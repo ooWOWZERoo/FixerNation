@@ -1,11 +1,13 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
+require('express-async-errors');
 const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./routes/auth');
 const bookRoutes = require('./routes/books');
 const uploadRoutes = require('./routes/uploads');
+const curriculumRoutes = require('./routes/curriculum');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -19,6 +21,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes.router);
 app.use('/api/books', bookRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/curricula', curriculumRoutes);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, Apache serves those files

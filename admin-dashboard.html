@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=2">
+<link rel="stylesheet" href="admin-common.css?v=3">
 </head>
 <body>
 
@@ -95,15 +95,14 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=2"></script>
+<script src="admin-common.js?v=3"></script>
 <script>
 fnRequireAuth();
 
-const books = fnGetBooks();
+// Books and curricula are on the real API; contacts and blog posts are migrated
+// in later tasks and still read from the localStorage demo until then.
 const contacts = fnGetContacts();
 
-document.getElementById('statTotalBooks').textContent = books.length;
-document.getElementById('statPublished').textContent = books.filter(b => b.published).length;
 document.getElementById('statContacts').textContent = contacts.length;
 
 const weekAgo = Date.now() - 7 * 86400000;
@@ -111,7 +110,6 @@ const newThisWeek = contacts.filter(c => new Date(c.signupDate).getTime() >= wee
 document.getElementById('statNewWeek').textContent = newThisWeek;
 document.getElementById('statNewWeekDelta').textContent = newThisWeek > 0 ? '+' + newThisWeek + ' this week' : 'No new signups';
 
-document.getElementById('statCurricula').textContent = fnGetCurricula().length;
 document.getElementById('statBlogPosts').textContent = fnGetBlogPosts().length;
 
 const recent = [...contacts].sort((a,b) => new Date(b.signupDate) - new Date(a.signupDate)).slice(0, 5);
@@ -126,6 +124,16 @@ if (recent.length === 0) {
     tbody.appendChild(tr);
   });
 }
+
+fetch('/api/books?all=true', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? [] : r.json()).then(data => {
+  const books = (data && data.books) || [];
+  document.getElementById('statTotalBooks').textContent = books.length;
+  document.getElementById('statPublished').textContent = books.filter(b => b.published).length;
+});
+
+fetch('/api/curricula?all=true', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? [] : r.json()).then(data => {
+  document.getElementById('statCurricula').textContent = ((data && data.curricula) || []).length;
+});
 </script>
 
 </body>

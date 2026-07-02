@@ -193,13 +193,15 @@
   </div>
 </footer>
 
-<script src="admin-common.js?v=2"></script>
+<script src="admin-common.js?v=3"></script>
 <script>
-function getCurriculumFromQuery() {
+async function getCurriculumFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   if (!id) return null;
-  const c = fnGetCurricula().find(x => x.id === id);
+  const r = await fetch(`/api/curricula/${id}`);
+  if (!r.ok) return null;
+  const c = (await r.json()).curriculum;
   return (c && c.published) ? c : null;
 }
 
@@ -211,8 +213,10 @@ function showInfoToast(msg) {
   window._infoToastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
 }
 
-function openResource(curriculumId, resourceName) {
-  const c = fnGetCurricula().find(x => x.id === curriculumId);
+async function openResource(curriculumId, resourceName) {
+  const r = await fetch(`/api/curricula/${curriculumId}`);
+  if (!r.ok) return;
+  const c = (await r.json()).curriculum;
   if (!c) return;
   if (resourceName === 'Quiz + Answer Key') {
     openQuizModal(c);
@@ -253,24 +257,18 @@ function renderDetailResources(c) {
     return;
   }
   row.innerHTML = c.resources.map(r =>
-    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource('${c.id}', '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
+    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
   ).join('');
 }
 
 function renderDetailVideo(c) {
   const slot = document.getElementById('detailVideo');
-  const videos = c.videos || [];
-  const first = videos[0];
-  // Older saved videos (added before the admin started recording a `url`) only have
-  // a `.name` — that name IS the filename the admin picked, so try it directly rather
-  // than giving up. fnVideoEmbedHtml's built-in error handler covers the case where
-  // the file genuinely isn't in the project folder.
-  const ref = first && (first.url || first.name);
-  slot.innerHTML = ref ? fnVideoEmbedHtml(ref) : '';
+  const first = (c.videos && c.videos[0]) || null;
+  slot.innerHTML = first && first.url ? fnVideoEmbedHtml(first.url) : '';
 }
 
-function renderLessonDetail() {
-  const c = getCurriculumFromQuery();
+async function renderLessonDetail() {
+  const c = await getCurriculumFromQuery();
   if (!c) {
     document.getElementById('notFoundState').style.display = 'block';
     document.title = 'Lesson Not Found — Fixer Nation';

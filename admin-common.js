@@ -1,10 +1,7 @@
 /* Fixer Nation Admin — shared demo backend (browser localStorage only) */
 
 const FN_KEYS = {
-  books: 'fn_books',
   contacts: 'fn_newsletter_contacts',
-  curricula: 'fn_curricula',
-  downloads: 'fn_curriculum_downloads',
   campaigns: 'fn_campaigns',
   posts: 'fn_blog_posts',
   tags: 'fn_blog_tags',
@@ -25,80 +22,6 @@ function fnUid() {
 }
 
 function fnSeedIfEmpty() {
-  if (!localStorage.getItem(FN_KEYS.books)) {
-    const seedBooks = [
-      {
-        id: fnUid(),
-        title: 'Kill the Bully',
-        author: 'Anthony J. Placito',
-        coverImage: 'cover-kill-the-bully.png',
-        shortDescription: 'Stand up to the negativity around you and silence the outer critics holding you back.',
-        longDescription: "Alex Parker has had enough. Every day, he faces relentless bullying from Brandon Pierce—at the bus stop, in the hallways, even in front of teachers who turn a blind eye. But when his grandpa offers to teach him how to handle a gun, Alex thinks he's found the perfect solution. Kill the Bully is not just a story about gun control; it's about the battles we fight within ourselves and the choices we make when facing adversity.",
-        price: 18.99,
-        compareAtPrice: '',
-        sku: 'FN-KTB-001',
-        category: 'Short Story Series',
-        tags: ['Also on Amazon Kindle'],
-        stockStatus: 'In Stock',
-        amazonUrl: 'https://www.amazon.com',
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 40).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: "Your Past Doesn't Define You",
-        author: 'Anthony J. Placito',
-        coverImage: 'cover-your-past.png',
-        shortDescription: 'Break free from self-doubt and redefine your future with clarity and purpose.',
-        longDescription: "The Emily Story — Based on a True Story. Emily and Sam were inseparable until Sam's world shattered. When Emily discovers the horrifying truth, she refuses to stand by, risking everything to help her friend escape her nightmare. A powerful, unflinching story about survival and the strength to reclaim one's life.",
-        price: 18.99,
-        compareAtPrice: '',
-        sku: 'FN-YPD-002',
-        category: 'Short Story Series',
-        tags: ['Available on Kindle'],
-        stockStatus: 'In Stock',
-        amazonUrl: 'https://www.amazon.com',
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 25).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'Think with 5 Brains, Then Make Up Your Mind',
-        author: 'Anthony J. Placito',
-        coverImage: 'cover-5-brains.png',
-        shortDescription: 'A sharper, more strategic mindset for navigating decisions with confidence.',
-        longDescription: 'What if you could unlock a smarter, sharper, and more confident version of yourself? This book introduces a powerful approach to decision-making, challenging you to go beyond instinct and impulse, and equips you with the tools to navigate challenges like "The Fixer."',
-        price: 18.99,
-        compareAtPrice: '',
-        sku: 'FN-T5B-003',
-        category: 'Short Story Series',
-        tags: ['New Arrival'],
-        stockStatus: 'Coming Soon',
-        amazonUrl: '',
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'How to Lie and Get Away With It Every Time',
-        author: 'Anthony J. Placito',
-        coverImage: 'cover-how-to-lie.png',
-        shortDescription: 'Strategic thinking and psychological insight, wrapped in compelling storytelling.',
-        longDescription: 'From childhood fibs to workplace misdirection, this book opens your eyes to the human tendency to bend truth — emphasizing awareness, ethics, and emotional intelligence so you can protect yourself from manipulation while cultivating trust and understanding.',
-        price: 18.99,
-        compareAtPrice: '',
-        sku: 'FN-HTL-004',
-        category: 'Short Story Series',
-        tags: ['New Arrival'],
-        stockStatus: 'Coming Soon',
-        amazonUrl: '',
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-      },
-    ];
-    localStorage.setItem(FN_KEYS.books, JSON.stringify(seedBooks));
-  }
-
   if (!localStorage.getItem(FN_KEYS.contacts)) {
     const seedContacts = [
       { id: fnUid(), name: 'Jordan Reyes', email: 'jordan.reyes@example.com', address: { street: '214 Maple Ave', city: 'Springfield', state: 'IL', zip: '62701' }, signupDate: new Date(Date.now() - 86400000 * 12).toISOString(), source: 'Homepage', status: 'Subscribed' },
@@ -110,79 +33,6 @@ function fnSeedIfEmpty() {
 
   if (!localStorage.getItem(FN_KEYS.campaigns)) {
     localStorage.setItem(FN_KEYS.campaigns, JSON.stringify([]));
-  }
-
-  if (!localStorage.getItem(FN_KEYS.curricula)) {
-    const seedCurricula = [
-      {
-        id: fnUid(),
-        title: 'Responsibility & Ownership: Take Responsibility for Your Growth',
-        series: 'SEL Morning Boost',
-        audiences: ['Elementary School', 'Middle School'],
-        shortDescription: 'A 5-lesson unit helping students understand that personal growth happens when they choose effort, practice, and steady learning.',
-        overview: "Students will understand that support from teachers, family, and friends matters, but no one can grow for them. This unit builds self-awareness and accountability through daily reflection, guided discussion, and a culminating project.",
-        objectives: [
-          'Identify the difference between effort and outcome',
-          'Practice daily reflection on personal choices',
-          'Build a personal accountability plan',
-        ],
-        estimatedDuration: '5 lessons · 1 week (30 min/day)',
-        materials: ['Classroom poster (included)', 'Student reflection journal', 'Whiteboard or chart paper'],
-        resources: ['Classroom Poster', 'Student Handout', 'Teacher Copy', 'Quiz + Answer Key'],
-        lessonDocument: '',
-        lessonDocumentName: '',
-        videos: [],
-        quiz: [
-          {
-            question: 'What does it mean to "own" your growth?',
-            options: ['Blaming others when things go wrong', 'Choosing effort and steady learning, even when uncomfortable', 'Waiting for someone else to fix the problem', 'Avoiding challenges altogether'],
-            correctIndex: 1,
-          },
-          {
-            question: 'Which of these is an example of a growth choice?',
-            options: ['Giving up after one try', 'Asking for help and trying again', 'Ignoring feedback', 'Comparing yourself only to others'],
-            correctIndex: 1,
-          },
-        ],
-        downloadLimit: 3,
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 14).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'Think with 5 Brains: Decision-Making Workshop',
-        series: 'Positivity, Health & Wellness',
-        audiences: ['High School', 'Higher Education'],
-        shortDescription: 'A strategic-thinking curriculum built on the "Think with 5 Brains" framework for stronger, more confident decisions.',
-        overview: 'This curriculum challenges students to slow down and examine decisions from multiple angles before acting. Includes discussion-based lessons, a group activity, and a short written reflection.',
-        objectives: [
-          'Apply a 5-step decision framework to real scenarios',
-          'Practice identifying assumptions and biases',
-          'Communicate a decision rationale clearly',
-        ],
-        estimatedDuration: '3 lessons · 2 weeks',
-        materials: ['Handout packet', 'Scenario cards'],
-        resources: ['Student Handout', 'Teacher Copy', 'Quiz + Answer Key'],
-        lessonDocument: '',
-        lessonDocumentName: '',
-        videos: [],
-        quiz: [
-          {
-            question: 'Why use multiple "brains" before deciding?',
-            options: ['To slow down and avoid all decisions', 'To consider a decision from more than one angle', 'To always follow the majority', 'To skip the decision entirely'],
-            correctIndex: 1,
-          },
-        ],
-        downloadLimit: 5,
-        published: false,
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      },
-    ];
-    localStorage.setItem(FN_KEYS.curricula, JSON.stringify(seedCurricula));
-  }
-
-  if (!localStorage.getItem(FN_KEYS.downloads)) {
-    localStorage.setItem(FN_KEYS.downloads, JSON.stringify([]));
   }
 
   if (!localStorage.getItem(FN_KEYS.posts)) {
@@ -323,14 +173,6 @@ function fnHandleUnauthorized(response) {
   return false;
 }
 
-function fnGetBooks() {
-  fnSeedIfEmpty();
-  return JSON.parse(localStorage.getItem(FN_KEYS.books) || '[]');
-}
-function fnSaveBooks(books) {
-  localStorage.setItem(FN_KEYS.books, JSON.stringify(books));
-}
-
 function fnGetContacts() {
   fnSeedIfEmpty();
   return JSON.parse(localStorage.getItem(FN_KEYS.contacts) || '[]');
@@ -464,67 +306,6 @@ function fnGetAudience(audienceFilter) {
 function fnGetContactSources() {
   const contacts = fnGetContacts();
   return Array.from(new Set(contacts.map(c => c.source).filter(Boolean)));
-}
-
-function fnGetCurricula() {
-  fnSeedIfEmpty();
-  return JSON.parse(localStorage.getItem(FN_KEYS.curricula) || '[]');
-}
-function fnSaveCurricula(curricula) {
-  localStorage.setItem(FN_KEYS.curricula, JSON.stringify(curricula));
-}
-
-function fnGetDownloadLog() {
-  fnSeedIfEmpty();
-  return JSON.parse(localStorage.getItem(FN_KEYS.downloads) || '[]');
-}
-function fnSaveDownloadLog(log) {
-  localStorage.setItem(FN_KEYS.downloads, JSON.stringify(log));
-}
-
-// Returns records of { curriculumId, teacherEmail, count } for one curriculum
-function fnGetDownloadsForCurriculum(curriculumId) {
-  return fnGetDownloadLog().filter(d => d.curriculumId === curriculumId);
-}
-
-// Attempts a simulated teacher download. Enforces the per-teacher download limit
-// configured on the curriculum. Returns { ok, count, limit, reason }.
-function fnSimulateDownload(curriculumId, teacherEmail) {
-  const curricula = fnGetCurricula();
-  const curriculum = curricula.find(c => c.id === curriculumId);
-  if (!curriculum) return { ok: false, reason: 'not_found' };
-
-  const log = fnGetDownloadLog();
-  const email = teacherEmail.trim().toLowerCase();
-  let record = log.find(d => d.curriculumId === curriculumId && d.teacherEmail === email);
-
-  const limit = Number(curriculum.downloadLimit) || 0;
-  const currentCount = record ? record.count : 0;
-
-  if (limit > 0 && currentCount >= limit) {
-    return { ok: false, reason: 'limit_reached', count: currentCount, limit };
-  }
-
-  if (record) {
-    record.count += 1;
-    record.lastDownload = new Date().toISOString();
-  } else {
-    record = { id: fnUid(), curriculumId, teacherEmail: email, count: 1, lastDownload: new Date().toISOString() };
-    log.push(record);
-  }
-  fnSaveDownloadLog(log);
-  return { ok: true, count: record.count, limit };
-}
-
-function fnResetDownloads(curriculumId, teacherEmail) {
-  let log = fnGetDownloadLog();
-  if (teacherEmail) {
-    const email = teacherEmail.trim().toLowerCase();
-    log = log.filter(d => !(d.curriculumId === curriculumId && d.teacherEmail === email));
-  } else {
-    log = log.filter(d => d.curriculumId !== curriculumId);
-  }
-  fnSaveDownloadLog(log);
 }
 
 /* ---- Blog posts ---- */

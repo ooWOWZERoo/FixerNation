@@ -1,0 +1,246 @@
+const express = require('express');
+const pool = require('../db/pool');
+const { requireAuth, getAuthUser } = require('../middleware/auth');
+
+const router = express.Router();
+
+async function attachChildren(curricula) {
+  if (curricula.length === 0) return curricula;
+  const ids = curricula.map(c => c.id);
+
+  const [audienceRows] = await pool.query('SELECT curriculum_id, audience FROM curriculum_audiences WHERE curriculum_id IN (?)', [ids]);
+  const [objectiveRows] = await pool.query('SELECT curriculum_id, objective FROM curriculum_objectives WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  const [materialRows] = await pool.query('SELECT curriculum_id, material FROM curriculum_materials WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  const [resourceRows] = await pool.query('SELECT curriculum_id, resource FROM curriculum_resources WHERE curriculum_id IN (?)', [ids]);
+  const [videoRows] = await pool.query('SELECT curriculum_id, name, url, size_label FROM curriculum_videos WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  const [questionRows] = await pool.query('SELECT id, curriculum_id, question, correct_index FROM curriculum_quiz_questions WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  const questionIds = questionRows.map(q => q.id);
+  const [optionRows] = questionIds.length
+    ? await pool.query('SELECT question_id, option_text FROM curriculum_quiz_options WHERE question_id IN (?) ORDER BY sort_order', [questionIds])
+    : [[]];
+
+  const group = (rows, key) => rows.reduce((acc, r) => { (acc[r[key]] = acc[r[key]] || []).push(r); return acc; }, {});
+  const audiencesByC = group(audienceRows, 'curriculum_id');
+  const objectivesByC = group(objectiveRows, 'curriculum_id');
+  const materialsByC = group(materialRows, 'curriculum_id');
+  const resourcesByC = group(resourceRows, 'curriculum_id');
+  const videosByC = group(videoRows, 'curriculum_id');
+  const optionsByQ = group(optionRows, 'question_id');
+  const questionsByC = group(questionRows, 'curriculum_id');
+
+  return curricula.map(c => ({
+    ...c,
+    audiences: (audiencesByC[c.id] || []).map(r => r.audience),
+    objectives: (objectivesByC[c.id] || []).map(r => r.objective),
+    materials: (materialsByC[c.id] || []).map(r => r.material),
+    resources: (resourcesByC[c.id] || []).map(r => r.resource),
+    videos: (videosByC[c.id] || []).map(r => ({ name: r.name, url: r.url, sizeLabel: r.size_label })),
+    quiz: (questionsByC[c.id] || []).map(q => ({
+      question: q.question,
+      correctIndex: q.correct_index,
+      options: (optionsByQ[q.id] || []).map(o => o.option_text),
+    })),
+  }));
+}
+
+function serialize(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    series: row.series,
+    shortDescription: row.short_description,
+    overview: row.overview,
+    estimatedDuration: row.estimated_duration,
+    lessonDocument: row.lesson_document,
+    lessonDocumentName: row.lesson_document_name,
+    downloadLimit: row.download_limit,
+    published: !!row.published,
+    createdAt: row.created_at,
+    audiences: row.audiences,
+    objectives: row.objectives,
+    materials: row.materials,
+    resources: row.resources,
+    videos: row.videos,
+    quiz: row.quiz,
+  };
+}
+
+router.get('/', async (req, res) => {
+  const wantsAll = req.query.all === 'true' && !!getAuthUser(req);
+  const [rows] = wantsAll
+    ? await pool.query('SELECT * FROM curricula ORDER BY created_at DESC')
+    : await pool.query('SELECT * FROM curricula WHERE published = 1 ORDER BY created_at DESC');
+  const curricula = (await attachChildren(rows)).map(serialize);
+  res.json({ curricula });
+});
+
+router.get('/:id', async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM curricula WHERE id = ?', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Curriculum not found' });
+  const [curriculum] = await attachChildren(rows);
+  res.json({ curriculum: serialize(curriculum) });
+});
+
+async function replaceChildren(connection, id, c) {
+  await connection.query('DELETE FROM curriculum_audiences WHERE curriculum_id = ?', [id]);
+  await connection.query('DELETE FROM curriculum_objectives WHERE curriculum_id = ?', [id]);
+  await connection.query('DELETE FROM curriculum_materials WHERE curriculum_id = ?', [id]);
+  await connection.query('DELETE FROM curriculum_resources WHERE curriculum_id = ?', [id]);
+  await connection.query('DELETE FROM curriculum_videos WHERE curriculum_id = ?', [id]);
+  await connection.query(
+    'DELETE FROM curriculum_quiz_questions WHERE curriculum_id = ?',
+    [id]
+  ); // cascades to curriculum_quiz_options via FK
+
+  const audiences = Array.isArray(c.audiences) ? c.audiences : [];
+  if (audiences.length) {
+    await connection.query('INSERT INTO curriculum_audiences (curriculum_id, audience) VALUES ' + audiences.map(() => '(?, ?)').join(', '), audiences.flatMap(a => [id, a]));
+  }
+
+  const objectives = Array.isArray(c.objectives) ? c.objectives : [];
+  for (let i = 0; i < objectives.length; i++) {
+    await connection.query('INSERT INTO curriculum_objectives (curriculum_id, objective, sort_order) VALUES (?, ?, ?)', [id, objectives[i], i]);
+  }
+
+  const materials = Array.isArray(c.materials) ? c.materials : [];
+  for (let i = 0; i < materials.length; i++) {
+    await connection.query('INSERT INTO curriculum_materials (curriculum_id, material, sort_order) VALUES (?, ?, ?)', [id, materials[i], i]);
+  }
+
+  const resources = Array.isArray(c.resources) ? c.resources : [];
+  if (resources.length) {
+    await connection.query('INSERT INTO curriculum_resources (curriculum_id, resource) VALUES ' + resources.map(() => '(?, ?)').join(', '), resources.flatMap(r => [id, r]));
+  }
+
+  const videos = Array.isArray(c.videos) ? c.videos : [];
+  for (let i = 0; i < videos.length; i++) {
+    const v = videos[i];
+    await connection.query(
+      'INSERT INTO curriculum_videos (curriculum_id, name, url, size_label, sort_order) VALUES (?, ?, ?, ?, ?)',
+      [id, v.name || '', v.url || '', v.sizeLabel || '', i]
+    );
+  }
+
+  const quiz = Array.isArray(c.quiz) ? c.quiz : [];
+  for (let i = 0; i < quiz.length; i++) {
+    const q = quiz[i];
+    const [qResult] = await connection.query(
+      'INSERT INTO curriculum_quiz_questions (curriculum_id, question, correct_index, sort_order) VALUES (?, ?, ?, ?)',
+      [id, q.question || '', q.correctIndex || 0, i]
+    );
+    const options = Array.isArray(q.options) ? q.options : [];
+    for (let oi = 0; oi < options.length; oi++) {
+      await connection.query(
+        'INSERT INTO curriculum_quiz_options (question_id, option_text, sort_order) VALUES (?, ?, ?)',
+        [qResult.insertId, options[oi] || '', oi]
+      );
+    }
+  }
+}
+
+router.post('/', requireAuth, async (req, res) => {
+  const c = req.body || {};
+  if (!c.title || !Array.isArray(c.audiences) || c.audiences.length === 0) {
+    return res.status(400).json({ error: 'Title and at least one audience are required' });
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.query(
+      `INSERT INTO curricula (title, series, short_description, overview, estimated_duration, lesson_document, lesson_document_name, download_limit, published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [c.title, c.series || '', c.shortDescription || '', c.overview || '', c.estimatedDuration || '', c.lessonDocument || '', c.lessonDocumentName || '', c.downloadLimit || 0, c.published ? 1 : 0]
+    );
+    await replaceChildren(connection, result.insertId, c);
+    await connection.commit();
+
+    const [rows] = await pool.query('SELECT * FROM curricula WHERE id = ?', [result.insertId]);
+    const [curriculum] = await attachChildren(rows);
+    res.status(201).json({ curriculum: serialize(curriculum) });
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+});
+
+router.put('/:id', requireAuth, async (req, res) => {
+  const c = req.body || {};
+  if (!c.title || !Array.isArray(c.audiences) || c.audiences.length === 0) {
+    return res.status(400).json({ error: 'Title and at least one audience are required' });
+  }
+
+  const [existing] = await pool.query('SELECT id FROM curricula WHERE id = ?', [req.params.id]);
+  if (!existing[0]) return res.status(404).json({ error: 'Curriculum not found' });
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      `UPDATE curricula SET title=?, series=?, short_description=?, overview=?, estimated_duration=?, lesson_document=?, lesson_document_name=?, download_limit=?, published=?
+       WHERE id=?`,
+      [c.title, c.series || '', c.shortDescription || '', c.overview || '', c.estimatedDuration || '', c.lessonDocument || '', c.lessonDocumentName || '', c.downloadLimit || 0, c.published ? 1 : 0, req.params.id]
+    );
+    await replaceChildren(connection, req.params.id, c);
+    await connection.commit();
+
+    const [rows] = await pool.query('SELECT * FROM curricula WHERE id = ?', [req.params.id]);
+    const [curriculum] = await attachChildren(rows);
+    res.json({ curriculum: serialize(curriculum) });
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+});
+
+router.delete('/:id', requireAuth, async (req, res) => {
+  const [result] = await pool.query('DELETE FROM curricula WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Curriculum not found' });
+  res.json({ ok: true });
+});
+
+// --- Download-limit simulator ---
+
+router.get('/:id/downloads', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT teacher_email, count, last_download FROM curriculum_downloads WHERE curriculum_id = ?', [req.params.id]);
+  res.json({ downloads: rows.map(r => ({ teacherEmail: r.teacher_email, count: r.count, lastDownload: r.last_download })) });
+});
+
+router.post('/:id/downloads', requireAuth, async (req, res) => {
+  const teacherEmail = (req.body && req.body.teacherEmail || '').trim().toLowerCase();
+  if (!teacherEmail) return res.status(400).json({ error: 'Teacher email is required' });
+
+  const [curriculumRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [req.params.id]);
+  if (!curriculumRows[0]) return res.status(404).json({ error: 'Curriculum not found' });
+  const limit = curriculumRows[0].download_limit || 0;
+
+  const [existingRows] = await pool.query('SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?', [req.params.id, teacherEmail]);
+  const currentCount = existingRows[0] ? existingRows[0].count : 0;
+
+  if (limit > 0 && currentCount >= limit) {
+    return res.json({ ok: false, reason: 'limit_reached', count: currentCount, limit });
+  }
+
+  const newCount = currentCount + 1;
+  await pool.query(
+    `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download) VALUES (?, ?, 1, NOW())
+     ON DUPLICATE KEY UPDATE count = ?, last_download = NOW()`,
+    [req.params.id, teacherEmail, newCount]
+  );
+  res.json({ ok: true, count: newCount, limit });
+});
+
+router.delete('/:id/downloads', requireAuth, async (req, res) => {
+  if (req.query.teacherEmail) {
+    await pool.query('DELETE FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?', [req.params.id, req.query.teacherEmail.trim().toLowerCase()]);
+  } else {
+    await pool.query('DELETE FROM curriculum_downloads WHERE curriculum_id = ?', [req.params.id]);
+  }
+  res.json({ ok: true });
+});
+
+module.exports = router;

@@ -362,7 +362,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=2"></script>
+<script src="admin-common.js?v=3"></script>
 <script>
 document.getElementById('filterBar').addEventListener('click', function(e){
   if(!e.target.classList.contains('chip')) return;
@@ -395,13 +395,14 @@ function showInfoToast(msg) {
   window._infoToastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
 }
 
+let curriculaCache = [];
+
 function getFeaturedCurriculum() {
-  const curricula = fnGetCurricula();
   // This spotlight (and the matching card in the library grid below) represents the
   // "Take Responsibility for Your Growth" lesson — match it by title so everything on
   // this page reflects whatever the admin has actually configured for it.
-  return curricula.find(c => c.published && c.title && c.title.includes('Take Responsibility for Your Growth'))
-    || curricula.find(c => c.published);
+  return curriculaCache.find(c => c.title && c.title.includes('Take Responsibility for Your Growth'))
+    || curriculaCache[0];
 }
 
 function renderSpotlightResources() {
@@ -412,12 +413,12 @@ function renderSpotlightResources() {
     return;
   }
   row.innerHTML = match.resources.map(r =>
-    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource('${match.id}', '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
+    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${match.id}, '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
   ).join('');
 }
 
 function openResource(curriculumId, resourceName) {
-  const c = fnGetCurricula().find(x => x.id === curriculumId);
+  const c = curriculaCache.find(x => x.id === curriculumId);
   if (!c) return;
   if (resourceName === 'Quiz + Answer Key') {
     openQuizModal(c);
@@ -454,14 +455,8 @@ function closeQuizModal() {
 function renderSpotlightVideo() {
   const match = getFeaturedCurriculum();
   const slot = document.getElementById('spotlightVideo');
-  const videos = (match && match.videos) || [];
-  const first = videos[0];
-  // Older saved videos (added before the admin started recording a `url`) only have
-  // a `.name` — that name IS the filename the admin picked, so try it directly rather
-  // than giving up. fnVideoEmbedHtml's built-in error handler covers the case where
-  // the file genuinely isn't in the project folder.
-  const ref = first && (first.url || first.name);
-  slot.innerHTML = ref ? fnVideoEmbedHtml(ref) : '';
+  const first = (match && match.videos && match.videos[0]) || null;
+  slot.innerHTML = first && first.url ? fnVideoEmbedHtml(first.url) : '';
 }
 
 function wireFeaturedLessonLinks() {
@@ -480,9 +475,14 @@ function wireFeaturedLessonLinks() {
   }
 }
 
-renderSpotlightResources();
-renderSpotlightVideo();
-wireFeaturedLessonLinks();
+fetch('/api/curricula')
+  .then(r => r.json())
+  .then(data => {
+    curriculaCache = data.curricula || [];
+    renderSpotlightResources();
+    renderSpotlightVideo();
+    wireFeaturedLessonLinks();
+  });
 </script>
 
 </body>

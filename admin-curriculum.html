@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=2">
+<link rel="stylesheet" href="admin-common.css?v=3">
 </head>
 <body>
 
@@ -124,7 +124,7 @@
             <button type="button" class="a-repeat-remove" onclick="removeLessonDoc()">✕</button>
           </div>
           <input type="file" id="lessonDocFile" accept=".pdf,.doc,.docx">
-          <div class="a-note">PDF or Word document. Stored for this browser session as a demo attachment.</div>
+          <div class="a-note">PDF or Word document. Uploaded to the server when selected.</div>
         </div>
 
         <div class="a-field">
@@ -135,11 +135,11 @@
             <input type="text" id="videoUrlInput" placeholder="YouTube/Vimeo link, or a local file like trailer-kill-the-bully.mp4" style="flex:1;">
             <button type="button" class="a-btn a-btn-outline" onclick="addVideoFromUrl()">+ Add Video URL</button>
           </div>
-          <div class="a-note">This is the one that actually plays on the public site — paste a YouTube/Vimeo link or the filename of a video already in the site folder.</div>
+          <div class="a-note">Paste a YouTube/Vimeo link, or upload a video file below.</div>
 
           <input type="file" id="videoFile" accept="video/*" style="margin:14px 0 8px;">
           <button type="button" class="a-dashed-btn" onclick="addVideoFromInput()">+ Add Video File</button>
-          <div class="a-note">This browser can't upload the actual video bytes into the site (no real backend), so picking a file here references it <em>by filename</em>, the same way the book covers and trailers are referenced elsewhere on the site. It will play on the public lesson page only if a file with that exact name is also placed in the FixerNation project folder — otherwise you'll get a broken player. If the video isn't in the folder yet, add it there first (or use "+ Add Video URL" above to point at a link instead).</div>
+          <div class="a-note">Uploads the video file to the server. Large files may take a moment.</div>
         </div>
 
         <div class="a-field">
@@ -193,15 +193,16 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=2"></script>
+<script src="admin-common.js?v=3"></script>
 <script>
 fnRequireAuth();
 
 let editingId = null;
 let currentVideos = [];
 let currentQuiz = [];
-let currentLessonDoc = { data: '', name: '' };
+let currentLessonDoc = { url: '', name: '' };
 let activeDownloadCurriculumId = null;
+let curriculaCache = [];
 
 function renderAudienceCheckboxes(selected) {
   const row = document.getElementById('audienceRow');
@@ -225,8 +226,15 @@ function renderResourceCheckboxes(selected) {
   });
 }
 
-function renderCurricula() {
-  const list = fnGetCurricula();
+async function fetchCurricula() {
+  const r = await fetch('/api/curricula?all=true', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  const data = await r.json();
+  return data.curricula || [];
+}
+
+async function renderCurricula() {
+  const list = curriculaCache = await fetchCurricula();
   const tbody = document.querySelector('#curriculumTable tbody');
   tbody.innerHTML = '';
   if (list.length === 0) {
@@ -249,9 +257,9 @@ function renderCurricula() {
       <td><span class="a-pill ${c.published ? 'a-pill-success' : 'a-pill-neutral'}">${c.published ? 'Published' : 'Draft'}</span></td>
       <td>
         <div class="a-row-actions">
-          <button class="a-icon-btn" title="Downloads" onclick="openDownloadModal('${c.id}')">⬇️</button>
-          <button class="a-icon-btn" title="Edit" onclick="editCurriculum('${c.id}')">✏️</button>
-          <button class="a-icon-btn danger" title="Delete" onclick="deleteCurriculum('${c.id}')">🗑️</button>
+          <button class="a-icon-btn" title="Downloads" onclick="openDownloadModal(${c.id})">⬇️</button>
+          <button class="a-icon-btn" title="Edit" onclick="editCurriculum(${c.id})">✏️</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteCurriculum(${c.id})">🗑️</button>
         </div>
       </td>
     `;
@@ -266,11 +274,24 @@ function renderVideoList() {
     const row = document.createElement('div');
     row.className = 'a-repeat-row';
     const badge = v.url
-      ? '<span class="a-pill a-pill-success" style="margin-left:8px;">▶ Plays if file is in the project folder</span>'
+      ? '<span class="a-pill a-pill-success" style="margin-left:8px;">▶ Playable</span>'
       : '<span class="a-pill a-pill-neutral" style="margin-left:8px;">Not playable</span>';
     row.innerHTML = `<div class="info"><div class="name">🎬 ${v.name}${badge}</div><div class="meta">${v.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideo(${i})">✕</button>`;
     el.appendChild(row);
   });
+}
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
+  if (fnHandleUnauthorized(r)) return null;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Upload failed');
+    return null;
+  }
+  return (await r.json()).url;
 }
 
 function addVideoFromUrl() {
@@ -282,18 +303,18 @@ function addVideoFromUrl() {
   renderVideoList();
 }
 
-function addVideoFromInput() {
+async function addVideoFromInput() {
   const input = document.getElementById('videoFile');
   const file = input.files[0];
   if (!file) { fnToast('Choose a video file first'); return; }
   const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-  // We can't pull the actual file bytes into the site (no real backend), so this
-  // references the file by its filename — same approach used for cover images and
-  // trailers elsewhere on the site. It'll only play if a file with this exact name
-  // is also present in the FixerNation project folder.
-  currentVideos.push({ name: file.name, sizeLabel: sizeMb + ' MB · referenced by filename', url: file.name });
+  fnToast('Uploading video…');
+  const url = await uploadFile(file);
+  if (!url) return;
+  currentVideos.push({ name: file.name, sizeLabel: sizeMb + ' MB', url });
   input.value = '';
   renderVideoList();
+  fnToast('Video uploaded');
 }
 function removeVideo(i) {
   currentVideos.splice(i, 1);
@@ -360,19 +381,19 @@ function updateQuestionText(i, val) { currentQuiz[i].question = val; }
 function updateOptionText(qi, oi, val) { currentQuiz[qi].options[oi] = val; }
 function setCorrectOption(qi, oi) { currentQuiz[qi].correctIndex = oi; }
 
-document.getElementById('lessonDocFile').addEventListener('change', function(e){
+document.getElementById('lessonDocFile').addEventListener('change', async function(e){
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    currentLessonDoc = { data: ev.target.result, name: file.name };
-    document.getElementById('lessonDocName').textContent = '📄 ' + file.name;
-    document.getElementById('lessonDocPreview').style.display = 'flex';
-  };
-  reader.readAsDataURL(file);
+  fnToast('Uploading document…');
+  const url = await uploadFile(file);
+  if (!url) { e.target.value = ''; return; }
+  currentLessonDoc = { url, name: file.name };
+  document.getElementById('lessonDocName').textContent = '📄 ' + file.name;
+  document.getElementById('lessonDocPreview').style.display = 'flex';
+  fnToast('Document uploaded');
 });
 function removeLessonDoc() {
-  currentLessonDoc = { data: '', name: '' };
+  currentLessonDoc = { url: '', name: '' };
   document.getElementById('lessonDocPreview').style.display = 'none';
   document.getElementById('lessonDocFile').value = '';
 }
@@ -381,7 +402,7 @@ function openCurriculumModal() {
   editingId = null;
   currentVideos = [];
   currentQuiz = [];
-  currentLessonDoc = { data: '', name: '' };
+  currentLessonDoc = { url: '', name: '' };
   document.getElementById('curriculumModalTitle').textContent = 'Build New Curriculum';
   document.getElementById('curriculumForm').reset();
   document.getElementById('downloadLimit').value = 3;
@@ -399,16 +420,12 @@ function closeCurriculumModal() {
 }
 
 function editCurriculum(id) {
-  const list = fnGetCurricula();
-  const c = list.find(x => x.id === id);
+  const c = curriculaCache.find(x => x.id === id);
   if (!c) return;
   editingId = id;
-  // Backfill `url` for videos saved before that field existed — their `.name` was
-  // always the picked filename, so it's a safe stand-in. This also fixes the
-  // "Not playable" badge for legacy entries once the curriculum is saved again.
-  currentVideos = JSON.parse(JSON.stringify(c.videos || [])).map(v => ({ ...v, url: v.url || v.name }));
+  currentVideos = JSON.parse(JSON.stringify(c.videos || []));
   currentQuiz = JSON.parse(JSON.stringify(c.quiz || []));
-  currentLessonDoc = { data: c.lessonDocument || '', name: c.lessonDocumentName || '' };
+  currentLessonDoc = { url: c.lessonDocument || '', name: c.lessonDocumentName || '' };
 
   document.getElementById('curriculumModalTitle').textContent = 'Edit Curriculum';
   document.getElementById('title').value = c.title || '';
@@ -436,10 +453,16 @@ function editCurriculum(id) {
   document.getElementById('curriculumModalOverlay').classList.add('show');
 }
 
-function deleteCurriculum(id) {
+async function deleteCurriculum(id) {
   if (!confirm('Delete this curriculum? This cannot be undone.')) return;
-  fnSaveCurricula(fnGetCurricula().filter(c => c.id !== id));
-  fnResetDownloads(id);
+  const r = await fetch(`/api/curricula/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not delete curriculum'); return; }
   renderCurricula();
   fnToast('Curriculum deleted');
 }
@@ -455,13 +478,12 @@ function setPublishedToggle(on) {
   else { t.classList.remove('on'); l.textContent = 'Draft (hidden from teachers)'; }
 }
 
-function saveCurriculum() {
+async function saveCurriculum() {
   const title = document.getElementById('title').value.trim();
   const audiences = Array.from(document.querySelectorAll('#audienceRow input:checked')).map(cb => cb.value);
   if (!title) { fnToast('Title is required'); return; }
   if (audiences.length === 0) { fnToast('Select at least one intended audience'); return; }
 
-  const list = fnGetCurricula();
   const data = {
     title,
     series: document.getElementById('series').value.trim(),
@@ -472,7 +494,7 @@ function saveCurriculum() {
     estimatedDuration: document.getElementById('estimatedDuration').value.trim(),
     materials: document.getElementById('materials').value.split('\n').map(s => s.trim()).filter(Boolean),
     resources: Array.from(document.querySelectorAll('#resourcesRow input:checked')).map(cb => cb.value),
-    lessonDocument: currentLessonDoc.data,
+    lessonDocument: currentLessonDoc.url,
     lessonDocumentName: currentLessonDoc.name,
     videos: currentVideos,
     quiz: currentQuiz,
@@ -480,22 +502,29 @@ function saveCurriculum() {
     published: document.getElementById('publishedToggle').classList.contains('on'),
   };
 
-  if (editingId) {
-    const idx = list.findIndex(c => c.id === editingId);
-    list[idx] = { ...list[idx], ...data };
-    fnToast('Curriculum updated');
-  } else {
-    list.push({ id: fnUid(), createdAt: new Date().toISOString(), ...data });
-    fnToast('Curriculum created');
+  const url = editingId ? `/api/curricula/${editingId}` : '/api/curricula';
+  const method = editingId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save curriculum');
+    return;
   }
-  fnSaveCurricula(list);
+
+  fnToast(editingId ? 'Curriculum updated' : 'Curriculum created');
   closeCurriculumModal();
   renderCurricula();
 }
 
 function openDownloadModal(curriculumId) {
   activeDownloadCurriculumId = curriculumId;
-  const c = fnGetCurricula().find(x => x.id === curriculumId);
+  const c = curriculaCache.find(x => x.id === curriculumId);
   document.getElementById('downloadModalTitle').textContent = c ? c.title : '';
   document.getElementById('simTeacherEmail').value = '';
   document.getElementById('simResult').innerHTML = '';
@@ -507,9 +536,11 @@ function closeDownloadModal() {
   renderCurricula();
 }
 
-function renderDownloadHistory() {
-  const records = fnGetDownloadsForCurriculum(activeDownloadCurriculumId);
-  const c = fnGetCurricula().find(x => x.id === activeDownloadCurriculumId);
+async function renderDownloadHistory() {
+  const r = await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const records = (await r.json()).downloads || [];
+  const c = curriculaCache.find(x => x.id === activeDownloadCurriculumId);
   const limit = c ? (Number(c.downloadLimit) || 0) : 0;
   const el = document.getElementById('downloadHistory');
   if (records.length === 0) {
@@ -534,10 +565,17 @@ function renderDownloadHistory() {
   }).join('');
 }
 
-function simulateDownload() {
+async function simulateDownload() {
   const email = document.getElementById('simTeacherEmail').value.trim();
   if (!email) { fnToast('Enter a teacher email'); return; }
-  const result = fnSimulateDownload(activeDownloadCurriculumId, email);
+  const r = await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teacherEmail: email }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json();
   const resultEl = document.getElementById('simResult');
   if (result.ok) {
     resultEl.innerHTML = `<div class="a-error show" style="background:var(--a-success-soft); color:var(--a-success);">✓ Download allowed — ${result.count}${result.limit > 0 ? ' of ' + result.limit : ''} used for ${email}.</div>`;
@@ -549,14 +587,24 @@ function simulateDownload() {
   renderDownloadHistory();
 }
 
-function resetOneDownload(email) {
-  fnResetDownloads(activeDownloadCurriculumId, email);
+async function resetOneDownload(email) {
+  await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads?teacherEmail=${encodeURIComponent(email)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
   renderDownloadHistory();
   fnToast('Reset for ' + email);
 }
-function resetAllDownloads() {
+async function resetAllDownloads() {
   if (!confirm('Reset download counts for every teacher on this curriculum?')) return;
-  fnResetDownloads(activeDownloadCurriculumId);
+  await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
   renderDownloadHistory();
   fnToast('All download counts reset');
 }

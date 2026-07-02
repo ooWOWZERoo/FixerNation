@@ -8,6 +8,16 @@ const { requireAuth } = require('../middleware/auth');
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
 
+const ALLOWED_MIME_PATTERN = new RegExp(
+  '^(' +
+  'image/|' +
+  'video/|' +
+  'application/pdf|' +
+  'application/msword|' +
+  'application/vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document' +
+  ')'
+);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -18,9 +28,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  // Videos can be large (existing book trailers run 30-49MB); the hosting
+  // provider's own reverse proxy may enforce a lower ceiling than this —
+  // if so, uploads will fail there rather than here.
+  limits: { fileSize: 250 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!/^image\//.test(file.mimetype)) return cb(new Error('Only image files are allowed'));
+    if (!ALLOWED_MIME_PATTERN.test(file.mimetype)) {
+      return cb(new Error('Unsupported file type: ' + file.mimetype));
+    }
     cb(null, true);
   },
 });
