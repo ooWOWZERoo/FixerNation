@@ -302,7 +302,14 @@ function fnLogin(username, password) {
 }
 
 function fnLogout() {
-  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+  // A bodyless POST gets rejected upstream of the app on this host, so always
+  // send a Content-Type + JSON body (even if empty) on POST/PUT/DELETE calls.
+  fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  })
     .finally(() => { window.location.href = 'admin-login.html'; });
 }
 
