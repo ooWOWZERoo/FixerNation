@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+
+<div class="a-auth-wrap">
+  <div>
+    <div class="a-auth-card">
+      <div class="a-auth-logo">
+        <div class="mark">FN</div>
+        <div class="word">Fixer Nation Admin</div>
+      </div>
+      <h1>Sign in</h1>
+      <p class="sub">Manage books, pricing, and newsletter contacts.</p>
+
+      <div class="a-error" id="loginError">Incorrect username or password. Please try again.</div>
+
+      <form id="loginForm">
+        <div class="a-field">
+          <label>Username</label>
+          <input type="text" id="username" autocomplete="username" required>
+        </div>
+        <div class="a-field">
+          <label>Password</label>
+          <input type="password" id="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="a-btn a-btn-primary a-btn-block">Sign In</button>
+      </form>
+
+      <p class="a-hint">Demo credentials — <code>admin</code> / <code>FixerNation2026!</code><br>Stored locally in this browser only, for prototype purposes.</p>
+    </div>
+    <a href="fixernation-redesign-mockup.html" class="a-back-link">← Back to the site</a>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+<script>
+fnSeedIfEmpty();
+
+document.getElementById('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  const errorBox = document.getElementById('loginError');
+  if (fnLogin(u, p)) {
+    window.location.href = 'admin-dashboard.html';
+  } else {
+    errorBox.classList.add('show');
+  }
+});
+</script>
+
+</body>
+</html>

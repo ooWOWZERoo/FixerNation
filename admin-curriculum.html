@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curriculum Builder — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-curriculum.html" class="active"><span class="ic">🎓</span><span class="label">Curriculum</span></a>
+      <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blog Posts</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">Newsletter CRM</span></a>
+      <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="fixernation-redesign-mockup.html"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Curriculum Builder</h1>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Curriculum Catalog</h2>
+          <button class="a-btn a-btn-primary" onclick="openCurriculumModal()">+ Build New Curriculum</button>
+        </div>
+        <table class="a-table" id="curriculumTable">
+          <thead><tr><th>Title</th><th>Audience</th><th>Contents</th><th>Download Limit</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="a-empty" id="curriculumEmpty" style="display:none;">
+          <div class="big">🎓</div>
+          No curriculum built yet — click "Build New Curriculum" to create your first one.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Curriculum Modal -->
+<div class="a-modal-overlay" id="curriculumModalOverlay">
+  <div class="a-modal" style="max-width:760px;">
+    <div class="a-modal-head">
+      <h3 id="curriculumModalTitle">Build New Curriculum</h3>
+      <button class="a-modal-close" onclick="closeCurriculumModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <form id="curriculumForm">
+        <input type="hidden" id="curriculumId">
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Curriculum Title *</label>
+            <input type="text" id="title" required>
+          </div>
+          <div class="a-field">
+            <label>Series / Program</label>
+            <input type="text" id="series" placeholder="e.g. SEL Morning Boost">
+          </div>
+        </div>
+
+        <div class="a-field">
+          <label>Intended Audience *</label>
+          <div class="a-audience-row" id="audienceRow"></div>
+        </div>
+
+        <div class="a-field">
+          <label>Short Description <span style="font-weight:400; text-transform:none;">(shown on listing cards)</span></label>
+          <textarea id="shortDescription" style="min-height:60px;"></textarea>
+        </div>
+
+        <div class="a-field">
+          <label>Overview <span style="font-weight:400; text-transform:none;">(full curriculum description)</span></label>
+          <textarea id="overview" style="min-height:100px;"></textarea>
+        </div>
+
+        <div class="a-field">
+          <label>Learning Objectives <span style="font-weight:400; text-transform:none;">(one per line)</span></label>
+          <textarea id="objectives" style="min-height:80px;" placeholder="Identify the difference between effort and outcome&#10;Practice daily reflection on personal choices"></textarea>
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Estimated Duration</label>
+            <input type="text" id="estimatedDuration" placeholder="e.g. 5 lessons · 1 week">
+          </div>
+          <div class="a-field">
+            <label>Max Downloads Per Teacher *</label>
+            <input type="number" id="downloadLimit" min="0" value="3" required>
+          </div>
+        </div>
+
+        <div class="a-field">
+          <label>Materials Needed <span style="font-weight:400; text-transform:none;">(one per line)</span></label>
+          <textarea id="materials" style="min-height:70px;" placeholder="Classroom poster (included)&#10;Student reflection journal"></textarea>
+        </div>
+
+        <div class="a-field">
+          <label>Included Resources</label>
+          <div class="a-tag-row" id="resourcesRow"></div>
+          <div class="a-note">Controls which resource buttons appear for this lesson on the public National Education Portal page (Classroom Poster, Student Handout, Teacher Copy, Quiz + Answer Key).</div>
+        </div>
+
+        <div class="a-field">
+          <label>Lesson Plan Document</label>
+          <div class="a-repeat-row" id="lessonDocPreview" style="display:none;">
+            <div class="info"><div class="name" id="lessonDocName"></div><div class="meta">Attached document</div></div>
+            <button type="button" class="a-repeat-remove" onclick="removeLessonDoc()">✕</button>
+          </div>
+          <input type="file" id="lessonDocFile" accept=".pdf,.doc,.docx">
+          <div class="a-note">PDF or Word document. Stored for this browser session as a demo attachment.</div>
+        </div>
+
+        <div class="a-field">
+          <label>Video Lessons</label>
+          <div class="a-repeat-list" id="videoList"></div>
+
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <input type="text" id="videoUrlInput" placeholder="YouTube/Vimeo link, or a local file like trailer-kill-the-bully.mp4" style="flex:1;">
+            <button type="button" class="a-btn a-btn-outline" onclick="addVideoFromUrl()">+ Add Video URL</button>
+          </div>
+          <div class="a-note">This is the one that actually plays on the public site — paste a YouTube/Vimeo link or the filename of a video already in the site folder.</div>
+
+          <input type="file" id="videoFile" accept="video/*" style="margin:14px 0 8px;">
+          <button type="button" class="a-dashed-btn" onclick="addVideoFromInput()">+ Add Video File</button>
+          <div class="a-note">This browser can't upload the actual video bytes into the site (no real backend), so picking a file here references it <em>by filename</em>, the same way the book covers and trailers are referenced elsewhere on the site. It will play on the public lesson page only if a file with that exact name is also placed in the FixerNation project folder — otherwise you'll get a broken player. If the video isn't in the folder yet, add it there first (or use "+ Add Video URL" above to point at a link instead).</div>
+        </div>
+
+        <div class="a-field">
+          <label>Quiz Questions</label>
+          <div id="quizList"></div>
+          <button type="button" class="a-dashed-btn" onclick="addQuizQuestion()">+ Add Question</button>
+        </div>
+
+        <div class="a-field">
+          <label>Publish Status</label>
+          <div class="a-toggle-row">
+            <div class="a-toggle on" id="publishedToggle" onclick="togglePublished()"><div class="knob"></div></div>
+            <span id="publishedLabel" style="font-size:14px; font-weight:600;">Published (visible to teachers)</span>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeCurriculumModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="saveCurriculum()">Save Curriculum</button>
+    </div>
+  </div>
+</div>
+
+<!-- Download Tracking Modal -->
+<div class="a-modal-overlay" id="downloadModalOverlay">
+  <div class="a-modal" style="max-width:520px;">
+    <div class="a-modal-head">
+      <h3>Download Limit — <span id="downloadModalTitle"></span></h3>
+      <button class="a-modal-close" onclick="closeDownloadModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <p style="font-size:13.5px; color:var(--a-text-soft); margin-bottom:16px;">Simulate a teacher downloading this curriculum to test the per-teacher limit. Each email is tracked separately.</p>
+      <div class="a-field" style="margin-bottom:12px;">
+        <label>Teacher Email</label>
+        <div style="display:flex; gap:10px;">
+          <input type="email" id="simTeacherEmail" placeholder="teacher@school.edu" style="flex:1;">
+          <button class="a-btn a-btn-primary" onclick="simulateDownload()">Simulate Download</button>
+        </div>
+      </div>
+      <div id="simResult"></div>
+      <div class="a-field" style="margin-top:20px;">
+        <label>Download History for This Curriculum</label>
+        <div id="downloadHistory"></div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="resetAllDownloads()">Reset All Counts</button>
+      <button class="a-btn a-btn-outline" onclick="closeDownloadModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+<script>
+fnRequireAuth();
+
+let editingId = null;
+let currentVideos = [];
+let currentQuiz = [];
+let currentLessonDoc = { data: '', name: '' };
+let activeDownloadCurriculumId = null;
+
+function renderAudienceCheckboxes(selected) {
+  const row = document.getElementById('audienceRow');
+  row.innerHTML = '';
+  FN_AUDIENCES.forEach(a => {
+    const label = document.createElement('label');
+    label.className = 'a-audience-check';
+    label.innerHTML = `<input type="checkbox" value="${a}" ${selected.includes(a) ? 'checked' : ''}> ${a}`;
+    row.appendChild(label);
+  });
+}
+
+function renderResourceCheckboxes(selected) {
+  const row = document.getElementById('resourcesRow');
+  row.innerHTML = '';
+  FN_CURRICULUM_RESOURCES.forEach(r => {
+    const label = document.createElement('label');
+    label.className = 'a-tag-check';
+    label.innerHTML = `<input type="checkbox" value="${r}" ${selected.includes(r) ? 'checked' : ''}> ${r}`;
+    row.appendChild(label);
+  });
+}
+
+function renderCurricula() {
+  const list = fnGetCurricula();
+  const tbody = document.querySelector('#curriculumTable tbody');
+  tbody.innerHTML = '';
+  if (list.length === 0) {
+    document.getElementById('curriculumTable').style.display = 'none';
+    document.getElementById('curriculumEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('curriculumTable').style.display = 'table';
+  document.getElementById('curriculumEmpty').style.display = 'none';
+
+  list.forEach(c => {
+    const tr = document.createElement('tr');
+    const audienceBadges = (c.audiences || []).map(a => `<span class="a-audience-badge">${a}</span>`).join('');
+    const contents = `${(c.videos || []).length} video${(c.videos||[]).length===1?'':'s'} · ${(c.quiz || []).length} quiz question${(c.quiz||[]).length===1?'':'s'} · ${(c.resources || []).length}/${FN_CURRICULUM_RESOURCES.length} resources`;
+    tr.innerHTML = `
+      <td><div class="a-cell-title">${c.title}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
+      <td>${audienceBadges || '<span class="a-cell-sub">Not set</span>'}</td>
+      <td>${contents}</td>
+      <td>${c.downloadLimit > 0 ? c.downloadLimit + ' / teacher' : 'Unlimited'}</td>
+      <td><span class="a-pill ${c.published ? 'a-pill-success' : 'a-pill-neutral'}">${c.published ? 'Published' : 'Draft'}</span></td>
+      <td>
+        <div class="a-row-actions">
+          <button class="a-icon-btn" title="Downloads" onclick="openDownloadModal('${c.id}')">⬇️</button>
+          <button class="a-icon-btn" title="Edit" onclick="editCurriculum('${c.id}')">✏️</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteCurriculum('${c.id}')">🗑️</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderVideoList() {
+  const el = document.getElementById('videoList');
+  el.innerHTML = '';
+  currentVideos.forEach((v, i) => {
+    const row = document.createElement('div');
+    row.className = 'a-repeat-row';
+    const badge = v.url
+      ? '<span class="a-pill a-pill-success" style="margin-left:8px;">▶ Plays if file is in the project folder</span>'
+      : '<span class="a-pill a-pill-neutral" style="margin-left:8px;">Not playable</span>';
+    row.innerHTML = `<div class="info"><div class="name">🎬 ${v.name}${badge}</div><div class="meta">${v.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideo(${i})">✕</button>`;
+    el.appendChild(row);
+  });
+}
+
+function addVideoFromUrl() {
+  const input = document.getElementById('videoUrlInput');
+  const url = input.value.trim();
+  if (!url) { fnToast('Paste a video link or filename first'); return; }
+  currentVideos.push({ name: url, sizeLabel: 'Linked video', url });
+  input.value = '';
+  renderVideoList();
+}
+
+function addVideoFromInput() {
+  const input = document.getElementById('videoFile');
+  const file = input.files[0];
+  if (!file) { fnToast('Choose a video file first'); return; }
+  const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+  // We can't pull the actual file bytes into the site (no real backend), so this
+  // references the file by its filename — same approach used for cover images and
+  // trailers elsewhere on the site. It'll only play if a file with this exact name
+  // is also present in the FixerNation project folder.
+  currentVideos.push({ name: file.name, sizeLabel: sizeMb + ' MB · referenced by filename', url: file.name });
+  input.value = '';
+  renderVideoList();
+}
+function removeVideo(i) {
+  currentVideos.splice(i, 1);
+  renderVideoList();
+}
+
+const QUIZ_MIN_OPTIONS = 2;
+const QUIZ_MAX_OPTIONS = 6;
+
+function renderQuizList() {
+  const el = document.getElementById('quizList');
+  el.innerHTML = '';
+  currentQuiz.forEach((q, qi) => {
+    const block = document.createElement('div');
+    block.className = 'a-quiz-block';
+    let optionsHtml = '';
+    for (let oi = 0; oi < q.options.length; oi++) {
+      optionsHtml += `
+        <div class="a-quiz-option-row">
+          <input type="radio" name="correct_${qi}" ${q.correctIndex === oi ? 'checked' : ''} onchange="setCorrectOption(${qi}, ${oi})">
+          <input type="text" placeholder="Option ${oi + 1}" value="${(q.options[oi] || '').replace(/"/g,'&quot;')}" oninput="updateOptionText(${qi}, ${oi}, this.value)">
+          ${q.options.length > QUIZ_MIN_OPTIONS ? `<button type="button" class="a-repeat-remove" title="Remove this option" onclick="removeQuizOption(${qi}, ${oi})">✕</button>` : ''}
+        </div>`;
+    }
+    block.innerHTML = `
+      <button type="button" class="a-quiz-remove" onclick="removeQuizQuestion(${qi})">✕</button>
+      <div class="qnum">Question ${qi + 1}</div>
+      <input type="text" placeholder="Question text" value="${(q.question || '').replace(/"/g,'&quot;')}" oninput="updateQuestionText(${qi}, this.value)">
+      <div class="a-quiz-options">${optionsHtml}</div>
+      ${q.options.length < QUIZ_MAX_OPTIONS ? `<button type="button" class="a-dashed-btn" style="margin-top:10px;" onclick="addQuizOption(${qi})">+ Add Option</button>` : ''}
+      <div class="a-note">Select the radio button next to the correct answer. Each question can have between ${QUIZ_MIN_OPTIONS} and ${QUIZ_MAX_OPTIONS} answer options — use "+ Add Option" or the ✕ next to an option to adjust.</div>
+    `;
+    el.appendChild(block);
+  });
+}
+
+function addQuizQuestion() {
+  currentQuiz.push({ question: '', options: ['', '', '', ''], correctIndex: 0 });
+  renderQuizList();
+}
+function removeQuizQuestion(i) {
+  currentQuiz.splice(i, 1);
+  renderQuizList();
+}
+function addQuizOption(qi) {
+  const q = currentQuiz[qi];
+  if (q.options.length >= QUIZ_MAX_OPTIONS) { fnToast('Maximum ' + QUIZ_MAX_OPTIONS + ' options per question'); return; }
+  q.options.push('');
+  renderQuizList();
+}
+function removeQuizOption(qi, oi) {
+  const q = currentQuiz[qi];
+  if (q.options.length <= QUIZ_MIN_OPTIONS) { fnToast('A question needs at least ' + QUIZ_MIN_OPTIONS + ' options'); return; }
+  q.options.splice(oi, 1);
+  // Keep the correct-answer marker pointing at the same logical option after a removal.
+  if (q.correctIndex === oi) {
+    q.correctIndex = 0;
+  } else if (q.correctIndex > oi) {
+    q.correctIndex -= 1;
+  }
+  renderQuizList();
+}
+function updateQuestionText(i, val) { currentQuiz[i].question = val; }
+function updateOptionText(qi, oi, val) { currentQuiz[qi].options[oi] = val; }
+function setCorrectOption(qi, oi) { currentQuiz[qi].correctIndex = oi; }
+
+document.getElementById('lessonDocFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    currentLessonDoc = { data: ev.target.result, name: file.name };
+    document.getElementById('lessonDocName').textContent = '📄 ' + file.name;
+    document.getElementById('lessonDocPreview').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+});
+function removeLessonDoc() {
+  currentLessonDoc = { data: '', name: '' };
+  document.getElementById('lessonDocPreview').style.display = 'none';
+  document.getElementById('lessonDocFile').value = '';
+}
+
+function openCurriculumModal() {
+  editingId = null;
+  currentVideos = [];
+  currentQuiz = [];
+  currentLessonDoc = { data: '', name: '' };
+  document.getElementById('curriculumModalTitle').textContent = 'Build New Curriculum';
+  document.getElementById('curriculumForm').reset();
+  document.getElementById('downloadLimit').value = 3;
+  renderAudienceCheckboxes([]);
+  renderResourceCheckboxes([]);
+  renderVideoList();
+  renderQuizList();
+  removeLessonDoc();
+  setPublishedToggle(true);
+  document.getElementById('curriculumModalOverlay').classList.add('show');
+}
+
+function closeCurriculumModal() {
+  document.getElementById('curriculumModalOverlay').classList.remove('show');
+}
+
+function editCurriculum(id) {
+  const list = fnGetCurricula();
+  const c = list.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  // Backfill `url` for videos saved before that field existed — their `.name` was
+  // always the picked filename, so it's a safe stand-in. This also fixes the
+  // "Not playable" badge for legacy entries once the curriculum is saved again.
+  currentVideos = JSON.parse(JSON.stringify(c.videos || [])).map(v => ({ ...v, url: v.url || v.name }));
+  currentQuiz = JSON.parse(JSON.stringify(c.quiz || []));
+  currentLessonDoc = { data: c.lessonDocument || '', name: c.lessonDocumentName || '' };
+
+  document.getElementById('curriculumModalTitle').textContent = 'Edit Curriculum';
+  document.getElementById('title').value = c.title || '';
+  document.getElementById('series').value = c.series || '';
+  document.getElementById('shortDescription').value = c.shortDescription || '';
+  document.getElementById('overview').value = c.overview || '';
+  document.getElementById('objectives').value = (c.objectives || []).join('\n');
+  document.getElementById('estimatedDuration').value = c.estimatedDuration || '';
+  document.getElementById('downloadLimit').value = c.downloadLimit ?? 3;
+  document.getElementById('materials').value = (c.materials || []).join('\n');
+
+  renderAudienceCheckboxes(c.audiences || []);
+  renderResourceCheckboxes(c.resources || []);
+  renderVideoList();
+  renderQuizList();
+
+  if (currentLessonDoc.name) {
+    document.getElementById('lessonDocName').textContent = '📄 ' + currentLessonDoc.name;
+    document.getElementById('lessonDocPreview').style.display = 'flex';
+  } else {
+    document.getElementById('lessonDocPreview').style.display = 'none';
+  }
+
+  setPublishedToggle(!!c.published);
+  document.getElementById('curriculumModalOverlay').classList.add('show');
+}
+
+function deleteCurriculum(id) {
+  if (!confirm('Delete this curriculum? This cannot be undone.')) return;
+  fnSaveCurricula(fnGetCurricula().filter(c => c.id !== id));
+  fnResetDownloads(id);
+  renderCurricula();
+  fnToast('Curriculum deleted');
+}
+
+function togglePublished() {
+  const t = document.getElementById('publishedToggle');
+  setPublishedToggle(!t.classList.contains('on'));
+}
+function setPublishedToggle(on) {
+  const t = document.getElementById('publishedToggle');
+  const l = document.getElementById('publishedLabel');
+  if (on) { t.classList.add('on'); l.textContent = 'Published (visible to teachers)'; }
+  else { t.classList.remove('on'); l.textContent = 'Draft (hidden from teachers)'; }
+}
+
+function saveCurriculum() {
+  const title = document.getElementById('title').value.trim();
+  const audiences = Array.from(document.querySelectorAll('#audienceRow input:checked')).map(cb => cb.value);
+  if (!title) { fnToast('Title is required'); return; }
+  if (audiences.length === 0) { fnToast('Select at least one intended audience'); return; }
+
+  const list = fnGetCurricula();
+  const data = {
+    title,
+    series: document.getElementById('series').value.trim(),
+    audiences,
+    shortDescription: document.getElementById('shortDescription').value.trim(),
+    overview: document.getElementById('overview').value.trim(),
+    objectives: document.getElementById('objectives').value.split('\n').map(s => s.trim()).filter(Boolean),
+    estimatedDuration: document.getElementById('estimatedDuration').value.trim(),
+    materials: document.getElementById('materials').value.split('\n').map(s => s.trim()).filter(Boolean),
+    resources: Array.from(document.querySelectorAll('#resourcesRow input:checked')).map(cb => cb.value),
+    lessonDocument: currentLessonDoc.data,
+    lessonDocumentName: currentLessonDoc.name,
+    videos: currentVideos,
+    quiz: currentQuiz,
+    downloadLimit: parseInt(document.getElementById('downloadLimit').value, 10) || 0,
+    published: document.getElementById('publishedToggle').classList.contains('on'),
+  };
+
+  if (editingId) {
+    const idx = list.findIndex(c => c.id === editingId);
+    list[idx] = { ...list[idx], ...data };
+    fnToast('Curriculum updated');
+  } else {
+    list.push({ id: fnUid(), createdAt: new Date().toISOString(), ...data });
+    fnToast('Curriculum created');
+  }
+  fnSaveCurricula(list);
+  closeCurriculumModal();
+  renderCurricula();
+}
+
+function openDownloadModal(curriculumId) {
+  activeDownloadCurriculumId = curriculumId;
+  const c = fnGetCurricula().find(x => x.id === curriculumId);
+  document.getElementById('downloadModalTitle').textContent = c ? c.title : '';
+  document.getElementById('simTeacherEmail').value = '';
+  document.getElementById('simResult').innerHTML = '';
+  renderDownloadHistory();
+  document.getElementById('downloadModalOverlay').classList.add('show');
+}
+function closeDownloadModal() {
+  document.getElementById('downloadModalOverlay').classList.remove('show');
+  renderCurricula();
+}
+
+function renderDownloadHistory() {
+  const records = fnGetDownloadsForCurriculum(activeDownloadCurriculumId);
+  const c = fnGetCurricula().find(x => x.id === activeDownloadCurriculumId);
+  const limit = c ? (Number(c.downloadLimit) || 0) : 0;
+  const el = document.getElementById('downloadHistory');
+  if (records.length === 0) {
+    el.innerHTML = '<div class="a-note">No downloads recorded yet for this curriculum.</div>';
+    return;
+  }
+  el.innerHTML = records.map(r => {
+    const pct = limit > 0 ? Math.min(100, (r.count / limit) * 100) : 0;
+    const full = limit > 0 && r.count >= limit;
+    return `
+      <div class="a-download-row">
+        <div style="flex:1;">
+          <div>${r.teacherEmail}</div>
+          <div class="a-limit-bar"><div class="a-limit-bar-fill ${full ? 'full' : ''}" style="width:${pct}%;"></div></div>
+        </div>
+        <div style="text-align:right; margin-left:14px;">
+          <div style="font-weight:700;">${r.count}${limit > 0 ? ' / ' + limit : ''}</div>
+          <button class="a-icon-btn" style="margin-top:4px;" title="Reset this teacher" onclick="resetOneDownload('${r.teacherEmail}')">↺</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function simulateDownload() {
+  const email = document.getElementById('simTeacherEmail').value.trim();
+  if (!email) { fnToast('Enter a teacher email'); return; }
+  const result = fnSimulateDownload(activeDownloadCurriculumId, email);
+  const resultEl = document.getElementById('simResult');
+  if (result.ok) {
+    resultEl.innerHTML = `<div class="a-error show" style="background:var(--a-success-soft); color:var(--a-success);">✓ Download allowed — ${result.count}${result.limit > 0 ? ' of ' + result.limit : ''} used for ${email}.</div>`;
+  } else if (result.reason === 'limit_reached') {
+    resultEl.innerHTML = `<div class="a-error show">✕ Blocked — ${email} has reached the limit of ${result.limit} download${result.limit===1?'':'s'}.</div>`;
+  } else {
+    resultEl.innerHTML = `<div class="a-error show">Something went wrong.</div>`;
+  }
+  renderDownloadHistory();
+}
+
+function resetOneDownload(email) {
+  fnResetDownloads(activeDownloadCurriculumId, email);
+  renderDownloadHistory();
+  fnToast('Reset for ' + email);
+}
+function resetAllDownloads() {
+  if (!confirm('Reset download counts for every teacher on this curriculum?')) return;
+  fnResetDownloads(activeDownloadCurriculumId);
+  renderDownloadHistory();
+  fnToast('All download counts reset');
+}
+
+renderCurricula();
+</script>
+
+</body>
+</html>

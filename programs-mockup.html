@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programs — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 26px; border-radius:999px; font-weight:700; font-size:14.5px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn-primary{background:var(--coral); color:#fff;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
+  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
+  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;}
+  .nav-links{display:flex; align-items:center; gap:24px; font-size:14px; font-weight:600;}
+  .nav-links a{opacity:0.8;}
+  .nav-links a.active, .nav-links a:hover{opacity:1; color:var(--coral-dark);}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+
+  .section{padding:56px 0 90px;}
+  .prog-head h1{font-size:38px; margin:12px 0 24px;}
+  .filter-bar{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:56px;}
+  .chip{padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:700; background:#fff; color:var(--ink-soft); box-shadow:0 6px 16px -10px rgba(22,79,74,0.3); cursor:pointer;}
+  .chip.active{background:var(--teal-dark); color:#fff;}
+
+  .empty-state{text-align:center; padding:70px 20px; background:#fff; border-radius:var(--radius-md); box-shadow:0 14px 30px -22px rgba(22,79,74,0.25);}
+  .empty-icon{width:64px; height:64px; border-radius:50%; background:var(--cream-soft); display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 20px;}
+  .empty-state h3{font-size:20px; margin-bottom:10px;}
+  .empty-state p{color:var(--ink-soft); font-size:14.5px; max-width:400px; margin:0 auto 22px;}
+
+  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:56px 0 28px;}
+  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:44px;}
+  .footer-brand .brand{color:#fff;}
+  .footer-credo{font-family:'Fraunces',serif; font-style:italic; color:#F6D9C3; margin-top:14px; font-size:14.5px; max-width:280px;}
+  footer h4{color:#fff; font-size:12.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; opacity:0.9;}
+  footer li{margin-bottom:9px; font-size:14px;}
+  footer a:hover{color:var(--coral);}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:22px; font-size:12.5px; opacity:0.65; text-align:center;}
+
+  @media (max-width:960px){
+    .nav-links{display:none;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:600px){
+    .footer-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="fixernation-redesign-mockup.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <nav class="nav-links">
+      <a href="fixernation-redesign-mockup.html">Home</a>
+      <a href="about-mockup.html">About</a>
+      <a href="books-mockup.html">Books</a>
+      <a href="blog-mockup.html">FN Blogs</a>
+      <a href="fnnetwork-mockup.html">FN Network</a>
+      <a href="education-portal-mockup.html" class="active">Schools</a>
+      <a href="askthefixer-mockup.html">Ask The Fixer</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="#" style="font-weight:600; font-size:14px;">Log In</a>
+      <a href="join-mockup.html" class="btn btn-primary">Join Fixer Nation</a>
+    </div>
+  </div>
+</header>
+
+<section class="section wrap">
+  <div class="prog-head">
+    <span class="eyebrow">2D Education</span>
+    <h1>Programs</h1>
+  </div>
+  <div class="filter-bar" id="filterBar">
+    <div class="chip active" data-f="all">All programs</div>
+    <div class="chip" data-f="elementary">Elementary School</div>
+    <div class="chip" data-f="middle">Middle School</div>
+    <div class="chip" data-f="high">High School</div>
+    <div class="chip" data-f="higher">Higher Education</div>
+  </div>
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🗂️</div>
+    <h3>No available programs</h3>
+    <p>New programs are added regularly as part of the growing 2D Education library. Check back soon, or explore the Lesson Plan Library in the meantime.</p>
+    <a href="education-portal-mockup.html" class="btn btn-primary">Browse Lesson Plan Library</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand"><div class="brand-mark">FN</div> Fixer Nation</div>
+        <p class="footer-credo">"There are no problems in life... only issues and answers."</p>
+      </div>
+      <div><h4>Explore</h4><ul><li><a href="about-mockup.html">About</a></li><li><a href="books-mockup.html">Books</a></li><li><a href="blog-mockup.html">FN Blogs</a></li></ul></div>
+      <div><h4>Community</h4><ul><li><a href="fnnetwork-mockup.html">FN Network</a></li><li><a href="askthefixer-mockup.html">Ask The Fixer</a></li><li><a href="join-mockup.html">Join Fixer Nation</a></li></ul></div>
+      <div><h4>Schools</h4><ul><li><a href="education-portal-mockup.html">National Education Portal</a></li><li><a href="education-schools-mockup.html">2D Education - Schools</a></li><li><a href="programs-mockup.html">Programs</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</div>
+  </div>
+</footer>
+
+<script>
+document.getElementById('filterBar').addEventListener('click', function(e){
+  if(!e.target.classList.contains('chip')) return;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog Posts — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin-common.css">
+<style>
+  .a-tag-check{position:relative;}
+  .a-reading-time{font-size:12.5px; color:var(--a-text-soft); margin-top:6px;}
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculum</span></a>
+      <a href="admin-blogs.html" class="active"><span class="ic">📝</span><span class="label">Blog Posts</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">Newsletter CRM</span></a>
+      <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="fixernation-redesign-mockup.html"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Blog Posts</h1>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>FN Blogs</h2>
+          <button class="a-btn a-btn-primary" onclick="openPostModal()">+ Write New Post</button>
+        </div>
+        <table class="a-table" id="postsTable">
+          <thead><tr><th></th><th>Title</th><th>Category</th><th>Publish Date</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="a-empty" id="postsEmpty" style="display:none;">
+          <div class="big">📝</div>
+          No blog posts yet — click "Write New Post" to publish your first one.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Blog Post Modal -->
+<div class="a-modal-overlay" id="postModalOverlay">
+  <div class="a-modal">
+    <div class="a-modal-head">
+      <h3 id="postModalTitle">Write New Post</h3>
+      <button class="a-modal-close" onclick="closePostModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <form id="postForm">
+        <input type="hidden" id="postId">
+
+        <div class="a-field">
+          <label>Featured Image</label>
+          <div class="a-image-preview" id="imagePreview" style="aspect-ratio:16/9;">No image selected</div>
+          <div style="display:flex; gap:10px;">
+            <input type="file" id="imageFile" accept="image/*" style="flex:1;">
+          </div>
+          <div style="margin-top:8px;">
+            <input type="text" id="imageUrl" placeholder="...or paste an image URL">
+          </div>
+        </div>
+
+        <div class="a-field">
+          <label>Title *</label>
+          <input type="text" id="title" required>
+        </div>
+
+        <div class="a-field">
+          <label>URL Slug <span style="font-weight:400; text-transform:none;">(auto-generated from title — edit if you want a custom link)</span></label>
+          <input type="text" id="slug" placeholder="turns-into-this-when-you-type-a-title">
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Author</label>
+            <input type="text" id="author" value="Anthony J. Placito">
+          </div>
+          <div class="a-field">
+            <label>Category *</label>
+            <select id="category" required></select>
+          </div>
+        </div>
+
+        <div class="a-field">
+          <label>Excerpt <span style="font-weight:400; text-transform:none;">(short summary shown on listing cards)</span></label>
+          <textarea id="excerpt" style="min-height:60px;"></textarea>
+        </div>
+
+        <div class="a-field">
+          <label>Post Body</label>
+          <textarea id="body" style="min-height:180px;" oninput="updateReadingTime()"></textarea>
+          <div class="a-reading-time" id="readingTime">~0 min read</div>
+        </div>
+
+        <div class="a-field">
+          <label>Video <span style="font-weight:400; text-transform:none;">(optional — makes this a video blog post)</span></label>
+          <input type="text" id="videoUrl" placeholder="YouTube/Vimeo link, or a local file like trailer-kill-the-bully.mp4" oninput="updateVideoPreview()">
+          <div class="fn-video-embed" id="videoPreview" style="display:none; margin-top:10px;"></div>
+          <div class="a-note">Paste a YouTube or Vimeo link for a real embed, or the filename of a video already in the site folder.</div>
+          <div class="a-repeat-list" id="videoFileList" style="margin-top:10px;"></div>
+          <input type="file" id="videoFile" accept="video/*" style="margin-bottom:8px;">
+          <div class="a-note">Uploading a file here only remembers its name and size for this demo browser session — the actual video isn't persisted (same limitation as the curriculum builder's video uploads). Use the URL field above for a real, playable video blog post.</div>
+        </div>
+
+        <div class="a-field">
+          <label>Tags</label>
+          <div class="a-tag-row" id="tagRow"></div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <input type="text" id="newTagInput" placeholder="Add a new tag..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); addNewTag();}">
+            <button type="button" class="a-btn a-btn-outline" onclick="addNewTag()">+ Add Tag</button>
+          </div>
+          <div class="a-note">Click a tag to apply it to this post. New tags you add here stay available for future posts.</div>
+        </div>
+
+        <div class="a-field">
+          <label>Publish Date</label>
+          <input type="date" id="publishDate">
+        </div>
+
+        <div class="a-field">
+          <label>Featured Post</label>
+          <div class="a-toggle-row">
+            <div class="a-toggle" id="featuredToggle" onclick="toggleFeatured()"><div class="knob"></div></div>
+            <span id="featuredLabel" style="font-size:14px; font-weight:600;">Not featured</span>
+          </div>
+          <div class="a-note">The featured post is the large hero shown at the top of the FN Blogs page. Only one post should be featured at a time — turning this on for a new post will turn it off for the others.</div>
+        </div>
+
+        <div class="a-field">
+          <label>Publish Status</label>
+          <div class="a-toggle-row">
+            <div class="a-toggle on" id="publishedToggle" onclick="togglePublished()"><div class="knob"></div></div>
+            <span id="publishedLabel" style="font-size:14px; font-weight:600;">Published (visible on the site)</span>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closePostModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="savePost()">Save Post</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+<script>
+fnRequireAuth();
+
+let currentImageData = '';
+let currentVideoFile = null; // { name, sizeLabel } — demo only, not persisted
+let editingId = null;
+let slugManuallyEdited = false;
+
+function populateCategorySelect(selectEl, selected) {
+  selectEl.innerHTML = FN_BLOG_CATEGORIES.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+}
+
+function renderTagCheckboxes(selectedTags) {
+  const row = document.getElementById('tagRow');
+  const selected = selectedTags || [];
+  row.innerHTML = fnGetBlogTags().map(t => {
+    const checked = selected.includes(t) ? 'checked' : '';
+    return `<label class="a-tag-check"><input type="checkbox" value="${t}" ${checked}> ${t}</label>`;
+  }).join('');
+}
+
+function getCheckedTags() {
+  return Array.from(document.querySelectorAll('#tagRow input:checked')).map(cb => cb.value);
+}
+
+function addNewTag() {
+  const input = document.getElementById('newTagInput');
+  const value = input.value.trim();
+  if (!value) { fnToast('Type a tag name first'); return; }
+  const currentlyChecked = getCheckedTags();
+  const canonical = fnAddBlogTag(value);
+  input.value = '';
+  renderTagCheckboxes([...currentlyChecked, canonical]);
+  fnToast('Tag added');
+}
+
+function renderPosts() {
+  const posts = [...fnGetBlogPosts()].sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
+  const tbody = document.querySelector('#postsTable tbody');
+  tbody.innerHTML = '';
+  if (posts.length === 0) {
+    document.getElementById('postsTable').style.display = 'none';
+    document.getElementById('postsEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('postsTable').style.display = 'table';
+  document.getElementById('postsEmpty').style.display = 'none';
+
+  posts.forEach(p => {
+    const tr = document.createElement('tr');
+    const hasVideo = !!(p.videoUrl || p.videoFileName);
+    tr.innerHTML = `
+      <td><img class="a-row-thumb" style="aspect-ratio:16/10; height:auto;" src="${p.featuredImage || ''}" alt="${p.title}" onerror="this.style.opacity=0.2;"></td>
+      <td><div class="a-cell-title">${p.title} ${hasVideo ? '🎥' : ''}</div><div class="a-cell-sub">/${p.slug || ''}</div></td>
+      <td><span class="a-pill a-pill-neutral">${p.category}</span></td>
+      <td>${p.publishDate ? fnFormatDate(p.publishDate) : '—'}</td>
+      <td>
+        <span class="a-pill ${p.published ? 'a-pill-success' : 'a-pill-neutral'}">${p.published ? 'Published' : 'Draft'}</span>
+        ${p.featured ? '<span class="a-pill a-pill-warning" style="margin-left:6px;">★ Featured</span>' : ''}
+      </td>
+      <td>
+        <div class="a-row-actions">
+          <button class="a-icon-btn" title="Edit" onclick="editPost('${p.id}')">✏️</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deletePost('${p.id}')">🗑️</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openPostModal() {
+  editingId = null;
+  currentImageData = '';
+  currentVideoFile = null;
+  slugManuallyEdited = false;
+  document.getElementById('postModalTitle').textContent = 'Write New Post';
+  document.getElementById('postForm').reset();
+  document.getElementById('author').value = 'Anthony J. Placito';
+  populateCategorySelect(document.getElementById('category'), FN_BLOG_CATEGORIES[0]);
+  document.getElementById('imagePreview').innerHTML = 'No image selected';
+  document.getElementById('publishDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('readingTime').textContent = '~0 min read';
+  document.getElementById('videoPreview').style.display = 'none';
+  document.getElementById('videoPreview').innerHTML = '';
+  renderVideoFileList();
+  renderTagCheckboxes([]);
+  setFeaturedToggle(false);
+  setPublishedToggle(true);
+  document.getElementById('postModalOverlay').classList.add('show');
+}
+
+function closePostModal() {
+  document.getElementById('postModalOverlay').classList.remove('show');
+}
+
+function editPost(id) {
+  const posts = fnGetBlogPosts();
+  const p = posts.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  currentImageData = p.featuredImage || '';
+  currentVideoFile = p.videoFileName ? { name: p.videoFileName, sizeLabel: p.videoFileSize || '' } : null;
+  slugManuallyEdited = true;
+  document.getElementById('postModalTitle').textContent = 'Edit Post';
+  document.getElementById('title').value = p.title || '';
+  document.getElementById('slug').value = p.slug || '';
+  document.getElementById('author').value = p.author || '';
+  populateCategorySelect(document.getElementById('category'), p.category);
+  document.getElementById('excerpt').value = p.excerpt || '';
+  document.getElementById('body').value = p.body || '';
+  renderTagCheckboxes(p.tags || []);
+  document.getElementById('publishDate').value = p.publishDate || new Date().toISOString().slice(0, 10);
+  document.getElementById('imageUrl').value = p.featuredImage || '';
+  document.getElementById('videoUrl').value = p.videoUrl || '';
+  updateReadingTime();
+  updateVideoPreview();
+  renderVideoFileList();
+  setFeaturedToggle(!!p.featured);
+  setPublishedToggle(!!p.published);
+  if (p.featuredImage) {
+    document.getElementById('imagePreview').innerHTML = `<img src="${p.featuredImage}" onerror="this.parentElement.textContent='Preview unavailable'">`;
+  } else {
+    document.getElementById('imagePreview').innerHTML = 'No image selected';
+  }
+  document.getElementById('postModalOverlay').classList.add('show');
+}
+
+function deletePost(id) {
+  if (!confirm('Delete this blog post? This cannot be undone.')) return;
+  const posts = fnGetBlogPosts().filter(p => p.id !== id);
+  fnSaveBlogPosts(posts);
+  renderPosts();
+  fnToast('Post deleted');
+}
+
+function toggleFeatured() {
+  const t = document.getElementById('featuredToggle');
+  setFeaturedToggle(!t.classList.contains('on'));
+}
+function setFeaturedToggle(on) {
+  const t = document.getElementById('featuredToggle');
+  const l = document.getElementById('featuredLabel');
+  if (on) { t.classList.add('on'); l.textContent = 'Featured (shown as the hero post)'; }
+  else { t.classList.remove('on'); l.textContent = 'Not featured'; }
+}
+
+function togglePublished() {
+  const t = document.getElementById('publishedToggle');
+  setPublishedToggle(!t.classList.contains('on'));
+}
+function setPublishedToggle(on) {
+  const t = document.getElementById('publishedToggle');
+  const l = document.getElementById('publishedLabel');
+  if (on) { t.classList.add('on'); l.textContent = 'Published (visible on the site)'; }
+  else { t.classList.remove('on'); l.textContent = 'Draft (hidden from the site)'; }
+}
+
+function updateReadingTime() {
+  document.getElementById('readingTime').textContent = '~' + fnReadingTime(document.getElementById('body').value);
+}
+
+function updateVideoPreview() {
+  const url = document.getElementById('videoUrl').value.trim();
+  const preview = document.getElementById('videoPreview');
+  if (!url) {
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    return;
+  }
+  preview.innerHTML = fnVideoEmbedHtml(url).replace(/^<div class="fn-video-embed">/, '').replace(/<\/div>$/, '');
+  preview.style.display = 'block';
+}
+
+function renderVideoFileList() {
+  const el = document.getElementById('videoFileList');
+  el.innerHTML = '';
+  if (currentVideoFile) {
+    const row = document.createElement('div');
+    row.className = 'a-repeat-row';
+    row.innerHTML = `<div class="info"><div class="name">🎬 ${currentVideoFile.name}</div><div class="meta">${currentVideoFile.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideoFile()">✕</button>`;
+    el.appendChild(row);
+  }
+}
+
+function removeVideoFile() {
+  currentVideoFile = null;
+  document.getElementById('videoFile').value = '';
+  renderVideoFileList();
+}
+
+document.getElementById('videoFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+  currentVideoFile = { name: file.name, sizeLabel: sizeMb + ' MB (demo only, not persisted)' };
+  renderVideoFileList();
+});
+
+document.getElementById('title').addEventListener('input', function(e){
+  if (!slugManuallyEdited) {
+    document.getElementById('slug').value = fnSlugify(e.target.value);
+  }
+});
+document.getElementById('slug').addEventListener('input', function(){
+  slugManuallyEdited = true;
+});
+
+document.getElementById('imageFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    currentImageData = ev.target.result;
+    document.getElementById('imageUrl').value = '';
+    document.getElementById('imagePreview').innerHTML = `<img src="${currentImageData}">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('imageUrl').addEventListener('input', function(e){
+  const val = e.target.value.trim();
+  if (val) {
+    currentImageData = val;
+    document.getElementById('imagePreview').innerHTML = `<img src="${val}" onerror="this.parentElement.textContent='Preview unavailable'">`;
+  }
+});
+
+function savePost() {
+  const title = document.getElementById('title').value.trim();
+  const category = document.getElementById('category').value;
+  if (!title || !category) {
+    fnToast('Title and category are required');
+    return;
+  }
+  let slug = fnSlugify(document.getElementById('slug').value || title);
+  const tags = getCheckedTags();
+  let posts = fnGetBlogPosts();
+
+  // keep slugs unique
+  const slugTaken = (s) => posts.some(p => p.slug === s && p.id !== editingId);
+  if (slugTaken(slug)) {
+    let n = 2;
+    while (slugTaken(slug + '-' + n)) n++;
+    slug = slug + '-' + n;
+  }
+
+  const featured = document.getElementById('featuredToggle').classList.contains('on');
+
+  const postData = {
+    title,
+    slug,
+    author: document.getElementById('author').value.trim() || 'Anthony J. Placito',
+    category,
+    featuredImage: currentImageData,
+    excerpt: document.getElementById('excerpt').value.trim(),
+    body: document.getElementById('body').value.trim(),
+    tags,
+    videoUrl: document.getElementById('videoUrl').value.trim(),
+    videoFileName: currentVideoFile ? currentVideoFile.name : '',
+    videoFileSize: currentVideoFile ? currentVideoFile.sizeLabel : '',
+    publishDate: document.getElementById('publishDate').value || new Date().toISOString().slice(0, 10),
+    featured,
+    published: document.getElementById('publishedToggle').classList.contains('on'),
+  };
+
+  // Only one featured post at a time
+  if (featured) {
+    posts = posts.map(p => ({ ...p, featured: false }));
+  }
+
+  if (editingId) {
+    const idx = posts.findIndex(p => p.id === editingId);
+    posts[idx] = { ...posts[idx], ...postData };
+    fnToast('Post updated');
+  } else {
+    posts.push({ id: fnUid(), createdAt: new Date().toISOString(), ...postData });
+    fnToast('Post published');
+  }
+  fnSaveBlogPosts(posts);
+  closePostModal();
+  renderPosts();
+}
+
+renderPosts();
+</script>
+
+</body>
+</html>

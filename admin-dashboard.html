@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin-common.css">
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html" class="active"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculum</span></a>
+      <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blog Posts</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">Newsletter CRM</span></a>
+      <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="fixernation-redesign-mockup.html"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Dashboard</h1>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="a-stat-grid" style="grid-template-columns:repeat(6,1fr);">
+        <div class="a-stat-card">
+          <div class="label">Total Books</div>
+          <div class="value" id="statTotalBooks">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Published</div>
+          <div class="value" id="statPublished">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Newsletter Contacts</div>
+          <div class="value" id="statContacts">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">New This Week</div>
+          <div class="value" id="statNewWeek">—</div>
+          <div class="delta" id="statNewWeekDelta"></div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Curricula Built</div>
+          <div class="value" id="statCurricula">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Blog Posts</div>
+          <div class="value" id="statBlogPosts">—</div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Recent Newsletter Signups</h2>
+          <a href="admin-newsletter.html" class="a-btn a-btn-outline">View All</a>
+        </div>
+        <table class="a-table" id="recentContactsTable">
+          <thead><tr><th>Name</th><th>Email</th><th>Signed Up</th><th>Source</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="a-empty" id="recentContactsEmpty" style="display:none;">
+          <div class="big">📭</div>
+          No newsletter signups yet.
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Quick Actions</h2>
+        </div>
+        <div style="display:flex; gap:14px; flex-wrap:wrap;">
+          <a href="admin-books.html" class="a-btn a-btn-primary">+ Add a Book</a>
+          <a href="admin-curriculum.html" class="a-btn a-btn-primary">+ Build a Curriculum</a>
+          <a href="admin-blogs.html" class="a-btn a-btn-primary">+ Write a Blog Post</a>
+          <a href="admin-newsletter.html" class="a-btn a-btn-outline">Manage Newsletter Contacts</a>
+          <a href="admin-campaigns.html" class="a-btn a-btn-outline">New Email Campaign</a>
+          <a href="fixernation-redesign-mockup.html" class="a-btn a-btn-outline">View Public Site</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+<script>
+fnRequireAuth();
+
+const books = fnGetBooks();
+const contacts = fnGetContacts();
+
+document.getElementById('statTotalBooks').textContent = books.length;
+document.getElementById('statPublished').textContent = books.filter(b => b.published).length;
+document.getElementById('statContacts').textContent = contacts.length;
+
+const weekAgo = Date.now() - 7 * 86400000;
+const newThisWeek = contacts.filter(c => new Date(c.signupDate).getTime() >= weekAgo).length;
+document.getElementById('statNewWeek').textContent = newThisWeek;
+document.getElementById('statNewWeekDelta').textContent = newThisWeek > 0 ? '+' + newThisWeek + ' this week' : 'No new signups';
+
+document.getElementById('statCurricula').textContent = fnGetCurricula().length;
+document.getElementById('statBlogPosts').textContent = fnGetBlogPosts().length;
+
+const recent = [...contacts].sort((a,b) => new Date(b.signupDate) - new Date(a.signupDate)).slice(0, 5);
+const tbody = document.querySelector('#recentContactsTable tbody');
+if (recent.length === 0) {
+  document.getElementById('recentContactsTable').style.display = 'none';
+  document.getElementById('recentContactsEmpty').style.display = 'block';
+} else {
+  recent.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="a-cell-title">${c.name || '—'}</td><td>${c.email}</td><td>${fnFormatDate(c.signupDate)}</td><td><span class="a-pill a-pill-neutral">${c.source}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+
+</body>
+</html>

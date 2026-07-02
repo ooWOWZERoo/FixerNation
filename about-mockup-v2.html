@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Anthony J. Placito — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1F3A54; --navy-dark:#142838; --amber:#F2A93C; --amber-dark:#D98F1F;
+    --coral:#FF7A59; --cream:#FAF7F1; --panel:#F1ECE2; --ink:#23262B; --ink-soft:#5C6470;
+    --radius:16px; --shadow:0 20px 45px -20px rgba(20,40,56,0.3);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Manrope', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Manrope', sans-serif; color:var(--navy); font-weight:800; letter-spacing:-0.01em;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  ul{list-style:none;}
+  .wrap{max-width:1200px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--navy); background:rgba(31,58,84,0.08); padding:8px 16px; border-radius:8px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 26px; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; border:none; transition:transform .15s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--amber); color:var(--navy-dark); box-shadow:0 12px 24px -10px rgba(242,169,60,0.65);}
+  .btn-outline{background:transparent; color:var(--navy); border:2px solid var(--navy);}
+  .btn-outline:hover{background:var(--navy); color:#fff;}
+  .btn-white{background:#fff; color:var(--navy);}
+  header{position:sticky; top:0; z-index:80; background:#fff; border-bottom:1px solid rgba(20,40,56,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px; gap:20px;}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; color:var(--navy);}
+  .brand-mark{width:38px; height:38px; border-radius:10px; background:var(--navy); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800;}
+  .nav-links{display:flex; align-items:center; gap:6px; font-size:14.5px; font-weight:700; color:var(--navy);}
+  .nav-item{position:relative; padding:12px 14px; cursor:pointer;}
+  .nav-item.active > span{color:var(--amber-dark);}
+  .nav-item .caret{font-size:10px; opacity:0.6;}
+  .mega{position:absolute; top:100%; left:0; background:#fff; border-radius:14px; box-shadow:0 24px 50px -20px rgba(20,40,56,0.35); padding:24px; display:none; min-width:240px; border:1px solid rgba(20,40,56,0.06);}
+  .nav-item:hover .mega{display:block;}
+  .mega a{display:block; padding:9px 10px; border-radius:8px; font-weight:600; color:var(--ink); font-size:14px;}
+  .mega a:hover{background:var(--panel); color:var(--navy);}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+  .nav-cta .login{font-weight:700; font-size:14px; color:var(--navy);}
+
+  .about-hero{padding:64px 0 30px;}
+  .about-hero-grid{display:grid; grid-template-columns:0.9fr 1.1fr; gap:56px; align-items:center;}
+  .about-photo{border-radius:20px; overflow:hidden; box-shadow:var(--shadow); aspect-ratio:3/3.6;}
+  .about-photo img{width:100%; height:100%; object-fit:cover;}
+  .about-hero h1{font-size:42px; margin:16px 0 18px;}
+  .about-hero p.lead{font-size:16.5px; color:var(--ink-soft); margin-bottom:26px;}
+  .stat-strip{display:flex; gap:44px; margin-top:32px; flex-wrap:wrap;}
+  .stat-strip .stat b{display:block; font-size:26px; color:var(--navy);}
+  .stat-strip .stat span{font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:700;}
+
+  .section{padding:70px 0;}
+  .section-head{max-width:640px; margin:0 auto 44px; text-align:center;}
+  .section-head h2{font-size:32px; margin-top:12px;}
+  .section-head p{color:var(--ink-soft); font-size:15.5px; margin-top:12px;}
+
+  .story-block{max-width:760px; margin:0 auto; font-size:16px;}
+  .story-block p{margin-bottom:20px; color:var(--ink);}
+  .pull-quote{background:var(--navy); color:#fff; border-radius:18px; padding:34px 38px; font-size:21px; font-weight:700; text-align:center; margin:44px auto;}
+
+  .checklist-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:22px; background:var(--panel); padding:0;}
+  .mini-books{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
+  .mini-book{border-radius:14px; overflow:hidden; aspect-ratio:3/2; display:flex; align-items:flex-end; padding:18px; color:#fff; font-weight:800; font-size:15px;}
+  .mini-book.has-photo{background:#fff; align-items:center; justify-content:center; padding:10px;}
+  .mini-book.has-photo img{width:100%; height:100%; object-fit:contain;}
+  .bm1{background:linear-gradient(160deg,var(--navy),var(--navy-dark));}
+  .bm2{background:linear-gradient(160deg,var(--coral),#D9502F);}
+  .bm3{background:linear-gradient(160deg,var(--amber),var(--amber-dark));}
+  .bm4{background:linear-gradient(160deg,#3E6E86,#20404F);}
+
+  .cta-band{background:var(--amber); color:var(--navy-dark); padding:64px 0; text-align:center;}
+  .cta-band h2{font-size:28px; margin-bottom:22px; color:var(--navy-dark);}
+
+  footer{background:var(--navy-dark); color:rgba(255,255,255,0.75); padding:56px 0 28px;}
+  .footer-grid{display:grid; grid-template-columns:1.3fr repeat(5,1fr); gap:28px; margin-bottom:44px;}
+  .footer-brand .brand{color:#fff;}
+  .footer-brand p{margin-top:14px; font-size:13.5px; max-width:220px; color:rgba(255,255,255,0.6);}
+  footer h4{color:#fff; font-size:12.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; opacity:0.85;}
+  footer li{margin-bottom:9px; font-size:13.5px;}
+  footer a:hover{color:var(--amber);}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:22px; font-size:12.5px; opacity:0.6; text-align:center;}
+
+  @media (max-width:960px){
+    .nav-links{display:none;}
+    .about-hero-grid{grid-template-columns:1fr;}
+    .about-hero h1{font-size:32px;}
+    .mini-books{grid-template-columns:1fr 1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr 1fr;}
+  }
+  @media (max-width:600px){
+    .mini-books, .footer-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="fixernation-redesign-mockup-v2.html" class="brand"><div class="brand-mark">✓</div> Fixer Nation</a>
+    <nav class="nav-links">
+      <div class="nav-item"><span>Books <span class="caret">▾</span></span>
+        <div class="mega">
+          <a href="books-mockup-v2.html">Kill the Bully</a>
+          <a href="books-mockup-v2.html">Your Past Doesn't Define You</a>
+          <a href="books-mockup-v2.html">Think with 5 Brains</a>
+          <a href="books-mockup-v2.html">How to Lie &amp; Get Away With It</a>
+        </div>
+      </div>
+      <div class="nav-item"><span>Resources <span class="caret">▾</span></span>
+        <div class="mega"><a href="blog-mockup-v2.html">FN Blogs</a><a href="askthefixer-mockup-v2.html">Ask The Fixer</a><a href="education-portal-mockup-v2.html">Education Portal</a></div>
+      </div>
+      <div class="nav-item"><span>Community <span class="caret">▾</span></span>
+        <div class="mega"><a href="fnnetwork-mockup-v2.html">FN Network</a><a href="#">Pro Network</a><a href="#">Success Stories</a></div>
+      </div>
+      <div class="nav-item"><span>Schools <span class="caret">▾</span></span>
+        <div class="mega">
+          <a href="education-portal-mockup-v2.html">National Education Portal</a>
+          <a href="education-schools-mockup-v2.html">2D Education - Schools</a>
+          <a href="programs-mockup-v2.html">Programs</a>
+        </div>
+      </div>
+      <div class="nav-item"><span>Membership <span class="caret">▾</span></span>
+        <div class="mega"><a href="join-mockup-v2.html">Plans &amp; Pricing</a><a href="join-mockup-v2.html">Free with Book</a></div>
+      </div>
+      <div class="nav-item active"><span>About</span></div>
+    </nav>
+    <div class="nav-cta">
+      <a href="#" class="login">Log In</a>
+      <a href="join-mockup-v2.html" class="btn btn-primary">★ Join Fixer Nation</a>
+    </div>
+  </div>
+</header>
+
+<section class="about-hero">
+  <div class="wrap about-hero-grid">
+    <div class="about-photo"><img src="anthony.png" alt="Anthony J. Placito"></div>
+    <div>
+      <span class="eyebrow">Meet the Fixer</span>
+      <h1>Anthony J. Placito</h1>
+      <p class="lead">Helping you build confidence, overcome challenge, and cultivate resilience — through real-life experience, psychological insight, and strategic thinking.</p>
+      <div style="display:flex; gap:14px; flex-wrap:wrap;">
+        <a href="books-mockup-v2.html" class="btn btn-primary">Explore Books</a>
+        <a href="askthefixer-mockup-v2.html" class="btn btn-outline">Ask The Fixer</a>
+      </div>
+      <div class="stat-strip">
+        <div class="stat"><b>4</b><span>Books Published</span></div>
+        <div class="stat"><b>1</b><span>Fixer Nation Credo</span></div>
+        <div class="stat"><b>PHW</b><span>Positivity·Health·Wellness</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap story-block">
+    <p>Anthony J. Placito is dedicated to helping individuals overcome obstacles, build confidence, and make smarter decisions. With a passion for personal growth and resilience, he shares powerful insights through his books: <em>Your Past Doesn't Define You</em>, <em>Kill the Bully</em>, <em>Think with 5 Brains Then Make Up Your Mind</em>, and <em>How to Lie and Get Away with It Every Time</em>.</p>
+    <p>Drawing from real-life experiences, psychological principles, and strategic thinking, Anthony's work provides readers with the tools they need to break free from self-doubt, silence their inner and outer critics, and navigate life's toughest challenges with confidence.</p>
+    <div class="pull-quote">"There are no problems in life... only issues and answers."</div>
+    <p>Through his writing, Anthony challenges readers to rethink their past, redefine their future, and approach decision-making with clarity and purpose.</p>
+  </div>
+</section>
+
+<section class="section" style="background:var(--panel);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">The Books</span>
+      <h2>Four Titles, One Philosophy</h2>
+    </div>
+    <div class="mini-books">
+      <a href="books-mockup-v2.html" class="mini-book has-photo"><img src="cover-kill-the-bully.png" alt="Kill the Bully book cover"></a>
+      <a href="books-mockup-v2.html" class="mini-book has-photo"><img src="cover-your-past.png" alt="Your Past Doesn't Define You book cover"></a>
+      <a href="books-mockup-v2.html" class="mini-book has-photo"><img src="cover-5-brains.png" alt="Think with 5 Brains, Then Make Up Your Mind book cover"></a>
+      <a href="books-mockup-v2.html" class="mini-book has-photo"><img src="cover-how-to-lie.png" alt="How to Lie and Get Away With It Every Time book cover"></a>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="wrap">
+    <span class="eyebrow" style="background:rgba(20,40,56,0.1); color:var(--navy-dark);">Join Fixer Nation</span>
+    <h2 style="margin-top:16px;">Ready to turn your issues into answers?</h2>
+    <a href="join-mockup-v2.html" class="btn btn-white">Join Fixer Nation</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand"><div class="brand-mark">✓</div> Fixer Nation</div>
+        <p>"There are no problems in life... only issues and answers." — Fixer Nation Credo</p>
+      </div>
+      <div><h4>Books</h4><ul><li><a href="books-mockup-v2.html">Short Story Series</a></li><li><a href="#">Reviews</a></li></ul></div>
+      <div><h4>Resources</h4><ul><li><a href="blog-mockup-v2.html">FN Blogs</a></li><li><a href="askthefixer-mockup-v2.html">Ask The Fixer</a></li></ul></div>
+      <div><h4>Community</h4><ul><li><a href="fnnetwork-mockup-v2.html">FN Network</a></li><li><a href="#">Pro Network</a></li></ul></div>
+      <div><h4>Membership</h4><ul><li><a href="join-mockup-v2.html">Plans</a></li><li><a href="join-mockup-v2.html">Free w/ Book</a></li></ul></div>
+      <div><h4>Support</h4><ul><li><a href="#">Contact</a></li><li><a href="#">Log In</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</div>
+  </div>
+</footer>
+
+</body>
+</html>

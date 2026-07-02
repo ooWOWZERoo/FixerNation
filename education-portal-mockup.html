@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>National Education Portal — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  ul{list-style:none;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 22px; border-radius:999px; font-weight:700; font-size:14px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  .btn-sm{padding:8px 16px; font-size:12.5px;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
+  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
+  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;}
+  .nav-links{display:flex; align-items:center; gap:24px; font-size:14px; font-weight:600;}
+  .nav-links a{opacity:0.8;}
+  .nav-links a.active, .nav-links a:hover{opacity:1; color:var(--coral-dark);}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+
+  .banner{position:relative; margin-top:0;}
+  .banner img{width:100%; height:340px; object-fit:cover; filter:brightness(0.55);}
+  .banner-copy{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:0 32px;}
+  .banner-copy .wrap{color:#fff;}
+  .banner-copy h1{color:#fff; font-size:36px; margin-bottom:8px;}
+  .banner-copy p{color:rgba(255,255,255,0.85); font-size:15px;}
+
+  .section{padding:64px 0;}
+  .section-head{max-width:700px; margin:0 auto 40px; text-align:center;}
+  .section-head h2{font-size:30px; margin-top:12px;}
+  .section-head p{color:var(--ink-soft); font-size:15px; margin-top:10px;}
+
+  .spotlight{display:grid; grid-template-columns:1fr 1.3fr; gap:40px; background:#fff; border-radius:var(--radius-md); padding:36px; box-shadow:var(--shadow); align-items:start;}
+  .spotlight-thumbs{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .spotlight-thumbs img{border-radius:10px; box-shadow:0 8px 18px -10px rgba(0,0,0,0.3);}
+  .spotlight h3{font-size:22px; margin:10px 0 6px;}
+  .spotlight .meta{font-size:12.5px; color:var(--coral-dark); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;}
+  .spotlight p{font-size:14.5px; color:var(--ink); margin-bottom:16px;}
+  .res-row{display:flex; gap:10px; flex-wrap:wrap;}
+
+  .story-block{max-width:820px; margin:0 auto; font-size:15.5px;}
+  .story-block p{margin-bottom:18px; color:var(--ink);}
+  .story-block h3{font-size:22px; margin:30px 0 12px;}
+
+  .checklist-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px;}
+  .check-card{background:#fff; border-radius:14px; padding:20px; box-shadow:0 12px 26px -20px rgba(22,79,74,0.25); font-size:13.5px; font-weight:600;}
+  .check-card::before{content:"✓"; color:var(--coral); font-weight:800; margin-right:8px;}
+
+  .audience-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:22px;}
+  .audience-card{background:#fff; border-radius:16px; padding:26px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.25);}
+  .audience-card h4{font-size:16px; margin-bottom:10px;}
+  .audience-card p{font-size:13px; color:var(--ink-soft);}
+
+  .pull-quote{background:var(--teal); color:#fff; border-radius:18px; padding:34px 38px; font-size:20px; font-weight:600; text-align:center; margin:20px auto 0; max-width:800px;}
+
+  .filter-bar{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:32px; justify-content:center;}
+  .chip{padding:9px 16px; border-radius:999px; font-size:12.5px; font-weight:700; background:#fff; color:var(--ink-soft); box-shadow:0 6px 14px -10px rgba(22,79,74,0.3); cursor:pointer;}
+  .chip.active{background:var(--teal-dark); color:#fff;}
+  .lesson-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .lesson-card{background:#fff; border-radius:16px; padding:22px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.25);}
+  .lesson-card.linked{cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;}
+  .lesson-card.linked:hover{transform:translateY(-4px); box-shadow:0 18px 34px -20px rgba(22,79,74,0.4);}
+  .lesson-card.linked .lesson-num::after{content:" · View lesson →"; color:var(--coral-dark); font-weight:800; text-transform:none; letter-spacing:normal;}
+  .lesson-num{font-size:11.5px; font-weight:800; color:var(--coral-dark); text-transform:uppercase; letter-spacing:0.05em;}
+  .lesson-card h4{font-size:16px; margin:8px 0 6px;}
+  .lesson-series{font-size:12px; color:var(--ink-soft); margin-bottom:10px; font-weight:600;}
+  .lesson-card p{font-size:13px; color:var(--ink);}
+  .library-note{text-align:center; color:var(--ink-soft); font-size:13.5px; margin-top:28px;}
+
+  .cta-links{display:flex; justify-content:center; gap:16px; margin-top:40px; flex-wrap:wrap;}
+
+  .pricing-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  .plan-card{background:#fff; border-radius:14px; padding:22px; box-shadow:0 12px 26px -20px rgba(22,79,74,0.25); position:relative;}
+  .plan-card h4{font-size:14.5px; margin-bottom:6px; line-height:1.3;}
+  .plan-price{font-family:'Fraunces',serif; font-size:24px; color:var(--teal-dark); margin:8px 0 14px;}
+  .plan-card .btn{width:100%;}
+  .new-tag{position:absolute; top:14px; right:14px; background:var(--gold); color:var(--teal-dark); font-size:10px; font-weight:800; text-transform:uppercase; padding:4px 8px; border-radius:6px;}
+  .cart-toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--teal-dark); color:#fff; padding:14px 24px; border-radius:999px; font-weight:700; font-size:14px; transition:transform .3s ease; z-index:200;}
+  .cart-toast.show{transform:translateX(-50%) translateY(0);}
+
+  .form-card{background:#fff; border-radius:var(--radius-md); padding:34px; box-shadow:var(--shadow); max-width:760px; margin:0 auto;}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  .form-field label{display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;}
+  .form-field input, .form-field textarea{width:100%; border:2px solid rgba(22,79,74,0.15); border-radius:10px; padding:12px 14px; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; background:var(--cream);}
+  .form-field textarea{min-height:110px; resize:vertical;}
+  .form-field input:focus, .form-field textarea:focus{outline:none; border-color:var(--coral);}
+  .success-msg{display:none; background:#E4F3EE; color:var(--teal-dark); border-radius:12px; padding:14px 18px; margin-top:16px; font-weight:600; font-size:14px;}
+  .privacy-link{font-size:12px; color:var(--ink-soft); text-decoration:underline; display:block; text-align:center; margin-top:18px;}
+
+  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:56px 0 28px;}
+  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:44px;}
+  .footer-brand .brand{color:#fff;}
+  .footer-credo{font-family:'Fraunces',serif; font-style:italic; color:#F6D9C3; margin-top:14px; font-size:14.5px; max-width:280px;}
+  footer h4{color:#fff; font-size:12.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; opacity:0.9;}
+  footer li{margin-bottom:9px; font-size:14px;}
+  footer a:hover{color:var(--coral);}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:22px; font-size:12.5px; opacity:0.65; text-align:center;}
+
+  @media (max-width:960px){
+    .nav-links{display:none;}
+    .spotlight{grid-template-columns:1fr;}
+    .checklist-grid, .audience-grid, .lesson-grid, .pricing-grid{grid-template-columns:1fr 1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+    .form-row{grid-template-columns:1fr;}
+  }
+  @media (max-width:600px){
+    .checklist-grid, .audience-grid, .lesson-grid, .pricing-grid, .footer-grid{grid-template-columns:1fr;}
+  }
+
+  .resource-modal-overlay{position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:300; padding:24px;}
+  .resource-modal-overlay.show{display:flex;}
+  .resource-modal{background:#fff; border-radius:22px; max-width:640px; width:100%; max-height:86vh; overflow-y:auto; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4);}
+  .resource-modal-head{display:flex; align-items:center; justify-content:space-between; padding:22px 28px; border-bottom:1px solid rgba(22,79,74,0.1); position:sticky; top:0; background:#fff;}
+  .resource-modal-head h3{margin:0; font-size:19px;}
+  .resource-modal-close{width:32px; height:32px; border-radius:50%; border:none; background:var(--cream-soft); cursor:pointer; font-size:16px;}
+  .resource-modal-body{padding:26px 28px 32px;}
+  .rq-block{margin-bottom:22px; padding-bottom:20px; border-bottom:1px solid rgba(22,79,74,0.08);}
+  .rq-block:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
+  .rq-num{font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--coral-dark); margin-bottom:8px;}
+  .rq-question{font-weight:700; margin-bottom:10px; font-size:15px;}
+  .rq-option{padding:9px 12px; border-radius:8px; font-size:13.5px; margin-bottom:6px; background:var(--cream-soft);}
+  .rq-option.correct{background:#E4F3EE; color:var(--teal-dark); font-weight:700;}
+
+  .fn-video-embed{position:relative; width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#000;}
+  .fn-video-embed iframe, .fn-video-embed video{width:100%; height:100%; border:none; display:block;}
+  .video-not-available{font-size:12.5px; color:var(--ink-soft); background:var(--cream-soft); border-radius:10px; padding:12px 14px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="fixernation-redesign-mockup.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <nav class="nav-links">
+      <a href="fixernation-redesign-mockup.html">Home</a>
+      <a href="about-mockup.html">About</a>
+      <a href="books-mockup.html">Books</a>
+      <a href="blog-mockup.html">FN Blogs</a>
+      <a href="fnnetwork-mockup.html">FN Network</a>
+      <a href="education-portal-mockup.html" class="active">Schools</a>
+      <a href="askthefixer-mockup.html">Ask The Fixer</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="#" style="font-weight:600; font-size:14px;">Log In</a>
+      <a href="join-mockup.html" class="btn btn-primary">Join Fixer Nation</a>
+    </div>
+  </div>
+</header>
+
+<div class="banner">
+  <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1400&q=80" alt="Classroom presentation banner">
+  <div class="banner-copy">
+    <div class="wrap">
+      <span class="eyebrow" style="background:rgba(255,255,255,0.2); color:#fff;">Elementary · Middle · High School</span>
+      <h1 style="margin-top:12px;">SEL Morning Boost In The Classroom</h1>
+      <p>A growing library of Social Emotional Learning lesson plans for the whole educational community.</p>
+    </div>
+  </div>
+</div>
+
+<section class="section">
+  <div class="wrap">
+    <div class="spotlight">
+      <div>
+        <span class="eyebrow">Featured Lesson</span>
+        <h3>Take Responsibility for Your Growth</h3>
+        <div class="meta">Lesson Plan 5-21 · #44 · Series: Responsibility &amp; Ownership</div>
+        <p>Students will understand that support from teachers, family, and friends matters, but no one can grow for them. They will learn that personal growth happens when they choose effort, practice, better responses, and steady learning, even when it feels uncomfortable.</p>
+        <div class="res-row" id="spotlightResources"></div>
+        <div id="spotlightVideo" style="margin-top:18px;"></div>
+        <div id="spotlightDetailLink" style="margin-top:18px;"></div>
+      </div>
+      <div class="spotlight-thumbs">
+        <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=80" alt="Lesson resource thumbnail">
+        <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=80" alt="Lesson resource thumbnail">
+        <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80" alt="Lesson resource thumbnail">
+        <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=400&q=80" alt="Lesson resource thumbnail">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--cream-soft); padding-top:10px;">
+  <div class="wrap story-block">
+    <h3>About the Fixer Nation Morning Boost Lesson Plan Library</h3>
+    <p>The Fixer Nation Morning Boost Lesson Plan Library is a growing collection of Social Emotional Learning (SEL), character development, life skills, wellness, and personal growth lessons designed to help students become stronger thinkers, better decision-makers, healthier individuals, and more responsible members of their schools, families, and communities.</p>
+    <p>Each lesson plan is intentionally created to support the developmental needs of students while also providing valuable resources for teachers, counselors, administrators, parents, guardians, and educational organizations seeking meaningful and practical SEL content.</p>
+    <h3>A Growing Library of Fresh Content</h3>
+    <p>Unlike traditional SEL programs that often provide a limited number of lessons, new lesson plans are released every weekday, Monday through Friday — ensuring there is always fresh, relevant, and engaging content available to support students on their developmental journey.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">What's Included</span>
+      <h2>What's in every lesson plan?</h2>
+    </div>
+    <div class="checklist-grid">
+      <div class="check-card">Classroom Poster</div>
+      <div class="check-card">Lesson Theme &amp; Series</div>
+      <div class="check-card">Objective of the Lesson</div>
+      <div class="check-card">Teacher Notes</div>
+      <div class="check-card">2D Education Alignment</div>
+      <div class="check-card">Student Reflection Activities</div>
+      <div class="check-card">Student Quiz</div>
+      <div class="check-card">Teacher Quiz Copy w/ Answer Key</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Who It's For</span>
+      <h2>Designed to support the whole educational community</h2>
+    </div>
+    <div class="audience-grid">
+      <div class="audience-card"><h4>Students</h4><p>Practical tools that build self-awareness, decision-making, confidence, and healthy daily habits.</p></div>
+      <div class="audience-card"><h4>Teachers</h4><p>Ready-to-use lesson materials, discussions, quizzes, and posters that save preparation time.</p></div>
+      <div class="audience-card"><h4>Parents &amp; Guardians</h4><p>Concepts that can be reinforced at home for stronger school-to-home connections.</p></div>
+      <div class="audience-card"><h4>Schools &amp; Districts</h4><p>A scalable SEL resource supporting school culture, engagement, and long-term student success.</p></div>
+    </div>
+    <div class="pull-quote">"At Fixer Nation, we believe there are no problems in life — only issues and answers."</div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Lesson Plan Library</span>
+      <h2>Browse the growing library</h2>
+      <p>New lessons are added every weekday. A representative sample is shown below.</p>
+    </div>
+    <div class="filter-bar" id="filterBar">
+      <div class="chip active" data-series="all">All Series</div>
+      <div class="chip" data-series="Mental Strength">Mental Strength</div>
+      <div class="chip" data-series="Clarity & Focus">Clarity &amp; Focus</div>
+      <div class="chip" data-series="Purpose & Direction">Purpose &amp; Direction</div>
+      <div class="chip" data-series="Confidence & Courage">Confidence &amp; Courage</div>
+      <div class="chip" data-series="Healthy Boundaries">Healthy Boundaries</div>
+      <div class="chip" data-series="Responsibility & Ownership">Responsibility &amp; Ownership</div>
+      <div class="chip" data-series="Respect & Character">Respect &amp; Character</div>
+      <div class="chip" data-series="Problem Solving & Wise Choices">Problem Solving</div>
+      <div class="chip" data-series="Teamwork & Community">Teamwork</div>
+    </div>
+    <div class="lesson-grid" id="lessonGrid">
+      <div class="lesson-card" data-series="Mental Strength"><div class="lesson-num">Lesson 4-1 · #1</div><h4>Awareness Builds Strength</h4><div class="lesson-series">Mental Strength</div><p>Students learn that awareness helps them notice thoughts and choices so they can make better decisions.</p></div>
+      <div class="lesson-card" data-series="Clarity & Focus"><div class="lesson-num">Lesson 4-5 · #5</div><h4>Focus Creates Results</h4><div class="lesson-series">Clarity &amp; Focus</div><p>Students learn how awareness, focus, and removing distractions improve daily habits.</p></div>
+      <div class="lesson-card" data-series="Purpose & Direction"><div class="lesson-num">Lesson 4-24 · #24</div><h4>Know What Matters</h4><div class="lesson-series">Purpose &amp; Direction</div><p>Students learn how identifying what matters most helps them make wiser choices.</p></div>
+      <div class="lesson-card" data-series="Confidence & Courage"><div class="lesson-num">Lesson 5-1 · #30</div><h4>Trust Your Growth</h4><div class="lesson-series">Confidence &amp; Courage</div><p>Students learn to recognize progress, avoid comparison, and build confidence.</p></div>
+      <div class="lesson-card" data-series="Healthy Boundaries"><div class="lesson-num">Lesson 5-8 · #35</div><h4>Know Your Limits</h4><div class="lesson-series">Healthy Boundaries</div><p>Students learn that paying attention to stress and overload leads to healthier decisions.</p></div>
+      <div class="lesson-card" id="featuredLessonCard" data-series="Responsibility & Ownership"><div class="lesson-num">Lesson 5-21 · #44</div><h4>Take Responsibility for Your Growth</h4><div class="lesson-series">Responsibility &amp; Ownership</div><p>Students learn that personal growth happens when they choose effort and steady learning.</p></div>
+      <div class="lesson-card" data-series="Respect & Character"><div class="lesson-num">Lesson 6-1 · #51</div><h4>Respect Starts With How You Treat People</h4><div class="lesson-series">Respect &amp; Character</div><p>Students practice respectful words, careful listening, and kind actions.</p></div>
+      <div class="lesson-card" data-series="Problem Solving & Wise Choices"><div class="lesson-num">Lesson 6-15 · #61</div><h4>Name the Real Issue</h4><div class="lesson-series">Problem Solving &amp; Wise Choices</div><p>Students learn to stop guessing or blaming, and choose a wiser next step.</p></div>
+      <div class="lesson-card" data-series="Teamwork & Community"><div class="lesson-num">Lesson 6-22 · #66</div><h4>Show Up for Others</h4><div class="lesson-series">Teamwork &amp; Community</div><p>Students learn that showing up for others makes the group stronger.</p></div>
+    </div>
+    <p class="library-note">Showing 9 of 72+ lessons in the growing library — new lessons added every weekday, Monday through Friday.</p>
+    <div class="cta-links">
+      <a href="https://www.ed.gov/teaching-and-administration/supporting-students/seac/supporting-student-attendance-and-engagement" class="btn btn-outline">Education Funding Options</a>
+      <a href="#quoteForm" class="btn btn-primary">Request a Formal Quotation</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">2D Education for Schools</span>
+      <h2>Plans for every size classroom, school, or district</h2>
+      <p>For single educators or teachers registering through a school-purchased plan, use <a href="education-schools-mockup.html" style="text-decoration:underline;">Registration</a> instead.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="plan-card"><span class="new-tag">New</span><h4>Small Team Plan (Up to 5 Educators)</h4><div class="plan-price">$699</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Department / Grade Plan (Up to 15 Educators)</h4><div class="plan-price">$1,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Small School Building Plan (Up to 35 Educators)</h4><div class="plan-price">$2,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Standard School Building Plan (Up to 60 Educators)</h4><div class="plan-price">$3,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Large School Building Plan (Up to 100 Educators)</h4><div class="plan-price">$4,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Small District Plan (Up to 150 Educators)</h4><div class="plan-price">$7,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Mid Size District Plan (Up to 400 Educators)</h4><div class="plan-price">$14,999</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Large District Plan (Up to 1000 Educators)</h4><div class="plan-price">$29,999</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+      <div class="plan-card"><span class="new-tag">New</span><h4>Enterprise District Plan (Custom Quote)</h4><div class="plan-price">$39,999</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
+    </div>
+    <div class="cta-links">
+      <a href="https://www.ed.gov/teaching-and-administration/supporting-students/seac/supporting-student-attendance-and-engagement" class="btn btn-outline">Education Funding Options</a>
+      <a href="#quoteForm" class="btn btn-primary">Request a Formal Quotation</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="quoteForm">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Get a Quote</span>
+      <h2>Request a Formal Quotation</h2>
+      <p>Please include the number of licenses you're requesting — determined by how many teachers will be using the Fixer Nation Morning Boost materials.</p>
+    </div>
+    <div class="form-card">
+      <form id="quoteFormEl">
+        <div class="form-row">
+          <div class="form-field"><label>First Name</label><input type="text"></div>
+          <div class="form-field"><label>Last Name</label><input type="text"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field"><label>Email</label><input type="email" required></div>
+          <div class="form-field"><label>School</label><input type="text"></div>
+        </div>
+        <div class="form-row" style="grid-template-columns:1fr;">
+          <div class="form-field"><label>Phone</label><input type="tel"></div>
+        </div>
+        <div class="form-field" style="margin-bottom:16px;"><label>Message</label><textarea placeholder="Number of licenses / teachers..."></textarea></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Request Quotation</button>
+        <a href="#" class="privacy-link">Do Not Sell My Personal Information</a>
+        <div class="success-msg" id="quoteSuccess">Thank you for your interest — we'll follow up shortly.</div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand"><div class="brand-mark">FN</div> Fixer Nation</div>
+        <p class="footer-credo">"There are no problems in life... only issues and answers."</p>
+      </div>
+      <div><h4>Explore</h4><ul><li><a href="about-mockup.html">About</a></li><li><a href="books-mockup.html">Books</a></li><li><a href="blog-mockup.html">FN Blogs</a></li></ul></div>
+      <div><h4>Community</h4><ul><li><a href="fnnetwork-mockup.html">FN Network</a></li><li><a href="askthefixer-mockup.html">Ask The Fixer</a></li><li><a href="join-mockup.html">Join Fixer Nation</a></li></ul></div>
+      <div><h4>Schools</h4><ul><li><a href="education-portal-mockup.html">National Education Portal</a></li><li><a href="education-schools-mockup.html">2D Education - Schools</a></li><li><a href="programs-mockup.html">Programs</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</div>
+  </div>
+</footer>
+
+<div class="cart-toast" id="cartToast">Added to cart</div>
+
+<!-- Quiz + Answer Key Modal -->
+<div class="resource-modal-overlay" id="quizModalOverlay">
+  <div class="resource-modal">
+    <div class="resource-modal-head">
+      <h3 id="quizModalTitle">Quiz + Answer Key</h3>
+      <button class="resource-modal-close" onclick="closeQuizModal()">✕</button>
+    </div>
+    <div class="resource-modal-body" id="quizModalBody"></div>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+<script>
+document.getElementById('filterBar').addEventListener('click', function(e){
+  if(!e.target.classList.contains('chip')) return;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+  var series = e.target.dataset.series;
+  document.querySelectorAll('.lesson-card').forEach(card => {
+    card.style.display = (series === 'all' || card.dataset.series === series) ? 'block' : 'none';
+  });
+});
+
+function addToCart(btn){
+  var toast = document.getElementById('cartToast');
+  toast.textContent = 'Added "' + btn.parentElement.querySelector('h4').textContent + '" to cart';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+document.getElementById('quoteFormEl').addEventListener('submit', function(e){
+  e.preventDefault();
+  document.getElementById('quoteSuccess').style.display = 'block';
+  this.reset();
+});
+
+function showInfoToast(msg) {
+  var toast = document.getElementById('cartToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(window._infoToastTimer);
+  window._infoToastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
+}
+
+function getFeaturedCurriculum() {
+  const curricula = fnGetCurricula();
+  // This spotlight (and the matching card in the library grid below) represents the
+  // "Take Responsibility for Your Growth" lesson — match it by title so everything on
+  // this page reflects whatever the admin has actually configured for it.
+  return curricula.find(c => c.published && c.title && c.title.includes('Take Responsibility for Your Growth'))
+    || curricula.find(c => c.published);
+}
+
+function renderSpotlightResources() {
+  const match = getFeaturedCurriculum();
+  const row = document.getElementById('spotlightResources');
+  if (!match || !(match.resources || []).length) {
+    row.innerHTML = '<span style="font-size:13px; color:var(--ink-soft);">No resources have been marked as included for this lesson yet.</span>';
+    return;
+  }
+  row.innerHTML = match.resources.map(r =>
+    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource('${match.id}', '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
+  ).join('');
+}
+
+function openResource(curriculumId, resourceName) {
+  const c = fnGetCurricula().find(x => x.id === curriculumId);
+  if (!c) return;
+  if (resourceName === 'Quiz + Answer Key') {
+    openQuizModal(c);
+    return;
+  }
+  if (c.lessonDocument) {
+    window.open(c.lessonDocument, '_blank');
+  } else {
+    showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Lesson Plan Document field in the Curriculum Builder.');
+  }
+}
+
+function openQuizModal(c) {
+  document.getElementById('quizModalTitle').textContent = 'Quiz + Answer Key — ' + c.title;
+  const body = document.getElementById('quizModalBody');
+  const quiz = c.quiz || [];
+  if (quiz.length === 0) {
+    body.innerHTML = '<p style="color:var(--ink-soft);">No quiz questions have been added for this lesson yet — build one in the admin Curriculum Builder.</p>';
+  } else {
+    body.innerHTML = quiz.map((q, qi) => `
+      <div class="rq-block">
+        <div class="rq-num">Question ${qi + 1}</div>
+        <div class="rq-question">${q.question || '(no question text yet)'}</div>
+        ${(q.options || []).map((opt, oi) => `<div class="rq-option ${oi === q.correctIndex ? 'correct' : ''}">${oi === q.correctIndex ? '✓ ' : ''}${opt || '(empty option)'}</div>`).join('')}
+      </div>
+    `).join('');
+  }
+  document.getElementById('quizModalOverlay').classList.add('show');
+}
+function closeQuizModal() {
+  document.getElementById('quizModalOverlay').classList.remove('show');
+}
+
+function renderSpotlightVideo() {
+  const match = getFeaturedCurriculum();
+  const slot = document.getElementById('spotlightVideo');
+  const videos = (match && match.videos) || [];
+  const first = videos[0];
+  // Older saved videos (added before the admin started recording a `url`) only have
+  // a `.name` — that name IS the filename the admin picked, so try it directly rather
+  // than giving up. fnVideoEmbedHtml's built-in error handler covers the case where
+  // the file genuinely isn't in the project folder.
+  const ref = first && (first.url || first.name);
+  slot.innerHTML = ref ? fnVideoEmbedHtml(ref) : '';
+}
+
+function wireFeaturedLessonLinks() {
+  const match = getFeaturedCurriculum();
+  const ctaSlot = document.getElementById('spotlightDetailLink');
+  const card = document.getElementById('featuredLessonCard');
+  if (!match) {
+    ctaSlot.innerHTML = '';
+    return;
+  }
+  const url = 'lesson-detail.html?id=' + encodeURIComponent(match.id);
+  ctaSlot.innerHTML = `<a href="${url}" class="btn btn-primary btn-sm">View Full Lesson Plan →</a>`;
+  if (card) {
+    card.classList.add('linked');
+    card.addEventListener('click', () => { window.location.href = url; });
+  }
+}
+
+renderSpotlightResources();
+renderSpotlightVideo();
+wireFeaturedLessonLinks();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Campaigns — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin-common.css">
+<style>
+  .a-demo-banner{background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:12px; padding:14px 18px; font-size:13px; font-weight:600; margin-bottom:22px; display:flex; align-items:center; gap:10px;}
+  .a-audience-preview{background:var(--a-bg); border:1px solid var(--a-border); border-radius:10px; padding:12px 14px; font-size:13.5px; margin-top:6px;}
+  .a-audience-preview b{color:var(--a-accent);}
+  .a-format-btn{padding:8px 16px; font-size:13px;}
+  .a-format-btn.active{background:var(--a-accent); color:#fff; border-color:var(--a-accent);}
+  #body.a-body-html{font-family:'SFMono-Regular', Consolas, 'Courier New', monospace; font-size:12.5px;}
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculum</span></a>
+      <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blog Posts</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">Newsletter CRM</span></a>
+      <a href="admin-campaigns.html" class="active"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="fixernation-redesign-mockup.html"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Email Campaigns</h1>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="a-demo-banner">⚠️ Sending is simulated in this demo — no real emails are delivered. Connect a provider like Mailchimp, SendGrid, or Postmark to send for real.</div>
+
+      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="a-stat-card">
+          <div class="label">Campaigns Sent</div>
+          <div class="value" id="statSent">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Drafts</div>
+          <div class="value" id="statDrafts">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Total Recipients Reached</div>
+          <div class="value" id="statRecipients">—</div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Campaigns</h2>
+          <button class="a-btn a-btn-primary" onclick="openCampaignModal()">+ New Campaign</button>
+        </div>
+        <table class="a-table" id="campaignTable">
+          <thead><tr><th>Subject</th><th>Audience</th><th>Status</th><th>Sent</th><th>Recipients</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="a-empty" id="campaignEmpty" style="display:none;">
+          <div class="big">📣</div>
+          No campaigns yet — click "New Campaign" to draft your first mass email.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compose Campaign Modal -->
+<div class="a-modal-overlay" id="campaignModalOverlay">
+  <div class="a-modal" style="max-width:680px;">
+    <div class="a-modal-head">
+      <h3 id="campaignModalTitle">New Campaign</h3>
+      <button class="a-modal-close" onclick="closeCampaignModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <form id="campaignForm">
+        <input type="hidden" id="campaignId">
+
+        <div class="a-field">
+          <label>Subject Line *</label>
+          <input type="text" id="subject" required placeholder="e.g. New Fixer Nation title just dropped 📚">
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>From Name</label>
+            <input type="text" id="fromName" value="Fixer Nation">
+          </div>
+          <div class="a-field">
+            <label>From Email</label>
+            <input type="email" id="fromEmail" value="hello@fixernation.org">
+          </div>
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Audience — Status</label>
+            <select id="audienceStatus">
+              <option value="Subscribed">Subscribed only</option>
+              <option value="All">All contacts (incl. unsubscribed)</option>
+            </select>
+          </div>
+          <div class="a-field">
+            <label>Audience — Source</label>
+            <select id="audienceSource">
+              <option value="All">All sources</option>
+            </select>
+          </div>
+        </div>
+        <div class="a-audience-preview" id="audiencePreview">Recipients: —</div>
+
+        <div class="a-field" style="margin-top:16px;">
+          <label>Email Body</label>
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <button type="button" class="a-btn a-btn-outline a-format-btn active" id="formatTextBtn" onclick="setBodyFormat('text')">Plain Text</button>
+            <button type="button" class="a-btn a-btn-outline a-format-btn" id="formatHtmlBtn" onclick="setBodyFormat('html')">HTML</button>
+          </div>
+
+          <div class="a-tag-row" id="htmlToolbar" style="display:none; margin-bottom:10px;">
+            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('heading')">+ Heading</button>
+            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('paragraph')">+ Paragraph</button>
+            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('button')">+ Button</button>
+            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('image')">+ Image</button>
+            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('divider')">+ Divider</button>
+          </div>
+
+          <textarea id="body" style="min-height:180px;" placeholder="Write your campaign email here..." oninput="updateHtmlPreview()"></textarea>
+          <div class="a-note" id="bodyFormatNote">Plain text email — line breaks are preserved, no HTML formatting.</div>
+
+          <div id="htmlPreviewWrap" style="display:none; margin-top:14px;">
+            <div class="a-note" style="margin-bottom:6px;">Live Preview</div>
+            <iframe id="htmlPreview" style="width:100%; height:260px; border:1px solid var(--a-border); border-radius:10px; background:#fff;" sandbox=""></iframe>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeCampaignModal()">Cancel</button>
+      <button class="a-btn a-btn-outline" onclick="saveCampaign(false)">Save Draft</button>
+      <button class="a-btn a-btn-primary" onclick="saveCampaign(true)">Send Now (Simulated)</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Campaign Modal -->
+<div class="a-modal-overlay" id="viewModalOverlay">
+  <div class="a-modal" style="max-width:600px;">
+    <div class="a-modal-head">
+      <h3 id="viewSubject"></h3>
+      <button class="a-modal-close" onclick="closeViewModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-note" id="viewMeta" style="margin-bottom:16px;"></div>
+      <div style="white-space:pre-wrap; background:var(--a-bg); border-radius:10px; padding:16px; font-size:13.5px; line-height:1.7;" id="viewBodyText"></div>
+      <iframe id="viewBodyHtml" style="display:none; width:100%; height:320px; border:1px solid var(--a-border); border-radius:10px; background:#fff;" sandbox=""></iframe>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+<script>
+fnRequireAuth();
+
+let editingId = null;
+let bodyFormat = 'text';
+
+function setBodyFormat(fmt) {
+  bodyFormat = fmt;
+  document.getElementById('formatTextBtn').classList.toggle('active', fmt === 'text');
+  document.getElementById('formatHtmlBtn').classList.toggle('active', fmt === 'html');
+  document.getElementById('htmlToolbar').style.display = fmt === 'html' ? 'flex' : 'none';
+  document.getElementById('body').classList.toggle('a-body-html', fmt === 'html');
+  document.getElementById('bodyFormatNote').textContent = fmt === 'html'
+    ? "HTML email — write real HTML markup below. Recipients with an HTML-capable email client will see it fully styled; others will see the raw markup, so it's good practice to also offer a plain-text version with a real email provider."
+    : 'Plain text email — line breaks are preserved, no HTML formatting.';
+  document.getElementById('htmlPreviewWrap').style.display = fmt === 'html' ? 'block' : 'none';
+  if (fmt === 'html') updateHtmlPreview();
+}
+
+function updateHtmlPreview() {
+  if (bodyFormat !== 'html') return;
+  const iframe = document.getElementById('htmlPreview');
+  iframe.srcdoc = document.getElementById('body').value || '<p style="font-family:sans-serif;color:#888;padding:20px;">Nothing to preview yet.</p>';
+}
+
+function insertSnippet(type) {
+  const textarea = document.getElementById('body');
+  const snippets = {
+    heading: '<h1 style="font-family:Arial,sans-serif; color:#164F4A;">Your Headline Here</h1>\n',
+    paragraph: '<p style="font-family:Arial,sans-serif; color:#2A2420; line-height:1.6;">Write your message here.</p>\n',
+    button: '<a href="https://www.fixernation.org" style="display:inline-block; background:#F26B4D; color:#ffffff; padding:12px 24px; border-radius:999px; text-decoration:none; font-family:Arial,sans-serif; font-weight:bold;">Call to Action</a>\n',
+    image: '<img src="https://www.fixernation.org/path-to-image.jpg" alt="" style="max-width:100%; display:block;">\n',
+    divider: '<hr style="border:none; border-top:1px solid #eee; margin:20px 0;">\n',
+  };
+  const snippet = snippets[type] || '';
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  textarea.value = textarea.value.slice(0, start) + snippet + textarea.value.slice(end);
+  textarea.focus();
+  textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
+  updateHtmlPreview();
+}
+
+function populateSourceOptions() {
+  const sel = document.getElementById('audienceSource');
+  const current = sel.value;
+  sel.innerHTML = '<option value="All">All sources</option>';
+  fnGetContactSources().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    sel.appendChild(opt);
+  });
+  if (Array.from(sel.options).some(o => o.value === current)) sel.value = current;
+}
+
+function updateAudiencePreview() {
+  const filter = {
+    status: document.getElementById('audienceStatus').value,
+    source: document.getElementById('audienceSource').value,
+  };
+  const count = fnGetAudience(filter).length;
+  document.getElementById('audiencePreview').innerHTML = `Recipients: <b>${count}</b> contact${count===1?'':'s'} match this audience`;
+}
+
+function renderCampaigns() {
+  const campaigns = fnGetCampaigns().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  document.getElementById('statSent').textContent = campaigns.filter(c => c.status === 'Sent').length;
+  document.getElementById('statDrafts').textContent = campaigns.filter(c => c.status === 'Draft').length;
+  document.getElementById('statRecipients').textContent = campaigns.filter(c => c.status === 'Sent').reduce((sum, c) => sum + (c.recipientCount || 0), 0);
+
+  const tbody = document.querySelector('#campaignTable tbody');
+  tbody.innerHTML = '';
+  if (campaigns.length === 0) {
+    document.getElementById('campaignTable').style.display = 'none';
+    document.getElementById('campaignEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('campaignTable').style.display = 'table';
+  document.getElementById('campaignEmpty').style.display = 'none';
+
+  campaigns.forEach(c => {
+    const tr = document.createElement('tr');
+    const audienceLabel = `${c.audienceFilter.status}${c.audienceFilter.source !== 'All' ? ' · ' + c.audienceFilter.source : ''}`;
+    tr.innerHTML = `
+      <td class="a-cell-title">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
+      <td>${audienceLabel}</td>
+      <td><span class="a-pill ${c.status === 'Sent' ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
+      <td>${c.sentAt ? fnFormatDate(c.sentAt) : '—'}</td>
+      <td>${c.status === 'Sent' ? c.recipientCount : '—'}</td>
+      <td>
+        <div class="a-row-actions">
+          <button class="a-icon-btn" title="View" onclick="viewCampaign('${c.id}')">👁️</button>
+          ${c.status === 'Draft' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign('${c.id}')">✏️</button>` : ''}
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteCampaign('${c.id}')">🗑️</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openCampaignModal() {
+  editingId = null;
+  document.getElementById('campaignModalTitle').textContent = 'New Campaign';
+  document.getElementById('campaignForm').reset();
+  document.getElementById('fromName').value = 'Fixer Nation';
+  document.getElementById('fromEmail').value = 'hello@fixernation.org';
+  populateSourceOptions();
+  document.getElementById('audienceStatus').value = 'Subscribed';
+  document.getElementById('audienceSource').value = 'All';
+  updateAudiencePreview();
+  setBodyFormat('text');
+  document.getElementById('campaignModalOverlay').classList.add('show');
+}
+function closeCampaignModal() {
+  document.getElementById('campaignModalOverlay').classList.remove('show');
+}
+
+function editCampaign(id) {
+  const c = fnGetCampaigns().find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById('campaignModalTitle').textContent = 'Edit Draft Campaign';
+  document.getElementById('subject').value = c.subject;
+  document.getElementById('fromName').value = c.fromName;
+  document.getElementById('fromEmail').value = c.fromEmail;
+  document.getElementById('body').value = c.body;
+  populateSourceOptions();
+  document.getElementById('audienceStatus').value = c.audienceFilter.status;
+  document.getElementById('audienceSource').value = c.audienceFilter.source;
+  updateAudiencePreview();
+  setBodyFormat(c.bodyFormat === 'html' ? 'html' : 'text');
+  document.getElementById('campaignModalOverlay').classList.add('show');
+}
+
+function deleteCampaign(id) {
+  if (!confirm('Delete this campaign?')) return;
+  fnSaveCampaigns(fnGetCampaigns().filter(c => c.id !== id));
+  renderCampaigns();
+  fnToast('Campaign deleted');
+}
+
+function viewCampaign(id) {
+  const c = fnGetCampaigns().find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('viewSubject').textContent = c.subject;
+  const audienceLabel = `${c.audienceFilter.status}${c.audienceFilter.source !== 'All' ? ' · ' + c.audienceFilter.source : ''}`;
+  document.getElementById('viewMeta').innerHTML =
+    `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
+    (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '');
+  if (c.bodyFormat === 'html') {
+    document.getElementById('viewBodyText').style.display = 'none';
+    const iframe = document.getElementById('viewBodyHtml');
+    iframe.style.display = 'block';
+    iframe.srcdoc = c.body || '<p style="font-family:sans-serif;color:#888;padding:20px;">(no body written)</p>';
+  } else {
+    document.getElementById('viewBodyHtml').style.display = 'none';
+    document.getElementById('viewBodyText').style.display = 'block';
+    document.getElementById('viewBodyText').textContent = c.body || '(no body written)';
+  }
+  document.getElementById('viewModalOverlay').classList.add('show');
+}
+function closeViewModal() {
+  document.getElementById('viewModalOverlay').classList.remove('show');
+}
+
+function saveCampaign(send) {
+  const subject = document.getElementById('subject').value.trim();
+  if (!subject) { fnToast('Subject line is required'); return; }
+
+  const audienceFilter = {
+    status: document.getElementById('audienceStatus').value,
+    source: document.getElementById('audienceSource').value,
+  };
+  const data = {
+    subject,
+    fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
+    fromEmail: document.getElementById('fromEmail').value.trim() || 'hello@fixernation.org',
+    audienceFilter,
+    body: document.getElementById('body').value,
+    bodyFormat,
+  };
+
+  const campaigns = fnGetCampaigns();
+
+  if (send) {
+    const recipientCount = fnGetAudience(audienceFilter).length;
+    if (recipientCount === 0) {
+      if (!confirm('This audience currently matches 0 contacts. Send anyway (it will just be logged with 0 recipients)?')) return;
+    } else if (!confirm(`Simulate sending "${subject}" to ${recipientCount} recipient(s)? No real email will be sent.`)) {
+      return;
+    }
+    data.status = 'Sent';
+    data.sentAt = new Date().toISOString();
+    data.recipientCount = recipientCount;
+  } else {
+    data.status = 'Draft';
+  }
+
+  if (editingId) {
+    const idx = campaigns.findIndex(c => c.id === editingId);
+    campaigns[idx] = { ...campaigns[idx], ...data };
+  } else {
+    campaigns.push({ id: fnUid(), createdAt: new Date().toISOString(), ...data });
+  }
+  fnSaveCampaigns(campaigns);
+  closeCampaignModal();
+  renderCampaigns();
+  fnToast(send ? `Campaign sent (simulated) to ${data.recipientCount} contact(s)` : 'Draft saved');
+}
+
+['audienceStatus', 'audienceSource'].forEach(id => {
+  document.getElementById(id).addEventListener('change', updateAudiencePreview);
+});
+
+renderCampaigns();
+</script>
+
+</body>
+</html>
