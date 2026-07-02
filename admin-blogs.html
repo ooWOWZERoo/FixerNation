@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=3">
+<link rel="stylesheet" href="admin-common.css?v=4">
 <style>
   .a-tag-check{position:relative;}
   .a-reading-time{font-size:12.5px; color:var(--a-text-soft); margin-top:6px;}
@@ -118,7 +118,7 @@
           <div class="a-note">Paste a YouTube or Vimeo link for a real embed, or the filename of a video already in the site folder.</div>
           <div class="a-repeat-list" id="videoFileList" style="margin-top:10px;"></div>
           <input type="file" id="videoFile" accept="video/*" style="margin-bottom:8px;">
-          <div class="a-note">Uploading a file here only remembers its name and size for this demo browser session — the actual video isn't persisted (same limitation as the curriculum builder's video uploads). Use the URL field above for a real, playable video blog post.</div>
+          <div class="a-note">Uploads the video file to the server and fills in the URL field above automatically.</div>
         </div>
 
         <div class="a-field">
@@ -161,23 +161,32 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=3"></script>
+<script src="admin-common.js?v=4"></script>
 <script>
 fnRequireAuth();
 
 let currentImageData = '';
-let currentVideoFile = null; // { name, sizeLabel } — demo only, not persisted
+let pendingImageFile = null;
+let pendingVideoFile = null;
 let editingId = null;
 let slugManuallyEdited = false;
+let postsCache = [];
+let blogTagsCache = [];
 
 function populateCategorySelect(selectEl, selected) {
   selectEl.innerHTML = FN_BLOG_CATEGORIES.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
 }
 
+async function fetchBlogTags() {
+  const r = await fetch('/api/blog/tags', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).tags || [];
+}
+
 function renderTagCheckboxes(selectedTags) {
   const row = document.getElementById('tagRow');
   const selected = selectedTags || [];
-  row.innerHTML = fnGetBlogTags().map(t => {
+  row.innerHTML = blogTagsCache.map(t => {
     const checked = selected.includes(t) ? 'checked' : '';
     return `<label class="a-tag-check"><input type="checkbox" value="${t}" ${checked}> ${t}</label>`;
   }).join('');
@@ -187,19 +196,33 @@ function getCheckedTags() {
   return Array.from(document.querySelectorAll('#tagRow input:checked')).map(cb => cb.value);
 }
 
-function addNewTag() {
+async function addNewTag() {
   const input = document.getElementById('newTagInput');
   const value = input.value.trim();
   if (!value) { fnToast('Type a tag name first'); return; }
   const currentlyChecked = getCheckedTags();
-  const canonical = fnAddBlogTag(value);
+  const r = await fetch('/api/blog/tags', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tag: value }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const canonical = (await r.json()).tag;
   input.value = '';
+  blogTagsCache = await fetchBlogTags();
   renderTagCheckboxes([...currentlyChecked, canonical]);
   fnToast('Tag added');
 }
 
-function renderPosts() {
-  const posts = [...fnGetBlogPosts()].sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
+async function fetchPosts() {
+  const r = await fetch('/api/blog/posts?all=true', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).posts || [];
+}
+
+async function renderPosts() {
+  const posts = postsCache = await fetchPosts();
   const tbody = document.querySelector('#postsTable tbody');
   tbody.innerHTML = '';
   if (posts.length === 0) {
@@ -224,8 +247,8 @@ function renderPosts() {
       </td>
       <td>
         <div class="a-row-actions">
-          <button class="a-icon-btn" title="Edit" onclick="editPost('${p.id}')">✏️</button>
-          <button class="a-icon-btn danger" title="Delete" onclick="deletePost('${p.id}')">🗑️</button>
+          <button class="a-icon-btn" title="Edit" onclick="editPost(${p.id})">✏️</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deletePost(${p.id})">🗑️</button>
         </div>
       </td>
     `;
@@ -236,7 +259,8 @@ function renderPosts() {
 function openPostModal() {
   editingId = null;
   currentImageData = '';
-  currentVideoFile = null;
+  pendingImageFile = null;
+  pendingVideoFile = null;
   slugManuallyEdited = false;
   document.getElementById('postModalTitle').textContent = 'Write New Post';
   document.getElementById('postForm').reset();
@@ -259,12 +283,12 @@ function closePostModal() {
 }
 
 function editPost(id) {
-  const posts = fnGetBlogPosts();
-  const p = posts.find(x => x.id === id);
+  const p = postsCache.find(x => x.id === id);
   if (!p) return;
   editingId = id;
   currentImageData = p.featuredImage || '';
-  currentVideoFile = p.videoFileName ? { name: p.videoFileName, sizeLabel: p.videoFileSize || '' } : null;
+  pendingImageFile = null;
+  pendingVideoFile = p.videoFileName ? { name: p.videoFileName, sizeLabel: p.videoFileSize || '' } : null;
   slugManuallyEdited = true;
   document.getElementById('postModalTitle').textContent = 'Edit Post';
   document.getElementById('title').value = p.title || '';
@@ -290,10 +314,16 @@ function editPost(id) {
   document.getElementById('postModalOverlay').classList.add('show');
 }
 
-function deletePost(id) {
+async function deletePost(id) {
   if (!confirm('Delete this blog post? This cannot be undone.')) return;
-  const posts = fnGetBlogPosts().filter(p => p.id !== id);
-  fnSaveBlogPosts(posts);
+  const r = await fetch(`/api/blog/posts/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not delete post'); return; }
   renderPosts();
   fnToast('Post deleted');
 }
@@ -339,26 +369,34 @@ function updateVideoPreview() {
 function renderVideoFileList() {
   const el = document.getElementById('videoFileList');
   el.innerHTML = '';
-  if (currentVideoFile) {
+  if (pendingVideoFile) {
     const row = document.createElement('div');
     row.className = 'a-repeat-row';
-    row.innerHTML = `<div class="info"><div class="name">🎬 ${currentVideoFile.name}</div><div class="meta">${currentVideoFile.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideoFile()">✕</button>`;
+    row.innerHTML = `<div class="info"><div class="name">🎬 ${pendingVideoFile.name}</div><div class="meta">${pendingVideoFile.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideoFile()">✕</button>`;
     el.appendChild(row);
   }
 }
 
 function removeVideoFile() {
-  currentVideoFile = null;
+  pendingVideoFile = null;
   document.getElementById('videoFile').value = '';
+  document.getElementById('videoUrl').value = '';
+  updateVideoPreview();
   renderVideoFileList();
 }
 
-document.getElementById('videoFile').addEventListener('change', function(e){
+document.getElementById('videoFile').addEventListener('change', async function(e){
   const file = e.target.files[0];
   if (!file) return;
   const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-  currentVideoFile = { name: file.name, sizeLabel: sizeMb + ' MB (demo only, not persisted)' };
+  fnToast('Uploading video…');
+  const url = await fnUploadFile(file);
+  if (!url) { e.target.value = ''; return; }
+  pendingVideoFile = { name: file.name, sizeLabel: sizeMb + ' MB' };
+  document.getElementById('videoUrl').value = url;
+  updateVideoPreview();
   renderVideoFileList();
+  fnToast('Video uploaded');
 });
 
 document.getElementById('title').addEventListener('input', function(e){
@@ -373,11 +411,11 @@ document.getElementById('slug').addEventListener('input', function(){
 document.getElementById('imageFile').addEventListener('change', function(e){
   const file = e.target.files[0];
   if (!file) return;
+  pendingImageFile = file;
+  document.getElementById('imageUrl').value = '';
   const reader = new FileReader();
   reader.onload = function(ev){
-    currentImageData = ev.target.result;
-    document.getElementById('imageUrl').value = '';
-    document.getElementById('imagePreview').innerHTML = `<img src="${currentImageData}">`;
+    document.getElementById('imagePreview').innerHTML = `<img src="${ev.target.result}">`;
   };
   reader.readAsDataURL(file);
 });
@@ -385,68 +423,68 @@ document.getElementById('imageFile').addEventListener('change', function(e){
 document.getElementById('imageUrl').addEventListener('input', function(e){
   const val = e.target.value.trim();
   if (val) {
+    pendingImageFile = null;
     currentImageData = val;
     document.getElementById('imagePreview').innerHTML = `<img src="${val}" onerror="this.parentElement.textContent='Preview unavailable'">`;
   }
 });
 
-function savePost() {
+async function savePost() {
   const title = document.getElementById('title').value.trim();
   const category = document.getElementById('category').value;
   if (!title || !category) {
     fnToast('Title and category are required');
     return;
   }
-  let slug = fnSlugify(document.getElementById('slug').value || title);
-  const tags = getCheckedTags();
-  let posts = fnGetBlogPosts();
 
-  // keep slugs unique
-  const slugTaken = (s) => posts.some(p => p.slug === s && p.id !== editingId);
-  if (slugTaken(slug)) {
-    let n = 2;
-    while (slugTaken(slug + '-' + n)) n++;
-    slug = slug + '-' + n;
+  let featuredImage = currentImageData;
+  if (pendingImageFile) {
+    const uploadedUrl = await fnUploadFile(pendingImageFile);
+    if (uploadedUrl === null) return;
+    featuredImage = uploadedUrl;
   }
-
-  const featured = document.getElementById('featuredToggle').classList.contains('on');
 
   const postData = {
     title,
-    slug,
+    slug: fnSlugify(document.getElementById('slug').value || title),
     author: document.getElementById('author').value.trim() || 'Anthony J. Placito',
     category,
-    featuredImage: currentImageData,
+    featuredImage,
     excerpt: document.getElementById('excerpt').value.trim(),
     body: document.getElementById('body').value.trim(),
-    tags,
+    tags: getCheckedTags(),
     videoUrl: document.getElementById('videoUrl').value.trim(),
-    videoFileName: currentVideoFile ? currentVideoFile.name : '',
-    videoFileSize: currentVideoFile ? currentVideoFile.sizeLabel : '',
+    videoFileName: pendingVideoFile ? pendingVideoFile.name : '',
+    videoFileSize: pendingVideoFile ? pendingVideoFile.sizeLabel : '',
     publishDate: document.getElementById('publishDate').value || new Date().toISOString().slice(0, 10),
-    featured,
+    featured: document.getElementById('featuredToggle').classList.contains('on'),
     published: document.getElementById('publishedToggle').classList.contains('on'),
   };
 
-  // Only one featured post at a time
-  if (featured) {
-    posts = posts.map(p => ({ ...p, featured: false }));
+  const url = editingId ? `/api/blog/posts/${editingId}` : '/api/blog/posts';
+  const method = editingId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(postData),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save post');
+    return;
   }
 
-  if (editingId) {
-    const idx = posts.findIndex(p => p.id === editingId);
-    posts[idx] = { ...posts[idx], ...postData };
-    fnToast('Post updated');
-  } else {
-    posts.push({ id: fnUid(), createdAt: new Date().toISOString(), ...postData });
-    fnToast('Post published');
-  }
-  fnSaveBlogPosts(posts);
+  fnToast(editingId ? 'Post updated' : 'Post published');
   closePostModal();
   renderPosts();
 }
 
-renderPosts();
+(async function init() {
+  blogTagsCache = await fetchBlogTags();
+  renderPosts();
+})();
 </script>
 
 </body>

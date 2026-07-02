@@ -28,6 +28,7 @@ async function main() {
 
   await seedBooks(connection);
   await seedCurricula(connection);
+  await seedBlogPosts(connection);
 
   await connection.end();
 }
@@ -195,6 +196,100 @@ async function seedCurricula(connection) {
     }
   }
   console.log(`Seeded ${curricula.length} curricula.`);
+}
+
+async function seedBlogPosts(connection) {
+  const [existing] = await connection.query('SELECT id FROM blog_posts LIMIT 1');
+  if (existing.length) {
+    console.log('Blog posts already exist, skipping blog seed.');
+    return;
+  }
+
+  const posts = [
+    {
+      title: 'Turning Your Issue Into an Answer, One Morning Boost at a Time',
+      slug: 'turning-your-issue-into-an-answer-one-morning-boost-at-a-time',
+      author: 'Anthony J. Placito',
+      category: 'Morning Boost',
+      featuredImage: 'https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?w=900&q=80',
+      excerpt: "How a five-minute daily habit can reset your mindset and carry you through the week's hardest moments — straight from the Fixer Nation philosophy.",
+      body: "Every issue has an answer — but only if you show up for it. The Morning Boost is a five-minute ritual: one minute of stillness, one minute naming the issue in front of you, one minute reframing it as a question instead of a wall, one minute writing down the smallest next step, and one minute of gratitude for something already working in your favor.\n\nIt sounds small. It is small. That's the point — a habit has to survive your worst mornings to actually count as a habit. Do it on the days you don't want to, and it'll be there for you on the days you need it most.\n\nStart tomorrow. Five minutes. One issue. One answer.",
+      tags: ['Morning Boost', 'Habits', 'Mindset'],
+      publishDate: new Date(Date.now() - 86400000 * 9).toISOString().slice(0, 10),
+      featured: true,
+      published: true,
+    },
+    {
+      title: 'A 5-Minute Morning Boost Ritual to Start the Day as the Fixer',
+      slug: 'a-5-minute-morning-boost-ritual-to-start-the-day-as-the-fixer',
+      author: 'Anthony J. Placito',
+      category: 'Morning Boost',
+      featuredImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80',
+      excerpt: "Before the phone, before the noise — a short ritual that sets the tone for the whole day.",
+      body: "The Fixer doesn't wait for a good mood to show up before doing good work. The Fixer builds the mood on purpose, first thing, before the day gets a vote.\n\nTry this: phone stays face-down for the first ten minutes you're awake. Instead, ask yourself one question — \"What's one issue I can turn into an answer today?\" Write down whatever comes up, even if it's small. Then go do the first thing on your actual to-do list before checking a single notification.\n\nSmall wins compound. A Morning Boost isn't about fixing everything — it's about proving to yourself, daily, that you're someone who fixes things.",
+      tags: ['Morning Boost', 'Routine'],
+      publishDate: new Date(Date.now() - 86400000 * 4).toISOString().slice(0, 10),
+      featured: false,
+      published: true,
+    },
+    {
+      title: 'Silencing the Inner Critic',
+      slug: 'silencing-the-inner-critic',
+      author: 'Anthony J. Placito',
+      category: 'Mindset',
+      featuredImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80',
+      excerpt: 'Practical steps for redirecting self-doubt into forward motion.',
+      body: "The inner critic rarely says anything untrue — it just says it at the worst possible time, in the worst possible tone. The goal isn't to silence it forever; it's to stop letting it drive.\n\nWhen it shows up, try naming it out loud: \"That's the critic talking.\" That tiny bit of distance is often enough to keep moving instead of freezing. Then ask what a coach — not a critic — would say about the same situation. Usually it's shorter, kinder, and more useful.",
+      tags: ['Mindset', 'Self-Talk'],
+      publishDate: new Date(Date.now() - 86400000 * 18).toISOString().slice(0, 10),
+      featured: false,
+      published: true,
+    },
+    {
+      title: 'Behind the Pages of Kill the Bully',
+      slug: 'behind-the-pages-of-kill-the-bully',
+      author: 'Anthony J. Placito',
+      category: 'Books Blog',
+      featuredImage: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&q=80',
+      excerpt: 'What inspired the book, and how readers are using it to stand their ground.',
+      body: "Kill the Bully started as a true story before it became a book. The goal was never to glamorize a solution — it was to be honest about how real the pressure feels when you're the one being targeted, and how many different directions that pressure can push a person.\n\nReaders have told us they've used it to open conversations at home that were otherwise hard to start. That's the part that matters most — not the plot twist, but the door it opens.",
+      tags: ['Books Blog', 'Behind the Scenes'],
+      publishDate: new Date(Date.now() - 86400000 * 27).toISOString().slice(0, 10),
+      featured: false,
+      published: true,
+    },
+    {
+      title: 'Resetting Before Monday',
+      slug: 'resetting-before-monday',
+      author: 'Anthony J. Placito',
+      category: 'Weekend Energy',
+      featuredImage: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=600&q=80',
+      excerpt: 'A short ritual to close out the week and walk into the next one with clarity.',
+      body: "Sunday doesn't have to be dread — it can be the reset button. Spend ten minutes reviewing what actually went well this week (not just what went wrong), then pick one single priority for Monday morning. One. Not five.\n\nClose the loop on anything you can close today, and give yourself permission to leave the rest for the version of you that shows up tomorrow, already rested and already clear on what matters first.",
+      tags: ['Weekend Energy', 'Routine'],
+      publishDate: new Date(Date.now() - 86400000 * 33).toISOString().slice(0, 10),
+      featured: false,
+      published: true,
+    },
+  ];
+
+  for (const p of posts) {
+    const [result] = await connection.query(
+      `INSERT INTO blog_posts (title, slug, author, category, featured_image, excerpt, body, publish_date, featured, published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.title, p.slug, p.author, p.category, p.featuredImage, p.excerpt, p.body, p.publishDate, p.featured ? 1 : 0, p.published ? 1 : 0]
+    );
+    for (const tag of p.tags) {
+      await connection.query('INSERT INTO blog_post_tags (post_id, tag) VALUES (?, ?)', [result.insertId, tag]);
+    }
+  }
+
+  const allTags = [...new Set(posts.flatMap(p => p.tags))];
+  for (const tag of allTags) {
+    await connection.query('INSERT IGNORE INTO blog_tags (tag) VALUES (?)', [tag]);
+  }
+
+  console.log(`Seeded ${posts.length} blog posts and ${allTags.length} tags.`);
 }
 
 main().catch(err => {

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=3">
+<link rel="stylesheet" href="admin-common.css?v=4">
 </head>
 <body>
 
@@ -193,7 +193,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=3"></script>
+<script src="admin-common.js?v=4"></script>
 <script>
 fnRequireAuth();
 
@@ -281,19 +281,6 @@ function renderVideoList() {
   });
 }
 
-async function uploadFile(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
-  if (fnHandleUnauthorized(r)) return null;
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    fnToast(err.error || 'Upload failed');
-    return null;
-  }
-  return (await r.json()).url;
-}
-
 function addVideoFromUrl() {
   const input = document.getElementById('videoUrlInput');
   const url = input.value.trim();
@@ -309,7 +296,7 @@ async function addVideoFromInput() {
   if (!file) { fnToast('Choose a video file first'); return; }
   const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
   fnToast('Uploading video…');
-  const url = await uploadFile(file);
+  const url = await fnUploadFile(file);
   if (!url) return;
   currentVideos.push({ name: file.name, sizeLabel: sizeMb + ' MB', url });
   input.value = '';
@@ -385,7 +372,7 @@ document.getElementById('lessonDocFile').addEventListener('change', async functi
   const file = e.target.files[0];
   if (!file) return;
   fnToast('Uploading document…');
-  const url = await uploadFile(file);
+  const url = await fnUploadFile(file);
   if (!url) { e.target.value = ''; return; }
   currentLessonDoc = { url, name: file.name };
   document.getElementById('lessonDocName').textContent = '📄 ' + file.name;

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=3">
+<link rel="stylesheet" href="admin-common.css?v=4">
 </head>
 <body>
 
@@ -95,12 +95,12 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=3"></script>
+<script src="admin-common.js?v=4"></script>
 <script>
 fnRequireAuth();
 
-// Books and curricula are on the real API; contacts and blog posts are migrated
-// in later tasks and still read from the localStorage demo until then.
+// Books, curricula, and blog posts are on the real API; newsletter contacts
+// and campaigns are migrated in later tasks and still read from localStorage.
 const contacts = fnGetContacts();
 
 document.getElementById('statContacts').textContent = contacts.length;
@@ -109,8 +109,6 @@ const weekAgo = Date.now() - 7 * 86400000;
 const newThisWeek = contacts.filter(c => new Date(c.signupDate).getTime() >= weekAgo).length;
 document.getElementById('statNewWeek').textContent = newThisWeek;
 document.getElementById('statNewWeekDelta').textContent = newThisWeek > 0 ? '+' + newThisWeek + ' this week' : 'No new signups';
-
-document.getElementById('statBlogPosts').textContent = fnGetBlogPosts().length;
 
 const recent = [...contacts].sort((a,b) => new Date(b.signupDate) - new Date(a.signupDate)).slice(0, 5);
 const tbody = document.querySelector('#recentContactsTable tbody');
@@ -133,6 +131,10 @@ fetch('/api/books?all=true', { credentials: 'include' }).then(r => fnHandleUnaut
 
 fetch('/api/curricula?all=true', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? [] : r.json()).then(data => {
   document.getElementById('statCurricula').textContent = ((data && data.curricula) || []).length;
+});
+
+fetch('/api/blog/posts?all=true', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? [] : r.json()).then(data => {
+  document.getElementById('statBlogPosts').textContent = ((data && data.posts) || []).length;
 });
 </script>
 

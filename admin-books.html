@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=3">
+<link rel="stylesheet" href="admin-common.css?v=4">
 <style>
   .a-tag-check{position:relative;}
 </style>
@@ -162,7 +162,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=3"></script>
+<script src="admin-common.js?v=4"></script>
 <script>
 fnRequireAuth();
 
@@ -303,16 +303,6 @@ document.getElementById('coverUrl').addEventListener('input', function(e){
   }
 });
 
-async function uploadPendingCover() {
-  const formData = new FormData();
-  formData.append('file', pendingCoverFile);
-  const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
-  if (fnHandleUnauthorized(r)) return null;
-  if (!r.ok) { fnToast('Cover image upload failed'); return null; }
-  const data = await r.json();
-  return data.url;
-}
-
 async function saveBook() {
   const title = document.getElementById('title').value.trim();
   const price = document.getElementById('price').value;
@@ -323,7 +313,7 @@ async function saveBook() {
 
   let coverImage = currentCoverData;
   if (pendingCoverFile) {
-    const uploadedUrl = await uploadPendingCover();
+    const uploadedUrl = await fnUploadFile(pendingCoverFile);
     if (uploadedUrl === null) return;
     coverImage = uploadedUrl;
   }

@@ -3,8 +3,6 @@
 const FN_KEYS = {
   contacts: 'fn_newsletter_contacts',
   campaigns: 'fn_campaigns',
-  posts: 'fn_blog_posts',
-  tags: 'fn_blog_tags',
 };
 
 const FN_AUDIENCES = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
@@ -35,92 +33,6 @@ function fnSeedIfEmpty() {
     localStorage.setItem(FN_KEYS.campaigns, JSON.stringify([]));
   }
 
-  if (!localStorage.getItem(FN_KEYS.posts)) {
-    const seedPosts = [
-      {
-        id: fnUid(),
-        title: 'Turning Your Issue Into an Answer, One Morning Boost at a Time',
-        slug: 'turning-your-issue-into-an-answer-one-morning-boost-at-a-time',
-        author: 'Anthony J. Placito',
-        category: 'Morning Boost',
-        featuredImage: 'https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?w=900&q=80',
-        excerpt: "How a five-minute daily habit can reset your mindset and carry you through the week's hardest moments — straight from the Fixer Nation philosophy.",
-        body: "Every issue has an answer — but only if you show up for it. The Morning Boost is a five-minute ritual: one minute of stillness, one minute naming the issue in front of you, one minute reframing it as a question instead of a wall, one minute writing down the smallest next step, and one minute of gratitude for something already working in your favor.\n\nIt sounds small. It is small. That's the point — a habit has to survive your worst mornings to actually count as a habit. Do it on the days you don't want to, and it'll be there for you on the days you need it most.\n\nStart tomorrow. Five minutes. One issue. One answer.",
-        tags: ['Morning Boost', 'Habits', 'Mindset'],
-        publishDate: new Date(Date.now() - 86400000 * 9).toISOString().slice(0, 10),
-        featured: true,
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 9).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'A 5-Minute Morning Boost Ritual to Start the Day as the Fixer',
-        slug: 'a-5-minute-morning-boost-ritual-to-start-the-day-as-the-fixer',
-        author: 'Anthony J. Placito',
-        category: 'Morning Boost',
-        featuredImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80',
-        excerpt: "Before the phone, before the noise — a short ritual that sets the tone for the whole day.",
-        body: "The Fixer doesn't wait for a good mood to show up before doing good work. The Fixer builds the mood on purpose, first thing, before the day gets a vote.\n\nTry this: phone stays face-down for the first ten minutes you're awake. Instead, ask yourself one question — \"What's one issue I can turn into an answer today?\" Write down whatever comes up, even if it's small. Then go do the first thing on your actual to-do list before checking a single notification.\n\nSmall wins compound. A Morning Boost isn't about fixing everything — it's about proving to yourself, daily, that you're someone who fixes things.",
-        tags: ['Morning Boost', 'Routine'],
-        publishDate: new Date(Date.now() - 86400000 * 4).toISOString().slice(0, 10),
-        featured: false,
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'Silencing the Inner Critic',
-        slug: 'silencing-the-inner-critic',
-        author: 'Anthony J. Placito',
-        category: 'Mindset',
-        featuredImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80',
-        excerpt: 'Practical steps for redirecting self-doubt into forward motion.',
-        body: "The inner critic rarely says anything untrue — it just says it at the worst possible time, in the worst possible tone. The goal isn't to silence it forever; it's to stop letting it drive.\n\nWhen it shows up, try naming it out loud: \"That's the critic talking.\" That tiny bit of distance is often enough to keep moving instead of freezing. Then ask what a coach — not a critic — would say about the same situation. Usually it's shorter, kinder, and more useful.",
-        tags: ['Mindset', 'Self-Talk'],
-        publishDate: new Date(Date.now() - 86400000 * 18).toISOString().slice(0, 10),
-        featured: false,
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 18).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'Behind the Pages of Kill the Bully',
-        slug: 'behind-the-pages-of-kill-the-bully',
-        author: 'Anthony J. Placito',
-        category: 'Books Blog',
-        featuredImage: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&q=80',
-        excerpt: 'What inspired the book, and how readers are using it to stand their ground.',
-        body: "Kill the Bully started as a true story before it became a book. The goal was never to glamorize a solution — it was to be honest about how real the pressure feels when you're the one being targeted, and how many different directions that pressure can push a person.\n\nReaders have told us they've used it to open conversations at home that were otherwise hard to start. That's the part that matters most — not the plot twist, but the door it opens.",
-        tags: ['Books Blog', 'Behind the Scenes'],
-        publishDate: new Date(Date.now() - 86400000 * 27).toISOString().slice(0, 10),
-        featured: false,
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 27).toISOString(),
-      },
-      {
-        id: fnUid(),
-        title: 'Resetting Before Monday',
-        slug: 'resetting-before-monday',
-        author: 'Anthony J. Placito',
-        category: 'Weekend Energy',
-        featuredImage: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=600&q=80',
-        excerpt: 'A short ritual to close out the week and walk into the next one with clarity.',
-        body: "Sunday doesn't have to be dread — it can be the reset button. Spend ten minutes reviewing what actually went well this week (not just what went wrong), then pick one single priority for Monday morning. One. Not five.\n\nClose the loop on anything you can close today, and give yourself permission to leave the rest for the version of you that shows up tomorrow, already rested and already clear on what matters first.",
-        tags: ['Weekend Energy', 'Routine'],
-        publishDate: new Date(Date.now() - 86400000 * 33).toISOString().slice(0, 10),
-        featured: false,
-        published: true,
-        createdAt: new Date(Date.now() - 86400000 * 33).toISOString(),
-      },
-    ];
-    localStorage.setItem(FN_KEYS.posts, JSON.stringify(seedPosts));
-  }
-
-  if (!localStorage.getItem(FN_KEYS.tags)) {
-    // Seeded from the tags already used on the sample posts above, plus the categories themselves.
-    const seedTags = ['Morning Boost', 'Habits', 'Mindset', 'Routine', 'Self-Talk', 'Books Blog', 'Behind the Scenes', 'Weekend Energy'];
-    localStorage.setItem(FN_KEYS.tags, JSON.stringify(seedTags));
-  }
 }
 
 // Real server-side auth (session cookie), replacing the old sessionStorage flag.
@@ -171,6 +83,21 @@ function fnHandleUnauthorized(response) {
     return true;
   }
   return false;
+}
+
+// Uploads a File to the server and returns its public URL, or null on failure
+// (after showing a toast). Shared by books, curriculum, and blog admin pages.
+async function fnUploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
+  if (fnHandleUnauthorized(r)) return null;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Upload failed');
+    return null;
+  }
+  return (await r.json()).url;
 }
 
 function fnGetContacts() {
@@ -306,42 +233,6 @@ function fnGetAudience(audienceFilter) {
 function fnGetContactSources() {
   const contacts = fnGetContacts();
   return Array.from(new Set(contacts.map(c => c.source).filter(Boolean)));
-}
-
-/* ---- Blog posts ---- */
-function fnGetBlogPosts() {
-  fnSeedIfEmpty();
-  return JSON.parse(localStorage.getItem(FN_KEYS.posts) || '[]');
-}
-function fnSaveBlogPosts(posts) {
-  localStorage.setItem(FN_KEYS.posts, JSON.stringify(posts));
-}
-// Published posts only, newest first — what the public site should render.
-function fnGetPublishedBlogPosts() {
-  return fnGetBlogPosts()
-    .filter(p => p.published)
-    .sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-}
-// Master list of blog tags, grown over time as the user creates new ones —
-// distinct from FN_BLOG_CATEGORIES, which is a fixed set.
-function fnGetBlogTags() {
-  fnSeedIfEmpty();
-  return JSON.parse(localStorage.getItem(FN_KEYS.tags) || '[]');
-}
-function fnSaveBlogTags(tags) {
-  localStorage.setItem(FN_KEYS.tags, JSON.stringify(tags));
-}
-// Adds a new tag to the master list (case-insensitive dedupe) and returns the
-// canonical stored tag string, so it's available in the picker for future posts.
-function fnAddBlogTag(tag) {
-  const clean = (tag || '').trim();
-  if (!clean) return '';
-  const tags = fnGetBlogTags();
-  const existing = tags.find(t => t.toLowerCase() === clean.toLowerCase());
-  if (existing) return existing;
-  tags.push(clean);
-  fnSaveBlogTags(tags);
-  return clean;
 }
 
 function fnSlugify(str) {
