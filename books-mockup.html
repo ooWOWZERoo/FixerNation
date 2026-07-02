@@ -123,52 +123,7 @@
       <div class="chip">New Arrivals</div>
     </div>
 
-    <div class="books-grid">
-      <div class="book-card">
-        <div class="book-cover has-photo"><img src="cover-kill-the-bully.png" alt="Kill the Bully book cover"></div>
-        <div class="book-info">
-          <span class="book-tag">Also on Amazon Kindle</span>
-          <p class="book-desc">Stand up to the negativity around you and silence the outer critics holding you back.</p>
-          <div class="book-actions">
-            <a href="book-kill-the-bully.html" class="btn btn-outline">Details</a>
-            <a href="https://www.amazon.com" class="btn btn-primary">Amazon</a>
-          </div>
-        </div>
-      </div>
-      <div class="book-card">
-        <div class="book-cover has-photo"><img src="cover-your-past.png" alt="Your Past Doesn't Define You book cover"></div>
-        <div class="book-info">
-          <span class="book-tag">Available on Kindle</span>
-          <p class="book-desc">Break free from self-doubt and redefine your future with clarity and purpose.</p>
-          <div class="book-actions">
-            <a href="book-your-past.html" class="btn btn-outline">Details</a>
-            <a href="https://www.amazon.com" class="btn btn-primary">Amazon</a>
-          </div>
-        </div>
-      </div>
-      <div class="book-card">
-        <div class="book-cover has-photo"><img src="cover-5-brains.png" alt="Think with 5 Brains, Then Make Up Your Mind book cover"></div>
-        <div class="book-info">
-          <span class="book-tag">New Arrival</span>
-          <p class="book-desc">A sharper, more strategic mindset for navigating decisions with confidence.</p>
-          <div class="book-actions">
-            <a href="book-5-brains.html" class="btn btn-outline">Details</a>
-            <a href="#" class="btn btn-primary">Coming Soon</a>
-          </div>
-        </div>
-      </div>
-      <div class="book-card">
-        <div class="book-cover has-photo"><img src="cover-how-to-lie.png" alt="How to Lie and Get Away With It Every Time book cover"></div>
-        <div class="book-info">
-          <span class="book-tag">New Arrival</span>
-          <p class="book-desc">Strategic thinking and psychological insight, wrapped in compelling storytelling.</p>
-          <div class="book-actions">
-            <a href="book-how-to-lie.html" class="btn btn-outline">Details</a>
-            <a href="#" class="btn btn-primary">Coming Soon</a>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="books-grid" id="booksGrid"></div>
   </div>
 </section>
 
@@ -217,6 +172,56 @@
     <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</div>
   </div>
 </footer>
+
+<script>
+// Known hand-authored detail pages, matched by title — new books added via the
+// admin panel won't have one yet until a dedicated detail page is built for them.
+const DETAIL_PAGES = {
+  'Kill the Bully': 'book-kill-the-bully.html',
+  "Your Past Doesn't Define You": 'book-your-past.html',
+  'Think with 5 Brains, Then Make Up Your Mind': 'book-5-brains.html',
+  'How to Lie and Get Away With It Every Time': 'book-how-to-lie.html',
+};
+
+function bookCoverClass(index) {
+  return 'bc' + ((index % 4) + 1);
+}
+
+function renderBookCard(book, index) {
+  const detailPage = DETAIL_PAGES[book.title];
+  const detailsBtn = detailPage
+    ? `<a href="${detailPage}" class="btn btn-outline">Details</a>`
+    : '';
+  const actionBtn = book.stockStatus === 'Coming Soon'
+    ? `<a href="#" class="btn btn-primary">Coming Soon</a>`
+    : (book.amazonUrl ? `<a href="${book.amazonUrl}" class="btn btn-primary">Amazon</a>` : '');
+
+  const coverHtml = book.coverImage
+    ? `<div class="book-cover has-photo"><img src="${book.coverImage}" alt="${book.title} book cover"></div>`
+    : `<div class="book-cover ${bookCoverClass(index)}"><span>${book.title}</span></div>`;
+
+  return `
+    <div class="book-card">
+      ${coverHtml}
+      <div class="book-info">
+        <span class="book-tag">${(book.tags && book.tags[0]) || book.category || ''}</span>
+        <p class="book-desc">${book.shortDescription || ''}</p>
+        <div class="book-actions">${detailsBtn}${actionBtn}</div>
+      </div>
+    </div>
+  `;
+}
+
+fetch('/api/books')
+  .then(r => r.json())
+  .then(data => {
+    const grid = document.getElementById('booksGrid');
+    grid.innerHTML = (data.books || []).map(renderBookCard).join('');
+  })
+  .catch(() => {
+    document.getElementById('booksGrid').innerHTML = '<p style="text-align:center; color:var(--ink-soft);">Could not load books right now.</p>';
+  });
+</script>
 
 </body>
 </html>

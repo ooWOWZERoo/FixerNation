@@ -167,13 +167,22 @@
 fnRequireAuth();
 
 let currentCoverData = '';
+let pendingCoverFile = null;
 let editingId = null;
+let booksCache = [];
 
-function renderBooks() {
-  const books = fnGetBooks();
+async function fetchBooks() {
+  const r = await fetch('/api/books?all=true', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  const data = await r.json();
+  return data.books || [];
+}
+
+async function renderBooks() {
+  booksCache = await fetchBooks();
   const tbody = document.querySelector('#booksTable tbody');
   tbody.innerHTML = '';
-  if (books.length === 0) {
+  if (booksCache.length === 0) {
     document.getElementById('booksTable').style.display = 'none';
     document.getElementById('booksEmpty').style.display = 'block';
     return;
@@ -181,7 +190,7 @@ function renderBooks() {
   document.getElementById('booksTable').style.display = 'table';
   document.getElementById('booksEmpty').style.display = 'none';
 
-  books.forEach(b => {
+  booksCache.forEach(b => {
     const tr = document.createElement('tr');
     const stockPillClass = b.stockStatus === 'In Stock' ? 'a-pill-success' : (b.stockStatus === 'Coming Soon' ? 'a-pill-warning' : 'a-pill-danger');
     tr.innerHTML = `
@@ -192,8 +201,8 @@ function renderBooks() {
       <td><span class="a-pill ${b.published ? 'a-pill-success' : 'a-pill-neutral'}">${b.published ? 'Published' : 'Draft'}</span></td>
       <td>
         <div class="a-row-actions">
-          <button class="a-icon-btn" title="Edit" onclick="editBook('${b.id}')">✏️</button>
-          <button class="a-icon-btn danger" title="Delete" onclick="deleteBook('${b.id}')">🗑️</button>
+          <button class="a-icon-btn" title="Edit" onclick="editBook(${b.id})">✏️</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteBook(${b.id})">🗑️</button>
         </div>
       </td>
     `;
@@ -204,6 +213,7 @@ function renderBooks() {
 function openBookModal() {
   editingId = null;
   currentCoverData = '';
+  pendingCoverFile = null;
   document.getElementById('bookModalTitle').textContent = 'Add New Book';
   document.getElementById('bookForm').reset();
   document.getElementById('author').value = 'Anthony J. Placito';
@@ -219,11 +229,11 @@ function closeBookModal() {
 }
 
 function editBook(id) {
-  const books = fnGetBooks();
-  const b = books.find(x => x.id === id);
+  const b = booksCache.find(x => x.id === id);
   if (!b) return;
   editingId = id;
   currentCoverData = b.coverImage || '';
+  pendingCoverFile = null;
   document.getElementById('bookModalTitle').textContent = 'Edit Book';
   document.getElementById('title').value = b.title || '';
   document.getElementById('author').value = b.author || '';
@@ -246,10 +256,16 @@ function editBook(id) {
   document.getElementById('bookModalOverlay').classList.add('show');
 }
 
-function deleteBook(id) {
+async function deleteBook(id) {
   if (!confirm('Delete this book? This cannot be undone.')) return;
-  const books = fnGetBooks().filter(b => b.id !== id);
-  fnSaveBooks(books);
+  const r = await fetch(`/api/books/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not delete book'); return; }
   renderBooks();
   fnToast('Book deleted');
 }
@@ -268,11 +284,12 @@ function setPublishedToggle(on) {
 document.getElementById('coverFile').addEventListener('change', function(e){
   const file = e.target.files[0];
   if (!file) return;
+  pendingCoverFile = file;
+  document.getElementById('coverUrl').value = '';
+  // Local-only preview until the file is actually uploaded on save.
   const reader = new FileReader();
   reader.onload = function(ev){
-    currentCoverData = ev.target.result;
-    document.getElementById('coverUrl').value = '';
-    document.getElementById('imagePreview').innerHTML = `<img src="${currentCoverData}">`;
+    document.getElementById('imagePreview').innerHTML = `<img src="${ev.target.result}">`;
   };
   reader.readAsDataURL(file);
 });
@@ -280,25 +297,42 @@ document.getElementById('coverFile').addEventListener('change', function(e){
 document.getElementById('coverUrl').addEventListener('input', function(e){
   const val = e.target.value.trim();
   if (val) {
+    pendingCoverFile = null;
     currentCoverData = val;
     document.getElementById('imagePreview').innerHTML = `<img src="${val}" onerror="this.parentElement.textContent='Preview unavailable'">`;
   }
 });
 
-function saveBook() {
+async function uploadPendingCover() {
+  const formData = new FormData();
+  formData.append('file', pendingCoverFile);
+  const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
+  if (fnHandleUnauthorized(r)) return null;
+  if (!r.ok) { fnToast('Cover image upload failed'); return null; }
+  const data = await r.json();
+  return data.url;
+}
+
+async function saveBook() {
   const title = document.getElementById('title').value.trim();
   const price = document.getElementById('price').value;
   if (!title || price === '') {
     fnToast('Title and price are required');
     return;
   }
-  const tags = Array.from(document.querySelectorAll('.a-tag-check input:checked')).map(cb => cb.value);
-  const books = fnGetBooks();
 
+  let coverImage = currentCoverData;
+  if (pendingCoverFile) {
+    const uploadedUrl = await uploadPendingCover();
+    if (uploadedUrl === null) return;
+    coverImage = uploadedUrl;
+  }
+
+  const tags = Array.from(document.querySelectorAll('.a-tag-check input:checked')).map(cb => cb.value);
   const bookData = {
     title,
     author: document.getElementById('author').value.trim(),
-    coverImage: currentCoverData,
+    coverImage,
     shortDescription: document.getElementById('shortDescription').value.trim(),
     longDescription: document.getElementById('longDescription').value.trim(),
     price: parseFloat(price),
@@ -311,15 +345,22 @@ function saveBook() {
     published: document.getElementById('publishedToggle').classList.contains('on'),
   };
 
-  if (editingId) {
-    const idx = books.findIndex(b => b.id === editingId);
-    books[idx] = { ...books[idx], ...bookData };
-    fnToast('Book updated');
-  } else {
-    books.push({ id: fnUid(), createdAt: new Date().toISOString(), ...bookData });
-    fnToast('Book added');
+  const url = editingId ? `/api/books/${editingId}` : '/api/books';
+  const method = editingId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bookData),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save book');
+    return;
   }
-  fnSaveBooks(books);
+
+  fnToast(editingId ? 'Book updated' : 'Book added');
   closeBookModal();
   renderBooks();
 }

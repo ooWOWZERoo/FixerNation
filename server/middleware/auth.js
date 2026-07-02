@@ -1,17 +1,25 @@
 const jwt = require('jsonwebtoken');
 const { COOKIE_NAME } = require('../routes/auth');
 
-function requireAuth(req, res, next) {
+// Returns the decoded session payload, or null if there is no valid session.
+// Does not send a response — safe to use for optional/best-effort auth checks.
+function getAuthUser(req) {
   const token = req.cookies[COOKIE_NAME];
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!token) return null;
   try {
-    req.user = jwt.verify(token, process.env.SESSION_SECRET);
-    next();
+    return jwt.verify(token, process.env.SESSION_SECRET);
   } catch {
-    res.status(401).json({ error: 'Unauthorized' });
+    return null;
   }
 }
 
-module.exports = { requireAuth };
+function requireAuth(req, res, next) {
+  const user = getAuthUser(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  req.user = user;
+  next();
+}
+
+module.exports = { requireAuth, getAuthUser };

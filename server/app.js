@@ -4,6 +4,8 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./routes/auth');
+const bookRoutes = require('./routes/books');
+const uploadRoutes = require('./routes/uploads');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -15,6 +17,8 @@ app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
 app.use('/api/auth', authRoutes.router);
+app.use('/api/books', bookRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, Apache serves those files
