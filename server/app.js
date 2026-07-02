@@ -1,9 +1,13 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cookieSession = require('cookie-session');
 
 const authRoutes = require('./routes/auth');
+
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
+}
 
 const app = express();
 
