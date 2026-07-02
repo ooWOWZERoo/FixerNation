@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=4">
+<link rel="stylesheet" href="admin-common.css?v=5">
 </head>
 <body>
 
@@ -145,14 +145,21 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=4"></script>
+<script src="admin-common.js?v=5"></script>
 <script>
 fnRequireAuth();
 
 let searchTerm = '';
+let contactsCache = [];
 
-function renderContacts() {
-  const all = fnGetContacts();
+async function fetchContacts() {
+  const r = await fetch('/api/newsletter/contacts', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).contacts || [];
+}
+
+async function renderContacts() {
+  const all = contactsCache = await fetchContacts();
   const contacts = all
     .filter(c => !searchTerm || c.name.toLowerCase().includes(searchTerm) || c.email.toLowerCase().includes(searchTerm))
     .sort((a,b) => new Date(b.signupDate) - new Date(a.signupDate));
@@ -185,8 +192,8 @@ function renderContacts() {
       <td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
       <td>
         <div class="a-row-actions">
-          <button class="a-icon-btn" title="${subscribed ? 'Unsubscribe' : 'Resubscribe'}" onclick="toggleStatus('${c.id}')">${subscribed ? '🔕' : '🔔'}</button>
-          <button class="a-icon-btn danger" title="Delete" onclick="deleteContact('${c.id}')">🗑️</button>
+          <button class="a-icon-btn" title="${subscribed ? 'Unsubscribe' : 'Resubscribe'}" onclick="toggleStatus(${c.id})">${subscribed ? '🔕' : '🔔'}</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteContact(${c.id})">🗑️</button>
         </div>
       </td>
     `;
@@ -194,19 +201,29 @@ function renderContacts() {
   });
 }
 
-function toggleStatus(id) {
-  const contacts = fnGetContacts();
-  const c = contacts.find(x => x.id === id);
+async function toggleStatus(id) {
+  const c = contactsCache.find(x => x.id === id);
   if (!c) return;
-  c.status = c.status === 'Subscribed' ? 'Unsubscribed' : 'Subscribed';
-  fnSaveContacts(contacts);
+  const newStatus = c.status === 'Subscribed' ? 'Unsubscribed' : 'Subscribed';
+  const r = await fetch(`/api/newsletter/contacts/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: newStatus }),
+  });
+  if (fnHandleUnauthorized(r)) return;
   renderContacts();
 }
 
-function deleteContact(id) {
+async function deleteContact(id) {
   if (!confirm('Remove this contact?')) return;
-  const contacts = fnGetContacts().filter(c => c.id !== id);
-  fnSaveContacts(contacts);
+  const r = await fetch(`/api/newsletter/contacts/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
   renderContacts();
   fnToast('Contact removed');
 }
@@ -220,7 +237,7 @@ function closeContactModal() {
   document.getElementById('contactModalOverlay').classList.remove('show');
 }
 
-function saveContact() {
+async function saveContact() {
   const email = document.getElementById('contactEmail').value.trim();
   if (!email) { fnToast('Email is required'); return; }
   const name = document.getElementById('contactName').value.trim();
@@ -231,7 +248,14 @@ function saveContact() {
     state: document.getElementById('contactState').value.trim(),
     zip: document.getElementById('contactZip').value.trim(),
   };
-  const result = fnAddNewsletterContact(name, email, source, address);
+  const r = await fetch('/api/newsletter/contacts', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, source, address }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json();
   if (!result.ok) {
     fnToast('That email is already in the list');
     return;
@@ -242,7 +266,7 @@ function saveContact() {
 }
 
 function exportCsv() {
-  const contacts = fnGetContacts();
+  const contacts = contactsCache;
   if (contacts.length === 0) { fnToast('No contacts to export'); return; }
   const rows = [['Name','Email','Street','City','State','Zip','Signup Date','Source','Status']];
   contacts.forEach(c => rows.push([
@@ -315,8 +339,15 @@ function parseImportInput() {
   document.getElementById('importConfirmBtn').disabled = totalValid === 0;
 }
 
-function confirmImport() {
-  const result = fnImportContacts(parsedImportRows, 'Bulk Import');
+async function confirmImport() {
+  const r = await fetch('/api/newsletter/contacts/import', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rows: parsedImportRows, defaultSource: 'Bulk Import' }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json();
   closeImportModal();
   renderContacts();
   fnToast(`Imported ${result.imported} · skipped ${result.skippedDuplicate} duplicate(s), ${result.skippedInvalid} invalid`);

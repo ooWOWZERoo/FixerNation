@@ -435,19 +435,25 @@
   </div>
 </footer>
 
-<script src="admin-common.js?v=4"></script>
+<script src="admin-common.js?v=5"></script>
 <script>
-document.getElementById('newsletterForm').addEventListener('submit', function(e){
+document.getElementById('newsletterForm').addEventListener('submit', async function(e){
   e.preventDefault();
   const name = document.getElementById('newsletterName').value.trim();
   const email = document.getElementById('newsletterEmail').value.trim();
   const msg = document.getElementById('newsletterMsg');
-  const result = fnAddNewsletterContact(name, email, 'Homepage');
+  const form = this;
+  const r = await fetch('/api/newsletter/contacts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, source: 'Homepage' }),
+  });
+  const result = await r.json().catch(() => ({ ok: false }));
   msg.classList.remove('success','error');
   if (result.ok) {
     msg.textContent = "You're subscribed! Thanks for joining Fixer Nation.";
     msg.classList.add('show','success');
-    this.reset();
+    form.reset();
   } else {
     msg.textContent = "That email is already on our list.";
     msg.classList.add('show','error');

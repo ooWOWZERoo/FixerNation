@@ -100,29 +100,13 @@ async function fnUploadFile(file) {
   return (await r.json()).url;
 }
 
+// NOTE: newsletter contacts themselves live on the real API now (/api/newsletter/*).
+// This localStorage-backed getter is kept only because admin-campaigns.html's
+// audience targeting (fnGetAudience/fnGetContactSources below) still reads it —
+// remove once campaigns are migrated too.
 function fnGetContacts() {
   fnSeedIfEmpty();
   return JSON.parse(localStorage.getItem(FN_KEYS.contacts) || '[]');
-}
-function fnSaveContacts(contacts) {
-  localStorage.setItem(FN_KEYS.contacts, JSON.stringify(contacts));
-}
-
-function fnAddNewsletterContact(name, email, source, address) {
-  const contacts = fnGetContacts();
-  const exists = contacts.some(c => c.email.toLowerCase() === email.toLowerCase());
-  if (exists) return { ok: false, reason: 'duplicate' };
-  contacts.unshift({
-    id: fnUid(),
-    name: name || '',
-    email: email,
-    address: address || { street: '', city: '', state: '', zip: '' },
-    signupDate: new Date().toISOString(),
-    source: source || 'Homepage',
-    status: 'Subscribed',
-  });
-  fnSaveContacts(contacts);
-  return { ok: true };
 }
 
 function fnFormatAddress(address, full) {
@@ -181,34 +165,6 @@ function fnParseCsv(text) {
     zip: idx.zip >= 0 ? (r[idx.zip] || '').trim() : '',
     source: idx.source >= 0 ? (r[idx.source] || '').trim() : '',
   }));
-}
-
-// Bulk-imports parsed CSV rows, skipping rows without a valid-looking email
-// and rows whose email already exists. Returns a summary.
-function fnImportContacts(parsedRows, defaultSource) {
-  const contacts = fnGetContacts();
-  const existingEmails = new Set(contacts.map(c => c.email.toLowerCase()));
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  let imported = 0, skippedInvalid = 0, skippedDuplicate = 0;
-  parsedRows.forEach(row => {
-    const email = (row.email || '').trim();
-    if (!email || !emailPattern.test(email)) { skippedInvalid++; return; }
-    if (existingEmails.has(email.toLowerCase())) { skippedDuplicate++; return; }
-    contacts.unshift({
-      id: fnUid(),
-      name: row.name || '',
-      email,
-      address: { street: row.street || '', city: row.city || '', state: row.state || '', zip: row.zip || '' },
-      signupDate: new Date().toISOString(),
-      source: row.source || defaultSource || 'Bulk Import',
-      status: 'Subscribed',
-    });
-    existingEmails.add(email.toLowerCase());
-    imported++;
-  });
-  fnSaveContacts(contacts);
-  return { imported, skippedInvalid, skippedDuplicate };
 }
 
 /* ---- Mass marketing email campaigns (simulated — no real email is sent) ---- */
