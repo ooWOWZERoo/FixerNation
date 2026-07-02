@@ -31,6 +31,14 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// Temporary diagnostic route — confirms whether Set-Cookie headers survive
+// the reverse proxy at all, independent of cookie-session. Remove once the
+// session cookie issue is resolved.
+router.get('/debug-cookie', (req, res) => {
+  res.cookie('fn_debug', 'hello', { httpOnly: true });
+  res.json({ ok: true });
+});
+
 router.get('/me', (req, res) => {
   if (!req.session || !req.session.userId) {
     return res.json({ loggedIn: false });
