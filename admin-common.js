@@ -1,8 +1,6 @@
 /* Fixer Nation Admin — shared demo backend (browser localStorage only) */
 
 const FN_KEYS = {
-  auth: 'fn_admin_session',
-  creds: 'fn_admin_credentials',
   books: 'fn_books',
   contacts: 'fn_newsletter_contacts',
   curricula: 'fn_curricula',
@@ -27,10 +25,6 @@ function fnUid() {
 }
 
 function fnSeedIfEmpty() {
-  if (!localStorage.getItem(FN_KEYS.creds)) {
-    localStorage.setItem(FN_KEYS.creds, JSON.stringify({ username: 'admin', password: 'FixerNation2026!' }));
-  }
-
   if (!localStorage.getItem(FN_KEYS.books)) {
     const seedBooks = [
       {
@@ -279,30 +273,47 @@ function fnSeedIfEmpty() {
   }
 }
 
-function fnIsLoggedIn() {
-  return sessionStorage.getItem(FN_KEYS.auth) === 'true';
-}
-
+// Real server-side auth (session cookie), replacing the old sessionStorage flag.
+// Redirects to the login page if the session check fails or errors out.
 function fnRequireAuth() {
   fnSeedIfEmpty();
-  if (!fnIsLoggedIn()) {
-    window.location.href = 'admin-login.html';
-  }
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.loggedIn) window.location.href = 'admin-login.html';
+    })
+    .catch(() => { window.location.href = 'admin-login.html'; });
 }
 
+// Returns a Promise resolving to { ok, username? , error? }.
 function fnLogin(username, password) {
-  fnSeedIfEmpty();
-  const creds = JSON.parse(localStorage.getItem(FN_KEYS.creds));
-  if (username === creds.username && password === creds.password) {
-    sessionStorage.setItem(FN_KEYS.auth, 'true');
-    return true;
-  }
-  return false;
+  return fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ username, password }),
+  })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) return { ok: false, error: data.error || 'Login failed' };
+      return { ok: true, username: data.username };
+    })
+    .catch(() => ({ ok: false, error: 'Could not reach the server' }));
 }
 
 function fnLogout() {
-  sessionStorage.removeItem(FN_KEYS.auth);
-  window.location.href = 'admin-login.html';
+  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    .finally(() => { window.location.href = 'admin-login.html'; });
+}
+
+// If a fetch to an authenticated API endpoint comes back 401, the session has
+// expired or was never valid — bounce to login instead of showing broken/empty data.
+function fnHandleUnauthorized(response) {
+  if (response.status === 401) {
+    window.location.href = 'admin-login.html';
+    return true;
+  }
+  return false;
 }
 
 function fnGetBooks() {

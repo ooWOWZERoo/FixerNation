@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
-const cookieSession = require('cookie-session');
+const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./routes/auth');
 
@@ -12,16 +12,9 @@ if (!process.env.SESSION_SECRET) {
 const app = express();
 
 app.use(express.json({ limit: '5mb' }));
-app.use(cookieSession({
-  name: 'fn_session',
-  secret: process.env.SESSION_SECRET,
-  maxAge: 24 * 60 * 60 * 1000,
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
-}));
+app.use(cookieParser());
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes.router);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, Apache serves those files

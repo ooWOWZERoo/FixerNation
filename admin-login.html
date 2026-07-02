@@ -50,11 +50,18 @@ document.getElementById('loginForm').addEventListener('submit', function(e){
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value;
   const errorBox = document.getElementById('loginError');
-  if (fnLogin(u, p)) {
-    window.location.href = 'admin-dashboard.html';
-  } else {
-    errorBox.classList.add('show');
-  }
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  errorBox.classList.remove('show');
+  submitBtn.disabled = true;
+  fnLogin(u, p).then(result => {
+    if (result.ok) {
+      window.location.href = 'admin-dashboard.html';
+    } else {
+      errorBox.textContent = result.error || 'Incorrect username or password. Please try again.';
+      errorBox.classList.add('show');
+      submitBtn.disabled = false;
+    }
+  });
 });
 </script>
 
