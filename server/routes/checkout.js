@@ -15,8 +15,8 @@ async function findOrCreateContact(email, source) {
   const [existing] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [email]);
   if (existing[0]) return existing[0].id;
   const [result] = await pool.query(
-    'INSERT INTO newsletter_contacts (email, source, status) VALUES (?, ?, ?)',
-    [email, source, 'Subscribed']
+    'INSERT INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, ?, ?)',
+    ['', email, source, 'Subscribed']
   );
   return result.insertId;
 }

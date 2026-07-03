@@ -9,6 +9,15 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="admin-common.css?v=7">
+<style>
+  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:#fff; color:var(--a-text);}
+  #contactsTable th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
+  #contactsTable th.sortable:hover{color:var(--a-accent);}
+  .sort-arrow{font-size:10px; margin-left:3px; opacity:0.7;}
+  .a-pagination{display:flex; justify-content:space-between; align-items:center; margin-top:16px; font-size:13px; color:var(--a-text-soft); flex-wrap:wrap; gap:10px;}
+  .a-pagination .a-btn{padding:7px 14px; font-size:12.5px;}
+  .a-pagination .a-btn:disabled{opacity:0.4; cursor:not-allowed;}
+</style>
 </head>
 <body>
 
@@ -57,7 +66,14 @@
         <div class="a-card-head">
           <h2>Contacts</h2>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <div class="a-search"><input type="text" id="searchInput" placeholder="Search name or email..."></div>
+            <div class="a-search"><input type="text" id="searchInput" placeholder="Search name, email, phone, company..." style="width:280px;"></div>
+            <select class="a-filter-select" id="filterGroup"><option value="">All Groups</option></select>
+            <select class="a-filter-select" id="filterStatus">
+              <option value="">All Statuses</option>
+              <option>Subscribed</option>
+              <option>Unsubscribed</option>
+            </select>
+            <select class="a-filter-select" id="filterSource"><option value="">All Sources</option></select>
             <button class="a-btn a-btn-outline" onclick="openGroupsModal()">🏷️ Manage Groups</button>
             <button class="a-btn a-btn-outline" onclick="openImportModal()">⬆ Import CSV</button>
             <button class="a-btn a-btn-outline" onclick="exportCsv()">⬇ Export CSV</button>
@@ -65,12 +81,30 @@
           </div>
         </div>
         <table class="a-table" id="contactsTable">
-          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Address</th><th>Signed Up</th><th>Source</th><th>Status</th><th>Groups</th><th></th></tr></thead>
+          <thead><tr>
+            <th class="sortable" onclick="setSort('name')">Name<span class="sort-arrow" id="arrow-name"></span></th>
+            <th class="sortable" onclick="setSort('email')">Email<span class="sort-arrow" id="arrow-email"></span></th>
+            <th>Phone</th>
+            <th class="sortable" onclick="setSort('company')">Company<span class="sort-arrow" id="arrow-company"></span></th>
+            <th>Address</th>
+            <th class="sortable" onclick="setSort('signupDate')">Signed Up<span class="sort-arrow" id="arrow-signupDate"></span></th>
+            <th class="sortable" onclick="setSort('source')">Source<span class="sort-arrow" id="arrow-source"></span></th>
+            <th class="sortable" onclick="setSort('status')">Status<span class="sort-arrow" id="arrow-status"></span></th>
+            <th>Groups</th>
+            <th></th>
+          </tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="contactsEmpty" style="display:none;">
           <div class="big">📭</div>
-          No newsletter contacts yet. Signups from the homepage will show up here automatically.
+          No contacts match the current search/filters.
+        </div>
+        <div class="a-pagination" id="paginationWrap">
+          <div id="paginationInfo"></div>
+          <div style="display:flex; gap:6px;">
+            <button class="a-btn a-btn-outline" id="prevPageBtn" onclick="changePage(-1)">← Prev</button>
+            <button class="a-btn a-btn-outline" id="nextPageBtn" onclick="changePage(1)">Next →</button>
+          </div>
         </div>
       </div>
     </div>
@@ -234,6 +268,13 @@
 fnRequireAuth();
 
 let searchTerm = '';
+let filterGroupId = '';
+let filterStatus = '';
+let filterSource = '';
+let sortField = 'signupDate';
+let sortDir = 'desc';
+let currentPage = 1;
+const PAGE_SIZE = 50;
 let contactsCache = [];
 let groupsCache = [];
 let editingContactId = null;
@@ -250,16 +291,79 @@ async function fetchGroups() {
   return (await r.json()).groups || [];
 }
 
-async function renderContacts() {
-  const all = contactsCache = await fetchContacts();
-  const contacts = all
-    .filter(c => !searchTerm || c.name.toLowerCase().includes(searchTerm) || c.email.toLowerCase().includes(searchTerm))
-    .sort((a,b) => new Date(b.signupDate) - new Date(a.signupDate));
+// Fetches fresh data from the server — only needed after a mutation (add,
+// edit, delete, import, group change). Pure UI interactions (search, filter,
+// sort, pagination) should call applyFiltersAndRender() instead, which works
+// off the already-fetched contactsCache — refetching all ~4,000 contacts on
+// every keystroke would be slow and unnecessary.
+async function fetchAndRenderContacts() {
+  [contactsCache, groupsCache] = await Promise.all([fetchContacts(), fetchGroups()]);
+  populateFilterOptions();
+  applyFiltersAndRender();
+}
+
+function populateFilterOptions() {
+  const groupSelect = document.getElementById('filterGroup');
+  const currentGroupValue = groupSelect.value;
+  groupSelect.innerHTML = '<option value="">All Groups</option>' +
+    groupsCache.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  groupSelect.value = currentGroupValue;
+
+  const sourceSelect = document.getElementById('filterSource');
+  const currentSourceValue = sourceSelect.value;
+  const sources = [...new Set(contactsCache.map(c => c.source).filter(Boolean))].sort();
+  sourceSelect.innerHTML = '<option value="">All Sources</option>' +
+    sources.map(s => `<option value="${s}">${s}</option>`).join('');
+  sourceSelect.value = currentSourceValue;
+}
+
+function setSort(field) {
+  if (sortField === field) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortField = field;
+    sortDir = field === 'signupDate' ? 'desc' : 'asc';
+  }
+  currentPage = 1;
+  applyFiltersAndRender();
+}
+
+function changePage(delta) {
+  currentPage += delta;
+  applyFiltersAndRender();
+}
+
+function applyFiltersAndRender() {
+  const all = contactsCache;
 
   document.getElementById('statTotal').textContent = all.length;
   document.getElementById('statSubscribed').textContent = all.filter(c => c.status === 'Subscribed').length;
   const weekAgo = Date.now() - 7 * 86400000;
   document.getElementById('statWeek').textContent = all.filter(c => new Date(c.signupDate).getTime() >= weekAgo).length;
+
+  let contacts = all.filter(c => {
+    if (searchTerm) {
+      const haystack = [c.name, c.email, c.phone, c.company].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(searchTerm)) return false;
+    }
+    if (filterGroupId && !(c.groups || []).some(g => String(g.id) === filterGroupId)) return false;
+    if (filterStatus && c.status !== filterStatus) return false;
+    if (filterSource && c.source !== filterSource) return false;
+    return true;
+  });
+
+  contacts.sort((a, b) => {
+    let av = a[sortField], bv = b[sortField];
+    if (sortField === 'signupDate') { av = new Date(av).getTime(); bv = new Date(bv).getTime(); }
+    else { av = (av || '').toString().toLowerCase(); bv = (bv || '').toString().toLowerCase(); }
+    if (av < bv) return sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  ['name', 'email', 'company', 'signupDate', 'source', 'status'].forEach(f => {
+    document.getElementById(`arrow-${f}`).textContent = sortField === f ? (sortDir === 'asc' ? '▲' : '▼') : '';
+  });
 
   const tbody = document.querySelector('#contactsTable tbody');
   tbody.innerHTML = '';
@@ -267,12 +371,24 @@ async function renderContacts() {
   if (contacts.length === 0) {
     document.getElementById('contactsTable').style.display = 'none';
     document.getElementById('contactsEmpty').style.display = 'block';
+    document.getElementById('paginationWrap').style.display = 'none';
     return;
   }
   document.getElementById('contactsTable').style.display = 'table';
   document.getElementById('contactsEmpty').style.display = 'none';
+  document.getElementById('paginationWrap').style.display = 'flex';
 
-  contacts.forEach(c => {
+  const totalPages = Math.max(1, Math.ceil(contacts.length / PAGE_SIZE));
+  currentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageContacts = contacts.slice(start, start + PAGE_SIZE);
+
+  document.getElementById('paginationInfo').textContent =
+    `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, contacts.length)} of ${contacts.length}`;
+  document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+  document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+
+  pageContacts.forEach(c => {
     const tr = document.createElement('tr');
     const subscribed = c.status === 'Subscribed';
     tr.innerHTML = `
@@ -309,7 +425,7 @@ async function toggleStatus(id) {
     body: JSON.stringify({ status: newStatus }),
   });
   if (fnHandleUnauthorized(r)) return;
-  renderContacts();
+  fetchAndRenderContacts();
 }
 
 async function deleteContact(id) {
@@ -321,7 +437,7 @@ async function deleteContact(id) {
     body: '{}',
   });
   if (fnHandleUnauthorized(r)) return;
-  renderContacts();
+  fetchAndRenderContacts();
   fnToast('Contact removed');
 }
 
@@ -404,7 +520,7 @@ async function saveContact() {
     if (fnHandleUnauthorized(r)) return;
     if (!r.ok) { fnToast('Could not save contact'); return; }
     closeContactModal();
-    renderContacts();
+    fetchAndRenderContacts();
     fnToast('Contact updated');
     return;
   }
@@ -422,19 +538,20 @@ async function saveContact() {
     return;
   }
   closeContactModal();
-  renderContacts();
+  fetchAndRenderContacts();
   fnToast('Contact added');
 }
 
 function exportCsv() {
   const contacts = contactsCache;
   if (contacts.length === 0) { fnToast('No contacts to export'); return; }
-  const rows = [['Name','Email','Street','City','State','Zip','Signup Date','Source','Status']];
+  const rows = [['Name','Email','Phone','Company','Street','City','State','Zip','Signup Date','Source','Status','Groups','Notes']];
   contacts.forEach(c => rows.push([
-    c.name || '', c.email,
+    c.name || '', c.email, c.phone || '', c.company || '',
     (c.address && c.address.street) || '', (c.address && c.address.city) || '',
     (c.address && c.address.state) || '', (c.address && c.address.zip) || '',
     fnFormatDate(c.signupDate), c.source, c.status,
+    (c.groups || []).map(g => g.name).join('; '), c.notes || '',
   ]));
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -461,7 +578,7 @@ async function openGroupsModal() {
 }
 function closeGroupsModal() {
   document.getElementById('groupsModalOverlay').classList.remove('show');
-  renderContacts();
+  fetchAndRenderContacts();
 }
 
 function renderGroupsList() {
@@ -569,7 +686,7 @@ async function confirmImport() {
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json();
   closeImportModal();
-  renderContacts();
+  fetchAndRenderContacts();
   fnToast(`Imported ${result.imported} · skipped ${result.skippedDuplicate} duplicate(s), ${result.skippedInvalid} invalid`);
 }
 
@@ -847,10 +964,26 @@ async function assignSeatEmail(purchaseId, seatId, email) {
 
 document.getElementById('searchInput').addEventListener('input', function(e){
   searchTerm = e.target.value.trim().toLowerCase();
-  renderContacts();
+  currentPage = 1;
+  applyFiltersAndRender();
+});
+document.getElementById('filterGroup').addEventListener('change', function(e){
+  filterGroupId = e.target.value;
+  currentPage = 1;
+  applyFiltersAndRender();
+});
+document.getElementById('filterStatus').addEventListener('change', function(e){
+  filterStatus = e.target.value;
+  currentPage = 1;
+  applyFiltersAndRender();
+});
+document.getElementById('filterSource').addEventListener('change', function(e){
+  filterSource = e.target.value;
+  currentPage = 1;
+  applyFiltersAndRender();
 });
 
-renderContacts();
+fetchAndRenderContacts();
 </script>
 
 </body>
