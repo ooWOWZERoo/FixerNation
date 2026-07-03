@@ -62,8 +62,21 @@ function fnAuthCloseModal() {
   document.getElementById('fnAuthModalOverlay').style.display = 'none';
 }
 
+// A plain (non-httpOnly) hint of who's logged in, so the nav can render
+// correctly on first paint without waiting on a network round-trip to
+// /api/site-auth/me. This is purely a display optimization — the real
+// session lives in the httpOnly cookie, and fnAuthCheckSession() below
+// still verifies with the server on every page load and self-corrects
+// the hint (and the nav) if it's ever stale.
+const FN_AUTH_HINT_KEY = 'fnUserFirstName';
+
 function fnAuthRenderNav(loggedIn, firstName) {
   const nav = document.getElementById('fnAuthNav');
+  if (loggedIn) {
+    localStorage.setItem(FN_AUTH_HINT_KEY, firstName);
+  } else {
+    localStorage.removeItem(FN_AUTH_HINT_KEY);
+  }
   if (!nav) return;
   if (loggedIn) {
     nav.innerHTML = `
@@ -78,6 +91,15 @@ function fnAuthRenderNav(loggedIn, firstName) {
     nav.innerHTML = `<a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a>`;
   }
 }
+
+// Renders immediately from the local hint (no network wait) to avoid a
+// "Log In" flash on every page load for already-logged-in visitors.
+// fnAuthCheckSession() still runs right after to confirm/correct it.
+function fnAuthRenderNavOptimistic() {
+  const hint = localStorage.getItem(FN_AUTH_HINT_KEY);
+  if (hint) fnAuthRenderNav(true, hint);
+}
+fnAuthRenderNavOptimistic();
 
 function fnAuthToggleUserMenu() {
   const menu = document.getElementById('fnAuthUserMenu');
