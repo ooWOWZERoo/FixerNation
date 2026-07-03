@@ -5,9 +5,27 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer');
+const { attachPurchaseDetails } = require('./newsletter');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Site-user session check for the self-service "My License" endpoints below —
+// mirrors /me's cookie/JWT verification but rejects with 401 instead of a
+// { loggedIn: false } body, and resolves the full user row.
+async function requireSiteAuth(req, res, next) {
+  const token = req.cookies[SITE_COOKIE_NAME];
+  if (!token) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
+    if (!rows[0]) return res.status(401).json({ error: 'Not logged in' });
+    req.siteUser = rows[0];
+    next();
+  } catch {
+    res.status(401).json({ error: 'Not logged in' });
+  }
+}
 
 function setSiteSessionCookie(res, user) {
   const token = jwt.sign({ userId: user.id, firstName: user.first_name }, process.env.SESSION_SECRET, {
@@ -72,6 +90,13 @@ router.post('/signup', async (req, res) => {
       [`${firstName} ${lastName}`, email, 'Homepage', 'Subscribed']
     );
   }
+
+  // If a license seat (single or group) was invited to this exact email,
+  // signing up claims it — this is what actually grants that teacher access.
+  await pool.query(
+    "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE invited_email = ? AND status = 'pending'",
+    [result.insertId, email]
+  );
 
   const verifyToken = await createToken(result.insertId, 'verify', 24 * 60 * 60 * 1000);
   const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;
@@ -170,6 +195,41 @@ router.post('/reset-password', async (req, res) => {
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await pool.query('UPDATE site_users SET password_hash = ? WHERE id = ?', [passwordHash, record.user_id]);
+  res.json({ ok: true });
+});
+
+// --- Self-service license view for logged-in site users (teachers / school admins) ---
+
+router.get('/my-purchases', requireSiteAuth, async (req, res) => {
+  const [contactRows] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [req.siteUser.email]);
+  if (!contactRows[0]) return res.json({ purchases: [] });
+
+  const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [contactRows[0].id]);
+  res.json({ purchases: await attachPurchaseDetails(rows) });
+});
+
+// Lets the buyer (e.g. a school administrator) hand out an open group-license
+// seat to a teacher by email, without needing a Fixer Nation admin involved.
+router.put('/my-purchases/:purchaseId/seats/:seatId', requireSiteAuth, async (req, res) => {
+  const [contactRows] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [req.siteUser.email]);
+  const contactId = contactRows[0] && contactRows[0].id;
+
+  const [purchaseRows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [req.params.purchaseId]);
+  const purchase = purchaseRows[0];
+  if (!purchase || purchase.contact_id !== contactId) {
+    return res.status(404).json({ error: 'Purchase not found' });
+  }
+
+  const [seatRows] = await pool.query('SELECT * FROM license_seats WHERE id = ? AND purchase_id = ?', [req.params.seatId, purchase.id]);
+  const seat = seatRows[0];
+  if (!seat) return res.status(404).json({ error: 'Seat not found' });
+  if (seat.status !== 'pending') return res.status(409).json({ error: 'This seat has already been registered' });
+
+  const invitedEmail = (req.body && req.body.invitedEmail || '').trim();
+  if (invitedEmail && !EMAIL_PATTERN.test(invitedEmail)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+  await pool.query('UPDATE license_seats SET invited_email = ? WHERE id = ?', [invitedEmail || null, seat.id]);
   res.json({ ok: true });
 });
 

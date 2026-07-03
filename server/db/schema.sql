@@ -95,6 +95,38 @@ CREATE TABLE IF NOT EXISTS contact_group_members (
   FOREIGN KEY (group_id) REFERENCES contact_groups(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Purchases — books, single teacher licenses, and group (school) licenses.
+-- Recorded manually by an admin for now since there's no in-app checkout yet
+-- (books sell via Amazon); a contact is the buyer of record.
+CREATE TABLE IF NOT EXISTS purchases (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  contact_id INT UNSIGNED NOT NULL,
+  product_type VARCHAR(32) NOT NULL, -- 'book' | 'single_license' | 'group_license'
+  book_id INT UNSIGNED NULL,
+  seat_count INT UNSIGNED NULL, -- 1 for single_license, N for group_license, NULL for book
+  purchased_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  source VARCHAR(64) NOT NULL DEFAULT 'Manual Entry',
+  notes VARCHAR(500),
+  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per license seat (single_license purchases always have exactly one,
+-- pre-filled with the buyer's own email). For group_license purchases, the
+-- buyer (e.g. a school administrator) assigns invited_email to each open seat
+-- as they hand access out to teachers; a seat becomes 'registered' the moment
+-- a site_user signs up with that exact email.
+CREATE TABLE IF NOT EXISTS license_seats (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  purchase_id INT UNSIGNED NOT NULL,
+  invited_email VARCHAR(255) NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'registered'
+  registered_site_user_id INT UNSIGNED NULL,
+  registered_at DATETIME NULL,
+  FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
+  FOREIGN KEY (registered_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------------------------------------------------------------------------
 -- Email campaigns (real SMTP sending, one individual email per recipient)
 -- ---------------------------------------------------------------------------

@@ -169,6 +169,132 @@ router.get('/unsubscribe', async (req, res) => {
   res.send(`<p style="font-family:sans-serif; padding:40px; text-align:center;">${email} has been unsubscribed from Fixer Nation emails.</p>`);
 });
 
+// --- Purchases (books, single teacher licenses, group/school licenses) ---
+
+const PRODUCT_TYPES = ['book', 'single_license', 'group_license'];
+
+async function attachPurchaseDetails(purchases) {
+  if (purchases.length === 0) return purchases;
+  const ids = purchases.map(p => p.id);
+  const bookIds = purchases.map(p => p.book_id).filter(Boolean);
+
+  const [seatRows] = await pool.query(
+    `SELECT s.*, u.first_name, u.last_name FROM license_seats s
+     LEFT JOIN site_users u ON u.id = s.registered_site_user_id
+     WHERE s.purchase_id IN (?) ORDER BY s.id`,
+    [ids]
+  );
+  const [bookRows] = bookIds.length ? await pool.query('SELECT id, title FROM books WHERE id IN (?)', [bookIds]) : [[]];
+  const bookTitleById = {};
+  bookRows.forEach(b => { bookTitleById[b.id] = b.title; });
+
+  const seatsByPurchase = {};
+  seatRows.forEach(s => {
+    (seatsByPurchase[s.purchase_id] = seatsByPurchase[s.purchase_id] || []).push({
+      id: s.id,
+      invitedEmail: s.invited_email,
+      status: s.status,
+      registeredName: s.registered_site_user_id ? `${s.first_name} ${s.last_name}` : null,
+      registeredAt: s.registered_at,
+    });
+  });
+
+  return purchases.map(p => ({
+    id: p.id,
+    contactId: p.contact_id,
+    productType: p.product_type,
+    bookId: p.book_id,
+    bookTitle: p.book_id ? bookTitleById[p.book_id] || null : null,
+    seatCount: p.seat_count,
+    purchasedAt: p.purchased_at,
+    source: p.source,
+    notes: p.notes,
+    seats: seatsByPurchase[p.id] || [],
+  }));
+}
+
+router.get('/contacts/:id/purchases', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [req.params.id]);
+  res.json({ purchases: await attachPurchaseDetails(rows) });
+});
+
+router.post('/contacts/:id/purchases', requireAuth, async (req, res) => {
+  const [contactRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [req.params.id]);
+  const contact = contactRows[0];
+  if (!contact) return res.status(404).json({ error: 'Contact not found' });
+
+  const b = req.body || {};
+  if (!PRODUCT_TYPES.includes(b.productType)) {
+    return res.status(400).json({ error: 'productType must be one of: ' + PRODUCT_TYPES.join(', ') });
+  }
+  if (b.productType === 'book' && !b.bookId) {
+    return res.status(400).json({ error: 'bookId is required for a book purchase' });
+  }
+  if (b.productType === 'group_license' && !(Number(b.seatCount) > 0)) {
+    return res.status(400).json({ error: 'seatCount must be a positive number for a group license' });
+  }
+
+  const seatCount = b.productType === 'single_license' ? 1 : b.productType === 'group_license' ? Number(b.seatCount) : null;
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.query(
+      'INSERT INTO purchases (contact_id, product_type, book_id, seat_count, source, notes) VALUES (?, ?, ?, ?, ?, ?)',
+      [contact.id, b.productType, b.productType === 'book' ? b.bookId : null, seatCount, b.source || 'Manual Entry', b.notes || '']
+    );
+    const purchaseId = result.insertId;
+
+    if (b.productType === 'single_license') {
+      await connection.query(
+        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, ?)',
+        [purchaseId, contact.email, 'pending']
+      );
+    } else if (b.productType === 'group_license') {
+      await connection.query(
+        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(seatCount).fill('(?, NULL, ?)').join(', '),
+        Array.from({ length: seatCount }).flatMap(() => [purchaseId, 'pending'])
+      );
+    }
+    await connection.commit();
+
+    const [rows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
+    const [purchase] = await attachPurchaseDetails(rows);
+    res.status(201).json({ purchase });
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+});
+
+router.delete('/purchases/:id', requireAuth, async (req, res) => {
+  const [result] = await pool.query('DELETE FROM purchases WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Purchase not found' });
+  res.json({ ok: true });
+});
+
+// Assign (or clear) the invited email for one seat of a group license. Only
+// open ('pending') seats can be reassigned — once a teacher has registered,
+// the seat is theirs.
+router.put('/purchases/:purchaseId/seats/:seatId', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT * FROM license_seats WHERE id = ? AND purchase_id = ?',
+    [req.params.seatId, req.params.purchaseId]
+  );
+  const seat = rows[0];
+  if (!seat) return res.status(404).json({ error: 'Seat not found' });
+  if (seat.status !== 'pending') return res.status(409).json({ error: 'This seat has already been registered and cannot be reassigned' });
+
+  const invitedEmail = (req.body && req.body.invitedEmail || '').trim();
+  if (invitedEmail && !EMAIL_PATTERN.test(invitedEmail)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+  await pool.query('UPDATE license_seats SET invited_email = ? WHERE id = ?', [invitedEmail || null, seat.id]);
+  res.json({ ok: true });
+});
+
 // Bulk import — rows already parsed client-side from CSV.
 router.post('/contacts/import', requireAuth, async (req, res) => {
   const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
@@ -193,4 +319,4 @@ router.post('/contacts/import', requireAuth, async (req, res) => {
   res.json({ imported, skippedInvalid, skippedDuplicate });
 });
 
-module.exports = router;
+module.exports = { router, attachPurchaseDetails };

@@ -181,6 +181,44 @@
   </div>
 </div>
 
+<!-- Purchases & Licenses modal -->
+<div class="a-modal-overlay" id="purchasesModalOverlay">
+  <div class="a-modal" style="max-width:640px;">
+    <div class="a-modal-head">
+      <h3>Purchases &amp; Licenses — <span id="purchasesContactName"></span></h3>
+      <button class="a-modal-close" onclick="closePurchasesModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div id="purchasesList"></div>
+      <div class="a-empty" id="purchasesEmpty" style="display:none; padding:20px 0;">No purchases logged yet for this contact.</div>
+
+      <div style="border-top:1px solid var(--a-border); margin-top:18px; padding-top:18px;">
+        <div class="a-field">
+          <label>Add a Purchase</label>
+          <select id="purchaseType" onchange="onPurchaseTypeChange()">
+            <option value="book">Book</option>
+            <option value="single_license">Single Teacher License</option>
+            <option value="group_license">Group License (school block)</option>
+          </select>
+        </div>
+        <div class="a-field" id="purchaseBookField">
+          <label>Book</label>
+          <select id="purchaseBookId"></select>
+        </div>
+        <div class="a-field" id="purchaseSeatCountField" style="display:none;">
+          <label>Number of Seats</label>
+          <input type="number" id="purchaseSeatCount" min="1" value="5">
+        </div>
+        <div class="a-field"><label>Notes</label><input type="text" id="purchaseNotes" placeholder="Optional"></div>
+        <button type="button" class="a-btn a-btn-primary a-btn-block" onclick="addPurchase()">+ Add Purchase</button>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closePurchasesModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="admin-common.js?v=7"></script>
 <script>
 fnRequireAuth();
@@ -237,6 +275,7 @@ async function renderContacts() {
       <td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>
       <td>
         <div class="a-row-actions">
+          <button class="a-icon-btn" title="Purchases &amp; Licenses" onclick="openPurchasesModal(${c.id})">🧾</button>
           <button class="a-icon-btn" title="Edit" onclick="editContact(${c.id})">✏️</button>
           <button class="a-icon-btn" title="${subscribed ? 'Unsubscribe' : 'Resubscribe'}" onclick="toggleStatus(${c.id})">${subscribed ? '🔕' : '🔔'}</button>
           <button class="a-icon-btn danger" title="Delete" onclick="deleteContact(${c.id})">🗑️</button>
@@ -514,6 +553,160 @@ async function confirmImport() {
   closeImportModal();
   renderContacts();
   fnToast(`Imported ${result.imported} · skipped ${result.skippedDuplicate} duplicate(s), ${result.skippedInvalid} invalid`);
+}
+
+/* ---- Purchases & Licenses ---- */
+let purchasesContactId = null;
+let booksCache = [];
+
+async function fetchBooksForDropdown() {
+  const r = await fetch('/api/books?all=true', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).books || [];
+}
+
+async function fetchPurchases(contactId) {
+  const r = await fetch(`/api/newsletter/contacts/${contactId}/purchases`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).purchases || [];
+}
+
+function onPurchaseTypeChange() {
+  const type = document.getElementById('purchaseType').value;
+  document.getElementById('purchaseBookField').style.display = type === 'book' ? 'block' : 'none';
+  document.getElementById('purchaseSeatCountField').style.display = type === 'group_license' ? 'block' : 'none';
+}
+
+async function openPurchasesModal(contactId) {
+  purchasesContactId = contactId;
+  const c = contactsCache.find(x => x.id === contactId);
+  document.getElementById('purchasesContactName').textContent = (c && (c.name || c.email)) || '';
+
+  booksCache = await fetchBooksForDropdown();
+  document.getElementById('purchaseBookId').innerHTML = booksCache.map(b => `<option value="${b.id}">${b.title}</option>`).join('') || '<option value="">No books yet</option>';
+  document.getElementById('purchaseType').value = 'book';
+  document.getElementById('purchaseSeatCount').value = 5;
+  document.getElementById('purchaseNotes').value = '';
+  onPurchaseTypeChange();
+
+  await renderPurchasesList();
+  document.getElementById('purchasesModalOverlay').classList.add('show');
+}
+
+function closePurchasesModal() {
+  document.getElementById('purchasesModalOverlay').classList.remove('show');
+  purchasesContactId = null;
+}
+
+async function renderPurchasesList() {
+  const purchases = await fetchPurchases(purchasesContactId);
+  const wrap = document.getElementById('purchasesList');
+  document.getElementById('purchasesEmpty').style.display = purchases.length === 0 ? 'block' : 'none';
+
+  wrap.innerHTML = purchases.map(p => {
+    const dateLabel = fnFormatDate(p.purchasedAt);
+    if (p.productType === 'book') {
+      return purchaseCard(p, `📗 Book: ${p.bookTitle || '(deleted book)'}`, `Purchased ${dateLabel}`, '');
+    }
+    if (p.productType === 'single_license') {
+      const seat = p.seats[0];
+      const statusLine = seat && seat.status === 'registered'
+        ? `Registered to ${seat.registeredName}`
+        : `Pending — awaiting sign-up from ${seat ? seat.invitedEmail : 'this contact'}`;
+      return purchaseCard(p, '🔑 Single Teacher License', `Purchased ${dateLabel} · ${statusLine}`, '');
+    }
+    // group_license
+    const registeredCount = p.seats.filter(s => s.status === 'registered').length;
+    const seatRows = p.seats.map(s => `
+      <div class="a-repeat-row">
+        <div class="info" style="flex:1;">
+          ${s.status === 'registered'
+            ? `<div class="name">✅ ${s.registeredName} <span style="color:var(--a-text-soft); font-weight:400;">(${s.invitedEmail})</span></div>`
+            : `<input type="email" placeholder="teacher@school.org" value="${s.invitedEmail || ''}" style="width:100%;" onchange="assignSeatEmail(${p.id}, ${s.id}, this.value)">`}
+        </div>
+      </div>
+    `).join('');
+    return purchaseCard(
+      p,
+      `🏫 Group License — ${registeredCount}/${p.seatCount} seats used`,
+      `Purchased ${dateLabel}`,
+      `<div style="margin-top:10px;">${seatRows}</div>`
+    );
+  }).join('');
+}
+
+function purchaseCard(p, title, subtitle, extraHtml) {
+  return `
+    <div class="a-card" style="margin-bottom:12px; box-shadow:none; border:1px solid var(--a-border);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div>
+          <div class="a-cell-title">${title}</div>
+          <div class="a-note" style="margin:2px 0 0;">${subtitle}${p.notes ? ' · ' + p.notes : ''}</div>
+        </div>
+        <button class="a-icon-btn danger" title="Delete purchase" onclick="deletePurchase(${p.id})">🗑️</button>
+      </div>
+      ${extraHtml}
+    </div>
+  `;
+}
+
+async function addPurchase() {
+  const productType = document.getElementById('purchaseType').value;
+  const body = { productType, notes: document.getElementById('purchaseNotes').value.trim() };
+  if (productType === 'book') {
+    body.bookId = Number(document.getElementById('purchaseBookId').value);
+    if (!body.bookId) { fnToast('Add a book in the Books tab first'); return; }
+  }
+  if (productType === 'group_license') {
+    body.seatCount = Number(document.getElementById('purchaseSeatCount').value);
+    if (!(body.seatCount > 0)) { fnToast('Seat count must be at least 1'); return; }
+  }
+
+  const r = await fetch(`/api/newsletter/contacts/${purchasesContactId}/purchases`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not add purchase');
+    return;
+  }
+  document.getElementById('purchaseNotes').value = '';
+  await renderPurchasesList();
+  fnToast('Purchase added');
+}
+
+async function deletePurchase(id) {
+  if (!confirm('Delete this purchase? Any license seats tied to it will be removed too.')) return;
+  const r = await fetch(`/api/newsletter/purchases/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  await renderPurchasesList();
+  fnToast('Purchase deleted');
+}
+
+async function assignSeatEmail(purchaseId, seatId, email) {
+  const r = await fetch(`/api/newsletter/purchases/${purchaseId}/seats/${seatId}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ invitedEmail: email.trim() }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save email');
+  } else {
+    fnToast('Seat updated');
+  }
+  await renderPurchasesList();
 }
 
 document.getElementById('searchInput').addEventListener('input', function(e){

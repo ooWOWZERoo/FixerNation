@@ -27,7 +27,7 @@ app.use('/api/books', bookRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/curricula', curriculumRoutes);
 app.use('/api/blog', blogRoutes);
-app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/newsletter', newsletterRoutes.router);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/site-auth', siteAuthRoutes.router);
 

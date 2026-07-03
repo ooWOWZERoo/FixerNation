@@ -82,7 +82,8 @@ function fnAuthRenderNav(loggedIn, firstName) {
     nav.innerHTML = `
       <div style="position:relative;">
         <a href="#" onclick="fnAuthToggleUserMenu(); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
-        <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:140px; z-index:300;">
+        <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:160px; z-index:300;">
+          <a href="my-license.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My License</a>
           <a href="#" onclick="fnAuthLogout(); return false;" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">Log Out</a>
         </div>
       </div>
