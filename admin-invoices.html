@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=8">
+<link rel="stylesheet" href="admin-common.css?v=9">
 </head>
 <body>
 
@@ -57,7 +57,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=8"></script>
+<script src="admin-common.js?v=9"></script>
 <script>
 fnRequireAuth();
 
@@ -76,18 +76,23 @@ async function loadInvoices() {
   invoicesCache.forEach(inv => {
     const tr = document.createElement('tr');
     const paid = inv.status === 'paid';
+    const cancelled = inv.status === 'cancelled';
+    const statusLabel = cancelled ? 'Cancelled' : (paid ? 'Paid' : 'Unpaid');
+    const statusPill = cancelled ? 'a-pill-danger' : (paid ? 'a-pill-success' : 'a-pill-neutral');
     tr.innerHTML = `
       <td class="a-cell-title"><a href="admin-invoice-print.html?id=${inv.id}" target="_blank">${inv.invoiceNumber}</a></td>
       <td>${(inv.buyer && (inv.buyer.company || inv.buyer.name)) || '—'}<div class="a-note">${(inv.buyer && inv.buyer.email) || ''}</div></td>
       <td>${inv.poNumber || '—'}</td>
       <td>${inv.itemCount}</td>
       <td>${fnFormatCurrency(inv.total)}</td>
-      <td><span class="a-pill ${paid ? 'a-pill-success' : 'a-pill-neutral'}">${paid ? 'Paid' : 'Unpaid'}</span></td>
+      <td><span class="a-pill ${statusPill}">${statusLabel}</span></td>
       <td>${fnFormatDate(inv.createdAt)}</td>
       <td>
         <div class="a-row-actions">
           <a class="a-icon-btn" title="View / Print" href="admin-invoice-print.html?id=${inv.id}" target="_blank">🖨️</a>
-          <button class="a-icon-btn" title="${paid ? 'Mark unpaid' : 'Mark paid'}" onclick="toggleInvoiceStatus(${inv.id}, '${paid ? 'unpaid' : 'paid'}')">${paid ? '↺' : '✅'}</button>
+          ${cancelled ? '' : `<button class="a-icon-btn" title="${paid ? 'Mark unpaid' : 'Mark paid'}" onclick="toggleInvoiceStatus(${inv.id}, '${paid ? 'unpaid' : 'paid'}')">${paid ? '↺' : '✅'}</button>`}
+          ${cancelled ? '' : `<button class="a-icon-btn" title="Cancel invoice" onclick="cancelInvoice(${inv.id})">🚫</button>`}
+          <button class="a-icon-btn danger" title="Delete invoice" onclick="deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </td>
     `;
@@ -110,6 +115,40 @@ async function toggleInvoiceStatus(id, newStatus) {
   }
   loadInvoices();
   fnToast(newStatus === 'paid' ? 'Marked as paid' : 'Marked as unpaid');
+}
+
+async function cancelInvoice(id) {
+  if (!confirm('Cancel this invoice? It will be kept for records but marked as cancelled. This does not remove any seats or licenses already granted.')) return;
+  const r = await fetch(`/api/invoices/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'cancelled' }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not cancel invoice');
+    return;
+  }
+  loadInvoices();
+  fnToast('Invoice cancelled');
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Permanently delete this invoice? This cannot be undone. The underlying purchases (seats, licenses, book orders) are kept — only the invoice document is removed.')) return;
+  const r = await fetch(`/api/invoices/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not delete invoice');
+    return;
+  }
+  loadInvoices();
+  fnToast('Invoice deleted');
 }
 
 loadInvoices();

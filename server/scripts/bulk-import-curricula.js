@@ -108,9 +108,9 @@ async function main() {
 
       await connection.beginTransaction();
       const [result] = await connection.query(
-        `INSERT INTO curricula (title, series, short_description, overview, estimated_duration, download_limit, published)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [title, 'SEL Morning Boost', lesson.objective, lesson.objective, '', DOWNLOAD_LIMIT, 0]
+        `INSERT INTO curricula (title, series, short_description, overview, download_limit, published)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [title, 'SEL Morning Boost', lesson.objective, lesson.objective, DOWNLOAD_LIMIT, 0]
       );
       const id = result.insertId;
       await connection.query(

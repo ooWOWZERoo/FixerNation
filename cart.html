@@ -86,7 +86,7 @@
 
 <footer>© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</footer>
 
-<script src="admin-common.js?v=8"></script>
+<script src="admin-common.js?v=9"></script>
 <script src="cart.js"></script>
 <script>
 function toast(msg) {
@@ -107,6 +107,17 @@ function renderStatusBanner() {
   } else if (status === 'cancelled') {
     banner.innerHTML = `<div class="status-banner cancelled">Checkout was cancelled — your cart is still here, no charge was made.</div>`;
   }
+}
+
+let siteAuthState = { loggedIn: false, email: '' };
+
+async function loadSiteAuthState() {
+  const r = await fetch('/api/site-auth/me', { credentials: 'include' });
+  siteAuthState = await r.json().catch(() => ({ loggedIn: false }));
+}
+
+function cartNeedsEmailField(items) {
+  return items.some(item => item.type === 'license_product');
 }
 
 function renderCart() {
@@ -147,17 +158,25 @@ function renderCart() {
   }).join('');
 
   const total = cartTotal();
+  const needsEmailField = cartNeedsEmailField(items);
+  const canCheckout = needsEmailField || siteAuthState.loggedIn;
+
+  const emailFieldHtml = needsEmailField
+    ? `<div class="a-field"><label>Your Email (School Buyer)</label><input type="email" id="checkoutEmail" placeholder="you@school.org"></div>`
+    : (siteAuthState.loggedIn
+      ? `<div class="a-field"><label>Your Email</label><div style="padding:11px 14px; border-radius:10px; border:1px solid var(--border); font-size:14px; background:var(--cream-soft); color:var(--ink-soft);">${siteAuthState.email} (from your account)</div></div>`
+      : `<div class="status-banner cancelled">Please <a href="#" onclick="fnAuthOpenModal('login'); return false;" style="color:var(--coral-dark); font-weight:700;">log in</a> or <a href="#" onclick="fnAuthOpenModal('signup'); return false;" style="color:var(--coral-dark); font-weight:700;">sign up</a> to check out — book purchases use your account email.</div>`);
 
   wrap.innerHTML = `
     ${itemsHtml}
     <div class="summary-card">
       <div class="total-row"><span>Total</span><span>${fnFormatCurrency(total)}</span></div>
 
-      <div class="a-field"><label>Your Email</label><input type="email" id="checkoutEmail" placeholder="you@school.org"></div>
+      ${emailFieldHtml}
 
       <div class="checkout-options">
-        <button class="btn btn-primary" onclick="checkoutWithStripe()">Pay by Card</button>
-        <button class="btn btn-outline" onclick="togglePoForm()">Pay by Purchase Order</button>
+        <button class="btn btn-primary" ${canCheckout ? '' : 'disabled'} onclick="checkoutWithStripe()">Pay by Card</button>
+        <button class="btn btn-outline" ${canCheckout ? '' : 'disabled'} onclick="togglePoForm()">Pay by Purchase Order</button>
       </div>
 
       <div class="po-form" id="poForm">
@@ -174,10 +193,16 @@ function togglePoForm() {
 }
 
 function validateCheckout() {
-  const email = document.getElementById('checkoutEmail').value.trim();
-  if (!email) { toast('Enter your email first'); return null; }
-
   const items = cartGet();
+  let email;
+  if (cartNeedsEmailField(items)) {
+    email = document.getElementById('checkoutEmail').value.trim();
+    if (!email) { toast('Enter your email first'); return null; }
+  } else {
+    if (!siteAuthState.loggedIn) { toast('Please log in to check out'); return null; }
+    email = siteAuthState.email;
+  }
+
   for (const item of items) {
     if (item.type === 'license_product' && !(item.schoolDomain || '').trim()) {
       toast('Enter a school domain for every license in your cart');
@@ -220,8 +245,16 @@ async function checkoutWithPo() {
   renderCart();
 }
 
-renderStatusBanner();
-renderCart();
+document.addEventListener('fn-auth-changed', async () => {
+  await loadSiteAuthState();
+  renderCart();
+});
+
+(async function init() {
+  await loadSiteAuthState();
+  renderStatusBanner();
+  renderCart();
+})();
 </script>
 
 <!-- Log In / Sign Up modal (site-auth.js) -->

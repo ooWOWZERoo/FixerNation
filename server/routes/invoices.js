@@ -81,8 +81,8 @@ router.get('/:id', requireAuth, async (req, res) => {
 // rather than letting the CRM's per-purchase status drift from the invoice.
 router.put('/:id', requireAuth, async (req, res) => {
   const status = req.body && req.body.status;
-  if (status !== 'paid' && status !== 'unpaid') {
-    return res.status(400).json({ error: "status must be 'paid' or 'unpaid'" });
+  if (status !== 'paid' && status !== 'unpaid' && status !== 'cancelled') {
+    return res.status(400).json({ error: "status must be 'paid', 'unpaid', or 'cancelled'" });
   }
 
   const [rows] = await pool.query('SELECT id FROM invoices WHERE id = ?', [req.params.id]);
@@ -95,8 +95,13 @@ router.put('/:id', requireAuth, async (req, res) => {
       'UPDATE invoices SET status = ?, paid_at = ? WHERE id = ?',
       [status, status === 'paid' ? new Date() : null, req.params.id]
     );
-    // purchases.payment_status uses 'paid'|'pending' (not 'unpaid') — map accordingly.
-    await connection.query('UPDATE purchases SET payment_status = ? WHERE invoice_id = ?', [status === 'paid' ? 'paid' : 'pending', req.params.id]);
+    // Cancelling an invoice is just a record-keeping change — it doesn't touch
+    // purchases.payment_status, since seats/access already granted to a school
+    // shouldn't be silently revoked here. paid/unpaid still cascade as before.
+    if (status !== 'cancelled') {
+      // purchases.payment_status uses 'paid'|'pending' (not 'unpaid') — map accordingly.
+      await connection.query('UPDATE purchases SET payment_status = ? WHERE invoice_id = ?', [status === 'paid' ? 'paid' : 'pending', req.params.id]);
+    }
     await connection.commit();
   } catch (err) {
     await connection.rollback();
@@ -105,6 +110,15 @@ router.put('/:id', requireAuth, async (req, res) => {
     connection.release();
   }
 
+  res.json({ ok: true });
+});
+
+// Purchases carry ON DELETE SET NULL on invoice_id, so deleting an invoice
+// un-groups its line items rather than deleting the underlying purchases —
+// seats/licenses/book orders already granted stay intact.
+router.delete('/:id', requireAuth, async (req, res) => {
+  const [result] = await pool.query('DELETE FROM invoices WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Invoice not found' });
   res.json({ ok: true });
 });
 

@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   contact_id INT UNSIGNED NOT NULL,
   po_number VARCHAR(128) NULL,
   total_cents INT UNSIGNED NOT NULL DEFAULT 0,
-  status VARCHAR(16) NOT NULL DEFAULT 'unpaid', -- 'unpaid' | 'paid'
+  status VARCHAR(16) NOT NULL DEFAULT 'unpaid', -- 'unpaid' | 'paid' | 'cancelled'
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   paid_at DATETIME NULL,
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE
@@ -230,7 +230,8 @@ CREATE TABLE IF NOT EXISTS curricula (
   series VARCHAR(255),
   short_description TEXT,
   overview TEXT,
-  estimated_duration VARCHAR(128),
+  lessons_count INT UNSIGNED,
+  weeks_count INT UNSIGNED,
   lesson_document VARCHAR(255),
   lesson_document_name VARCHAR(255),
   download_limit INT UNSIGNED NOT NULL DEFAULT 0,
@@ -266,6 +267,8 @@ CREATE TABLE IF NOT EXISTS curriculum_resources (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   curriculum_id INT UNSIGNED NOT NULL,
   resource VARCHAR(64) NOT NULL,
+  file_path VARCHAR(512),
+  file_name VARCHAR(255),
   FOREIGN KEY (curriculum_id) REFERENCES curricula(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

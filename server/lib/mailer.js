@@ -83,4 +83,23 @@ async function sendAdminInviteEmail({ to, username, inviteUrl }) {
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail };
+const CONTACT_INBOX = 'admin@fixernationeducation.com';
+
+async function sendContactFormEmail({ formName, fields, replyTo }) {
+  const rows = Object.entries(fields)
+    .filter(([, value]) => value)
+    .map(([label, value]) => `<p><strong>${label}:</strong> ${value}</p>`)
+    .join('');
+  const text = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
+
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to: CONTACT_INBOX,
+    replyTo,
+    subject: `New ${formName} submission — Fixer Nation`,
+    text,
+    html: rows,
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendContactFormEmail };

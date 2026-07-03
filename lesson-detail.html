@@ -74,8 +74,12 @@
   .rq-block:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
   .rq-num{font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--coral-dark); margin-bottom:8px;}
   .rq-question{font-weight:700; margin-bottom:10px; font-size:15px;}
-  .rq-option{padding:9px 12px; border-radius:8px; font-size:13.5px; margin-bottom:6px; background:var(--cream-soft);}
-  .rq-option.correct{background:#E4F3EE; color:var(--teal-dark); font-weight:700;}
+  .rq-option{display:flex; gap:8px; padding:9px 12px; border-radius:8px; font-size:13.5px; margin-bottom:6px; background:var(--cream-soft);}
+  .rq-option-letter{font-weight:800; color:var(--teal-dark);}
+  .rq-answerkey{margin-top:26px; padding-top:22px; border-top:2px solid rgba(22,79,74,0.15);}
+  .rq-answerkey h4{font-size:15px; margin-bottom:12px;}
+  .rq-answerkey-row{font-size:13.5px; margin-bottom:6px;}
+  .rq-answerkey-row strong{color:var(--coral-dark);}
 
   .fn-video-embed{position:relative; width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#000;}
   .fn-video-embed iframe, .fn-video-embed video{width:100%; height:100%; border:none; display:block;}
@@ -204,7 +208,7 @@
   </div>
 </footer>
 
-<script src="admin-common.js?v=8"></script>
+<script src="admin-common.js?v=9"></script>
 <script>
 async function getCurriculumFromQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -233,11 +237,16 @@ async function openResource(curriculumId, resourceName) {
     openQuizModal(c);
     return;
   }
-  if (c.lessonDocument) {
-    window.open(c.lessonDocument, '_blank');
+  const entry = (c.resources || []).find(x => x.resource === resourceName);
+  if (entry && entry.filePath) {
+    window.open(entry.filePath, '_blank');
   } else {
-    showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Lesson Plan Document field in the Curriculum Builder.');
+    showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Curriculum Builder.');
   }
+}
+
+function optionLetter(index) {
+  return String.fromCharCode(65 + index);
 }
 
 function openQuizModal(c) {
@@ -247,13 +256,20 @@ function openQuizModal(c) {
   if (quiz.length === 0) {
     body.innerHTML = '<p style="color:var(--ink-soft);">No quiz questions have been added for this lesson yet — build one in the admin Curriculum Builder.</p>';
   } else {
-    body.innerHTML = quiz.map((q, qi) => `
+    const questionsHtml = quiz.map((q, qi) => `
       <div class="rq-block">
         <div class="rq-num">Question ${qi + 1}</div>
         <div class="rq-question">${q.question || '(no question text yet)'}</div>
-        ${(q.options || []).map((opt, oi) => `<div class="rq-option ${oi === q.correctIndex ? 'correct' : ''}">${oi === q.correctIndex ? '✓ ' : ''}${opt || '(empty option)'}</div>`).join('')}
+        ${(q.options || []).map((opt, oi) => `<div class="rq-option"><span class="rq-option-letter">${optionLetter(oi)}.</span> ${opt || '(empty option)'}</div>`).join('')}
       </div>
     `).join('');
+    const answerKeyHtml = `
+      <div class="rq-answerkey">
+        <h4>Answer Key</h4>
+        ${quiz.map((q, qi) => `<div class="rq-answerkey-row">Question ${qi + 1}: <strong>${optionLetter(q.correctIndex)}</strong></div>`).join('')}
+      </div>
+    `;
+    body.innerHTML = questionsHtml + answerKeyHtml;
   }
   document.getElementById('quizModalOverlay').classList.add('show');
 }
@@ -278,7 +294,7 @@ function renderDetailResources(c) {
     return;
   }
   row.innerHTML = c.resources.map(r =>
-    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
+    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`
   ).join('');
 }
 
@@ -303,7 +319,8 @@ async function renderLessonDetail() {
   document.getElementById('lessonTitle').textContent = c.title;
 
   const metaParts = [];
-  if (c.estimatedDuration) metaParts.push(c.estimatedDuration);
+  if (c.lessonsCount) metaParts.push(c.lessonsCount + ' lesson' + (c.lessonsCount === 1 ? '' : 's'));
+  if (c.weeksCount) metaParts.push(c.weeksCount + ' week' + (c.weeksCount === 1 ? '' : 's'));
   if (c.downloadLimit > 0) metaParts.push(c.downloadLimit + ' download' + (c.downloadLimit === 1 ? '' : 's') + ' per teacher');
   document.getElementById('lessonMeta').textContent = metaParts.join(' · ');
 

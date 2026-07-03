@@ -131,7 +131,8 @@ async function seedCurricula(connection) {
         'Practice daily reflection on personal choices',
         'Build a personal accountability plan',
       ],
-      estimatedDuration: '5 lessons · 1 week (30 min/day)',
+      lessonsCount: 5,
+      weeksCount: 1,
       materials: ['Classroom poster (included)', 'Student reflection journal', 'Whiteboard or chart paper'],
       resources: ['Classroom Poster', 'Student Handout', 'Teacher Copy', 'Quiz + Answer Key'],
       videos: [],
@@ -161,7 +162,8 @@ async function seedCurricula(connection) {
         'Practice identifying assumptions and biases',
         'Communicate a decision rationale clearly',
       ],
-      estimatedDuration: '3 lessons · 2 weeks',
+      lessonsCount: 3,
+      weeksCount: 2,
       materials: ['Handout packet', 'Scenario cards'],
       resources: ['Student Handout', 'Teacher Copy', 'Quiz + Answer Key'],
       videos: [],
@@ -179,9 +181,9 @@ async function seedCurricula(connection) {
 
   for (const c of curricula) {
     const [result] = await connection.query(
-      `INSERT INTO curricula (title, series, short_description, overview, estimated_duration, download_limit, published)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [c.title, c.series, c.shortDescription, c.overview, c.estimatedDuration, c.downloadLimit, c.published ? 1 : 0]
+      `INSERT INTO curricula (title, series, short_description, overview, lessons_count, weeks_count, download_limit, published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [c.title, c.series, c.shortDescription, c.overview, c.lessonsCount || null, c.weeksCount || null, c.downloadLimit, c.published ? 1 : 0]
     );
     const id = result.insertId;
     for (const a of c.audiences) await connection.query('INSERT INTO curriculum_audiences (curriculum_id, audience) VALUES (?, ?)', [id, a]);

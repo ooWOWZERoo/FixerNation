@@ -160,12 +160,14 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   const token = req.cookies[SITE_COOKIE_NAME];
   if (!token) return res.json({ loggedIn: false });
   try {
     const payload = jwt.verify(token, process.env.SESSION_SECRET);
-    res.json({ loggedIn: true, firstName: payload.firstName });
+    const [rows] = await pool.query('SELECT email FROM site_users WHERE id = ?', [payload.userId]);
+    if (!rows[0]) return res.json({ loggedIn: false });
+    res.json({ loggedIn: true, firstName: payload.firstName, email: rows[0].email });
   } catch {
     res.json({ loggedIn: false });
   }

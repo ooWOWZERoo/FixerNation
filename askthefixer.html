@@ -118,18 +118,19 @@
     <div class="form-card">
       <form id="askForm">
         <div class="form-row">
-          <div class="form-field"><label>First Name</label><input type="text" placeholder="Jane"></div>
-          <div class="form-field"><label>Last Name</label><input type="text" placeholder="Doe"></div>
-          <div class="form-field"><label>Email *</label><input type="email" required placeholder="jane@email.com"></div>
+          <div class="form-field"><label>First Name</label><input type="text" id="askFirstName" placeholder="Jane"></div>
+          <div class="form-field"><label>Last Name</label><input type="text" id="askLastName" placeholder="Doe"></div>
+          <div class="form-field"><label>Email *</label><input type="email" id="askEmail" required placeholder="jane@email.com"></div>
         </div>
         <div class="form-field" style="margin-bottom:16px;">
           <label>Message</label>
-          <textarea placeholder="Tell The Fixer what's on your mind..."></textarea>
+          <textarea id="askMessage" placeholder="Tell The Fixer what's on your mind..."></textarea>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Send</button>
         </div>
         <div class="success-msg" id="successMsg">Thanks — The Fixer has received your message and will follow up soon.</div>
+        <div class="error-msg" id="askErrorMsg" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;">Something went wrong sending your message — please try again.</div>
       </form>
     </div>
   </div>
@@ -165,10 +166,27 @@
 </footer>
 
 <script>
-document.getElementById('askForm').addEventListener('submit', function(e){
+document.getElementById('askForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  document.getElementById('successMsg').style.display = 'block';
-  this.reset();
+  const errorMsg = document.getElementById('askErrorMsg');
+  errorMsg.style.display = 'none';
+  try {
+    const r = await fetch('/api/contact/ask-the-fixer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: document.getElementById('askFirstName').value,
+        lastName: document.getElementById('askLastName').value,
+        email: document.getElementById('askEmail').value,
+        message: document.getElementById('askMessage').value,
+      }),
+    });
+    if (!r.ok) throw new Error('request failed');
+    document.getElementById('successMsg').style.display = 'block';
+    this.reset();
+  } catch (err) {
+    errorMsg.style.display = 'block';
+  }
 });
 </script>
 

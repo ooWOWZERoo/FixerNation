@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=8">
+<link rel="stylesheet" href="admin-common.css?v=9">
 </head>
 <body>
 
@@ -102,13 +102,18 @@
 
         <div class="a-form-row">
           <div class="a-field">
-            <label>Estimated Duration</label>
-            <input type="text" id="estimatedDuration" placeholder="e.g. 5 lessons · 1 week">
+            <label>Number of Lessons</label>
+            <input type="number" id="lessonsCount" min="0" placeholder="e.g. 5">
           </div>
           <div class="a-field">
-            <label>Max Downloads Per Teacher *</label>
-            <input type="number" id="downloadLimit" min="0" value="3" required>
+            <label>Number of Week(s)</label>
+            <input type="number" id="weeksCount" min="0" placeholder="e.g. 1">
           </div>
+        </div>
+
+        <div class="a-field">
+          <label>Max Downloads Per Teacher *</label>
+          <input type="number" id="downloadLimit" min="0" value="3" required>
         </div>
 
         <div class="a-field">
@@ -118,8 +123,8 @@
 
         <div class="a-field">
           <label>Included Resources</label>
-          <div class="a-tag-row" id="resourcesRow"></div>
-          <div class="a-note">Controls which resource buttons appear for this lesson on the public National Education Portal page (Classroom Poster, Student Handout, Teacher Copy, Quiz + Answer Key).</div>
+          <div class="a-resource-list" id="resourcesRow"></div>
+          <div class="a-note">Controls which resource buttons appear for this lesson on the public National Education Portal page. Checking a resource (other than Quiz + Answer Key, which uses the Quiz Questions section below) reveals a file upload for that specific resource, which links to its own button on the lesson detail page.</div>
         </div>
 
         <div class="a-field">
@@ -198,13 +203,14 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=8"></script>
+<script src="admin-common.js?v=9"></script>
 <script>
 fnRequireAuth();
 
 let editingId = null;
 let currentVideos = [];
 let currentQuiz = [];
+let currentResources = [];
 let currentLessonDoc = { url: '', name: '' };
 let activeDownloadCurriculumId = null;
 let curriculaCache = [];
@@ -220,15 +226,61 @@ function renderAudienceCheckboxes(selected) {
   });
 }
 
-function renderResourceCheckboxes(selected) {
+function renderResourceCheckboxes() {
   const row = document.getElementById('resourcesRow');
   row.innerHTML = '';
   FN_CURRICULUM_RESOURCES.forEach(r => {
-    const label = document.createElement('label');
-    label.className = 'a-tag-check';
-    label.innerHTML = `<input type="checkbox" value="${r}" ${selected.includes(r) ? 'checked' : ''}> ${r}`;
-    row.appendChild(label);
+    const entry = currentResources.find(x => x.resource === r);
+    const checked = !!entry;
+    const needsFile = r !== 'Quiz + Answer Key';
+
+    const block = document.createElement('div');
+    block.className = 'a-resource-block';
+
+    let fileHtml = '';
+    if (checked && needsFile) {
+      fileHtml = entry.fileName
+        ? `<div class="a-repeat-row"><div class="info"><div class="name">📄 ${entry.fileName}</div><div class="meta">Attached to ${r}</div></div><button type="button" class="a-repeat-remove" onclick="removeResourceFile('${r.replace(/'/g, "\\'")}')">✕</button></div>`
+        : `<input type="file" onchange="uploadResourceFile('${r.replace(/'/g, "\\'")}', this)">`;
+    } else if (checked) {
+      fileHtml = `<div class="a-note" style="margin-top:0;">Uses the Quiz Questions section below — no file needed.</div>`;
+    }
+
+    block.innerHTML = `
+      <label class="a-tag-check"><input type="checkbox" value="${r}" ${checked ? 'checked' : ''} onchange="toggleResource('${r.replace(/'/g, "\\'")}', this.checked)"> ${r}</label>
+      ${checked ? `<div class="a-resource-file">${fileHtml}</div>` : ''}
+    `;
+    row.appendChild(block);
   });
+}
+
+function toggleResource(resource, isChecked) {
+  if (isChecked) {
+    if (!currentResources.find(x => x.resource === resource)) {
+      currentResources.push({ resource, filePath: '', fileName: '' });
+    }
+  } else {
+    currentResources = currentResources.filter(x => x.resource !== resource);
+  }
+  renderResourceCheckboxes();
+}
+
+async function uploadResourceFile(resource, input) {
+  const file = input.files[0];
+  if (!file) return;
+  fnToast('Uploading file…');
+  const url = await fnUploadFile(file);
+  if (!url) return;
+  const entry = currentResources.find(x => x.resource === resource);
+  if (entry) { entry.filePath = url; entry.fileName = file.name; }
+  renderResourceCheckboxes();
+  fnToast('File uploaded');
+}
+
+function removeResourceFile(resource) {
+  const entry = currentResources.find(x => x.resource === resource);
+  if (entry) { entry.filePath = ''; entry.fileName = ''; }
+  renderResourceCheckboxes();
 }
 
 async function fetchCurricula() {
@@ -394,12 +446,13 @@ function openCurriculumModal() {
   editingId = null;
   currentVideos = [];
   currentQuiz = [];
+  currentResources = [];
   currentLessonDoc = { url: '', name: '' };
   document.getElementById('curriculumModalTitle').textContent = 'Build New Curriculum';
   document.getElementById('curriculumForm').reset();
   document.getElementById('downloadLimit').value = 3;
   renderAudienceCheckboxes([]);
-  renderResourceCheckboxes([]);
+  renderResourceCheckboxes();
   renderVideoList();
   renderQuizList();
   removeLessonDoc();
@@ -417,6 +470,7 @@ function editCurriculum(id) {
   editingId = id;
   currentVideos = JSON.parse(JSON.stringify(c.videos || []));
   currentQuiz = JSON.parse(JSON.stringify(c.quiz || []));
+  currentResources = JSON.parse(JSON.stringify(c.resources || []));
   currentLessonDoc = { url: c.lessonDocument || '', name: c.lessonDocumentName || '' };
 
   document.getElementById('curriculumModalTitle').textContent = 'Edit Curriculum';
@@ -425,12 +479,13 @@ function editCurriculum(id) {
   document.getElementById('shortDescription').value = c.shortDescription || '';
   document.getElementById('overview').value = c.overview || '';
   document.getElementById('objectives').value = (c.objectives || []).join('\n');
-  document.getElementById('estimatedDuration').value = c.estimatedDuration || '';
+  document.getElementById('lessonsCount').value = c.lessonsCount ?? '';
+  document.getElementById('weeksCount').value = c.weeksCount ?? '';
   document.getElementById('downloadLimit').value = c.downloadLimit ?? 3;
   document.getElementById('materials').value = (c.materials || []).join('\n');
 
   renderAudienceCheckboxes(c.audiences || []);
-  renderResourceCheckboxes(c.resources || []);
+  renderResourceCheckboxes();
   renderVideoList();
   renderQuizList();
 
@@ -483,9 +538,10 @@ async function saveCurriculum() {
     shortDescription: document.getElementById('shortDescription').value.trim(),
     overview: document.getElementById('overview').value.trim(),
     objectives: document.getElementById('objectives').value.split('\n').map(s => s.trim()).filter(Boolean),
-    estimatedDuration: document.getElementById('estimatedDuration').value.trim(),
+    lessonsCount: document.getElementById('lessonsCount').value ? parseInt(document.getElementById('lessonsCount').value, 10) : null,
+    weeksCount: document.getElementById('weeksCount').value ? parseInt(document.getElementById('weeksCount').value, 10) : null,
     materials: document.getElementById('materials').value.split('\n').map(s => s.trim()).filter(Boolean),
-    resources: Array.from(document.querySelectorAll('#resourcesRow input:checked')).map(cb => cb.value),
+    resources: currentResources,
     lessonDocument: currentLessonDoc.url,
     lessonDocumentName: currentLessonDoc.name,
     videos: currentVideos,

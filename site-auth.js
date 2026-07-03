@@ -150,6 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       fnAuthRenderNav(true, result.firstName);
       fnAuthCloseModal();
+      document.dispatchEvent(new CustomEvent('fn-auth-changed'));
     });
   }
 

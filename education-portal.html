@@ -138,8 +138,12 @@
   .rq-block:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
   .rq-num{font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--coral-dark); margin-bottom:8px;}
   .rq-question{font-weight:700; margin-bottom:10px; font-size:15px;}
-  .rq-option{padding:9px 12px; border-radius:8px; font-size:13.5px; margin-bottom:6px; background:var(--cream-soft);}
-  .rq-option.correct{background:#E4F3EE; color:var(--teal-dark); font-weight:700;}
+  .rq-option{display:flex; gap:8px; padding:9px 12px; border-radius:8px; font-size:13.5px; margin-bottom:6px; background:var(--cream-soft);}
+  .rq-option-letter{font-weight:800; color:var(--teal-dark);}
+  .rq-answerkey{margin-top:26px; padding-top:22px; border-top:2px solid rgba(22,79,74,0.15);}
+  .rq-answerkey h4{font-size:15px; margin-bottom:12px;}
+  .rq-answerkey-row{font-size:13.5px; margin-bottom:6px;}
+  .rq-answerkey-row strong{color:var(--coral-dark);}
 
   .fn-video-embed{position:relative; width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#000;}
   .fn-video-embed iframe, .fn-video-embed video{width:100%; height:100%; border:none; display:block;}
@@ -310,20 +314,21 @@
     <div class="form-card">
       <form id="quoteFormEl">
         <div class="form-row">
-          <div class="form-field"><label>First Name</label><input type="text"></div>
-          <div class="form-field"><label>Last Name</label><input type="text"></div>
+          <div class="form-field"><label>First Name</label><input type="text" id="quoteFirstName"></div>
+          <div class="form-field"><label>Last Name</label><input type="text" id="quoteLastName"></div>
         </div>
         <div class="form-row">
-          <div class="form-field"><label>Email</label><input type="email" required></div>
-          <div class="form-field"><label>School</label><input type="text"></div>
+          <div class="form-field"><label>Email</label><input type="email" id="quoteEmail" required></div>
+          <div class="form-field"><label>School</label><input type="text" id="quoteSchool"></div>
         </div>
         <div class="form-row" style="grid-template-columns:1fr;">
-          <div class="form-field"><label>Phone</label><input type="tel"></div>
+          <div class="form-field"><label>Phone</label><input type="tel" id="quotePhone"></div>
         </div>
-        <div class="form-field" style="margin-bottom:16px;"><label>Message</label><textarea placeholder="Number of licenses / teachers..."></textarea></div>
+        <div class="form-field" style="margin-bottom:16px;"><label>Message</label><textarea id="quoteMessage" placeholder="Number of licenses / teachers..."></textarea></div>
         <button type="submit" class="btn btn-primary" style="width:100%;">Request Quotation</button>
         <a href="#" class="privacy-link">Do Not Sell My Personal Information</a>
         <div class="success-msg" id="quoteSuccess">Thank you for your interest — we'll follow up shortly.</div>
+        <div class="error-msg" id="quoteErrorMsg" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;">Something went wrong sending your request — please try again.</div>
       </form>
     </div>
   </div>
@@ -357,7 +362,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=8"></script>
+<script src="admin-common.js?v=9"></script>
 <script src="cart.js"></script>
 <script>
 document.getElementById('filterBar').addEventListener('click', function(e){
@@ -409,10 +414,29 @@ fetch('/api/license-products')
   .then(r => r.json())
   .then(data => renderLicenseProducts(data.licenseProducts || []));
 
-document.getElementById('quoteFormEl').addEventListener('submit', function(e){
+document.getElementById('quoteFormEl').addEventListener('submit', async function(e){
   e.preventDefault();
-  document.getElementById('quoteSuccess').style.display = 'block';
-  this.reset();
+  const errorMsg = document.getElementById('quoteErrorMsg');
+  errorMsg.style.display = 'none';
+  try {
+    const r = await fetch('/api/contact/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: document.getElementById('quoteFirstName').value,
+        lastName: document.getElementById('quoteLastName').value,
+        email: document.getElementById('quoteEmail').value,
+        school: document.getElementById('quoteSchool').value,
+        phone: document.getElementById('quotePhone').value,
+        message: document.getElementById('quoteMessage').value,
+      }),
+    });
+    if (!r.ok) throw new Error('request failed');
+    document.getElementById('quoteSuccess').style.display = 'block';
+    this.reset();
+  } catch (err) {
+    errorMsg.style.display = 'block';
+  }
 });
 
 function showInfoToast(msg) {
@@ -452,7 +476,7 @@ function renderSpotlightResources() {
     return;
   }
   row.innerHTML = match.resources.map(r =>
-    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${match.id}, '${r.replace(/'/g, "\\'")}'); return false;">${r}</a>`
+    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${match.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`
   ).join('');
 }
 
@@ -463,11 +487,16 @@ function openResource(curriculumId, resourceName) {
     openQuizModal(c);
     return;
   }
-  if (c.lessonDocument) {
-    window.open(c.lessonDocument, '_blank');
+  const entry = (c.resources || []).find(x => x.resource === resourceName);
+  if (entry && entry.filePath) {
+    window.open(entry.filePath, '_blank');
   } else {
-    showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Lesson Plan Document field in the Curriculum Builder.');
+    showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Curriculum Builder.');
   }
+}
+
+function optionLetter(index) {
+  return String.fromCharCode(65 + index);
 }
 
 function openQuizModal(c) {
@@ -477,13 +506,20 @@ function openQuizModal(c) {
   if (quiz.length === 0) {
     body.innerHTML = '<p style="color:var(--ink-soft);">No quiz questions have been added for this lesson yet — build one in the admin Curriculum Builder.</p>';
   } else {
-    body.innerHTML = quiz.map((q, qi) => `
+    const questionsHtml = quiz.map((q, qi) => `
       <div class="rq-block">
         <div class="rq-num">Question ${qi + 1}</div>
         <div class="rq-question">${q.question || '(no question text yet)'}</div>
-        ${(q.options || []).map((opt, oi) => `<div class="rq-option ${oi === q.correctIndex ? 'correct' : ''}">${oi === q.correctIndex ? '✓ ' : ''}${opt || '(empty option)'}</div>`).join('')}
+        ${(q.options || []).map((opt, oi) => `<div class="rq-option"><span class="rq-option-letter">${optionLetter(oi)}.</span> ${opt || '(empty option)'}</div>`).join('')}
       </div>
     `).join('');
+    const answerKeyHtml = `
+      <div class="rq-answerkey">
+        <h4>Answer Key</h4>
+        ${quiz.map((q, qi) => `<div class="rq-answerkey-row">Question ${qi + 1}: <strong>${optionLetter(q.correctIndex)}</strong></div>`).join('')}
+      </div>
+    `;
+    body.innerHTML = questionsHtml + answerKeyHtml;
   }
   document.getElementById('quizModalOverlay').classList.add('show');
 }
