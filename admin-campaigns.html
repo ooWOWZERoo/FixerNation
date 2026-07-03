@@ -101,7 +101,7 @@
           </div>
           <div class="a-field">
             <label>From Email</label>
-            <input type="email" id="fromEmail" value="hello@fixernation.org">
+            <input type="email" id="fromEmail" value="noreply@fixernationeducation.com">
           </div>
         </div>
 
@@ -285,7 +285,7 @@ async function openCampaignModal() {
   document.getElementById('campaignModalTitle').textContent = 'New Campaign';
   document.getElementById('campaignForm').reset();
   document.getElementById('fromName').value = 'Fixer Nation';
-  document.getElementById('fromEmail').value = 'hello@fixernation.org';
+  document.getElementById('fromEmail').value = 'noreply@fixernationeducation.com';
   subscribedContactsCache = await fetchSubscribedContacts();
   populateSourceOptions();
   document.getElementById('audienceSource').value = 'All';
@@ -369,7 +369,7 @@ async function saveCampaign(send) {
   const data = {
     subject,
     fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
-    fromEmail: document.getElementById('fromEmail').value.trim() || 'hello@fixernation.org',
+    fromEmail: document.getElementById('fromEmail').value.trim() || 'noreply@fixernationeducation.com',
     audienceFilter: { status: 'Subscribed', source },
     body: document.getElementById('body').value,
     bodyFormat,

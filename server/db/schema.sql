@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   subject VARCHAR(255) NOT NULL,
   from_name VARCHAR(255) NOT NULL DEFAULT 'Fixer Nation',
-  from_email VARCHAR(255) NOT NULL DEFAULT 'hello@fixernation.org',
+  from_email VARCHAR(255) NOT NULL DEFAULT 'noreply@fixernationeducation.com',
   audience_status VARCHAR(32) NOT NULL DEFAULT 'Subscribed',
   audience_source VARCHAR(128) NOT NULL DEFAULT 'All',
   body MEDIUMTEXT,
