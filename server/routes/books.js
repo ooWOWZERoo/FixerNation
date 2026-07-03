@@ -32,6 +32,12 @@ function serializeBook(row) {
     tags: row.tags || [],
     stockStatus: row.stock_status,
     amazonUrl: row.amazon_url,
+    kindlePrice: row.kindle_price === null ? '' : Number(row.kindle_price),
+    kindleUrl: row.kindle_url || '',
+    hardcoverPrice: row.hardcover_price === null ? '' : Number(row.hardcover_price),
+    hardcoverUrl: row.hardcover_url || '',
+    paperbackPrice: row.paperback_price === null ? '' : Number(row.paperback_price),
+    paperbackUrl: row.paperback_url || '',
     published: !!row.published,
     createdAt: row.created_at,
   };
@@ -63,12 +69,16 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const [result] = await pool.query(
-    `INSERT INTO books (title, author, cover_image, short_description, long_description, price, compare_at_price, sku, category, stock_status, amazon_url, published)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO books (title, author, cover_image, short_description, long_description, price, compare_at_price, sku, category, stock_status, amazon_url, kindle_price, kindle_url, hardcover_price, hardcover_url, paperback_price, paperback_url, published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       b.title, b.author || '', b.coverImage || '', b.shortDescription || '', b.longDescription || '',
       b.price, b.compareAtPrice || null, b.sku || '', b.category || '', b.stockStatus || 'In Stock',
-      b.amazonUrl || '', b.published ? 1 : 0,
+      b.amazonUrl || '',
+      b.kindlePrice || null, b.kindleUrl || null,
+      b.hardcoverPrice || null, b.hardcoverUrl || null,
+      b.paperbackPrice || null, b.paperbackUrl || null,
+      b.published ? 1 : 0,
     ]
   );
 
@@ -94,12 +104,16 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!existing[0]) return res.status(404).json({ error: 'Book not found' });
 
   await pool.query(
-    `UPDATE books SET title=?, author=?, cover_image=?, short_description=?, long_description=?, price=?, compare_at_price=?, sku=?, category=?, stock_status=?, amazon_url=?, published=?
+    `UPDATE books SET title=?, author=?, cover_image=?, short_description=?, long_description=?, price=?, compare_at_price=?, sku=?, category=?, stock_status=?, amazon_url=?, kindle_price=?, kindle_url=?, hardcover_price=?, hardcover_url=?, paperback_price=?, paperback_url=?, published=?
      WHERE id=?`,
     [
       b.title, b.author || '', b.coverImage || '', b.shortDescription || '', b.longDescription || '',
       b.price, b.compareAtPrice || null, b.sku || '', b.category || '', b.stockStatus || 'In Stock',
-      b.amazonUrl || '', b.published ? 1 : 0, req.params.id,
+      b.amazonUrl || '',
+      b.kindlePrice || null, b.kindleUrl || null,
+      b.hardcoverPrice || null, b.hardcoverUrl || null,
+      b.paperbackPrice || null, b.paperbackUrl || null,
+      b.published ? 1 : 0, req.params.id,
     ]
   );
 

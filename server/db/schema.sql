@@ -65,6 +65,12 @@ CREATE TABLE IF NOT EXISTS books (
   category VARCHAR(128),
   stock_status VARCHAR(32) NOT NULL DEFAULT 'In Stock',
   amazon_url VARCHAR(512),
+  kindle_price DECIMAL(10,2), -- these three are purely informational (link out to Amazon) — separate from `price` above, which is what our own Add to Cart/Stripe/PO checkout charges
+  kindle_url VARCHAR(512),
+  hardcover_price DECIMAL(10,2),
+  hardcover_url VARCHAR(512),
+  paperback_price DECIMAL(10,2),
+  paperback_url VARCHAR(512),
   published TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

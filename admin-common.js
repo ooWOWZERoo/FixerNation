@@ -233,10 +233,25 @@ function fnPopulateBookDetail(title) {
         desc.innerHTML = paragraphs.map((p, i) => i === 0 ? `<p><em>${p}</em></p>` : `<p>${p}</p>`).join('');
       }
 
-      const amazonLink = document.querySelector('.amazon-link');
-      if (amazonLink) {
-        amazonLink.style.display = book.amazonUrl ? '' : 'none';
-        if (book.amazonUrl) amazonLink.href = book.amazonUrl;
+      const amazonFormats = document.getElementById('amazonFormats');
+      if (amazonFormats) {
+        const formats = [
+          { label: 'Kindle', price: book.kindlePrice, url: book.kindleUrl },
+          { label: 'Hardcover', price: book.hardcoverPrice, url: book.hardcoverUrl },
+          { label: 'Paperback', price: book.paperbackPrice, url: book.paperbackUrl },
+        ].filter(f => f.price !== '' && f.price !== null && f.price !== undefined);
+
+        if (formats.length) {
+          amazonFormats.innerHTML = '<div class="amazon-formats-label">Also available on Amazon:</div>' +
+            '<div class="amazon-formats-row">' +
+            formats.map(f => f.url
+              ? `<a class="amazon-format-btn" href="${f.url}" target="_blank" rel="noopener">${f.label} — ${fnFormatCurrency(f.price)}</a>`
+              : `<span class="amazon-format-btn">${f.label} — ${fnFormatCurrency(f.price)}</span>`
+            ).join('') +
+            '</div>';
+        } else {
+          amazonFormats.innerHTML = '';
+        }
       }
 
       const photo = document.querySelector('.product-photo img');

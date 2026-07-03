@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=7">
+<link rel="stylesheet" href="admin-common.css?v=8">
 <style>
   .a-tag-check{position:relative;}
 </style>
@@ -136,9 +136,25 @@
             </select>
           </div>
           <div class="a-field">
-            <label>Amazon Link</label>
+            <label>Amazon Link <span style="font-weight:400; text-transform:none;">(used for the books grid's Amazon button)</span></label>
             <input type="text" id="amazonUrl" placeholder="https://www.amazon.com/...">
           </div>
+        </div>
+
+        <div class="a-field">
+          <label>Amazon Format Pricing <span style="font-weight:400; text-transform:none;">(shown on the detail page — leave a format blank if Amazon doesn't offer it)</span></label>
+        </div>
+        <div class="a-form-row">
+          <div class="a-field"><label style="font-size:11px;">Kindle Price</label><input type="number" id="kindlePrice" step="0.01" min="0"></div>
+          <div class="a-field"><label style="font-size:11px;">Kindle Link</label><input type="text" id="kindleUrl" placeholder="https://www.amazon.com/..."></div>
+        </div>
+        <div class="a-form-row">
+          <div class="a-field"><label style="font-size:11px;">Hardcover Price</label><input type="number" id="hardcoverPrice" step="0.01" min="0"></div>
+          <div class="a-field"><label style="font-size:11px;">Hardcover Link</label><input type="text" id="hardcoverUrl" placeholder="https://www.amazon.com/..."></div>
+        </div>
+        <div class="a-form-row">
+          <div class="a-field"><label style="font-size:11px;">Paperback Price</label><input type="number" id="paperbackPrice" step="0.01" min="0"></div>
+          <div class="a-field"><label style="font-size:11px;">Paperback Link</label><input type="text" id="paperbackUrl" placeholder="https://www.amazon.com/..."></div>
         </div>
 
         <div class="a-field">
@@ -167,7 +183,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=7"></script>
+<script src="admin-common.js?v=8"></script>
 <script>
 fnRequireAuth();
 
@@ -250,6 +266,12 @@ function editBook(id) {
   document.getElementById('category').value = b.category || '';
   document.getElementById('stockStatus').value = b.stockStatus || 'In Stock';
   document.getElementById('amazonUrl').value = b.amazonUrl || '';
+  document.getElementById('kindlePrice').value = b.kindlePrice ?? '';
+  document.getElementById('kindleUrl').value = b.kindleUrl || '';
+  document.getElementById('hardcoverPrice').value = b.hardcoverPrice ?? '';
+  document.getElementById('hardcoverUrl').value = b.hardcoverUrl || '';
+  document.getElementById('paperbackPrice').value = b.paperbackPrice ?? '';
+  document.getElementById('paperbackUrl').value = b.paperbackUrl || '';
   document.getElementById('coverUrl').value = b.coverImage || '';
   document.querySelectorAll('.a-tag-check input').forEach(cb => cb.checked = (b.tags || []).includes(cb.value));
   setPublishedToggle(!!b.published);
@@ -336,6 +358,12 @@ async function saveBook() {
     category: document.getElementById('category').value.trim(),
     stockStatus: document.getElementById('stockStatus').value,
     amazonUrl: document.getElementById('amazonUrl').value.trim(),
+    kindlePrice: document.getElementById('kindlePrice').value ? parseFloat(document.getElementById('kindlePrice').value) : '',
+    kindleUrl: document.getElementById('kindleUrl').value.trim(),
+    hardcoverPrice: document.getElementById('hardcoverPrice').value ? parseFloat(document.getElementById('hardcoverPrice').value) : '',
+    hardcoverUrl: document.getElementById('hardcoverUrl').value.trim(),
+    paperbackPrice: document.getElementById('paperbackPrice').value ? parseFloat(document.getElementById('paperbackPrice').value) : '',
+    paperbackUrl: document.getElementById('paperbackUrl').value.trim(),
     tags,
     published: document.getElementById('publishedToggle').classList.contains('on'),
   };
