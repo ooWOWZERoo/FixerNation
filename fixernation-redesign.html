@@ -256,7 +256,7 @@
       <a href="askthefixer.html">Ask The Fixer</a>
     </nav>
     <div class="nav-cta">
-      <a href="#" style="font-weight:600; font-size:14px;">Log In</a>
+      <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
       <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
     </div>
   </div>
@@ -515,7 +515,54 @@
   </div>
 </footer>
 
+<!-- Log In / Sign Up modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script src="admin-common.js?v=7"></script>
+<script src="site-auth.js"></script>
 <script>
 document.getElementById('newsletterForm').addEventListener('submit', async function(e){
   e.preventDefault();
