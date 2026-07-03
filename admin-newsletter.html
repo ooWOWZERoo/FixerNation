@@ -617,15 +617,7 @@ async function renderPurchasesList() {
     }
     // group_license
     const registeredCount = p.seats.filter(s => s.status === 'registered').length;
-    const seatRows = p.seats.map(s => `
-      <div class="a-repeat-row">
-        <div class="info" style="flex:1;">
-          ${s.status === 'registered'
-            ? `<div class="name">✅ ${s.registeredName} <span style="color:var(--a-text-soft); font-weight:400;">(${s.invitedEmail})</span></div>`
-            : `<input type="email" placeholder="teacher@school.org" value="${s.invitedEmail || ''}" style="width:100%;" onchange="assignSeatEmail(${p.id}, ${s.id}, this.value)">`}
-        </div>
-      </div>
-    `).join('');
+    const seatRows = p.seats.map(s => seatRowHtml(p.id, s)).join('');
     return purchaseCard(
       p,
       `🏫 Group License — ${registeredCount}/${p.seatCount} seats used`,
@@ -633,6 +625,23 @@ async function renderPurchasesList() {
       `<div style="margin-top:10px;">${seatRows}</div>`
     );
   }).join('');
+}
+
+function seatRowHtml(purchaseId, s) {
+  if (s.status === 'registered') {
+    return `
+      <div class="a-repeat-row">
+        <div class="info" style="flex:1;"><div class="name">✅ ${s.registeredName} <span style="color:var(--a-text-soft); font-weight:400;">(${s.invitedEmail})</span></div></div>
+        <button type="button" class="a-repeat-remove" title="Free this seat (does not delete the account)" onclick="unregisterSeat(${purchaseId}, ${s.id})">↺</button>
+      </div>`;
+  }
+  const inputId = `seatEmail_${s.id}`;
+  return `
+    <div class="a-repeat-row">
+      <input type="email" id="${inputId}" placeholder="teacher@school.org" value="${s.invitedEmail || ''}" style="flex:1;">
+      <button type="button" class="a-btn a-btn-outline" style="padding:6px 10px; font-size:12px;" onclick="assignSeatEmail(${purchaseId}, ${s.id}, document.getElementById('${inputId}').value)">Save Invite</button>
+      <button type="button" class="a-btn a-btn-primary" style="padding:6px 10px; font-size:12px;" onclick="registerSeatDirectly(${purchaseId}, ${s.id}, document.getElementById('${inputId}').value)">Register Now</button>
+    </div>`;
 }
 
 function purchaseCard(p, title, subtitle, extraHtml) {
@@ -643,11 +652,84 @@ function purchaseCard(p, title, subtitle, extraHtml) {
           <div class="a-cell-title">${title}</div>
           <div class="a-note" style="margin:2px 0 0;">${subtitle}${p.notes ? ' · ' + p.notes : ''}</div>
         </div>
-        <button class="a-icon-btn danger" title="Delete purchase" onclick="deletePurchase(${p.id})">🗑️</button>
+        <div style="display:flex; gap:4px;">
+          <button class="a-icon-btn" title="Edit" onclick="togglePurchaseEdit(${p.id})">✏️</button>
+          <button class="a-icon-btn danger" title="Delete purchase" onclick="deletePurchase(${p.id})">🗑️</button>
+        </div>
+      </div>
+      <div id="purchaseEdit_${p.id}" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--a-border);">
+        ${p.productType === 'group_license' ? `
+          <div class="a-field" style="margin-bottom:8px;">
+            <label style="font-size:11.5px;">Total Seats</label>
+            <input type="number" id="editSeatCount_${p.id}" min="${p.seats.filter(s => s.status === 'registered').length || 1}" value="${p.seatCount}">
+          </div>` : ''}
+        <div class="a-field" style="margin-bottom:8px;">
+          <label style="font-size:11.5px;">Notes</label>
+          <input type="text" id="editNotes_${p.id}" value="${(p.notes || '').replace(/"/g, '&quot;')}">
+        </div>
+        <button type="button" class="a-btn a-btn-primary" style="padding:6px 12px; font-size:12.5px;" onclick="savePurchaseEdit(${p.id}, '${p.productType}')">Save Changes</button>
       </div>
       ${extraHtml}
     </div>
   `;
+}
+
+function togglePurchaseEdit(id) {
+  const el = document.getElementById(`purchaseEdit_${id}`);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function savePurchaseEdit(id, productType) {
+  const body = { notes: document.getElementById(`editNotes_${id}`).value.trim() };
+  if (productType === 'group_license') {
+    body.seatCount = Number(document.getElementById(`editSeatCount_${id}`).value);
+  }
+  const r = await fetch(`/api/newsletter/purchases/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save changes');
+    return;
+  }
+  await renderPurchasesList();
+  fnToast('Purchase updated');
+}
+
+async function registerSeatDirectly(purchaseId, seatId, email) {
+  email = (email || '').trim();
+  if (!email) { fnToast('Enter an email first'); return; }
+  const r = await fetch(`/api/newsletter/purchases/${purchaseId}/seats/${seatId}/register`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not register that seat');
+    return;
+  }
+  await renderPurchasesList();
+  fnToast('Seat registered');
+}
+
+async function unregisterSeat(purchaseId, seatId) {
+  if (!confirm('Free this seat? The account itself will not be affected — just this seat, so it can be handed to someone else.')) return;
+  const r = await fetch(`/api/newsletter/purchases/${purchaseId}/seats/${seatId}/unregister`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  await renderPurchasesList();
+  fnToast('Seat freed up');
 }
 
 async function addPurchase() {

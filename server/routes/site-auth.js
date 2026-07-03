@@ -250,6 +250,42 @@ router.get('/site-users', requireAuth, async (req, res) => {
   });
 });
 
+router.put('/site-users/:id', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [req.params.id]);
+  const user = rows[0];
+  if (!user) return res.status(404).json({ error: 'Site user not found' });
+
+  const b = req.body || {};
+  const firstName = b.firstName !== undefined ? b.firstName.trim() : user.first_name;
+  const lastName = b.lastName !== undefined ? b.lastName.trim() : user.last_name;
+  const email = b.email !== undefined ? b.email.trim() : user.email;
+
+  if (!firstName || !lastName || !email || !EMAIL_PATTERN.test(email)) {
+    return res.status(400).json({ error: 'First name, last name, and a valid email are required' });
+  }
+
+  if (email !== user.email) {
+    const [existing] = await pool.query('SELECT id FROM site_users WHERE email = ? AND id != ?', [email, user.id]);
+    if (existing[0]) return res.status(409).json({ error: 'Another account already uses that email' });
+  }
+
+  await pool.query('UPDATE site_users SET first_name = ?, last_name = ?, email = ? WHERE id = ?', [firstName, lastName, email, user.id]);
+  res.json({ ok: true });
+});
+
+// Sends the customer the same password-reset email they'd get from
+// self-service "Forgot Password", just initiated by the admin instead.
+router.post('/site-users/:id/send-password-reset', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT id, first_name, email FROM site_users WHERE id = ?', [req.params.id]);
+  const user = rows[0];
+  if (!user) return res.status(404).json({ error: 'Site user not found' });
+
+  const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
+  const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}`;
+  await sendPasswordResetEmail({ to: user.email, firstName: user.first_name, resetUrl });
+  res.json({ ok: true });
+});
+
 router.delete('/site-users/:id', requireAuth, async (req, res) => {
   const connection = await pool.getConnection();
   try {

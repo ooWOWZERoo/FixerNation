@@ -284,6 +284,64 @@ router.post('/contacts/:id/purchases', requireAuth, async (req, res) => {
   res.status(201).json({ purchase });
 });
 
+// Lets the admin correct notes/source on any purchase, and grow or shrink a
+// group license's seat count after the fact. Shrinking only ever removes
+// still-open ('pending') seats — a seat a teacher has already claimed is
+// never touched here (use the unregister endpoint below to free one first).
+router.put('/purchases/:id', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [req.params.id]);
+  const purchase = rows[0];
+  if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
+
+  const b = req.body || {};
+  const notes = b.notes !== undefined ? b.notes : purchase.notes;
+  const source = b.source !== undefined ? b.source : purchase.source;
+
+  if (purchase.product_type === 'group_license' && b.seatCount !== undefined) {
+    const newCount = Number(b.seatCount);
+    if (!(newCount > 0)) return res.status(400).json({ error: 'seatCount must be a positive number' });
+
+    const [seatRows] = await pool.query('SELECT * FROM license_seats WHERE purchase_id = ?', [purchase.id]);
+    const registeredCount = seatRows.filter(s => s.status === 'registered').length;
+    if (newCount < registeredCount) {
+      return res.status(400).json({ error: `Cannot reduce below ${registeredCount} seats already in use — free some up first` });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query('UPDATE purchases SET seat_count = ?, notes = ?, source = ? WHERE id = ?', [newCount, notes, source, purchase.id]);
+
+      const currentTotal = seatRows.length;
+      if (newCount > currentTotal) {
+        const toAdd = newCount - currentTotal;
+        await connection.query(
+          'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(toAdd).fill('(?, NULL, ?)').join(', '),
+          Array.from({ length: toAdd }).flatMap(() => [purchase.id, 'pending'])
+        );
+      } else if (newCount < currentTotal) {
+        const toRemove = currentTotal - newCount;
+        const removableIds = seatRows.filter(s => s.status === 'pending').slice(0, toRemove).map(s => s.id);
+        if (removableIds.length) {
+          await connection.query('DELETE FROM license_seats WHERE id IN (?)', [removableIds]);
+        }
+      }
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  } else {
+    await pool.query('UPDATE purchases SET notes = ?, source = ? WHERE id = ?', [notes, source, purchase.id]);
+  }
+
+  const [updatedRows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchase.id]);
+  const [purchase2] = await attachPurchaseDetails(updatedRows);
+  res.json({ purchase: purchase2 });
+});
+
 router.delete('/purchases/:id', requireAuth, async (req, res) => {
   const [result] = await pool.query('DELETE FROM purchases WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Purchase not found' });
@@ -307,6 +365,45 @@ router.put('/purchases/:purchaseId/seats/:seatId', requireAuth, async (req, res)
     return res.status(400).json({ error: 'Invalid email address' });
   }
   await pool.query('UPDATE license_seats SET invited_email = ? WHERE id = ?', [invitedEmail || null, seat.id]);
+  res.json({ ok: true });
+});
+
+// Directly links a seat to an existing site_user account by email, bypassing
+// the normal "sign up with the invited email" flow — for when an admin needs
+// to hand a seat to someone who already has an account under a different
+// invited address, or fix a signup that didn't get auto-claimed correctly.
+router.post('/purchases/:purchaseId/seats/:seatId/register', requireAuth, async (req, res) => {
+  const [seatRows] = await pool.query('SELECT * FROM license_seats WHERE id = ? AND purchase_id = ?', [req.params.seatId, req.params.purchaseId]);
+  const seat = seatRows[0];
+  if (!seat) return res.status(404).json({ error: 'Seat not found' });
+
+  const email = (req.body && req.body.email || '').trim();
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  const [userRows] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email]);
+  if (!userRows[0]) {
+    return res.status(404).json({ error: 'No account exists with that email yet — ask them to sign up first, or save it as the invited email instead.' });
+  }
+
+  await pool.query(
+    "UPDATE license_seats SET status = 'registered', invited_email = ?, registered_site_user_id = ?, registered_at = NOW() WHERE id = ?",
+    [email, userRows[0].id, seat.id]
+  );
+  res.json({ ok: true });
+});
+
+// Frees a claimed seat back to 'pending' without touching the customer's
+// account — use this instead of deleting the whole site_user when you just
+// need to reassign one seat to someone else.
+router.post('/purchases/:purchaseId/seats/:seatId/unregister', requireAuth, async (req, res) => {
+  const [seatRows] = await pool.query('SELECT * FROM license_seats WHERE id = ? AND purchase_id = ?', [req.params.seatId, req.params.purchaseId]);
+  const seat = seatRows[0];
+  if (!seat) return res.status(404).json({ error: 'Seat not found' });
+
+  await pool.query(
+    "UPDATE license_seats SET status = 'pending', registered_site_user_id = NULL, registered_at = NULL WHERE id = ?",
+    [seat.id]
+  );
   res.json({ ok: true });
 });
 
