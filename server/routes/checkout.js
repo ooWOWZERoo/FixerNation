@@ -78,7 +78,7 @@ async function resolveCartItems(items) {
   const licenseProductIds = items.filter(i => i.type === 'license_product').map(i => i.id);
 
   const [bookRows] = bookIds.length ? await pool.query('SELECT id, title, price FROM books WHERE id IN (?)', [bookIds]) : [[]];
-  const [lpRows] = licenseProductIds.length ? await pool.query('SELECT id, name, seat_count, price_cents FROM license_products WHERE id IN (?)', [licenseProductIds]) : [[]];
+  const [lpRows] = licenseProductIds.length ? await pool.query('SELECT id, name, seat_count, price_cents, call_for_quote FROM license_products WHERE id IN (?)', [licenseProductIds]) : [[]];
   const bookById = Object.fromEntries(bookRows.map(b => [b.id, b]));
   const lpById = Object.fromEntries(lpRows.map(lp => [lp.id, lp]));
 
@@ -98,6 +98,7 @@ async function resolveCartItems(items) {
     } else if (item.type === 'license_product') {
       const lp = lpById[item.id];
       if (!lp) throw { status: 400, message: `License product ${item.id} not found` };
+      if (lp.call_for_quote) throw { status: 400, message: `${lp.name} requires a custom quote and can't be checked out online — contact us directly` };
       const domain = (item.schoolDomain || '').trim();
       if (!domain) throw { status: 400, message: `A school domain is required for ${lp.name}` };
       lineItems.push({

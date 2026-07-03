@@ -397,8 +397,10 @@ function renderLicenseProducts(products){
     <div class="plan-card">
       <span class="new-tag">New</span>
       <h4>${p.name}</h4>
-      <div class="plan-price">$${p.price.toLocaleString()}</div>
-      <button class="btn btn-primary" onclick="addLicenseProductToCart(${p.id})">Add to Cart</button>
+      <div class="plan-price">${p.callForQuote ? 'Call For Quote' : '$' + p.price.toLocaleString()}</div>
+      ${p.callForQuote
+        ? `<a href="#quoteForm" class="btn btn-primary">Request a Quote</a>`
+        : `<button class="btn btn-primary" onclick="addLicenseProductToCart(${p.id})">Add to Cart</button>`}
     </div>
   `).join('');
 }

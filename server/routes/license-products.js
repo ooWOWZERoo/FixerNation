@@ -11,6 +11,7 @@ function serialize(row) {
     description: row.description || '',
     seatCount: row.seat_count,
     price: Number(row.price_cents) / 100,
+    callForQuote: !!row.call_for_quote,
     sortOrder: row.sort_order,
     active: !!row.active,
     createdAt: row.created_at,
@@ -37,13 +38,14 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
   const b = req.body || {};
-  if (!b.name || !(Number(b.seatCount) > 0) || !(Number(b.price) >= 0)) {
-    return res.status(400).json({ error: 'Name, a positive seat count, and a price are required' });
+  const callForQuote = !!b.callForQuote;
+  if (!b.name || !(Number(b.seatCount) > 0) || (!callForQuote && !(Number(b.price) >= 0))) {
+    return res.status(400).json({ error: 'Name, a positive seat count, and (unless Call For Quote) a price are required' });
   }
 
   const [result] = await pool.query(
-    'INSERT INTO license_products (name, description, seat_count, price_cents, sort_order, active) VALUES (?, ?, ?, ?, ?, ?)',
-    [b.name, b.description || '', Number(b.seatCount), Math.round(Number(b.price) * 100), Number(b.sortOrder) || 0, b.active === false ? 0 : 1]
+    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [result.insertId]);
@@ -52,16 +54,17 @@ router.post('/', requireAuth, async (req, res) => {
 
 router.put('/:id', requireAuth, async (req, res) => {
   const b = req.body || {};
-  if (!b.name || !(Number(b.seatCount) > 0) || !(Number(b.price) >= 0)) {
-    return res.status(400).json({ error: 'Name, a positive seat count, and a price are required' });
+  const callForQuote = !!b.callForQuote;
+  if (!b.name || !(Number(b.seatCount) > 0) || (!callForQuote && !(Number(b.price) >= 0))) {
+    return res.status(400).json({ error: 'Name, a positive seat count, and (unless Call For Quote) a price are required' });
   }
 
   const [existing] = await pool.query('SELECT id FROM license_products WHERE id = ?', [req.params.id]);
   if (!existing[0]) return res.status(404).json({ error: 'License product not found' });
 
   await pool.query(
-    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, sort_order=?, active=? WHERE id=?',
-    [b.name, b.description || '', Number(b.seatCount), Math.round(Number(b.price) * 100), Number(b.sortOrder) || 0, b.active === false ? 0 : 1, req.params.id]
+    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, sort_order=?, active=? WHERE id=?',
+    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, req.params.id]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [req.params.id]);

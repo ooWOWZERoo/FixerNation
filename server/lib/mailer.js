@@ -70,4 +70,17 @@ async function sendPasswordResetEmail({ to, firstName, resetUrl }) {
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail };
+// Same structure/tone as sendVerificationEmail (a link to click, 24-hour
+// expiry) but distinct wording per the admin-invite requirement — this is
+// someone being granted admin access, not a self-signup.
+async function sendAdminInviteEmail({ to, username, inviteUrl }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: 'You have been assigned an admin role on Fixer Nation Education',
+    text: `Hi ${username},\n\nYou have been assigned an admin role on the Fixer Nation Education domain. Please verify your email address and set your password by visiting this link:\n${inviteUrl}\n\nThis link expires in 24 hours.`,
+    html: `<p>Hi ${username},</p><p>You have been assigned an admin role on the Fixer Nation Education domain. Please verify your email address and set your password by clicking the link below:</p><p><a href="${inviteUrl}">Activate my admin account</a></p><p>This link expires in 24 hours.</p>`,
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail };

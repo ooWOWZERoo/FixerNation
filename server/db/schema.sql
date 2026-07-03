@@ -5,7 +5,22 @@ CREATE TABLE IF NOT EXISTS admin_users (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(64) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  email_verified TINYINT(1) NOT NULL DEFAULT 1, -- 1 for the original admin (no invite flow); a newly-invited admin starts at 0 until they accept
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Single-use invite links for adding a new admin — a new admin_users row is
+-- created with an unusable random password immediately, so they can't log in
+-- until they follow this link to set their own password (mirrors the
+-- site_user_tokens verification pattern, but for admins).
+CREATE TABLE IF NOT EXISTS admin_invite_tokens (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT UNSIGNED NOT NULL,
+  token VARCHAR(128) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (admin_id) REFERENCES admin_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
@@ -110,6 +125,7 @@ CREATE TABLE IF NOT EXISTS license_products (
   description VARCHAR(500),
   seat_count INT UNSIGNED NOT NULL,
   price_cents INT UNSIGNED NOT NULL,
+  call_for_quote TINYINT(1) NOT NULL DEFAULT 0, -- for large (1000+ seat) tiers with no fixed price — shows "Call For Quote" instead and can't be added to the self-service cart
   sort_order INT UNSIGNED NOT NULL DEFAULT 0,
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
