@@ -173,6 +173,12 @@ router.get('/unsubscribe', async (req, res) => {
 
 const PRODUCT_TYPES = ['book', 'single_license', 'group_license'];
 
+// Strips a leading "@" and stray whitespace/casing so "@Lincoln.edu" and
+// "lincoln.edu " both save and search as the same domain.
+function normalizeDomain(domain) {
+  return (domain || '').trim().replace(/^@/, '').toLowerCase();
+}
+
 async function attachPurchaseDetails(purchases) {
   if (purchases.length === 0) return purchases;
   const ids = purchases.map(p => p.id);
@@ -209,6 +215,7 @@ async function attachPurchaseDetails(purchases) {
     purchasedAt: p.purchased_at,
     source: p.source,
     notes: p.notes,
+    schoolDomain: p.school_domain,
     seats: seatsByPurchase[p.id] || [],
   }));
 }
@@ -216,15 +223,15 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe checkout webhook (server/routes/checkout.js) — both need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, seatCount, source, notes, stripeSessionId }) {
+async function createPurchase(contactId, { productType, bookId, seatCount, source, notes, stripeSessionId, schoolDomain }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      'INSERT INTO purchases (contact_id, product_type, book_id, seat_count, source, notes, stripe_session_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [contactId, productType, productType === 'book' ? bookId : null, finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null]
+      'INSERT INTO purchases (contact_id, product_type, book_id, seat_count, source, notes, stripe_session_id, school_domain) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [contactId, productType, productType === 'book' ? bookId : null, finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null, productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null]
     );
     const purchaseId = result.insertId;
 
@@ -277,11 +284,38 @@ router.post('/contacts/:id/purchases', requireAuth, async (req, res) => {
     seatCount: b.seatCount,
     source: b.source || 'Manual Entry',
     notes: b.notes,
+    schoolDomain: b.schoolDomain,
   });
 
   const [rows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
   const [purchase] = await attachPurchaseDetails(rows);
   res.status(201).json({ purchase });
+});
+
+// Looks up group licenses by the school's email domain — lets an admin find
+// "how many seats does lincolnhigh.edu have left" without first having to
+// know which CRM contact bought them. Group licenses created before this
+// feature won't show up until their schoolDomain is set via the edit UI.
+router.get('/purchases/by-domain', requireAuth, async (req, res) => {
+  const domain = normalizeDomain(req.query.domain);
+  if (!domain) return res.status(400).json({ error: 'domain is required' });
+
+  const [rows] = await pool.query(
+    "SELECT * FROM purchases WHERE product_type = 'group_license' AND school_domain LIKE ? ORDER BY purchased_at DESC",
+    [`%${domain}%`]
+  );
+  if (!rows.length) return res.json({ purchases: [] });
+
+  const contactIds = [...new Set(rows.map(p => p.contact_id))];
+  const [contactRows] = await pool.query('SELECT id, name, email FROM newsletter_contacts WHERE id IN (?)', [contactIds]);
+  const contactById = {};
+  contactRows.forEach(c => { contactById[c.id] = { name: c.name, email: c.email }; });
+
+  const purchases = (await attachPurchaseDetails(rows)).map(p => ({
+    ...p,
+    buyer: contactById[p.contactId] || null,
+  }));
+  res.json({ purchases });
 });
 
 // Lets the admin correct notes/source on any purchase, and grow or shrink a
@@ -296,6 +330,9 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
   const b = req.body || {};
   const notes = b.notes !== undefined ? b.notes : purchase.notes;
   const source = b.source !== undefined ? b.source : purchase.source;
+  const schoolDomain = purchase.product_type === 'group_license'
+    ? (b.schoolDomain !== undefined ? normalizeDomain(b.schoolDomain) || null : purchase.school_domain)
+    : purchase.school_domain;
 
   if (purchase.product_type === 'group_license' && b.seatCount !== undefined) {
     const newCount = Number(b.seatCount);
@@ -310,7 +347,7 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
-      await connection.query('UPDATE purchases SET seat_count = ?, notes = ?, source = ? WHERE id = ?', [newCount, notes, source, purchase.id]);
+      await connection.query('UPDATE purchases SET seat_count = ?, notes = ?, source = ?, school_domain = ? WHERE id = ?', [newCount, notes, source, schoolDomain, purchase.id]);
 
       const currentTotal = seatRows.length;
       if (newCount > currentTotal) {
@@ -334,7 +371,7 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
       connection.release();
     }
   } else {
-    await pool.query('UPDATE purchases SET notes = ?, source = ? WHERE id = ?', [notes, source, purchase.id]);
+    await pool.query('UPDATE purchases SET notes = ?, source = ?, school_domain = ? WHERE id = ?', [notes, source, schoolDomain, purchase.id]);
   }
 
   const [updatedRows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchase.id]);

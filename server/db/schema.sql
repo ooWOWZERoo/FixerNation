@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   source VARCHAR(64) NOT NULL DEFAULT 'Manual Entry',
   notes VARCHAR(500),
   stripe_session_id VARCHAR(255) NULL UNIQUE, -- set when created from a real Stripe payment; guards webhook retries from double-creating a purchase
+  school_domain VARCHAR(255) NULL, -- meaningful for group_license only — lets the admin look up a school's whole license block by domain instead of hunting for the buyer's CRM contact
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

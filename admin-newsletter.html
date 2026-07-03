@@ -21,6 +21,7 @@
       <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
       <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blogs</span></a>
       <a href="admin-newsletter.html" class="active"><span class="ic">✉️</span><span class="label">CRM</span></a>
+      <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
       <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
       <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
     </nav>
@@ -208,6 +209,10 @@
         <div class="a-field" id="purchaseSeatCountField" style="display:none;">
           <label>Number of Seats</label>
           <input type="number" id="purchaseSeatCount" min="1" value="5">
+        </div>
+        <div class="a-field" id="purchaseSchoolDomainField" style="display:none;">
+          <label>School Domain</label>
+          <input type="text" id="purchaseSchoolDomain" placeholder="e.g. lincolnhigh.edu">
         </div>
         <div class="a-field"><label>Notes</label><input type="text" id="purchaseNotes" placeholder="Optional"></div>
         <button type="button" class="a-btn a-btn-primary a-btn-block" onclick="addPurchase()">+ Add Purchase</button>
@@ -575,6 +580,7 @@ function onPurchaseTypeChange() {
   const type = document.getElementById('purchaseType').value;
   document.getElementById('purchaseBookField').style.display = type === 'book' ? 'block' : 'none';
   document.getElementById('purchaseSeatCountField').style.display = type === 'group_license' ? 'block' : 'none';
+  document.getElementById('purchaseSchoolDomainField').style.display = type === 'group_license' ? 'block' : 'none';
 }
 
 async function openPurchasesModal(contactId) {
@@ -586,6 +592,7 @@ async function openPurchasesModal(contactId) {
   document.getElementById('purchaseBookId').innerHTML = booksCache.map(b => `<option value="${b.id}">${b.title}</option>`).join('') || '<option value="">No books yet</option>';
   document.getElementById('purchaseType').value = 'book';
   document.getElementById('purchaseSeatCount').value = 5;
+  document.getElementById('purchaseSchoolDomain').value = '';
   document.getElementById('purchaseNotes').value = '';
   onPurchaseTypeChange();
 
@@ -618,10 +625,11 @@ async function renderPurchasesList() {
     // group_license
     const registeredCount = p.seats.filter(s => s.status === 'registered').length;
     const seatRows = p.seats.map(s => seatRowHtml(p.id, s)).join('');
+    const domainLabel = p.schoolDomain ? ` · ${p.schoolDomain}` : ' · no school domain set';
     return purchaseCard(
       p,
       `🏫 Group License — ${registeredCount}/${p.seatCount} seats used`,
-      `Purchased ${dateLabel}`,
+      `Purchased ${dateLabel}${domainLabel}`,
       `<div style="margin-top:10px;">${seatRows}</div>`
     );
   }).join('');
@@ -662,6 +670,10 @@ function purchaseCard(p, title, subtitle, extraHtml) {
           <div class="a-field" style="margin-bottom:8px;">
             <label style="font-size:11.5px;">Total Seats</label>
             <input type="number" id="editSeatCount_${p.id}" min="${p.seats.filter(s => s.status === 'registered').length || 1}" value="${p.seatCount}">
+          </div>
+          <div class="a-field" style="margin-bottom:8px;">
+            <label style="font-size:11.5px;">School Domain</label>
+            <input type="text" id="editSchoolDomain_${p.id}" placeholder="e.g. lincolnhigh.edu" value="${(p.schoolDomain || '').replace(/"/g, '&quot;')}">
           </div>` : ''}
         <div class="a-field" style="margin-bottom:8px;">
           <label style="font-size:11.5px;">Notes</label>
@@ -683,6 +695,7 @@ async function savePurchaseEdit(id, productType) {
   const body = { notes: document.getElementById(`editNotes_${id}`).value.trim() };
   if (productType === 'group_license') {
     body.seatCount = Number(document.getElementById(`editSeatCount_${id}`).value);
+    body.schoolDomain = document.getElementById(`editSchoolDomain_${id}`).value.trim();
   }
   const r = await fetch(`/api/newsletter/purchases/${id}`, {
     method: 'PUT',
@@ -742,6 +755,7 @@ async function addPurchase() {
   if (productType === 'group_license') {
     body.seatCount = Number(document.getElementById('purchaseSeatCount').value);
     if (!(body.seatCount > 0)) { fnToast('Seat count must be at least 1'); return; }
+    body.schoolDomain = document.getElementById('purchaseSchoolDomain').value.trim();
   }
 
   const r = await fetch(`/api/newsletter/contacts/${purchasesContactId}/purchases`, {
