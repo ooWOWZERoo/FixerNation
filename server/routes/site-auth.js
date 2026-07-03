@@ -6,6 +6,7 @@ const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer');
 const { attachPurchaseDetails } = require('./newsletter');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -231,6 +232,45 @@ router.put('/my-purchases/:purchaseId/seats/:seatId', requireSiteAuth, async (re
   }
   await pool.query('UPDATE license_seats SET invited_email = ? WHERE id = ?', [invitedEmail || null, seat.id]);
   res.json({ ok: true });
+});
+
+// --- Admin management of site-user accounts ---
+
+router.get('/site-users', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT id, first_name, last_name, email, email_verified, created_at FROM site_users ORDER BY created_at DESC');
+  res.json({
+    siteUsers: rows.map(r => ({
+      id: r.id,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      email: r.email,
+      emailVerified: !!r.email_verified,
+      createdAt: r.created_at,
+    })),
+  });
+});
+
+router.delete('/site-users/:id', requireAuth, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    // Free up any license seats this account had claimed so they can be
+    // handed to someone else, rather than leaving an orphaned "registered"
+    // seat with no linked account.
+    await connection.query(
+      "UPDATE license_seats SET status = 'pending', registered_site_user_id = NULL, registered_at = NULL WHERE registered_site_user_id = ?",
+      [req.params.id]
+    );
+    const [result] = await connection.query('DELETE FROM site_users WHERE id = ?', [req.params.id]);
+    await connection.commit();
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Site user not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 });
 
 module.exports = { router };
