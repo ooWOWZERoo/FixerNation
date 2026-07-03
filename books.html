@@ -103,6 +103,7 @@
       <a href="askthefixer.html">Ask The Fixer</a>
     </nav>
     <div class="nav-cta">
+      <div id="fnCartNav"><a href="cart.html" style="font-weight:600; font-size:14px;">🛒 Cart</a></div>
       <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
       <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
     </div>
@@ -174,6 +175,8 @@
   </div>
 </footer>
 
+<script src="admin-common.js?v=7"></script>
+<script src="cart.js"></script>
 <script>
 // Known hand-authored detail pages, matched by title — new books added via the
 // admin panel won't have one yet until a dedicated detail page is built for them.
@@ -196,6 +199,9 @@ function renderBookCard(book, index) {
   const actionBtn = book.stockStatus === 'Coming Soon'
     ? `<a href="#" class="btn btn-primary">Coming Soon</a>`
     : (book.amazonUrl ? `<a href="${book.amazonUrl}" class="btn btn-primary">Amazon</a>` : '');
+  const cartBtn = (book.stockStatus !== 'Coming Soon' && book.price !== '')
+    ? `<button type="button" class="btn btn-outline" onclick="addBookToCart(${book.id}, '${book.title.replace(/'/g, "\\'")}', ${book.price})">Add to Cart</button>`
+    : '';
 
   const coverHtml = book.coverImage
     ? `<div class="book-cover has-photo"><img src="${book.coverImage}" alt="${book.title} book cover"></div>`
@@ -207,10 +213,15 @@ function renderBookCard(book, index) {
       <div class="book-info">
         <span class="book-tag">${(book.tags && book.tags[0]) || book.category || ''}</span>
         <p class="book-desc">${book.shortDescription || ''}</p>
-        <div class="book-actions">${detailsBtn}${actionBtn}</div>
+        <div class="book-actions">${detailsBtn}${actionBtn}${cartBtn}</div>
       </div>
     </div>
   `;
+}
+
+function addBookToCart(id, title, price) {
+  cartAdd({ type: 'book', id, name: title, price, quantity: 1 });
+  fnToast('Added "' + title + '" to cart');
 }
 
 fetch('/api/books')

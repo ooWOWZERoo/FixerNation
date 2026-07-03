@@ -626,9 +626,10 @@ async function renderPurchasesList() {
     const registeredCount = p.seats.filter(s => s.status === 'registered').length;
     const seatRows = p.seats.map(s => seatRowHtml(p.id, s)).join('');
     const domainLabel = p.schoolDomain ? ` · ${p.schoolDomain}` : ' · no school domain set';
+    const productLabel = p.licenseProductName ? ` (${p.licenseProductName})` : '';
     return purchaseCard(
       p,
-      `🏫 Group License — ${registeredCount}/${p.seatCount} seats used`,
+      `🏫 Group License${productLabel} — ${registeredCount}/${p.seatCount} seats used`,
       `Purchased ${dateLabel}${domainLabel}`,
       `<div style="margin-top:10px;">${seatRows}</div>`
     );
@@ -653,11 +654,20 @@ function seatRowHtml(purchaseId, s) {
 }
 
 function purchaseCard(p, title, subtitle, extraHtml) {
+  const paymentBadge = p.paymentMethod && p.paymentMethod !== 'manual'
+    ? `<span class="a-pill ${p.paymentStatus === 'paid' ? 'a-pill-success' : 'a-pill-neutral'}" style="margin-left:8px;">
+        ${p.paymentMethod === 'po' ? 'PO' + (p.poNumber ? ' ' + p.poNumber : '') : 'Stripe'} · ${p.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+      </span>`
+    : '';
+  const markPaidBtn = p.paymentStatus === 'pending'
+    ? `<button class="a-btn a-btn-outline" style="padding:4px 10px; font-size:11.5px; margin-left:8px;" onclick="markPurchasePaid(${p.id})">Mark as Paid</button>`
+    : '';
+
   return `
     <div class="a-card" style="margin-bottom:12px; box-shadow:none; border:1px solid var(--a-border);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
         <div>
-          <div class="a-cell-title">${title}</div>
+          <div class="a-cell-title">${title}${paymentBadge}${markPaidBtn}</div>
           <div class="a-note" style="margin:2px 0 0;">${subtitle}${p.notes ? ' · ' + p.notes : ''}</div>
         </div>
         <div style="display:flex; gap:4px;">
@@ -711,6 +721,23 @@ async function savePurchaseEdit(id, productType) {
   }
   await renderPurchasesList();
   fnToast('Purchase updated');
+}
+
+async function markPurchasePaid(id) {
+  const r = await fetch(`/api/newsletter/purchases/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paymentStatus: 'paid' }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not update payment status');
+    return;
+  }
+  await renderPurchasesList();
+  fnToast('Marked as paid');
 }
 
 async function registerSeatDirectly(purchaseId, seatId, email) {

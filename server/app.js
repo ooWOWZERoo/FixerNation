@@ -13,6 +13,7 @@ const newsletterRoutes = require('./routes/newsletter');
 const campaignRoutes = require('./routes/campaigns');
 const siteAuthRoutes = require('./routes/site-auth');
 const checkoutRoutes = require('./routes/checkout');
+const licenseProductRoutes = require('./routes/license-products');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -37,6 +38,7 @@ app.use('/api/newsletter', newsletterRoutes.router);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/site-auth', siteAuthRoutes.router);
 app.use('/api/checkout', checkoutRoutes.router);
+app.use('/api/license-products', licenseProductRoutes);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, Apache serves those files

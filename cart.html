@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Cart — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --border:rgba(22,79,74,0.15);
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:900px; margin:0 auto; padding:0 32px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 22px; border-radius:999px; font-weight:700; font-size:14px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn:disabled{opacity:.55; cursor:not-allowed; transform:none;}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
+  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
+  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+
+  .section{padding:44px 0 64px;}
+  h1{font-size:30px; margin-bottom:24px;}
+
+  .status-banner{border-radius:14px; padding:16px 20px; font-size:14px; margin-bottom:24px;}
+  .status-banner.success{background:#E4F3EE; color:var(--teal-dark);}
+  .status-banner.cancelled{background:var(--cream-soft); color:var(--ink-soft);}
+
+  .cart-item{background:#fff; border-radius:14px; box-shadow:var(--shadow); padding:20px 22px; margin-bottom:14px; display:flex; align-items:flex-start; gap:16px;}
+  .cart-item .info{flex:1;}
+  .cart-item .name{font-weight:700; font-size:15px; margin-bottom:4px;}
+  .cart-item .price{color:var(--ink-soft); font-size:13.5px;}
+  .cart-item .domain-field{margin-top:10px;}
+  .cart-item .domain-field label{display:block; font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;}
+  .cart-item .domain-field input{padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:13.5px; width:220px;}
+  .qty-input{width:56px; padding:8px; border-radius:8px; border:1px solid var(--border); text-align:center; font-size:13.5px;}
+  .remove-btn{background:none; border:none; color:var(--coral-dark); font-size:13px; font-weight:700; cursor:pointer;}
+
+  .summary-card{background:#fff; border-radius:var(--radius-md); box-shadow:var(--shadow); padding:26px 28px; margin-top:24px;}
+  .total-row{display:flex; justify-content:space-between; font-weight:700; font-size:18px; margin-bottom:20px;}
+  .a-field{margin-bottom:14px;}
+  .a-field label{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;}
+  .a-field input{width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--border); font-size:14px; font-family:inherit;}
+  .checkout-options{display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;}
+  .po-form{display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);}
+  .po-form.show{display:block;}
+
+  .empty-state{text-align:center; color:var(--ink-soft); font-size:14px; padding:60px 20px; background:#fff; border-radius:var(--radius-md); box-shadow:var(--shadow);}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s; z-index:400;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:40px 0 24px; text-align:center; font-size:12.5px; opacity:0.75;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="fixernation-redesign.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <div class="nav-cta">
+      <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
+    </div>
+  </div>
+</header>
+
+<section class="section">
+  <div class="wrap">
+    <h1>Your Cart</h1>
+    <div id="statusBanner"></div>
+    <div id="cartWrap"></div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<footer>© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</footer>
+
+<script src="admin-common.js?v=7"></script>
+<script src="cart.js"></script>
+<script>
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function renderStatusBanner() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('checkout');
+  const banner = document.getElementById('statusBanner');
+  if (status === 'success') {
+    banner.innerHTML = `<div class="status-banner success">✅ Payment received! Sign up (or log in) on the site with the same email you checked out with, and any licenses will activate automatically.</div>`;
+    cartClear();
+  } else if (status === 'cancelled') {
+    banner.innerHTML = `<div class="status-banner cancelled">Checkout was cancelled — your cart is still here, no charge was made.</div>`;
+  }
+}
+
+function renderCart() {
+  const items = cartGet();
+  const wrap = document.getElementById('cartWrap');
+
+  if (!items.length) {
+    wrap.innerHTML = `<div class="empty-state">Your cart is empty. Browse <a href="books.html" style="color:var(--coral-dark); font-weight:700;">books</a> or <a href="education-portal.html" style="color:var(--coral-dark); font-weight:700;">school license plans</a> to get started.</div>`;
+    return;
+  }
+
+  const itemsHtml = items.map((item, index) => {
+    if (item.type === 'book') {
+      return `
+        <div class="cart-item">
+          <div class="info">
+            <div class="name">📗 ${item.name}</div>
+            <div class="price">${fnFormatCurrency(item.price)} each</div>
+          </div>
+          <input type="number" class="qty-input" min="1" value="${item.quantity}" onchange="cartUpdateQuantity(${index}, this.value); renderCart();">
+          <button class="remove-btn" onclick="cartRemove(${index}); renderCart();">Remove</button>
+        </div>
+      `;
+    }
+    return `
+      <div class="cart-item">
+        <div class="info">
+          <div class="name">🏫 ${item.name}</div>
+          <div class="price">${fnFormatCurrency(item.price)}</div>
+          <div class="domain-field">
+            <label>School Domain (required)</label>
+            <input type="text" placeholder="e.g. lincolnhigh.edu" value="${item.schoolDomain || ''}" onchange="cartUpdateDomain(${index}, this.value.trim())">
+          </div>
+        </div>
+        <button class="remove-btn" onclick="cartRemove(${index}); renderCart();">Remove</button>
+      </div>
+    `;
+  }).join('');
+
+  const total = cartTotal();
+
+  wrap.innerHTML = `
+    ${itemsHtml}
+    <div class="summary-card">
+      <div class="total-row"><span>Total</span><span>${fnFormatCurrency(total)}</span></div>
+
+      <div class="a-field"><label>Your Email</label><input type="email" id="checkoutEmail" placeholder="you@school.org"></div>
+
+      <div class="checkout-options">
+        <button class="btn btn-primary" onclick="checkoutWithStripe()">Pay by Card</button>
+        <button class="btn btn-outline" onclick="togglePoForm()">Pay by Purchase Order</button>
+      </div>
+
+      <div class="po-form" id="poForm">
+        <div class="a-field"><label>Purchase Order Number</label><input type="text" id="poNumber" placeholder="PO-12345"></div>
+        <button class="btn btn-primary" onclick="checkoutWithPo()">Submit Purchase Order</button>
+        <div class="note" style="font-size:12.5px; color:var(--ink-soft); margin-top:8px;">Your licenses activate immediately — payment can follow through your school's normal PO process. We'll follow up on invoicing.</div>
+      </div>
+    </div>
+  `;
+}
+
+function togglePoForm() {
+  document.getElementById('poForm').classList.toggle('show');
+}
+
+function validateCheckout() {
+  const email = document.getElementById('checkoutEmail').value.trim();
+  if (!email) { toast('Enter your email first'); return null; }
+
+  const items = cartGet();
+  for (const item of items) {
+    if (item.type === 'license_product' && !(item.schoolDomain || '').trim()) {
+      toast('Enter a school domain for every license in your cart');
+      return null;
+    }
+  }
+  return { email, items: items.map(i => ({ type: i.type, id: i.id, quantity: i.quantity, schoolDomain: i.schoolDomain })) };
+}
+
+async function checkoutWithStripe() {
+  const payload = validateCheckout();
+  if (!payload) return;
+
+  const r = await fetch('/api/checkout/create-cart-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(result.error || 'Could not start checkout'); return; }
+  window.location.href = result.url;
+}
+
+async function checkoutWithPo() {
+  const payload = validateCheckout();
+  if (!payload) return;
+  const poNumber = document.getElementById('poNumber').value.trim();
+  if (!poNumber) { toast('Enter a Purchase Order number'); return; }
+
+  const r = await fetch('/api/checkout/create-po-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, poNumber }),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(result.error || 'Could not submit Purchase Order'); return; }
+
+  cartClear();
+  document.getElementById('statusBanner').innerHTML = `<div class="status-banner success">✅ Purchase Order received! Your licenses are active now — sign up (or log in) with the same email to manage them. We'll follow up about invoicing.</div>`;
+  renderCart();
+}
+
+renderStatusBanner();
+renderCart();
+</script>
+
+<!-- Log In / Sign Up modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="site-auth.js"></script>
+
+</body>
+</html>

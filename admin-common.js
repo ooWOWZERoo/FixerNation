@@ -207,6 +207,10 @@ function fnPopulateBookDetail(title) {
       const book = (data.books || []).find(b => b.title === title);
       if (!book) return;
 
+      // Exposed so each book-detail page's own inline script can wire up a
+      // real Add to Cart button without re-fetching the book itself.
+      window.fnCurrentBook = book;
+
       const eyebrow = document.querySelector('.product-info .eyebrow');
       if (eyebrow) eyebrow.textContent = book.category || 'Short Story Book Series';
 

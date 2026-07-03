@@ -95,23 +95,47 @@ CREATE TABLE IF NOT EXISTS contact_group_members (
   FOREIGN KEY (group_id) REFERENCES contact_groups(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Sellable school license tiers shown on education-portal.html and managed
+-- from admin-license-products.html — e.g. "Small Team Plan (Up to 5
+-- Educators)" at a fixed seat count and price. A group_license purchase
+-- made through the cart references one of these (license_product_id on
+-- purchases below); admin-added purchases and Stripe's flexible-seat-count
+-- licenses.html flow don't require one.
+CREATE TABLE IF NOT EXISTS license_products (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description VARCHAR(500),
+  seat_count INT UNSIGNED NOT NULL,
+  price_cents INT UNSIGNED NOT NULL,
+  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Purchases — books, single teacher licenses, and group (school) licenses.
--- Created either manually by an admin, or automatically from a real Stripe
--- Checkout payment (see server/routes/checkout.js); a contact is the buyer
--- of record either way.
+-- Created either manually by an admin, automatically from a real Stripe
+-- Checkout payment, or immediately upon a Purchase Order order (payment
+-- pending until an admin marks it paid) — see server/routes/checkout.js.
+-- A contact is the buyer of record either way.
 CREATE TABLE IF NOT EXISTS purchases (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   contact_id INT UNSIGNED NOT NULL,
   product_type VARCHAR(32) NOT NULL, -- 'book' | 'single_license' | 'group_license'
   book_id INT UNSIGNED NULL,
+  license_product_id INT UNSIGNED NULL, -- set when bought from the cart against a fixed license_products tier
   seat_count INT UNSIGNED NULL, -- 1 for single_license, N for group_license, NULL for book
   purchased_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(64) NOT NULL DEFAULT 'Manual Entry',
   notes VARCHAR(500),
-  stripe_session_id VARCHAR(255) NULL UNIQUE, -- set when created from a real Stripe payment; guards webhook retries from double-creating a purchase
+  stripe_session_id VARCHAR(255) NULL, -- set when created from a real Stripe payment; one session can now produce multiple purchase rows (a cart), so this is intentionally NOT unique — idempotency is checked by existence, not a DB constraint
   school_domain VARCHAR(255) NULL, -- meaningful for group_license only — lets the admin look up a school's whole license block by domain instead of hunting for the buyer's CRM contact
+  payment_method VARCHAR(16) NOT NULL DEFAULT 'manual', -- 'manual' | 'stripe' | 'po'
+  payment_status VARCHAR(16) NOT NULL DEFAULT 'paid', -- 'paid' | 'pending' — POs start pending until an admin marks them paid; access is granted immediately either way
+  po_number VARCHAR(128) NULL,
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
-  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
+  FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- One row per license seat (single_license purchases always have exactly one,

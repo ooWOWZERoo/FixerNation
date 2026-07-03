@@ -38,18 +38,65 @@
     </div>
 
     <div class="a-content">
-      <div class="a-card">
-        <div class="a-card-head">
-          <h2>Find a School's Licenses</h2>
-        </div>
-        <div style="display:flex; gap:10px;">
-          <input type="text" id="domainSearchInput" placeholder="e.g. lincolnhigh.edu" style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid var(--a-border); font-size:14px;" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchByDomain();}">
-          <button type="button" class="a-btn a-btn-primary" onclick="searchByDomain()">Search</button>
-        </div>
-        <div class="a-note" style="margin-top:8px;">Only group (school) licenses that have a School Domain set are searchable here — set one from a purchase's edit panel in the CRM if it's missing.</div>
+      <div style="display:flex; gap:8px; margin-bottom:20px;">
+        <button type="button" class="a-btn a-btn-outline" id="tabBtnProducts" onclick="showTab('products')">License Products</button>
+        <button type="button" class="a-btn a-btn-outline" id="tabBtnSchool" onclick="showTab('school')">Find a School</button>
       </div>
 
-      <div id="resultsWrap" style="margin-top:20px;"></div>
+      <div id="tabProducts">
+        <div class="a-card">
+          <div class="a-card-head">
+            <h2>License Products</h2>
+            <button class="a-btn a-btn-primary" onclick="openProductModal()">+ Add Product</button>
+          </div>
+          <table class="a-table" id="productsTable">
+            <thead><tr><th>Name</th><th>Seats</th><th>Price</th><th>Status</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="a-empty" id="productsEmpty" style="display:none;">No license products yet — add one, or run the seed script to import the 9 existing education-portal.html tiers.</div>
+        </div>
+      </div>
+
+      <div id="tabSchool" style="display:none;">
+        <div class="a-card">
+          <div class="a-card-head">
+            <h2>Find a School's Licenses</h2>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="domainSearchInput" placeholder="e.g. lincolnhigh.edu" style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid var(--a-border); font-size:14px;" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchByDomain();}">
+            <button type="button" class="a-btn a-btn-primary" onclick="searchByDomain()">Search</button>
+          </div>
+          <div class="a-note" style="margin-top:8px;">Only group (school) licenses that have a School Domain set are searchable here — set one from a purchase's edit panel in the CRM if it's missing.</div>
+        </div>
+
+        <div id="resultsWrap" style="margin-top:20px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit license product modal -->
+<div class="a-modal-overlay" id="productModalOverlay">
+  <div class="a-modal" style="max-width:460px;">
+    <div class="a-modal-head">
+      <h3 id="productModalTitle">Add License Product</h3>
+      <button class="a-modal-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-field"><label>Name *</label><input type="text" id="productName" placeholder="e.g. Small Team Plan (Up to 5 Educators)"></div>
+      <div class="a-form-row">
+        <div class="a-field"><label>Seat Count *</label><input type="number" id="productSeatCount" min="1"></div>
+        <div class="a-field"><label>Price (USD) *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
+      </div>
+      <div class="a-field"><label>Description</label><input type="text" id="productDescription" placeholder="Optional"></div>
+      <div class="a-field"><label>Sort Order</label><input type="number" id="productSortOrder" value="0"></div>
+      <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:4px;">
+        <input type="checkbox" id="productActive" checked> Active (visible on education-portal.html)
+      </label>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeProductModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="productSaveBtn" onclick="saveProduct()">Add Product</button>
     </div>
   </div>
 </div>
@@ -57,6 +104,114 @@
 <script src="admin-common.js?v=7"></script>
 <script>
 fnRequireAuth();
+
+function showTab(tab) {
+  document.getElementById('tabProducts').style.display = tab === 'products' ? 'block' : 'none';
+  document.getElementById('tabSchool').style.display = tab === 'school' ? 'block' : 'none';
+  document.getElementById('tabBtnProducts').className = tab === 'products' ? 'a-btn a-btn-primary' : 'a-btn a-btn-outline';
+  document.getElementById('tabBtnSchool').className = tab === 'school' ? 'a-btn a-btn-primary' : 'a-btn a-btn-outline';
+}
+showTab('products');
+
+/* ---- License Products CRUD ---- */
+let productsCache = [];
+let editingProductId = null;
+
+async function fetchProducts() {
+  const r = await fetch('/api/license-products?all=true', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).licenseProducts || [];
+}
+
+async function renderProducts() {
+  productsCache = await fetchProducts();
+  const tbody = document.querySelector('#productsTable tbody');
+  tbody.innerHTML = '';
+  document.getElementById('productsTable').style.display = productsCache.length ? 'table' : 'none';
+  document.getElementById('productsEmpty').style.display = productsCache.length ? 'none' : 'block';
+
+  productsCache.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="a-cell-title">${p.name}</td>
+      <td>${p.seatCount}</td>
+      <td>${fnFormatCurrency(p.price)}</td>
+      <td><span class="a-pill ${p.active ? 'a-pill-success' : 'a-pill-neutral'}">${p.active ? 'Active' : 'Inactive'}</span></td>
+      <td>
+        <div class="a-row-actions">
+          <button class="a-icon-btn" title="Edit" onclick="openProductModal(${p.id})">✏️</button>
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteProduct(${p.id})">🗑️</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openProductModal(id) {
+  editingProductId = id || null;
+  const p = id ? productsCache.find(x => x.id === id) : null;
+  document.getElementById('productModalTitle').textContent = p ? 'Edit License Product' : 'Add License Product';
+  document.getElementById('productSaveBtn').textContent = p ? 'Save Changes' : 'Add Product';
+  document.getElementById('productName').value = p ? p.name : '';
+  document.getElementById('productSeatCount').value = p ? p.seatCount : '';
+  document.getElementById('productPrice').value = p ? p.price : '';
+  document.getElementById('productDescription').value = p ? p.description : '';
+  document.getElementById('productSortOrder').value = p ? p.sortOrder : 0;
+  document.getElementById('productActive').checked = p ? p.active : true;
+  document.getElementById('productModalOverlay').classList.add('show');
+}
+
+function closeProductModal() {
+  document.getElementById('productModalOverlay').classList.remove('show');
+}
+
+async function saveProduct() {
+  const body = {
+    name: document.getElementById('productName').value.trim(),
+    seatCount: Number(document.getElementById('productSeatCount').value),
+    price: Number(document.getElementById('productPrice').value),
+    description: document.getElementById('productDescription').value.trim(),
+    sortOrder: Number(document.getElementById('productSortOrder').value) || 0,
+    active: document.getElementById('productActive').checked,
+  };
+  if (!body.name || !(body.seatCount > 0) || !(body.price >= 0)) {
+    fnToast('Name, seat count, and price are required');
+    return;
+  }
+
+  const url = editingProductId ? `/api/license-products/${editingProductId}` : '/api/license-products';
+  const r = await fetch(url, {
+    method: editingProductId ? 'PUT' : 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save product');
+    return;
+  }
+  closeProductModal();
+  renderProducts();
+  fnToast(editingProductId ? 'Product updated' : 'Product added');
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Delete this license product? Past purchases made from it are not affected.')) return;
+  const r = await fetch(`/api/license-products/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  renderProducts();
+  fnToast('Product deleted');
+}
+
+renderProducts();
 
 async function searchByDomain() {
   const domain = document.getElementById('domainSearchInput').value.trim();

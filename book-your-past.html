@@ -115,6 +115,7 @@
       <a href="askthefixer.html">Ask The Fixer</a>
     </nav>
     <div class="nav-cta">
+      <div id="fnCartNav"><a href="cart.html" style="font-weight:600; font-size:14px;">🛒 Cart</a></div>
       <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
       <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
     </div>
@@ -145,8 +146,8 @@
         </div>
       </div>
       <div class="action-row">
-        <button class="btn btn-primary" onclick="showToast('Added to cart')">Add to Cart</button>
-        <button class="btn btn-outline" onclick="showToast('Redirecting to checkout...')">Buy Now</button>
+        <button class="btn btn-primary" onclick="addToCartClick()">Add to Cart</button>
+        <button class="btn btn-outline" onclick="buyNowClick()">Buy Now</button>
       </div>
       <a href="https://www.amazon.com" class="amazon-link">Also available on Amazon Kindle →</a>
     </div>
@@ -245,6 +246,7 @@
 <div class="toast" id="toast">Added to cart</div>
 
 <script src="admin-common.js?v=7"></script>
+<script src="cart.js"></script>
 <script>
 function stepQty(delta){
   var input = document.getElementById('qtyInput');
@@ -256,6 +258,16 @@ function showToast(msg){
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2200);
+}
+function addToCartClick(){
+  if (!window.fnCurrentBook) return;
+  var qty = parseInt(document.getElementById('qtyInput').value) || 1;
+  cartAdd({ type: 'book', id: window.fnCurrentBook.id, name: window.fnCurrentBook.title, price: window.fnCurrentBook.price, quantity: qty });
+  showToast('Added to cart');
+}
+function buyNowClick(){
+  addToCartClick();
+  window.location.href = 'cart.html';
 }
 fnPopulateBookDetail('Your Past Doesn\'t Define You');
 </script>

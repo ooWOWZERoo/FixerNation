@@ -161,6 +161,7 @@
       <a href="askthefixer.html">Ask The Fixer</a>
     </nav>
     <div class="nav-cta">
+      <div id="fnCartNav"><a href="cart.html" style="font-weight:600; font-size:14px;">🛒 Cart</a></div>
       <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
       <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
     </div>
@@ -290,17 +291,7 @@
       <h2>Plans for every size classroom, school, or district</h2>
       <p>For single educators or teachers registering through a school-purchased plan, use <a href="education-schools.html" style="text-decoration:underline;">Registration</a> instead.</p>
     </div>
-    <div class="pricing-grid">
-      <div class="plan-card"><span class="new-tag">New</span><h4>Small Team Plan (Up to 5 Educators)</h4><div class="plan-price">$699</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Department / Grade Plan (Up to 15 Educators)</h4><div class="plan-price">$1,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Small School Building Plan (Up to 35 Educators)</h4><div class="plan-price">$2,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Standard School Building Plan (Up to 60 Educators)</h4><div class="plan-price">$3,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Large School Building Plan (Up to 100 Educators)</h4><div class="plan-price">$4,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Small District Plan (Up to 150 Educators)</h4><div class="plan-price">$7,499</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Mid Size District Plan (Up to 400 Educators)</h4><div class="plan-price">$14,999</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Large District Plan (Up to 1000 Educators)</h4><div class="plan-price">$29,999</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-      <div class="plan-card"><span class="new-tag">New</span><h4>Enterprise District Plan (Custom Quote)</h4><div class="plan-price">$39,999</div><button class="btn btn-primary" onclick="addToCart(this)">Add to Cart</button></div>
-    </div>
+    <div class="pricing-grid" id="licenseProductsGrid"></div>
     <div class="cta-links">
       <a href="https://www.ed.gov/teaching-and-administration/supporting-students/seac/supporting-student-attendance-and-engagement" class="btn btn-outline">Education Funding Options</a>
       <a href="#quoteForm" class="btn btn-primary">Request a Formal Quotation</a>
@@ -367,6 +358,7 @@
 </div>
 
 <script src="admin-common.js?v=7"></script>
+<script src="cart.js"></script>
 <script>
 document.getElementById('filterBar').addEventListener('click', function(e){
   if(!e.target.classList.contains('chip')) return;
@@ -378,12 +370,42 @@ document.getElementById('filterBar').addEventListener('click', function(e){
   });
 });
 
-function addToCart(btn){
+function showCartToast(msg){
   var toast = document.getElementById('cartToast');
-  toast.textContent = 'Added "' + btn.parentElement.querySelector('h4').textContent + '" to cart';
+  toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
+
+let licenseProductsCache = [];
+
+function addLicenseProductToCart(productId){
+  const product = licenseProductsCache.find(p => p.id === productId);
+  if (!product) return;
+  cartAdd({ type: 'license_product', id: product.id, name: product.name, price: product.price, quantity: 1, schoolDomain: '' });
+  showCartToast('Added "' + product.name + '" to cart');
+}
+
+function renderLicenseProducts(products){
+  licenseProductsCache = products;
+  const grid = document.getElementById('licenseProductsGrid');
+  if (!products.length) {
+    grid.innerHTML = '<p style="color:var(--ink-soft); font-size:14px;">No license plans are published yet — check back soon.</p>';
+    return;
+  }
+  grid.innerHTML = products.map(p => `
+    <div class="plan-card">
+      <span class="new-tag">New</span>
+      <h4>${p.name}</h4>
+      <div class="plan-price">$${p.price.toLocaleString()}</div>
+      <button class="btn btn-primary" onclick="addLicenseProductToCart(${p.id})">Add to Cart</button>
+    </div>
+  `).join('');
+}
+
+fetch('/api/license-products')
+  .then(r => r.json())
+  .then(data => renderLicenseProducts(data.licenseProducts || []));
 
 document.getElementById('quoteFormEl').addEventListener('submit', function(e){
   e.preventDefault();
