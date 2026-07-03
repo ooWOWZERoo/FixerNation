@@ -195,3 +195,51 @@ function fnToast(msg) {
   clearTimeout(window._fnToastTimer);
   window._fnToastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
 }
+
+// Populates a hand-authored book detail page (book-*.html) with live data
+// from the database, matched by exact title. Shared across all book detail
+// pages since they share the same markup structure (.eyebrow, h1, .product-price,
+// .stock-badge, .product-desc, .amazon-link, .product-photo img).
+function fnPopulateBookDetail(title) {
+  fetch('/api/books')
+    .then(r => r.json())
+    .then(data => {
+      const book = (data.books || []).find(b => b.title === title);
+      if (!book) return;
+
+      const eyebrow = document.querySelector('.product-info .eyebrow');
+      if (eyebrow) eyebrow.textContent = book.category || 'Short Story Book Series';
+
+      const h1 = document.querySelector('.product-info h1');
+      if (h1) h1.textContent = book.title;
+
+      const priceEl = document.querySelector('.product-price');
+      if (priceEl) priceEl.textContent = fnFormatCurrency(book.price);
+
+      const stockBadge = document.querySelector('.stock-badge');
+      if (stockBadge) {
+        const colors = { 'In Stock': '#164F4A', 'Coming Soon': '#EBA657', 'Out of Stock': '#B4762A' };
+        const color = colors[book.stockStatus] || colors['In Stock'];
+        stockBadge.innerHTML = `<span class="stock-dot" style="background:${color};"></span> ${book.stockStatus || 'In Stock'}`;
+      }
+
+      const desc = document.querySelector('.product-desc');
+      if (desc && book.longDescription) {
+        const paragraphs = book.longDescription.split(/\n+/).filter(Boolean);
+        desc.innerHTML = paragraphs.map((p, i) => i === 0 ? `<p><em>${p}</em></p>` : `<p>${p}</p>`).join('');
+      }
+
+      const amazonLink = document.querySelector('.amazon-link');
+      if (amazonLink) {
+        amazonLink.style.display = book.amazonUrl ? '' : 'none';
+        if (book.amazonUrl) amazonLink.href = book.amazonUrl;
+      }
+
+      const photo = document.querySelector('.product-photo img');
+      if (photo && book.coverImage) {
+        photo.src = book.coverImage;
+        photo.alt = book.title + ' book cover';
+      }
+    })
+    .catch(() => {});
+}

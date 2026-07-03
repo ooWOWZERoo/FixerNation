@@ -242,6 +242,7 @@
 
 <div class="toast" id="toast">Added to cart</div>
 
+<script src="admin-common.js?v=7"></script>
 <script>
 function stepQty(delta){
   var input = document.getElementById('qtyInput');
@@ -254,6 +255,7 @@ function showToast(msg){
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
+fnPopulateBookDetail('Kill the Bully');
 </script>
 
 </body>
