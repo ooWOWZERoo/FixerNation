@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
+const { unsubscribeToken } = require('../lib/mailer');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -59,6 +60,20 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
   const [result] = await pool.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Contact not found' });
   res.json({ ok: true });
+});
+
+// Public link clicked from inside a sent campaign email — no auth, verified by
+// an HMAC token instead so a link can't be used to unsubscribe someone else.
+router.get('/unsubscribe', async (req, res) => {
+  const email = (req.query.email || '').trim();
+  const token = req.query.token || '';
+  res.set('Content-Type', 'text/html');
+
+  if (!email || token !== unsubscribeToken(email)) {
+    return res.status(400).send('<p style="font-family:sans-serif; padding:40px; text-align:center;">This unsubscribe link is invalid.</p>');
+  }
+  await pool.query('UPDATE newsletter_contacts SET status = ? WHERE email = ?', ['Unsubscribed', email]);
+  res.send(`<p style="font-family:sans-serif; padding:40px; text-align:center;">${email} has been unsubscribed from Fixer Nation emails.</p>`);
 });
 
 // Bulk import — rows already parsed client-side from CSV.

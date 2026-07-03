@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-common.css?v=5">
+<link rel="stylesheet" href="admin-common.css?v=6">
 <style>
   .a-demo-banner{background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:12px; padding:14px 18px; font-size:13px; font-weight:600; margin-bottom:22px; display:flex; align-items:center; gap:10px;}
   .a-audience-preview{background:var(--a-bg); border:1px solid var(--a-border); border-radius:10px; padding:12px 14px; font-size:13.5px; margin-top:6px;}
@@ -43,7 +43,7 @@
     </div>
 
     <div class="a-content">
-      <div class="a-demo-banner">⚠️ Sending is simulated in this demo — no real emails are delivered. Connect a provider like Mailchimp, SendGrid, or Postmark to send for real.</div>
+      <div class="a-demo-banner">⚠️ Sending is real — campaigns go out via SMTP to your actual subscriber list. Unsubscribed contacts are always excluded automatically, and every email includes a working unsubscribe link.</div>
 
       <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
         <div class="a-stat-card">
@@ -105,20 +105,12 @@
           </div>
         </div>
 
-        <div class="a-form-row">
-          <div class="a-field">
-            <label>Audience — Status</label>
-            <select id="audienceStatus">
-              <option value="Subscribed">Subscribed only</option>
-              <option value="All">All contacts (incl. unsubscribed)</option>
-            </select>
-          </div>
-          <div class="a-field">
-            <label>Audience — Source</label>
-            <select id="audienceSource">
-              <option value="All">All sources</option>
-            </select>
-          </div>
+        <div class="a-field">
+          <label>Audience — Source</label>
+          <select id="audienceSource">
+            <option value="All">All sources</option>
+          </select>
+          <div class="a-note">Real sends always go to subscribed contacts only, regardless of source — unsubscribed contacts can never be included.</div>
         </div>
         <div class="a-audience-preview" id="audiencePreview">Recipients: —</div>
 
@@ -150,7 +142,7 @@
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeCampaignModal()">Cancel</button>
       <button class="a-btn a-btn-outline" onclick="saveCampaign(false)">Save Draft</button>
-      <button class="a-btn a-btn-primary" onclick="saveCampaign(true)">Send Now (Simulated)</button>
+      <button class="a-btn a-btn-primary" onclick="saveCampaign(true)">Send Now</button>
     </div>
   </div>
 </div>
@@ -173,12 +165,21 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=5"></script>
+<script src="admin-common.js?v=6"></script>
 <script>
 fnRequireAuth();
 
 let editingId = null;
 let bodyFormat = 'text';
+let campaignsCache = [];
+let subscribedContactsCache = [];
+
+async function fetchSubscribedContacts() {
+  const r = await fetch('/api/newsletter/contacts', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  const contacts = (await r.json()).contacts || [];
+  return contacts.filter(c => c.status === 'Subscribed');
+}
 
 function setBodyFormat(fmt) {
   bodyFormat = fmt;
@@ -221,7 +222,8 @@ function populateSourceOptions() {
   const sel = document.getElementById('audienceSource');
   const current = sel.value;
   sel.innerHTML = '<option value="All">All sources</option>';
-  fnGetContactSources().forEach(s => {
+  const sources = Array.from(new Set(subscribedContactsCache.map(c => c.source).filter(Boolean)));
+  sources.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s; opt.textContent = s;
     sel.appendChild(opt);
@@ -230,16 +232,19 @@ function populateSourceOptions() {
 }
 
 function updateAudiencePreview() {
-  const filter = {
-    status: document.getElementById('audienceStatus').value,
-    source: document.getElementById('audienceSource').value,
-  };
-  const count = fnGetAudience(filter).length;
-  document.getElementById('audiencePreview').innerHTML = `Recipients: <b>${count}</b> contact${count===1?'':'s'} match this audience`;
+  const source = document.getElementById('audienceSource').value;
+  const count = subscribedContactsCache.filter(c => source === 'All' || c.source === source).length;
+  document.getElementById('audiencePreview').innerHTML = `Recipients: <b>${count}</b> subscribed contact${count===1?'':'s'} match this audience`;
 }
 
-function renderCampaigns() {
-  const campaigns = fnGetCampaigns().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+async function fetchCampaigns() {
+  const r = await fetch('/api/campaigns', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).campaigns || [];
+}
+
+async function renderCampaigns() {
+  const campaigns = campaignsCache = await fetchCampaigns();
   document.getElementById('statSent').textContent = campaigns.filter(c => c.status === 'Sent').length;
   document.getElementById('statDrafts').textContent = campaigns.filter(c => c.status === 'Draft').length;
   document.getElementById('statRecipients').textContent = campaigns.filter(c => c.status === 'Sent').reduce((sum, c) => sum + (c.recipientCount || 0), 0);
@@ -265,9 +270,9 @@ function renderCampaigns() {
       <td>${c.status === 'Sent' ? c.recipientCount : '—'}</td>
       <td>
         <div class="a-row-actions">
-          <button class="a-icon-btn" title="View" onclick="viewCampaign('${c.id}')">👁️</button>
-          ${c.status === 'Draft' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign('${c.id}')">✏️</button>` : ''}
-          <button class="a-icon-btn danger" title="Delete" onclick="deleteCampaign('${c.id}')">🗑️</button>
+          <button class="a-icon-btn" title="View" onclick="viewCampaign(${c.id})">👁️</button>
+          ${c.status === 'Draft' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign(${c.id})">✏️</button>` : ''}
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteCampaign(${c.id})">🗑️</button>
         </div>
       </td>
     `;
@@ -275,14 +280,14 @@ function renderCampaigns() {
   });
 }
 
-function openCampaignModal() {
+async function openCampaignModal() {
   editingId = null;
   document.getElementById('campaignModalTitle').textContent = 'New Campaign';
   document.getElementById('campaignForm').reset();
   document.getElementById('fromName').value = 'Fixer Nation';
   document.getElementById('fromEmail').value = 'hello@fixernation.org';
+  subscribedContactsCache = await fetchSubscribedContacts();
   populateSourceOptions();
-  document.getElementById('audienceStatus').value = 'Subscribed';
   document.getElementById('audienceSource').value = 'All';
   updateAudiencePreview();
   setBodyFormat('text');
@@ -292,8 +297,8 @@ function closeCampaignModal() {
   document.getElementById('campaignModalOverlay').classList.remove('show');
 }
 
-function editCampaign(id) {
-  const c = fnGetCampaigns().find(x => x.id === id);
+async function editCampaign(id) {
+  const c = campaignsCache.find(x => x.id === id);
   if (!c) return;
   editingId = id;
   document.getElementById('campaignModalTitle').textContent = 'Edit Draft Campaign';
@@ -301,26 +306,32 @@ function editCampaign(id) {
   document.getElementById('fromName').value = c.fromName;
   document.getElementById('fromEmail').value = c.fromEmail;
   document.getElementById('body').value = c.body;
+  subscribedContactsCache = await fetchSubscribedContacts();
   populateSourceOptions();
-  document.getElementById('audienceStatus').value = c.audienceFilter.status;
   document.getElementById('audienceSource').value = c.audienceFilter.source;
   updateAudiencePreview();
   setBodyFormat(c.bodyFormat === 'html' ? 'html' : 'text');
   document.getElementById('campaignModalOverlay').classList.add('show');
 }
 
-function deleteCampaign(id) {
+async function deleteCampaign(id) {
   if (!confirm('Delete this campaign?')) return;
-  fnSaveCampaigns(fnGetCampaigns().filter(c => c.id !== id));
+  const r = await fetch(`/api/campaigns/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
   renderCampaigns();
   fnToast('Campaign deleted');
 }
 
 function viewCampaign(id) {
-  const c = fnGetCampaigns().find(x => x.id === id);
+  const c = campaignsCache.find(x => x.id === id);
   if (!c) return;
   document.getElementById('viewSubject').textContent = c.subject;
-  const audienceLabel = `${c.audienceFilter.status}${c.audienceFilter.source !== 'All' ? ' · ' + c.audienceFilter.source : ''}`;
+  const audienceLabel = `Subscribed${c.audienceFilter.source !== 'All' ? ' · ' + c.audienceFilter.source : ''}`;
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '');
@@ -340,54 +351,73 @@ function closeViewModal() {
   document.getElementById('viewModalOverlay').classList.remove('show');
 }
 
-function saveCampaign(send) {
+async function saveCampaign(send) {
   const subject = document.getElementById('subject').value.trim();
   if (!subject) { fnToast('Subject line is required'); return; }
 
-  const audienceFilter = {
-    status: document.getElementById('audienceStatus').value,
-    source: document.getElementById('audienceSource').value,
-  };
+  const source = document.getElementById('audienceSource').value;
+  const recipientCount = subscribedContactsCache.filter(c => source === 'All' || c.source === source).length;
+
+  if (send) {
+    if (recipientCount === 0) {
+      if (!confirm('This audience currently matches 0 subscribed contacts. Send anyway?')) return;
+    } else if (!confirm(`Send "${subject}" for real to ${recipientCount} recipient(s)? This cannot be undone.`)) {
+      return;
+    }
+  }
+
   const data = {
     subject,
     fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('fromEmail').value.trim() || 'hello@fixernation.org',
-    audienceFilter,
+    audienceFilter: { status: 'Subscribed', source },
     body: document.getElementById('body').value,
     bodyFormat,
   };
 
-  const campaigns = fnGetCampaigns();
+  const url = editingId ? `/api/campaigns/${editingId}` : '/api/campaigns';
+  const method = editingId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save campaign');
+    return;
+  }
+  const saved = (await r.json()).campaign;
 
-  if (send) {
-    const recipientCount = fnGetAudience(audienceFilter).length;
-    if (recipientCount === 0) {
-      if (!confirm('This audience currently matches 0 contacts. Send anyway (it will just be logged with 0 recipients)?')) return;
-    } else if (!confirm(`Simulate sending "${subject}" to ${recipientCount} recipient(s)? No real email will be sent.`)) {
-      return;
-    }
-    data.status = 'Sent';
-    data.sentAt = new Date().toISOString();
-    data.recipientCount = recipientCount;
-  } else {
-    data.status = 'Draft';
+  if (!send) {
+    closeCampaignModal();
+    renderCampaigns();
+    fnToast('Draft saved');
+    return;
   }
 
-  if (editingId) {
-    const idx = campaigns.findIndex(c => c.id === editingId);
-    campaigns[idx] = { ...campaigns[idx], ...data };
-  } else {
-    campaigns.push({ id: fnUid(), createdAt: new Date().toISOString(), ...data });
+  fnToast('Sending…');
+  const sendR = await fetch(`/api/campaigns/${saved.id}/send`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(sendR)) return;
+  if (!sendR.ok) {
+    const err = await sendR.json().catch(() => ({}));
+    fnToast(err.error || 'Send failed');
+    return;
   }
-  fnSaveCampaigns(campaigns);
+  const result = await sendR.json();
   closeCampaignModal();
   renderCampaigns();
-  fnToast(send ? `Campaign sent (simulated) to ${data.recipientCount} contact(s)` : 'Draft saved');
+  fnToast(`Sent to ${result.sent} recipient(s)${result.failed ? `, ${result.failed} failed` : ''}`);
 }
 
-['audienceStatus', 'audienceSource'].forEach(id => {
-  document.getElementById(id).addEventListener('change', updateAudiencePreview);
-});
+document.getElementById('audienceSource').addEventListener('change', updateAudiencePreview);
 
 renderCampaigns();
 </script>
