@@ -54,6 +54,22 @@ CREATE TABLE IF NOT EXISTS newsletter_contacts (
   status VARCHAR(32) NOT NULL DEFAULT 'Subscribed'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Contact groups, for categorizing contacts. A contact may belong to any
+-- number of groups.
+CREATE TABLE IF NOT EXISTS contact_groups (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL UNIQUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS contact_group_members (
+  contact_id INT UNSIGNED NOT NULL,
+  group_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (contact_id, group_id),
+  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
+  FOREIGN KEY (group_id) REFERENCES contact_groups(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------------------------------------------------------------------------
 -- Email campaigns (sending stays simulated — no real provider integration yet)
 -- ---------------------------------------------------------------------------

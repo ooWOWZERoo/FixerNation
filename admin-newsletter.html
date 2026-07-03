@@ -19,7 +19,7 @@
       <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
       <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculum</span></a>
       <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blog Posts</span></a>
-      <a href="admin-newsletter.html" class="active"><span class="ic">✉️</span><span class="label">Newsletter CRM</span></a>
+      <a href="admin-newsletter.html" class="active"><span class="ic">✉️</span><span class="label">CRM</span></a>
       <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
     </nav>
     <div class="a-sidebar-foot">
@@ -55,13 +55,14 @@
           <h2>Contacts</h2>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <div class="a-search"><input type="text" id="searchInput" placeholder="Search name or email..."></div>
+            <button class="a-btn a-btn-outline" onclick="openGroupsModal()">🏷️ Manage Groups</button>
             <button class="a-btn a-btn-outline" onclick="openImportModal()">⬆ Import CSV</button>
             <button class="a-btn a-btn-outline" onclick="exportCsv()">⬇ Export CSV</button>
             <button class="a-btn a-btn-primary" onclick="openContactModal()">+ Add Contact</button>
           </div>
         </div>
         <table class="a-table" id="contactsTable">
-          <thead><tr><th>Name</th><th>Email</th><th>Address</th><th>Signed Up</th><th>Source</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Address</th><th>Signed Up</th><th>Source</th><th>Status</th><th>Groups</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="contactsEmpty" style="display:none;">
@@ -73,11 +74,11 @@
   </div>
 </div>
 
-<!-- Add contact modal -->
+<!-- Add/Edit contact modal -->
 <div class="a-modal-overlay" id="contactModalOverlay">
   <div class="a-modal" style="max-width:480px;">
     <div class="a-modal-head">
-      <h3>Add Contact</h3>
+      <h3 id="contactModalTitle">Add Contact</h3>
       <button class="a-modal-close" onclick="closeContactModal()">✕</button>
     </div>
     <div class="a-modal-body">
@@ -99,11 +100,44 @@
             <option>Referral</option>
           </select>
         </div>
+        <div class="a-field">
+          <label>Subscription Status</label>
+          <select id="contactStatus">
+            <option>Subscribed</option>
+            <option>Unsubscribed</option>
+          </select>
+        </div>
+        <div class="a-field">
+          <label>Groups</label>
+          <div class="a-tag-row" id="contactGroupsRow"></div>
+          <div class="a-note" id="contactGroupsEmptyNote" style="display:none;">No groups yet — create one with "Manage Groups" first.</div>
+        </div>
       </form>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeContactModal()">Cancel</button>
-      <button class="a-btn a-btn-primary" onclick="saveContact()">Add Contact</button>
+      <button class="a-btn a-btn-primary" id="contactSaveBtn" onclick="saveContact()">Add Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage groups modal -->
+<div class="a-modal-overlay" id="groupsModalOverlay">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>Manage Groups</h3>
+      <button class="a-modal-close" onclick="closeGroupsModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <input type="text" id="newGroupName" placeholder="New group name..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); createGroup();}">
+        <button type="button" class="a-btn a-btn-outline" onclick="createGroup()">+ Add</button>
+      </div>
+      <div id="groupsList"></div>
+      <div class="a-note" id="groupsEmptyNote" style="display:none;">No groups yet.</div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeGroupsModal()">Close</button>
     </div>
   </div>
 </div>
@@ -151,11 +185,19 @@ fnRequireAuth();
 
 let searchTerm = '';
 let contactsCache = [];
+let groupsCache = [];
+let editingContactId = null;
 
 async function fetchContacts() {
   const r = await fetch('/api/newsletter/contacts', { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return [];
   return (await r.json()).contacts || [];
+}
+
+async function fetchGroups() {
+  const r = await fetch('/api/newsletter/groups', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).groups || [];
 }
 
 async function renderContacts() {
@@ -190,8 +232,10 @@ async function renderContacts() {
       <td>${fnFormatDate(c.signupDate)}</td>
       <td><span class="a-pill a-pill-neutral">${c.source}</span></td>
       <td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
+      <td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>
       <td>
         <div class="a-row-actions">
+          <button class="a-icon-btn" title="Edit" onclick="editContact(${c.id})">✏️</button>
           <button class="a-icon-btn" title="${subscribed ? 'Unsubscribe' : 'Resubscribe'}" onclick="toggleStatus(${c.id})">${subscribed ? '🔕' : '🔔'}</button>
           <button class="a-icon-btn danger" title="Delete" onclick="deleteContact(${c.id})">🗑️</button>
         </div>
@@ -228,11 +272,51 @@ async function deleteContact(id) {
   fnToast('Contact removed');
 }
 
-function openContactModal() {
+function renderGroupCheckboxes(selectedIds) {
+  const row = document.getElementById('contactGroupsRow');
+  const selected = selectedIds || [];
+  row.innerHTML = groupsCache.map(g => {
+    const checked = selected.includes(g.id) ? 'checked' : '';
+    return `<label class="a-tag-check"><input type="checkbox" value="${g.id}" ${checked}> ${g.name}</label>`;
+  }).join('');
+  document.getElementById('contactGroupsEmptyNote').style.display = groupsCache.length === 0 ? 'block' : 'none';
+}
+
+function getCheckedGroupIds() {
+  return Array.from(document.querySelectorAll('#contactGroupsRow input:checked')).map(cb => Number(cb.value));
+}
+
+async function openContactModal() {
+  editingContactId = null;
+  document.getElementById('contactModalTitle').textContent = 'Add Contact';
+  document.getElementById('contactSaveBtn').textContent = 'Add Contact';
   document.getElementById('contactForm').reset();
   document.getElementById('contactSource').value = 'Manual Entry';
+  document.getElementById('contactStatus').value = 'Subscribed';
+  groupsCache = await fetchGroups();
+  renderGroupCheckboxes([]);
   document.getElementById('contactModalOverlay').classList.add('show');
 }
+
+async function editContact(id) {
+  const c = contactsCache.find(x => x.id === id);
+  if (!c) return;
+  editingContactId = id;
+  document.getElementById('contactModalTitle').textContent = 'Edit Contact';
+  document.getElementById('contactSaveBtn').textContent = 'Save Changes';
+  document.getElementById('contactName').value = c.name || '';
+  document.getElementById('contactEmail').value = c.email || '';
+  document.getElementById('contactStreet').value = (c.address && c.address.street) || '';
+  document.getElementById('contactCity').value = (c.address && c.address.city) || '';
+  document.getElementById('contactState').value = (c.address && c.address.state) || '';
+  document.getElementById('contactZip').value = (c.address && c.address.zip) || '';
+  document.getElementById('contactSource').value = c.source || 'Manual Entry';
+  document.getElementById('contactStatus').value = c.status || 'Subscribed';
+  groupsCache = await fetchGroups();
+  renderGroupCheckboxes((c.groups || []).map(g => g.id));
+  document.getElementById('contactModalOverlay').classList.add('show');
+}
+
 function closeContactModal() {
   document.getElementById('contactModalOverlay').classList.remove('show');
 }
@@ -242,17 +326,35 @@ async function saveContact() {
   if (!email) { fnToast('Email is required'); return; }
   const name = document.getElementById('contactName').value.trim();
   const source = document.getElementById('contactSource').value;
+  const status = document.getElementById('contactStatus').value;
   const address = {
     street: document.getElementById('contactStreet').value.trim(),
     city: document.getElementById('contactCity').value.trim(),
     state: document.getElementById('contactState').value.trim(),
     zip: document.getElementById('contactZip').value.trim(),
   };
+  const groupIds = getCheckedGroupIds();
+
+  if (editingContactId) {
+    const r = await fetch(`/api/newsletter/contacts/${editingContactId}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, source, status, address, groupIds }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    if (!r.ok) { fnToast('Could not save contact'); return; }
+    closeContactModal();
+    renderContacts();
+    fnToast('Contact updated');
+    return;
+  }
+
   const r = await fetch('/api/newsletter/contacts', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, source, address }),
+    body: JSON.stringify({ name, email, source, status, address, groupIds }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json();
@@ -290,6 +392,65 @@ function exportCsv() {
 
 /* ---- Import ---- */
 let parsedImportRows = [];
+
+/* ---- Groups ---- */
+async function openGroupsModal() {
+  groupsCache = await fetchGroups();
+  renderGroupsList();
+  document.getElementById('newGroupName').value = '';
+  document.getElementById('groupsModalOverlay').classList.add('show');
+}
+function closeGroupsModal() {
+  document.getElementById('groupsModalOverlay').classList.remove('show');
+  renderContacts();
+}
+
+function renderGroupsList() {
+  const el = document.getElementById('groupsList');
+  document.getElementById('groupsEmptyNote').style.display = groupsCache.length === 0 ? 'block' : 'none';
+  el.innerHTML = groupsCache.map(g => `
+    <div class="a-repeat-row">
+      <div class="info"><div class="name">${g.name}</div></div>
+      <button type="button" class="a-repeat-remove" title="Delete group" onclick="deleteGroup(${g.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function createGroup() {
+  const input = document.getElementById('newGroupName');
+  const name = input.value.trim();
+  if (!name) { fnToast('Type a group name first'); return; }
+  const r = await fetch('/api/newsletter/groups', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not create group');
+    return;
+  }
+  input.value = '';
+  groupsCache = await fetchGroups();
+  renderGroupsList();
+  fnToast('Group created');
+}
+
+async function deleteGroup(id) {
+  if (!confirm('Delete this group? Contacts in it will no longer be tagged with it.')) return;
+  const r = await fetch(`/api/newsletter/groups/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  groupsCache = await fetchGroups();
+  renderGroupsList();
+  fnToast('Group deleted');
+}
 
 function openImportModal() {
   document.getElementById('importFile').value = '';
