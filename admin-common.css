@@ -72,6 +72,7 @@ button, input, select, textarea{font-family:inherit;}
 .a-nav a .ic{width:18px; text-align:center; font-size:15px;}
 .a-nav a:hover{background:var(--a-sidebar-soft); color:#fff;}
 .a-nav a.active{background:var(--a-accent); color:#fff;}
+.a-nav-divider{border-top:1px solid rgba(255,255,255,0.1); margin:8px 12px;}
 .a-sidebar-foot{border-top:1px solid rgba(255,255,255,0.1); padding-top:14px; margin-top:14px; display:flex; flex-direction:column; gap:3px;}
 .a-sidebar-foot a{display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:10px; font-size:13.5px; font-weight:600; color:var(--a-sidebar-text);}
 .a-sidebar-foot a:hover{background:var(--a-sidebar-soft); color:#fff;}
