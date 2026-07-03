@@ -11,7 +11,7 @@ function serialize(row) {
     subject: row.subject,
     fromName: row.from_name,
     fromEmail: row.from_email,
-    audienceFilter: { status: row.audience_status, source: row.audience_source },
+    audienceFilter: { status: row.audience_status, source: row.audience_source, groupId: row.audience_group_id },
     body: row.body,
     bodyFormat: row.body_format,
     status: row.status,
@@ -31,9 +31,9 @@ router.post('/', requireAuth, async (req, res) => {
   if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
 
   const [result] = await pool.query(
-    `INSERT INTO campaigns (subject, from_name, from_email, audience_status, audience_source, body, body_format, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'Draft')`,
-    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', c.body || '', c.bodyFormat || 'text']
+    `INSERT INTO campaigns (subject, from_name, from_email, audience_status, audience_source, audience_group_id, body, body_format, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Draft')`,
+    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', (c.audienceFilter && c.audienceFilter.groupId) || null, c.body || '', c.bodyFormat || 'text']
   );
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [result.insertId]);
   res.status(201).json({ campaign: serialize(rows[0]) });
@@ -47,9 +47,9 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!existing[0]) return res.status(404).json({ error: 'Campaign not found' });
 
   await pool.query(
-    `UPDATE campaigns SET subject=?, from_name=?, from_email=?, audience_status=?, audience_source=?, body=?, body_format=?
+    `UPDATE campaigns SET subject=?, from_name=?, from_email=?, audience_status=?, audience_source=?, audience_group_id=?, body=?, body_format=?
      WHERE id=?`,
-    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', c.body || '', c.bodyFormat || 'text', req.params.id]
+    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', (c.audienceFilter && c.audienceFilter.groupId) || null, c.body || '', c.bodyFormat || 'text', req.params.id]
   );
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
   res.json({ campaign: serialize(rows[0]) });
@@ -61,22 +61,33 @@ router.delete('/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// Sends the campaign for real via SMTP. Regardless of the audience_status
-// filter stored on the campaign, delivery ALWAYS excludes unsubscribed
-// contacts — that filter only ever narrows further (e.g. by source), it can
-// never be used to reach people who opted out.
+// Sends the campaign for real via SMTP — one individual email per recipient
+// (each message's "To" header contains only that one address; there is no
+// CC/BCC of the full list, so no recipient ever sees anyone else's address).
+// Regardless of the audience_status filter stored on the campaign, delivery
+// ALWAYS excludes unsubscribed contacts — source/group filters only ever
+// narrow further, they can never be used to reach people who opted out.
 router.post('/:id/send', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Campaign not found' });
   const campaign = rows[0];
 
   const params = ['Subscribed'];
-  let sourceClause = '';
+  let joinClause = '';
+  let extraClauses = '';
   if (campaign.audience_source && campaign.audience_source !== 'All') {
-    sourceClause = ' AND source = ?';
+    extraClauses += ' AND c.source = ?';
     params.push(campaign.audience_source);
   }
-  const [contacts] = await pool.query(`SELECT email FROM newsletter_contacts WHERE status = ?${sourceClause}`, params);
+  if (campaign.audience_group_id) {
+    joinClause = ' JOIN contact_group_members m ON m.contact_id = c.id';
+    extraClauses += ' AND m.group_id = ?';
+    params.push(campaign.audience_group_id);
+  }
+  const [contacts] = await pool.query(
+    `SELECT DISTINCT c.email FROM newsletter_contacts c${joinClause} WHERE c.status = ?${extraClauses}`,
+    params
+  );
 
   let sent = 0, failed = 0;
   for (const contact of contacts) {

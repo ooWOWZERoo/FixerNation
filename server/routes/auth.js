@@ -2,11 +2,10 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
+const { requireAuth } = require('../middleware/auth');
+const { COOKIE_NAME, COOKIE_MAX_AGE_MS } = require('../lib/session');
 
 const router = express.Router();
-
-const COOKIE_NAME = 'fn_session';
-const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function setSessionCookie(res, user) {
   const token = jwt.sign({ userId: user.id, username: user.username }, process.env.SESSION_SECRET, {
@@ -59,4 +58,27 @@ router.get('/me', (req, res) => {
   }
 });
 
-module.exports = { router, COOKIE_NAME };
+router.put('/password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current and new password are required' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+
+  const [rows] = await pool.query('SELECT id, password_hash FROM admin_users WHERE id = ?', [req.user.userId]);
+  const user = rows[0];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const matches = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!matches) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 12);
+  await pool.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+  res.json({ ok: true });
+});
+
+module.exports = { router };

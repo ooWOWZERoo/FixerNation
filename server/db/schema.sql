@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS contact_group_members (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
--- Email campaigns (sending stays simulated — no real provider integration yet)
+-- Email campaigns (real SMTP sending, one individual email per recipient)
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS campaigns (
@@ -81,13 +81,15 @@ CREATE TABLE IF NOT EXISTS campaigns (
   from_email VARCHAR(255) NOT NULL DEFAULT 'noreply@fixernationeducation.com',
   audience_status VARCHAR(32) NOT NULL DEFAULT 'Subscribed',
   audience_source VARCHAR(128) NOT NULL DEFAULT 'All',
+  audience_group_id INT UNSIGNED NULL,
   body MEDIUMTEXT,
   body_format VARCHAR(16) NOT NULL DEFAULT 'text',
   status VARCHAR(16) NOT NULL DEFAULT 'Draft',
   sent_at DATETIME NULL,
   recipient_count INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (audience_group_id) REFERENCES contact_groups(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------

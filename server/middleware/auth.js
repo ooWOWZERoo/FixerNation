@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { COOKIE_NAME } = require('../routes/auth');
+const { COOKIE_NAME } = require('../lib/session');
 
 // Returns the decoded session payload, or null if there is no valid session.
 // Does not send a response — safe to use for optional/best-effort auth checks.

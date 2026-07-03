@@ -29,6 +29,7 @@
       <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blog Posts</span></a>
       <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">CRM</span></a>
       <a href="admin-campaigns.html" class="active"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+      <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
     </nav>
     <div class="a-sidebar-foot">
       <a href="fixernation-redesign.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
@@ -105,13 +106,21 @@
           </div>
         </div>
 
-        <div class="a-field">
-          <label>Audience — Source</label>
-          <select id="audienceSource">
-            <option value="All">All sources</option>
-          </select>
-          <div class="a-note">Real sends always go to subscribed contacts only, regardless of source — unsubscribed contacts can never be included.</div>
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Audience — Source</label>
+            <select id="audienceSource">
+              <option value="All">All sources</option>
+            </select>
+          </div>
+          <div class="a-field">
+            <label>Audience — Group</label>
+            <select id="audienceGroup">
+              <option value="">All groups</option>
+            </select>
+          </div>
         </div>
+        <div class="a-note">Real sends always go to subscribed contacts only — unsubscribed contacts can never be included, regardless of source/group.</div>
         <div class="a-audience-preview" id="audiencePreview">Recipients: —</div>
 
         <div class="a-field" style="margin-top:16px;">
@@ -173,12 +182,19 @@ let editingId = null;
 let bodyFormat = 'text';
 let campaignsCache = [];
 let subscribedContactsCache = [];
+let groupsCache = [];
 
 async function fetchSubscribedContacts() {
   const r = await fetch('/api/newsletter/contacts', { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return [];
   const contacts = (await r.json()).contacts || [];
   return contacts.filter(c => c.status === 'Subscribed');
+}
+
+async function fetchGroups() {
+  const r = await fetch('/api/newsletter/groups', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).groups || [];
 }
 
 function setBodyFormat(fmt) {
@@ -231,9 +247,38 @@ function populateSourceOptions() {
   if (Array.from(sel.options).some(o => o.value === current)) sel.value = current;
 }
 
+function populateGroupOptions() {
+  const sel = document.getElementById('audienceGroup');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All groups</option>';
+  groupsCache.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id; opt.textContent = g.name;
+    sel.appendChild(opt);
+  });
+  if (Array.from(sel.options).some(o => o.value === current)) sel.value = current;
+}
+
+function describeAudience(filter) {
+  const parts = [filter.status];
+  if (filter.source && filter.source !== 'All') parts.push(filter.source);
+  if (filter.groupId) {
+    const group = groupsCache.find(g => g.id === filter.groupId);
+    parts.push(group ? group.name : 'Group');
+  }
+  return parts.join(' · ');
+}
+
+function matchesAudience(contact, source, groupId) {
+  if (source !== 'All' && contact.source !== source) return false;
+  if (groupId && !(contact.groups || []).some(g => g.id === Number(groupId))) return false;
+  return true;
+}
+
 function updateAudiencePreview() {
   const source = document.getElementById('audienceSource').value;
-  const count = subscribedContactsCache.filter(c => source === 'All' || c.source === source).length;
+  const groupId = document.getElementById('audienceGroup').value;
+  const count = subscribedContactsCache.filter(c => matchesAudience(c, source, groupId)).length;
   document.getElementById('audiencePreview').innerHTML = `Recipients: <b>${count}</b> subscribed contact${count===1?'':'s'} match this audience`;
 }
 
@@ -261,7 +306,7 @@ async function renderCampaigns() {
 
   campaigns.forEach(c => {
     const tr = document.createElement('tr');
-    const audienceLabel = `${c.audienceFilter.status}${c.audienceFilter.source !== 'All' ? ' · ' + c.audienceFilter.source : ''}`;
+    const audienceLabel = describeAudience(c.audienceFilter);
     tr.innerHTML = `
       <td class="a-cell-title">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
       <td>${audienceLabel}</td>
@@ -286,9 +331,11 @@ async function openCampaignModal() {
   document.getElementById('campaignForm').reset();
   document.getElementById('fromName').value = 'Fixer Nation';
   document.getElementById('fromEmail').value = 'noreply@fixernationeducation.com';
-  subscribedContactsCache = await fetchSubscribedContacts();
+  [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions();
+  populateGroupOptions();
   document.getElementById('audienceSource').value = 'All';
+  document.getElementById('audienceGroup').value = '';
   updateAudiencePreview();
   setBodyFormat('text');
   document.getElementById('campaignModalOverlay').classList.add('show');
@@ -306,9 +353,11 @@ async function editCampaign(id) {
   document.getElementById('fromName').value = c.fromName;
   document.getElementById('fromEmail').value = c.fromEmail;
   document.getElementById('body').value = c.body;
-  subscribedContactsCache = await fetchSubscribedContacts();
+  [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions();
+  populateGroupOptions();
   document.getElementById('audienceSource').value = c.audienceFilter.source;
+  document.getElementById('audienceGroup').value = c.audienceFilter.groupId || '';
   updateAudiencePreview();
   setBodyFormat(c.bodyFormat === 'html' ? 'html' : 'text');
   document.getElementById('campaignModalOverlay').classList.add('show');
@@ -331,7 +380,7 @@ function viewCampaign(id) {
   const c = campaignsCache.find(x => x.id === id);
   if (!c) return;
   document.getElementById('viewSubject').textContent = c.subject;
-  const audienceLabel = `Subscribed${c.audienceFilter.source !== 'All' ? ' · ' + c.audienceFilter.source : ''}`;
+  const audienceLabel = describeAudience(c.audienceFilter);
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '');
@@ -356,7 +405,9 @@ async function saveCampaign(send) {
   if (!subject) { fnToast('Subject line is required'); return; }
 
   const source = document.getElementById('audienceSource').value;
-  const recipientCount = subscribedContactsCache.filter(c => source === 'All' || c.source === source).length;
+  const groupIdRaw = document.getElementById('audienceGroup').value;
+  const groupId = groupIdRaw ? Number(groupIdRaw) : null;
+  const recipientCount = subscribedContactsCache.filter(c => matchesAudience(c, source, groupId)).length;
 
   if (send) {
     if (recipientCount === 0) {
@@ -370,7 +421,7 @@ async function saveCampaign(send) {
     subject,
     fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('fromEmail').value.trim() || 'noreply@fixernationeducation.com',
-    audienceFilter: { status: 'Subscribed', source },
+    audienceFilter: { status: 'Subscribed', source, groupId },
     body: document.getElementById('body').value,
     bodyFormat,
   };
@@ -418,8 +469,12 @@ async function saveCampaign(send) {
 }
 
 document.getElementById('audienceSource').addEventListener('change', updateAudiencePreview);
+document.getElementById('audienceGroup').addEventListener('change', updateAudiencePreview);
 
-renderCampaigns();
+(async function init() {
+  groupsCache = await fetchGroups();
+  renderCampaigns();
+})();
 </script>
 
 </body>
