@@ -43,4 +43,31 @@ async function sendCampaignEmail({ to, fromName, fromEmail, subject, body, bodyF
   await getTransporter().sendMail(mail);
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken };
+// Transactional emails (verification, password reset) always send from the
+// authenticated SMTP account itself, unlike campaigns which let the admin
+// pick a from-address — these need to reliably land, not be customized.
+function systemFromAddress() {
+  return `"Fixer Nation" <${process.env.SMTP_USER}>`;
+}
+
+async function sendVerificationEmail({ to, firstName, verifyUrl }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: 'Verify your Fixer Nation account',
+    text: `Hi ${firstName},\n\nWelcome to Fixer Nation! Please verify your email address by visiting this link:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+    html: `<p>Hi ${firstName},</p><p>Welcome to Fixer Nation! Please verify your email address by clicking the link below:</p><p><a href="${verifyUrl}">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
+  });
+}
+
+async function sendPasswordResetEmail({ to, firstName, resetUrl }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: 'Reset your Fixer Nation password',
+    text: `Hi ${firstName},\n\nWe received a request to reset your Fixer Nation password. Visit this link to choose a new one:\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
+    html: `<p>Hi ${firstName},</p><p>We received a request to reset your Fixer Nation password. Click below to choose a new one:</p><p><a href="${resetUrl}">Reset my password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail };
