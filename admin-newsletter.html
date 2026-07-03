@@ -32,6 +32,7 @@
       <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
       <a href="admin-newsletter.html" class="active"><span class="ic">✉️</span><span class="label">CRM</span></a>
       <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
+      <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
     </nav>
     <div class="a-sidebar-foot">
@@ -790,7 +791,13 @@ function purchaseCard(p, title, subtitle, extraHtml) {
         ${p.paymentMethod === 'po' ? 'PO' + (p.poNumber ? ' ' + p.poNumber : '') : 'Stripe'} · ${p.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
       </span>`
     : '';
-  const markPaidBtn = p.paymentStatus === 'pending'
+  const invoiceLink = p.invoiceId
+    ? `<a class="a-btn a-btn-outline" style="padding:4px 10px; font-size:11.5px; margin-left:8px;" href="admin-invoice-print.html?id=${p.invoiceId}" target="_blank">🧾 View Invoice</a>`
+    : '';
+  // Invoice-linked purchases are marked paid at the invoice level (Invoices
+  // page) so every line item on that PO stays in sync — only show the
+  // standalone toggle for pending purchases that aren't part of an invoice.
+  const markPaidBtn = (p.paymentStatus === 'pending' && !p.invoiceId)
     ? `<button class="a-btn a-btn-outline" style="padding:4px 10px; font-size:11.5px; margin-left:8px;" onclick="markPurchasePaid(${p.id})">Mark as Paid</button>`
     : '';
 
@@ -798,7 +805,7 @@ function purchaseCard(p, title, subtitle, extraHtml) {
     <div class="a-card" style="margin-bottom:12px; box-shadow:none; border:1px solid var(--a-border);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
         <div>
-          <div class="a-cell-title">${title}${paymentBadge}${markPaidBtn}</div>
+          <div class="a-cell-title">${title}${paymentBadge}${invoiceLink}${markPaidBtn}</div>
           <div class="a-note" style="margin:2px 0 0;">${subtitle}${p.notes ? ' · ' + p.notes : ''}</div>
         </div>
         <div style="display:flex; gap:4px;">

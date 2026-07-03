@@ -132,6 +132,22 @@ CREATE TABLE IF NOT EXISTS license_products (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- One invoice per Purchase Order submission, grouping together the purchase
+-- rows (line items) it created. Generated automatically by
+-- server/routes/checkout.js's create-po-order; viewed/printed from
+-- admin-invoices.html / admin-invoice-print.html.
+CREATE TABLE IF NOT EXISTS invoices (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  invoice_number VARCHAR(32) UNIQUE,
+  contact_id INT UNSIGNED NOT NULL,
+  po_number VARCHAR(128) NULL,
+  total_cents INT UNSIGNED NOT NULL DEFAULT 0,
+  status VARCHAR(16) NOT NULL DEFAULT 'unpaid', -- 'unpaid' | 'paid'
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  paid_at DATETIME NULL,
+  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Purchases — books, single teacher licenses, and group (school) licenses.
 -- Created either manually by an admin, automatically from a real Stripe
 -- Checkout payment, or immediately upon a Purchase Order order (payment
@@ -152,9 +168,12 @@ CREATE TABLE IF NOT EXISTS purchases (
   payment_method VARCHAR(16) NOT NULL DEFAULT 'manual', -- 'manual' | 'stripe' | 'po'
   payment_status VARCHAR(16) NOT NULL DEFAULT 'paid', -- 'paid' | 'pending' — POs start pending until an admin marks them paid; access is granted immediately either way
   po_number VARCHAR(128) NULL,
+  invoice_id INT UNSIGNED NULL, -- set for PO-sourced purchases, grouping them under one invoices row
+  amount_cents INT UNSIGNED NULL, -- snapshot of what was actually charged for this line item — prices can change later, so this preserves invoice accuracy
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
-  FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL
+  FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- One row per license seat (single_license purchases always have exactly one,

@@ -90,11 +90,12 @@ async function resolveCartItems(items) {
     if (item.type === 'book') {
       const book = bookById[item.id];
       if (!book) throw { status: 400, message: `Book ${item.id} not found` };
+      const unitAmountCents = Math.round(Number(book.price) * 100);
       lineItems.push({
-        price_data: { currency: 'usd', product_data: { name: book.title }, unit_amount: Math.round(Number(book.price) * 100) },
+        price_data: { currency: 'usd', product_data: { name: book.title }, unit_amount: unitAmountCents },
         quantity,
       });
-      resolved.push({ type: 'book', id: book.id });
+      resolved.push({ type: 'book', id: book.id, name: book.title, amountCents: unitAmountCents * quantity });
     } else if (item.type === 'license_product') {
       const lp = lpById[item.id];
       if (!lp) throw { status: 400, message: `License product ${item.id} not found` };
@@ -108,7 +109,7 @@ async function resolveCartItems(items) {
       // A quantity > 1 on a license product multiplies the seat count within
       // one license block for that school, rather than creating separate
       // blocks — simplest mapping of "add another one of these" to one domain.
-      resolved.push({ type: 'license_product', id: lp.id, seatCount: lp.seat_count * quantity, domain });
+      resolved.push({ type: 'license_product', id: lp.id, name: lp.name, seatCount: lp.seat_count * quantity, domain, amountCents: lp.price_cents * quantity });
     } else {
       throw { status: 400, message: 'Invalid cart item type' };
     }
@@ -124,9 +125,18 @@ async function fulfillResolvedItems(contactId, resolved, fulfillmentFields) {
       licenseProductId: item.type === 'license_product' ? item.id : undefined,
       seatCount: item.type === 'license_product' ? item.seatCount : undefined,
       schoolDomain: item.type === 'license_product' ? item.domain : undefined,
+      amountCents: item.amountCents,
       ...fulfillmentFields,
     });
   }
+}
+
+// "INV-00001" style, generated after the row exists so it can incorporate the
+// real auto-increment id — simplest scheme that's guaranteed unique.
+async function generateInvoiceNumber(connection, invoiceId) {
+  const invoiceNumber = `INV-${String(invoiceId).padStart(5, '0')}`;
+  await connection.query('UPDATE invoices SET invoice_number = ? WHERE id = ?', [invoiceNumber, invoiceId]);
+  return invoiceNumber;
 }
 
 // Cart checkout — multiple books and/or license products in one Stripe
@@ -197,14 +207,35 @@ router.post('/create-po-order', async (req, res) => {
   }
 
   const contactId = await findOrCreateContact(email, 'Purchase Order');
+  const totalCents = resolved.reduce((sum, item) => sum + (item.amountCents || 0), 0);
+
+  const connection = await pool.getConnection();
+  let invoiceId, invoiceNumber;
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.query(
+      'INSERT INTO invoices (contact_id, po_number, total_cents, status) VALUES (?, ?, ?, ?)',
+      [contactId, poNumber, totalCents, 'unpaid']
+    );
+    invoiceId = result.insertId;
+    invoiceNumber = await generateInvoiceNumber(connection, invoiceId);
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+
   await fulfillResolvedItems(contactId, resolved, {
     source: 'Purchase Order',
     paymentMethod: 'po',
     paymentStatus: 'pending',
     poNumber,
+    invoiceId,
   });
 
-  res.status(201).json({ ok: true });
+  res.status(201).json({ ok: true, invoiceId, invoiceNumber });
 });
 
 // Registered in server/app.js with express.raw() ahead of the global JSON

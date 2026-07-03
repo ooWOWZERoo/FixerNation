@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --teal:#164F4A; --teal-dark:#0E3733; --coral:#F26B4D; --gold:#EBA657;
+    --ink:#2A2420; --ink-soft:#6B5F55; --border:#E4DDD2;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; color:var(--ink); background:#f2ede4; padding:32px;}
+  h1,h2{font-family:'Fraunces', serif; color:var(--teal-dark);}
+  .toolbar{max-width:800px; margin:0 auto 16px; display:flex; justify-content:space-between; align-items:center;}
+  .toolbar a{color:var(--teal-dark); font-size:13.5px; font-weight:600; text-decoration:none;}
+  .btn{padding:10px 20px; border-radius:999px; border:none; background:var(--coral); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer;}
+  .sheet{max-width:800px; margin:0 auto; background:#fff; padding:48px; box-shadow:0 20px 45px -18px rgba(22,79,74,0.25);}
+  .brand-row{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px;}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;}
+  .brand-word{font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:var(--teal-dark);}
+  .invoice-title{text-align:right;}
+  .invoice-title h1{font-size:26px; margin-bottom:4px;}
+  .invoice-title .num{font-size:14px; color:var(--ink-soft); font-weight:600;}
+  .status-badge{display:inline-block; margin-top:8px; padding:4px 12px; border-radius:999px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;}
+  .status-badge.paid{background:#E4F3EE; color:var(--teal-dark);}
+  .status-badge.unpaid{background:#FDECEA; color:#B3261E;}
+  .meta-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:36px;}
+  .meta-block h3{font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); margin-bottom:8px;}
+  .meta-block p{font-size:14px; line-height:1.6;}
+  table{width:100%; border-collapse:collapse; margin-bottom:24px;}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft); padding:10px 8px; border-bottom:2px solid var(--border);}
+  td{padding:14px 8px; border-bottom:1px solid var(--border); font-size:14px;}
+  td.amount, th.amount{text-align:right;}
+  .total-row td{border-bottom:none; font-weight:700; font-size:16px; padding-top:18px;}
+  .footer-note{margin-top:40px; font-size:12.5px; color:var(--ink-soft); text-align:center;}
+
+  @media print{
+    body{background:#fff; padding:0;}
+    .toolbar{display:none;}
+    .sheet{box-shadow:none; max-width:none; padding:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a href="admin-invoices.html">← Back to Invoices</a>
+  <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+</div>
+
+<div class="sheet" id="sheet">
+  <p style="text-align:center; color:var(--ink-soft);">Loading invoice…</p>
+</div>
+
+<script src="admin-common.js?v=7"></script>
+<script>
+fnRequireAuth();
+
+async function loadInvoice() {
+  const id = new URLSearchParams(window.location.search).get('id');
+  const sheet = document.getElementById('sheet');
+  if (!id) {
+    sheet.innerHTML = '<p style="text-align:center; color:var(--ink-soft);">No invoice ID given.</p>';
+    return;
+  }
+
+  const r = await fetch(`/api/invoices/${id}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    sheet.innerHTML = '<p style="text-align:center; color:var(--ink-soft);">Invoice not found.</p>';
+    return;
+  }
+  const { invoice } = await r.json();
+  renderInvoice(invoice);
+}
+
+function renderInvoice(inv) {
+  const buyer = inv.buyer || {};
+  const address = buyer.address || {};
+  const addressLine = [address.street, [address.city, address.state].filter(Boolean).join(', '), address.zip].filter(Boolean).join(' · ');
+  const paid = inv.status === 'paid';
+
+  const rows = inv.lineItems.map(li => `
+    <tr>
+      <td>${li.description}${li.seatCount ? ` <span style="color:var(--ink-soft);">(${li.seatCount} seats)</span>` : ''}</td>
+      <td class="amount">${li.amount !== null ? fnFormatCurrency(li.amount) : '—'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('sheet').innerHTML = `
+    <div class="brand-row">
+      <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+      <div class="invoice-title">
+        <h1>Invoice</h1>
+        <div class="num">${inv.invoiceNumber}</div>
+        <div class="status-badge ${paid ? 'paid' : 'unpaid'}">${paid ? 'Paid' : 'Unpaid'}</div>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-block">
+        <h3>Bill To</h3>
+        <p>
+          ${buyer.company || buyer.name || '—'}<br>
+          ${buyer.name && buyer.company ? buyer.name + '<br>' : ''}
+          ${buyer.email || ''}<br>
+          ${addressLine}
+        </p>
+      </div>
+      <div class="meta-block">
+        <h3>Invoice Details</h3>
+        <p>
+          Date: ${fnFormatDate(inv.createdAt)}<br>
+          PO Number: ${inv.poNumber || '—'}<br>
+          ${inv.paidAt ? 'Paid: ' + fnFormatDate(inv.paidAt) : ''}
+        </p>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Description</th><th class="amount">Amount</th></tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row"><td>Total</td><td class="amount">${fnFormatCurrency(inv.total)}</td></tr>
+      </tbody>
+    </table>
+
+    <div class="footer-note">Fixer Nation Education · fixernationeducation.com</div>
+  `;
+}
+
+loadInvoice();
+</script>
+
+</body>
+</html>

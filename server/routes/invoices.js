@@ -1,0 +1,111 @@
+const express = require('express');
+const pool = require('../db/pool');
+const { requireAuth } = require('../middleware/auth');
+const { attachPurchaseDetails } = require('./newsletter');
+
+const router = express.Router();
+
+function serialize(row, contact) {
+  return {
+    id: row.id,
+    invoiceNumber: row.invoice_number,
+    contactId: row.contact_id,
+    buyer: contact ? { name: contact.name, email: contact.email, company: contact.company } : null,
+    poNumber: row.po_number,
+    total: Number(row.total_cents) / 100,
+    status: row.status,
+    createdAt: row.created_at,
+    paidAt: row.paid_at,
+  };
+}
+
+router.get('/', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC');
+  if (!rows.length) return res.json({ invoices: [] });
+
+  const contactIds = [...new Set(rows.map(i => i.contact_id))];
+  const [contactRows] = await pool.query('SELECT id, name, email, company FROM newsletter_contacts WHERE id IN (?)', [contactIds]);
+  const contactById = Object.fromEntries(contactRows.map(c => [c.id, c]));
+
+  const [itemCountRows] = await pool.query(
+    'SELECT invoice_id, COUNT(*) AS count FROM purchases WHERE invoice_id IN (?) GROUP BY invoice_id',
+    [rows.map(i => i.id)]
+  );
+  const itemCountByInvoice = Object.fromEntries(itemCountRows.map(r => [r.invoice_id, r.count]));
+
+  res.json({
+    invoices: rows.map(row => ({
+      ...serialize(row, contactById[row.contact_id]),
+      itemCount: itemCountByInvoice[row.id] || 0,
+    })),
+  });
+});
+
+router.get('/:id', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
+  const invoice = rows[0];
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+  const [contactRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [invoice.contact_id]);
+  const [purchaseRows] = await pool.query('SELECT * FROM purchases WHERE invoice_id = ? ORDER BY id', [invoice.id]);
+  const lineItems = await attachPurchaseDetails(purchaseRows);
+
+  res.json({
+    invoice: {
+      ...serialize(invoice, contactRows[0]),
+      buyer: contactRows[0] ? {
+        name: contactRows[0].name,
+        email: contactRows[0].email,
+        company: contactRows[0].company,
+        address: {
+          street: contactRows[0].street || '',
+          city: contactRows[0].city || '',
+          state: contactRows[0].state || '',
+          zip: contactRows[0].zip || '',
+        },
+      } : null,
+      lineItems: lineItems.map(li => ({
+        description: li.productType === 'book'
+          ? `📗 ${li.bookTitle || 'Book'}`
+          : `🏫 ${li.licenseProductName || (li.productType === 'single_license' ? 'Single Teacher License' : 'Group License')}${li.schoolDomain ? ` (${li.schoolDomain})` : ''}`,
+        seatCount: li.seatCount,
+        amount: li.amount,
+      })),
+    },
+  });
+});
+
+// Marks the whole invoice paid/unpaid and cascades that status to every
+// purchase it grouped — a partially-paid PO order (some line items paid,
+// others not) isn't a state worth supporting, so this keeps them in sync
+// rather than letting the CRM's per-purchase status drift from the invoice.
+router.put('/:id', requireAuth, async (req, res) => {
+  const status = req.body && req.body.status;
+  if (status !== 'paid' && status !== 'unpaid') {
+    return res.status(400).json({ error: "status must be 'paid' or 'unpaid'" });
+  }
+
+  const [rows] = await pool.query('SELECT id FROM invoices WHERE id = ?', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Invoice not found' });
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      'UPDATE invoices SET status = ?, paid_at = ? WHERE id = ?',
+      [status, status === 'paid' ? new Date() : null, req.params.id]
+    );
+    // purchases.payment_status uses 'paid'|'pending' (not 'unpaid') — map accordingly.
+    await connection.query('UPDATE purchases SET payment_status = ? WHERE invoice_id = ?', [status === 'paid' ? 'paid' : 'pending', req.params.id]);
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+
+  res.json({ ok: true });
+});
+
+module.exports = router;

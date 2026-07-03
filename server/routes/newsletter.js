@@ -234,6 +234,8 @@ async function attachPurchaseDetails(purchases) {
     paymentMethod: p.payment_method,
     paymentStatus: p.payment_status,
     poNumber: p.po_number,
+    invoiceId: p.invoice_id,
+    amount: p.amount_cents === null ? null : Number(p.amount_cents) / 100,
     seats: seatsByPurchase[p.id] || [],
   }));
 }
@@ -241,20 +243,21 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, schoolDomain, paymentMethod, paymentStatus, poNumber }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, school_domain, payment_method, payment_status, po_number)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         contactId, productType, productType === 'book' ? bookId : null, productType === 'group_license' ? licenseProductId || null : null,
         finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null,
         productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null,
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
+        invoiceId || null, amountCents === undefined ? null : amountCents,
       ]
     );
     const purchaseId = result.insertId;
