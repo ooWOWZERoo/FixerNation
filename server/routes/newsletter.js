@@ -213,6 +213,43 @@ async function attachPurchaseDetails(purchases) {
   }));
 }
 
+// Shared by the admin's manual "add a purchase" endpoint below and the real
+// Stripe checkout webhook (server/routes/checkout.js) — both need the exact
+// same purchase + seat-creation behavior, just from different sources.
+async function createPurchase(contactId, { productType, bookId, seatCount, source, notes, stripeSessionId }) {
+  const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.query(
+      'INSERT INTO purchases (contact_id, product_type, book_id, seat_count, source, notes, stripe_session_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [contactId, productType, productType === 'book' ? bookId : null, finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null]
+    );
+    const purchaseId = result.insertId;
+
+    if (productType === 'single_license') {
+      const [contactRows] = await connection.query('SELECT email FROM newsletter_contacts WHERE id = ?', [contactId]);
+      await connection.query(
+        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, ?)',
+        [purchaseId, contactRows[0].email, 'pending']
+      );
+    } else if (productType === 'group_license') {
+      await connection.query(
+        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(finalSeatCount).fill('(?, NULL, ?)').join(', '),
+        Array.from({ length: finalSeatCount }).flatMap(() => [purchaseId, 'pending'])
+      );
+    }
+    await connection.commit();
+    return purchaseId;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
 router.get('/contacts/:id/purchases', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [req.params.id]);
   res.json({ purchases: await attachPurchaseDetails(rows) });
@@ -234,39 +271,17 @@ router.post('/contacts/:id/purchases', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'seatCount must be a positive number for a group license' });
   }
 
-  const seatCount = b.productType === 'single_license' ? 1 : b.productType === 'group_license' ? Number(b.seatCount) : null;
+  const purchaseId = await createPurchase(contact.id, {
+    productType: b.productType,
+    bookId: b.bookId,
+    seatCount: b.seatCount,
+    source: b.source || 'Manual Entry',
+    notes: b.notes,
+  });
 
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const [result] = await connection.query(
-      'INSERT INTO purchases (contact_id, product_type, book_id, seat_count, source, notes) VALUES (?, ?, ?, ?, ?, ?)',
-      [contact.id, b.productType, b.productType === 'book' ? b.bookId : null, seatCount, b.source || 'Manual Entry', b.notes || '']
-    );
-    const purchaseId = result.insertId;
-
-    if (b.productType === 'single_license') {
-      await connection.query(
-        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, ?)',
-        [purchaseId, contact.email, 'pending']
-      );
-    } else if (b.productType === 'group_license') {
-      await connection.query(
-        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(seatCount).fill('(?, NULL, ?)').join(', '),
-        Array.from({ length: seatCount }).flatMap(() => [purchaseId, 'pending'])
-      );
-    }
-    await connection.commit();
-
-    const [rows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
-    const [purchase] = await attachPurchaseDetails(rows);
-    res.status(201).json({ purchase });
-  } catch (err) {
-    await connection.rollback();
-    throw err;
-  } finally {
-    connection.release();
-  }
+  const [rows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
+  const [purchase] = await attachPurchaseDetails(rows);
+  res.status(201).json({ purchase });
 });
 
 router.delete('/purchases/:id', requireAuth, async (req, res) => {
@@ -319,4 +334,4 @@ router.post('/contacts/import', requireAuth, async (req, res) => {
   res.json({ imported, skippedInvalid, skippedDuplicate });
 });
 
-module.exports = { router, attachPurchaseDetails };
+module.exports = { router, attachPurchaseDetails, createPurchase };

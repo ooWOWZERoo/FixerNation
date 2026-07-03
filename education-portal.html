@@ -314,6 +314,7 @@
       <span class="eyebrow">Get a Quote</span>
       <h2>Request a Formal Quotation</h2>
       <p>Please include the number of licenses you're requesting — determined by how many teachers will be using the Fixer Nation Morning Boost materials.</p>
+      <p style="margin-top:10px; font-size:13.5px;">Just need a single teacher license or a small school license? <a href="licenses.html" style="color:var(--coral-dark); font-weight:700;">Buy one instantly →</a></p>
     </div>
     <div class="form-card">
       <form id="quoteFormEl">
@@ -418,7 +419,7 @@ function renderSpotlightResources() {
       ? ''
       : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
     row.innerHTML = `<div class="locked-panel">🔒 The lesson document and quiz for this plan require an active teacher license.
-      <a href="#quoteForm">Request access →</a>${loginPrompt}</div>`;
+      <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`;
     return;
   }
 

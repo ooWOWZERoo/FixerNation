@@ -12,12 +12,18 @@ const blogRoutes = require('./routes/blog');
 const newsletterRoutes = require('./routes/newsletter');
 const campaignRoutes = require('./routes/campaigns');
 const siteAuthRoutes = require('./routes/site-auth');
+const checkoutRoutes = require('./routes/checkout');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
 }
 
 const app = express();
+
+// Stripe's webhook signature check needs the raw, unparsed request body, so
+// this must be registered before the global JSON body parser below (which
+// would otherwise consume the stream and leave nothing for Stripe to verify).
+app.post('/api/checkout/webhook', express.raw({ type: 'application/json' }), checkoutRoutes.webhookHandler);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
@@ -30,6 +36,7 @@ app.use('/api/blog', blogRoutes);
 app.use('/api/newsletter', newsletterRoutes.router);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/site-auth', siteAuthRoutes.router);
+app.use('/api/checkout', checkoutRoutes.router);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, Apache serves those files

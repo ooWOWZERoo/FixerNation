@@ -269,7 +269,7 @@ function renderDetailResources(c) {
       ? ''
       : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
     row.innerHTML = `<div class="locked-panel">🔒 The lesson document and quiz for this plan require an active teacher license.
-      <a href="education-portal.html#quoteForm">Request access →</a>${loginPrompt}</div>`;
+      <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`;
     return;
   }
 

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Licenses — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 32px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 22px; border-radius:999px; font-weight:700; font-size:14px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-primary:disabled{opacity:0.55; cursor:not-allowed; transform:none;}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
+  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
+  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;}
+  .nav-links{display:flex; align-items:center; gap:24px; font-size:14px; font-weight:600;}
+  .nav-links a{opacity:0.8;}
+  .nav-links a.active, .nav-links a:hover{opacity:1; color:var(--coral-dark);}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+
+  .section{padding:52px 0 64px;}
+  .hero{text-align:center; max-width:640px; margin:0 auto 40px;}
+  .hero h1{font-size:34px; margin-bottom:12px;}
+  .hero p{color:var(--ink-soft); font-size:15px;}
+
+  .email-field{max-width:420px; margin:0 auto 36px; text-align:center;}
+  .email-field label{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;}
+  .email-field input{width:100%; padding:12px 16px; border-radius:10px; border:1px solid rgba(22,79,74,0.18); font-size:14.5px; font-family:inherit;}
+  .email-field .note{font-size:12px; color:var(--ink-soft); margin-top:6px;}
+
+  .plans{display:flex; gap:24px; flex-wrap:wrap; justify-content:center;}
+  .plan-card{background:#fff; border-radius:var(--radius-md); box-shadow:var(--shadow); padding:32px; max-width:340px; flex:1; min-width:280px;}
+  .plan-card h3{font-size:20px; margin-bottom:6px;}
+  .plan-card .price{font-size:32px; font-weight:800; color:var(--teal-dark); margin:14px 0 4px;}
+  .plan-card .price small{font-size:14px; font-weight:600; color:var(--ink-soft);}
+  .plan-card ul{list-style:none; margin:18px 0 24px; padding:0;}
+  .plan-card li{position:relative; padding-left:24px; margin-bottom:9px; font-size:13.5px; color:var(--ink);}
+  .plan-card li::before{content:"✓"; position:absolute; left:0; color:var(--coral); font-weight:800;}
+  .seat-count-row{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+  .seat-count-row input{width:70px; padding:9px 10px; border-radius:8px; border:1px solid rgba(22,79,74,0.18); font-size:14px; text-align:center;}
+  .seat-total{font-size:12.5px; color:var(--ink-soft); margin-bottom:14px;}
+
+  .status-banner{max-width:640px; margin:0 auto 32px; border-radius:14px; padding:18px 22px; font-size:14px; text-align:center;}
+  .status-banner.success{background:#E4F3EE; color:var(--teal-dark);}
+  .status-banner.cancelled{background:var(--cream-soft); color:var(--ink-soft);}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s; z-index:500;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:56px 0 28px;}
+  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:44px;}
+  .footer-brand .brand{color:#fff;}
+  .footer-credo{font-family:'Fraunces',serif; font-style:italic; color:#F6D9C3; margin-top:14px; font-size:14.5px; max-width:280px;}
+  footer h4{color:#fff; font-size:12.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; opacity:0.9;}
+  footer ul{list-style:none;}
+  footer li{margin-bottom:9px; font-size:14px;}
+  footer a:hover{color:var(--coral);}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:22px; font-size:12.5px; opacity:0.65; text-align:center;}
+
+  @media (max-width:960px){ .nav-links{display:none;} .footer-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:600px){ .footer-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="fixernation-redesign.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <nav class="nav-links">
+      <a href="fixernation-redesign.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="books.html">Books</a>
+      <a href="blog.html">FN Blogs</a>
+      <a href="fnnetwork.html">FN Network</a>
+      <a href="education-portal.html">Schools</a>
+      <a href="askthefixer.html">Ask The Fixer</a>
+    </nav>
+    <div class="nav-cta">
+      <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
+      <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
+    </div>
+  </div>
+</header>
+
+<section class="section">
+  <div class="wrap">
+    <div class="hero">
+      <h1>Get Full Access for Your Classroom</h1>
+      <p>Unlock the complete lesson document, quiz, and answer key for every Fixer Nation curriculum — for yourself or your whole school.</p>
+    </div>
+
+    <div id="statusBanner"></div>
+
+    <div class="email-field">
+      <label>Your Email</label>
+      <input type="email" id="buyerEmail" placeholder="you@school.org">
+      <div class="note">We'll link your purchase to this email — sign up (or log in) on the site with the same address afterward to manage it.</div>
+    </div>
+
+    <div class="plans">
+      <div class="plan-card">
+        <h3>Single Teacher License</h3>
+        <div class="price">$49<small> one-time</small></div>
+        <ul>
+          <li>Full access to every lesson document</li>
+          <li>Quiz + answer key for every lesson</li>
+          <li>For one teacher account</li>
+        </ul>
+        <button class="btn btn-primary" style="width:100%;" onclick="buy('single_license', this)">Buy Now</button>
+      </div>
+
+      <div class="plan-card">
+        <h3>Group License (School)</h3>
+        <div class="price">$39<small> / seat</small></div>
+        <ul>
+          <li>Everything in the single license</li>
+          <li>Hand out seats to any teacher by email</li>
+          <li>Manage seats anytime from My License</li>
+        </ul>
+        <div class="seat-count-row">
+          <label for="seatCount" style="font-size:13px; font-weight:700; color:var(--ink-soft);">Seats:</label>
+          <input type="number" id="seatCount" min="1" value="5" oninput="updateGroupTotal()">
+        </div>
+        <div class="seat-total" id="groupTotal">Total: $195.00</div>
+        <button class="btn btn-primary" style="width:100%;" onclick="buy('group_license', this)">Buy Now</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand"><div class="brand-mark">FN</div> Fixer Nation</div>
+        <p class="footer-credo">"There are no problems in life... only issues and answers."</p>
+      </div>
+      <div><h4>Explore</h4><ul><li><a href="about.html">About</a></li><li><a href="books.html">Books</a></li><li><a href="blog.html">FN Blogs</a></li></ul></div>
+      <div><h4>Community</h4><ul><li><a href="fnnetwork.html">FN Network</a></li><li><a href="askthefixer.html">Ask The Fixer</a></li><li><a href="join.html">Join Fixer Nation</a></li></ul></div>
+      <div><h4>Schools</h4><ul><li><a href="education-portal.html">National Education Portal</a></li><li><a href="education-schools.html">2D Education - Schools</a></li><li><a href="programs.html">Programs</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</div>
+  </div>
+</footer>
+
+<script src="admin-common.js?v=7"></script>
+<script>
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function updateGroupTotal() {
+  const seats = Math.max(1, Number(document.getElementById('seatCount').value) || 1);
+  document.getElementById('groupTotal').textContent = 'Total: $' + (seats * 39).toFixed(2);
+}
+updateGroupTotal();
+
+async function buy(productType, btn) {
+  const email = document.getElementById('buyerEmail').value.trim();
+  if (!email) { toast('Enter your email first'); return; }
+
+  const body = { productType, email };
+  if (productType === 'group_license') {
+    body.seatCount = Number(document.getElementById('seatCount').value);
+    if (!(body.seatCount > 0)) { toast('Seat count must be at least 1'); return; }
+  }
+
+  btn.disabled = true;
+  const r = await fetch('/api/checkout/create-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    btn.disabled = false;
+    toast(result.error || 'Could not start checkout');
+    return;
+  }
+  window.location.href = result.url;
+}
+
+function renderStatusBanner() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('checkout');
+  const banner = document.getElementById('statusBanner');
+  if (status === 'success') {
+    banner.innerHTML = `<div class="status-banner success">✅ Payment received! Sign up (or log in) on the site with the same email you just paid with, and your license will activate automatically.</div>`;
+  } else if (status === 'cancelled') {
+    banner.innerHTML = `<div class="status-banner cancelled">Checkout was cancelled — no charge was made.</div>`;
+  }
+}
+renderStatusBanner();
+</script>
+
+<!-- Log In / Sign Up modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="site-auth.js"></script>
+
+</body>
+</html>

@@ -96,8 +96,9 @@ CREATE TABLE IF NOT EXISTS contact_group_members (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Purchases — books, single teacher licenses, and group (school) licenses.
--- Recorded manually by an admin for now since there's no in-app checkout yet
--- (books sell via Amazon); a contact is the buyer of record.
+-- Created either manually by an admin, or automatically from a real Stripe
+-- Checkout payment (see server/routes/checkout.js); a contact is the buyer
+-- of record either way.
 CREATE TABLE IF NOT EXISTS purchases (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   contact_id INT UNSIGNED NOT NULL,
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   purchased_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(64) NOT NULL DEFAULT 'Manual Entry',
   notes VARCHAR(500),
+  stripe_session_id VARCHAR(255) NULL UNIQUE, -- set when created from a real Stripe payment; guards webhook retries from double-creating a purchase
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
