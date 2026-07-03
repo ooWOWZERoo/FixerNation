@@ -198,7 +198,7 @@ function renderBookCard(book, index) {
     : '';
   const actionBtn = book.stockStatus === 'Coming Soon'
     ? `<a href="#" class="btn btn-primary">Coming Soon</a>`
-    : (book.amazonUrl ? `<a href="${book.amazonUrl}" class="btn btn-primary">Amazon</a>` : '');
+    : (book.amazonUrl ? `<a href="${book.amazonUrl}" class="btn btn-primary" target="_blank" rel="noopener">Amazon</a>` : '');
   const cartBtn = (book.stockStatus !== 'Coming Soon' && book.price !== '')
     ? `<button type="button" class="btn btn-outline" onclick="addBookToCart(${book.id}, '${book.title.replace(/'/g, "\\'")}', ${book.price})">Add to Cart</button>`
     : '';
