@@ -336,6 +336,27 @@ router.get('/purchases/by-domain', requireAuth, async (req, res) => {
   res.json({ purchases });
 });
 
+// Deletes a school's license entirely (e.g. they cancelled their account) —
+// every group_license purchase for that EXACT domain, cascading to their
+// license_seats. Uses an exact match on purpose, unlike the forgiving LIKE
+// search above: a fuzzy delete could wipe out an unrelated school that just
+// happened to share a substring in its domain. Registered teachers' site_user
+// accounts are not touched, only their access via this school's seats.
+router.delete('/purchases/by-domain', requireAuth, async (req, res) => {
+  const domain = normalizeDomain(req.query.domain);
+  if (!domain) return res.status(400).json({ error: 'domain is required' });
+
+  const [rows] = await pool.query(
+    "SELECT id FROM purchases WHERE product_type = 'group_license' AND school_domain = ?",
+    [domain]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'No group licenses found for that domain' });
+
+  const ids = rows.map(r => r.id);
+  await pool.query('DELETE FROM purchases WHERE id IN (?)', [ids]);
+  res.json({ ok: true, deleted: ids.length });
+});
+
 // Lets the admin correct notes/source on any purchase, and grow or shrink a
 // group license's seat count after the fact. Shrinking only ever removes
 // still-open ('pending') seats — a seat a teacher has already claimed is

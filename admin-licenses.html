@@ -249,6 +249,7 @@ function licenseCard(p) {
     <div class="a-card" style="margin-bottom:20px;">
       <div class="a-card-head">
         <h2>🏫 ${p.schoolDomain}</h2>
+        <button type="button" class="a-btn a-btn-danger" onclick="deleteSchool('${p.schoolDomain}', ${registered.length})">🗑️ Delete School</button>
       </div>
       <div class="a-note" style="margin-bottom:16px;">Purchased by ${buyerLine} · ${fnFormatDate(p.purchasedAt)}${p.notes ? ' · ' + p.notes : ''}</div>
 
@@ -294,6 +295,27 @@ async function updateAvailable(purchaseId, registeredCount) {
   }
   fnToast('Available seats updated');
   searchByDomain();
+}
+
+async function deleteSchool(schoolDomain, registeredCount) {
+  const warning = registeredCount > 0
+    ? `This will immediately revoke access for ${registeredCount} registered teacher(s). Their accounts will NOT be deleted, just their access to this license.`
+    : 'This license has no registered teachers yet.';
+  if (!confirm(`Delete the entire license for "${schoolDomain}"? ${warning}\n\nThis cannot be undone.`)) return;
+
+  const r = await fetch(`/api/newsletter/purchases/by-domain?domain=${encodeURIComponent(schoolDomain)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not delete this school\'s license');
+    return;
+  }
+  fnToast(`Deleted the license for ${schoolDomain}`);
+  document.getElementById('resultsWrap').innerHTML = '';
+  document.getElementById('domainSearchInput').value = '';
 }
 </script>
 
