@@ -65,7 +65,7 @@
           </div>
         </div>
         <table class="a-table" id="contactsTable">
-          <thead><tr><th>Name</th><th>Email</th><th>Address</th><th>Signed Up</th><th>Source</th><th>Status</th><th>Groups</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Address</th><th>Signed Up</th><th>Source</th><th>Status</th><th>Groups</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="contactsEmpty" style="display:none;">
@@ -88,6 +88,10 @@
       <form id="contactForm">
         <div class="a-field"><label>Name</label><input type="text" id="contactName"></div>
         <div class="a-field"><label>Email *</label><input type="email" id="contactEmail" required></div>
+        <div class="a-form-row">
+          <div class="a-field"><label>Phone</label><input type="text" id="contactPhone"></div>
+          <div class="a-field"><label>Company</label><input type="text" id="contactCompany"></div>
+        </div>
         <div class="a-field"><label>Street Address</label><input type="text" id="contactStreet"></div>
         <div class="a-form-row">
           <div class="a-field"><label>City</label><input type="text" id="contactCity"></div>
@@ -115,6 +119,7 @@
           <div class="a-tag-row" id="contactGroupsRow"></div>
           <div class="a-note" id="contactGroupsEmptyNote" style="display:none;">No groups yet — create one with "Manage Groups" first.</div>
         </div>
+        <div class="a-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Optional"></div>
       </form>
     </div>
     <div class="a-modal-foot">
@@ -273,6 +278,8 @@ async function renderContacts() {
     tr.innerHTML = `
       <td class="a-cell-title">${c.name || '—'}</td>
       <td>${c.email}</td>
+      <td>${c.phone || '—'}</td>
+      <td>${c.company || '—'}</td>
       <td title="${fnFormatAddress(c.address, true)}">${fnFormatAddress(c.address)}</td>
       <td>${fnFormatDate(c.signupDate)}</td>
       <td><span class="a-pill a-pill-neutral">${c.source}</span></td>
@@ -352,12 +359,15 @@ async function editContact(id) {
   document.getElementById('contactSaveBtn').textContent = 'Save Changes';
   document.getElementById('contactName').value = c.name || '';
   document.getElementById('contactEmail').value = c.email || '';
+  document.getElementById('contactPhone').value = c.phone || '';
+  document.getElementById('contactCompany').value = c.company || '';
   document.getElementById('contactStreet').value = (c.address && c.address.street) || '';
   document.getElementById('contactCity').value = (c.address && c.address.city) || '';
   document.getElementById('contactState').value = (c.address && c.address.state) || '';
   document.getElementById('contactZip').value = (c.address && c.address.zip) || '';
   document.getElementById('contactSource').value = c.source || 'Manual Entry';
   document.getElementById('contactStatus').value = c.status || 'Subscribed';
+  document.getElementById('contactNotes').value = c.notes || '';
   groupsCache = await fetchGroups();
   renderGroupCheckboxes((c.groups || []).map(g => g.id));
   document.getElementById('contactModalOverlay').classList.add('show');
@@ -371,6 +381,8 @@ async function saveContact() {
   const email = document.getElementById('contactEmail').value.trim();
   if (!email) { fnToast('Email is required'); return; }
   const name = document.getElementById('contactName').value.trim();
+  const phone = document.getElementById('contactPhone').value.trim();
+  const company = document.getElementById('contactCompany').value.trim();
   const source = document.getElementById('contactSource').value;
   const status = document.getElementById('contactStatus').value;
   const address = {
@@ -379,6 +391,7 @@ async function saveContact() {
     state: document.getElementById('contactState').value.trim(),
     zip: document.getElementById('contactZip').value.trim(),
   };
+  const notes = document.getElementById('contactNotes').value.trim();
   const groupIds = getCheckedGroupIds();
 
   if (editingContactId) {
@@ -386,7 +399,7 @@ async function saveContact() {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, source, status, address, groupIds }),
+      body: JSON.stringify({ name, email, phone, company, source, status, address, notes, groupIds }),
     });
     if (fnHandleUnauthorized(r)) return;
     if (!r.ok) { fnToast('Could not save contact'); return; }
@@ -400,7 +413,7 @@ async function saveContact() {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, source, status, address, groupIds }),
+    body: JSON.stringify({ name, email, phone, company, source, status, address, notes, groupIds }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json();

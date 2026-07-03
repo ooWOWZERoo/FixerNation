@@ -1,3 +1,7 @@
 server/node_modules/
 server/.env
 *.log
+
+# Sensitive one-off import data (real contact PII) — uploaded directly to the
+# server via cPanel File Manager, never committed to this (public) repo.
+server/scripts/data/

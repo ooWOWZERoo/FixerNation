@@ -36,10 +36,13 @@ function serialize(row) {
     id: row.id,
     name: row.name,
     email: row.email,
+    phone: row.phone || '',
+    company: row.company || '',
     address: { street: row.street || '', city: row.city || '', state: row.state || '', zip: row.zip || '' },
     signupDate: row.signup_date,
     source: row.source,
     status: row.status,
+    notes: row.notes || '',
     groups: row.groups || [],
   };
 }
@@ -56,8 +59,8 @@ router.post('/contacts', async (req, res) => {
   const status = b.status === 'Unsubscribed' ? 'Unsubscribed' : 'Subscribed';
   try {
     const [result] = await pool.query(
-      'INSERT INTO newsletter_contacts (name, email, street, city, state, zip, source, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [b.name || '', email, address.street || '', address.city || '', address.state || '', address.zip || '', b.source || 'Homepage', status]
+      'INSERT INTO newsletter_contacts (name, email, phone, company, street, city, state, zip, source, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [b.name || '', email, b.phone || '', b.company || '', address.street || '', address.city || '', address.state || '', address.zip || '', b.source || 'Homepage', status, b.notes || '']
     );
     if (Array.isArray(b.groupIds) && b.groupIds.length) {
       await setContactGroups(pool, result.insertId, b.groupIds);
@@ -91,20 +94,23 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
   const merged = {
     name: b.name !== undefined ? b.name : existing.name,
     email: b.email !== undefined ? b.email.trim() : existing.email,
+    phone: b.phone !== undefined ? b.phone : existing.phone,
+    company: b.company !== undefined ? b.company : existing.company,
     street: b.address !== undefined ? address.street || '' : existing.street,
     city: b.address !== undefined ? address.city || '' : existing.city,
     state: b.address !== undefined ? address.state || '' : existing.state,
     zip: b.address !== undefined ? address.zip || '' : existing.zip,
     source: b.source !== undefined ? b.source : existing.source,
     status: b.status !== undefined ? b.status : existing.status,
+    notes: b.notes !== undefined ? b.notes : existing.notes,
   };
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     await connection.query(
-      'UPDATE newsletter_contacts SET name=?, email=?, street=?, city=?, state=?, zip=?, source=?, status=? WHERE id=?',
-      [merged.name, merged.email, merged.street, merged.city, merged.state, merged.zip, merged.source, merged.status, req.params.id]
+      'UPDATE newsletter_contacts SET name=?, email=?, phone=?, company=?, street=?, city=?, state=?, zip=?, source=?, status=?, notes=? WHERE id=?',
+      [merged.name, merged.email, merged.phone, merged.company, merged.street, merged.city, merged.state, merged.zip, merged.source, merged.status, merged.notes, req.params.id]
     );
     if (b.groupIds !== undefined) {
       await setContactGroups(connection, req.params.id, b.groupIds);

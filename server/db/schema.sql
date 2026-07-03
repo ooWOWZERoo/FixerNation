@@ -70,13 +70,16 @@ CREATE TABLE IF NOT EXISTS newsletter_contacts (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255),
   email VARCHAR(255) NOT NULL UNIQUE,
+  phone VARCHAR(32),
+  company VARCHAR(255),
   street VARCHAR(255),
   city VARCHAR(128),
   state VARCHAR(64),
   zip VARCHAR(16),
   signup_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(128) NOT NULL DEFAULT 'Homepage',
-  status VARCHAR(32) NOT NULL DEFAULT 'Subscribed'
+  status VARCHAR(32) NOT NULL DEFAULT 'Subscribed',
+  notes TEXT -- catch-all for rarely-populated imported fields (secondary email/phone, extra addresses, etc.) so bulk imports don't have to silently drop them
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Contact groups, for categorizing contacts. A contact may belong to any
