@@ -1,8 +1,26 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
+const { getSiteUser, hasActiveLicense } = require('../lib/access');
 
 const router = express.Router();
+
+// Strips the actual downloadable content (lesson document + quiz) from each
+// curriculum unless the requester is an admin or a site_user with an active
+// license seat. Everything else (theme, series, overview, objectives,
+// materials list, resource labels, video) stays visible as a public preview.
+async function gateAccess(curricula, req) {
+  const isAdmin = !!getAuthUser(req);
+  const siteUser = isAdmin ? null : await getSiteUser(req);
+  const licensed = isAdmin || await hasActiveLicense(siteUser && siteUser.id);
+  return curricula.map(c => ({
+    ...c,
+    lessonDocument: licensed ? c.lessonDocument : '',
+    lessonDocumentName: licensed ? c.lessonDocumentName : '',
+    quiz: licensed ? c.quiz : [],
+    access: { licensed, loggedIn: isAdmin || !!siteUser },
+  }));
+}
 
 async function attachChildren(curricula) {
   if (curricula.length === 0) return curricula;
@@ -71,14 +89,15 @@ router.get('/', async (req, res) => {
     ? await pool.query('SELECT * FROM curricula ORDER BY created_at DESC')
     : await pool.query('SELECT * FROM curricula WHERE published = 1 ORDER BY created_at DESC');
   const curricula = (await attachChildren(rows)).map(serialize);
-  res.json({ curricula });
+  res.json({ curricula: await gateAccess(curricula, req) });
 });
 
 router.get('/:id', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM curricula WHERE id = ?', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Curriculum not found' });
   const [curriculum] = await attachChildren(rows);
-  res.json({ curriculum: serialize(curriculum) });
+  const [gated] = await gateAccess([serialize(curriculum)], req);
+  res.json({ curriculum: gated });
 });
 
 async function replaceChildren(connection, id, c) {
