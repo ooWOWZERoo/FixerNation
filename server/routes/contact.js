@@ -1,4 +1,5 @@
 const express = require('express');
+const pool = require('../db/pool');
 const { sendContactFormEmail } = require('../lib/mailer');
 
 const router = express.Router();
@@ -23,6 +24,11 @@ router.post('/ask-the-fixer', async (req, res) => {
 router.post('/quote', async (req, res) => {
   const { firstName, lastName, email, school, phone, message } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  await pool.query(
+    'INSERT INTO quote_requests (first_name, last_name, email, school, phone, message) VALUES (?, ?, ?, ?, ?, ?)',
+    [firstName || '', lastName || '', email, school || '', phone || '', message || '']
+  );
 
   await sendContactFormEmail({
     formName: 'Request a Formal Quotation',

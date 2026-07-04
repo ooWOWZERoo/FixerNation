@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { attachPurchaseDetails } = require('./newsletter');
+const { sendInvoiceEmail } = require('../lib/mailer');
 
 const router = express.Router();
 
@@ -16,6 +17,40 @@ function serialize(row, contact) {
     status: row.status,
     createdAt: row.created_at,
     paidAt: row.paid_at,
+  };
+}
+
+// Shared by GET /:id and POST /:id/resend — both need the invoice, its buyer
+// contact, and its line items rendered the same way.
+async function fetchInvoiceWithLineItems(id) {
+  const [rows] = await pool.query('SELECT * FROM invoices WHERE id = ?', [id]);
+  const invoice = rows[0];
+  if (!invoice) return null;
+
+  const [contactRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [invoice.contact_id]);
+  const [purchaseRows] = await pool.query('SELECT * FROM purchases WHERE invoice_id = ? ORDER BY id', [invoice.id]);
+  const lineItems = await attachPurchaseDetails(purchaseRows);
+
+  return {
+    ...serialize(invoice, contactRows[0]),
+    buyer: contactRows[0] ? {
+      name: contactRows[0].name,
+      email: contactRows[0].email,
+      company: contactRows[0].company,
+      address: {
+        street: contactRows[0].street || '',
+        city: contactRows[0].city || '',
+        state: contactRows[0].state || '',
+        zip: contactRows[0].zip || '',
+      },
+    } : null,
+    lineItems: lineItems.map(li => ({
+      description: li.productType === 'book'
+        ? `📗 ${li.bookTitle || 'Book'}`
+        : `🏫 ${li.licenseProductName || (li.productType === 'single_license' ? 'Single Teacher License' : 'Group License')}${li.schoolDomain ? ` (${li.schoolDomain})` : ''}`,
+      seatCount: li.seatCount,
+      amount: li.amount,
+    })),
   };
 }
 
@@ -42,37 +77,31 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 router.get('/:id', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
-  const invoice = rows[0];
+  const invoice = await fetchInvoiceWithLineItems(req.params.id);
   if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  res.json({ invoice });
+});
 
-  const [contactRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [invoice.contact_id]);
-  const [purchaseRows] = await pool.query('SELECT * FROM purchases WHERE invoice_id = ? ORDER BY id', [invoice.id]);
-  const lineItems = await attachPurchaseDetails(purchaseRows);
+// Emails the invoice to its buyer's contact email — the invoice contents are
+// embedded directly in the email body since there's no customer-facing page
+// to link to (admin-invoice-print.html requires admin login).
+router.post('/:id/resend', requireAuth, async (req, res) => {
+  const invoice = await fetchInvoiceWithLineItems(req.params.id);
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  if (!invoice.buyer || !invoice.buyer.email) {
+    return res.status(400).json({ error: 'No email on file for this invoice\'s contact' });
+  }
 
-  res.json({
-    invoice: {
-      ...serialize(invoice, contactRows[0]),
-      buyer: contactRows[0] ? {
-        name: contactRows[0].name,
-        email: contactRows[0].email,
-        company: contactRows[0].company,
-        address: {
-          street: contactRows[0].street || '',
-          city: contactRows[0].city || '',
-          state: contactRows[0].state || '',
-          zip: contactRows[0].zip || '',
-        },
-      } : null,
-      lineItems: lineItems.map(li => ({
-        description: li.productType === 'book'
-          ? `📗 ${li.bookTitle || 'Book'}`
-          : `🏫 ${li.licenseProductName || (li.productType === 'single_license' ? 'Single Teacher License' : 'Group License')}${li.schoolDomain ? ` (${li.schoolDomain})` : ''}`,
-        seatCount: li.seatCount,
-        amount: li.amount,
-      })),
-    },
+  await sendInvoiceEmail({
+    to: invoice.buyer.email,
+    buyerName: invoice.buyer.company || invoice.buyer.name,
+    invoiceNumber: invoice.invoiceNumber,
+    poNumber: invoice.poNumber,
+    total: invoice.total,
+    status: invoice.status,
+    lineItems: invoice.lineItems,
   });
+  res.json({ ok: true });
 });
 
 // Marks the whole invoice paid/unpaid and cascades that status to every

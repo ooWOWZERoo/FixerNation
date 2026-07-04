@@ -90,6 +90,7 @@ async function loadInvoices() {
       <td>
         <div class="a-row-actions">
           <a class="a-icon-btn" title="View / Print" href="admin-invoice-print.html?id=${inv.id}" target="_blank">🖨️</a>
+          <button class="a-icon-btn" title="Resend invoice email" onclick="resendInvoice(${inv.id})">📧</button>
           ${cancelled ? '' : `<button class="a-icon-btn" title="${paid ? 'Mark unpaid' : 'Mark paid'}" onclick="toggleInvoiceStatus(${inv.id}, '${paid ? 'unpaid' : 'paid'}')">${paid ? '↺' : '✅'}</button>`}
           ${cancelled ? '' : `<button class="a-icon-btn" title="Cancel invoice" onclick="cancelInvoice(${inv.id})">🚫</button>`}
           <button class="a-icon-btn danger" title="Delete invoice" onclick="deleteInvoice(${inv.id})">🗑️</button>
@@ -115,6 +116,22 @@ async function toggleInvoiceStatus(id, newStatus) {
   }
   loadInvoices();
   fnToast(newStatus === 'paid' ? 'Marked as paid' : 'Marked as unpaid');
+}
+
+async function resendInvoice(id) {
+  const r = await fetch(`/api/invoices/${id}/resend`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not resend invoice');
+    return;
+  }
+  fnToast('Invoice emailed');
 }
 
 async function cancelInvoice(id) {

@@ -344,3 +344,21 @@ CREATE TABLE IF NOT EXISTS blog_tags (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   tag VARCHAR(128) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Quote requests
+-- ---------------------------------------------------------------------------
+
+-- Submissions of the "Request a Formal Quotation" form (education-portal.html)
+-- — previously only emailed to admin@fixernationeducation.com with no
+-- persistent record; stored here so they show up in dashboard stats.
+CREATE TABLE IF NOT EXISTS quote_requests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  email VARCHAR(255) NOT NULL,
+  school VARCHAR(255),
+  phone VARCHAR(64),
+  message TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

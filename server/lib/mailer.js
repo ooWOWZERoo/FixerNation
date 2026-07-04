@@ -102,4 +102,30 @@ async function sendContactFormEmail({ formName, fields, replyTo }) {
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendContactFormEmail };
+// There's no customer-facing invoice page (admin-invoice-print.html requires
+// admin login), so the invoice contents are embedded directly in the email
+// body rather than linked to.
+async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total, status, lineItems }) {
+  const rows = lineItems.map(li =>
+    `<tr><td style="padding:6px 10px;">${li.description}${li.seatCount ? ` (${li.seatCount} seats)` : ''}</td><td style="padding:6px 10px; text-align:right;">${li.amount !== null ? '$' + li.amount.toFixed(2) : '—'}</td></tr>`
+  ).join('');
+  const textRows = lineItems.map(li =>
+    `- ${li.description}${li.seatCount ? ` (${li.seatCount} seats)` : ''}: ${li.amount !== null ? '$' + li.amount.toFixed(2) : '—'}`
+  ).join('\n');
+  const statusLabel = status === 'paid' ? 'Paid' : (status === 'cancelled' ? 'Cancelled' : 'Unpaid');
+
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `Invoice ${invoiceNumber} — Fixer Nation`,
+    text: `Hi ${buyerName || 'there'},\n\nHere is invoice ${invoiceNumber}${poNumber ? ` (PO ${poNumber})` : ''}, status: ${statusLabel}.\n\n${textRows}\n\nTotal: $${total.toFixed(2)}\n\nQuestions? Just reply to this email.`,
+    html: `<p>Hi ${buyerName || 'there'},</p>
+      <p>Here is invoice <strong>${invoiceNumber}</strong>${poNumber ? ` (PO ${poNumber})` : ''} — status: <strong>${statusLabel}</strong>.</p>
+      <table style="border-collapse:collapse; width:100%; max-width:480px;">${rows}
+        <tr><td style="padding:10px; font-weight:700; border-top:2px solid #ddd;">Total</td><td style="padding:10px; font-weight:700; text-align:right; border-top:2px solid #ddd;">$${total.toFixed(2)}</td></tr>
+      </table>
+      <p>Questions? Just reply to this email.</p>`,
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendContactFormEmail, sendInvoiceEmail };

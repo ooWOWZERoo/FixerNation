@@ -9,6 +9,28 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="admin-common.css?v=10">
+<style>
+  .fin-section-head{margin:28px 0 12px;}
+  .fin-section-head:first-child{margin-top:0;}
+  .fin-section-head h3{font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--a-text-soft);}
+  .fin-bar-chart{display:flex; align-items:flex-end; gap:6px; height:150px; padding:10px 4px 26px;}
+  .fin-bar-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative;}
+  .fin-bar{width:100%; background:var(--a-accent); border-radius:4px 4px 0 0; min-height:3px; transition:background .15s ease;}
+  .fin-bar-wrap:hover .fin-bar{background:var(--a-accent-dark);}
+  .fin-bar-tooltip{position:absolute; bottom:100%; margin-bottom:6px; background:var(--a-text); color:#fff; font-size:11px; padding:3px 8px; border-radius:6px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .1s ease;}
+  .fin-bar-wrap:hover .fin-bar-tooltip{opacity:1;}
+  .fin-bar-label{position:absolute; top:100%; margin-top:6px; font-size:10px; color:var(--a-text-soft); white-space:nowrap;}
+  .fin-best-item{display:flex; align-items:center; gap:18px; padding:6px 0 18px;}
+  .fin-best-item .fin-best-badge{width:52px; height:52px; border-radius:14px; background:var(--a-success-soft); color:var(--a-success); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0;}
+  .fin-best-item .name{font-weight:700; font-size:16px;}
+  .fin-best-item .meta{font-size:13px; color:var(--a-text-soft); margin-top:2px;}
+  .fin-top-items{width:100%; border-collapse:collapse;}
+  .fin-top-items td{padding:8px 4px; font-size:13.5px; border-top:1px solid var(--a-border);}
+  .fin-top-items td.num{text-align:right; color:var(--a-text-soft);}
+  .fin-recommend ul{margin:0; padding-left:20px;}
+  .fin-recommend li{margin-bottom:8px; font-size:13.5px; line-height:1.5;}
+  .fin-recommend li strong{color:var(--a-text);}
+</style>
 </head>
 <body>
 
@@ -40,6 +62,102 @@
     </div>
 
     <div class="a-content">
+      <div class="fin-section-head"><h3>Financial Insights</h3></div>
+
+      <div class="a-stat-grid">
+        <div class="a-stat-card">
+          <div class="label">Sales Today</div>
+          <div class="value" id="finSalesToday">—</div>
+          <div class="delta" id="finOrdersToday"></div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Sales This Week</div>
+          <div class="value" id="finSalesWeek">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Sales This Month</div>
+          <div class="value" id="finSalesMonth">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Sales All-Time</div>
+          <div class="value" id="finSalesAllTime">—</div>
+          <div class="delta" id="finOrdersAllTime"></div>
+        </div>
+      </div>
+
+      <div class="a-stat-grid">
+        <div class="a-stat-card">
+          <div class="label">Revenue Collected</div>
+          <div class="value" id="finRevenueCollected">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Revenue Outstanding</div>
+          <div class="value" id="finRevenueOutstanding">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Average Order Value</div>
+          <div class="value" id="finAvgOrder">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Active Customers (30d)</div>
+          <div class="value" id="finActiveCustomers">—</div>
+        </div>
+      </div>
+
+      <div class="a-stat-grid">
+        <div class="a-stat-card">
+          <div class="label">Invoices Issued</div>
+          <div class="value" id="finInvoicesTotal">—</div>
+          <div class="delta" id="finInvoicesBreakdown"></div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Invoices Outstanding</div>
+          <div class="value" id="finInvoicesOutstanding">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Quotes Issued (30d)</div>
+          <div class="value" id="finQuotes30">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Quotes Issued (All-Time)</div>
+          <div class="value" id="finQuotesTotal">—</div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Sales Over Time <span style="font-weight:400; font-size:13px; color:var(--a-text-soft);">(last 14 days)</span></h2>
+        </div>
+        <div class="fin-bar-chart" id="finSalesChart"></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Best Selling Item</h2>
+        </div>
+        <div class="fin-best-item" id="finBestItem"></div>
+        <table class="fin-top-items" id="finTopItemsTable"><tbody></tbody></table>
+        <div class="a-empty" id="finTopItemsEmpty" style="display:none;">
+          <div class="big">🛒</div>
+          No sales recorded yet.
+        </div>
+      </div>
+
+      <div class="a-card fin-recommend">
+        <div class="a-card-head">
+          <h2>Recommended Insights To Track Next</h2>
+        </div>
+        <ul>
+          <li><strong>Month-over-month growth:</strong> compare this month's sales to last month's to spot momentum or a slowdown early.</li>
+          <li><strong>Quote-to-sale conversion rate:</strong> of the schools who requested a formal quote, what share became a paying license customer?</li>
+          <li><strong>Revenue by category:</strong> books vs. single-teacher licenses vs. school/group licenses — which line is actually driving growth.</li>
+          <li><strong>Days sales outstanding:</strong> average time between an invoice being issued and marked paid, to catch slow-paying schools early.</li>
+          <li><strong>Customer lifetime value:</strong> average total spend per contact over their full history, to see if repeat/renewal purchases are happening.</li>
+          <li><strong>Refund/cancellation rate:</strong> share of invoices marked cancelled, as a data quality and sales-process health signal.</li>
+        </ul>
+      </div>
+
+      <div class="fin-section-head"><h3>Content</h3></div>
       <div class="a-stat-grid" style="grid-template-columns:repeat(6,1fr);">
         <div class="a-stat-card">
           <div class="label">Total Books</div>
@@ -141,6 +259,80 @@ fetch('/api/curricula?all=true', { credentials: 'include' }).then(r => fnHandleU
 
 fetch('/api/blog/posts?all=true', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? [] : r.json()).then(data => {
   document.getElementById('statBlogPosts').textContent = ((data && data.posts) || []).length;
+});
+
+const ITEM_TYPE_ICON = { book: '📗', license_product: '🏫', single_license: '🏫' };
+
+function renderSalesChart(salesOverTime) {
+  const chart = document.getElementById('finSalesChart');
+  const max = Math.max(...salesOverTime.map(d => d.total), 1);
+  chart.innerHTML = salesOverTime.map(d => {
+    const heightPct = Math.max((d.total / max) * 100, d.total > 0 ? 4 : 1.5);
+    const label = new Date(d.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `
+      <div class="fin-bar-wrap">
+        <div class="fin-bar-tooltip">${fnFormatCurrency(d.total)}</div>
+        <div class="fin-bar" style="height:${heightPct}%;"></div>
+        <div class="fin-bar-label">${label}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderBestItem(bestItem, topItems) {
+  const best = document.getElementById('finBestItem');
+  const table = document.querySelector('#finTopItemsTable tbody');
+  const empty = document.getElementById('finTopItemsEmpty');
+
+  if (!bestItem) {
+    best.innerHTML = '';
+    document.getElementById('finTopItemsTable').style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  document.getElementById('finTopItemsTable').style.display = 'table';
+  empty.style.display = 'none';
+
+  best.innerHTML = `
+    <div class="fin-best-badge">${ITEM_TYPE_ICON[bestItem.type] || '🛒'}</div>
+    <div>
+      <div class="name">${bestItem.name}</div>
+      <div class="meta">${bestItem.unitsSold} sold · ${fnFormatCurrency(bestItem.revenue)} in revenue</div>
+    </div>
+  `;
+
+  table.innerHTML = topItems.map((item, i) => `
+    <tr>
+      <td>${i + 1}. ${ITEM_TYPE_ICON[item.type] || '🛒'} ${item.name}</td>
+      <td class="num">${item.unitsSold} sold</td>
+      <td class="num">${fnFormatCurrency(item.revenue)}</td>
+    </tr>
+  `).join('');
+}
+
+fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? null : r.json()).then(data => {
+  if (!data) return;
+
+  document.getElementById('finSalesToday').textContent = fnFormatCurrency(data.salesToday);
+  document.getElementById('finOrdersToday').textContent = data.ordersToday + ' order' + (data.ordersToday === 1 ? '' : 's');
+  document.getElementById('finSalesWeek').textContent = fnFormatCurrency(data.salesThisWeek);
+  document.getElementById('finSalesMonth').textContent = fnFormatCurrency(data.salesThisMonth);
+  document.getElementById('finSalesAllTime').textContent = fnFormatCurrency(data.salesAllTime);
+  document.getElementById('finOrdersAllTime').textContent = data.ordersAllTime + ' order' + (data.ordersAllTime === 1 ? '' : 's') + ' total';
+
+  document.getElementById('finRevenueCollected').textContent = fnFormatCurrency(data.revenueCollected);
+  document.getElementById('finRevenueOutstanding').textContent = fnFormatCurrency(data.revenueOutstanding);
+  document.getElementById('finAvgOrder').textContent = fnFormatCurrency(data.averageOrderValue);
+  document.getElementById('finActiveCustomers').textContent = data.activeCustomersLast30Days;
+
+  document.getElementById('finInvoicesTotal').textContent = data.invoices.total;
+  document.getElementById('finInvoicesBreakdown').textContent = `${data.invoices.paid} paid · ${data.invoices.unpaid} unpaid · ${data.invoices.cancelled} cancelled`;
+  document.getElementById('finInvoicesOutstanding').textContent = fnFormatCurrency(data.invoices.outstandingTotal);
+  document.getElementById('finQuotes30').textContent = data.quotes.last30Days;
+  document.getElementById('finQuotesTotal').textContent = data.quotes.total;
+
+  renderSalesChart(data.salesOverTime);
+  renderBestItem(data.bestSellingItem, data.topItems);
 });
 </script>
 

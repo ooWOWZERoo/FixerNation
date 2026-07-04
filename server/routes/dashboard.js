@@ -1,0 +1,123 @@
+const express = require('express');
+const pool = require('../db/pool');
+const { requireAuth } = require('../middleware/auth');
+
+const router = express.Router();
+
+function toDollars(cents) {
+  return cents === null || cents === undefined ? 0 : Number(cents) / 100;
+}
+
+// Single aggregated endpoint for the dashboard's Financial Insights section —
+// computed in SQL rather than the "fetch full list, reduce client-side"
+// pattern used elsewhere, since purchases can grow large over time.
+router.get('/financial-summary', requireAuth, async (req, res) => {
+  const [[salesTodayRow]] = await pool.query(
+    "SELECT COALESCE(SUM(amount_cents),0) AS cents, COUNT(*) AS orders FROM purchases WHERE DATE(purchased_at) = CURDATE()"
+  );
+  const [[salesWeekRow]] = await pool.query(
+    "SELECT COALESCE(SUM(amount_cents),0) AS cents FROM purchases WHERE purchased_at >= NOW() - INTERVAL 7 DAY"
+  );
+  const [[salesMonthRow]] = await pool.query(
+    "SELECT COALESCE(SUM(amount_cents),0) AS cents FROM purchases WHERE purchased_at >= NOW() - INTERVAL 30 DAY"
+  );
+  const [[salesAllTimeRow]] = await pool.query(
+    "SELECT COALESCE(SUM(amount_cents),0) AS cents, COUNT(*) AS orders FROM purchases"
+  );
+  const [[revenueRow]] = await pool.query(
+    `SELECT
+       COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN amount_cents ELSE 0 END),0) AS collected_cents,
+       COALESCE(SUM(CASE WHEN payment_status = 'pending' THEN amount_cents ELSE 0 END),0) AS outstanding_cents
+     FROM purchases`
+  );
+
+  const [dailyRows] = await pool.query(
+    `SELECT DATE(purchased_at) AS day, COALESCE(SUM(amount_cents),0) AS cents
+     FROM purchases WHERE purchased_at >= CURDATE() - INTERVAL 13 DAY
+     GROUP BY DATE(purchased_at)`
+  );
+  const dailyByDate = {};
+  dailyRows.forEach(r => {
+    const key = (r.day instanceof Date ? r.day : new Date(r.day)).toISOString().slice(0, 10);
+    dailyByDate[key] = toDollars(r.cents);
+  });
+  const salesOverTime = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    salesOverTime.push({ date: key, total: dailyByDate[key] || 0 });
+  }
+
+  // "Best selling item" spans three separate item universes: books, fixed
+  // license_products tiers, and the flat single-teacher-license product
+  // (which has no row of its own — it's a hardcoded price in checkout.js).
+  const [bookRows] = await pool.query(
+    `SELECT p.book_id AS id, b.title AS name, COUNT(*) AS units, COALESCE(SUM(p.amount_cents),0) AS cents
+     FROM purchases p JOIN books b ON b.id = p.book_id
+     WHERE p.product_type = 'book' GROUP BY p.book_id, b.title`
+  );
+  const [licenseProductRows] = await pool.query(
+    `SELECT p.license_product_id AS id, lp.name AS name, COUNT(*) AS units, COALESCE(SUM(p.amount_cents),0) AS cents
+     FROM purchases p JOIN license_products lp ON lp.id = p.license_product_id
+     WHERE p.product_type = 'group_license' AND p.license_product_id IS NOT NULL GROUP BY p.license_product_id, lp.name`
+  );
+  const [[singleLicenseRow]] = await pool.query(
+    "SELECT COUNT(*) AS units, COALESCE(SUM(amount_cents),0) AS cents FROM purchases WHERE product_type = 'single_license'"
+  );
+
+  const items = [
+    ...bookRows.map(r => ({ type: 'book', name: r.name, unitsSold: r.units, revenue: toDollars(r.cents) })),
+    ...licenseProductRows.map(r => ({ type: 'license_product', name: r.name, unitsSold: r.units, revenue: toDollars(r.cents) })),
+  ];
+  if (singleLicenseRow.units > 0) {
+    items.push({ type: 'single_license', name: 'Single Teacher License', unitsSold: singleLicenseRow.units, revenue: toDollars(singleLicenseRow.cents) });
+  }
+  items.sort((a, b) => b.revenue - a.revenue);
+
+  const [[invoiceTotals]] = await pool.query(
+    `SELECT COUNT(*) AS total,
+       SUM(status = 'unpaid') AS unpaid,
+       SUM(status = 'paid') AS paid,
+       SUM(status = 'cancelled') AS cancelled,
+       COALESCE(SUM(CASE WHEN status = 'unpaid' THEN total_cents ELSE 0 END),0) AS outstanding_cents
+     FROM invoices`
+  );
+
+  const [[quoteTotals]] = await pool.query(
+    "SELECT COUNT(*) AS total, SUM(created_at >= NOW() - INTERVAL 30 DAY) AS last30 FROM quote_requests"
+  );
+
+  const [[activeCustomersRow]] = await pool.query(
+    "SELECT COUNT(DISTINCT contact_id) AS count FROM purchases WHERE purchased_at >= NOW() - INTERVAL 30 DAY"
+  );
+
+  res.json({
+    salesToday: toDollars(salesTodayRow.cents),
+    ordersToday: salesTodayRow.orders,
+    salesThisWeek: toDollars(salesWeekRow.cents),
+    salesThisMonth: toDollars(salesMonthRow.cents),
+    salesAllTime: toDollars(salesAllTimeRow.cents),
+    ordersAllTime: salesAllTimeRow.orders,
+    averageOrderValue: salesAllTimeRow.orders > 0 ? toDollars(salesAllTimeRow.cents) / salesAllTimeRow.orders : 0,
+    revenueCollected: toDollars(revenueRow.collected_cents),
+    revenueOutstanding: toDollars(revenueRow.outstanding_cents),
+    salesOverTime,
+    bestSellingItem: items[0] || null,
+    topItems: items.slice(0, 5),
+    invoices: {
+      total: invoiceTotals.total,
+      unpaid: invoiceTotals.unpaid || 0,
+      paid: invoiceTotals.paid || 0,
+      cancelled: invoiceTotals.cancelled || 0,
+      outstandingTotal: toDollars(invoiceTotals.outstanding_cents),
+    },
+    quotes: {
+      total: quoteTotals.total,
+      last30Days: quoteTotals.last30 || 0,
+    },
+    activeCustomersLast30Days: activeCustomersRow.count,
+  });
+});
+
+module.exports = router;
