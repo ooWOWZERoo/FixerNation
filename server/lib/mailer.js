@@ -49,7 +49,10 @@ async function sendCampaignEmail({ to, fromName, fromEmail, subject, body, bodyF
     headers: { 'List-Unsubscribe': `<${url}>` },
   };
   if (bodyFormat === 'html') {
-    const pixel = trackingToken ? `<img src="${trackingPixelUrl(trackingToken)}" width="1" height="1" alt="" style="display:none;">` : '';
+    // No display:none — some mail clients skip fetching images they'll
+    // never render, which would silently defeat the pixel. 1x1 with no
+    // border is invisible enough on its own.
+    const pixel = trackingToken ? `<img src="${trackingPixelUrl(trackingToken)}" width="1" height="1" border="0" alt="">` : '';
     mail.html = `${body}${pixel}\n<hr style="border:none;border-top:1px solid #eee;margin:24px 0;">\n<p style="font-family:Arial,sans-serif;font-size:11px;color:#999;">You're receiving this because you subscribed to Fixer Nation updates. <a href="${url}" style="color:#999;">Unsubscribe</a>.</p>`;
   } else {
     mail.text = `${body}\n\n---\nYou're receiving this because you subscribed to Fixer Nation updates.\nUnsubscribe: ${url}`;

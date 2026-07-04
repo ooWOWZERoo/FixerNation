@@ -10,9 +10,12 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="admin-common.css?v=10">
 <style>
-  .fin-section-head{margin:28px 0 12px;}
+  .fin-section-head{margin:28px 0 12px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding:6px 0; border-bottom:1px solid var(--a-border);}
   .fin-section-head:first-child{margin-top:0;}
   .fin-section-head h3{font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--a-text-soft);}
+  .fin-section-head:hover h3{color:var(--a-accent);}
+  .fin-toggle-arrow{font-size:11px; color:var(--a-text-soft); transition:color .15s ease;}
+  .fin-section-head:hover .fin-toggle-arrow{color:var(--a-accent);}
   .fin-bar-chart{display:flex; align-items:flex-end; gap:6px; height:150px; padding:10px 4px 26px;}
   .fin-bar-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative;}
   .fin-bar{width:100%; background:var(--a-accent); border-radius:4px 4px 0 0; min-height:3px; transition:background .15s ease;}
@@ -30,6 +33,7 @@
   .fin-recommend ul{margin:0; padding-left:20px;}
   .fin-recommend li{margin-bottom:8px; font-size:13.5px; line-height:1.5;}
   .fin-recommend li strong{color:var(--a-text);}
+  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:#fff; color:var(--a-text);}
 </style>
 </head>
 <body>
@@ -47,6 +51,7 @@
       <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
       <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
+      <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
     </nav>
     <div class="a-sidebar-foot">
       <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
@@ -62,7 +67,11 @@
     </div>
 
     <div class="a-content">
-      <div class="fin-section-head"><h3>Financial Insights</h3></div>
+      <div class="fin-section-head" onclick="toggleSection('financialInsights')">
+        <h3>Financial Insights</h3>
+        <span class="fin-toggle-arrow" id="arrow-financialInsights">▼</span>
+      </div>
+      <div id="body-financialInsights">
 
       <div class="a-stat-grid">
         <div class="a-stat-card">
@@ -126,7 +135,16 @@
 
       <div class="a-card">
         <div class="a-card-head">
-          <h2>Sales Over Time <span style="font-weight:400; font-size:13px; color:var(--a-text-soft);">(last 14 days)</span></h2>
+          <h2>Sales Over Time</h2>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <input type="date" id="salesRangeStart" class="a-filter-select">
+            <span style="color:var(--a-text-soft); font-size:13px;">to</span>
+            <input type="date" id="salesRangeEnd" class="a-filter-select">
+            <button class="a-btn a-btn-outline" onclick="applySalesRange()">Apply</button>
+            <button class="a-btn a-btn-outline" onclick="setSalesRangePreset(14)">Last 14 Days</button>
+            <button class="a-btn a-btn-outline" onclick="setSalesRangePreset(30)">Last 30 Days</button>
+            <button class="a-btn a-btn-outline" onclick="setSalesRangePreset(90)">Last 90 Days</button>
+          </div>
         </div>
         <div class="fin-bar-chart" id="finSalesChart"></div>
       </div>
@@ -157,7 +175,13 @@
         </ul>
       </div>
 
-      <div class="fin-section-head"><h3>Content</h3></div>
+      </div>
+
+      <div class="fin-section-head" onclick="toggleSection('content')">
+        <h3>Content</h3>
+        <span class="fin-toggle-arrow" id="arrow-content">▼</span>
+      </div>
+      <div id="body-content">
       <div class="a-stat-grid" style="grid-template-columns:repeat(6,1fr);">
         <div class="a-stat-card">
           <div class="label">Total Books</div>
@@ -214,6 +238,8 @@
           <a href="fixernation-redesign.html" class="a-btn a-btn-outline" target="_blank" rel="noopener">View Public Site</a>
         </div>
       </div>
+
+      </div>
     </div>
   </div>
 </div>
@@ -221,6 +247,34 @@
 <script src="admin-common.js?v=10"></script>
 <script>
 fnRequireAuth();
+
+const SECTION_STORAGE_KEY = 'fnDashboardCollapsedSections';
+
+function loadCollapsedSections() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SECTION_STORAGE_KEY));
+    if (Array.isArray(saved)) return new Set(saved);
+  } catch (e) {}
+  return new Set();
+}
+let collapsedSections = loadCollapsedSections();
+
+function applySectionState(key) {
+  const body = document.getElementById('body-' + key);
+  const arrow = document.getElementById('arrow-' + key);
+  const collapsed = collapsedSections.has(key);
+  body.style.display = collapsed ? 'none' : '';
+  arrow.textContent = collapsed ? '▶' : '▼';
+}
+
+function toggleSection(key) {
+  if (collapsedSections.has(key)) collapsedSections.delete(key);
+  else collapsedSections.add(key);
+  localStorage.setItem(SECTION_STORAGE_KEY, JSON.stringify([...collapsedSections]));
+  applySectionState(key);
+}
+
+['financialInsights', 'content'].forEach(applySectionState);
 
 // Books, curricula, blog posts, and newsletter contacts are on the real API;
 // campaigns are migrated in the next task and still read from localStorage.
@@ -314,11 +368,14 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   if (!data) return;
 
   document.getElementById('finSalesToday').textContent = fnFormatCurrency(data.salesToday);
-  document.getElementById('finOrdersToday').textContent = data.ordersToday + ' order' + (data.ordersToday === 1 ? '' : 's');
+  const todayIso = isoDate(new Date());
+  document.getElementById('finOrdersToday').innerHTML =
+    `<a href="admin-orders.html?start=${todayIso}&end=${todayIso}" style="color:inherit; text-decoration:underline;">${data.ordersToday} order${data.ordersToday === 1 ? '' : 's'}</a>`;
   document.getElementById('finSalesWeek').textContent = fnFormatCurrency(data.salesThisWeek);
   document.getElementById('finSalesMonth').textContent = fnFormatCurrency(data.salesThisMonth);
   document.getElementById('finSalesAllTime').textContent = fnFormatCurrency(data.salesAllTime);
-  document.getElementById('finOrdersAllTime').textContent = data.ordersAllTime + ' order' + (data.ordersAllTime === 1 ? '' : 's') + ' total';
+  document.getElementById('finOrdersAllTime').innerHTML =
+    `<a href="admin-orders.html" style="color:inherit; text-decoration:underline;">${data.ordersAllTime} order${data.ordersAllTime === 1 ? '' : 's'} total</a>`;
 
   document.getElementById('finRevenueCollected').textContent = fnFormatCurrency(data.revenueCollected);
   document.getElementById('finRevenueOutstanding').textContent = fnFormatCurrency(data.revenueOutstanding);
@@ -331,9 +388,41 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   document.getElementById('finQuotes30').textContent = data.quotes.last30Days;
   document.getElementById('finQuotesTotal').textContent = data.quotes.total;
 
-  renderSalesChart(data.salesOverTime);
   renderBestItem(data.bestSellingItem, data.topItems);
 });
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+async function loadSalesOverTime(start, end) {
+  const params = new URLSearchParams();
+  if (start) params.set('start', start);
+  if (end) params.set('end', end);
+  const r = await fetch(`/api/dashboard/sales-over-time?${params}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+  document.getElementById('salesRangeStart').value = data.start;
+  document.getElementById('salesRangeEnd').value = data.end;
+  renderSalesChart(data.salesOverTime);
+}
+
+function setSalesRangePreset(days) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - (days - 1));
+  loadSalesOverTime(isoDate(start), isoDate(end));
+}
+
+function applySalesRange() {
+  const start = document.getElementById('salesRangeStart').value;
+  const end = document.getElementById('salesRangeEnd').value;
+  if (!start || !end) { fnToast('Choose both a start and end date'); return; }
+  loadSalesOverTime(start, end);
+}
+
+setSalesRangePreset(14);
 </script>
 
 </body>

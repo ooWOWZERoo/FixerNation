@@ -326,6 +326,38 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
   }
 }
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// All orders across every contact, newest first — backs the Orders dashboard
+// and the Financial Insights "N orders" links. Optional start/end filters to
+// a date range (both must be valid dates or the filter is ignored entirely).
+router.get('/purchases', requireAuth, async (req, res) => {
+  const { start, end } = req.query;
+  let sql = 'SELECT * FROM purchases';
+  const params = [];
+  if (DATE_PATTERN.test(start) && DATE_PATTERN.test(end)) {
+    sql += ' WHERE DATE(purchased_at) BETWEEN ? AND ?';
+    params.push(start, end);
+  }
+  sql += ' ORDER BY purchased_at DESC';
+
+  const [rows] = await pool.query(sql, params);
+  const purchases = await attachPurchaseDetails(rows);
+
+  const contactIds = [...new Set(purchases.map(p => p.contactId))];
+  const [contactRows] = contactIds.length
+    ? await pool.query('SELECT id, name, email, company FROM newsletter_contacts WHERE id IN (?)', [contactIds])
+    : [[]];
+  const contactById = Object.fromEntries(contactRows.map(c => [c.id, c]));
+
+  res.json({
+    purchases: purchases.map(p => ({
+      ...p,
+      buyer: contactById[p.contactId] || null,
+    })),
+  });
+});
+
 router.get('/contacts/:id/purchases', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [req.params.id]);
   res.json({ purchases: await attachPurchaseDetails(rows) });

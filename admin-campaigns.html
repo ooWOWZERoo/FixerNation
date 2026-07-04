@@ -33,6 +33,7 @@
       <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
       <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
+      <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
     </nav>
     <div class="a-sidebar-foot">
       <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
@@ -331,7 +332,9 @@ async function renderCampaigns() {
     const tr = document.createElement('tr');
     const audienceLabel = describeAudience(c.audienceFilter);
     const stats = campaignStatsCache[c.id];
-    const openedCell = c.status === 'Sent' && stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
+    const openedCell = c.status !== 'Sent' ? '—'
+      : c.bodyFormat !== 'html' ? '<span title="Plain-text emails have no HTML to embed a tracking pixel in, so opens can never be tracked for this campaign.">N/A (plain text)</span>'
+      : stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
     const unsubCell = c.status === 'Sent' && stats ? stats.unsubscribed : '—';
     tr.innerHTML = `
       <td class="a-cell-title">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
@@ -345,6 +348,7 @@ async function renderCampaigns() {
         <div class="a-row-actions">
           <button class="a-icon-btn" title="View" onclick="viewCampaign(${c.id})">👁️</button>
           ${c.status === 'Draft' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign(${c.id})">✏️</button>` : ''}
+          <button class="a-icon-btn" title="Duplicate" onclick="duplicateCampaign(${c.id})">📄</button>
           <button class="a-icon-btn danger" title="Delete" onclick="deleteCampaign(${c.id})">🗑️</button>
         </div>
       </td>
@@ -391,6 +395,34 @@ async function editCampaign(id) {
   document.getElementById('campaignModalOverlay').classList.add('show');
 }
 
+async function duplicateCampaign(id) {
+  const c = campaignsCache.find(x => x.id === id);
+  if (!c) return;
+
+  const data = {
+    subject: `${c.subject} (Copy)`,
+    fromName: c.fromName,
+    fromEmail: c.fromEmail,
+    audienceFilter: c.audienceFilter,
+    body: c.body,
+    bodyFormat: c.bodyFormat,
+  };
+  const r = await fetch('/api/campaigns', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not duplicate campaign');
+    return;
+  }
+  renderCampaigns();
+  fnToast('Campaign duplicated as a new draft');
+}
+
 async function deleteCampaign(id) {
   if (!confirm('Delete this campaign?')) return;
   const r = await fetch(`/api/campaigns/${id}`, {
@@ -413,7 +445,7 @@ function viewCampaign(id) {
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '') +
-    (stats ? `<br>Opened: ${stats.opened} (${Math.round(stats.openRate * 100)}%) · Unsubscribed: ${stats.unsubscribed}${stats.failed ? ' · Failed: ' + stats.failed : ''}` : '');
+    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'} · Unsubscribed: ${stats.unsubscribed}${stats.failed ? ' · Failed: ' + stats.failed : ''}` : '');
   if (c.bodyFormat === 'html') {
     document.getElementById('viewBodyText').style.display = 'none';
     const iframe = document.getElementById('viewBodyHtml');

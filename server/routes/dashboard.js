@@ -8,6 +8,56 @@ function toDollars(cents) {
   return cents === null || cents === undefined ? 0 : Number(cents) / 100;
 }
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_RANGE_DAYS = 366;
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+// Chart date range is its own endpoint (rather than a param on
+// financial-summary) so switching the range doesn't require re-fetching
+// everything else on the dashboard. Defaults to the last 14 days.
+router.get('/sales-over-time', requireAuth, async (req, res) => {
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(defaultStart.getDate() - 13);
+
+  let start = DATE_PATTERN.test(req.query.start) ? req.query.start : isoDate(defaultStart);
+  let end = DATE_PATTERN.test(req.query.end) ? req.query.end : isoDate(today);
+  if (start > end) [start, end] = [end, start];
+
+  const startDate = new Date(start + 'T00:00:00Z');
+  const endDate = new Date(end + 'T00:00:00Z');
+  const rangeDays = Math.round((endDate - startDate) / 86400000);
+  if (rangeDays > MAX_RANGE_DAYS) {
+    endDate.setUTCDate(startDate.getUTCDate() + MAX_RANGE_DAYS);
+    end = isoDate(endDate);
+  }
+
+  const [dailyRows] = await pool.query(
+    `SELECT DATE(purchased_at) AS day, COALESCE(SUM(amount_cents),0) AS cents
+     FROM purchases WHERE DATE(purchased_at) BETWEEN ? AND ?
+     GROUP BY DATE(purchased_at)`,
+    [start, end]
+  );
+  const dailyByDate = {};
+  dailyRows.forEach(r => {
+    const key = isoDate(r.day instanceof Date ? r.day : new Date(r.day));
+    dailyByDate[key] = toDollars(r.cents);
+  });
+
+  const salesOverTime = [];
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    const key = isoDate(cursor);
+    salesOverTime.push({ date: key, total: dailyByDate[key] || 0 });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  res.json({ salesOverTime, start, end });
+});
+
 // Single aggregated endpoint for the dashboard's Financial Insights section —
 // computed in SQL rather than the "fetch full list, reduce client-side"
 // pattern used elsewhere, since purchases can grow large over time.
@@ -30,24 +80,6 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
        COALESCE(SUM(CASE WHEN payment_status = 'pending' THEN amount_cents ELSE 0 END),0) AS outstanding_cents
      FROM purchases`
   );
-
-  const [dailyRows] = await pool.query(
-    `SELECT DATE(purchased_at) AS day, COALESCE(SUM(amount_cents),0) AS cents
-     FROM purchases WHERE purchased_at >= CURDATE() - INTERVAL 13 DAY
-     GROUP BY DATE(purchased_at)`
-  );
-  const dailyByDate = {};
-  dailyRows.forEach(r => {
-    const key = (r.day instanceof Date ? r.day : new Date(r.day)).toISOString().slice(0, 10);
-    dailyByDate[key] = toDollars(r.cents);
-  });
-  const salesOverTime = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    salesOverTime.push({ date: key, total: dailyByDate[key] || 0 });
-  }
 
   // "Best selling item" spans three separate item universes: books, fixed
   // license_products tiers, and the flat single-teacher-license product
@@ -102,7 +134,6 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
     averageOrderValue: salesAllTimeRow.orders > 0 ? toDollars(salesAllTimeRow.cents) / salesAllTimeRow.orders : 0,
     revenueCollected: toDollars(revenueRow.collected_cents),
     revenueOutstanding: toDollars(revenueRow.outstanding_cents),
-    salesOverTime,
     bestSellingItem: items[0] || null,
     topItems: items.slice(0, 5),
     invoices: {
