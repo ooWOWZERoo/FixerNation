@@ -14,6 +14,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ---
 
+## Release 11 — 2026-07-04 — Visitor path tracking and a real Insights section
+
+- **New "Visitor Paths" dashboard**: anonymous, session-based tracking of how people navigate the public site — entry page, the sequence of pages visited, and key interactions (book views, add-to-cart, curriculum resource/quiz opens, quote requests, Ask The Fixer submissions). No names, emails, or IP addresses are stored — sessions are pseudonymous and reset when a visitor closes their browser tab. Click any recent session to see its full path.
+- Replaced the static "Recommended Insights To Track Next" list on the Dashboard with a real, computed **Insights** section: month-over-month growth, quote-to-sale conversion rate, revenue by category (books vs. single-teacher licenses vs. school/group licenses), days sales outstanding, customer lifetime value, and invoice cancellation rate.
+
 ## Release 10 — 2026-07-04 — Bounce/undelivered tracking, click tracking, and per-campaign activity view
 
 - **Bounce/undelivered classification**: a failed send is now recorded as "Bounced" (the mail server permanently rejected the address) or "Undelivered" (a temporary failure or connection issue) instead of one generic "failed" bucket.
