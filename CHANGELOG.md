@@ -7,10 +7,18 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 ## Unreleased / Known pending work
 
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded and pushed but **not live** — blocked on the admin obtaining real Stripe API keys (`STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`). Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
+- **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - No automated test suite exists yet.
 - The `-v2` alternate design pages across the site are frozen/static by original project decision — not a bug, not scheduled for further work.
 
 ---
+
+## Release 10 — 2026-07-04 — Bounce/undelivered tracking, click tracking, and per-campaign activity view
+
+- **Bounce/undelivered classification**: a failed send is now recorded as "Bounced" (the mail server permanently rejected the address) or "Undelivered" (a temporary failure or connection issue) instead of one generic "failed" bucket.
+- **Link-click tracking** for HTML campaigns: every link in the email body is rewritten to route through a tracking redirect, giving a second, independent signal that an email was actually opened (useful when images are blocked, since pixel tracking alone would miss it).
+- **Per-campaign activity view**: click any campaign's subject to see exactly who opened, unsubscribed, bounced, or was undelivered — by email address, not the full recipient list.
+- Added a reminder in the campaign composer that open/click tracking only works for HTML campaigns, and Bounced/Undelivered stat cards to the campaigns dashboard.
 
 ## Release 9 — 2026-07-04 — Orders dashboard, sales date range, and dashboard polish
 
