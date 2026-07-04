@@ -3,6 +3,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { sendCampaignEmail } = require('../lib/mailer');
+const { rewriteLinksForTracking, classifySendError } = require('../lib/campaign-tracking');
 
 const router = express.Router();
 
@@ -44,6 +45,28 @@ router.get('/track-open', async (req, res) => {
   res.set('Content-Type', 'image/gif');
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.send(TRACKING_PIXEL);
+});
+
+// Public — hit when a recipient clicks a link inside an HTML campaign. The
+// real destination was stored server-side when the link was rewritten at
+// send time (see rewriteLinksForTracking); this endpoint never trusts a
+// redirect target from the request itself, so it can't be abused as an open
+// redirect. A click also counts as an implicit open (you can't click a link
+// in an email you never opened).
+router.get('/click', async (req, res) => {
+  const linkId = req.query.l;
+  const [[target]] = linkId ? await pool.query('SELECT * FROM campaign_link_targets WHERE link_id = ?', [linkId]) : [[]];
+  if (!target) return res.status(404).send('This link is no longer valid.');
+
+  await pool.query(
+    'UPDATE campaign_link_targets SET click_count = click_count + 1 WHERE id = ?',
+    [target.id]
+  );
+  await pool.query(
+    'UPDATE campaign_sends SET opened_at = COALESCE(opened_at, NOW()), open_count = open_count + 1, clicked_at = COALESCE(clicked_at, NOW()), click_count = click_count + 1 WHERE id = ?',
+    [target.send_id]
+  );
+  res.redirect(target.destination_url);
 });
 
 router.post('/', requireAuth, async (req, res) => {
@@ -109,31 +132,39 @@ router.post('/:id/send', requireAuth, async (req, res) => {
     params
   );
 
-  let sent = 0, failed = 0;
+  let sent = 0, bounced = 0, undelivered = 0;
   for (const contact of contacts) {
     const token = crypto.randomBytes(24).toString('hex');
+    // Inserted before sending (rather than after) so link-click tracking has
+    // a real campaign_sends.id to attach its rewritten-link rows to.
+    const [insertResult] = await pool.query(
+      'INSERT INTO campaign_sends (campaign_id, contact_id, email, token, status) VALUES (?, ?, ?, ?, ?)',
+      [campaign.id, contact.id, contact.email, token, 'sent']
+    );
+    const sendId = insertResult.insertId;
+
     try {
+      const body = campaign.body_format === 'html'
+        ? await rewriteLinksForTracking(campaign.body, sendId)
+        : campaign.body;
       await sendCampaignEmail({
         to: contact.email,
         fromName: campaign.from_name,
         fromEmail: campaign.from_email,
         subject: campaign.subject,
-        body: campaign.body,
+        body,
         bodyFormat: campaign.body_format,
         trackingToken: token,
       });
-      await pool.query(
-        'INSERT INTO campaign_sends (campaign_id, contact_id, email, token, status) VALUES (?, ?, ?, ?, ?)',
-        [campaign.id, contact.id, contact.email, token, 'sent']
-      );
       sent++;
     } catch (err) {
       console.error(`Failed to send campaign ${campaign.id} to ${contact.email}:`, err.message);
+      const status = classifySendError(err);
       await pool.query(
-        'INSERT INTO campaign_sends (campaign_id, contact_id, email, token, status, error_message) VALUES (?, ?, ?, ?, ?, ?)',
-        [campaign.id, contact.id, contact.email, token, 'failed', err.message.slice(0, 500)]
+        'UPDATE campaign_sends SET status = ?, error_message = ? WHERE id = ?',
+        [status, err.message.slice(0, 500), sendId]
       );
-      failed++;
+      if (status === 'bounced') bounced++; else undelivered++;
     }
   }
 
@@ -142,15 +173,17 @@ router.post('/:id/send', requireAuth, async (req, res) => {
     [sent, req.params.id]
   );
   const [updated] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
-  res.json({ campaign: serialize(updated[0]), sent, failed });
+  res.json({ campaign: serialize(updated[0]), sent, bounced, undelivered });
 });
 
 router.get('/:id/stats', requireAuth, async (req, res) => {
   const [[row]] = await pool.query(
     `SELECT COUNT(*) AS total,
        SUM(status = 'sent') AS sent,
-       SUM(status = 'failed') AS failed,
+       SUM(status = 'bounced') AS bounced,
+       SUM(status = 'undelivered') AS undelivered,
        SUM(opened_at IS NOT NULL) AS opened,
+       SUM(clicked_at IS NOT NULL) AS clicked,
        SUM(unsubscribed_at IS NOT NULL) AS unsubscribed
      FROM campaign_sends WHERE campaign_id = ?`,
     [req.params.id]
@@ -160,11 +193,28 @@ router.get('/:id/stats', requireAuth, async (req, res) => {
     stats: {
       total: row.total,
       sent: sentCount,
-      failed: row.failed || 0,
+      bounced: row.bounced || 0,
+      undelivered: row.undelivered || 0,
       opened: row.opened || 0,
+      clicked: row.clicked || 0,
       unsubscribed: row.unsubscribed || 0,
       openRate: sentCount > 0 ? (row.opened || 0) / sentCount : 0,
     },
+  });
+});
+
+// Only the recipients matching each specific condition — not the full send
+// list — since that's what the admin actually wants to see per campaign.
+router.get('/:id/activity', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT email, status, error_message, opened_at, clicked_at, unsubscribed_at FROM campaign_sends WHERE campaign_id = ? ORDER BY email',
+    [req.params.id]
+  );
+  res.json({
+    opened: rows.filter(r => r.opened_at).map(r => ({ email: r.email, at: r.opened_at, clicked: !!r.clicked_at })),
+    unsubscribed: rows.filter(r => r.unsubscribed_at).map(r => ({ email: r.email, at: r.unsubscribed_at })),
+    bounced: rows.filter(r => r.status === 'bounced').map(r => ({ email: r.email, reason: r.error_message })),
+    undelivered: rows.filter(r => r.status === 'undelivered').map(r => ({ email: r.email, reason: r.error_message })),
   });
 });
 

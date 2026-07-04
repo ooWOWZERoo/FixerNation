@@ -51,7 +51,7 @@
     <div class="a-content">
       <div class="a-demo-banner">⚠️ Sending is real — campaigns go out via SMTP to your actual subscriber list. Unsubscribed contacts are always excluded automatically, and every email includes a working unsubscribe link.</div>
 
-      <div class="a-stat-grid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
         <div class="a-stat-card">
           <div class="label">Campaigns Sent</div>
           <div class="value" id="statSent">—</div>
@@ -64,9 +64,19 @@
           <div class="label">Total Recipients Reached</div>
           <div class="value" id="statRecipients">—</div>
         </div>
+      </div>
+      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
         <div class="a-stat-card">
           <div class="label">Total Opens Tracked</div>
           <div class="value" id="statOpened">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Total Bounced</div>
+          <div class="value" id="statBounced">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Total Undelivered</div>
+          <div class="value" id="statUndelivered">—</div>
         </div>
       </div>
 
@@ -75,7 +85,7 @@
           <h2>Campaigns</h2>
           <button class="a-btn a-btn-primary" onclick="openCampaignModal()">+ New Campaign</button>
         </div>
-        <div class="a-note" style="margin-bottom:14px;">📊 Open tracking uses an invisible pixel image — it's directional, not exact. Many email clients block remote images by default (undercounts), while some (e.g. Apple Mail Privacy Protection) pre-load every image automatically whether or not a person actually opened it (overcounts).</div>
+        <div class="a-note" style="margin-bottom:14px;">📊 Open tracking uses an invisible pixel image plus link-click tracking — both are directional, not exact. Many email clients block remote images by default (undercounts), while some (e.g. Apple Mail Privacy Protection) pre-load every image automatically whether or not a person actually opened it (overcounts). Bounced/Undelivered only catches failures the mail server reports immediately at send time, not bounces that arrive later as a separate email. Click a campaign's subject to see exactly who opened, unsubscribed, bounced, or was undelivered.</div>
         <table class="a-table" id="campaignTable">
           <thead><tr><th>Subject</th><th>Audience</th><th>Status</th><th>Sent</th><th>Recipients</th><th>Opened</th><th>Unsubscribed</th><th></th></tr></thead>
           <tbody></tbody>
@@ -139,6 +149,7 @@
             <button type="button" class="a-btn a-btn-outline a-format-btn active" id="formatTextBtn" onclick="setBodyFormat('text')">Plain Text</button>
             <button type="button" class="a-btn a-btn-outline a-format-btn" id="formatHtmlBtn" onclick="setBodyFormat('html')">HTML</button>
           </div>
+          <div class="a-note" style="margin-bottom:10px;">📊 Open and click tracking only work for <strong>HTML</strong> campaigns — a plain-text email has no way to carry a tracking pixel or trackable links.</div>
 
           <div class="a-tag-row" id="htmlToolbar" style="display:none; margin-bottom:10px;">
             <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('heading')">+ Heading</button>
@@ -175,6 +186,7 @@
     </div>
     <div class="a-modal-body">
       <div class="a-note" id="viewMeta" style="margin-bottom:16px;"></div>
+      <div id="viewActivity" style="margin-bottom:16px;"></div>
       <div style="white-space:pre-wrap; background:var(--a-bg); border-radius:10px; padding:16px; font-size:13.5px; line-height:1.7;" id="viewBodyText"></div>
       <iframe id="viewBodyHtml" style="display:none; width:100%; height:320px; border:1px solid var(--a-border); border-radius:10px; background:#fff;" sandbox=""></iframe>
     </div>
@@ -317,6 +329,8 @@ async function renderCampaigns() {
   campaignStatsCache = {};
   sentCampaigns.forEach((c, i) => { campaignStatsCache[c.id] = statsResults[i]; });
   document.getElementById('statOpened').textContent = Object.values(campaignStatsCache).reduce((sum, s) => sum + (s ? s.opened : 0), 0);
+  document.getElementById('statBounced').textContent = Object.values(campaignStatsCache).reduce((sum, s) => sum + (s ? s.bounced : 0), 0);
+  document.getElementById('statUndelivered').textContent = Object.values(campaignStatsCache).reduce((sum, s) => sum + (s ? s.undelivered : 0), 0);
 
   const tbody = document.querySelector('#campaignTable tbody');
   tbody.innerHTML = '';
@@ -337,7 +351,7 @@ async function renderCampaigns() {
       : stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
     const unsubCell = c.status === 'Sent' && stats ? stats.unsubscribed : '—';
     tr.innerHTML = `
-      <td class="a-cell-title">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
+      <td class="a-cell-title" style="cursor:pointer;" onclick="viewCampaign(${c.id})" title="Click to view details">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
       <td>${audienceLabel}</td>
       <td><span class="a-pill ${c.status === 'Sent' ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
       <td>${c.sentAt ? fnFormatDate(c.sentAt) : '—'}</td>
@@ -436,7 +450,28 @@ async function deleteCampaign(id) {
   fnToast('Campaign deleted');
 }
 
-function viewCampaign(id) {
+function activitySection(label, icon, entries, renderEntry) {
+  if (!entries || entries.length === 0) {
+    return `<div style="padding:8px 0; font-size:13px; color:var(--a-text-soft);">${icon} ${label}: 0</div>`;
+  }
+  return `
+    <details style="padding:8px 0;">
+      <summary style="cursor:pointer; font-size:13px; font-weight:600;">${icon} ${label}: ${entries.length}</summary>
+      <div style="margin:8px 0 0 20px; font-size:12.5px; color:var(--a-text-soft);">
+        ${entries.map(renderEntry).join('')}
+      </div>
+    </details>
+  `;
+}
+
+async function fetchCampaignActivity(id) {
+  const r = await fetch(`/api/campaigns/${id}/activity`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return null;
+  if (!r.ok) return null;
+  return await r.json();
+}
+
+async function viewCampaign(id) {
   const c = campaignsCache.find(x => x.id === id);
   if (!c) return;
   document.getElementById('viewSubject').textContent = c.subject;
@@ -445,7 +480,27 @@ function viewCampaign(id) {
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '') +
-    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'} · Unsubscribed: ${stats.unsubscribed}${stats.failed ? ' · Failed: ' + stats.failed : ''}` : '');
+    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'} · Bounced: ${stats.bounced} · Undelivered: ${stats.undelivered}` : '');
+
+  const activityEl = document.getElementById('viewActivity');
+  activityEl.innerHTML = '';
+  if (c.status === 'Sent') {
+    activityEl.innerHTML = '<div class="a-note">Loading activity…</div>';
+    const activity = await fetchCampaignActivity(id);
+    if (activity) {
+      activityEl.innerHTML = `
+        <div style="border:1px solid var(--a-border); border-radius:10px; padding:4px 14px;">
+          ${activitySection('Opened', '📬', activity.opened, e => `<div>${e.email} — ${fnFormatDate(e.at)}${e.clicked ? ' (clicked a link)' : ''}</div>`)}
+          ${activitySection('Unsubscribed', '🔕', activity.unsubscribed, e => `<div>${e.email} — ${fnFormatDate(e.at)}</div>`)}
+          ${activitySection('Bounced', '⛔', activity.bounced, e => `<div>${e.email}${e.reason ? ' — ' + e.reason : ''}</div>`)}
+          ${activitySection('Undelivered', '⚠️', activity.undelivered, e => `<div>${e.email}${e.reason ? ' — ' + e.reason : ''}</div>`)}
+        </div>
+      `;
+    } else {
+      activityEl.innerHTML = '';
+    }
+  }
+
   if (c.bodyFormat === 'html') {
     document.getElementById('viewBodyText').style.display = 'none';
     const iframe = document.getElementById('viewBodyHtml');

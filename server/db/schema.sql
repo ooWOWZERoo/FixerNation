@@ -233,14 +233,37 @@ CREATE TABLE IF NOT EXISTS campaign_sends (
   contact_id INT UNSIGNED NULL,
   email VARCHAR(255) NOT NULL,
   token VARCHAR(64) NOT NULL UNIQUE,
-  status VARCHAR(16) NOT NULL DEFAULT 'sent', -- 'sent' | 'failed'
+  -- 'sent': accepted by the SMTP relay. 'bounced': the relay gave a permanent
+  -- (5xx) rejection at send time — e.g. mailbox doesn't exist. 'undelivered':
+  -- a temporary (4xx) rejection or a connection-level failure (timeout, DNS,
+  -- etc.) — the relay never gave a definitive answer either way. This only
+  -- catches failures the relay reports immediately; a bounce that arrives
+  -- later as a separate email (the more common real-world path) isn't caught
+  -- without polling the mailbox for bounce notifications (not implemented).
+  status VARCHAR(16) NOT NULL DEFAULT 'sent',
   error_message VARCHAR(500) NULL,
   sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   opened_at DATETIME NULL,
   open_count INT UNSIGNED NOT NULL DEFAULT 0,
+  clicked_at DATETIME NULL,
+  click_count INT UNSIGNED NOT NULL DEFAULT 0,
   unsubscribed_at DATETIME NULL,
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Every link in an HTML campaign's body is rewritten to route through
+-- GET /api/campaigns/click?l=<link_id> — the real destination is looked up
+-- here server-side rather than trusted from the request's query string, so
+-- the public click endpoint can never be abused as an open redirect.
+CREATE TABLE IF NOT EXISTS campaign_link_targets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  send_id INT UNSIGNED NOT NULL,
+  link_id VARCHAR(32) NOT NULL UNIQUE,
+  destination_url VARCHAR(2048) NOT NULL,
+  click_count INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (send_id) REFERENCES campaign_sends(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
