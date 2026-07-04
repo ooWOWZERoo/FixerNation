@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=9">
+<link rel="stylesheet" href="admin-common.css?v=10">
 <style>
   .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:#fff; color:var(--a-text);}
   #contactsTable th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
@@ -157,6 +157,11 @@
         </div>
         <div class="a-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Optional"></div>
       </form>
+      <div class="a-field" id="contactAccountField" style="display:none;">
+        <label>Site Account</label>
+        <div id="contactAccountStatus" style="font-size:13.5px; margin-bottom:10px;"></div>
+        <div class="a-row-actions" id="contactAccountActions"></div>
+      </div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeContactModal()">Cancel</button>
@@ -265,7 +270,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=9"></script>
+<script src="admin-common.js?v=10"></script>
 <script>
 fnRequireAuth();
 
@@ -405,6 +410,7 @@ function applyFiltersAndRender() {
       <td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>
       <td>
         <div class="a-row-actions">
+          ${resendVerificationButtonHtml(c)}
           <button class="a-icon-btn" title="Purchases &amp; Licenses" onclick="openPurchasesModal(${c.id})">🧾</button>
           <button class="a-icon-btn" title="Edit" onclick="editContact(${c.id})">✏️</button>
           <button class="a-icon-btn" title="${subscribed ? 'Unsubscribe' : 'Resubscribe'}" onclick="toggleStatus(${c.id})">${subscribed ? '🔕' : '🔔'}</button>
@@ -464,6 +470,7 @@ async function openContactModal() {
   document.getElementById('contactForm').reset();
   document.getElementById('contactSource').value = 'Manual Entry';
   document.getElementById('contactStatus').value = 'Subscribed';
+  document.getElementById('contactAccountField').style.display = 'none';
   groupsCache = await fetchGroups();
   renderGroupCheckboxes([]);
   document.getElementById('contactModalOverlay').classList.add('show');
@@ -488,7 +495,74 @@ async function editContact(id) {
   document.getElementById('contactNotes').value = c.notes || '';
   groupsCache = await fetchGroups();
   renderGroupCheckboxes((c.groups || []).map(g => g.id));
+  renderContactAccountField(c);
   document.getElementById('contactModalOverlay').classList.add('show');
+}
+
+function resendVerificationButtonHtml(c) {
+  const canResend = c.hasAccount && !c.accountVerified;
+  const title = !c.hasAccount ? 'No account registered for this email' : (c.accountVerified ? 'Account already verified' : 'Resend verification email');
+  return `<button class="a-icon-btn" title="${title}" ${canResend ? '' : 'disabled'} onclick="resendVerification(${c.id})">✉️</button>`;
+}
+
+function renderContactAccountField(c) {
+  const field = document.getElementById('contactAccountField');
+  const status = document.getElementById('contactAccountStatus');
+  const actions = document.getElementById('contactAccountActions');
+  field.style.display = 'block';
+
+  if (!c.hasAccount) {
+    status.innerHTML = '<span class="a-pill a-pill-neutral">No account</span> — has not signed up on the public site.';
+    actions.innerHTML = '';
+    return;
+  }
+
+  const emailForJs = c.email.replace(/'/g, "\\'");
+  status.innerHTML = `<span class="a-pill ${c.accountVerified ? 'a-pill-success' : 'a-pill-neutral'}">${c.accountVerified ? 'Verified' : 'Unverified'}</span> Registered on the public site.`;
+  actions.innerHTML = `
+    ${c.accountVerified ? '' : `<button type="button" class="a-btn a-btn-outline" onclick="resendVerification(${c.id})">Resend Verification</button>`}
+    <button type="button" class="a-btn a-btn-outline" onclick="sendAccountPasswordReset(${c.siteUserId}, '${emailForJs}')">Send Password Reset</button>
+    <button type="button" class="a-btn a-btn-outline" style="color:var(--a-danger); border-color:var(--a-danger);" onclick="deleteSiteAccount(${c.siteUserId}, '${emailForJs}')">Delete Account</button>
+  `;
+}
+
+async function resendVerification(contactId) {
+  const r = await fetch(`/api/newsletter/contacts/${contactId}/resend-verification`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(result.error || 'Could not resend verification email'); return; }
+  fnToast('Verification email sent');
+}
+
+async function sendAccountPasswordReset(siteUserId, email) {
+  if (!confirm(`Send a password reset email to ${email}?`)) return;
+  const r = await fetch(`/api/site-auth/site-users/${siteUserId}/send-password-reset`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  fnToast('Password reset email sent');
+}
+
+async function deleteSiteAccount(siteUserId, email) {
+  if (!confirm(`Delete the account for ${email}? Any license seat they've claimed will reopen for someone else to use.`)) return;
+  const r = await fetch(`/api/site-auth/site-users/${siteUserId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  closeContactModal();
+  fetchAndRenderContacts();
+  fnToast('Account deleted');
 }
 
 function closeContactModal() {

@@ -1,7 +1,8 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
-const { unsubscribeToken } = require('../lib/mailer');
+const { unsubscribeToken, sendVerificationEmail } = require('../lib/mailer');
+const { createToken } = require('../lib/site-tokens');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,6 +20,18 @@ async function attachGroups(contacts) {
     (groupsByContact[r.contact_id] = groupsByContact[r.contact_id] || []).push({ id: r.id, name: r.name });
   });
   return contacts.map(c => ({ ...c, groups: groupsByContact[c.id] || [] }));
+}
+
+// Site users (public-site accounts) aren't a separate CRM entity — they're
+// linked to a contact purely by matching email, so this surfaces account
+// status as a value on the contact rather than a standalone admin dashboard.
+async function attachSiteUserInfo(contacts) {
+  if (contacts.length === 0) return contacts;
+  const emails = contacts.map(c => c.email);
+  const [rows] = await pool.query('SELECT id, email, email_verified FROM site_users WHERE email IN (?)', [emails]);
+  const byEmail = {};
+  rows.forEach(r => { byEmail[r.email.toLowerCase()] = r; });
+  return contacts.map(c => ({ ...c, siteUser: byEmail[c.email.toLowerCase()] || null }));
 }
 
 async function setContactGroups(connection, contactId, groupIds) {
@@ -44,6 +57,9 @@ function serialize(row) {
     status: row.status,
     notes: row.notes || '',
     groups: row.groups || [],
+    siteUserId: row.siteUser ? row.siteUser.id : null,
+    hasAccount: !!row.siteUser,
+    accountVerified: row.siteUser ? !!row.siteUser.email_verified : false,
   };
 }
 
@@ -66,7 +82,7 @@ router.post('/contacts', async (req, res) => {
       await setContactGroups(pool, result.insertId, b.groupIds);
     }
     const [rows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [result.insertId]);
-    const [contact] = await attachGroups(rows);
+    const [contact] = await attachSiteUserInfo(await attachGroups(rows));
     res.status(201).json({ ok: true, contact: serialize(contact) });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
@@ -78,7 +94,7 @@ router.post('/contacts', async (req, res) => {
 
 router.get('/contacts', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM newsletter_contacts ORDER BY signup_date DESC');
-  const contacts = (await attachGroups(rows)).map(serialize);
+  const contacts = (await attachSiteUserInfo(await attachGroups(rows))).map(serialize);
   res.json({ contacts });
 });
 
@@ -124,13 +140,33 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
   }
 
   const [rows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  const [contact] = await attachGroups(rows);
+  const [contact] = await attachSiteUserInfo(await attachGroups(rows));
   res.json({ contact: serialize(contact) });
 });
 
 router.delete('/contacts/:id', requireAuth, async (req, res) => {
   const [result] = await pool.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Contact not found' });
+  res.json({ ok: true });
+});
+
+// Ad-hoc admin-triggered resend of the site-account verification email,
+// looked up by the contact's email — unlike the public self-service
+// /api/site-auth/resend-verification, this is authenticated and gives the
+// admin a specific reason when it can't send (no account / already verified).
+router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) => {
+  const [contactRows] = await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [req.params.id]);
+  const contact = contactRows[0];
+  if (!contact) return res.status(404).json({ error: 'Contact not found' });
+
+  const [userRows] = await pool.query('SELECT id, first_name, email_verified FROM site_users WHERE email = ?', [contact.email]);
+  const user = userRows[0];
+  if (!user) return res.status(404).json({ error: 'No account is registered for this email' });
+  if (user.email_verified) return res.status(400).json({ error: 'This account is already verified' });
+
+  const verifyToken = await createToken(user.id, 'verify', 24 * 60 * 60 * 1000);
+  const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;
+  await sendVerificationEmail({ to: contact.email, firstName: user.first_name, verifyUrl });
   res.json({ ok: true });
 });
 

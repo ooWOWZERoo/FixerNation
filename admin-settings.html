@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=9">
+<link rel="stylesheet" href="admin-common.css?v=10">
 </head>
 <body>
 
@@ -74,16 +74,6 @@
         </table>
       </div>
 
-      <div class="a-card" style="margin-top:24px;">
-        <div class="a-card-head">
-          <h2>Registered Site Users</h2>
-        </div>
-        <table class="a-table" id="siteUsersTable">
-          <thead><tr><th>Name</th><th>Email</th><th>Verified</th><th>Signed Up</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="a-empty" id="siteUsersEmpty" style="display:none;">No one has created a public account yet.</div>
-      </div>
     </div>
   </div>
 </div>
@@ -108,29 +98,7 @@
   </div>
 </div>
 
-<!-- Edit site user modal -->
-<div class="a-modal-overlay" id="siteUserEditModalOverlay">
-  <div class="a-modal" style="max-width:420px;">
-    <div class="a-modal-head">
-      <h3>Edit Account</h3>
-      <button class="a-modal-close" onclick="closeEditSiteUserModal()">✕</button>
-    </div>
-    <div class="a-modal-body">
-      <div class="a-error" id="siteUserEditError"></div>
-      <div class="a-form-row">
-        <div class="a-field"><label>First Name</label><input type="text" id="editSiteUserFirstName"></div>
-        <div class="a-field"><label>Last Name</label><input type="text" id="editSiteUserLastName"></div>
-      </div>
-      <div class="a-field"><label>Email</label><input type="email" id="editSiteUserEmail"></div>
-    </div>
-    <div class="a-modal-foot">
-      <button class="a-btn a-btn-outline" onclick="closeEditSiteUserModal()">Cancel</button>
-      <button class="a-btn a-btn-primary" onclick="saveSiteUserEdit()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<script src="admin-common.js?v=9"></script>
+<script src="admin-common.js?v=10"></script>
 <script>
 fnRequireAuth();
 
@@ -215,107 +183,6 @@ async function sendAdminInvite() {
 }
 
 loadAdmins();
-
-let siteUsersCache = [];
-
-async function loadSiteUsers() {
-  const r = await fetch('/api/site-auth/site-users', { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return;
-  siteUsersCache = (await r.json()).siteUsers || [];
-
-  const tbody = document.querySelector('#siteUsersTable tbody');
-  tbody.innerHTML = '';
-  document.getElementById('siteUsersTable').style.display = siteUsersCache.length ? 'table' : 'none';
-  document.getElementById('siteUsersEmpty').style.display = siteUsersCache.length ? 'none' : 'block';
-
-  siteUsersCache.forEach(u => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="a-cell-title">${u.firstName} ${u.lastName}</td>
-      <td>${u.email}</td>
-      <td><span class="a-pill ${u.emailVerified ? 'a-pill-success' : 'a-pill-neutral'}">${u.emailVerified ? 'Verified' : 'Unverified'}</span></td>
-      <td>${fnFormatDate(u.createdAt)}</td>
-      <td>
-        <div class="a-row-actions">
-          <button class="a-icon-btn" title="Edit account" onclick="openEditSiteUserModal(${u.id})">✏️</button>
-          <button class="a-icon-btn" title="Send password reset email" onclick="sendPasswordReset(${u.id}, '${u.email.replace(/'/g, "\\'")}')">🔑</button>
-          <button class="a-icon-btn danger" title="Delete account" onclick="deleteSiteUser(${u.id}, '${u.email.replace(/'/g, "\\'")}')">🗑️</button>
-        </div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-async function deleteSiteUser(id, email) {
-  if (!confirm(`Delete the account for ${email}? Any license seat they'd claimed will reopen for someone else to use.`)) return;
-  const r = await fetch(`/api/site-auth/site-users/${id}`, {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  });
-  if (fnHandleUnauthorized(r)) return;
-  loadSiteUsers();
-  fnToast('Account deleted');
-}
-
-async function sendPasswordReset(id, email) {
-  if (!confirm(`Send a password reset email to ${email}?`)) return;
-  const r = await fetch(`/api/site-auth/site-users/${id}/send-password-reset`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  });
-  if (fnHandleUnauthorized(r)) return;
-  fnToast('Password reset email sent');
-}
-
-let editingSiteUserId = null;
-
-function openEditSiteUserModal(id) {
-  const u = siteUsersCache.find(x => x.id === id);
-  if (!u) return;
-  editingSiteUserId = id;
-  document.getElementById('siteUserEditError').classList.remove('show');
-  document.getElementById('editSiteUserFirstName').value = u.firstName;
-  document.getElementById('editSiteUserLastName').value = u.lastName;
-  document.getElementById('editSiteUserEmail').value = u.email;
-  document.getElementById('siteUserEditModalOverlay').classList.add('show');
-}
-
-function closeEditSiteUserModal() {
-  document.getElementById('siteUserEditModalOverlay').classList.remove('show');
-  editingSiteUserId = null;
-}
-
-async function saveSiteUserEdit() {
-  const firstName = document.getElementById('editSiteUserFirstName').value.trim();
-  const lastName = document.getElementById('editSiteUserLastName').value.trim();
-  const email = document.getElementById('editSiteUserEmail').value.trim();
-  const errorBox = document.getElementById('siteUserEditError');
-  errorBox.classList.remove('show');
-
-  const r = await fetch(`/api/site-auth/site-users/${editingSiteUserId}`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ firstName, lastName, email }),
-  });
-  if (fnHandleUnauthorized(r)) return;
-  const result = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    errorBox.textContent = result.error || 'Could not save changes.';
-    errorBox.classList.add('show');
-    return;
-  }
-  closeEditSiteUserModal();
-  loadSiteUsers();
-  fnToast('Account updated');
-}
-
-loadSiteUsers();
 </script>
 
 </body>

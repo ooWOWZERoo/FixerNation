@@ -1,10 +1,10 @@
-const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer');
+const { createToken, consumeToken } = require('../lib/site-tokens');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
 
@@ -38,23 +38,6 @@ function setSiteSessionCookie(res, user) {
     secure: process.env.NODE_ENV === 'production',
     maxAge: SITE_COOKIE_MAX_AGE_MS,
   });
-}
-
-async function createToken(userId, type, ttlMs) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + ttlMs);
-  await pool.query('INSERT INTO site_user_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)', [userId, token, type, expiresAt]);
-  return token;
-}
-
-async function consumeToken(token, type) {
-  const [rows] = await pool.query(
-    'SELECT * FROM site_user_tokens WHERE token = ? AND type = ? AND expires_at > NOW()',
-    [token, type]
-  );
-  if (!rows[0]) return null;
-  await pool.query('DELETE FROM site_user_tokens WHERE id = ?', [rows[0].id]);
-  return rows[0];
 }
 
 router.post('/signup', async (req, res) => {
@@ -237,43 +220,9 @@ router.put('/my-purchases/:purchaseId/seats/:seatId', requireSiteAuth, async (re
 });
 
 // --- Admin management of site-user accounts ---
-
-router.get('/site-users', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT id, first_name, last_name, email, email_verified, created_at FROM site_users ORDER BY created_at DESC');
-  res.json({
-    siteUsers: rows.map(r => ({
-      id: r.id,
-      firstName: r.first_name,
-      lastName: r.last_name,
-      email: r.email,
-      emailVerified: !!r.email_verified,
-      createdAt: r.created_at,
-    })),
-  });
-});
-
-router.put('/site-users/:id', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [req.params.id]);
-  const user = rows[0];
-  if (!user) return res.status(404).json({ error: 'Site user not found' });
-
-  const b = req.body || {};
-  const firstName = b.firstName !== undefined ? b.firstName.trim() : user.first_name;
-  const lastName = b.lastName !== undefined ? b.lastName.trim() : user.last_name;
-  const email = b.email !== undefined ? b.email.trim() : user.email;
-
-  if (!firstName || !lastName || !email || !EMAIL_PATTERN.test(email)) {
-    return res.status(400).json({ error: 'First name, last name, and a valid email are required' });
-  }
-
-  if (email !== user.email) {
-    const [existing] = await pool.query('SELECT id FROM site_users WHERE email = ? AND id != ?', [email, user.id]);
-    if (existing[0]) return res.status(409).json({ error: 'Another account already uses that email' });
-  }
-
-  await pool.query('UPDATE site_users SET first_name = ?, last_name = ?, email = ? WHERE id = ?', [firstName, lastName, email, user.id]);
-  res.json({ ok: true });
-});
+// Site users aren't browsed as their own list — they're surfaced as a value
+// on the matching CRM contact (see server/routes/newsletter.js), so these
+// two actions are triggered from there by site-user id.
 
 // Sends the customer the same password-reset email they'd get from
 // self-service "Forgot Password", just initiated by the admin instead.
