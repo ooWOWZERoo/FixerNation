@@ -500,9 +500,8 @@ async function editContact(id) {
 }
 
 function resendVerificationButtonHtml(c) {
-  const canResend = c.hasAccount && !c.accountVerified;
-  const title = !c.hasAccount ? 'No account registered for this email' : (c.accountVerified ? 'Account already verified' : 'Resend verification email');
-  return `<button class="a-icon-btn" title="${title}" ${canResend ? '' : 'disabled'} onclick="resendVerification(${c.id})">✉️</button>`;
+  const title = !c.hasAccount ? 'Resend verification email (no account registered for this email yet)' : (c.accountVerified ? 'Resend verification email (already verified)' : 'Resend verification email');
+  return `<button class="a-icon-btn" title="${title}" onclick="resendVerification(${c.id})">✉️</button>`;
 }
 
 function renderContactAccountField(c) {
