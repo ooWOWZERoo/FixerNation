@@ -15,7 +15,7 @@ This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/Fi
 1. `git pull` in the git clone (`~/repositories/fixernation`)
 2. `rsync` the static files into `~/public_html`:
    ```
-   rsync -av --delete \
+   rsync -av --delete --delete-excluded \
      --exclude='.git' \
      --exclude='.gitignore' \
      --exclude='*.md' \
@@ -24,7 +24,7 @@ This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/Fi
      --exclude='uploads' \
      ~/repositories/fixernation/ ~/public_html/
    ```
-   `api` is cPanel-generated proxy glue (not in git) and `uploads` holds real uploaded files (not in git) — excluding either wrong will silently break the live API or destroy uploaded content. `*.md` covers all repo documentation (`PROJECT.md`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and any future doc file) — none of it is meant to be served publicly.
+   `api` is cPanel-generated proxy glue (not in git) and `uploads` holds real uploaded files (not in git) — excluding either wrong will silently break the live API or destroy uploaded content. `*.md` covers all repo documentation (`PROJECT.md`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and any future doc file) — none of it is meant to be served publicly. **`--delete-excluded` is required, not optional** — plain `--exclude` + `--delete` only stops *new* copies of excluded files; it actively *protects* any excluded file already present in `public_html` from being removed. Without `--delete-excluded`, a doc file that was ever synced before an exclude rule existed for it stays live forever. (This bit us once already — `CLAUDE.md`/`CHANGELOG.md` sat publicly exposed on production, serving internal deploy/infra details including the cPanel hostname and username, until this flag was added.)
 3. `npm install` (after `source`-ing the app's nodevenv) if `server/package.json` changed
 4. **Restart the Node app** if any `server/` code changed — Node does not hot-reload; a `git pull` alone leaves old code running in memory even though the files on disk are current (symptom: new routes 404 with Express's own "Cannot GET/POST" page, not a crash)
 5. For a schema change to an **existing** table: `server/scripts/migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`, so it silently no-ops on altered tables. Write a one-off idempotent script (see `server/scripts/alter-*.js` for the pattern — check `information_schema.COLUMNS`/`TABLES` before altering) and have the user run it via `node scripts/whatever.js` in cPanel Terminal, in addition to updating `schema.sql` (which stays the source of truth for fresh installs only).
