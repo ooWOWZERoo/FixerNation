@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Newsletter CRM — Fixer Nation Admin</title>
+<title>Contacts Management — Fixer Nation Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -44,7 +44,7 @@
 
   <div class="a-main">
     <div class="a-topbar">
-      <h1>Newsletter CRM</h1>
+      <h1>Contacts Management</h1>
       <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
 
@@ -501,7 +501,7 @@ async function editContact(id) {
 
 function resendVerificationButtonHtml(c) {
   const title = !c.hasAccount ? 'Resend verification email (no account registered for this email yet)' : (c.accountVerified ? 'Resend verification email (already verified)' : 'Resend verification email');
-  return `<button class="a-icon-btn" title="${title}" onclick="resendVerification(${c.id})">✉️</button>`;
+  return `<button class="a-icon-btn" title="${title}" onclick="resendVerification(${c.id})">📧</button>`;
 }
 
 function renderContactAccountField(c) {
