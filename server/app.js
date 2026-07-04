@@ -17,6 +17,7 @@ const licenseProductRoutes = require('./routes/license-products');
 const invoiceRoutes = require('./routes/invoices');
 const contactRoutes = require('./routes/contact');
 const dashboardRoutes = require('./routes/dashboard');
+const analyticsRoutes = require('./routes/analytics');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -45,6 +46,7 @@ app.use('/api/license-products', licenseProductRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, Apache serves those files

@@ -151,4 +151,83 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
   });
 });
 
+// The 6 metrics from the old static "Recommended Insights" list, now
+// computed for real from live data.
+router.get('/insights', requireAuth, async (req, res) => {
+  // 1. Month-over-month growth
+  const [[momRow]] = await pool.query(
+    `SELECT
+       COALESCE(SUM(CASE WHEN purchased_at >= DATE_FORMAT(NOW(), '%Y-%m-01') THEN amount_cents ELSE 0 END), 0) AS this_month_cents,
+       COALESCE(SUM(CASE WHEN purchased_at >= DATE_FORMAT(NOW() - INTERVAL 1 MONTH, '%Y-%m-01') AND purchased_at < DATE_FORMAT(NOW(), '%Y-%m-01') THEN amount_cents ELSE 0 END), 0) AS last_month_cents
+     FROM purchases`
+  );
+  const thisMonth = toDollars(momRow.this_month_cents);
+  const lastMonth = toDollars(momRow.last_month_cents);
+  const momGrowthPct = lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : null;
+
+  // 2. Quote-to-sale conversion rate
+  const [[quoteConvRow]] = await pool.query(
+    `SELECT COUNT(DISTINCT qr.email) AS total_quotes,
+       COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN qr.email END) AS converted
+     FROM quote_requests qr
+     LEFT JOIN newsletter_contacts nc ON nc.email = qr.email
+     LEFT JOIN purchases p ON p.contact_id = nc.id AND p.product_type IN ('single_license', 'group_license')`
+  );
+  const totalQuotes = quoteConvRow.total_quotes || 0;
+  const convertedQuotes = quoteConvRow.converted || 0;
+
+  // 3. Revenue by category
+  const [categoryRows] = await pool.query(
+    "SELECT product_type, COALESCE(SUM(amount_cents),0) AS cents FROM purchases GROUP BY product_type"
+  );
+  const categoryByType = Object.fromEntries(categoryRows.map(r => [r.product_type, toDollars(r.cents)]));
+  const categoryTotal = Object.values(categoryByType).reduce((a, b) => a + b, 0);
+  const revenueByCategory = ['book', 'single_license', 'group_license'].map(type => ({
+    type,
+    label: type === 'book' ? 'Books' : type === 'single_license' ? 'Single Teacher Licenses' : 'School/Group Licenses',
+    revenue: categoryByType[type] || 0,
+    percentOfTotal: categoryTotal > 0 ? ((categoryByType[type] || 0) / categoryTotal) * 100 : 0,
+  }));
+
+  // 4. Days sales outstanding
+  const [[dsoRow]] = await pool.query(
+    "SELECT AVG(DATEDIFF(paid_at, created_at)) AS avg_days FROM invoices WHERE status = 'paid' AND paid_at IS NOT NULL"
+  );
+
+  // 5. Customer lifetime value
+  const [[ltvRow]] = await pool.query(
+    `SELECT AVG(contact_total) AS avg_cents FROM (
+       SELECT contact_id, SUM(amount_cents) AS contact_total FROM purchases GROUP BY contact_id
+     ) t`
+  );
+
+  // 6. Refund/cancellation rate
+  const [[cancelRow]] = await pool.query(
+    "SELECT COUNT(*) AS total, SUM(status = 'cancelled') AS cancelled FROM invoices"
+  );
+  const totalInvoices = cancelRow.total || 0;
+  const cancelledInvoices = cancelRow.cancelled || 0;
+
+  res.json({
+    monthOverMonthGrowth: {
+      thisMonth,
+      lastMonth,
+      growthPercent: momGrowthPct,
+    },
+    quoteToSaleConversion: {
+      totalQuotes,
+      convertedQuotes,
+      conversionRate: totalQuotes > 0 ? convertedQuotes / totalQuotes : null,
+    },
+    revenueByCategory,
+    daysSalesOutstanding: dsoRow.avg_days === null ? null : Number(dsoRow.avg_days),
+    customerLifetimeValue: toDollars(ltvRow.avg_cents),
+    cancellationRate: {
+      totalInvoices,
+      cancelledInvoices,
+      rate: totalInvoices > 0 ? cancelledInvoices / totalInvoices : null,
+    },
+  });
+});
+
 module.exports = router;

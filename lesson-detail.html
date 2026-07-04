@@ -208,7 +208,8 @@
   </div>
 </footer>
 
-<script src="admin-common.js?v=10"></script>
+<script src="admin-common.js?v=11"></script>
+<script>fnTrackPageview();</script>
 <script>
 async function getCurriculumFromQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -233,6 +234,7 @@ async function openResource(curriculumId, resourceName) {
   if (!r.ok) return;
   const c = (await r.json()).curriculum;
   if (!c) return;
+  fnTrackEvent('resource_open', `${c.title} — ${resourceName}`);
   if (resourceName === 'Quiz + Answer Key') {
     openQuizModal(c);
     return;

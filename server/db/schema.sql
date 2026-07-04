@@ -408,3 +408,31 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   message TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Visitor analytics (public site only — anonymous, session-based)
+-- ---------------------------------------------------------------------------
+
+-- A "session" is one browser tab's visit, identified by a random id the
+-- client generates and holds in sessionStorage (so it clears when the tab
+-- closes) — never tied to a logged-in identity, no IP address stored.
+CREATE TABLE IF NOT EXISTS analytics_sessions (
+  id VARCHAR(36) PRIMARY KEY,
+  entry_page VARCHAR(512),
+  referrer VARCHAR(512),
+  user_agent VARCHAR(255),
+  first_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per pageview or tracked interaction within a session — the
+-- ordered sequence of rows for one session_id is that visitor's "path".
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  session_id VARCHAR(36) NOT NULL,
+  event_type VARCHAR(32) NOT NULL, -- 'pageview' | 'book_view' | 'add_to_cart' | 'resource_open' | 'quiz_open' | 'quote_request' | 'ask_the_fixer'
+  page VARCHAR(512),
+  label VARCHAR(255), -- human-readable detail, e.g. a book title or resource name
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (session_id) REFERENCES analytics_sessions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

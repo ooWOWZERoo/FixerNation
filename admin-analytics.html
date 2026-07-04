@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visitor Paths — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="admin-common.css?v=11">
+<style>
+  .analytics-two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .analytics-list{list-style:none; margin:0; padding:0;}
+  .analytics-list li{display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid var(--a-border); font-size:13.5px;}
+  .analytics-list li:first-child{border-top:none;}
+  .analytics-list .count{color:var(--a-text-soft); font-weight:600;}
+  .path-step{display:flex; gap:12px; padding:9px 0; border-top:1px solid var(--a-border); font-size:13px;}
+  .path-step:first-child{border-top:none;}
+  .path-step .time{color:var(--a-text-soft); white-space:nowrap; min-width:150px;}
+  .path-step .type{font-weight:700; text-transform:uppercase; font-size:10.5px; letter-spacing:0.03em; color:var(--a-accent); min-width:90px;}
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <div class="a-nav-divider"></div>
+      <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blogs</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">CRM</span></a>
+      <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
+      <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
+      <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
+      <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
+      <a href="admin-analytics.html" class="active"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
+      <a href="fixernation-redesign.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Visitor Paths</h1>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="a-note" style="margin-bottom:18px;">👣 Anonymous, session-based tracking (no names, emails, or IP addresses stored) — a "session" is one browser tab's visit, so the same person visiting twice in different tabs/days shows up as separate sessions.</div>
+
+      <div class="a-stat-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="a-stat-card">
+          <div class="label">Sessions Today</div>
+          <div class="value" id="statSessionsToday">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Sessions Last 7 Days</div>
+          <div class="value" id="statSessions7d">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Sessions All-Time</div>
+          <div class="value" id="statSessionsAll">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Avg Pages / Session</div>
+          <div class="value" id="statAvgPages">—</div>
+        </div>
+        <div class="a-stat-card">
+          <div class="label">Bounce Rate</div>
+          <div class="value" id="statBounceRate">—</div>
+        </div>
+      </div>
+
+      <div class="analytics-two-col">
+        <div class="a-card">
+          <div class="a-card-head"><h2>Top Entry Pages</h2></div>
+          <ul class="analytics-list" id="topEntryPagesList"></ul>
+          <div class="a-empty" id="topEntryPagesEmpty" style="display:none;">No sessions recorded yet.</div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-head"><h2>Most-Opened Objects</h2></div>
+          <ul class="analytics-list" id="topEventsList"></ul>
+          <div class="a-empty" id="topEventsEmpty" style="display:none;">No tracked interactions yet (book views, add-to-cart, resource opens, quotes, etc.).</div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Recent Sessions</h2>
+        </div>
+        <table class="a-table" id="sessionsTable">
+          <thead><tr><th>Entry Page</th><th>Referrer</th><th>Started</th><th>Last Activity</th><th>Events</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="a-empty" id="sessionsEmpty" style="display:none;">
+          <div class="big">👣</div>
+          No visitor sessions recorded yet.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Session Path Modal -->
+<div class="a-modal-overlay" id="pathModalOverlay">
+  <div class="a-modal" style="max-width:600px;">
+    <div class="a-modal-head">
+      <h3>Visitor Path</h3>
+      <button class="a-modal-close" onclick="closePathModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-note" id="pathMeta" style="margin-bottom:16px;"></div>
+      <div id="pathTimeline"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closePathModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=11"></script>
+<script>
+fnRequireAuth();
+
+function formatEventType(type) {
+  const labels = {
+    pageview: 'Page View',
+    book_view: 'Book Viewed',
+    add_to_cart: 'Added to Cart',
+    resource_open: 'Resource Opened',
+    quote_request: 'Quote Requested',
+    ask_the_fixer: 'Ask The Fixer',
+  };
+  return labels[type] || type;
+}
+
+async function loadSummary() {
+  const r = await fetch('/api/analytics/summary', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+
+  document.getElementById('statSessionsToday').textContent = data.sessionsToday;
+  document.getElementById('statSessions7d').textContent = data.sessionsLast7Days;
+  document.getElementById('statSessionsAll').textContent = data.sessionsAllTime;
+  document.getElementById('statAvgPages').textContent = data.avgPagesPerSession.toFixed(1);
+  document.getElementById('statBounceRate').textContent = data.bounceRate === null ? 'N/A' : Math.round(data.bounceRate * 100) + '%';
+
+  const entryList = document.getElementById('topEntryPagesList');
+  entryList.innerHTML = data.topEntryPages.map(p => `<li><span>${p.page}</span><span class="count">${p.count}</span></li>`).join('');
+  document.getElementById('topEntryPagesEmpty').style.display = data.topEntryPages.length ? 'none' : 'block';
+
+  const eventsList = document.getElementById('topEventsList');
+  eventsList.innerHTML = data.topEvents.map(e => `<li><span>${formatEventType(e.event_type)} — ${e.label}</span><span class="count">${e.count}</span></li>`).join('');
+  document.getElementById('topEventsEmpty').style.display = data.topEvents.length ? 'none' : 'block';
+}
+
+async function loadSessions() {
+  const r = await fetch('/api/analytics/sessions', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const { sessions } = await r.json();
+
+  const tbody = document.querySelector('#sessionsTable tbody');
+  tbody.innerHTML = '';
+  if (sessions.length === 0) {
+    document.getElementById('sessionsTable').style.display = 'none';
+    document.getElementById('sessionsEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('sessionsTable').style.display = 'table';
+  document.getElementById('sessionsEmpty').style.display = 'none';
+
+  sessions.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="a-cell-title">${s.entryPage || '—'}</td>
+      <td>${s.referrer || '(direct)'}</td>
+      <td>${fnFormatDate(s.firstSeen)}</td>
+      <td>${fnFormatDate(s.lastSeen)}</td>
+      <td>${s.eventCount}</td>
+      <td><button class="a-btn a-btn-outline" onclick="viewPath('${s.id}')">View Path</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function viewPath(sessionId) {
+  const r = await fetch(`/api/analytics/sessions/${sessionId}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not load this session'); return; }
+  const { session, path } = await r.json();
+
+  document.getElementById('pathMeta').innerHTML =
+    `Entry: ${session.entryPage || '—'}<br>Referrer: ${session.referrer || '(direct)'}<br>Started: ${fnFormatDate(session.firstSeen)} · Last activity: ${fnFormatDate(session.lastSeen)}`;
+
+  document.getElementById('pathTimeline').innerHTML = path.map(step => `
+    <div class="path-step">
+      <div class="time">${fnFormatDate(step.at)}</div>
+      <div class="type">${formatEventType(step.eventType)}</div>
+      <div>${step.eventType === 'pageview' ? step.page : step.label}</div>
+    </div>
+  `).join('') || '<div class="a-note">No events recorded for this session.</div>';
+
+  document.getElementById('pathModalOverlay').classList.add('show');
+}
+function closePathModal() {
+  document.getElementById('pathModalOverlay').classList.remove('show');
+}
+
+loadSummary();
+loadSessions();
+</script>
+
+</body>
+</html>

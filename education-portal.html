@@ -362,7 +362,8 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=10"></script>
+<script src="admin-common.js?v=11"></script>
+<script>fnTrackPageview();</script>
 <script src="cart.js"></script>
 <script>
 document.getElementById('filterBar').addEventListener('click', function(e){
@@ -432,6 +433,7 @@ document.getElementById('quoteFormEl').addEventListener('submit', async function
       }),
     });
     if (!r.ok) throw new Error('request failed');
+    fnTrackEvent('quote_request');
     document.getElementById('quoteSuccess').style.display = 'block';
     this.reset();
   } catch (err) {
@@ -483,6 +485,7 @@ function renderSpotlightResources() {
 function openResource(curriculumId, resourceName) {
   const c = curriculaCache.find(x => x.id === curriculumId);
   if (!c) return;
+  fnTrackEvent('resource_open', `${c.title} — ${resourceName}`);
   if (resourceName === 'Quiz + Answer Key') {
     openQuizModal(c);
     return;

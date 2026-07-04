@@ -210,6 +210,7 @@ function fnPopulateBookDetail(title) {
       // Exposed so each book-detail page's own inline script can wire up a
       // real Add to Cart button without re-fetching the book itself.
       window.fnCurrentBook = book;
+      if (typeof fnTrackEvent === 'function') fnTrackEvent('book_view', book.title);
 
       const eyebrow = document.querySelector('.product-info .eyebrow');
       if (eyebrow) eyebrow.textContent = book.category || 'Short Story Book Series';
@@ -261,4 +262,41 @@ function fnPopulateBookDetail(title) {
       }
     })
     .catch(() => {});
+}
+
+// --- Anonymous visitor-path tracking (public v1 pages only — never called
+// from admin pages, so staff activity is never recorded as visitor data) ---
+
+function fnAnalyticsSessionId() {
+  const KEY = 'fnAnalyticsSession';
+  let id = sessionStorage.getItem(KEY);
+  if (!id) {
+    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    sessionStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
+// Uses sendBeacon so the request reliably fires even during page unload
+// (e.g. tracking that someone left a page), without blocking navigation.
+function fnTrackEvent(eventType, label) {
+  const payload = JSON.stringify({
+    sessionId: fnAnalyticsSessionId(),
+    eventType,
+    page: window.location.pathname,
+    label: label || '',
+    referrer: document.referrer,
+  });
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon('/api/analytics/track', new Blob([payload], { type: 'application/json' }));
+  } else {
+    fetch('/api/analytics/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(() => {});
+  }
+}
+
+function fnTrackPageview() {
+  fnTrackEvent('pageview', document.title);
 }

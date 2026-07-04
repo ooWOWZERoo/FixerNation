@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=10">
+<link rel="stylesheet" href="admin-common.css?v=11">
 <style>
   .fin-section-head{margin:28px 0 12px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding:6px 0; border-bottom:1px solid var(--a-border);}
   .fin-section-head:first-child{margin-top:0;}
@@ -30,9 +30,6 @@
   .fin-top-items{width:100%; border-collapse:collapse;}
   .fin-top-items td{padding:8px 4px; font-size:13.5px; border-top:1px solid var(--a-border);}
   .fin-top-items td.num{text-align:right; color:var(--a-text-soft);}
-  .fin-recommend ul{margin:0; padding-left:20px;}
-  .fin-recommend li{margin-bottom:8px; font-size:13.5px; line-height:1.5;}
-  .fin-recommend li strong{color:var(--a-text);}
   .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:#fff; color:var(--a-text);}
 </style>
 </head>
@@ -52,6 +49,7 @@
       <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
       <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
+      <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
     </nav>
     <div class="a-sidebar-foot">
       <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
@@ -161,20 +159,45 @@
         </div>
       </div>
 
-      <div class="a-card fin-recommend">
-        <div class="a-card-head">
-          <h2>Recommended Insights To Track Next</h2>
-        </div>
-        <ul>
-          <li><strong>Month-over-month growth:</strong> compare this month's sales to last month's to spot momentum or a slowdown early.</li>
-          <li><strong>Quote-to-sale conversion rate:</strong> of the schools who requested a formal quote, what share became a paying license customer?</li>
-          <li><strong>Revenue by category:</strong> books vs. single-teacher licenses vs. school/group licenses — which line is actually driving growth.</li>
-          <li><strong>Days sales outstanding:</strong> average time between an invoice being issued and marked paid, to catch slow-paying schools early.</li>
-          <li><strong>Customer lifetime value:</strong> average total spend per contact over their full history, to see if repeat/renewal purchases are happening.</li>
-          <li><strong>Refund/cancellation rate:</strong> share of invoices marked cancelled, as a data quality and sales-process health signal.</li>
-        </ul>
       </div>
 
+      <div class="fin-section-head" onclick="toggleSection('insights')">
+        <h3>Insights</h3>
+        <span class="fin-toggle-arrow" id="arrow-insights">▼</span>
+      </div>
+      <div id="body-insights">
+        <div class="a-stat-grid" style="grid-template-columns:repeat(5,1fr);">
+          <div class="a-stat-card">
+            <div class="label">Month-over-Month Growth</div>
+            <div class="value" id="insightMoM">—</div>
+            <div class="delta" id="insightMoMDelta"></div>
+          </div>
+          <div class="a-stat-card">
+            <div class="label">Quote-to-Sale Conversion</div>
+            <div class="value" id="insightQuoteConv">—</div>
+            <div class="delta" id="insightQuoteConvDelta"></div>
+          </div>
+          <div class="a-stat-card">
+            <div class="label">Days Sales Outstanding</div>
+            <div class="value" id="insightDSO">—</div>
+          </div>
+          <div class="a-stat-card">
+            <div class="label">Customer Lifetime Value</div>
+            <div class="value" id="insightLTV">—</div>
+          </div>
+          <div class="a-stat-card">
+            <div class="label">Cancellation Rate</div>
+            <div class="value" id="insightCancelRate">—</div>
+            <div class="delta" id="insightCancelDelta"></div>
+          </div>
+        </div>
+
+        <div class="a-card">
+          <div class="a-card-head">
+            <h2>Revenue by Category</h2>
+          </div>
+          <table class="fin-top-items" id="revenueByCategoryTable"><tbody></tbody></table>
+        </div>
       </div>
 
       <div class="fin-section-head" onclick="toggleSection('content')">
@@ -244,7 +267,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=10"></script>
+<script src="admin-common.js?v=11"></script>
 <script>
 fnRequireAuth();
 
@@ -274,7 +297,7 @@ function toggleSection(key) {
   applySectionState(key);
 }
 
-['financialInsights', 'content'].forEach(applySectionState);
+['financialInsights', 'insights', 'content'].forEach(applySectionState);
 
 // Books, curricula, blog posts, and newsletter contacts are on the real API;
 // campaigns are migrated in the next task and still read from localStorage.
@@ -389,6 +412,38 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   document.getElementById('finQuotesTotal').textContent = data.quotes.total;
 
   renderBestItem(data.bestSellingItem, data.topItems);
+});
+
+function formatPercent(value, decimals) {
+  return value === null || value === undefined ? 'N/A' : (value >= 0 ? '+' : '') + value.toFixed(decimals === undefined ? 1 : decimals) + '%';
+}
+
+fetch('/api/dashboard/insights', { credentials: 'include' }).then(r => fnHandleUnauthorized(r) ? null : r.json()).then(data => {
+  if (!data) return;
+
+  document.getElementById('insightMoM').textContent = formatPercent(data.monthOverMonthGrowth.growthPercent);
+  document.getElementById('insightMoMDelta').textContent =
+    `${fnFormatCurrency(data.monthOverMonthGrowth.thisMonth)} this month vs. ${fnFormatCurrency(data.monthOverMonthGrowth.lastMonth)} last month`;
+
+  const conv = data.quoteToSaleConversion;
+  document.getElementById('insightQuoteConv').textContent = conv.conversionRate === null ? 'N/A' : Math.round(conv.conversionRate * 100) + '%';
+  document.getElementById('insightQuoteConvDelta').textContent = `${conv.convertedQuotes} of ${conv.totalQuotes} quotes converted`;
+
+  document.getElementById('insightDSO').textContent = data.daysSalesOutstanding === null ? 'N/A' : data.daysSalesOutstanding.toFixed(1) + ' days';
+  document.getElementById('insightLTV').textContent = fnFormatCurrency(data.customerLifetimeValue);
+
+  const cancel = data.cancellationRate;
+  document.getElementById('insightCancelRate').textContent = cancel.rate === null ? 'N/A' : Math.round(cancel.rate * 100) + '%';
+  document.getElementById('insightCancelDelta').textContent = `${cancel.cancelledInvoices} of ${cancel.totalInvoices} invoices cancelled`;
+
+  const tbody = document.querySelector('#revenueByCategoryTable tbody');
+  tbody.innerHTML = data.revenueByCategory.map(cat => `
+    <tr>
+      <td>${cat.label}</td>
+      <td class="num">${fnFormatCurrency(cat.revenue)}</td>
+      <td class="num">${cat.percentOfTotal.toFixed(1)}%</td>
+    </tr>
+  `).join('');
 });
 
 function isoDate(d) {

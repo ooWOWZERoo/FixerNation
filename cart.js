@@ -22,6 +22,7 @@ function cartSave(items) {
 // Books merge into an existing line by id (quantity++); license products
 // always add as a new line, since each one may be for a different school domain.
 function cartAdd(item) {
+  if (typeof fnTrackEvent === 'function') fnTrackEvent('add_to_cart', item.name || '');
   const items = cartGet();
   if (item.type === 'book') {
     const existing = items.find(i => i.type === 'book' && i.id === item.id);
