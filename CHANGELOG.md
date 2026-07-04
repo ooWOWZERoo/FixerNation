@@ -8,6 +8,7 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded and pushed but **not live** — blocked on the admin obtaining real Stripe API keys (`STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`). Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
+- **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 - No automated test suite exists yet.
 - The `-v2` alternate design pages across the site are frozen/static by original project decision — not a bug, not scheduled for further work.
 
