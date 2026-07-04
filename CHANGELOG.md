@@ -6,6 +6,8 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ## Unreleased / Known pending work
 
+- **Incident (2026-07-04):** a deploy using `--delete-excluded` in the rsync command (meant to clean up two stray doc files exposed on production) instead deleted `public_html/api/`, the cPanel-generated proxy glue folder — this broke every API route, including admin and site login, until the Node app was stopped/started in cPanel to regenerate it. `--delete-excluded` has been removed from the documented deploy command in `CLAUDE.md` for good; stray doc files get deleted manually, one-off, from now on.
+
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded and pushed but **not live** — blocked on the admin obtaining real Stripe API keys (`STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`). Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.

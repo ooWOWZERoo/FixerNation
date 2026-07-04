@@ -15,7 +15,7 @@ This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/Fi
 1. `git pull` in the git clone (`~/repositories/fixernation`)
 2. `rsync` the static files into `~/public_html`:
    ```
-   rsync -av --delete --delete-excluded \
+   rsync -av --delete \
      --exclude='.git' \
      --exclude='.gitignore' \
      --exclude='*.md' \
@@ -24,7 +24,9 @@ This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/Fi
      --exclude='uploads' \
      ~/repositories/fixernation/ ~/public_html/
    ```
-   `api` is cPanel-generated proxy glue (not in git) and `uploads` holds real uploaded files (not in git) — excluding either wrong will silently break the live API or destroy uploaded content. `*.md` covers all repo documentation (`PROJECT.md`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and any future doc file) — none of it is meant to be served publicly. **`--delete-excluded` is required, not optional** — plain `--exclude` + `--delete` only stops *new* copies of excluded files; it actively *protects* any excluded file already present in `public_html` from being removed. Without `--delete-excluded`, a doc file that was ever synced before an exclude rule existed for it stays live forever. (This bit us once already — `CLAUDE.md`/`CHANGELOG.md` sat publicly exposed on production, serving internal deploy/infra details including the cPanel hostname and username, until this flag was added.)
+   `api` is cPanel-generated proxy glue (not in git) and `uploads` holds real uploaded files (not in git) — excluding either wrong will silently break the live API or destroy uploaded content. `*.md` covers all repo documentation (`PROJECT.md`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and any future doc file) — none of it is meant to be served publicly.
+
+   **Never add `--delete-excluded`.** It was tried once to retroactively clean up stray `.md` files that had leaked into `public_html`, but `--delete-excluded` deletes *every* excluded path found on the destination — including `api/` and `uploads/`, which are excluded specifically so `--delete` leaves them alone. It deleted `public_html/api/` (the cPanel-generated proxy glue), which took down every single API route including both admin and site login, until the Node app was stopped/started in cPanel to regenerate it. If a doc file ever leaks into `public_html` again, delete it manually and one-off (`rm -f ~/public_html/whatever.md`) — never fold that into the standing rsync command.
 3. `npm install` (after `source`-ing the app's nodevenv) if `server/package.json` changed
 4. **Restart the Node app** if any `server/` code changed — Node does not hot-reload; a `git pull` alone leaves old code running in memory even though the files on disk are current (symptom: new routes 404 with Express's own "Cannot GET/POST" page, not a crash)
 5. For a schema change to an **existing** table: `server/scripts/migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`, so it silently no-ops on altered tables. Write a one-off idempotent script (see `server/scripts/alter-*.js` for the pattern — check `information_schema.COLUMNS`/`TABLES` before altering) and have the user run it via `node scripts/whatever.js` in cPanel Terminal, in addition to updating `schema.sql` (which stays the source of truth for fresh installs only).
