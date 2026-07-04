@@ -1,9 +1,13 @@
+const crypto = require('crypto');
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { sendCampaignEmail } = require('../lib/mailer');
 
 const router = express.Router();
+
+// 1x1 transparent GIF served by the open-tracking pixel below.
+const TRACKING_PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64');
 
 function serialize(row) {
   return {
@@ -24,6 +28,22 @@ function serialize(row) {
 router.get('/', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM campaigns ORDER BY created_at DESC');
   res.json({ campaigns: rows.map(serialize) });
+});
+
+// Public — hit by the recipient's email client loading the tracking pixel
+// image, so this can't require admin auth. Declared before any /:id route
+// so Express never mistakes "track-open" for an :id value.
+router.get('/track-open', async (req, res) => {
+  const token = req.query.token;
+  if (token) {
+    await pool.query(
+      'UPDATE campaign_sends SET opened_at = COALESCE(opened_at, NOW()), open_count = open_count + 1 WHERE token = ?',
+      [token]
+    );
+  }
+  res.set('Content-Type', 'image/gif');
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.send(TRACKING_PIXEL);
 });
 
 router.post('/', requireAuth, async (req, res) => {
@@ -85,12 +105,13 @@ router.post('/:id/send', requireAuth, async (req, res) => {
     params.push(campaign.audience_group_id);
   }
   const [contacts] = await pool.query(
-    `SELECT DISTINCT c.email FROM newsletter_contacts c${joinClause} WHERE c.status = ?${extraClauses}`,
+    `SELECT DISTINCT c.id, c.email FROM newsletter_contacts c${joinClause} WHERE c.status = ?${extraClauses}`,
     params
   );
 
   let sent = 0, failed = 0;
   for (const contact of contacts) {
+    const token = crypto.randomBytes(24).toString('hex');
     try {
       await sendCampaignEmail({
         to: contact.email,
@@ -99,10 +120,19 @@ router.post('/:id/send', requireAuth, async (req, res) => {
         subject: campaign.subject,
         body: campaign.body,
         bodyFormat: campaign.body_format,
+        trackingToken: token,
       });
+      await pool.query(
+        'INSERT INTO campaign_sends (campaign_id, contact_id, email, token, status) VALUES (?, ?, ?, ?, ?)',
+        [campaign.id, contact.id, contact.email, token, 'sent']
+      );
       sent++;
     } catch (err) {
       console.error(`Failed to send campaign ${campaign.id} to ${contact.email}:`, err.message);
+      await pool.query(
+        'INSERT INTO campaign_sends (campaign_id, contact_id, email, token, status, error_message) VALUES (?, ?, ?, ?, ?, ?)',
+        [campaign.id, contact.id, contact.email, token, 'failed', err.message.slice(0, 500)]
+      );
       failed++;
     }
   }
@@ -113,6 +143,29 @@ router.post('/:id/send', requireAuth, async (req, res) => {
   );
   const [updated] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
   res.json({ campaign: serialize(updated[0]), sent, failed });
+});
+
+router.get('/:id/stats', requireAuth, async (req, res) => {
+  const [[row]] = await pool.query(
+    `SELECT COUNT(*) AS total,
+       SUM(status = 'sent') AS sent,
+       SUM(status = 'failed') AS failed,
+       SUM(opened_at IS NOT NULL) AS opened,
+       SUM(unsubscribed_at IS NOT NULL) AS unsubscribed
+     FROM campaign_sends WHERE campaign_id = ?`,
+    [req.params.id]
+  );
+  const sentCount = row.sent || 0;
+  res.json({
+    stats: {
+      total: row.total,
+      sent: sentCount,
+      failed: row.failed || 0,
+      opened: row.opened || 0,
+      unsubscribed: row.unsubscribed || 0,
+      openRate: sentCount > 0 ? (row.opened || 0) / sentCount : 0,
+    },
+  });
 });
 
 module.exports = router;

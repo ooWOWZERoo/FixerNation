@@ -50,7 +50,7 @@
     <div class="a-content">
       <div class="a-demo-banner">⚠️ Sending is real — campaigns go out via SMTP to your actual subscriber list. Unsubscribed contacts are always excluded automatically, and every email includes a working unsubscribe link.</div>
 
-      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="a-stat-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="a-stat-card">
           <div class="label">Campaigns Sent</div>
           <div class="value" id="statSent">—</div>
@@ -63,6 +63,10 @@
           <div class="label">Total Recipients Reached</div>
           <div class="value" id="statRecipients">—</div>
         </div>
+        <div class="a-stat-card">
+          <div class="label">Total Opens Tracked</div>
+          <div class="value" id="statOpened">—</div>
+        </div>
       </div>
 
       <div class="a-card">
@@ -70,8 +74,9 @@
           <h2>Campaigns</h2>
           <button class="a-btn a-btn-primary" onclick="openCampaignModal()">+ New Campaign</button>
         </div>
+        <div class="a-note" style="margin-bottom:14px;">📊 Open tracking uses an invisible pixel image — it's directional, not exact. Many email clients block remote images by default (undercounts), while some (e.g. Apple Mail Privacy Protection) pre-load every image automatically whether or not a person actually opened it (overcounts).</div>
         <table class="a-table" id="campaignTable">
-          <thead><tr><th>Subject</th><th>Audience</th><th>Status</th><th>Sent</th><th>Recipients</th><th></th></tr></thead>
+          <thead><tr><th>Subject</th><th>Audience</th><th>Status</th><th>Sent</th><th>Recipients</th><th>Opened</th><th>Unsubscribed</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="campaignEmpty" style="display:none;">
@@ -187,6 +192,14 @@ let bodyFormat = 'text';
 let campaignsCache = [];
 let subscribedContactsCache = [];
 let groupsCache = [];
+let campaignStatsCache = {};
+
+async function fetchCampaignStats(id) {
+  const r = await fetch(`/api/campaigns/${id}/stats`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return null;
+  if (!r.ok) return null;
+  return (await r.json()).stats;
+}
 
 async function fetchSubscribedContacts() {
   const r = await fetch('/api/newsletter/contacts', { credentials: 'include' });
@@ -298,6 +311,12 @@ async function renderCampaigns() {
   document.getElementById('statDrafts').textContent = campaigns.filter(c => c.status === 'Draft').length;
   document.getElementById('statRecipients').textContent = campaigns.filter(c => c.status === 'Sent').reduce((sum, c) => sum + (c.recipientCount || 0), 0);
 
+  const sentCampaigns = campaigns.filter(c => c.status === 'Sent');
+  const statsResults = await Promise.all(sentCampaigns.map(c => fetchCampaignStats(c.id)));
+  campaignStatsCache = {};
+  sentCampaigns.forEach((c, i) => { campaignStatsCache[c.id] = statsResults[i]; });
+  document.getElementById('statOpened').textContent = Object.values(campaignStatsCache).reduce((sum, s) => sum + (s ? s.opened : 0), 0);
+
   const tbody = document.querySelector('#campaignTable tbody');
   tbody.innerHTML = '';
   if (campaigns.length === 0) {
@@ -311,12 +330,17 @@ async function renderCampaigns() {
   campaigns.forEach(c => {
     const tr = document.createElement('tr');
     const audienceLabel = describeAudience(c.audienceFilter);
+    const stats = campaignStatsCache[c.id];
+    const openedCell = c.status === 'Sent' && stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
+    const unsubCell = c.status === 'Sent' && stats ? stats.unsubscribed : '—';
     tr.innerHTML = `
       <td class="a-cell-title">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
       <td>${audienceLabel}</td>
       <td><span class="a-pill ${c.status === 'Sent' ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
       <td>${c.sentAt ? fnFormatDate(c.sentAt) : '—'}</td>
       <td>${c.status === 'Sent' ? c.recipientCount : '—'}</td>
+      <td>${openedCell}</td>
+      <td>${unsubCell}</td>
       <td>
         <div class="a-row-actions">
           <button class="a-icon-btn" title="View" onclick="viewCampaign(${c.id})">👁️</button>
@@ -385,9 +409,11 @@ function viewCampaign(id) {
   if (!c) return;
   document.getElementById('viewSubject').textContent = c.subject;
   const audienceLabel = describeAudience(c.audienceFilter);
+  const stats = campaignStatsCache[id];
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
-    (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '');
+    (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '') +
+    (stats ? `<br>Opened: ${stats.opened} (${Math.round(stats.openRate * 100)}%) · Unsubscribed: ${stats.unsubscribed}${stats.failed ? ' · Failed: ' + stats.failed : ''}` : '');
   if (c.bodyFormat === 'html') {
     document.getElementById('viewBodyText').style.display = 'none';
     const iframe = document.getElementById('viewBodyHtml');

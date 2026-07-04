@@ -220,6 +220,29 @@ CREATE TABLE IF NOT EXISTS campaigns (
   FOREIGN KEY (audience_group_id) REFERENCES contact_groups(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- One row per (campaign, recipient) attempt — previously sending only wrote
+-- an aggregate recipient_count onto the campaigns row with no way to see who
+-- got it, whether it opened, or whether an unsubscribe came from this send.
+-- opened_at/open_count are pixel-based (see server/routes/campaigns.js
+-- track-open route) so they're directional, not exact: many clients block
+-- remote images (undercounts), and some (e.g. Apple Mail Privacy Protection)
+-- prefetch every image regardless of whether a human opened it (overcounts).
+CREATE TABLE IF NOT EXISTS campaign_sends (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  contact_id INT UNSIGNED NULL,
+  email VARCHAR(255) NOT NULL,
+  token VARCHAR(64) NOT NULL UNIQUE,
+  status VARCHAR(16) NOT NULL DEFAULT 'sent', -- 'sent' | 'failed'
+  error_message VARCHAR(500) NULL,
+  sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  opened_at DATETIME NULL,
+  open_count INT UNSIGNED NOT NULL DEFAULT 0,
+  unsubscribed_at DATETIME NULL,
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------------------------------------------------------------------------
 -- Curriculum builder
 -- ---------------------------------------------------------------------------

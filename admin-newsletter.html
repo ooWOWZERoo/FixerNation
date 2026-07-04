@@ -17,6 +17,10 @@
   .a-pagination{display:flex; justify-content:space-between; align-items:center; margin-top:16px; font-size:13px; color:var(--a-text-soft); flex-wrap:wrap; gap:10px;}
   .a-pagination .a-btn{padding:7px 14px; font-size:12.5px;}
   .a-pagination .a-btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .fn-columns-wrap{position:relative;}
+  .fn-columns-menu{position:absolute; top:calc(100% + 6px); right:0; background:#fff; border:1px solid var(--a-border); border-radius:10px; box-shadow:var(--a-shadow); padding:10px 14px; z-index:50; min-width:180px;}
+  .fn-columns-menu label{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0; cursor:pointer; white-space:nowrap;}
+  .fn-columns-menu label input{margin:0;}
 </style>
 </head>
 <body>
@@ -79,22 +83,15 @@
             <button class="a-btn a-btn-outline" onclick="openGroupsModal()">🏷️ Manage Groups</button>
             <button class="a-btn a-btn-outline" onclick="openImportModal()">⬆ Import CSV</button>
             <button class="a-btn a-btn-outline" onclick="exportCsv()">⬇ Export CSV</button>
+            <div class="fn-columns-wrap">
+              <button class="a-btn a-btn-outline" onclick="toggleColumnsMenu(event)">🔧 Columns</button>
+              <div class="fn-columns-menu" id="columnsMenu" style="display:none;"></div>
+            </div>
             <button class="a-btn a-btn-primary" onclick="openContactModal()">+ Add Contact</button>
           </div>
         </div>
         <table class="a-table" id="contactsTable">
-          <thead><tr>
-            <th class="sortable" onclick="setSort('name')">Name<span class="sort-arrow" id="arrow-name"></span></th>
-            <th class="sortable" onclick="setSort('email')">Email<span class="sort-arrow" id="arrow-email"></span></th>
-            <th>Phone</th>
-            <th class="sortable" onclick="setSort('company')">Company<span class="sort-arrow" id="arrow-company"></span></th>
-            <th>Address</th>
-            <th class="sortable" onclick="setSort('signupDate')">Signed Up<span class="sort-arrow" id="arrow-signupDate"></span></th>
-            <th class="sortable" onclick="setSort('source')">Source<span class="sort-arrow" id="arrow-source"></span></th>
-            <th class="sortable" onclick="setSort('status')">Status<span class="sort-arrow" id="arrow-status"></span></th>
-            <th>Groups</th>
-            <th></th>
-          </tr></thead>
+          <thead><tr id="contactsTableHead"></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="contactsEmpty" style="display:none;">
@@ -286,6 +283,73 @@ let contactsCache = [];
 let groupsCache = [];
 let editingContactId = null;
 
+const CONTACT_COLUMNS = [
+  { key: 'name', label: 'Name', sortable: true },
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'phone', label: 'Phone', sortable: false },
+  { key: 'company', label: 'Company', sortable: true },
+  { key: 'address', label: 'Address', sortable: false },
+  { key: 'signupDate', label: 'Signed Up', sortable: true },
+  { key: 'source', label: 'Source', sortable: true },
+  { key: 'status', label: 'Status', sortable: true },
+  { key: 'groups', label: 'Groups', sortable: false },
+];
+const COLUMNS_STORAGE_KEY = 'fnContactsVisibleColumns';
+
+function loadVisibleColumns() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLUMNS_STORAGE_KEY));
+    if (Array.isArray(saved) && saved.length) return new Set(saved);
+  } catch (e) {}
+  return new Set(CONTACT_COLUMNS.map(c => c.key));
+}
+let visibleColumns = loadVisibleColumns();
+
+function renderTableHead() {
+  const row = document.getElementById('contactsTableHead');
+  row.innerHTML = CONTACT_COLUMNS.filter(c => visibleColumns.has(c.key)).map(c =>
+    c.sortable
+      ? `<th class="sortable" onclick="setSort('${c.key}')">${c.label}<span class="sort-arrow" id="arrow-${c.key}"></span></th>`
+      : `<th>${c.label}</th>`
+  ).join('') + '<th></th>';
+}
+
+function renderColumnsMenu() {
+  const menu = document.getElementById('columnsMenu');
+  menu.innerHTML = CONTACT_COLUMNS.map(c =>
+    `<label><input type="checkbox" value="${c.key}" ${visibleColumns.has(c.key) ? 'checked' : ''} onchange="toggleColumn('${c.key}', this.checked)"> ${c.label}</label>`
+  ).join('');
+}
+
+function toggleColumn(key, checked) {
+  if (checked) {
+    visibleColumns.add(key);
+  } else if (visibleColumns.size > 1) {
+    visibleColumns.delete(key);
+  } else {
+    renderColumnsMenu();
+    fnToast('At least one column must stay visible');
+    return;
+  }
+  localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify([...visibleColumns]));
+  renderTableHead();
+  applyFiltersAndRender();
+}
+
+function toggleColumnsMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('columnsMenu');
+  const opening = menu.style.display !== 'block';
+  menu.style.display = opening ? 'block' : 'none';
+  if (opening) renderColumnsMenu();
+}
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('columnsMenu');
+  if (menu && menu.style.display === 'block' && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
 async function fetchContacts() {
   const r = await fetch('/api/newsletter/contacts', { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return [];
@@ -368,8 +432,8 @@ function applyFiltersAndRender() {
     return 0;
   });
 
-  ['name', 'email', 'company', 'signupDate', 'source', 'status'].forEach(f => {
-    document.getElementById(`arrow-${f}`).textContent = sortField === f ? (sortDir === 'asc' ? '▲' : '▼') : '';
+  CONTACT_COLUMNS.filter(c => c.sortable && visibleColumns.has(c.key)).forEach(c => {
+    document.getElementById(`arrow-${c.key}`).textContent = sortField === c.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
   });
 
   const tbody = document.querySelector('#contactsTable tbody');
@@ -398,16 +462,18 @@ function applyFiltersAndRender() {
   pageContacts.forEach(c => {
     const tr = document.createElement('tr');
     const subscribed = c.status === 'Subscribed';
-    tr.innerHTML = `
-      <td class="a-cell-title">${c.name || '—'}</td>
-      <td>${c.email}</td>
-      <td>${c.phone || '—'}</td>
-      <td>${c.company || '—'}</td>
-      <td title="${fnFormatAddress(c.address, true)}">${fnFormatAddress(c.address)}</td>
-      <td>${fnFormatDate(c.signupDate)}</td>
-      <td><span class="a-pill a-pill-neutral">${c.source}</span></td>
-      <td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
-      <td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>
+    const cellsByKey = {
+      name: `<td class="a-cell-title">${c.name || '—'}</td>`,
+      email: `<td>${c.email}</td>`,
+      phone: `<td>${c.phone || '—'}</td>`,
+      company: `<td>${c.company || '—'}</td>`,
+      address: `<td title="${fnFormatAddress(c.address, true)}">${fnFormatAddress(c.address)}</td>`,
+      signupDate: `<td>${fnFormatDate(c.signupDate)}</td>`,
+      source: `<td><span class="a-pill a-pill-neutral">${c.source}</span></td>`,
+      status: `<td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>`,
+      groups: `<td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>`,
+    };
+    tr.innerHTML = CONTACT_COLUMNS.filter(col => visibleColumns.has(col.key)).map(col => cellsByKey[col.key]).join('') + `
       <td>
         <div class="a-row-actions">
           ${resendVerificationButtonHtml(c)}
@@ -1064,6 +1130,7 @@ document.getElementById('filterSource').addEventListener('change', function(e){
   applyFiltersAndRender();
 });
 
+renderTableHead();
 fetchAndRenderContacts();
 </script>
 

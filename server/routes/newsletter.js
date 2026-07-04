@@ -199,15 +199,21 @@ router.delete('/groups/:id', requireAuth, async (req, res) => {
 
 // Public link clicked from inside a sent campaign email — no auth, verified by
 // an HMAC token instead so a link can't be used to unsubscribe someone else.
+// The optional `send` param attributes this unsubscribe back to the specific
+// campaign_sends row it came from, for per-campaign unsubscribe stats.
 router.get('/unsubscribe', async (req, res) => {
   const email = (req.query.email || '').trim();
   const token = req.query.token || '';
+  const sendToken = req.query.send || '';
   res.set('Content-Type', 'text/html');
 
   if (!email || token !== unsubscribeToken(email)) {
     return res.status(400).send('<p style="font-family:sans-serif; padding:40px; text-align:center;">This unsubscribe link is invalid.</p>');
   }
   await pool.query('UPDATE newsletter_contacts SET status = ? WHERE email = ?', ['Unsubscribed', email]);
+  if (sendToken) {
+    await pool.query('UPDATE campaign_sends SET unsubscribed_at = NOW() WHERE token = ?', [sendToken]);
+  }
   res.send(`<p style="font-family:sans-serif; padding:40px; text-align:center;">${email} has been unsubscribed from Fixer Nation emails.</p>`);
 });
 

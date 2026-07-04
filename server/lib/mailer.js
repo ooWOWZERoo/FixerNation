@@ -20,15 +20,28 @@ function unsubscribeToken(email) {
   return crypto.createHmac('sha256', process.env.SESSION_SECRET).update(email.toLowerCase()).digest('hex');
 }
 
-function unsubscribeUrl(email) {
+// sendToken (optional) attributes an unsubscribe click back to the specific
+// campaign_sends row it came from — the base email+HMAC token still gates
+// who's allowed to unsubscribe whom, this just adds the extra context.
+function unsubscribeUrl(email, sendToken) {
   const base = process.env.SITE_URL || '';
   const token = unsubscribeToken(email);
-  return `${base}/api/newsletter/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
+  let url = `${base}/api/newsletter/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
+  if (sendToken) url += `&send=${sendToken}`;
+  return url;
+}
+
+function trackingPixelUrl(sendToken) {
+  const base = process.env.SITE_URL || '';
+  return `${base}/api/campaigns/track-open?token=${sendToken}`;
 }
 
 // Sends one campaign email to one contact, appending a real unsubscribe link.
-async function sendCampaignEmail({ to, fromName, fromEmail, subject, body, bodyFormat }) {
-  const url = unsubscribeUrl(to);
+// trackingToken (optional — set by campaigns.js per recipient) enables both
+// open-tracking (HTML campaigns only — a plain-text email can't load a pixel)
+// and attributing an unsubscribe click back to this specific send.
+async function sendCampaignEmail({ to, fromName, fromEmail, subject, body, bodyFormat, trackingToken }) {
+  const url = unsubscribeUrl(to, trackingToken);
   const mail = {
     from: `"${fromName}" <${fromEmail}>`,
     to,
@@ -36,7 +49,8 @@ async function sendCampaignEmail({ to, fromName, fromEmail, subject, body, bodyF
     headers: { 'List-Unsubscribe': `<${url}>` },
   };
   if (bodyFormat === 'html') {
-    mail.html = `${body}\n<hr style="border:none;border-top:1px solid #eee;margin:24px 0;">\n<p style="font-family:Arial,sans-serif;font-size:11px;color:#999;">You're receiving this because you subscribed to Fixer Nation updates. <a href="${url}" style="color:#999;">Unsubscribe</a>.</p>`;
+    const pixel = trackingToken ? `<img src="${trackingPixelUrl(trackingToken)}" width="1" height="1" alt="" style="display:none;">` : '';
+    mail.html = `${body}${pixel}\n<hr style="border:none;border-top:1px solid #eee;margin:24px 0;">\n<p style="font-family:Arial,sans-serif;font-size:11px;color:#999;">You're receiving this because you subscribed to Fixer Nation updates. <a href="${url}" style="color:#999;">Unsubscribe</a>.</p>`;
   } else {
     mail.text = `${body}\n\n---\nYou're receiving this because you subscribed to Fixer Nation updates.\nUnsubscribe: ${url}`;
   }
