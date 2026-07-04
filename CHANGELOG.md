@@ -12,6 +12,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ---
 
+## Release 9 — 2026-07-04 — Orders dashboard, sales date range, and dashboard polish
+
+- **New Orders dashboard** (`admin-orders.html`, nav link under Licenses): every purchase across every contact, newest first, with a date-range filter. The Financial Insights "N orders" figures on the main Dashboard now link directly into it (Sales Today → today's orders, Sales All-Time → everything).
+- **Sales Over Time** now supports a custom start/end date range instead of a fixed 14-day window (still the default).
+- **Dashboard sections are collapsible** — Financial Insights and Content can each be hidden, remembered per browser.
+- **Campaigns can be duplicated** — a new "Duplicate" action creates a fresh Draft copy of any campaign's subject/body/format/audience, leaving the original's send history and stats untouched.
+- Fixed the open-tracking pixel's reliability (some mail clients skip fetching images that are never rendered) and clarified in the campaign list/detail view that plain-text campaigns show "N/A" for opens rather than a misleading "0" — a plain-text email has no HTML to carry a tracking pixel at all.
+
 ## Release 8 — 2026-07-04 — Contacts column picker & campaign analytics
 
 - **Contacts Management** (`admin-newsletter.html`): a "🔧 Columns" picker lets the admin choose which table columns to show or hide, remembered per browser. (Ascending/descending column sorting already existed and needed no changes.)
