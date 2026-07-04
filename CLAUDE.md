@@ -13,7 +13,18 @@ Also update `PROJECT.md` if the change affects architecture, the page list, or k
 This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → the user runs the following in cPanel's browser Terminal (no SSH access exists into this environment):
 
 1. `git pull` in the git clone (`~/repositories/fixernation`)
-2. `rsync` the static files into `~/public_html` — **must exclude** `.git`, `server`, `PROJECT.md`, `README.md`, `.gitignore`, `api` (cPanel-generated proxy glue, not in git), and `uploads` (real uploaded files, not in git). Excluding these wrong will silently break the live API or destroy uploaded content.
+2. `rsync` the static files into `~/public_html`:
+   ```
+   rsync -av --delete \
+     --exclude='.git' \
+     --exclude='.gitignore' \
+     --exclude='*.md' \
+     --exclude='server' \
+     --exclude='api' \
+     --exclude='uploads' \
+     ~/repositories/fixernation/ ~/public_html/
+   ```
+   `api` is cPanel-generated proxy glue (not in git) and `uploads` holds real uploaded files (not in git) — excluding either wrong will silently break the live API or destroy uploaded content. `*.md` covers all repo documentation (`PROJECT.md`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and any future doc file) — none of it is meant to be served publicly.
 3. `npm install` (after `source`-ing the app's nodevenv) if `server/package.json` changed
 4. **Restart the Node app** if any `server/` code changed — Node does not hot-reload; a `git pull` alone leaves old code running in memory even though the files on disk are current (symptom: new routes 404 with Express's own "Cannot GET/POST" page, not a crash)
 5. For a schema change to an **existing** table: `server/scripts/migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`, so it silently no-ops on altered tables. Write a one-off idempotent script (see `server/scripts/alter-*.js` for the pattern — check `information_schema.COLUMNS`/`TABLES` before altering) and have the user run it via `node scripts/whatever.js` in cPanel Terminal, in addition to updating `schema.sql` (which stays the source of truth for fresh installs only).
