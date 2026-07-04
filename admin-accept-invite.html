@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Activate Admin Account — Fixer Nation</title>
+<title>Set Admin Password — Fixer Nation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -34,8 +34,8 @@
 
 <div class="card">
   <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
-  <h1>Activate Your Admin Account</h1>
-  <p class="sub">You've been assigned an admin role on the Fixer Nation Education domain. Set a password to activate your account.</p>
+  <h1>Set Your Admin Password</h1>
+  <p class="sub">Enter a new password for your Fixer Nation Education admin account.</p>
 
   <div class="message" id="message"></div>
 
@@ -44,7 +44,7 @@
     <input type="password" id="newPassword" required minlength="8">
     <label>Confirm New Password</label>
     <input type="password" id="confirmPassword" required minlength="8">
-    <button type="submit">Activate Account</button>
+    <button type="submit">Set Password</button>
   </form>
 
   <a href="admin-login.html" class="back-link">← Back to Admin Login</a>
@@ -61,7 +61,7 @@ function showMessage(text, kind) {
 
 const token = new URLSearchParams(window.location.search).get('token');
 if (!token) {
-  showMessage('This invite link is missing its token. Please use the link from your email.', 'error');
+  showMessage('This link is missing its token. Please use the link from your email.', 'error');
   document.getElementById('acceptForm').style.display = 'none';
 }
 
@@ -82,11 +82,11 @@ document.getElementById('acceptForm').addEventListener('submit', async function 
   });
   const result = await r.json().catch(() => ({}));
   if (!r.ok) {
-    showMessage(result.error || 'Could not activate your account.', 'error');
+    showMessage(result.error || 'Could not set your password.', 'error');
     return;
   }
   document.getElementById('acceptForm').style.display = 'none';
-  showMessage('Your account is active! You can now log in.', 'success');
+  showMessage('Your password has been set! You can now log in.', 'success');
 });
 </script>
 

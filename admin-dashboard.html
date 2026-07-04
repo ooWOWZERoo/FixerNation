@@ -113,7 +113,7 @@
 
       <div class="a-stat-grid">
         <div class="a-stat-card">
-          <div class="label">Invoices Issued</div>
+          <div class="label">Purchase Order Invoices Issued</div>
           <div class="value" id="finInvoicesTotal">—</div>
           <div class="delta" id="finInvoicesBreakdown"></div>
         </div>
@@ -406,7 +406,10 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   document.getElementById('finActiveCustomers').textContent = data.activeCustomersLast30Days;
 
   document.getElementById('finInvoicesTotal').textContent = data.invoices.total;
-  document.getElementById('finInvoicesBreakdown').textContent = `${data.invoices.paid} paid · ${data.invoices.unpaid} unpaid · ${data.invoices.cancelled} cancelled`;
+  document.getElementById('finInvoicesBreakdown').innerHTML =
+    `<a href="admin-invoices.html?status=paid" style="color:inherit; text-decoration:underline;">${data.invoices.paid} paid</a> · ` +
+    `<a href="admin-invoices.html?status=unpaid" style="color:inherit; text-decoration:underline;">${data.invoices.unpaid} unpaid</a> · ` +
+    `<a href="admin-invoices.html?status=cancelled" style="color:inherit; text-decoration:underline;">${data.invoices.cancelled} cancelled</a>`;
   document.getElementById('finInvoicesOutstanding').textContent = fnFormatCurrency(data.invoices.outstandingTotal);
   document.getElementById('finQuotes30').textContent = data.quotes.last30Days;
   document.getElementById('finQuotesTotal').textContent = data.quotes.total;

@@ -54,8 +54,13 @@ async function fetchInvoiceWithLineItems(id) {
   };
 }
 
+const VALID_STATUSES = ['paid', 'unpaid', 'cancelled'];
+
 router.get('/', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC');
+  const status = req.query.status;
+  const [rows] = status && VALID_STATUSES.includes(status)
+    ? await pool.query('SELECT * FROM invoices WHERE status = ? ORDER BY created_at DESC', [status])
+    : await pool.query('SELECT * FROM invoices ORDER BY created_at DESC');
   if (!rows.length) return res.json({ invoices: [] });
 
   const contactIds = [...new Set(rows.map(i => i.contact_id))];

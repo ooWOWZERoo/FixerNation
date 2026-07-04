@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ---
 
+## Release 12 — 2026-07-04 — Admin management, and invoice linking on the Dashboard
+
+- **Admins (Settings)** got a full set of management controls per admin: resend a pending admin's invite email, send an active admin a password-reset link, edit their username/email, or delete their account. An admin can't delete their own account, and the last remaining admin can never be deleted — the site always keeps a way in.
+- **Purchase Order Invoices Issued** on the Dashboard's Financial Insights now links out just like "Sales Today"/"Sales All-Time" do for orders: the paid/unpaid/cancelled counts are each a distinct link straight to a pre-filtered Invoices list. The stat label itself was renamed from "Invoices Issued" to "Purchase Order Invoices Issued" for clarity (all invoices on this site come from PO checkouts, not card payments).
+- Invoices can now be filtered by status directly on `admin-invoices.html` via a dropdown, in addition to arriving pre-filtered from the Dashboard link.
+
 ## Release 11 — 2026-07-04 — Visitor path tracking and a real Insights section
 
 - **New "Visitor Paths" dashboard**: anonymous, session-based tracking of how people navigate the public site — entry page, the sequence of pages visited, and key interactions (book views, add-to-cart, curriculum resource/quiz opens, quote requests, Ask The Fixer submissions). No names, emails, or IP addresses are stored — sessions are pseudonymous and reset when a visitor closes their browser tab. Click any recent session to see its full path.

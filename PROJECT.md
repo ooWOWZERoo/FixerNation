@@ -49,8 +49,8 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
 | License products, school-domain lookup/management | admin-licenses.html |
-| Invoices (PO orders, resend, cancel/delete, print) | admin-invoices.html |
-| Settings (admin password, invite new admins) | admin-settings.html |
+| Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
+| Settings (own password, admin management — invite/resend-invite/password-reset/edit/delete) | admin-settings.html |
 | Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes) |
 
 Admin login is real (bcrypt-hashed password, JWT session) — there is no demo/seeded credential shown here on purpose; ask whoever manages the account.

@@ -9,6 +9,9 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="admin-common.css?v=11">
+<style>
+  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:#fff; color:var(--a-text);}
+</style>
 </head>
 <body>
 
@@ -45,6 +48,12 @@
       <div class="a-card">
         <div class="a-card-head">
           <h2>Purchase Order Invoices</h2>
+          <select id="statusFilter" class="a-filter-select" onchange="applyStatusFilter()">
+            <option value="">All Statuses</option>
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
         </div>
         <table class="a-table" id="invoicesTable">
           <thead><tr><th>Invoice #</th><th>School / Buyer</th><th>PO Number</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th></th></tr></thead>
@@ -65,8 +74,10 @@ fnRequireAuth();
 
 let invoicesCache = [];
 
-async function loadInvoices() {
-  const r = await fetch('/api/invoices', { credentials: 'include' });
+async function loadInvoices(status) {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  const r = await fetch(`/api/invoices?${params}`, { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
   invoicesCache = (await r.json()).invoices || [];
 
@@ -116,7 +127,7 @@ async function toggleInvoiceStatus(id, newStatus) {
     fnToast(err.error || 'Could not update invoice');
     return;
   }
-  loadInvoices();
+  loadInvoices(document.getElementById('statusFilter').value);
   fnToast(newStatus === 'paid' ? 'Marked as paid' : 'Marked as unpaid');
 }
 
@@ -150,7 +161,7 @@ async function cancelInvoice(id) {
     fnToast(err.error || 'Could not cancel invoice');
     return;
   }
-  loadInvoices();
+  loadInvoices(document.getElementById('statusFilter').value);
   fnToast('Invoice cancelled');
 }
 
@@ -166,11 +177,20 @@ async function deleteInvoice(id) {
     fnToast(err.error || 'Could not delete invoice');
     return;
   }
-  loadInvoices();
+  loadInvoices(document.getElementById('statusFilter').value);
   fnToast('Invoice deleted');
 }
 
-loadInvoices();
+function applyStatusFilter() {
+  const status = document.getElementById('statusFilter').value;
+  loadInvoices(status);
+}
+
+(function init() {
+  const status = new URLSearchParams(window.location.search).get('status') || '';
+  document.getElementById('statusFilter').value = status;
+  loadInvoices(status);
+})();
 </script>
 
 </body>

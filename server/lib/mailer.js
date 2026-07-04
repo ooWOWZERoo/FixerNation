@@ -100,6 +100,18 @@ async function sendAdminInviteEmail({ to, username, inviteUrl }) {
   });
 }
 
+// Same token/landing-page mechanism as sendAdminInviteEmail, distinct copy
+// since this is a password reset for an already-active admin, not an invite.
+async function sendAdminPasswordResetEmail({ to, username, resetUrl }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: 'Reset your Fixer Nation admin password',
+    text: `Hi ${username},\n\nAn admin password reset was requested for your Fixer Nation Education account. Visit this link to set a new password:\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
+    html: `<p>Hi ${username},</p><p>An admin password reset was requested for your Fixer Nation Education account. Click below to set a new password:</p><p><a href="${resetUrl}">Reset my password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
+  });
+}
+
 const CONTACT_INBOX = 'admin@fixernationeducation.com';
 
 async function sendContactFormEmail({ formName, fields, replyTo }) {
@@ -145,4 +157,4 @@ async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total,
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendContactFormEmail, sendInvoiceEmail };
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail };

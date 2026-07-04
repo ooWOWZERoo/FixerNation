@@ -71,7 +71,7 @@
           <button class="a-btn a-btn-primary" onclick="openInviteAdminModal()">+ Invite Admin</button>
         </div>
         <table class="a-table" id="adminsTable">
-          <thead><tr><th>Username</th><th>Email</th><th>Status</th><th>Added</th></tr></thead>
+          <thead><tr><th>Username</th><th>Email</th><th>Status</th><th>Added</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -96,6 +96,26 @@
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeInviteAdminModal()">Cancel</button>
       <button class="a-btn a-btn-primary" onclick="sendAdminInvite()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit admin modal -->
+<div class="a-modal-overlay" id="editAdminModalOverlay">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>Edit Admin</h3>
+      <button class="a-modal-close" onclick="closeEditAdminModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-error" id="editAdminError"></div>
+      <input type="hidden" id="editAdminId">
+      <div class="a-field"><label>Username</label><input type="text" id="editAdminUsername"></div>
+      <div class="a-field"><label>Email</label><input type="email" id="editAdminEmail"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeEditAdminModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="saveAdminEdit()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -135,18 +155,106 @@ document.getElementById('passwordForm').addEventListener('submit', async functio
   fnToast('Password updated');
 });
 
+let adminsCache = [];
+
 async function loadAdmins() {
   const r = await fetch('/api/auth/admins', { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
   const { admins } = await r.json();
+  adminsCache = admins;
   document.querySelector('#adminsTable tbody').innerHTML = admins.map(a => `
     <tr>
       <td class="a-cell-title">${a.username}</td>
       <td>${a.email || '—'}</td>
       <td><span class="a-pill ${a.emailVerified ? 'a-pill-success' : 'a-pill-neutral'}">${a.emailVerified ? 'Active' : 'Pending'}</span></td>
       <td>${fnFormatDate(a.createdAt)}</td>
+      <td>
+        <div class="a-row-actions">
+          ${a.emailVerified
+            ? `<button class="a-icon-btn" title="Send password reset" onclick="sendAdminPasswordReset(${a.id})">🔑</button>`
+            : `<button class="a-icon-btn" title="Resend invite email" onclick="resendAdminInvite(${a.id})">📧</button>`}
+          <button class="a-icon-btn" title="Edit admin" onclick="openEditAdminModal(${a.id})">✏️</button>
+          <button class="a-icon-btn danger" title="Delete admin" onclick="deleteAdmin(${a.id})">🗑️</button>
+        </div>
+      </td>
     </tr>
   `).join('');
+}
+
+async function resendAdminInvite(id) {
+  const r = await fetch(`/api/auth/admins/${id}/resend-invite`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(result.error || 'Could not resend invite'); return; }
+  fnToast('Invite resent');
+}
+
+async function sendAdminPasswordReset(id) {
+  if (!confirm('Send this admin a password reset link by email?')) return;
+  const r = await fetch(`/api/auth/admins/${id}/send-password-reset`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(result.error || 'Could not send reset link'); return; }
+  fnToast('Password reset link sent');
+}
+
+function openEditAdminModal(id) {
+  const admin = adminsCache.find(a => a.id === id);
+  if (!admin) return;
+  document.getElementById('editAdminError').classList.remove('show');
+  document.getElementById('editAdminId').value = admin.id;
+  document.getElementById('editAdminUsername').value = admin.username;
+  document.getElementById('editAdminEmail').value = admin.email || '';
+  document.getElementById('editAdminModalOverlay').classList.add('show');
+}
+
+function closeEditAdminModal() {
+  document.getElementById('editAdminModalOverlay').classList.remove('show');
+}
+
+async function saveAdminEdit() {
+  const id = document.getElementById('editAdminId').value;
+  const username = document.getElementById('editAdminUsername').value.trim();
+  const email = document.getElementById('editAdminEmail').value.trim();
+  const errorBox = document.getElementById('editAdminError');
+  errorBox.classList.remove('show');
+
+  const r = await fetch(`/api/auth/admins/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    errorBox.textContent = result.error || 'Could not save changes.';
+    errorBox.classList.add('show');
+    return;
+  }
+  closeEditAdminModal();
+  loadAdmins();
+  fnToast('Admin updated');
+}
+
+async function deleteAdmin(id) {
+  if (!confirm('Delete this admin account? This cannot be undone.')) return;
+  const r = await fetch(`/api/auth/admins/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(result.error || 'Could not delete admin'); return; }
+  loadAdmins();
+  fnToast('Admin deleted');
 }
 
 function openInviteAdminModal() {
