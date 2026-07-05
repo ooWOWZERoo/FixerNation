@@ -8,13 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=11">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=12">
 <style>
-  .a-demo-banner{background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:12px; padding:14px 18px; font-size:13px; font-weight:600; margin-bottom:22px; display:flex; align-items:center; gap:10px;}
+  .a-demo-banner{background:var(--a-warning-soft); color:var(--a-warning); border:1px solid var(--a-warning); border-radius:12px; padding:14px 18px; font-size:13px; font-weight:600; margin-bottom:22px; display:flex; align-items:center; gap:10px;}
   .a-audience-preview{background:var(--a-bg); border:1px solid var(--a-border); border-radius:10px; padding:12px 14px; font-size:13.5px; margin-top:6px;}
   .a-audience-preview b{color:var(--a-accent);}
   .a-format-btn{padding:8px 16px; font-size:13px;}
-  .a-format-btn.active{background:var(--a-accent); color:#fff; border-color:var(--a-accent);}
+  .a-format-btn.active{background:var(--a-accent-fill); color:#fff; border-color:var(--a-accent-fill);}
   #body.a-body-html{font-family:'SFMono-Regular', Consolas, 'Courier New', monospace; font-size:12.5px;}
 </style>
 </head>
@@ -46,6 +47,7 @@
   <div class="a-main">
     <div class="a-topbar">
       <h1>Email Campaigns</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
       <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
 
@@ -197,7 +199,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=11"></script>
+<script src="admin-common.js?v=12"></script>
 <script>
 fnRequireAuth();
 

@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ---
 
+## Release 13 — 2026-07-05 — Admin visual redesign, with a light/dark theme
+
+- **Full visual refresh of the admin backend**: moved off the old generic indigo/navy look to a palette drawn from Fixer Nation's own brand (teal, coral, gold), so the admin dashboard and the public site finally feel like one product. Flatter cards, pill-shaped nav highlights, and softer borders replace the old heavier drop shadows.
+- **Dark theme**, toggled from a sun/moon switch in the topbar of every dashboard page. Defaults to the browser's system preference on first visit, then remembers your choice. Every color used across the shared admin stylesheet — cards, tables, pills, modals, buttons, chart bars — has a matching dark-mode value, not just an inverted filter.
+- The admin login screen keeps a fixed brand-teal gradient regardless of the dashboard's theme setting (a deliberate exception, matching how most products treat their sign-in screen as a fixed brand moment).
+
 ## Release 12 — 2026-07-04 — Admin management, and invoice linking on the Dashboard
 
 - **Admins (Settings)** got a full set of management controls per admin: resend a pending admin's invite email, send an active admin a password-reset link, edit their username/email, or delete their account. An admin can't delete their own account, and the last remaining admin can never be deleted — the site always keeps a way in.

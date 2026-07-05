@@ -53,6 +53,8 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Settings (own password, admin management — invite/resend-invite/password-reset/edit/delete) | admin-settings.html |
 | Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes) |
 
+Admin styling uses FN's own brand palette (teal/coral/gold) with a light/dark theme, toggled from the topbar and persisted in `localStorage`. `admin-login.html` intentionally stays a fixed brand-teal gradient regardless of theme choice. The login/accept-invite/invoice-print pages have their own self-contained styles and don't participate in the shared theme.
+
 Admin login is real (bcrypt-hashed password, JWT session) — there is no demo/seeded credential shown here on purpose; ask whoever manages the account.
 
 ## Licensing & checkout

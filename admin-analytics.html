@@ -8,7 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=11">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=12">
 <style>
   .analytics-two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
   .analytics-list{list-style:none; margin:0; padding:0;}
@@ -49,6 +50,7 @@
   <div class="a-main">
     <div class="a-topbar">
       <h1>Visitor Paths</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
       <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
 
@@ -125,7 +127,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=11"></script>
+<script src="admin-common.js?v=12"></script>
 <script>
 fnRequireAuth();
 

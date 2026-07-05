@@ -196,6 +196,25 @@ function fnToast(msg) {
   window._fnToastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
 }
 
+// Light/dark theme for the admin backend. The actual attribute is set as
+// early as possible by a tiny inline script in each page's <head> (before
+// admin-common.css loads) to avoid a flash of the wrong theme — this just
+// handles the toggle click and keeps any toggle button's icon in sync.
+function fnToggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('fnTheme', next);
+  fnSyncThemeToggleUI();
+}
+
+function fnSyncThemeToggleUI() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.querySelectorAll('.a-theme-toggle .ic-sun').forEach(el => el.classList.toggle('on', !isDark));
+  document.querySelectorAll('.a-theme-toggle .ic-moon').forEach(el => el.classList.toggle('on', isDark));
+}
+
+document.addEventListener('DOMContentLoaded', fnSyncThemeToggleUI);
+
 // Populates a hand-authored book detail page (book-*.html) with live data
 // from the database, matched by exact title. Shared across all book detail
 // pages since they share the same markup structure (.eyebrow, h1, .product-price,

@@ -8,9 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="admin-common.css?v=11">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=12">
 <style>
-  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:#fff; color:var(--a-text);}
+  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text);}
   #contactsTable th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
   #contactsTable th.sortable:hover{color:var(--a-accent);}
   .sort-arrow{font-size:10px; margin-left:3px; opacity:0.7;}
@@ -18,7 +19,7 @@
   .a-pagination .a-btn{padding:7px 14px; font-size:12.5px;}
   .a-pagination .a-btn:disabled{opacity:0.4; cursor:not-allowed;}
   .fn-columns-wrap{position:relative;}
-  .fn-columns-menu{position:absolute; top:calc(100% + 6px); right:0; background:#fff; border:1px solid var(--a-border); border-radius:10px; box-shadow:var(--a-shadow); padding:10px 14px; z-index:50; min-width:180px;}
+  .fn-columns-menu{position:absolute; top:calc(100% + 6px); right:0; background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; box-shadow:var(--a-shadow); padding:10px 14px; z-index:50; min-width:180px;}
   .fn-columns-menu label{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0; cursor:pointer; white-space:nowrap;}
   .fn-columns-menu label input{margin:0;}
 </style>
@@ -51,6 +52,7 @@
   <div class="a-main">
     <div class="a-topbar">
       <h1>Contacts Management</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
       <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
 
@@ -269,7 +271,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=11"></script>
+<script src="admin-common.js?v=12"></script>
 <script>
 fnRequireAuth();
 
