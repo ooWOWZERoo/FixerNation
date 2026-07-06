@@ -430,9 +430,24 @@ CREATE TABLE IF NOT EXISTS analytics_sessions (
 CREATE TABLE IF NOT EXISTS analytics_events (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   session_id VARCHAR(36) NOT NULL,
-  event_type VARCHAR(32) NOT NULL, -- 'pageview' | 'book_view' | 'add_to_cart' | 'resource_open' | 'quiz_open' | 'quote_request' | 'ask_the_fixer'
+  event_type VARCHAR(32) NOT NULL, -- 'pageview' | 'book_view' | 'add_to_cart' | 'resource_open' | 'quiz_open' | 'quote_request' | 'ask_the_fixer' | 'contact_us'
   page VARCHAR(512),
   label VARCHAR(255), -- human-readable detail, e.g. a book title or resource name
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (session_id) REFERENCES analytics_sessions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Site-wide admin-configurable settings (generic key/value store)
+-- ---------------------------------------------------------------------------
+
+-- Simple key/value store for small admin-editable config values that don't
+-- warrant their own table — e.g. where "Ask The Fixer"/"Request a Quote"
+-- form submissions get emailed. Absent keys fall back to a hardcoded
+-- default in code (see server/lib/settings.js), so this table can stay
+-- empty until an admin actually changes something.
+CREATE TABLE IF NOT EXISTS settings (
+  setting_key VARCHAR(64) PRIMARY KEY,
+  setting_value VARCHAR(255) NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

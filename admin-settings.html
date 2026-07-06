@@ -9,7 +9,7 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
-<link rel="stylesheet" href="admin-common.css?v=12">
+<link rel="stylesheet" href="admin-common.css?v=13">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
     </nav>
     <div class="a-sidebar-foot">
       <a href="admin-settings.html" class="active"><span class="ic">⚙️</span><span class="label">Settings</span></a>
-      <a href="fixernation-redesign.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
       <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
     </div>
   </aside>
@@ -64,6 +64,62 @@
           </div>
           <div class="a-note">At least 8 characters.</div>
           <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Update Password</button>
+        </form>
+      </div>
+
+      <div class="a-card" style="margin-top:24px; max-width:480px;">
+        <div class="a-card-head">
+          <h2>Contact Email Routing</h2>
+        </div>
+        <form id="contactEmailsForm">
+          <div class="a-error" id="contactEmailsError"></div>
+          <div class="a-field">
+            <label>"Ask The Fixer" submissions go to</label>
+            <input type="email" id="contactEmailAskTheFixer" required>
+          </div>
+          <div class="a-field">
+            <label>"Request a Formal Quotation" submissions go to</label>
+            <input type="email" id="contactEmailQuote" required>
+          </div>
+          <div class="a-field">
+            <label>Privacy/data requests (Your Privacy Choices page) go to</label>
+            <input type="email" id="contactEmailPrivacy" required>
+          </div>
+          <div class="a-field">
+            <label>General "Contact Us" submissions go to</label>
+            <input type="email" id="contactEmailGeneral" required>
+          </div>
+          <div class="a-note">Each public contact form on the site emails whoever is set here.</div>
+          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
+        </form>
+      </div>
+
+      <div class="a-card" style="margin-top:24px; max-width:480px;">
+        <div class="a-card-head">
+          <h2>Invoice Branding</h2>
+        </div>
+        <form id="invoiceBrandingForm">
+          <div class="a-error" id="invoiceBrandingError"></div>
+          <div class="a-field">
+            <label>Logo</label>
+            <div class="a-image-preview" id="invoiceLogoPreview" style="aspect-ratio:auto; height:100px;">No logo uploaded</div>
+            <div style="display:flex; gap:10px;">
+              <input type="file" id="invoiceLogoFile" accept="image/*" style="flex:1;">
+            </div>
+            <div style="margin-top:8px;">
+              <input type="text" id="invoiceLogoUrl" placeholder="...or paste an image URL / filename">
+            </div>
+            <div class="a-note">Shown next to the business name at the top of every printed/emailed invoice. Leave empty to use the default "FN" mark.</div>
+          </div>
+          <div class="a-field">
+            <label>Business Name</label>
+            <input type="text" id="invoiceBusinessName" required>
+          </div>
+          <div class="a-field">
+            <label>Tagline / Footer Line</label>
+            <input type="text" id="invoiceTagline" placeholder="e.g. fixernationeducation.com">
+          </div>
+          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
         </form>
       </div>
 
@@ -122,7 +178,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=12"></script>
+<script src="admin-common.js?v=13"></script>
 <script>
 fnRequireAuth();
 
@@ -155,6 +211,115 @@ document.getElementById('passwordForm').addEventListener('submit', async functio
   }
   document.getElementById('passwordForm').reset();
   fnToast('Password updated');
+});
+
+async function loadContactEmails() {
+  const r = await fetch('/api/settings/contact-emails', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+  document.getElementById('contactEmailAskTheFixer').value = data.askTheFixer || '';
+  document.getElementById('contactEmailQuote').value = data.quote || '';
+  document.getElementById('contactEmailPrivacy').value = data.privacy || '';
+  document.getElementById('contactEmailGeneral').value = data.general || '';
+}
+
+document.getElementById('contactEmailsForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const askTheFixer = document.getElementById('contactEmailAskTheFixer').value.trim();
+  const quote = document.getElementById('contactEmailQuote').value.trim();
+  const privacy = document.getElementById('contactEmailPrivacy').value.trim();
+  const general = document.getElementById('contactEmailGeneral').value.trim();
+  const errorBox = document.getElementById('contactEmailsError');
+  errorBox.classList.remove('show');
+
+  const r = await fetch('/api/settings/contact-emails', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ askTheFixer, quote, privacy, general }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    errorBox.textContent = result.error || 'Could not save changes.';
+    errorBox.classList.add('show');
+    return;
+  }
+  fnToast('Contact email routing updated');
+});
+
+let invoiceLogoData = '';
+let pendingInvoiceLogoFile = null;
+
+async function loadInvoiceBranding() {
+  const r = await fetch('/api/settings/invoice-branding', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+  document.getElementById('invoiceBusinessName').value = data.businessName || '';
+  document.getElementById('invoiceTagline').value = data.tagline || '';
+  document.getElementById('invoiceLogoUrl').value = data.logoUrl || '';
+  invoiceLogoData = data.logoUrl || '';
+  pendingInvoiceLogoFile = null;
+  document.getElementById('invoiceLogoPreview').innerHTML = data.logoUrl
+    ? `<img src="${data.logoUrl}" onerror="this.parentElement.textContent='Preview unavailable'">`
+    : 'No logo uploaded';
+}
+
+document.getElementById('invoiceLogoFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  pendingInvoiceLogoFile = file;
+  document.getElementById('invoiceLogoUrl').value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('invoiceLogoPreview').innerHTML = `<img src="${ev.target.result}">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('invoiceLogoUrl').addEventListener('input', function(e) {
+  const val = e.target.value.trim();
+  if (val) {
+    pendingInvoiceLogoFile = null;
+    invoiceLogoData = val;
+    document.getElementById('invoiceLogoPreview').innerHTML = `<img src="${val}" onerror="this.parentElement.textContent='Preview unavailable'">`;
+  }
+});
+
+document.getElementById('invoiceBrandingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const errorBox = document.getElementById('invoiceBrandingError');
+  errorBox.classList.remove('show');
+
+  let logoUrl = invoiceLogoData;
+  if (pendingInvoiceLogoFile) {
+    const uploadedUrl = await fnUploadFile(pendingInvoiceLogoFile);
+    if (uploadedUrl === null) return;
+    logoUrl = uploadedUrl;
+  }
+
+  const businessName = document.getElementById('invoiceBusinessName').value.trim();
+  const tagline = document.getElementById('invoiceTagline').value.trim();
+
+  const r = await fetch('/api/settings/invoice-branding', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ businessName, tagline, logoUrl }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    errorBox.textContent = result.error || 'Could not save changes.';
+    errorBox.classList.add('show');
+    return;
+  }
+  pendingInvoiceLogoFile = null;
+  invoiceLogoData = logoUrl;
+  document.getElementById('invoiceLogoUrl').value = logoUrl;
+  fnToast('Invoice branding updated');
 });
 
 let adminsCache = [];
@@ -294,6 +459,8 @@ async function sendAdminInvite() {
   fnToast('Invite sent');
 }
 
+loadContactEmails();
+loadInvoiceBranding();
 loadAdmins();
 </script>
 

@@ -105,7 +105,6 @@
   .form-field textarea{min-height:110px; resize:vertical;}
   .form-field input:focus, .form-field textarea:focus{outline:none; border-color:var(--coral);}
   .success-msg{display:none; background:#E4F3EE; color:var(--teal-dark); border-radius:12px; padding:14px 18px; margin-top:16px; font-weight:600; font-size:14px;}
-  .privacy-link{font-size:12px; color:var(--ink-soft); text-decoration:underline; display:block; text-align:center; margin-top:18px;}
 
   footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:56px 0 28px;}
   .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:44px;}
@@ -154,9 +153,9 @@
 
 <header>
   <div class="nav wrap">
-    <a href="fixernation-redesign.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
     <nav class="nav-links">
-      <a href="fixernation-redesign.html">Home</a>
+      <a href="index.html">Home</a>
       <a href="about.html">About</a>
       <a href="books.html">Books</a>
       <a href="blog.html">FN Blogs</a>
@@ -326,7 +325,6 @@
         </div>
         <div class="form-field" style="margin-bottom:16px;"><label>Message</label><textarea id="quoteMessage" placeholder="Number of licenses / teachers..."></textarea></div>
         <button type="submit" class="btn btn-primary" style="width:100%;">Request Quotation</button>
-        <a href="#" class="privacy-link">Do Not Sell My Personal Information</a>
         <div class="success-msg" id="quoteSuccess">Thank you for your interest — we'll follow up shortly.</div>
         <div class="error-msg" id="quoteErrorMsg" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;">Something went wrong sending your request — please try again.</div>
       </form>
@@ -345,7 +343,7 @@
       <div><h4>Community</h4><ul><li><a href="fnnetwork.html">FN Network</a></li><li><a href="askthefixer.html">Ask The Fixer</a></li><li><a href="join.html">Join Fixer Nation</a></li></ul></div>
       <div><h4>Schools</h4><ul><li><a href="education-portal.html">National Education Portal</a></li><li><a href="education-schools.html">2D Education - Schools</a></li><li><a href="programs.html">Programs</a></li></ul></div>
     </div>
-    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved.</div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved. · <a href="privacy-choices.html" style="color:inherit;">Your Privacy Choices</a></div>
   </div>
 </footer>
 
@@ -362,7 +360,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=12"></script>
+<script src="admin-common.js?v=13"></script>
 <script>fnTrackPageview();</script>
 <script src="cart.js"></script>
 <script>

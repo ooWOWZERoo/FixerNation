@@ -17,7 +17,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 
 | Page | v1 file | v2 file |
 |---|---|---|
-| Home | fixernation-redesign.html | fixernation-redesign-v2.html |
+| Home | index.html | fixernation-redesign-v2.html |
 | About | about.html | about-v2.html |
 | Books listing | books.html | books-v2.html |
 | Book detail — Kill the Bully | book-kill-the-bully.html | book-kill-the-bully-v2.html |
@@ -36,6 +36,8 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Shopping cart (v1 only) | cart.html | — |
 | Self-service license management (v1 only) | my-license.html | — |
 | Password reset (v1 only) | reset-password.html | — |
+| Your Privacy Choices (v1 only) | privacy-choices.html | — |
+| Contact Us (v1 only) | contact.html | — |
 
 ## Admin backend
 
@@ -50,7 +52,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
 | License products, school-domain lookup/management | admin-licenses.html |
 | Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
-| Settings (own password, admin management — invite/resend-invite/password-reset/edit/delete) | admin-settings.html |
+| Settings (own password, admin management, contact-form email routing for 4 forms, invoice branding) | admin-settings.html |
 | Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes) |
 
 Admin styling uses FN's own brand palette (teal/coral/gold) with a light/dark theme, toggled from the topbar and persisted in `localStorage`. `admin-login.html` intentionally stays a fixed brand-teal gradient regardless of theme choice. The login/accept-invite/invoice-print pages have their own self-contained styles and don't participate in the shared theme.
@@ -78,6 +80,7 @@ Email campaigns (`admin-campaigns.html`) send for real via SMTP, always excludin
 - **Stripe checkout isn't live yet** — see Licensing & checkout above.
 - **No automated tests.** All verification is manual (curl with cookie jars, or the browser) after each deploy.
 - **`-v2` pages are frozen** by original project decision, not neglected.
+- **`privacy-choices.html`'s "we don't sell/share data" framing reflects what's actually implemented today** — no third-party ad trackers, no data brokers, sessionStorage-only anonymous analytics. This isn't legal advice; if a real third-party data relationship is ever added, that page needs to be revisited. The analytics opt-out toggle on that page sets a real `localStorage` flag (`fnAnalyticsOptOut`) that `fnTrackEvent`/`fnTrackPageview` check before firing.
 - Full change history lives in `CHANGELOG.md`, not inline in this file.
 
 ## Assets

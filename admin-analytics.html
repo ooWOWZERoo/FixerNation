@@ -9,17 +9,34 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
-<link rel="stylesheet" href="admin-common.css?v=12">
+<link rel="stylesheet" href="admin-common.css?v=13">
 <style>
   .analytics-two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
   .analytics-list{list-style:none; margin:0; padding:0;}
   .analytics-list li{display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid var(--a-border); font-size:13.5px;}
   .analytics-list li:first-child{border-top:none;}
   .analytics-list .count{color:var(--a-text-soft); font-weight:600;}
-  .path-step{display:flex; gap:12px; padding:9px 0; border-top:1px solid var(--a-border); font-size:13px;}
-  .path-step:first-child{border-top:none;}
-  .path-step .time{color:var(--a-text-soft); white-space:nowrap; min-width:150px;}
-  .path-step .type{font-weight:700; text-transform:uppercase; font-size:10.5px; letter-spacing:0.03em; color:var(--a-accent); min-width:90px;}
+  .fn-journey-map{display:flex; flex-wrap:wrap; align-items:flex-start; row-gap:64px; position:relative;}
+  .fn-journey-wrap-svg{position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible; pointer-events:none;}
+  .fn-journey-node{display:flex; flex-direction:column; align-items:center; text-align:center; width:128px; flex-shrink:0; position:relative; margin-left:24px;}
+  .fn-journey-node:first-child{margin-left:0;}
+  .fn-journey-connector{position:absolute; left:-24px; top:-1px; width:22px; text-align:center; font-size:15px; color:var(--a-text-soft); line-height:1;}
+  .fn-journey-dot{width:13px; height:13px; border-radius:50%; margin-bottom:8px; flex-shrink:0;}
+  .fn-journey-dot.cat-entry{background:var(--a-accent);}
+  .fn-journey-dot.cat-engage{background:var(--a-gold);}
+  .fn-journey-dot.cat-intent{background:var(--a-coral);}
+  .fn-journey-node-label{font-size:11.5px; font-weight:600; line-height:1.35; overflow-wrap:anywhere;}
+  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text);}
+  .fn-funnel-stage{margin-bottom:4px;}
+  .fn-funnel-row{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; gap:12px;}
+  .fn-funnel-label{font-weight:700; font-size:14px;}
+  .fn-funnel-count{font-size:14px; font-weight:700; white-space:nowrap;}
+  .fn-funnel-pct{color:var(--a-text-soft); font-weight:600; font-size:12.5px; margin-left:4px;}
+  .fn-funnel-track{width:100%; height:34px; border-radius:8px; background:var(--a-neutral-soft); overflow:hidden;}
+  .fn-funnel-fill{height:100%; background:var(--a-accent-fill); border-radius:8px; transition:width .3s ease; min-width:2px;}
+  .fn-funnel-drop{display:flex; align-items:center; gap:6px; padding:10px 4px 10px 14px; font-size:12.5px; color:var(--a-danger); font-weight:600;}
+  .fn-funnel-chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--a-border);}
+  .fn-funnel-chip{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:var(--a-accent-soft); color:var(--a-accent-on-soft); font-size:12.5px; font-weight:700;}
 </style>
 </head>
 <body>
@@ -42,7 +59,7 @@
     </nav>
     <div class="a-sidebar-foot">
       <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
-      <a href="fixernation-redesign.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
       <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
     </div>
   </aside>
@@ -56,6 +73,28 @@
 
     <div class="a-content">
       <div class="a-note" style="margin-bottom:18px;">👣 Anonymous, session-based tracking (no names, emails, or IP addresses stored) — a "session" is one browser tab's visit, so the same person visiting twice in different tabs/days shows up as separate sessions.</div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Traffic Funnel</h2>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <input type="date" id="funnelRangeStart" class="a-filter-select">
+            <span style="color:var(--a-text-soft); font-size:13px;">to</span>
+            <input type="date" id="funnelRangeEnd" class="a-filter-select">
+            <button class="a-btn a-btn-outline" onclick="applyFunnelRange()">Apply</button>
+            <button class="a-btn a-btn-outline" onclick="setFunnelRangePreset(7)">Last 7 Days</button>
+            <button class="a-btn a-btn-outline" onclick="setFunnelRangePreset(30)">Last 30 Days</button>
+            <button class="a-btn a-btn-outline" onclick="setFunnelRangePreset(90)">Last 90 Days</button>
+          </div>
+        </div>
+        <div class="a-note" style="margin-bottom:16px;">There's no "purchased" stage here — analytics sessions are anonymous by design, with no link to a purchase record. This tracks how far visitors get, not who buys.</div>
+        <div id="funnelStages"></div>
+        <div class="fn-funnel-chip-row" id="funnelChips"></div>
+        <div class="a-empty" id="funnelEmpty" style="display:none;">
+          <div class="big">🕳️</div>
+          No visitor sessions recorded in this range.
+        </div>
+      </div>
 
       <div class="a-stat-grid" style="grid-template-columns:repeat(5,1fr);">
         <div class="a-stat-card">
@@ -112,14 +151,14 @@
 
 <!-- Session Path Modal -->
 <div class="a-modal-overlay" id="pathModalOverlay">
-  <div class="a-modal" style="max-width:600px;">
+  <div class="a-modal" style="max-width:780px;">
     <div class="a-modal-head">
       <h3>Visitor Path</h3>
       <button class="a-modal-close" onclick="closePathModal()">✕</button>
     </div>
     <div class="a-modal-body">
-      <div class="a-note" id="pathMeta" style="margin-bottom:16px;"></div>
-      <div id="pathTimeline"></div>
+      <div class="a-note" id="pathMeta" style="margin-bottom:18px;"></div>
+      <div class="fn-journey-map" id="pathTimeline"></div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closePathModal()">Close</button>
@@ -127,7 +166,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=12"></script>
+<script src="admin-common.js?v=13"></script>
 <script>
 fnRequireAuth();
 
@@ -139,8 +178,75 @@ function formatEventType(type) {
     resource_open: 'Resource Opened',
     quote_request: 'Quote Requested',
     ask_the_fixer: 'Ask The Fixer',
+    contact_us: 'Contact Us',
   };
   return labels[type] || type;
+}
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+const FUNNEL_ICONS = { add_to_cart: '🛒', quote_request: '📝', ask_the_fixer: '✉️', contact_us: '📬' };
+
+async function loadFunnel(start, end) {
+  const params = new URLSearchParams();
+  if (start) params.set('start', start);
+  if (end) params.set('end', end);
+  const r = await fetch(`/api/analytics/funnel?${params}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+  document.getElementById('funnelRangeStart').value = data.start;
+  document.getElementById('funnelRangeEnd').value = data.end;
+  renderFunnel(data);
+}
+
+function renderFunnel(data) {
+  const top = data.stages[0].count;
+  document.getElementById('funnelEmpty').style.display = top === 0 ? 'block' : 'none';
+  document.getElementById('funnelStages').style.display = top === 0 ? 'none' : 'block';
+  document.getElementById('funnelChips').style.display = top === 0 ? 'none' : 'flex';
+  if (top === 0) return;
+
+  const stagesHtml = data.stages.map((stage, i) => {
+    const pct = top > 0 ? Math.round((stage.count / top) * 100) : 0;
+    let dropHtml = '';
+    if (i > 0) {
+      const prev = data.stages[i - 1];
+      const dropped = prev.count - stage.count;
+      const dropPct = prev.count > 0 ? Math.round((dropped / prev.count) * 100) : 0;
+      dropHtml = `<div class="fn-funnel-drop">↓ ${dropPct}% dropped off (${dropped.toLocaleString()} session${dropped === 1 ? '' : 's'})</div>`;
+    }
+    return `${dropHtml}
+      <div class="fn-funnel-stage">
+        <div class="fn-funnel-row">
+          <div class="fn-funnel-label">${stage.label}</div>
+          <div class="fn-funnel-count">${stage.count.toLocaleString()}<span class="fn-funnel-pct">${pct}%</span></div>
+        </div>
+        <div class="fn-funnel-track"><div class="fn-funnel-fill" style="width:${Math.max(pct, top > 0 ? 1 : 0)}%"></div></div>
+      </div>`;
+  }).join('');
+  document.getElementById('funnelStages').innerHTML = stagesHtml;
+
+  const chips = data.intentBreakdown.map(b =>
+    `<span class="fn-funnel-chip">${FUNNEL_ICONS[b.eventType] || '•'} ${b.count.toLocaleString()} ${formatEventType(b.eventType).toLowerCase()}</span>`
+  ).join('');
+  document.getElementById('funnelChips').innerHTML = chips;
+}
+
+function setFunnelRangePreset(days) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - (days - 1));
+  loadFunnel(isoDate(start), isoDate(end));
+}
+
+function applyFunnelRange() {
+  const start = document.getElementById('funnelRangeStart').value;
+  const end = document.getElementById('funnelRangeEnd').value;
+  if (!start || !end) { fnToast('Choose both a start and end date'); return; }
+  loadFunnel(start, end);
 }
 
 async function loadSummary() {
@@ -194,6 +300,41 @@ async function loadSessions() {
   });
 }
 
+// Turns a raw page path like "education-portal.html" into "Education Portal".
+// A few common pages get a friendlier override than the generic title-case.
+const SPECIAL_PAGE_NAMES = { 'index.html': 'Home', 'cart.html': 'Shopping Cart', 'fnnetwork.html': 'FN Network' };
+function prettyPageName(path) {
+  if (!path) return '';
+  const file = path.split('/').pop() || '';
+  if (SPECIAL_PAGE_NAMES[file]) return SPECIAL_PAGE_NAMES[file];
+  return file.replace(/\.html$/, '').split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Maps a tracked event into a journey-map node: an icon, a category (drives
+// the node's color), and a clear "Action: Object" label — bare object names
+// alone ("Kill the Bully") don't say what happened to it, so every node
+// pairs the action with the specific page/object it applies to.
+function journeyNodeInfo(step, index) {
+  switch (step.eventType) {
+    case 'pageview':
+      return { icon: index === 0 ? '🚪' : '📄', category: 'entry', text: `${index === 0 ? 'Entered' : 'Viewed'}: ${prettyPageName(step.page)}` };
+    case 'book_view':
+      return { icon: '📗', category: 'engage', text: `Viewed Product: ${step.label}` };
+    case 'resource_open':
+      return { icon: '🎓', category: 'engage', text: `Opened Resource: ${step.label}` };
+    case 'add_to_cart':
+      return { icon: '🛒', category: 'intent', text: `Added to Cart: ${step.label}` };
+    case 'quote_request':
+      return { icon: '📝', category: 'intent', text: 'Requested Quote' };
+    case 'ask_the_fixer':
+      return { icon: '✉️', category: 'intent', text: 'Asked The Fixer' };
+    case 'contact_us':
+      return { icon: '📬', category: 'intent', text: 'Submitted Contact Form' };
+    default:
+      return { icon: '•', category: 'entry', text: step.label || prettyPageName(step.page) || formatEventType(step.eventType) };
+  }
+}
+
 async function viewPath(sessionId) {
   const r = await fetch(`/api/analytics/sessions/${sessionId}`, { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
@@ -203,20 +344,111 @@ async function viewPath(sessionId) {
   document.getElementById('pathMeta').innerHTML =
     `Entry: ${session.entryPage || '—'}<br>Referrer: ${session.referrer || '(direct)'}<br>Started: ${fnFormatDate(session.firstSeen)} · Last activity: ${fnFormatDate(session.lastSeen)}`;
 
-  document.getElementById('pathTimeline').innerHTML = path.map(step => `
-    <div class="path-step">
-      <div class="time">${fnFormatDate(step.at)}</div>
-      <div class="type">${formatEventType(step.eventType)}</div>
-      <div>${step.eventType === 'pageview' ? step.page : step.label}</div>
-    </div>
-  `).join('') || '<div class="a-note">No events recorded for this session.</div>';
+  const timeline = document.getElementById('pathTimeline');
+  timeline.innerHTML = path.map((step, i) => {
+    const node = journeyNodeInfo(step, i);
+    // The connector belongs to this node (not a separate sibling), so it
+    // travels with the node when flex-wrap pushes it onto a new row —
+    // it always reads as "arriving into" whichever node it's attached to.
+    // Row-wrap points get overridden with a single curved connector instead
+    // (see drawWrapConnectors), so this is only the fallback same-row look.
+    const connector = i > 0 ? '<div class="fn-journey-connector">→</div>' : '';
+    return `
+      <div class="fn-journey-node" title="${fnFormatDate(step.at)}">
+        ${connector}
+        <div class="fn-journey-dot cat-${node.category}"></div>
+        <div class="fn-journey-node-label">${node.icon} ${node.text}</div>
+      </div>`;
+  }).join('') || '<div class="a-note">No events recorded for this session.</div>';
 
   document.getElementById('pathModalOverlay').classList.add('show');
+  // Positions are only real once the modal is visible (display:flex) —
+  // measuring before "show" is applied would read everything as zero.
+  drawWrapConnectors(timeline);
+}
+
+// Where flex-wrap breaks the node list onto a new row, replace the small
+// inline arrow with one continuous curved connector that visually carries
+// the path from the end of one row down into the start of the next, instead
+// of two disconnected arrow fragments.
+function drawWrapConnectors(container) {
+  const oldSvg = container.querySelector('.fn-journey-wrap-svg');
+  if (oldSvg) oldSvg.remove();
+
+  const nodes = Array.from(container.querySelectorAll('.fn-journey-node'));
+  if (nodes.length < 2) return;
+
+  // Clear any indent from a previous render before re-measuring.
+  nodes.forEach(n => { n.style.marginLeft = ''; });
+  let rects = nodes.map(n => n.getBoundingClientRect());
+
+  // Indent the first node of every wrapped row. Without this there's no
+  // room to approach it horizontally — the connector would have to drop
+  // straight into the top of its dot instead of arriving level, from the
+  // left, the same way every same-row arrow does.
+  const INDENT = 64;
+  for (let i = 1; i < nodes.length; i++) {
+    if (rects[i].top > rects[i - 1].top + 5) nodes[i].style.marginLeft = INDENT + 'px';
+  }
+  rects = nodes.map(n => n.getBoundingClientRect());
+
+  const containerRect = container.getBoundingClientRect();
+  const rows = [];
+  rects.forEach(r => {
+    const row = rows.find(row => Math.abs(row.top - r.top) < 5);
+    if (row) row.bottom = Math.max(row.bottom, r.bottom);
+    else rows.push({ top: r.top, bottom: r.bottom });
+  });
+
+  let paths = '';
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const a = rects[i];
+    const b = rects[i + 1];
+    if (b.top <= a.top + 5) continue; // same row — the small inline arrow already handles this
+
+    const connector = nodes[i + 1].querySelector('.fn-journey-connector');
+    if (connector) connector.style.display = 'none';
+
+    const rowA = rows.find(row => Math.abs(row.top - a.top) < 5);
+    const rowB = rows.find(row => Math.abs(row.top - b.top) < 5);
+    const margin = 10;
+    const shelfY = (rowA.bottom - containerRect.top + margin + rowB.top - containerRect.top - margin) / 2;
+    const r = 8;
+
+    const x1 = a.right - containerRect.left;
+    const y1 = a.top - containerRect.top + 6;
+    const x2 = b.left - containerRect.left;
+    const y2 = b.top - containerRect.top + 6;
+    const xStub = x1 + 24;       // short stub right, clear of row A's own node, before turning down
+    const xEntry = x2 - 24;      // sits in the new indent, just left of row B's node
+
+    // Four turns — right, down, left, down, left, down, right — landing as
+    // a level horizontal arrow straight into the dot from the left, exactly
+    // like every same-row arrow, instead of dropping into the top of it.
+    paths += `<path d="M${x1},${y1}
+      L${xStub - r},${y1} Q${xStub},${y1} ${xStub},${y1 + r}
+      L${xStub},${shelfY - r} Q${xStub},${shelfY} ${xStub - r},${shelfY}
+      L${xEntry + r},${shelfY} Q${xEntry},${shelfY} ${xEntry},${shelfY + r}
+      L${xEntry},${y2 - r} Q${xEntry},${y2} ${xEntry + r},${y2}
+      L${x2},${y2}" fill="none" style="stroke:var(--a-text-soft); stroke-width:1.75;" marker-end="url(#fnJourneyArrowhead)"/>`;
+  }
+  if (!paths) return;
+
+  container.insertAdjacentHTML('beforeend', `
+    <svg class="fn-journey-wrap-svg">
+      <defs>
+        <marker id="fnJourneyArrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--a-text-soft);"/>
+        </marker>
+      </defs>
+      ${paths}
+    </svg>`);
 }
 function closePathModal() {
   document.getElementById('pathModalOverlay').classList.remove('show');
 }
 
+loadFunnel();
 loadSummary();
 loadSessions();
 </script>

@@ -49,12 +49,12 @@
     You don't have any purchases on file yet. If you've bought a book or a teacher license, make sure you're logged in with the same email you used to purchase it.
   </div>
 
-  <a href="fixernation-redesign.html" class="back-link">← Back to Fixer Nation</a>
+  <a href="index.html" class="back-link">← Back to Fixer Nation</a>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="admin-common.js?v=12"></script>
+<script src="admin-common.js?v=13"></script>
 <script>fnTrackPageview();</script>
 <script>
 function toast(msg) {
@@ -72,7 +72,7 @@ function formatDate(iso) {
 async function loadPurchases() {
   const r = await fetch('/api/site-auth/my-purchases', { credentials: 'include' });
   if (r.status === 401) {
-    window.location.href = 'fixernation-redesign.html';
+    window.location.href = 'index.html';
     return;
   }
   const data = await r.json().catch(() => ({}));

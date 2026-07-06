@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Privacy Choices — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 28px; border-radius:999px; font-weight:700; font-size:15px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
+  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
+  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;}
+  .nav-links{display:flex; align-items:center; gap:26px; font-size:14.5px; font-weight:600; color:var(--ink);}
+  .nav-links a{opacity:0.8;}
+  .nav-links a.active, .nav-links a:hover{opacity:1; color:var(--coral-dark);}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+
+  .hero{padding:64px 0 10px;}
+  .hero h1{font-size:42px; margin:16px 0 16px;}
+  .hero p.lead{font-size:17px; color:var(--ink-soft); max-width:680px;}
+
+  .panel{margin-top:56px; padding:70px 0;}
+  .panel-grid{display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:start;}
+  .panel-grid h2{font-size:26px; margin-bottom:16px;}
+  .panel-grid p{color:var(--ink); font-size:15.5px; margin-bottom:14px;}
+  .panel-grid ul{margin:14px 0 0; padding:0;}
+  .panel-grid li{font-size:15px; margin-bottom:10px; padding-left:22px; position:relative;}
+  .panel-grid li::before{content:"—"; position:absolute; left:0; color:var(--coral);}
+
+  .toggle-row{display:flex; align-items:flex-start; gap:14px; background:#fff; border-radius:var(--radius-md); padding:20px 22px; margin-top:24px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);}
+  .toggle-switch{position:relative; width:44px; height:26px; border-radius:999px; background:rgba(22,79,74,0.18); cursor:pointer; flex-shrink:0; transition:background .15s ease; margin-top:2px;}
+  .toggle-switch.on{background:var(--teal);}
+  .toggle-switch .knob{position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left .15s ease; box-shadow:0 2px 4px rgba(0,0,0,0.2);}
+  .toggle-switch.on .knob{left:21px;}
+  .toggle-copy h4{font-size:14.5px; margin-bottom:4px; color:var(--teal-dark);}
+  .toggle-copy p{font-size:13.5px; color:var(--ink-soft); margin:0;}
+
+  .form-card{background:#fff; border-radius:var(--radius-md); padding:34px; box-shadow:var(--shadow);}
+  .form-card h3{font-size:20px; margin-bottom:6px;}
+  .form-card p.form-sub{font-size:13.5px; color:var(--ink-soft); margin-bottom:20px;}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  .form-field label{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;}
+  .form-field input, .form-field select, .form-field textarea{width:100%; border:2px solid rgba(22,79,74,0.15); border-radius:10px; padding:12px 14px; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; background:var(--cream);}
+  .form-field textarea{min-height:110px; resize:vertical;}
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus{outline:none; border-color:var(--coral);}
+  .form-field{margin-bottom:16px;}
+  .form-actions{display:flex; justify-content:flex-end; margin-top:8px;}
+  .success-msg{display:none; background:#E4F3EE; color:var(--teal-dark); border-radius:12px; padding:14px 18px; margin-top:16px; font-weight:600; font-size:14px;}
+
+  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:56px 0 28px;}
+  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:44px;}
+  .footer-brand .brand{color:#fff;}
+  .footer-credo{font-family:'Fraunces',serif; font-style:italic; color:#F6D9C3; margin-top:14px; font-size:14.5px; max-width:280px;}
+  footer h4{color:#fff; font-size:12.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; opacity:0.9;}
+  footer li{margin-bottom:9px; font-size:14px;}
+  footer a:hover{color:var(--coral);}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:22px; font-size:12.5px; opacity:0.65; text-align:center;}
+
+  @media (max-width:960px){
+    .nav-links{display:none;}
+    .panel-grid{grid-template-columns:1fr;}
+    .form-row{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:600px){
+    .footer-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="books.html">Books</a>
+      <a href="blog.html">FN Blogs</a>
+      <a href="fnnetwork.html">FN Network</a>
+      <a href="education-portal.html">Schools</a>
+      <a href="askthefixer.html">Ask The Fixer</a>
+    </nav>
+    <div class="nav-cta">
+      <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
+      <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <span class="eyebrow">Privacy</span>
+  <h1>Your Privacy Choices</h1>
+  <p class="lead">Fixer Nation does not sell or share your personal information with third parties, and we don't use third-party advertising trackers on this site. Here's exactly what we collect, why, and how to reach us if you want to see, delete, or opt out of any of it.</p>
+</section>
+
+<section class="panel">
+  <div class="wrap panel-grid">
+    <div>
+      <h2>What we actually collect</h2>
+      <p>We keep this simple on purpose — there's no data broker relationship or ad network behind this site to account for.</p>
+      <ul>
+        <li>Information you give us directly — your name, email, and whatever you write in a form like this one, Ask The Fixer, or a license quote request. Used only to respond to you or fulfill an order.</li>
+        <li>Anonymous visit data — which pages get viewed and in what order, with no name, email, or IP address attached. It's stored in your browser tab only (not a persistent cookie) and clears automatically when you close it.</li>
+      </ul>
+
+      <div class="toggle-row">
+        <div class="toggle-switch" id="analyticsToggle" onclick="toggleAnalyticsOptOut()"><div class="knob"></div></div>
+        <div class="toggle-copy">
+          <h4>Opt out of anonymous visit tracking</h4>
+          <p>Even though this data never includes your name or IP address, you can turn it off entirely on this device.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h3>Submit a Privacy Request</h3>
+      <p class="form-sub">Ask to see, delete, or opt out of your personal information — we'll respond by email.</p>
+      <form id="privacyForm">
+        <div class="form-row">
+          <div class="form-field"><label>Name</label><input type="text" id="privacyName" placeholder="Jane Doe"></div>
+          <div class="form-field"><label>Email *</label><input type="email" id="privacyEmail" required placeholder="jane@email.com"></div>
+        </div>
+        <div class="form-field">
+          <label>Request Type</label>
+          <select id="privacyRequestType">
+            <option value="access">Access — what do you have about me?</option>
+            <option value="delete">Delete my personal information</option>
+            <option value="opt_out">Opt out of any sale/sharing</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Message</label>
+          <textarea id="privacyMessage" placeholder="Any details that will help us find your records..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Submit Request</button>
+        </div>
+        <div class="success-msg" id="privacySuccess">Thanks — we've received your request and will follow up by email.</div>
+        <div class="error-msg" id="privacyErrorMsg" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;">Something went wrong sending your request — please try again.</div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand"><div class="brand-mark">FN</div> Fixer Nation</div>
+        <p class="footer-credo">"There are no problems in life... only issues and answers."</p>
+      </div>
+      <div><h4>Explore</h4><ul><li><a href="about.html">About</a></li><li><a href="books.html">Books</a></li><li><a href="blog.html">FN Blogs</a></li></ul></div>
+      <div><h4>Community</h4><ul><li><a href="fnnetwork.html">FN Network</a></li><li><a href="askthefixer.html">Ask The Fixer</a></li><li><a href="join.html">Join Fixer Nation</a></li></ul></div>
+      <div><h4>Schools</h4><ul><li><a href="education-portal.html">National Education Portal</a></li><li><a href="education-schools.html">2D Education - Schools</a></li><li><a href="programs.html">Programs</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved. · <a href="privacy-choices.html" style="color:inherit;">Your Privacy Choices</a></div>
+  </div>
+</footer>
+
+<script>
+function toggleAnalyticsOptOut() {
+  const optedOut = localStorage.getItem('fnAnalyticsOptOut') === '1';
+  localStorage.setItem('fnAnalyticsOptOut', optedOut ? '0' : '1');
+  syncAnalyticsToggle();
+}
+function syncAnalyticsToggle() {
+  const optedOut = localStorage.getItem('fnAnalyticsOptOut') === '1';
+  document.getElementById('analyticsToggle').classList.toggle('on', !optedOut);
+}
+syncAnalyticsToggle();
+
+document.getElementById('privacyForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const errorMsg = document.getElementById('privacyErrorMsg');
+  errorMsg.style.display = 'none';
+  try {
+    const r = await fetch('/api/contact/privacy-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('privacyName').value,
+        email: document.getElementById('privacyEmail').value,
+        requestType: document.getElementById('privacyRequestType').value,
+        message: document.getElementById('privacyMessage').value,
+      }),
+    });
+    if (!r.ok) throw new Error('request failed');
+    document.getElementById('privacySuccess').style.display = 'block';
+    this.reset();
+  } catch (err) {
+    errorMsg.style.display = 'block';
+  }
+});
+</script>
+
+<script src="admin-common.js?v=13"></script>
+<script>fnTrackPageview();</script>
+<script src="site-auth.js"></script>
+
+</body>
+</html>

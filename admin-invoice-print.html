@@ -58,7 +58,7 @@
   <p style="text-align:center; color:var(--ink-soft);">Loading invoice…</p>
 </div>
 
-<script src="admin-common.js?v=12"></script>
+<script src="admin-common.js?v=13"></script>
 <script>
 fnRequireAuth();
 
@@ -70,17 +70,26 @@ async function loadInvoice() {
     return;
   }
 
-  const r = await fetch(`/api/invoices/${id}`, { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return;
-  if (!r.ok) {
+  const [invoiceRes, brandingRes] = await Promise.all([
+    fetch(`/api/invoices/${id}`, { credentials: 'include' }),
+    fetch('/api/settings/invoice-branding', { credentials: 'include' }),
+  ]);
+  if (fnHandleUnauthorized(invoiceRes)) return;
+  if (!invoiceRes.ok) {
     sheet.innerHTML = '<p style="text-align:center; color:var(--ink-soft);">Invoice not found.</p>';
     return;
   }
-  const { invoice } = await r.json();
-  renderInvoice(invoice);
+  const { invoice } = await invoiceRes.json();
+  const branding = brandingRes.ok ? await brandingRes.json() : {};
+  renderInvoice(invoice, branding);
 }
 
-function renderInvoice(inv) {
+function renderInvoice(inv, branding) {
+  const businessName = branding.businessName || 'Fixer Nation Education';
+  const tagline = branding.tagline || '';
+  const brandMark = branding.logoUrl
+    ? `<img src="${branding.logoUrl}" style="width:40px; height:40px; border-radius:12px; object-fit:contain;">`
+    : `<div class="brand-mark">FN</div>`;
   const buyer = inv.buyer || {};
   const address = buyer.address || {};
   const addressLine = [address.street, [address.city, address.state].filter(Boolean).join(', '), address.zip].filter(Boolean).join(' · ');
@@ -95,7 +104,7 @@ function renderInvoice(inv) {
 
   document.getElementById('sheet').innerHTML = `
     <div class="brand-row">
-      <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+      <div class="brand">${brandMark}<div class="brand-word">${businessName}</div></div>
       <div class="invoice-title">
         <h1>Invoice</h1>
         <div class="num">${inv.invoiceNumber}</div>
@@ -131,7 +140,7 @@ function renderInvoice(inv) {
       </tbody>
     </table>
 
-    <div class="footer-note">Fixer Nation Education · fixernationeducation.com</div>
+    <div class="footer-note">${businessName}${tagline ? ` · ${tagline}` : ''}</div>
   `;
 }
 

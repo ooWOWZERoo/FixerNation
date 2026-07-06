@@ -6,6 +6,17 @@ const router = express.Router();
 
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9-]{8,64}$/;
 const EVENT_TYPE_PATTERN = /^[a-z_]{1,32}$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+// Which tracked events count as "explored content" vs "showed buying/contact
+// intent" for the funnel view. There's no "purchased" stage here on purpose —
+// analytics sessions are deliberately anonymous with no link to a purchase record.
+const ENGAGED_EVENTS = ['book_view', 'resource_open'];
+const INTENT_EVENTS = ['add_to_cart', 'quote_request', 'ask_the_fixer', 'contact_us'];
 
 // Public — called from every public v1 page via fnTrackPageview()/fnTrackEvent()
 // in admin-common.js. Anonymous: no IP address stored, no link to a logged-in
@@ -83,6 +94,55 @@ router.get('/summary', requireAuth, async (req, res) => {
     bounceRate,
     topEntryPages,
     topEvents,
+  });
+});
+
+// Funnel view: how far visitors get through Visited -> Explored -> Showed
+// intent, over a date range (default last 30 days). Counts are of distinct
+// sessions, not events, so a session that both viewed a book and added to
+// cart only counts once at each stage it reached.
+router.get('/funnel', requireAuth, async (req, res) => {
+  const today = new Date();
+  const defaultStart = new Date(today);
+  defaultStart.setDate(defaultStart.getDate() - 29);
+
+  let start = DATE_PATTERN.test(req.query.start) ? req.query.start : isoDate(defaultStart);
+  let end = DATE_PATTERN.test(req.query.end) ? req.query.end : isoDate(today);
+  if (start > end) [start, end] = [end, start];
+
+  const [[visitedRow]] = await pool.query(
+    'SELECT COUNT(*) AS count FROM analytics_sessions WHERE DATE(first_seen) BETWEEN ? AND ?',
+    [start, end]
+  );
+  const [[engagedRow]] = await pool.query(
+    `SELECT COUNT(DISTINCT s.id) AS count FROM analytics_sessions s
+     JOIN analytics_events e ON e.session_id = s.id
+     WHERE DATE(s.first_seen) BETWEEN ? AND ? AND e.event_type IN (?)`,
+    [start, end, ENGAGED_EVENTS]
+  );
+  const [[intentRow]] = await pool.query(
+    `SELECT COUNT(DISTINCT s.id) AS count FROM analytics_sessions s
+     JOIN analytics_events e ON e.session_id = s.id
+     WHERE DATE(s.first_seen) BETWEEN ? AND ? AND e.event_type IN (?)`,
+    [start, end, INTENT_EVENTS]
+  );
+  const [intentBreakdown] = await pool.query(
+    `SELECT e.event_type, COUNT(DISTINCT e.session_id) AS count FROM analytics_events e
+     JOIN analytics_sessions s ON s.id = e.session_id
+     WHERE DATE(s.first_seen) BETWEEN ? AND ? AND e.event_type IN (?)
+     GROUP BY e.event_type`,
+    [start, end, INTENT_EVENTS]
+  );
+
+  res.json({
+    start,
+    end,
+    stages: [
+      { key: 'visited', label: 'Visited the site', count: visitedRow.count },
+      { key: 'engaged', label: 'Explored content', count: engagedRow.count },
+      { key: 'intent', label: 'Showed buying/contact intent', count: intentRow.count },
+    ],
+    intentBreakdown: intentBreakdown.map(r => ({ eventType: r.event_type, count: r.count })),
   });
 });
 

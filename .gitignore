@@ -2,6 +2,10 @@ server/node_modules/
 server/.env
 *.log
 
+# Local-only preview tooling (mock API server for inspecting frontend
+# changes without a real database) — never part of the deployed app.
+.claude/
+
 # Sensitive one-off import data (real contact PII) — uploaded directly to the
 # server via cPanel File Manager, never committed to this (public) repo.
 server/scripts/data/

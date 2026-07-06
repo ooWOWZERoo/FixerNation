@@ -94,10 +94,10 @@ router.get('/verify', async (req, res) => {
   const token = req.query.token || '';
   const record = await consumeToken(token, 'verify');
   if (!record) {
-    return res.status(400).send('<p style="font-family:sans-serif; padding:40px; text-align:center;">This verification link is invalid or has expired. <a href="/fixernation-redesign.html">Return to the homepage</a> to request a new one.</p>');
+    return res.status(400).send('<p style="font-family:sans-serif; padding:40px; text-align:center;">This verification link is invalid or has expired. <a href="/index.html">Return to the homepage</a> to request a new one.</p>');
   }
   await pool.query('UPDATE site_users SET email_verified = 1 WHERE id = ?', [record.user_id]);
-  res.send('<p style="font-family:sans-serif; padding:40px; text-align:center;">Your email is verified! You can now log in. <a href="/fixernation-redesign.html">Return to the homepage</a>.</p>');
+  res.send('<p style="font-family:sans-serif; padding:40px; text-align:center;">Your email is verified! You can now log in. <a href="/index.html">Return to the homepage</a>.</p>');
 });
 
 router.post('/resend-verification', async (req, res) => {

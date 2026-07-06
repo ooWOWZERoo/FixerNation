@@ -112,9 +112,12 @@ async function sendAdminPasswordResetEmail({ to, username, resetUrl }) {
   });
 }
 
+// Fallback only for the rare case a caller doesn't pass `to` explicitly —
+// every real caller looks up the admin-configured address via
+// server/lib/settings.js (contact_email_ask_the_fixer / contact_email_quote).
 const CONTACT_INBOX = 'admin@fixernationeducation.com';
 
-async function sendContactFormEmail({ formName, fields, replyTo }) {
+async function sendContactFormEmail({ to, formName, fields, replyTo }) {
   const rows = Object.entries(fields)
     .filter(([, value]) => value)
     .map(([label, value]) => `<p><strong>${label}:</strong> ${value}</p>`)
@@ -123,7 +126,7 @@ async function sendContactFormEmail({ formName, fields, replyTo }) {
 
   await getTransporter().sendMail({
     from: systemFromAddress(),
-    to: CONTACT_INBOX,
+    to: to || CONTACT_INBOX,
     replyTo,
     subject: `New ${formName} submission — Fixer Nation`,
     text,

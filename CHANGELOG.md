@@ -16,6 +16,30 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ---
 
+## Release 17 — 2026-07-05 — Real Contact Us page, removed dead Reviews link
+
+- **New "Contact Us" page**, wired to the footer "Contact" link that previously went nowhere (`href="#"`). Emails a newly admin-configurable "General Contact" address — same Settings card as the other contact-form routing.
+- **Removed the dead "Reviews" footer link** (there's no reviews feature on the site) and fixed a books.html section that was mislabeled "Reviews" when it's actually about the included 90-day membership.
+
+## Release 16 — 2026-07-05 — Your Privacy Choices page
+
+- **New "Your Privacy Choices" page**, linked from the footer of every public page (previously a dead link buried under the Request a Quotation form). States plainly that Fixer Nation doesn't sell or share personal information with third parties, explains what actually is collected (contact info submitted directly, and anonymous session analytics with no persistent cookie), and includes a real request form (access / delete / opt-out) that emails a newly admin-configurable "Privacy Requests" address — same Settings card as the Ask The Fixer/Quote routing.
+- **A real analytics opt-out toggle** on that page — flips a `localStorage` flag that every page's tracking call checks before firing, so a visitor can turn off anonymous session tracking entirely on their device, not just a symbolic toggle.
+- Not legal advice — this reflects what's actually implemented in this codebase (no third-party ad trackers, no data brokers, sessionStorage-only analytics). If that ever changes, this page and its "we don't sell data" framing need to be revisited.
+
+## Release 15 — 2026-07-05 — Configurable contact-form email routing, homepage rename
+
+- **Settings now has a "Contact Email Routing" card**: the admin can set which inbox "Ask The Fixer" and "Request a Formal Quotation" submissions get emailed to, instead of it being hardcoded to `admin@fixernationeducation.com`. Both default to that same address until changed, so nothing changes unless an admin actually edits it.
+- **Settings also has a new "Invoice Branding" card**: business name, tagline/footer line, and a logo upload, shown at the top and bottom of every printed/emailed invoice in place of the old hardcoded "Fixer Nation" text. No logo uploaded yet shows the same "FN" mark as before.
+- **Homepage renamed from `fixernation-redesign.html` to `index.html`**, and the last leftover "redesign"/mockup wording (the browser tab title, and a placeholder line on the FN Blogs page) was cleaned up — every reference across the site, admin backend, and email-verification links now points to the new name. The bare domain root now resolves directly to the homepage. The frozen `-v2` alternate-design pages are intentionally left as-is (a prior, separate decision — not part of the live site).
+
+## Release 14 — 2026-07-05 — Visitor Paths becomes a traffic funnel
+
+- **Traffic Funnel** replaces the plain stat list at the top of Visitor Paths (`admin-analytics.html`) with a funnel-mapping-style visual: Visited the site → Explored content → Showed buying/contact intent, with the drop-off percentage between each stage called out directly. A date-range picker (7/30/90 days or custom) controls the window, defaulting to the last 30 days.
+- A chip row breaks the "intent" stage down by the specific action (added to cart, requested a quote, asked the Fixer), so an admin can see not just how many visitors reached that stage but what they were about to do.
+- There's deliberately no "purchased" stage — analytics sessions are anonymous by design with no link to a purchase record, so the funnel stops at intent, not conversion. The existing Top Entry Pages and Most-Opened Objects are unchanged.
+- **The per-session "Visitor Path" modal is now a graphical journey map** instead of a plain text list: connected icon nodes showing exactly where a visitor entered, which pages they viewed, and which specific objects they interacted with (a book/product, a curriculum resource, adding to the cart, requesting a quote, Ask The Fixer) — color-coded by category (entry, engagement, buying/contact intent) so the shape of a visit is readable at a glance.
+
 ## Release 13 — 2026-07-05 — Admin visual redesign, with a light/dark theme
 
 - **Full visual refresh of the admin backend**: moved off the old generic indigo/navy look to a palette drawn from Fixer Nation's own brand (teal, coral, gold), so the admin dashboard and the public site finally feel like one product. Flatter cards, pill-shaped nav highlights, and softer borders replace the old heavier drop shadows.

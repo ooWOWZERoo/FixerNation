@@ -302,6 +302,7 @@ function fnAnalyticsSessionId() {
 // Uses sendBeacon so the request reliably fires even during page unload
 // (e.g. tracking that someone left a page), without blocking navigation.
 function fnTrackEvent(eventType, label) {
+  if (localStorage.getItem('fnAnalyticsOptOut') === '1') return;
   const payload = JSON.stringify({
     sessionId: fnAnalyticsSessionId(),
     eventType,
