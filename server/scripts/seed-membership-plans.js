@@ -23,6 +23,7 @@ const PLANS = [
     regularPrice: null,
     billingInterval: 'one_time',
     trialDays: 0,
+    durationDays: 90,
     description: 'Receive a 90-day membership to the Fixer Nation Positivity Health and Wellness Network with any Fixer Nation Issues and Answers book purchase, using the QR code on the inside cover of your book.',
     benefits: CONSUMER_BENEFITS,
   },
@@ -33,6 +34,7 @@ const PLANS = [
     regularPrice: 10,
     billingInterval: 'monthly',
     trialDays: 30,
+    durationDays: 30,
     description: 'Put your Positivity, Health and Wellness plan into action — take advantage of our introductory offer today.',
     benefits: CONSUMER_BENEFITS,
   },
@@ -43,6 +45,7 @@ const PLANS = [
     regularPrice: 120,
     billingInterval: 'annual',
     trialDays: 30,
+    durationDays: 365,
     description: 'Just $5/month, regularly $120/year — put your Positivity, Health and Wellness plan into action.',
     benefits: CONSUMER_BENEFITS + '\nBest value — save 50%',
   },
@@ -53,6 +56,7 @@ const PLANS = [
     regularPrice: 58,
     billingInterval: 'monthly',
     trialDays: 30,
+    durationDays: 30,
     description: 'Put an advertising plan for your business into action — take advantage of our introductory offer today.',
     benefits: 'Business listing in the Fixer Nation Vendors network\nAdvertising placement across Fixer Nation channels\nAccess to the Fixer Nation Positivity Health and Wellness Network',
   },
@@ -63,6 +67,7 @@ const PLANS = [
     regularPrice: 598,
     billingInterval: 'annual',
     trialDays: 30,
+    durationDays: 365,
     description: 'Put an advertising plan for your business into action — take advantage of our introductory offer today.',
     benefits: 'Everything in Monthly, plus:\nBest value — save 2 months\nBusiness listing in the Fixer Nation Vendors network\nAdvertising placement across Fixer Nation channels',
   },
@@ -73,6 +78,7 @@ const PLANS = [
     regularPrice: null,
     billingInterval: 'one_time',
     trialDays: 0,
+    durationDays: 365,
     description: 'Complete your registration for the 2D Education Program. For all school-purchased tier plans this price is comped at checkout — be sure to use your school email address. Valid for 12 months.',
     benefits: 'Valid for 12 months\nFor all school-purchased tier plans, price is comped at checkout with a school email address',
   },
@@ -83,6 +89,7 @@ const PLANS = [
     regularPrice: null,
     billingInterval: 'annual',
     trialDays: 365,
+    durationDays: 365,
     description: "You'll represent a community of trusted professionals, share our mission of positivity, health, and wellness, and help connect people with resources that make a real difference.",
     benefits: 'Free access to the Fixer Nation Website and Mobile App\nParticipate in the Fixer Nation Residual Compensation Plan\nReceive the Fixer Nation Annual Service Provider Benefits\nBe assigned territory to build their Fixer Nation Network\nHave the potential to earn an Annual Performance Bonus',
   },
@@ -108,12 +115,12 @@ async function main() {
     }
     await connection.query(
       `INSERT INTO membership_plans
-        (name, member_type, price_cents, regular_price_cents, billing_interval, trial_days, description, benefits, sort_order, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        (name, member_type, price_cents, regular_price_cents, billing_interval, trial_days, duration_days, description, benefits, sort_order, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         p.name, p.memberType, Math.round(p.price * 100),
         p.regularPrice === null ? null : Math.round(p.regularPrice * 100),
-        p.billingInterval, p.trialDays, p.description, p.benefits, i,
+        p.billingInterval, p.trialDays, p.durationDays || null, p.description, p.benefits, i,
       ]
     );
     console.log(`Created: ${p.name}`);

@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS membership_plans (
   regular_price_cents INT UNSIGNED NULL, -- shown struck-through as the "regular price" comparison; NULL if there's no intro-discount framing
   billing_interval VARCHAR(16) NOT NULL, -- 'one_time' | 'monthly' | 'annual'
   trial_days INT UNSIGNED NOT NULL DEFAULT 0,
+  duration_days INT UNSIGNED NULL, -- how long one purchase/cycle lasts before expiring or renewing; NULL means no expiration is tracked. For 'one_time' plans this is the real membership length (e.g. 90). For 'monthly'/'annual' plans this is informational only (Stripe governs the actual billing cycle) — used to estimate contact_memberships.ends_at for admin display and to size the renewal-reminder window.
   description VARCHAR(1000),
   benefits TEXT, -- one bullet per line, shown as a checklist on the public pricing cards
   stripe_price_id VARCHAR(255) NULL, -- synced to a real Stripe Product+Price on save, once Stripe is configured
@@ -176,13 +177,30 @@ CREATE TABLE IF NOT EXISTS contact_memberships (
   membership_plan_id INT UNSIGNED NOT NULL,
   status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired'
   started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  ends_at DATETIME NULL, -- set on cancellation/expiry; NULL while ongoing
+  ends_at DATETIME NULL, -- current cycle/expiration estimate — set on grant/renewal from the plan's duration_days (or trial_days while trialing), advanced on each real charge, and set on cancellation. NULL if the plan has no duration_days configured.
+  reminder_sent_at DATETIME NULL, -- guards against re-sending the renewal reminder every day until ends_at actually changes (renewal clears this)
   purchase_id INT UNSIGNED NULL,
   stripe_subscription_id VARCHAR(255) NULL,
   stripe_customer_id VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per notification event the system can send automatically — a fixed
+-- set (seeded by server/scripts/seed-email-automations.js), not admin-creatable,
+-- since the *code* is what actually fires each one; the admin only edits
+-- whether it's on and what it says. event_key is what server/lib/automations.js
+-- looks up by.
+CREATE TABLE IF NOT EXISTS email_automations (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  event_key VARCHAR(64) NOT NULL UNIQUE, -- 'book_purchase_thank_you' | 'membership_purchase_thank_you' | 'membership_renewal_reminder' | 'invoice_paid' | 'payment_failed' | 'license_seat_invite'
+  label VARCHAR(255) NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  subject VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL, -- plain text with {{mergeField}} tokens; rendered as both text and simple HTML on send
+  reminder_days_before INT UNSIGNED NULL, -- only meaningful for membership_renewal_reminder — how many days before contact_memberships.ends_at to send
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- One invoice per Purchase Order submission, grouping together the purchase

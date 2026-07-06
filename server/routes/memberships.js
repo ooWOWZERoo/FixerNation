@@ -6,6 +6,12 @@ const { createPurchase } = require('./newsletter');
 const router = express.Router();
 const STATUSES = ['trialing', 'active', 'past_due', 'cancelled', 'expired'];
 
+function daysFromNow(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days));
+  return d;
+}
+
 function serialize(row) {
   return {
     id: row.id,
@@ -89,9 +95,11 @@ router.post('/contacts/:contactId', requireAuth, async (req, res) => {
   });
 
   const status = plan.trial_days > 0 ? 'trialing' : 'active';
+  const daysUntilEnd = plan.trial_days > 0 ? plan.trial_days : plan.duration_days;
+  const endsAt = daysUntilEnd ? daysFromNow(daysUntilEnd) : null;
   const [result] = await pool.query(
-    'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id) VALUES (?, ?, ?, ?)',
-    [contactId, membershipPlanId, status, purchaseId]
+    'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
+    [contactId, membershipPlanId, status, purchaseId, endsAt]
   );
 
   const [rows] = await pool.query(SELECT_WITH_PLAN + ' WHERE cm.id = ?', [result.insertId]);
@@ -108,7 +116,17 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!existing[0]) return res.status(404).json({ error: 'Membership not found' });
 
   const status = b.status || existing[0].status;
-  const endsAt = ['cancelled', 'expired'].includes(status) ? (existing[0].ends_at || new Date()) : null;
+  // Only touch ends_at on a real transition — set it when newly
+  // cancelling/expiring, clear it when reactivating out of one of those
+  // (the old end date no longer means anything until a real purchase/grant
+  // computes a new one). Any other status change (e.g. past_due -> active)
+  // must leave the existing expiration estimate alone.
+  let endsAt = existing[0].ends_at;
+  if (['cancelled', 'expired'].includes(status)) {
+    endsAt = existing[0].ends_at || new Date();
+  } else if (['cancelled', 'expired'].includes(existing[0].status)) {
+    endsAt = null;
+  }
   await pool.query('UPDATE contact_memberships SET status = ?, ends_at = ? WHERE id = ?', [status, endsAt, req.params.id]);
 
   const [rows] = await pool.query(SELECT_WITH_PLAN + ' WHERE cm.id = ?', [req.params.id]);

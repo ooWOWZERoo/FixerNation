@@ -3,6 +3,7 @@ const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { attachPurchaseDetails } = require('./newsletter');
 const { sendInvoiceEmail } = require('../lib/mailer');
+const { fireAutomation } = require('../lib/automations');
 
 const router = express.Router();
 
@@ -119,8 +120,9 @@ router.put('/:id', requireAuth, async (req, res) => {
     return res.status(400).json({ error: "status must be 'paid', 'unpaid', or 'cancelled'" });
   }
 
-  const [rows] = await pool.query('SELECT id FROM invoices WHERE id = ?', [req.params.id]);
+  const [rows] = await pool.query('SELECT id, status FROM invoices WHERE id = ?', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Invoice not found' });
+  const wasAlreadyPaid = rows[0].status === 'paid';
 
   const connection = await pool.getConnection();
   try {
@@ -142,6 +144,22 @@ router.put('/:id', requireAuth, async (req, res) => {
     throw err;
   } finally {
     connection.release();
+  }
+
+  // Only fire on a fresh transition to paid — flipping it paid→paid (e.g. a
+  // duplicate submit) shouldn't re-send the confirmation.
+  if (status === 'paid' && !wasAlreadyPaid) {
+    try {
+      const invoice = await fetchInvoiceWithLineItems(req.params.id);
+      if (invoice.buyer && invoice.buyer.email) {
+        await fireAutomation('invoice_paid', {
+          to: invoice.buyer.email,
+          mergeFields: { buyerName: invoice.buyer.company || invoice.buyer.name, invoiceNumber: invoice.invoiceNumber, total: '$' + invoice.total.toFixed(2) },
+        });
+      }
+    } catch (err) {
+      console.error('Invoice-paid automation failed:', err.message);
+    }
   }
 
   res.json({ ok: true });

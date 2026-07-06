@@ -3,6 +3,7 @@ const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { unsubscribeToken, sendVerificationEmail } = require('../lib/mailer');
 const { createToken } = require('../lib/site-tokens');
+const { fireAutomation } = require('../lib/automations');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -328,6 +329,39 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
       );
     }
     await connection.commit();
+
+    // Automated thank-you email — best-effort (fireAutomation swallows its
+    // own errors), so a template/lookup issue here never fails the purchase
+    // itself. Only book/membership purchases get one; license purchases are
+    // covered by the invoice-paid and seat-invite automations instead, since
+    // a single PO order can create several license purchase rows and would
+    // otherwise flood the buyer with one thank-you per line item.
+    if (productType === 'book' || productType === 'membership') {
+      try {
+        const [[contact]] = await pool.query('SELECT email, name FROM newsletter_contacts WHERE id = ?', [contactId]);
+        const firstName = (contact.name || '').split(' ')[0] || 'there';
+        if (productType === 'book') {
+          const [[book]] = await pool.query('SELECT title FROM books WHERE id = ?', [bookId]);
+          await fireAutomation('book_purchase_thank_you', {
+            to: contact.email,
+            mergeFields: { firstName, bookTitle: book ? book.title : 'your book' },
+          });
+        } else {
+          const [[plan]] = await pool.query('SELECT name FROM membership_plans WHERE id = ?', [membershipPlanId]);
+          await fireAutomation('membership_purchase_thank_you', {
+            to: contact.email,
+            mergeFields: {
+              firstName,
+              planName: plan ? plan.name : 'your membership',
+              amount: amountCents === null || amountCents === undefined ? '' : '$' + (amountCents / 100).toFixed(2),
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Thank-you automation lookup failed:', err.message);
+      }
+    }
+
     return purchaseId;
   } catch (err) {
     await connection.rollback();
@@ -543,6 +577,23 @@ router.put('/purchases/:purchaseId/seats/:seatId', requireAuth, async (req, res)
     return res.status(400).json({ error: 'Invalid email address' });
   }
   await pool.query('UPDATE license_seats SET invited_email = ? WHERE id = ?', [invitedEmail || null, seat.id]);
+
+  // Only fire on an actual change to a new email — re-saving the same
+  // invited address shouldn't re-send the invite every time.
+  if (invitedEmail && invitedEmail !== seat.invited_email) {
+    try {
+      const [[purchase]] = await pool.query('SELECT license_product_id, school_domain FROM purchases WHERE id = ?', [req.params.purchaseId]);
+      let licenseProductName = 'Fixer Nation Education';
+      if (purchase && purchase.license_product_id) {
+        const [[lp]] = await pool.query('SELECT name FROM license_products WHERE id = ?', [purchase.license_product_id]);
+        if (lp) licenseProductName = lp.name;
+      }
+      const schoolLabel = purchase && purchase.school_domain ? ` (${purchase.school_domain})` : '';
+      await fireAutomation('license_seat_invite', { to: invitedEmail, mergeFields: { licenseProductName, schoolLabel } });
+    } catch (err) {
+      console.error('License seat invite automation failed:', err.message);
+    }
+  }
   res.json({ ok: true });
 });
 

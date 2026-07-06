@@ -2,6 +2,7 @@ const express = require('express');
 const Stripe = require('stripe');
 const pool = require('../db/pool');
 const { createPurchase } = require('./newsletter');
+const { fireAutomation } = require('../lib/automations');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,6 +10,12 @@ const MAX_CART_ITEMS = 10;
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+function daysFromNow(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days));
+  return d;
 }
 
 async function findOrCreateContact(email, source, name) {
@@ -313,16 +320,22 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       paymentMethod: 'stripe',
       paymentStatus: 'paid',
     });
+    const endsAt = plan.duration_days ? daysFromNow(plan.duration_days) : null;
     await pool.query(
-      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id) VALUES (?, ?, ?, ?)',
-      [contactId, membershipPlanId, 'active', purchaseId]
+      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
+      [contactId, membershipPlanId, 'active', purchaseId, endsAt]
     );
   } else if (session.mode === 'subscription' && session.subscription) {
     const [existing] = await pool.query('SELECT id FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [session.subscription]);
     if (existing.length) return;
+    // While trialing, the date that matters is when the trial ends (the
+    // first real charge); once a real charge happens, handleMembershipInvoicePaid
+    // re-anchors ends_at to the plan's normal billing-cycle length instead.
+    const daysUntilEnd = plan.trial_days > 0 ? plan.trial_days : plan.duration_days;
+    const endsAt = daysUntilEnd ? daysFromNow(daysUntilEnd) : null;
     await pool.query(
-      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id) VALUES (?, ?, ?, ?, ?)',
-      [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer]
+      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id, ends_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
     );
   }
 }
@@ -330,7 +343,12 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
 async function handleMembershipInvoicePaid(invoice) {
   if (!invoice.subscription) return; // not a subscription invoice — not ours to handle here
 
-  const [membershipRows] = await pool.query('SELECT * FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [invoice.subscription]);
+  const [membershipRows] = await pool.query(
+    `SELECT cm.*, mp.duration_days FROM contact_memberships cm
+     JOIN membership_plans mp ON mp.id = cm.membership_plan_id
+     WHERE cm.stripe_subscription_id = ? LIMIT 1`,
+    [invoice.subscription]
+  );
   const membership = membershipRows[0];
   if (!membership) return;
 
@@ -347,15 +365,34 @@ async function handleMembershipInvoicePaid(invoice) {
     paymentStatus: 'paid',
   });
 
+  // A real charge just succeeded, so the next period is a normal billing
+  // cycle (not a trial) — re-anchor ends_at from here and clear
+  // reminder_sent_at so the reminder can fire again ahead of the new date.
+  const endsAt = membership.duration_days ? daysFromNow(membership.duration_days) : null;
   await pool.query(
-    "UPDATE contact_memberships SET purchase_id = ?, status = IF(status IN ('past_due','trialing'), 'active', status) WHERE id = ?",
-    [purchaseId, membership.id]
+    "UPDATE contact_memberships SET purchase_id = ?, status = IF(status IN ('past_due','trialing'), 'active', status), ends_at = ?, reminder_sent_at = NULL WHERE id = ?",
+    [purchaseId, endsAt, membership.id]
   );
 }
 
 async function handleMembershipPaymentFailed(invoice) {
   if (!invoice.subscription) return;
-  await pool.query("UPDATE contact_memberships SET status = 'past_due' WHERE stripe_subscription_id = ?", [invoice.subscription]);
+  const [rows] = await pool.query(
+    `SELECT cm.*, mp.name AS plan_name, nc.email, nc.name AS contact_name
+     FROM contact_memberships cm
+     JOIN membership_plans mp ON mp.id = cm.membership_plan_id
+     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
+     WHERE cm.stripe_subscription_id = ? LIMIT 1`,
+    [invoice.subscription]
+  );
+  const membership = rows[0];
+  if (!membership) return;
+
+  await pool.query("UPDATE contact_memberships SET status = 'past_due' WHERE id = ?", [membership.id]);
+  await fireAutomation('payment_failed', {
+    to: membership.email,
+    mergeFields: { firstName: (membership.contact_name || '').split(' ')[0] || 'there', planName: membership.plan_name },
+  });
 }
 
 async function handleMembershipSubscriptionUpdated(subscription) {

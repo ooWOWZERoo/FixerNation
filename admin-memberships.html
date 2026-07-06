@@ -27,6 +27,7 @@
       <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
       <a href="admin-memberships.html" class="active"><span class="ic">🪪</span><span class="label">Memberships</span></a>
+      <a href="admin-automations.html"><span class="ic">🤖</span><span class="label">Automations</span></a>
       <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
       <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
     </nav>
@@ -87,7 +88,7 @@
             </select>
           </div>
           <table class="a-table" id="membersTable">
-            <thead><tr><th>Contact</th><th>Plan</th><th>Member Type</th><th>Status</th><th>Started</th><th></th></tr></thead>
+            <thead><tr><th>Contact</th><th>Plan</th><th>Member Type</th><th>Status</th><th>Started</th><th>Expires</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
           <div class="a-empty" id="membersEmpty" style="display:none;">No members match these filters.</div>
@@ -126,6 +127,11 @@
           </select>
         </div>
         <div class="a-field"><label>Trial Days</label><input type="number" id="planTrialDays" min="0" value="0"></div>
+      </div>
+      <div class="a-field">
+        <label>Duration (Days)</label>
+        <input type="number" id="planDurationDays" min="1" placeholder="e.g. 90">
+        <div class="a-note">How long one purchase/cycle lasts before it needs to renew or expire. For a one-time plan, this is the real membership length. For monthly/annual plans, Stripe governs actual billing — this is only used to estimate a renewal date for admin display and to size the renewal-reminder window.</div>
       </div>
       <div class="a-field"><label>Description</label><input type="text" id="planDescription" placeholder="Shown under the plan name on the public pricing page"></div>
       <div class="a-field"><label>Benefits (one per line)</label><textarea id="planBenefits" rows="5" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Full Blog & Library access&#10;Vetted Professional Network&#10;Mobile App access"></textarea></div>
@@ -231,6 +237,7 @@ function openPlanModal(id) {
   document.getElementById('planRegularPrice').value = p && p.regularPrice ? p.regularPrice : '';
   document.getElementById('planBillingInterval').value = p ? p.billingInterval : 'monthly';
   document.getElementById('planTrialDays').value = p ? p.trialDays : 0;
+  document.getElementById('planDurationDays').value = p && p.durationDays ? p.durationDays : '';
   document.getElementById('planDescription').value = p ? p.description : '';
   document.getElementById('planBenefits').value = p && p.benefits ? p.benefits.join('\n') : '';
   document.getElementById('planSortOrder').value = p ? p.sortOrder : 0;
@@ -254,6 +261,7 @@ async function savePlan() {
     regularPrice: document.getElementById('planRegularPrice').value ? Number(document.getElementById('planRegularPrice').value) : null,
     billingInterval: document.getElementById('planBillingInterval').value,
     trialDays: Number(document.getElementById('planTrialDays').value) || 0,
+    durationDays: document.getElementById('planDurationDays').value ? Number(document.getElementById('planDurationDays').value) : null,
     description: document.getElementById('planDescription').value.trim(),
     benefits,
     sortOrder: Number(document.getElementById('planSortOrder').value) || 0,
@@ -324,6 +332,7 @@ async function renderMembers() {
       <td>${MEMBER_TYPE_LABELS[m.memberType] || m.memberType}</td>
       <td><span class="a-pill ${STATUS_PILLS[m.status] || 'a-pill-neutral'}">${m.status.replace('_', ' ')}</span></td>
       <td>${fnFormatDate(m.startedAt)}</td>
+      <td>${m.endsAt ? fnFormatDate(m.endsAt) : '—'}</td>
       <td>
         <div class="a-row-actions">
           <select onchange="updateMemberStatus(${m.id}, this.value)" style="padding:5px 8px; border-radius:8px; border:1px solid var(--a-border); font-size:12.5px;">

@@ -160,4 +160,20 @@ async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total,
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail };
+// Generic sender for admin-editable automation emails (server/lib/automations.js)
+// — subject/body have already had their {{mergeField}} tokens rendered by
+// the time they get here. Plain text is the source of truth (matches how
+// the admin edits it); HTML just turns newlines into <br>-separated
+// paragraphs rather than re-parsing any markup, since the editor is a plain
+// textarea, not a rich-text one.
+async function sendAutomationEmail({ to, subject, body }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject,
+    text: body,
+    html: body.split('\n').filter(line => line.trim()).map(line => `<p>${line}</p>`).join(''),
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail };

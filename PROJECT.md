@@ -53,7 +53,8 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
 | License products, school-domain lookup/management | admin-licenses.html |
-| Membership plans (CRUD, Stripe sync) + Members (browse/filter/grant) | admin-memberships.html |
+| Membership plans (CRUD, Stripe sync, duration) + Members (browse/filter/grant, expiration) | admin-memberships.html |
+| Automated emails (thank-yous, renewal reminder, payment-failed, invoice-paid, seat invite) | admin-automations.html |
 | Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
 | Settings (own password, admin management, contact-form email routing for 4 forms, invoice branding) | admin-settings.html |
 | Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes) |
@@ -77,6 +78,14 @@ Three member types — Consumer, Service Provider, Brand Ambassador — each wit
 
 A contact can hold multiple memberships at once, tracked in a `contact_memberships` table (status: trialing/active/past_due/cancelled/expired) separate from `purchases` — visible on the CRM contact record and browsable/filterable/manually-grantable from `admin-memberships.html`'s Members tab. Every real charge becomes its own order: the first one after a trial ends and every renewal each create a new `purchases` row (via the `invoice.paid` webhook, keyed uniquely by Stripe invoice ID so retries don't double-count), while the `contact_memberships` record persists across the whole subscription lifecycle. This is why membership revenue shows up in Orders and Financial Insights the same as book/license purchases.
 
+Each plan carries a `duration_days` (admin-set on `admin-memberships.html`) — for one-time plans (Free w/ Book, 2D Education registration) this is the real membership length; for monthly/annual plans Stripe governs actual billing, so it's only an estimate used for admin display and sizing the renewal-reminder window. A membership's `ends_at` is computed at signup/grant and re-anchored on every real renewal charge (clearing the reminder-sent flag so the next cycle gets its own reminder).
+
+## Automations
+
+A fixed set of six automated emails — book purchase thank-you, membership purchase thank-you (fires on every real charge, first and renewals), membership renewal reminder, invoice-paid confirmation, payment-failed/past-due, and license seat invite — fire from real events across `checkout.js`/`newsletter.js`/`invoices.js`. Each is admin-editable (subject/body with `{{mergeField}}` tokens, on/off, and — for the renewal reminder — how many days ahead of `ends_at` to send) from **`admin-automations.html`**, backed by a fixed `email_automations` table (`server/lib/automations.js`'s `fireAutomation()` is the single call site every trigger uses). Sending failures are swallowed and logged, never propagated — an SMTP hiccup must never block the purchase/invoice/seat action that triggered the email.
+
+The renewal reminder and lapsed-membership expiry both run from **`server/scripts/send-membership-reminders.js`**, this project's first scheduled job — set up as a daily cPanel Cron Job (there's no in-process scheduler; cron survives Node app restarts, which an in-app timer wouldn't).
+
 ## CRM & campaigns
 
 Contacts (`admin-newsletter.html`) support search/filter/sort/pagination, a user-configurable column picker, CSV import/export, contact groups, purchase history, and site-account status (registered/verified, resend verification, password reset, delete) — the latter surfaced directly on the contact record rather than a separate page, since a site-user account and a CRM contact are linked only by matching email (no formal foreign key).
@@ -87,6 +96,7 @@ Email campaigns (`admin-campaigns.html`) send for real via SMTP, always excludin
 
 - **Email open-tracking is pixel-based and imprecise.** The SMTP setup is a plain relay (cPanel mailbox), not an ESP with delivery/open webhooks, so opens are tracked via an invisible 1×1 image — many clients block remote images (undercounts), and some (e.g. Apple Mail Privacy Protection) pre-fetch every image regardless of whether a human opened it (overcounts). Plain-text campaigns can't be tracked at all (no way to embed a pixel). Treat the numbers as directional.
 - **Stripe checkout isn't live yet** — see Licensing & checkout and Memberships above.
+- **The renewal-reminder/expiry cron depends on the cPanel Cron Job staying configured** — if it's ever removed or misconfigured, reminders/expirations just silently stop (no alerting on a missed run). Verify with `node scripts/send-membership-reminders.js` in cPanel Terminal if renewal reminders seem to have stopped.
 - **No automated tests.** All verification is manual (curl with cookie jars, or the browser) after each deploy.
 - **`-v2` pages are frozen** by original project decision, not neglected.
 - **`privacy-choices.html`'s "we don't sell/share data" framing reflects what's actually implemented today** — no third-party ad trackers, no data brokers, sessionStorage-only anonymous analytics. This isn't legal advice; if a real third-party data relationship is ever added, that page needs to be revisited. The analytics opt-out toggle on that page sets a real `localStorage` flag (`fnAnalyticsOptOut`) that `fnTrackEvent`/`fnTrackPageview` check before firing.
