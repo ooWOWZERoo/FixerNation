@@ -49,7 +49,8 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Dashboard (+ Financial Insights) | admin-dashboard.html |
 | Book product configuration (CRUD, Amazon format pricing) | admin-books.html |
 | Curriculum builder (CRUD, resources, quiz, download-limit testing) | admin-curriculum.html |
-| Blog builder (CRUD, live on the public FN Blogs page) | admin-blogs.html |
+| Blog builder (CRUD, multi-category, SEO fields, membership gating, scheduling, live on the public FN Blogs page) | admin-blogs.html |
+| Morning Boost Studio (calendar-aware post prefill, ElevenLabs batch voice-over generation) | admin-morning-boost.html |
 | Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
 | License products, school-domain lookup/management | admin-licenses.html |
@@ -86,6 +87,12 @@ A fixed set of six automated emails — book purchase thank-you, membership purc
 
 The renewal reminder and lapsed-membership expiry both run from **`server/scripts/send-membership-reminders.js`**, this project's first scheduled job — set up as a daily cPanel Cron Job (there's no in-process scheduler; cron survives Node app restarts, which an in-app timer wouldn't).
 
+## Blog & Morning Boost
+
+Blog posts (`blog_posts`) can belong to several categories at once (`blog_post_categories`, mirrors the existing per-post tag system) — the public FN Blogs page's category filter chips check against that full set, not a single value. Posts also carry SEO fields (alt text, meta description, focus keyword) and a `requiresMembership` flag: when set, `/api/blog/posts` strips the body/video server-side for any visitor without an active Fixer Nation membership (any plan) and returns a `locked: true` flag instead — `blog.html` shows a locked preview with a join link. A post with `published` on and a future Publish Date stays off the public site until that date, i.e. real scheduling, not just an on/off toggle.
+
+The full 2026 Morning Boost content calendar (205 daily Theme/Series entries, imported from the step-sheet doc) lives in `morning_boost_calendar`. `admin-blogs.html` can pull any date's Theme/Series straight into a new post ("Load From Morning Boost Calendar"), and **`admin-morning-boost.html`** ("Morning Boost Studio") batch-generates a day's voice-over clips via the ElevenLabs API instead of pasting each script into ElevenLabs one at a time — **not live** until a real `ELEVENLABS_API_KEY` is set in `server/.env` and a voice ID is saved on that page, same deferred-but-complete pattern as Stripe. Automating image generation and video assembly (replacing the ChatGPT/Google-AI image step and the iMovie build) is intentionally deferred — no work has started there.
+
 ## CRM & campaigns
 
 Contacts (`admin-newsletter.html`) support search/filter/sort/pagination, a user-configurable column picker, CSV import/export, contact groups, purchase history, and site-account status (registered/verified, resend verification, password reset, delete) — the latter surfaced directly on the contact record rather than a separate page, since a site-user account and a CRM contact are linked only by matching email (no formal foreign key).
@@ -96,6 +103,7 @@ Email campaigns (`admin-campaigns.html`) send for real via SMTP, always excludin
 
 - **Email open-tracking is pixel-based and imprecise.** The SMTP setup is a plain relay (cPanel mailbox), not an ESP with delivery/open webhooks, so opens are tracked via an invisible 1×1 image — many clients block remote images (undercounts), and some (e.g. Apple Mail Privacy Protection) pre-fetch every image regardless of whether a human opened it (overcounts). Plain-text campaigns can't be tracked at all (no way to embed a pixel). Treat the numbers as directional.
 - **Stripe checkout isn't live yet** — see Licensing & checkout and Memberships above.
+- **ElevenLabs voice-over generation isn't live yet** — see Blog & Morning Boost above. Image generation and video assembly for Morning Boost remain fully manual by design (deferred, not started).
 - **The renewal-reminder/expiry cron depends on the cPanel Cron Job staying configured** — if it's ever removed or misconfigured, reminders/expirations just silently stop (no alerting on a missed run). Verify with `node scripts/send-membership-reminders.js` in cPanel Terminal if renewal reminders seem to have stopped.
 - **No automated tests.** All verification is manual (curl with cookie jars, or the browser) after each deploy.
 - **`-v2` pages are frozen** by original project decision, not neglected.

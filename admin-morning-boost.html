@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Boost Studio — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=13">
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <div class="a-nav-divider"></div>
+      <a href="admin-automations.html"><span class="ic">🤖</span><span class="label">Automations</span></a>
+      <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blogs</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">CRM</span></a>
+      <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
+      <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
+      <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
+      <a href="admin-memberships.html"><span class="ic">🪪</span><span class="label">Memberships</span></a>
+      <a href="admin-morning-boost.html" class="active"><span class="ic">🌅</span><span class="label">Morning Boost</span></a>
+      <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
+      <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
+      <a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Morning Boost Studio</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Today's Theme &amp; Series</h2>
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <div class="a-field" style="margin-bottom:0; flex:1;">
+            <label>Date</label>
+            <input type="date" id="boostDateInput" onchange="loadCalendarEntry()">
+          </div>
+        </div>
+        <div class="a-note" id="calendarEntryNote" style="margin-top:10px;">Pick a date to see its planned Theme/Series.</div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Voice-Over Generation (ElevenLabs)</h2>
+        </div>
+        <div class="a-note" style="margin-bottom:16px;">Replaces pasting each script into ElevenLabs one at a time — paste all of the day's scripts below (one per line, or separated by a blank line) and generate every clip in one action. Needs a real ElevenLabs API key configured in <code>server/.env</code> and a voice selected below.</div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>ElevenLabs Voice ID</label>
+            <input type="text" id="voiceIdInput" placeholder="e.g. 21m00Tcm4TlvDq8ikWAM">
+          </div>
+          <div class="a-field" style="align-self:flex-end;">
+            <button type="button" class="a-btn a-btn-outline" onclick="saveVoiceId()">Save Voice ID</button>
+          </div>
+        </div>
+
+        <div class="a-field">
+          <label>Scripts <span style="font-weight:400; text-transform:none;">(up to 13 — one per line, blank lines are ignored)</span></label>
+          <textarea id="scriptsInput" rows="10" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Script for image 1...&#10;Script for image 2...&#10;..." oninput="updateScriptCount()"></textarea>
+          <div class="a-note" id="scriptCountNote">0 scripts</div>
+        </div>
+
+        <button type="button" class="a-btn a-btn-primary" onclick="generateAudio()" id="generateBtn">Generate Voice-Overs</button>
+
+        <div id="audioResults" style="margin-top:20px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=13"></script>
+<script>
+fnRequireAuth();
+
+function getScripts() {
+  return document.getElementById('scriptsInput').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 13);
+}
+
+function updateScriptCount() {
+  const count = getScripts().length;
+  document.getElementById('scriptCountNote').textContent = `${count} script${count === 1 ? '' : 's'}${count >= 13 ? ' (max reached)' : ''}`;
+}
+
+async function loadCalendarEntry() {
+  const date = document.getElementById('boostDateInput').value;
+  const note = document.getElementById('calendarEntryNote');
+  if (!date) { note.textContent = 'Pick a date to see its planned Theme/Series.'; return; }
+  const r = await fetch(`/api/morning-boost/${date}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { note.textContent = 'No Morning Boost calendar entry for that date.'; return; }
+  const { entry } = await r.json();
+  note.innerHTML = `<strong>Theme:</strong> ${entry.theme} &nbsp; <strong>Series:</strong> ${entry.series}${entry.blogPostId ? ' — a blog post already exists for this date.' : ''}`;
+}
+
+async function loadVoiceId() {
+  const r = await fetch('/api/settings/morning-boost-voice', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const { voiceId } = await r.json();
+  document.getElementById('voiceIdInput').value = voiceId || '';
+}
+
+async function saveVoiceId() {
+  const voiceId = document.getElementById('voiceIdInput').value.trim();
+  if (!voiceId) { fnToast('Enter a voice ID first'); return; }
+  const r = await fetch('/api/settings/morning-boost-voice', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ voiceId }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not save voice ID'); return; }
+  fnToast('Voice ID saved');
+}
+
+async function generateAudio() {
+  const scripts = getScripts();
+  if (!scripts.length) { fnToast('Enter at least one script first'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  document.getElementById('audioResults').innerHTML = '';
+
+  try {
+    const r = await fetch('/api/morning-boost/generate-audio', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scripts }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const data = await r.json();
+    if (!r.ok) { fnToast(data.error || 'Could not generate audio'); return; }
+
+    document.getElementById('audioResults').innerHTML = data.results.map(res => {
+      if (!res.ok) {
+        return `<div class="a-repeat-row"><div class="info"><div class="name">❌ Script ${res.index + 1}</div><div class="meta">${res.error}</div></div></div>`;
+      }
+      return `<div class="a-repeat-row">
+        <div class="info" style="flex:1;">
+          <div class="name">🎧 Script ${res.index + 1}</div>
+          <audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio>
+        </div>
+        <a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>
+      </div>`;
+    }).join('');
+    fnToast('Voice-overs generated');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Voice-Overs';
+  }
+}
+
+(function init() {
+  document.getElementById('boostDateInput').value = new Date().toISOString().slice(0, 10);
+  loadCalendarEntry();
+  loadVoiceId();
+})();
+</script>
+
+</body>
+</html>

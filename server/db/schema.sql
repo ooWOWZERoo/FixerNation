@@ -432,16 +432,20 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   title VARCHAR(255) NOT NULL,
   slug VARCHAR(255) NOT NULL UNIQUE,
   author VARCHAR(255),
-  category VARCHAR(64) NOT NULL,
+  category VARCHAR(64) NOT NULL, -- primary category, kept for backward compat; blog_post_categories below is the authoritative filterable set (a post can belong to several)
   featured_image VARCHAR(512),
   excerpt TEXT,
   body MEDIUMTEXT,
   video_url VARCHAR(512),
   video_file_name VARCHAR(255),
   video_file_size_label VARCHAR(128),
+  alt_text VARCHAR(255), -- accessibility/SEO alt text for the featured image or video thumbnail
+  meta_description VARCHAR(500), -- SEO meta description; falls back to excerpt if blank
+  focus_keyword VARCHAR(255), -- SEO focus keyword (Wix's "add focus keyword to title tag/URL slug" step)
+  requires_membership TINYINT(1) NOT NULL DEFAULT 0, -- gates the post behind an active Fixer Nation membership (any type) — replaces Wix's "Monetize" tab
   publish_date DATE,
   featured TINYINT(1) NOT NULL DEFAULT 0,
-  published TINYINT(1) NOT NULL DEFAULT 0,
+  published TINYINT(1) NOT NULL DEFAULT 0, -- combined with publish_date: published=1 with a future publish_date is "Scheduled", not yet publicly visible
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -451,6 +455,31 @@ CREATE TABLE IF NOT EXISTS blog_post_tags (
   post_id INT UNSIGNED NOT NULL,
   tag VARCHAR(128) NOT NULL,
   FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Every category a post belongs to (a Morning Boost post is typically in
+-- several at once: Morning Boost + Health + Positivity + Wellness, etc.) —
+-- backfilled from each post's single `category` column when this table was
+-- added, and the authoritative set going forward.
+CREATE TABLE IF NOT EXISTS blog_post_categories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  post_id INT UNSIGNED NOT NULL,
+  category VARCHAR(64) NOT NULL,
+  FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The planned Theme/Series for each weekday's Morning Boost post, imported
+-- from the 2026 content calendar — drives auto-prefill on admin-blogs.html
+-- so the admin doesn't have to look up "what's this week's theme" by hand.
+-- blog_post_id is set once a post is actually created from this entry.
+CREATE TABLE IF NOT EXISTS morning_boost_calendar (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  boost_date DATE NOT NULL UNIQUE,
+  theme VARCHAR(255) NOT NULL,
+  series VARCHAR(255) NOT NULL,
+  blog_post_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (blog_post_id) REFERENCES blog_posts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Master, growing list of selectable blog tags (separate from the fixed FN_BLOG_CATEGORIES set).

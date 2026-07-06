@@ -6,9 +6,17 @@ const FN_AUDIENCES = ['Elementary School', 'Middle School', 'High School', 'High
 // shown on the public National Education Portal page for a lesson.
 const FN_CURRICULUM_RESOURCES = ['Classroom Poster', 'Student Handout', 'Teacher Copy', 'Quiz + Answer Key'];
 
-// Blog categories shown as filter chips on the public FN Blogs page.
-// "Morning Boost" added per request — a short daily-mindset-habit category.
-const FN_BLOG_CATEGORIES = ['Morning Boost', 'Weekend Energy', 'Books Blog', 'Mindset'];
+// Blog categories shown as filter chips on the public FN Blogs page. A post
+// can now belong to several at once (see blog_post_categories) — the 9
+// "2D Education"/Health/Positivity/Wellness entries were added to match the
+// Morning Boost content's real Wix category set, which always applies more
+// than one category per post.
+const FN_BLOG_CATEGORIES = [
+  'Morning Boost', 'Weekend Energy', 'Books Blog', 'Mindset',
+  'Health', 'Positivity', 'Wellness',
+  '2D Education Higher Education', '2D Education High School', '2D Education Middle School', '2D Elementary School',
+  '2D Business and Industry', '2D Government',
+];
 
 // Real server-side auth (session cookie). Redirects to the login page if the
 // session check fails or errors out.

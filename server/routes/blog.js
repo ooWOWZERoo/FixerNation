@@ -1,15 +1,26 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
+const { getSiteUser, hasActiveMembership } = require('../lib/access');
 
 const router = express.Router();
 
-async function attachTags(posts) {
+async function attachExtras(posts) {
   if (posts.length === 0) return posts;
-  const [tagRows] = await pool.query('SELECT post_id, tag FROM blog_post_tags WHERE post_id IN (?)', [posts.map(p => p.id)]);
+  const ids = posts.map(p => p.id);
+  const [tagRows] = await pool.query('SELECT post_id, tag FROM blog_post_tags WHERE post_id IN (?)', [ids]);
+  const [categoryRows] = await pool.query('SELECT post_id, category FROM blog_post_categories WHERE post_id IN (?)', [ids]);
+
   const tagsByPost = {};
   tagRows.forEach(row => { (tagsByPost[row.post_id] = tagsByPost[row.post_id] || []).push(row.tag); });
-  return posts.map(p => ({ ...p, tags: tagsByPost[p.id] || [] }));
+  const categoriesByPost = {};
+  categoryRows.forEach(row => { (categoriesByPost[row.post_id] = categoriesByPost[row.post_id] || []).push(row.category); });
+
+  return posts.map(p => ({
+    ...p,
+    tags: tagsByPost[p.id] || [],
+    categories: categoriesByPost[p.id] || [p.category],
+  }));
 }
 
 function serialize(row) {
@@ -19,12 +30,17 @@ function serialize(row) {
     slug: row.slug,
     author: row.author,
     category: row.category,
+    categories: row.categories || [row.category],
     featuredImage: row.featured_image,
     excerpt: row.excerpt,
     body: row.body,
     videoUrl: row.video_url,
     videoFileName: row.video_file_name,
     videoFileSize: row.video_file_size_label,
+    altText: row.alt_text || '',
+    metaDescription: row.meta_description || '',
+    focusKeyword: row.focus_keyword || '',
+    requiresMembership: !!row.requires_membership,
     publishDate: row.publish_date,
     featured: !!row.featured,
     published: !!row.published,
@@ -33,13 +49,34 @@ function serialize(row) {
   };
 }
 
+// Strips the protected content (video/body) from a post the viewer hasn't
+// unlocked — a real server-side strip, not just a UI hint, same pattern as
+// curriculum lesson-document gating in server/lib/access.js.
+function lockPost(post) {
+  return { ...post, locked: true, body: null, videoUrl: null, videoFileName: null, videoFileSize: null };
+}
+
 router.get('/posts', async (req, res) => {
   const wantsAll = req.query.all === 'true' && !!getAuthUser(req);
   const [rows] = wantsAll
     ? await pool.query('SELECT * FROM blog_posts ORDER BY publish_date DESC')
-    : await pool.query('SELECT * FROM blog_posts WHERE published = 1 ORDER BY publish_date DESC');
-  const posts = (await attachTags(rows)).map(serialize);
-  res.json({ posts });
+    // Scheduled posts (published=1 with a future publish_date) stay hidden
+    // from the public site until that date arrives — mirrors Wix's
+    // "schedule post" behavior using the fields that already existed.
+    : await pool.query(
+        "SELECT * FROM blog_posts WHERE published = 1 AND (publish_date IS NULL OR publish_date <= CURDATE()) ORDER BY publish_date DESC"
+      );
+  const posts = (await attachExtras(rows)).map(serialize);
+
+  if (wantsAll) return res.json({ posts });
+
+  const anyGated = posts.some(p => p.requiresMembership);
+  let unlocked = true;
+  if (anyGated) {
+    const siteUser = await getSiteUser(req);
+    unlocked = siteUser ? await hasActiveMembership(siteUser.email) : false;
+  }
+  res.json({ posts: posts.map(p => (p.requiresMembership && !unlocked ? lockPost(p) : { ...p, locked: false })) });
 });
 
 async function findUniqueSlug(baseSlug, excludeId) {
@@ -69,18 +106,25 @@ router.post('/posts', requireAuth, async (req, res) => {
       await connection.query('UPDATE blog_posts SET featured = 0');
     }
     const [result] = await connection.query(
-      `INSERT INTO blog_posts (title, slug, author, category, featured_image, excerpt, body, video_url, video_file_name, video_file_size_label, publish_date, featured, published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.title, slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '', p.videoUrl || '', p.videoFileName || '', p.videoFileSize || '', p.publishDate || null, p.featured ? 1 : 0, p.published ? 1 : 0]
+      `INSERT INTO blog_posts (title, slug, author, category, featured_image, excerpt, body, video_url, video_file_name, video_file_size_label, alt_text, meta_description, focus_keyword, requires_membership, publish_date, featured, published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        p.title, slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '',
+        p.videoUrl || '', p.videoFileName || '', p.videoFileSize || '',
+        p.altText || '', p.metaDescription || '', p.focusKeyword || '', p.requiresMembership ? 1 : 0,
+        p.publishDate || null, p.featured ? 1 : 0, p.published ? 1 : 0,
+      ]
     );
     const tags = Array.isArray(p.tags) ? p.tags : [];
     if (tags.length) {
       await connection.query('INSERT INTO blog_post_tags (post_id, tag) VALUES ' + tags.map(() => '(?, ?)').join(', '), tags.flatMap(t => [result.insertId, t]));
     }
+    const categories = Array.isArray(p.categories) && p.categories.length ? [...new Set(p.categories)] : [p.category];
+    await connection.query('INSERT INTO blog_post_categories (post_id, category) VALUES ' + categories.map(() => '(?, ?)').join(', '), categories.flatMap(c => [result.insertId, c]));
     await connection.commit();
 
     const [rows] = await pool.query('SELECT * FROM blog_posts WHERE id = ?', [result.insertId]);
-    const [post] = await attachTags(rows);
+    const [post] = await attachExtras(rows);
     res.status(201).json({ post: serialize(post) });
   } catch (err) {
     await connection.rollback();
@@ -107,19 +151,27 @@ router.put('/posts/:id', requireAuth, async (req, res) => {
       await connection.query('UPDATE blog_posts SET featured = 0 WHERE id != ?', [req.params.id]);
     }
     await connection.query(
-      `UPDATE blog_posts SET title=?, slug=?, author=?, category=?, featured_image=?, excerpt=?, body=?, video_url=?, video_file_name=?, video_file_size_label=?, publish_date=?, featured=?, published=?
+      `UPDATE blog_posts SET title=?, slug=?, author=?, category=?, featured_image=?, excerpt=?, body=?, video_url=?, video_file_name=?, video_file_size_label=?, alt_text=?, meta_description=?, focus_keyword=?, requires_membership=?, publish_date=?, featured=?, published=?
        WHERE id=?`,
-      [p.title, slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '', p.videoUrl || '', p.videoFileName || '', p.videoFileSize || '', p.publishDate || null, p.featured ? 1 : 0, p.published ? 1 : 0, req.params.id]
+      [
+        p.title, slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '',
+        p.videoUrl || '', p.videoFileName || '', p.videoFileSize || '',
+        p.altText || '', p.metaDescription || '', p.focusKeyword || '', p.requiresMembership ? 1 : 0,
+        p.publishDate || null, p.featured ? 1 : 0, p.published ? 1 : 0, req.params.id,
+      ]
     );
     await connection.query('DELETE FROM blog_post_tags WHERE post_id = ?', [req.params.id]);
     const tags = Array.isArray(p.tags) ? p.tags : [];
     if (tags.length) {
       await connection.query('INSERT INTO blog_post_tags (post_id, tag) VALUES ' + tags.map(() => '(?, ?)').join(', '), tags.flatMap(t => [req.params.id, t]));
     }
+    await connection.query('DELETE FROM blog_post_categories WHERE post_id = ?', [req.params.id]);
+    const categories = Array.isArray(p.categories) && p.categories.length ? [...new Set(p.categories)] : [p.category];
+    await connection.query('INSERT INTO blog_post_categories (post_id, category) VALUES ' + categories.map(() => '(?, ?)').join(', '), categories.flatMap(c => [req.params.id, c]));
     await connection.commit();
 
     const [rows] = await pool.query('SELECT * FROM blog_posts WHERE id = ?', [req.params.id]);
-    const [post] = await attachTags(rows);
+    const [post] = await attachExtras(rows);
     res.json({ post: serialize(post) });
   } catch (err) {
     await connection.rollback();

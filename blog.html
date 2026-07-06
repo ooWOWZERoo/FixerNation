@@ -224,7 +224,7 @@ function truncate(str, n) {
 }
 
 function renderFilterBar(posts) {
-  const usedCategories = FN_BLOG_CATEGORIES.filter(c => posts.some(p => p.category === c));
+  const usedCategories = FN_BLOG_CATEGORIES.filter(c => posts.some(p => (p.categories || [p.category]).includes(c)));
   const bar = document.getElementById('filterBar');
   bar.innerHTML = ['All Posts', ...usedCategories].map(c =>
     `<button class="chip ${c === activeCategory ? 'active' : ''}" onclick="setCategory('${c.replace(/'/g, "\\'")}')">${c}</button>`
@@ -244,7 +244,7 @@ function renderFeatured(posts) {
     <div class="featured-post">
       <div class="featured-img">
         <img src="${featured.featuredImage || ''}" alt="${featured.title}">
-        ${(featured.videoUrl || featured.videoFileName) ? '<span class="video-badge">▶ Video</span>' : ''}
+        ${featured.locked ? '<span class="video-badge">🔒 Members Only</span>' : ((featured.videoUrl || featured.videoFileName) ? '<span class="video-badge">▶ Video</span>' : '')}
       </div>
       <div class="featured-copy">
         <span class="eyebrow">${featured.category}</span>
@@ -260,7 +260,7 @@ function renderFeatured(posts) {
 function renderGrid(posts) {
   const featuredId = (posts.find(p => p.featured) || posts[0] || {}).id;
   const gridPosts = posts.filter(p => p.id !== featuredId);
-  const filtered = activeCategory === 'All Posts' ? gridPosts : gridPosts.filter(p => p.category === activeCategory);
+  const filtered = activeCategory === 'All Posts' ? gridPosts : gridPosts.filter(p => (p.categories || [p.category]).includes(activeCategory));
   const grid = document.getElementById('blogGrid');
   const empty = document.getElementById('blogEmpty');
 
@@ -277,7 +277,7 @@ function renderGrid(posts) {
     <div class="blog-card">
       <div class="blog-thumb">
         <img src="${p.featuredImage || ''}" alt="${p.title}">
-        ${(p.videoUrl || p.videoFileName) ? '<span class="video-badge">▶ Video</span>' : ''}
+        ${p.locked ? '<span class="video-badge">🔒 Members Only</span>' : ((p.videoUrl || p.videoFileName) ? '<span class="video-badge">▶ Video</span>' : '')}
       </div>
       <div class="blog-body">
         <span class="blog-cat">${p.category}</span>
@@ -301,7 +301,18 @@ function openPostRead(id) {
   document.getElementById('postReadImg').innerHTML = post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}">` : '';
   document.getElementById('postReadCategory').textContent = post.category;
   document.getElementById('postReadTitle').textContent = post.title;
-  document.getElementById('postReadMeta').textContent = `${post.author || 'Anthony J. Placito'} · ${fnFormatDate(post.publishDate)} · ${fnReadingTime(post.body)}`;
+  document.getElementById('postReadMeta').textContent = `${post.author || 'Anthony J. Placito'} · ${fnFormatDate(post.publishDate)}${post.locked ? '' : ' · ' + fnReadingTime(post.body)}`;
+
+  if (post.locked) {
+    document.getElementById('postReadBody').innerHTML = `
+      <p>${post.excerpt || ''}</p>
+      <div class="a-note" style="background:var(--cream-soft); border-radius:10px; padding:16px 18px; margin-top:10px;">
+        🔒 This post is for Fixer Nation members. <a href="join.html" style="color:var(--coral-dark); font-weight:700;">Join Fixer Nation</a> to watch and read the full post.
+      </div>
+    `;
+    document.getElementById('postReadOverlay').classList.add('show');
+    return;
+  }
 
   let videoHtml = '';
   if (post.videoUrl) {
@@ -319,7 +330,7 @@ function closePostRead() {
   document.getElementById('postReadOverlay').classList.remove('show');
 }
 
-fetch('/api/blog/posts')
+fetch('/api/blog/posts', { credentials: 'include' })
   .then(r => r.json())
   .then(data => {
     postsCache = data.posts || [];

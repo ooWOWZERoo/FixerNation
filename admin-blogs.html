@@ -32,6 +32,7 @@
       <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
       <a href="admin-memberships.html"><span class="ic">🪪</span><span class="label">Memberships</span></a>
+      <a href="admin-morning-boost.html"><span class="ic">🌅</span><span class="label">Morning Boost</span></a>
       <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
       <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
     </nav>
@@ -79,6 +80,15 @@
       <form id="postForm">
         <input type="hidden" id="postId">
 
+        <div class="a-field" id="calendarLoadField">
+          <label>Load From Morning Boost Calendar <span style="font-weight:400; text-transform:none;">(optional — prefills title/series for that day)</span></label>
+          <div style="display:flex; gap:10px;">
+            <input type="date" id="calendarDateInput" style="flex:1;">
+            <button type="button" class="a-btn a-btn-outline" onclick="loadFromCalendar()">Load</button>
+          </div>
+          <div class="a-note" id="calendarLoadNote"></div>
+        </div>
+
         <div class="a-field">
           <label>Featured Image</label>
           <div class="a-image-preview" id="imagePreview" style="aspect-ratio:16/9;">No image selected</div>
@@ -87,6 +97,9 @@
           </div>
           <div style="margin-top:8px;">
             <input type="text" id="imageUrl" placeholder="...or paste an image URL">
+          </div>
+          <div style="margin-top:8px;">
+            <input type="text" id="altText" placeholder="Alt text (accessibility + SEO)">
           </div>
         </div>
 
@@ -100,20 +113,30 @@
           <input type="text" id="slug" placeholder="turns-into-this-when-you-type-a-title">
         </div>
 
-        <div class="a-form-row">
-          <div class="a-field">
-            <label>Author</label>
-            <input type="text" id="author" value="Anthony J. Placito">
-          </div>
-          <div class="a-field">
-            <label>Category *</label>
-            <select id="category" required></select>
-          </div>
+        <div class="a-field">
+          <label>Author</label>
+          <input type="text" id="author" value="Anthony J. Placito">
+        </div>
+
+        <div class="a-field">
+          <label>Categories * <span style="font-weight:400; text-transform:none;">(a post can belong to several — the first one checked is used as the primary)</span></label>
+          <div class="a-tag-row" id="categoryRow"></div>
         </div>
 
         <div class="a-field">
           <label>Excerpt <span style="font-weight:400; text-transform:none;">(short summary shown on listing cards)</span></label>
           <textarea id="excerpt" style="min-height:60px;"></textarea>
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Meta Description <span style="font-weight:400; text-transform:none;">(SEO — falls back to excerpt if blank)</span></label>
+            <input type="text" id="metaDescription">
+          </div>
+          <div class="a-field">
+            <label>Focus Keyword <span style="font-weight:400; text-transform:none;">(SEO)</span></label>
+            <input type="text" id="focusKeyword">
+          </div>
         </div>
 
         <div class="a-field">
@@ -162,6 +185,16 @@
             <div class="a-toggle on" id="publishedToggle" onclick="togglePublished()"><div class="knob"></div></div>
             <span id="publishedLabel" style="font-size:14px; font-weight:600;">Published (visible on the site)</span>
           </div>
+          <div class="a-note">If Publish Date is in the future, the post stays hidden until that date arrives even while Published is on — this is how you schedule a post ahead of time.</div>
+        </div>
+
+        <div class="a-field">
+          <label>Members Only</label>
+          <div class="a-toggle-row">
+            <div class="a-toggle" id="requiresMembershipToggle" onclick="toggleRequiresMembership()"><div class="knob"></div></div>
+            <span id="requiresMembershipLabel" style="font-size:14px; font-weight:600;">Open to everyone</span>
+          </div>
+          <div class="a-note">When on, only visitors with an active Fixer Nation membership (any plan) can view this post's video/body — everyone else sees a locked preview with a link to join. Replaces Wix's "Monetize" gating.</div>
         </div>
       </form>
     </div>
@@ -183,9 +216,19 @@ let editingId = null;
 let slugManuallyEdited = false;
 let postsCache = [];
 let blogTagsCache = [];
+let loadedCalendarDate = null;
 
-function populateCategorySelect(selectEl, selected) {
-  selectEl.innerHTML = FN_BLOG_CATEGORIES.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+function renderCategoryCheckboxes(selectedCategories) {
+  const row = document.getElementById('categoryRow');
+  const selected = selectedCategories && selectedCategories.length ? selectedCategories : [];
+  row.innerHTML = FN_BLOG_CATEGORIES.map(c => {
+    const checked = selected.includes(c) ? 'checked' : '';
+    return `<label class="a-tag-check"><input type="checkbox" value="${c}" ${checked}> ${c}</label>`;
+  }).join('');
+}
+
+function getCheckedCategories() {
+  return Array.from(document.querySelectorAll('#categoryRow input:checked')).map(cb => cb.value);
 }
 
 async function fetchBlogTags() {
@@ -247,13 +290,17 @@ async function renderPosts() {
   posts.forEach(p => {
     const tr = document.createElement('tr');
     const hasVideo = !!(p.videoUrl || p.videoFileName);
+    const categories = p.categories && p.categories.length ? p.categories : [p.category];
+    const isScheduled = p.published && p.publishDate && p.publishDate > new Date().toISOString().slice(0, 10);
+    const statusLabel = !p.published ? 'Draft' : (isScheduled ? 'Scheduled' : 'Published');
+    const statusPill = !p.published ? 'a-pill-neutral' : (isScheduled ? 'a-pill-warning' : 'a-pill-success');
     tr.innerHTML = `
       <td><img class="a-row-thumb" style="aspect-ratio:16/10; height:auto;" src="${p.featuredImage || ''}" alt="${p.title}" onerror="this.style.opacity=0.2;"></td>
-      <td><div class="a-cell-title">${p.title} ${hasVideo ? '🎥' : ''}</div><div class="a-cell-sub">/${p.slug || ''}</div></td>
-      <td><span class="a-pill a-pill-neutral">${p.category}</span></td>
+      <td><div class="a-cell-title">${p.title} ${hasVideo ? '🎥' : ''} ${p.requiresMembership ? '🔒' : ''}</div><div class="a-cell-sub">/${p.slug || ''}</div></td>
+      <td>${categories.map(c => `<span class="a-pill a-pill-neutral" style="margin:2px;">${c}</span>`).join('')}</td>
       <td>${p.publishDate ? fnFormatDate(p.publishDate) : '—'}</td>
       <td>
-        <span class="a-pill ${p.published ? 'a-pill-success' : 'a-pill-neutral'}">${p.published ? 'Published' : 'Draft'}</span>
+        <span class="a-pill ${statusPill}">${statusLabel}</span>
         ${p.featured ? '<span class="a-pill a-pill-warning" style="margin-left:6px;">★ Featured</span>' : ''}
       </td>
       <td>
@@ -273,10 +320,16 @@ function openPostModal() {
   pendingImageFile = null;
   pendingVideoFile = null;
   slugManuallyEdited = false;
+  loadedCalendarDate = null;
   document.getElementById('postModalTitle').textContent = 'Write New Post';
   document.getElementById('postForm').reset();
+  document.getElementById('calendarLoadField').style.display = 'block';
+  document.getElementById('calendarLoadNote').textContent = '';
   document.getElementById('author').value = 'Anthony J. Placito';
-  populateCategorySelect(document.getElementById('category'), FN_BLOG_CATEGORIES[0]);
+  document.getElementById('altText').value = '';
+  document.getElementById('metaDescription').value = '';
+  document.getElementById('focusKeyword').value = '';
+  renderCategoryCheckboxes([]);
   document.getElementById('imagePreview').innerHTML = 'No image selected';
   document.getElementById('publishDate').value = new Date().toISOString().slice(0, 10);
   document.getElementById('readingTime').textContent = '~0 min read';
@@ -286,7 +339,44 @@ function openPostModal() {
   renderTagCheckboxes([]);
   setFeaturedToggle(false);
   setPublishedToggle(true);
+  setRequiresMembershipToggle(false);
   document.getElementById('postModalOverlay').classList.add('show');
+}
+
+// Pulls a calendar entry's theme/series into the title/excerpt and checks
+// "Morning Boost" so the admin doesn't have to look up or retype either —
+// the entry gets linked back to this post once it's actually saved.
+async function loadFromCalendar() {
+  const date = document.getElementById('calendarDateInput').value;
+  if (!date) { fnToast('Pick a date first'); return; }
+  const r = await fetch(`/api/morning-boost/${date}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    document.getElementById('calendarLoadNote').textContent = 'No Morning Boost calendar entry for that date.';
+    return;
+  }
+  const { entry } = await r.json();
+  loadedCalendarDate = date;
+  document.getElementById('title').value = `${entry.series}: ${entry.theme}`;
+  document.getElementById('slug').value = fnSlugify(`${entry.series}: ${entry.theme}`);
+  slugManuallyEdited = true;
+  document.getElementById('excerpt').value = entry.theme;
+  document.getElementById('publishDate').value = date;
+  renderCategoryCheckboxes(['Morning Boost']);
+  document.getElementById('calendarLoadNote').textContent = entry.blogPostId
+    ? `Loaded — Theme: "${entry.theme}", Series: "${entry.series}". A post already exists for this date (editing it won't create a duplicate link).`
+    : `Loaded — Theme: "${entry.theme}", Series: "${entry.series}".`;
+}
+
+function toggleRequiresMembership() {
+  const t = document.getElementById('requiresMembershipToggle');
+  setRequiresMembershipToggle(!t.classList.contains('on'));
+}
+function setRequiresMembershipToggle(on) {
+  const t = document.getElementById('requiresMembershipToggle');
+  const l = document.getElementById('requiresMembershipLabel');
+  if (on) { t.classList.add('on'); l.textContent = 'Requires an active Fixer Nation membership'; }
+  else { t.classList.remove('on'); l.textContent = 'Open to everyone'; }
 }
 
 function closePostModal() {
@@ -301,11 +391,16 @@ function editPost(id) {
   pendingImageFile = null;
   pendingVideoFile = p.videoFileName ? { name: p.videoFileName, sizeLabel: p.videoFileSize || '' } : null;
   slugManuallyEdited = true;
+  loadedCalendarDate = null;
   document.getElementById('postModalTitle').textContent = 'Edit Post';
+  document.getElementById('calendarLoadField').style.display = 'none';
   document.getElementById('title').value = p.title || '';
   document.getElementById('slug').value = p.slug || '';
   document.getElementById('author').value = p.author || '';
-  populateCategorySelect(document.getElementById('category'), p.category);
+  document.getElementById('altText').value = p.altText || '';
+  document.getElementById('metaDescription').value = p.metaDescription || '';
+  document.getElementById('focusKeyword').value = p.focusKeyword || '';
+  renderCategoryCheckboxes(p.categories && p.categories.length ? p.categories : [p.category]);
   document.getElementById('excerpt').value = p.excerpt || '';
   document.getElementById('body').value = p.body || '';
   renderTagCheckboxes(p.tags || []);
@@ -317,6 +412,7 @@ function editPost(id) {
   renderVideoFileList();
   setFeaturedToggle(!!p.featured);
   setPublishedToggle(!!p.published);
+  setRequiresMembershipToggle(!!p.requiresMembership);
   if (p.featuredImage) {
     document.getElementById('imagePreview').innerHTML = `<img src="${p.featuredImage}" onerror="this.parentElement.textContent='Preview unavailable'">`;
   } else {
@@ -442,9 +538,9 @@ document.getElementById('imageUrl').addEventListener('input', function(e){
 
 async function savePost() {
   const title = document.getElementById('title').value.trim();
-  const category = document.getElementById('category').value;
-  if (!title || !category) {
-    fnToast('Title and category are required');
+  const categories = getCheckedCategories();
+  if (!title || !categories.length) {
+    fnToast('Title and at least one category are required');
     return;
   }
 
@@ -459,8 +555,12 @@ async function savePost() {
     title,
     slug: fnSlugify(document.getElementById('slug').value || title),
     author: document.getElementById('author').value.trim() || 'Anthony J. Placito',
-    category,
+    category: categories[0],
+    categories,
     featuredImage,
+    altText: document.getElementById('altText').value.trim(),
+    metaDescription: document.getElementById('metaDescription').value.trim(),
+    focusKeyword: document.getElementById('focusKeyword').value.trim(),
     excerpt: document.getElementById('excerpt').value.trim(),
     body: document.getElementById('body').value.trim(),
     tags: getCheckedTags(),
@@ -470,6 +570,7 @@ async function savePost() {
     publishDate: document.getElementById('publishDate').value || new Date().toISOString().slice(0, 10),
     featured: document.getElementById('featuredToggle').classList.contains('on'),
     published: document.getElementById('publishedToggle').classList.contains('on'),
+    requiresMembership: document.getElementById('requiresMembershipToggle').classList.contains('on'),
   };
 
   const url = editingId ? `/api/blog/posts/${editingId}` : '/api/blog/posts';
@@ -485,6 +586,16 @@ async function savePost() {
     const err = await r.json().catch(() => ({}));
     fnToast(err.error || 'Could not save post');
     return;
+  }
+
+  if (loadedCalendarDate) {
+    const { post } = await r.json();
+    await fetch(`/api/morning-boost/${loadedCalendarDate}/blog-post`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blogPostId: post.id }),
+    });
   }
 
   fnToast(editingId ? 'Post updated' : 'Post published');

@@ -28,4 +28,20 @@ async function hasActiveLicense(siteUserId) {
   return rows.length > 0;
 }
 
-module.exports = { getSiteUser, hasActiveLicense };
+// True if the given email has any membership (any of the 7 plans/3 member
+// types) in trialing or active status — replaces Wix's "Monetize" gate for
+// Morning Boost blog posts. Resolved by email since site_users and
+// newsletter_contacts are only ever linked by matching email, same as every
+// other cross-reference between the two in this project.
+async function hasActiveMembership(email) {
+  if (!email) return false;
+  const [rows] = await pool.query(
+    `SELECT 1 FROM contact_memberships cm
+     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
+     WHERE nc.email = ? AND cm.status IN ('trialing', 'active') LIMIT 1`,
+    [email]
+  );
+  return rows.length > 0;
+}
+
+module.exports = { getSiteUser, hasActiveLicense, hasActiveMembership };

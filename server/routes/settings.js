@@ -62,4 +62,16 @@ router.put('/invoice-branding', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/morning-boost-voice', requireAuth, async (req, res) => {
+  const voiceId = await getSetting('morning_boost_voice_id');
+  res.json({ voiceId });
+});
+
+router.put('/morning-boost-voice', requireAuth, async (req, res) => {
+  const voiceId = (req.body && req.body.voiceId || '').trim();
+  if (!voiceId) return res.status(400).json({ error: 'A voice ID is required' });
+  await setSetting('morning_boost_voice_id', voiceId);
+  res.json({ ok: true });
+});
+
 module.exports = router;
