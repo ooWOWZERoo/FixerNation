@@ -97,10 +97,16 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
   const [[singleLicenseRow]] = await pool.query(
     "SELECT COUNT(*) AS units, COALESCE(SUM(amount_cents),0) AS cents FROM purchases WHERE product_type = 'single_license'"
   );
+  const [membershipPlanRows] = await pool.query(
+    `SELECT p.membership_plan_id AS id, mp.name AS name, COUNT(*) AS units, COALESCE(SUM(p.amount_cents),0) AS cents
+     FROM purchases p JOIN membership_plans mp ON mp.id = p.membership_plan_id
+     WHERE p.product_type = 'membership' GROUP BY p.membership_plan_id, mp.name`
+  );
 
   const items = [
     ...bookRows.map(r => ({ type: 'book', name: r.name, unitsSold: r.units, revenue: toDollars(r.cents) })),
     ...licenseProductRows.map(r => ({ type: 'license_product', name: r.name, unitsSold: r.units, revenue: toDollars(r.cents) })),
+    ...membershipPlanRows.map(r => ({ type: 'membership', name: r.name, unitsSold: r.units, revenue: toDollars(r.cents) })),
   ];
   if (singleLicenseRow.units > 0) {
     items.push({ type: 'single_license', name: 'Single Teacher License', unitsSold: singleLicenseRow.units, revenue: toDollars(singleLicenseRow.cents) });
@@ -182,9 +188,12 @@ router.get('/insights', requireAuth, async (req, res) => {
   );
   const categoryByType = Object.fromEntries(categoryRows.map(r => [r.product_type, toDollars(r.cents)]));
   const categoryTotal = Object.values(categoryByType).reduce((a, b) => a + b, 0);
-  const revenueByCategory = ['book', 'single_license', 'group_license'].map(type => ({
+  const CATEGORY_LABELS = {
+    book: 'Books', single_license: 'Single Teacher Licenses', group_license: 'School/Group Licenses', membership: 'Memberships',
+  };
+  const revenueByCategory = ['book', 'single_license', 'group_license', 'membership'].map(type => ({
     type,
-    label: type === 'book' ? 'Books' : type === 'single_license' ? 'Single Teacher Licenses' : 'School/Group Licenses',
+    label: CATEGORY_LABELS[type],
     revenue: categoryByType[type] || 0,
     percentOfTotal: categoryTotal > 0 ? ((categoryByType[type] || 0) / categoryTotal) * 100 : 0,
   }));

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Join Fixer Nation</title>
+<title>Brand Ambassador Program — Fixer Nation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -41,9 +41,8 @@
   .join-hero p.lead{font-size:17px; color:var(--ink-soft); max-width:600px; margin:0 auto;}
 
   .section{padding:56px 0 80px;}
-  .pricing-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
-  .price-card{background:#fff; border-radius:var(--radius-md); padding:36px 30px; position:relative; border:2px solid transparent; box-shadow:0 16px 34px -22px rgba(22,79,74,0.22);}
-  .price-card.featured{border-color:var(--coral); transform:scale(1.03);}
+  .pricing-grid{display:grid; grid-template-columns:1fr; max-width:420px; margin:0 auto;}
+  .price-card{background:#fff; border-radius:var(--radius-md); padding:36px 30px; position:relative; border:2px solid var(--coral); box-shadow:0 16px 34px -22px rgba(22,79,74,0.22);}
   .ribbon{position:absolute; top:-14px; right:24px; background:var(--coral); color:#fff; font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:7px 14px; border-radius:999px; box-shadow:0 10px 20px -8px rgba(242,107,77,0.6);}
   .price-card h3{font-size:19px; margin-bottom:6px;}
   .price-amount{font-family:'Fraunces',serif; font-size:38px; color:var(--teal-dark); margin:14px 0 4px;}
@@ -76,8 +75,6 @@
 
   @media (max-width:900px){
     .nav-links{display:none;}
-    .pricing-grid{grid-template-columns:1fr;}
-    .price-card.featured{transform:none;}
     .footer-grid{grid-template-columns:1fr 1fr;}
   }
   @media (max-width:560px){
@@ -90,7 +87,7 @@
   .checkout-modal label{display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:var(--ink-soft);}
   .checkout-modal input{width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px; margin-bottom:12px;}
   .checkout-error{display:none; font-size:13px; font-weight:600; color:#B3261E; background:rgba(179,38,30,0.08); padding:10px 14px; border-radius:10px; margin-bottom:14px;}
-  .checkout-note{display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;}
+  .checkout-note{display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px; max-width:420px; margin-left:auto; margin-right:auto;}
   .checkout-note.success{background:rgba(22,79,74,0.1); color:var(--teal-dark); display:block;}
   .checkout-note.cancelled{background:rgba(235,166,87,0.15); color:#8A5A1E; display:block;}
 </style>
@@ -111,38 +108,38 @@
     </nav>
     <div class="nav-cta">
       <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
-      <a href="join.html" class="btn btn-primary active">Join Fixer Nation</a>
+      <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
     </div>
   </div>
 </header>
 
 <section class="join-hero wrap">
-  <span class="eyebrow">Membership</span>
-  <h1>Choose your path into Fixer Nation</h1>
-  <p class="lead">Invest in your mental health and wellness — the monthly cost of two cups of coffee. If you're facing an issue, we're here to help you find the answer.</p>
-  <p style="font-size:13.5px; color:var(--ink-soft); margin-top:18px;">Run a business? See <a href="service-providers.html" style="color:var(--coral-dark); font-weight:600;">Service Provider memberships</a>. Want to represent Fixer Nation? See the <a href="brand-ambassador.html" style="color:var(--coral-dark); font-weight:600;">Brand Ambassador program</a>.</p>
+  <span class="eyebrow">Brand Ambassador Program</span>
+  <h1>Represent a community of trusted professionals</h1>
+  <p class="lead">Share our mission of positivity, health, and wellness, and help connect people with resources that make a real difference — with a 365-day free trial to get started.</p>
+  <p style="font-size:13.5px; color:var(--ink-soft); margin-top:18px;">Looking for the individual membership? See <a href="join.html" style="color:var(--coral-dark); font-weight:600;">Join Fixer Nation</a>. Run a business instead? See <a href="service-providers.html" style="color:var(--coral-dark); font-weight:600;">Service Provider memberships</a>.</p>
 </section>
 
 <section class="section" id="pricing">
   <div class="wrap">
     <div id="checkoutNote" class="checkout-note"></div>
     <div class="pricing-grid" id="pricingGrid">
-      <p style="text-align:center; grid-column:1/-1; color:var(--ink-soft);">Loading membership plans…</p>
+      <p style="text-align:center; color:var(--ink-soft);">Loading membership plan…</p>
     </div>
 
     <div class="faq">
       <h2>Common Questions</h2>
       <div class="faq-item">
-        <h4>What do all memberships include?</h4>
-        <p>Full access to the Fixer Nation Positivity Health and Wellness Social Network, Daily Morning Boost Emails, the Vetted Professional Network, "Ask The Fixer," the Blog, Library, and mobile app.</p>
+        <h4>What do approved Brand Ambassadors receive?</h4>
+        <p>Free access to the Fixer Nation website and mobile app, participation in the Fixer Nation Residual Compensation Plan, the Annual Service Provider Benefits, an assigned territory to build your Fixer Nation network, and the potential to earn an Annual Performance Bonus.</p>
       </div>
       <div class="faq-item">
         <h4>How does the free trial work?</h4>
-        <p>Monthly and Annual plans include a 30-day free trial — cancel anytime before it ends and you won't be charged.</p>
+        <p>Your first 365 days are free — cancel anytime before the trial ends and you won't be charged. After that, it renews at $499/year.</p>
       </div>
       <div class="faq-item">
-        <h4>I bought a book — how do I redeem my free membership?</h4>
-        <p>Use the QR code on the inside cover of your book to activate a 90-day Fixer Nation membership at no cost.</p>
+        <h4>Is this the same as a Service Provider membership?</h4>
+        <p>Brand Ambassadors receive everything included in the Annual Service Provider plan, plus territory assignment, the Residual Compensation Plan, and performance bonus eligibility.</p>
       </div>
     </div>
   </div>
@@ -150,8 +147,8 @@
 
 <section class="cta-band">
   <div class="wrap">
-    <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">You're worth it</span>
-    <h2 style="margin-top:18px;">We believe you, and your mental health, are worth so much more.</h2>
+    <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">Be the face of Fixer Nation in your community</span>
+    <h2 style="margin-top:18px;">Help connect people with resources that make a real difference.</h2>
     <a href="#pricing" class="btn btn-light">Start Your Free Trial</a>
   </div>
 </section>
@@ -270,28 +267,15 @@ function fnMoney(amount) {
 }
 
 function renderPlanCard(plan) {
-  const featured = plan.billingInterval === 'monthly' && plan.price > 0;
   const priceSuffix = plan.billingInterval === 'monthly' ? '<span>/mo</span>' : plan.billingInterval === 'annual' ? '<span>/yr</span>' : '';
-  let sub;
-  if (plan.trialDays > 0 && plan.regularPrice) {
-    sub = `${plan.trialDays}-day free trial, then ${fnMoney(plan.regularPrice)}${plan.billingInterval === 'monthly' ? '/mo' : '/yr'}`;
-  } else if (plan.trialDays > 0) {
-    sub = `${plan.trialDays}-day free trial`;
-  } else {
-    sub = plan.description || '';
-  }
+  const sub = plan.trialDays > 0 ? `${plan.trialDays}-day free trial, then ${fnMoney(plan.price)}${plan.billingInterval === 'monthly' ? '/mo' : '/yr'}` : (plan.description || '');
   const benefits = (plan.benefits || []).map(b => `<li><span class="check">✓</span> ${b}</li>`).join('');
-  let cta;
-  if (plan.price === 0) {
-    cta = `<a href="books.html" class="btn btn-outline" style="width:100%;">Buy the Book</a>`;
-  } else if (!plan.stripeConnected) {
-    cta = `<a href="contact.html" class="btn btn-outline" style="width:100%;">Contact Us to Sign Up</a>`;
-  } else {
-    cta = `<button type="button" class="btn ${featured ? 'btn-primary' : 'btn-outline'}" style="width:100%;" onclick="openCheckoutModal(${plan.id}, '${plan.name.replace(/'/g, "\\'")}')">${plan.trialDays > 0 ? 'Start Free Trial' : 'Buy Now'}</button>`;
-  }
+  const cta = plan.stripeConnected
+    ? `<button type="button" class="btn btn-primary" style="width:100%;" onclick="openCheckoutModal(${plan.id}, '${plan.name.replace(/'/g, "\\'")}')">${plan.trialDays > 0 ? 'Start Free Trial' : 'Buy Now'}</button>`
+    : `<a href="contact.html" class="btn btn-outline" style="width:100%;">Contact Us to Sign Up</a>`;
   return `
-    <div class="price-card ${featured ? 'featured' : ''}">
-      ${featured ? '<span class="ribbon">Most Flexible</span>' : ''}
+    <div class="price-card">
+      <span class="ribbon">365-Day Free Trial</span>
       <h3>${plan.name.replace('Fixer Nation ', '')}</h3>
       <p class="price-sub">${sub}</p>
       <div class="price-amount">${fnMoney(plan.price)}${priceSuffix}</div>
@@ -304,12 +288,12 @@ function renderPlanCard(plan) {
 async function loadMembershipPlans() {
   const grid = document.getElementById('pricingGrid');
   try {
-    const res = await fetch('/api/membership-plans?memberType=consumer');
+    const res = await fetch('/api/membership-plans?memberType=brand_ambassador');
     const data = await res.json();
     const plans = data.membershipPlans || [];
-    grid.innerHTML = plans.map(renderPlanCard).join('') || '<p style="text-align:center; grid-column:1/-1;">Membership plans are being updated — check back soon.</p>';
+    grid.innerHTML = plans.map(renderPlanCard).join('') || '<p style="text-align:center;">The Brand Ambassador program is being updated — check back soon.</p>';
   } catch (err) {
-    grid.innerHTML = '<p style="text-align:center; grid-column:1/-1;">Could not load membership plans right now.</p>';
+    grid.innerHTML = '<p style="text-align:center;">Could not load the membership plan right now.</p>';
   }
 }
 

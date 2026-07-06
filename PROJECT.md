@@ -24,7 +24,9 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Book detail — Your Past Doesn't Define You | book-your-past.html | book-your-past-v2.html |
 | Book detail — Think with 5 Brains | book-5-brains.html | book-5-brains-v2.html |
 | Book detail — How to Lie | book-how-to-lie.html | book-how-to-lie-v2.html |
-| Join / Membership pricing | join.html | join-v2.html |
+| Join / Membership pricing (consumer) | join.html | join-v2.html |
+| Service Provider memberships (v1 only) | service-providers.html | — |
+| Brand Ambassador program (v1 only) | brand-ambassador.html | — |
 | FN Network | fnnetwork.html | fnnetwork-v2.html |
 | Ask The Fixer | askthefixer.html | askthefixer-v2.html |
 | National Education Portal | education-portal.html | education-portal-v2.html |
@@ -51,6 +53,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
 | License products, school-domain lookup/management | admin-licenses.html |
+| Membership plans (CRUD, Stripe sync) + Members (browse/filter/grant) | admin-memberships.html |
 | Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
 | Settings (own password, admin management, contact-form email routing for 4 forms, invoice branding) | admin-settings.html |
 | Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes) |
@@ -68,6 +71,12 @@ Two ways to buy a school/teacher license, both live:
 
 A single admin-editable **license product catalog** (`admin-licenses.html`) backs both the cart (`cart.html`) and the standalone `licenses.html` flat-rate flow. Group licenses generate open seats a school fills with teacher emails; signing up with a matching email auto-claims a seat. Curriculum lesson documents and quizzes are gated behind an active seat — the overview/objectives/preview content stays public either way.
 
+## Memberships
+
+Three member types — Consumer, Service Provider, Brand Ambassador — each with one or more admin-editable **membership plans** (`admin-memberships.html`'s Plans tab), covering the 7 real tiers (Free w/ Book, Monthly/Annual Consumer, Monthly/Annual Service Provider, 2D Education Program registration, Brand Ambassador). Public checkout lives on `join.html` (consumer), `service-providers.html`, and `brand-ambassador.html`, each rendering its pricing cards from the plan catalog and posting to `/api/checkout/create-membership-session` — recurring plans open a Stripe subscription-mode Checkout session (with a trial period), the one-time 2D Education plan opens payment mode. Like license checkout, this is **not live** until real Stripe keys are configured; unsynced plans show "Contact Us to Sign Up" instead.
+
+A contact can hold multiple memberships at once, tracked in a `contact_memberships` table (status: trialing/active/past_due/cancelled/expired) separate from `purchases` — visible on the CRM contact record and browsable/filterable/manually-grantable from `admin-memberships.html`'s Members tab. Every real charge becomes its own order: the first one after a trial ends and every renewal each create a new `purchases` row (via the `invoice.paid` webhook, keyed uniquely by Stripe invoice ID so retries don't double-count), while the `contact_memberships` record persists across the whole subscription lifecycle. This is why membership revenue shows up in Orders and Financial Insights the same as book/license purchases.
+
 ## CRM & campaigns
 
 Contacts (`admin-newsletter.html`) support search/filter/sort/pagination, a user-configurable column picker, CSV import/export, contact groups, purchase history, and site-account status (registered/verified, resend verification, password reset, delete) — the latter surfaced directly on the contact record rather than a separate page, since a site-user account and a CRM contact are linked only by matching email (no formal foreign key).
@@ -77,7 +86,7 @@ Email campaigns (`admin-campaigns.html`) send for real via SMTP, always excludin
 ## Known limitations
 
 - **Email open-tracking is pixel-based and imprecise.** The SMTP setup is a plain relay (cPanel mailbox), not an ESP with delivery/open webhooks, so opens are tracked via an invisible 1×1 image — many clients block remote images (undercounts), and some (e.g. Apple Mail Privacy Protection) pre-fetch every image regardless of whether a human opened it (overcounts). Plain-text campaigns can't be tracked at all (no way to embed a pixel). Treat the numbers as directional.
-- **Stripe checkout isn't live yet** — see Licensing & checkout above.
+- **Stripe checkout isn't live yet** — see Licensing & checkout and Memberships above.
 - **No automated tests.** All verification is manual (curl with cookie jars, or the browser) after each deploy.
 - **`-v2` pages are frozen** by original project decision, not neglected.
 - **`privacy-choices.html`'s "we don't sell/share data" framing reflects what's actually implemented today** — no third-party ad trackers, no data brokers, sessionStorage-only anonymous analytics. This isn't legal advice; if a real third-party data relationship is ever added, that page needs to be revisited. The analytics opt-out toggle on that page sets a real `localStorage` flag (`fnAnalyticsOptOut`) that `fnTrackEvent`/`fnTrackPageview` check before firing.

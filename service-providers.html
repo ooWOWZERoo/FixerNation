@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Join Fixer Nation</title>
+<title>Service Provider Memberships — Fixer Nation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -111,16 +111,16 @@
     </nav>
     <div class="nav-cta">
       <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a></div>
-      <a href="join.html" class="btn btn-primary active">Join Fixer Nation</a>
+      <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
     </div>
   </div>
 </header>
 
 <section class="join-hero wrap">
-  <span class="eyebrow">Membership</span>
-  <h1>Choose your path into Fixer Nation</h1>
-  <p class="lead">Invest in your mental health and wellness — the monthly cost of two cups of coffee. If you're facing an issue, we're here to help you find the answer.</p>
-  <p style="font-size:13.5px; color:var(--ink-soft); margin-top:18px;">Run a business? See <a href="service-providers.html" style="color:var(--coral-dark); font-weight:600;">Service Provider memberships</a>. Want to represent Fixer Nation? See the <a href="brand-ambassador.html" style="color:var(--coral-dark); font-weight:600;">Brand Ambassador program</a>.</p>
+  <span class="eyebrow">Service Providers</span>
+  <h1>Grow your business with Fixer Nation</h1>
+  <p class="lead">Advertise your services to a network of people actively looking for trusted professionals — plus everything included in a Fixer Nation membership.</p>
+  <p style="font-size:13.5px; color:var(--ink-soft); margin-top:18px;">Looking for the individual membership? See <a href="join.html" style="color:var(--coral-dark); font-weight:600;">Join Fixer Nation</a>. Want to represent us instead? See the <a href="brand-ambassador.html" style="color:var(--coral-dark); font-weight:600;">Brand Ambassador program</a>.</p>
 </section>
 
 <section class="section" id="pricing">
@@ -133,16 +133,16 @@
     <div class="faq">
       <h2>Common Questions</h2>
       <div class="faq-item">
-        <h4>What do all memberships include?</h4>
-        <p>Full access to the Fixer Nation Positivity Health and Wellness Social Network, Daily Morning Boost Emails, the Vetted Professional Network, "Ask The Fixer," the Blog, Library, and mobile app.</p>
+        <h4>What do Service Provider memberships include?</h4>
+        <p>A business listing and advertising placement across Fixer Nation channels, plus full access to the Positivity Health and Wellness Network, Daily Morning Boost Emails, "Ask The Fixer," the Blog, Library, and mobile app.</p>
       </div>
       <div class="faq-item">
         <h4>How does the free trial work?</h4>
         <p>Monthly and Annual plans include a 30-day free trial — cancel anytime before it ends and you won't be charged.</p>
       </div>
       <div class="faq-item">
-        <h4>I bought a book — how do I redeem my free membership?</h4>
-        <p>Use the QR code on the inside cover of your book to activate a 90-day Fixer Nation membership at no cost.</p>
+        <h4>What is the 2D Education Program registration for?</h4>
+        <p>A one-time registration valid for 12 months. If your plan is purchased through a school, be sure to use your school email address at checkout — the price is comped for school-purchased tiers.</p>
       </div>
     </div>
   </div>
@@ -150,8 +150,8 @@
 
 <section class="cta-band">
   <div class="wrap">
-    <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">You're worth it</span>
-    <h2 style="margin-top:18px;">We believe you, and your mental health, are worth so much more.</h2>
+    <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">Put your business in front of people who need it</span>
+    <h2 style="margin-top:18px;">Join the network of trusted professionals people turn to first.</h2>
     <a href="#pricing" class="btn btn-light">Start Your Free Trial</a>
   </div>
 </section>
@@ -270,7 +270,7 @@ function fnMoney(amount) {
 }
 
 function renderPlanCard(plan) {
-  const featured = plan.billingInterval === 'monthly' && plan.price > 0;
+  const featured = plan.billingInterval === 'monthly';
   const priceSuffix = plan.billingInterval === 'monthly' ? '<span>/mo</span>' : plan.billingInterval === 'annual' ? '<span>/yr</span>' : '';
   let sub;
   if (plan.trialDays > 0 && plan.regularPrice) {
@@ -281,14 +281,9 @@ function renderPlanCard(plan) {
     sub = plan.description || '';
   }
   const benefits = (plan.benefits || []).map(b => `<li><span class="check">✓</span> ${b}</li>`).join('');
-  let cta;
-  if (plan.price === 0) {
-    cta = `<a href="books.html" class="btn btn-outline" style="width:100%;">Buy the Book</a>`;
-  } else if (!plan.stripeConnected) {
-    cta = `<a href="contact.html" class="btn btn-outline" style="width:100%;">Contact Us to Sign Up</a>`;
-  } else {
-    cta = `<button type="button" class="btn ${featured ? 'btn-primary' : 'btn-outline'}" style="width:100%;" onclick="openCheckoutModal(${plan.id}, '${plan.name.replace(/'/g, "\\'")}')">${plan.trialDays > 0 ? 'Start Free Trial' : 'Buy Now'}</button>`;
-  }
+  const cta = plan.stripeConnected
+    ? `<button type="button" class="btn ${featured ? 'btn-primary' : 'btn-outline'}" style="width:100%;" onclick="openCheckoutModal(${plan.id}, '${plan.name.replace(/'/g, "\\'")}')">${plan.trialDays > 0 ? 'Start Free Trial' : 'Buy Now'}</button>`
+    : `<a href="contact.html" class="btn btn-outline" style="width:100%;">Contact Us to Sign Up</a>`;
   return `
     <div class="price-card ${featured ? 'featured' : ''}">
       ${featured ? '<span class="ribbon">Most Flexible</span>' : ''}
@@ -304,7 +299,7 @@ function renderPlanCard(plan) {
 async function loadMembershipPlans() {
   const grid = document.getElementById('pricingGrid');
   try {
-    const res = await fetch('/api/membership-plans?memberType=consumer');
+    const res = await fetch('/api/membership-plans?memberType=service_provider');
     const data = await res.json();
     const plans = data.membershipPlans || [];
     grid.innerHTML = plans.map(renderPlanCard).join('') || '<p style="text-align:center; grid-column:1/-1;">Membership plans are being updated — check back soon.</p>';

@@ -232,6 +232,7 @@ async function attachPurchaseDetails(purchases) {
   const ids = purchases.map(p => p.id);
   const bookIds = purchases.map(p => p.book_id).filter(Boolean);
   const licenseProductIds = purchases.map(p => p.license_product_id).filter(Boolean);
+  const membershipPlanIds = purchases.map(p => p.membership_plan_id).filter(Boolean);
 
   const [seatRows] = await pool.query(
     `SELECT s.*, u.first_name, u.last_name FROM license_seats s
@@ -248,6 +249,12 @@ async function attachPurchaseDetails(purchases) {
     : [[]];
   const licenseProductNameById = {};
   licenseProductRows.forEach(lp => { licenseProductNameById[lp.id] = lp.name; });
+
+  const [membershipPlanRows] = membershipPlanIds.length
+    ? await pool.query('SELECT id, name, member_type FROM membership_plans WHERE id IN (?)', [membershipPlanIds])
+    : [[]];
+  const membershipPlanById = {};
+  membershipPlanRows.forEach(mp => { membershipPlanById[mp.id] = mp; });
 
   const seatsByPurchase = {};
   seatRows.forEach(s => {
@@ -268,6 +275,9 @@ async function attachPurchaseDetails(purchases) {
     bookTitle: p.book_id ? bookTitleById[p.book_id] || null : null,
     licenseProductId: p.license_product_id,
     licenseProductName: p.license_product_id ? licenseProductNameById[p.license_product_id] || null : null,
+    membershipPlanId: p.membership_plan_id,
+    membershipPlanName: p.membership_plan_id ? (membershipPlanById[p.membership_plan_id] || {}).name || null : null,
+    memberType: p.membership_plan_id ? (membershipPlanById[p.membership_plan_id] || {}).member_type || null : null,
     seatCount: p.seat_count,
     purchasedAt: p.purchased_at,
     source: p.source,
@@ -285,18 +295,19 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, membership_plan_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         contactId, productType, productType === 'book' ? bookId : null, productType === 'group_license' ? licenseProductId || null : null,
-        finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null,
+        productType === 'membership' ? membershipPlanId || null : null,
+        finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null, stripeInvoiceId || null,
         productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null,
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
         invoiceId || null, amountCents === undefined ? null : amountCents,

@@ -11,12 +11,12 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-async function findOrCreateContact(email, source) {
+async function findOrCreateContact(email, source, name) {
   const [existing] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [email]);
   if (existing[0]) return existing[0].id;
   const [result] = await pool.query(
     'INSERT INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, ?, ?)',
-    ['', email, source, 'Subscribed']
+    [name || '', email, source, 'Subscribed']
   );
   return result.insertId;
 }
@@ -238,6 +238,140 @@ router.post('/create-po-order', async (req, res) => {
   res.status(201).json({ ok: true, invoiceId, invoiceNumber });
 });
 
+// Where a paid membership plan's checkout should return to — derived from
+// the plan's member type server-side, never from client input, so there's
+// no open-redirect surface here.
+const MEMBERSHIP_RETURN_PAGES = {
+  consumer: 'join.html',
+  service_provider: 'service-providers.html',
+  brand_ambassador: 'brand-ambassador.html',
+};
+
+// Recurring plans (monthly/annual) check out in Stripe subscription mode;
+// one_time plans (the free book-perk tier is granted directly, never through
+// checkout — see below) use plain payment mode. Fulfillment for both only
+// happens from the webhook once Stripe confirms it, same as every other
+// checkout flow in this file.
+router.post('/create-membership-session', async (req, res) => {
+  const b = req.body || {};
+  const email = (b.email || '').trim();
+  const firstName = (b.firstName || '').trim();
+  const lastName = (b.lastName || '').trim();
+  const membershipPlanId = Number(b.membershipPlanId);
+
+  if (!email || !EMAIL_PATTERN.test(email)) return res.status(400).json({ error: 'A valid email is required' });
+  if (!membershipPlanId) return res.status(400).json({ error: 'membershipPlanId is required' });
+
+  const [planRows] = await pool.query('SELECT * FROM membership_plans WHERE id = ? AND active = 1', [membershipPlanId]);
+  const plan = planRows[0];
+  if (!plan) return res.status(404).json({ error: 'Membership plan not found' });
+  if (!plan.stripe_price_id) return res.status(400).json({ error: "This plan isn't available for online checkout yet — contact us to sign up." });
+
+  const returnPage = MEMBERSHIP_RETURN_PAGES[plan.member_type] || 'join.html';
+  const siteUrl = process.env.SITE_URL || '';
+  const isRecurring = plan.billing_interval === 'monthly' || plan.billing_interval === 'annual';
+
+  const sessionParams = {
+    mode: isRecurring ? 'subscription' : 'payment',
+    payment_method_types: ['card'],
+    customer_email: email,
+    line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+    metadata: { type: 'membership', membershipPlanId: String(plan.id), email, firstName, lastName },
+    success_url: `${siteUrl}/${returnPage}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrl}/${returnPage}?checkout=cancelled`,
+  };
+  if (isRecurring && plan.trial_days > 0) {
+    sessionParams.subscription_data = { trial_period_days: plan.trial_days };
+  }
+
+  const session = await getStripe().checkout.sessions.create(sessionParams);
+  res.json({ url: session.url });
+});
+
+// A subscription's very first real charge and every renewal after it all
+// fire invoice.paid — routing every one of them through here (not through
+// checkout.session.completed) means each actual charge becomes exactly one
+// order, whether or not there was a trial in front of it. checkout.session.
+// completed only establishes the subscription/membership record itself.
+async function handleMembershipCheckoutCompleted(session, metadata) {
+  const membershipPlanId = Number(metadata.membershipPlanId);
+  const [planRows] = await pool.query('SELECT * FROM membership_plans WHERE id = ?', [membershipPlanId]);
+  const plan = planRows[0];
+  if (!plan) return;
+
+  const contactId = await findOrCreateContact(metadata.email, 'Membership Signup', `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim());
+
+  if (session.mode === 'payment') {
+    const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_session_id = ? LIMIT 1', [session.id]);
+    if (existing.length) return;
+    const purchaseId = await createPurchase(contactId, {
+      productType: 'membership',
+      membershipPlanId,
+      amountCents: session.amount_total,
+      source: 'Stripe',
+      stripeSessionId: session.id,
+      paymentMethod: 'stripe',
+      paymentStatus: 'paid',
+    });
+    await pool.query(
+      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id) VALUES (?, ?, ?, ?)',
+      [contactId, membershipPlanId, 'active', purchaseId]
+    );
+  } else if (session.mode === 'subscription' && session.subscription) {
+    const [existing] = await pool.query('SELECT id FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [session.subscription]);
+    if (existing.length) return;
+    await pool.query(
+      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id) VALUES (?, ?, ?, ?, ?)',
+      [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer]
+    );
+  }
+}
+
+async function handleMembershipInvoicePaid(invoice) {
+  if (!invoice.subscription) return; // not a subscription invoice — not ours to handle here
+
+  const [membershipRows] = await pool.query('SELECT * FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [invoice.subscription]);
+  const membership = membershipRows[0];
+  if (!membership) return;
+
+  const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_invoice_id = ? LIMIT 1', [invoice.id]);
+  if (existing.length) return; // Stripe retries webhook delivery — guard against double-counting a renewal
+
+  const purchaseId = await createPurchase(membership.contact_id, {
+    productType: 'membership',
+    membershipPlanId: membership.membership_plan_id,
+    amountCents: invoice.amount_paid,
+    source: 'Stripe',
+    stripeInvoiceId: invoice.id,
+    paymentMethod: 'stripe',
+    paymentStatus: 'paid',
+  });
+
+  await pool.query(
+    "UPDATE contact_memberships SET purchase_id = ?, status = IF(status IN ('past_due','trialing'), 'active', status) WHERE id = ?",
+    [purchaseId, membership.id]
+  );
+}
+
+async function handleMembershipPaymentFailed(invoice) {
+  if (!invoice.subscription) return;
+  await pool.query("UPDATE contact_memberships SET status = 'past_due' WHERE stripe_subscription_id = ?", [invoice.subscription]);
+}
+
+async function handleMembershipSubscriptionUpdated(subscription) {
+  const statusMap = {
+    trialing: 'trialing', active: 'active', past_due: 'past_due',
+    canceled: 'cancelled', unpaid: 'past_due', incomplete: 'trialing', incomplete_expired: 'expired',
+  };
+  const status = statusMap[subscription.status] || 'active';
+  const endsAt = subscription.status === 'canceled' && subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null;
+  await pool.query('UPDATE contact_memberships SET status = ?, ends_at = ? WHERE stripe_subscription_id = ?', [status, endsAt, subscription.id]);
+}
+
+async function handleMembershipSubscriptionDeleted(subscription) {
+  await pool.query("UPDATE contact_memberships SET status = 'cancelled', ends_at = NOW() WHERE stripe_subscription_id = ?", [subscription.id]);
+}
+
 // Registered in server/app.js with express.raw() ahead of the global JSON
 // body parser — Stripe's signature check needs the exact raw request body,
 // which a JSON-parsed-and-reserialized body would not reproduce byte-for-byte.
@@ -254,6 +388,11 @@ async function webhookHandler(req, res) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const metadata = session.metadata || {};
+
+    if (metadata.type === 'membership') {
+      await handleMembershipCheckoutCompleted(session, metadata);
+      return res.json({ received: true });
+    }
 
     // Stripe retries webhook delivery — guard against creating purchases twice.
     // (stripe_session_id is intentionally not a DB-unique constraint since a
@@ -282,6 +421,14 @@ async function webhookHandler(req, res) {
         });
       }
     }
+  } else if (event.type === 'invoice.paid') {
+    await handleMembershipInvoicePaid(event.data.object);
+  } else if (event.type === 'invoice.payment_failed') {
+    await handleMembershipPaymentFailed(event.data.object);
+  } else if (event.type === 'customer.subscription.updated') {
+    await handleMembershipSubscriptionUpdated(event.data.object);
+  } else if (event.type === 'customer.subscription.deleted') {
+    await handleMembershipSubscriptionDeleted(event.data.object);
   }
 
   res.json({ received: true });

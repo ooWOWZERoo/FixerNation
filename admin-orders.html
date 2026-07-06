@@ -29,6 +29,7 @@
       <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
       <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
+      <a href="admin-memberships.html"><span class="ic">🪪</span><span class="label">Memberships</span></a>
       <a href="admin-orders.html" class="active"><span class="ic">📦</span><span class="label">Orders</span></a>
       <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
     </nav>
@@ -88,6 +89,7 @@ fnRequireAuth();
 
 function describeItem(p) {
   if (p.productType === 'book') return `📗 ${p.bookTitle || 'Book'}`;
+  if (p.productType === 'membership') return `🪪 ${p.membershipPlanName || 'Membership'}`;
   const name = p.licenseProductName || (p.productType === 'single_license' ? 'Single Teacher License' : 'Group License');
   return `🏫 ${name}${p.schoolDomain ? ` (${p.schoolDomain})` : ''}${p.seatCount ? ` — ${p.seatCount} seat${p.seatCount === 1 ? '' : 's'}` : ''}`;
 }

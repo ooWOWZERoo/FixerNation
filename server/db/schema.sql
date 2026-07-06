@@ -138,6 +138,53 @@ CREATE TABLE IF NOT EXISTS license_products (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------------
+-- Memberships (Consumers, Service Providers, Brand Ambassadors) — a separate
+-- catalog/system from school licensing (license_products above). A contact
+-- can hold more than one membership at once (e.g. a Service Provider who's
+-- also a Brand Ambassador), so member type is derived from active
+-- contact_memberships joined to membership_plans, not stored as a single
+-- fixed attribute on the contact.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS membership_plans (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  member_type VARCHAR(32) NOT NULL, -- 'consumer' | 'service_provider' | 'brand_ambassador'
+  price_cents INT UNSIGNED NOT NULL,
+  regular_price_cents INT UNSIGNED NULL, -- shown struck-through as the "regular price" comparison; NULL if there's no intro-discount framing
+  billing_interval VARCHAR(16) NOT NULL, -- 'one_time' | 'monthly' | 'annual'
+  trial_days INT UNSIGNED NOT NULL DEFAULT 0,
+  description VARCHAR(1000),
+  benefits TEXT, -- one bullet per line, shown as a checklist on the public pricing cards
+  stripe_price_id VARCHAR(255) NULL, -- synced to a real Stripe Product+Price on save, once Stripe is configured
+  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per contact per membership they've held — a contact resubscribing
+-- to the same plan later gets a new row rather than reusing an old one, so
+-- history (e.g. a lapsed-then-renewed member) stays intact. purchase_id
+-- links to the "order" this membership's most recent charge created (see
+-- purchases.membership_plan_id below); recurring renewals create additional
+-- purchases rows but don't change which contact_memberships row they belong to.
+CREATE TABLE IF NOT EXISTS contact_memberships (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  contact_id INT UNSIGNED NOT NULL,
+  membership_plan_id INT UNSIGNED NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired'
+  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ends_at DATETIME NULL, -- set on cancellation/expiry; NULL while ongoing
+  purchase_id INT UNSIGNED NULL,
+  stripe_subscription_id VARCHAR(255) NULL,
+  stripe_customer_id VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
+  FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- One invoice per Purchase Order submission, grouping together the purchase
 -- rows (line items) it created. Generated automatically by
 -- server/routes/checkout.js's create-po-order; viewed/printed from
@@ -162,14 +209,16 @@ CREATE TABLE IF NOT EXISTS invoices (
 CREATE TABLE IF NOT EXISTS purchases (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   contact_id INT UNSIGNED NOT NULL,
-  product_type VARCHAR(32) NOT NULL, -- 'book' | 'single_license' | 'group_license'
+  product_type VARCHAR(32) NOT NULL, -- 'book' | 'single_license' | 'group_license' | 'membership'
   book_id INT UNSIGNED NULL,
   license_product_id INT UNSIGNED NULL, -- set when bought from the cart against a fixed license_products tier
-  seat_count INT UNSIGNED NULL, -- 1 for single_license, N for group_license, NULL for book
+  membership_plan_id INT UNSIGNED NULL, -- set for product_type='membership' — each recurring renewal charge creates its own purchases row against the same plan, so this stays an "order" record, not the subscription itself (see contact_memberships)
+  seat_count INT UNSIGNED NULL, -- 1 for single_license, N for group_license, NULL for book/membership
   purchased_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(64) NOT NULL DEFAULT 'Manual Entry',
   notes VARCHAR(500),
   stripe_session_id VARCHAR(255) NULL, -- set when created from a real Stripe payment; one session can now produce multiple purchase rows (a cart), so this is intentionally NOT unique — idempotency is checked by existence, not a DB constraint
+  stripe_invoice_id VARCHAR(255) NULL UNIQUE, -- set for membership renewal charges (Stripe invoice.paid), where there's no checkout session to key off of — unique so a retried webhook can't double-record the same renewal
   school_domain VARCHAR(255) NULL, -- meaningful for group_license only — lets the admin look up a school's whole license block by domain instead of hunting for the buyer's CRM contact
   payment_method VARCHAR(16) NOT NULL DEFAULT 'manual', -- 'manual' | 'stripe' | 'po'
   payment_status VARCHAR(16) NOT NULL DEFAULT 'paid', -- 'paid' | 'pending' — POs start pending until an admin marks them paid; access is granted immediately either way
@@ -179,6 +228,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
   FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL,
+  FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE SET NULL,
   FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
