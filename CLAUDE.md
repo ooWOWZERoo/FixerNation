@@ -38,6 +38,10 @@ This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/Fi
 
 No local dev environment exists for this project — there's no local MySQL/MariaDB, and the sandbox blocks direct outbound connections to the remote DB. All verification happens by deploying to production and checking with `curl` + a cookie jar (no browser automation available either). Always use clearly-named test data (e.g. `@example.com` emails, obviously-fake school domains) and clean it up after verifying.
 
+## Admin nav ordering
+
+The icon nav in every `admin-*.html` sidebar is **strictly alphabetical** within the cluster below the divider (Dashboard always stays alone above the divider; Settings/View Site/Log Out always stay in the footer, unordered). When adding a new admin page's nav link, insert it alphabetically among the existing labels — not at the end, not next to whatever page it's conceptually related to. Bitten once: "Automations" was added right after "Memberships" (its closest conceptual sibling) instead of alphabetically before "Blogs".
+
 ## Infra gotchas (all previously bitten in this project)
 
 - **cPanel Terminal's default shell has no `node`/`npm` on PATH.** Every deploy instruction involving a Node command must chain the nodevenv activation onto the *same* command block — see "Deploy workflow" step 3 for the exact command. Bitten twice from giving a bare `node scripts/whatever.js` instruction.
