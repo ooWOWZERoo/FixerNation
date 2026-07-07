@@ -75,25 +75,36 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
   const urlPrefix = process.env.UPLOADS_URL_PREFIX || '/uploads/';
   const results = [];
   for (let i = 0; i < scripts.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 400));
+    console.log(`[morning-boost] Script ${i + 1}/${scripts.length}: sending to ElevenLabs`);
     try {
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: 'POST',
         headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: scripts[i], model_id: 'eleven_multilingual_v2' }),
+        body: JSON.stringify({ text: scripts[i], model_id: 'eleven_turbo_v2_5' }),
       });
       if (!response.ok) {
         const detail = await response.text().catch(() => '');
+        console.error(`[morning-boost] Script ${i + 1} failed: ${response.status} ${detail.slice(0, 200)}`);
         results.push({ index: i, ok: false, error: `ElevenLabs error (${response.status}): ${detail.slice(0, 200)}` });
         continue;
       }
       const buffer = Buffer.from(await response.arrayBuffer());
+      if (!buffer.length) {
+        console.error(`[morning-boost] Script ${i + 1}: ElevenLabs returned empty audio`);
+        results.push({ index: i, ok: false, error: 'ElevenLabs returned empty audio — try again' });
+        continue;
+      }
       const filename = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.mp3`;
       fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+      console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes)`);
       results.push({ index: i, ok: true, filename, url: urlPrefix + filename });
     } catch (err) {
+      console.error(`[morning-boost] Script ${i + 1} threw: ${err.message}`);
       results.push({ index: i, ok: false, error: err.message });
     }
   }
+  console.log(`[morning-boost] Done — ${results.filter(r => r.ok).length}/${scripts.length} succeeded`);
   res.json({ results });
 });
 
