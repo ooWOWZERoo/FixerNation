@@ -118,7 +118,7 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
       fs.writeFileSync(path.join(uploadsDir, filename), buffer);
       const hex = buffer.slice(0, 4).toString('hex').toUpperCase();
       console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes, starts 0x${hex})`);
-      results.push({ index: i, ok: true, filename, url: `/api/morning-boost/audio/${filename}`, _debug: { bytes: buffer.length, hex } });
+      results.push({ index: i, ok: true, filename, url: `/api/morning-boost/audio/${filename}` });
     } catch (err) {
       console.error(`[morning-boost] Script ${i + 1} threw: ${err.message}`);
       results.push({ index: i, ok: false, error: err.message });
