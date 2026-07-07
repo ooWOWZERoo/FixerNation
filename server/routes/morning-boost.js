@@ -80,7 +80,7 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
     try {
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: 'POST',
-        headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
+        headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
         body: JSON.stringify({ text: scripts[i], model_id: 'eleven_multilingual_v2' }),
       });
       if (!response.ok) {
@@ -104,7 +104,8 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
       }
       const filename = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.mp3`;
       fs.writeFileSync(path.join(uploadsDir, filename), buffer);
-      console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes)`);
+      const hex = buffer.slice(0, 4).toString('hex').toUpperCase();
+      console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes, starts 0x${hex})`);
       results.push({ index: i, ok: true, filename, url: urlPrefix + filename });
     } catch (err) {
       console.error(`[morning-boost] Script ${i + 1} threw: ${err.message}`);
