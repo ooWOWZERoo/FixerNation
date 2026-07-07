@@ -81,12 +81,19 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: 'POST',
         headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: scripts[i], model_id: 'eleven_turbo_v2_5' }),
+        body: JSON.stringify({ text: scripts[i], model_id: 'eleven_multilingual_v2', output_format: 'mp3_44100_128' }),
       });
       if (!response.ok) {
         const detail = await response.text().catch(() => '');
         console.error(`[morning-boost] Script ${i + 1} failed: ${response.status} ${detail.slice(0, 200)}`);
         results.push({ index: i, ok: false, error: `ElevenLabs error (${response.status}): ${detail.slice(0, 200)}` });
+        continue;
+      }
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) {
+        const detail = await response.text().catch(() => '');
+        console.error(`[morning-boost] Script ${i + 1}: unexpected content-type "${contentType}": ${detail.slice(0, 200)}`);
+        results.push({ index: i, ok: false, error: `ElevenLabs returned non-audio (${contentType}): ${detail.slice(0, 200)}` });
         continue;
       }
       const buffer = Buffer.from(await response.arrayBuffer());
