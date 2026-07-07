@@ -168,7 +168,8 @@ async function generateAudio() {
         if (!r.ok || !res || !res.ok) {
           row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${res ? res.error : (data.error || 'Unknown error')}</div></div>`;
         } else {
-          row.innerHTML = `<div class="info" style="flex:1;"><div class="name">🎧 Script ${i + 1}</div><audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio></div><a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>`;
+          const dbg = res._debug ? ` — ${res._debug.bytes} bytes, 0x${res._debug.hex}` : '';
+          row.innerHTML = `<div class="info" style="flex:1;"><div class="name">🎧 Script ${i + 1}<span style="font-size:11px;opacity:.5;">${dbg}</span></div><audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio></div><a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>`;
           succeeded++;
         }
       } catch (err) {
