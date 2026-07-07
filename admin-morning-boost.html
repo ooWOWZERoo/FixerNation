@@ -141,33 +141,41 @@ async function generateAudio() {
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
-  btn.textContent = 'Generating…';
-  document.getElementById('audioResults').innerHTML = '';
+  const resultsEl = document.getElementById('audioResults');
+  resultsEl.innerHTML = '';
 
+  let succeeded = 0;
   try {
-    const r = await fetch('/api/morning-boost/generate-audio', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scripts }),
-    });
-    if (fnHandleUnauthorized(r)) return;
-    const data = await r.json();
-    if (!r.ok) { fnToast(data.error || 'Could not generate audio'); return; }
+    for (let i = 0; i < scripts.length; i++) {
+      btn.textContent = `Generating ${i + 1} of ${scripts.length}…`;
+      if (i > 0) await new Promise(r => setTimeout(r, 500));
 
-    document.getElementById('audioResults').innerHTML = data.results.map(res => {
-      if (!res.ok) {
-        return `<div class="a-repeat-row"><div class="info"><div class="name">❌ Script ${res.index + 1}</div><div class="meta">${res.error}</div></div></div>`;
+      const row = document.createElement('div');
+      row.className = 'a-repeat-row';
+      row.innerHTML = `<div class="info"><div class="name">⏳ Script ${i + 1}</div><div class="meta">Generating…</div></div>`;
+      resultsEl.appendChild(row);
+
+      try {
+        const r = await fetch('/api/morning-boost/generate-audio', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scripts: [scripts[i]] }),
+        });
+        if (fnHandleUnauthorized(r)) return;
+        const data = await r.json();
+        const res = data.results && data.results[0];
+        if (!r.ok || !res || !res.ok) {
+          row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${res ? res.error : (data.error || 'Unknown error')}</div></div>`;
+        } else {
+          row.innerHTML = `<div class="info" style="flex:1;"><div class="name">🎧 Script ${i + 1}</div><audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio></div><a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>`;
+          succeeded++;
+        }
+      } catch (err) {
+        row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${err.message}</div></div>`;
       }
-      return `<div class="a-repeat-row">
-        <div class="info" style="flex:1;">
-          <div class="name">🎧 Script ${res.index + 1}</div>
-          <audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio>
-        </div>
-        <a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>
-      </div>`;
-    }).join('');
-    fnToast('Voice-overs generated');
+    }
+    fnToast(`Done — ${succeeded} of ${scripts.length} generated`);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Generate Voice-Overs';
