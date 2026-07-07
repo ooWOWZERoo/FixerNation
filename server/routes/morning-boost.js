@@ -41,6 +41,18 @@ router.get('/:date', requireAuth, async (req, res) => {
   res.json({ entry: serialize(rows[0]) });
 });
 
+// Serves generated audio files with the correct Content-Type so the browser's
+// <audio> element can play them (Apache serves uploads as octet-stream).
+router.get('/audio/:filename', requireAuth, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  if (!/^[\w\-]+\.mp3$/i.test(filename)) return res.status(400).json({ error: 'Invalid filename' });
+  const filePath = path.join(uploadsDir, filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+  res.setHeader('Content-Type', 'audio/mpeg');
+  res.setHeader('Accept-Ranges', 'bytes');
+  fs.createReadStream(filePath).pipe(res);
+});
+
 // Called once a blog post has actually been created/published for this
 // calendar entry, so admin-blogs.html can show "already posted" and avoid
 // double-publishing the same day.
@@ -106,7 +118,7 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
       fs.writeFileSync(path.join(uploadsDir, filename), buffer);
       const hex = buffer.slice(0, 4).toString('hex').toUpperCase();
       console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes, starts 0x${hex})`);
-      results.push({ index: i, ok: true, filename, url: urlPrefix + filename, _debug: { bytes: buffer.length, hex } });
+      results.push({ index: i, ok: true, filename, url: `/api/morning-boost/audio/${filename}`, _debug: { bytes: buffer.length, hex } });
     } catch (err) {
       console.error(`[morning-boost] Script ${i + 1} threw: ${err.message}`);
       results.push({ index: i, ok: false, error: err.message });
