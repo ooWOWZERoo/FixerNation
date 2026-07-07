@@ -78,10 +78,10 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
     if (i > 0) await new Promise(r => setTimeout(r, 400));
     console.log(`[morning-boost] Script ${i + 1}/${scripts.length}: sending to ElevenLabs`);
     try {
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: 'POST',
         headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: scripts[i], model_id: 'eleven_multilingual_v2', output_format: 'mp3_44100_128' }),
+        body: JSON.stringify({ text: scripts[i], model_id: 'eleven_multilingual_v2' }),
       });
       if (!response.ok) {
         const detail = await response.text().catch(() => '');
