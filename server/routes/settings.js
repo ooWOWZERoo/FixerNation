@@ -74,4 +74,17 @@ router.put('/morning-boost-voice', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/morning-boost-audio-limit', requireAuth, async (req, res) => {
+  const raw = await getSetting('morning_boost_audio_limit');
+  const limit = Math.max(1, Math.min(100, parseInt(raw || '20', 10)));
+  res.json({ limit });
+});
+
+router.put('/morning-boost-audio-limit', requireAuth, async (req, res) => {
+  const limit = parseInt(req.body && req.body.limit, 10);
+  if (!limit || limit < 1 || limit > 100) return res.status(400).json({ error: 'Limit must be 1–100' });
+  await setSetting('morning_boost_audio_limit', String(limit));
+  res.json({ ok: true });
+});
+
 module.exports = router;

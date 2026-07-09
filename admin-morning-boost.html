@@ -60,6 +60,19 @@
         <div class="a-note" id="calendarEntryNote" style="margin-top:10px;">Pick a date to see its planned Theme/Series.</div>
       </div>
 
+      <div class="a-card" id="historyCard">
+        <div class="a-card-head" style="align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">Voice-Over History</h2>
+          <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
+            <label style="font-size:13px; white-space:nowrap;">Keep last</label>
+            <input type="number" id="audioLimitInput" min="1" max="100" style="width:60px; padding:4px 8px; border-radius:8px; border:1px solid var(--a-border); font-size:13px; text-align:center;">
+            <label style="font-size:13px; white-space:nowrap;">clips</label>
+            <button type="button" class="a-btn a-btn-outline" style="padding:4px 12px; font-size:13px;" onclick="saveHistoryLimit()">Save</button>
+          </div>
+        </div>
+        <div id="historyList" style="margin-top:12px;"></div>
+      </div>
+
       <div class="a-card">
         <div class="a-card-head">
           <h2>Voice-Over Generation (ElevenLabs)</h2>
@@ -112,6 +125,63 @@ async function loadCalendarEntry() {
   if (!r.ok) { note.textContent = 'No Morning Boost calendar entry for that date.'; return; }
   const { entry } = await r.json();
   note.innerHTML = `<strong>Theme:</strong> ${entry.theme} &nbsp; <strong>Series:</strong> ${entry.series}${entry.blogPostId ? ' — a blog post already exists for this date.' : ''}`;
+}
+
+async function loadHistory() {
+  const listEl = document.getElementById('historyList');
+  const r = await fetch('/api/morning-boost/audio-history', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { listEl.innerHTML = '<div class="a-note">Could not load history.</div>'; return; }
+  const { clips, limit } = await r.json();
+  document.getElementById('audioLimitInput').value = limit;
+  if (!clips.length) {
+    listEl.innerHTML = '<div class="a-note">No voice-overs generated yet.</div>';
+    return;
+  }
+  listEl.innerHTML = clips.map(c => {
+    const date = new Date(c.createdAt).toLocaleString();
+    const preview = (c.scriptText || '').slice(0, 80) + ((c.scriptText || '').length > 80 ? '…' : '');
+    return `<div class="a-repeat-row" id="clip-${c.id}" style="flex-wrap:wrap; gap:8px;">
+      <div class="info" style="flex:1; min-width:0;">
+        <div class="name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(c.scriptText || '')}">${escHtml(preview) || '(no script text)'}</div>
+        <div class="meta">${date}</div>
+        <audio controls src="${c.url}" style="width:100%; margin-top:6px;"></audio>
+      </div>
+      <div style="display:flex; gap:6px; align-items:flex-start; flex-shrink:0;">
+        <a class="a-btn a-btn-outline" style="padding:5px 10px; font-size:12px;" href="${c.url}" download>Download</a>
+        <button type="button" class="a-btn a-btn-outline" style="padding:5px 10px; font-size:12px; color:var(--a-danger,#c0392b);" onclick="deleteClip('${c.filename}', ${c.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveHistoryLimit() {
+  const val = parseInt(document.getElementById('audioLimitInput').value, 10);
+  if (!val || val < 1) { fnToast('Enter a number between 1 and 100'); return; }
+  const r = await fetch('/api/settings/morning-boost-audio-limit', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ limit: val }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not save limit'); return; }
+  fnToast('History limit saved');
+  loadHistory();
+}
+
+async function deleteClip(filename, id) {
+  const r = await fetch(`/api/morning-boost/audio/${filename}`, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not delete clip'); return; }
+  const el = document.getElementById(`clip-${id}`);
+  if (el) el.remove();
+  const listEl = document.getElementById('historyList');
+  if (!listEl.children.length) listEl.innerHTML = '<div class="a-note">No voice-overs generated yet.</div>';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 async function loadVoiceId() {
@@ -170,6 +240,7 @@ async function generateAudio() {
         } else {
           row.innerHTML = `<div class="info" style="flex:1;"><div class="name">🎧 Script ${i + 1}</div><audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio></div><a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>`;
           succeeded++;
+          loadHistory();
         }
       } catch (err) {
         row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${err.message}</div></div>`;
@@ -186,6 +257,7 @@ async function generateAudio() {
   document.getElementById('boostDateInput').value = new Date().toISOString().slice(0, 10);
   loadCalendarEntry();
   loadVoiceId();
+  loadHistory();
 })();
 </script>
 

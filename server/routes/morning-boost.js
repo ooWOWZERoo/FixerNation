@@ -10,6 +10,11 @@ const router = express.Router();
 const MAX_SCRIPTS_PER_BATCH = 13; // matches the doc's 13-scripts-per-day structure
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 
+async function getAudioLimit() {
+  const raw = await getSetting('morning_boost_audio_limit');
+  return Math.max(1, Math.min(100, parseInt(raw || '20', 10)));
+}
+
 function serialize(row) {
   return {
     id: row.id,
@@ -33,6 +38,35 @@ router.get('/', requireAuth, async (req, res) => {
   sql += ' ORDER BY boost_date';
   const [rows] = await pool.query(sql, params);
   res.json({ calendar: rows.map(serialize) });
+});
+
+// Must be registered before /:date — single-segment paths would otherwise be
+// swallowed by that param route.
+router.get('/audio-history', requireAuth, async (req, res) => {
+  const limit = await getAudioLimit();
+  const [rows] = await pool.query(
+    'SELECT * FROM morning_boost_audio_clips ORDER BY created_at DESC LIMIT ?',
+    [limit]
+  );
+  res.json({
+    clips: rows.map(r => ({
+      id: r.id,
+      filename: r.filename,
+      scriptText: r.script_text,
+      url: `/api/morning-boost/audio/${r.filename}`,
+      createdAt: r.created_at,
+    })),
+    limit,
+  });
+});
+
+router.delete('/audio/:filename', requireAuth, async (req, res) => {
+  const filename = path.basename(req.params.filename);
+  if (!/^[\w\-]+\.mp3$/i.test(filename)) return res.status(400).json({ error: 'Invalid filename' });
+  await pool.query('DELETE FROM morning_boost_audio_clips WHERE filename = ?', [filename]);
+  const filePath = path.join(uploadsDir, filename);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  res.json({ ok: true });
 });
 
 router.get('/:date', requireAuth, async (req, res) => {
@@ -84,7 +118,6 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
     return res.status(400).json({ error: `A batch is at most ${MAX_SCRIPTS_PER_BATCH} scripts` });
   }
 
-  const urlPrefix = process.env.UPLOADS_URL_PREFIX || '/uploads/';
   const results = [];
   for (let i = 0; i < scripts.length; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 400));
@@ -116,8 +149,24 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
       }
       const filename = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.mp3`;
       fs.writeFileSync(path.join(uploadsDir, filename), buffer);
-      const hex = buffer.slice(0, 4).toString('hex').toUpperCase();
-      console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes, starts 0x${hex})`);
+      console.log(`[morning-boost] Script ${i + 1} saved: ${filename} (${buffer.length} bytes)`);
+
+      // Persist to history and prune oldest beyond the configured limit.
+      await pool.query(
+        'INSERT IGNORE INTO morning_boost_audio_clips (filename, script_text) VALUES (?, ?)',
+        [filename, scripts[i]]
+      );
+      const limit = await getAudioLimit();
+      const [overflow] = await pool.query(
+        'SELECT filename FROM morning_boost_audio_clips ORDER BY created_at DESC LIMIT 1000 OFFSET ?',
+        [limit]
+      );
+      for (const row of overflow) {
+        await pool.query('DELETE FROM morning_boost_audio_clips WHERE filename = ?', [row.filename]);
+        const old = path.join(uploadsDir, row.filename);
+        if (fs.existsSync(old)) fs.unlinkSync(old);
+      }
+
       results.push({ index: i, ok: true, filename, url: `/api/morning-boost/audio/${filename}` });
     } catch (err) {
       console.error(`[morning-boost] Script ${i + 1} threw: ${err.message}`);
