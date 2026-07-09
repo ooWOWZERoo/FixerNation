@@ -1,8 +1,11 @@
 const express = require('express');
 const Stripe = require('stripe');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { createPurchase } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
+const { createToken } = require('../lib/site-tokens');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -10,6 +13,35 @@ const MAX_CART_ITEMS = 10;
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+// Creates a shell site_users account (email pre-verified via Stripe payment)
+// and returns a 7-day set-password URL. Safe to call repeatedly — if the
+// account already exists it just issues a new token (equivalent to a password
+// reset, which is harmless). Errors are caught by the caller so a failure
+// here never blocks the thank-you email from going out.
+async function createSetPasswordUrl(email, firstName, lastName) {
+  const siteUrl = process.env.SITE_URL || '';
+  const [existing] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email]);
+  let userId;
+  if (existing[0]) {
+    userId = existing[0].id;
+  } else {
+    // Placeholder hash satisfies NOT NULL — user sets their real password via the token link.
+    const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+    const [result] = await pool.query(
+      'INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified) VALUES (?, ?, ?, ?, 1)',
+      [firstName || '', lastName || '', email, placeholderHash]
+    );
+    userId = result.insertId;
+    // Auto-claim any pending license seat invited to this email, same as normal signup.
+    await pool.query(
+      "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE invited_email = ? AND status = 'pending'",
+      [userId, email]
+    );
+  }
+  const token = await createToken(userId, 'reset', 7 * 24 * 60 * 60 * 1000);
+  return `${siteUrl}/reset-password.html?token=${token}`;
 }
 
 function daysFromNow(days) {
@@ -326,9 +358,11 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, 'active', purchaseId, endsAt]
     );
+    let setPasswordUrl = '';
+    try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     await fireAutomation('membership_purchase_thank_you', {
       to: metadata.email,
-      mergeFields: { firstName, planName: plan.name },
+      mergeFields: { firstName, planName: plan.name, setPasswordUrl },
     });
   } else if (session.mode === 'subscription' && session.subscription) {
     const [existing] = await pool.query('SELECT id FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [session.subscription]);
@@ -342,15 +376,17 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id, ends_at) VALUES (?, ?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
     );
+    let setPasswordUrl = '';
+    try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     if (plan.trial_days > 0) {
       await fireAutomation('membership_trial_started', {
         to: metadata.email,
-        mergeFields: { firstName, planName: plan.name, trialDays: String(plan.trial_days) },
+        mergeFields: { firstName, planName: plan.name, trialDays: String(plan.trial_days), setPasswordUrl },
       });
     } else {
       await fireAutomation('membership_purchase_thank_you', {
         to: metadata.email,
-        mergeFields: { firstName, planName: plan.name },
+        mergeFields: { firstName, planName: plan.name, setPasswordUrl },
       });
     }
   }

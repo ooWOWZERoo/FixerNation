@@ -95,8 +95,8 @@ fnRequireAuth();
 // server/routes/*.js — this is display-only, not enforced server-side.
 const MERGE_FIELDS = {
   book_purchase_thank_you: ['firstName', 'bookTitle'],
-  membership_trial_started: ['firstName', 'planName', 'trialDays'],
-  membership_purchase_thank_you: ['firstName', 'planName', 'amount'],
+  membership_trial_started: ['firstName', 'planName', 'trialDays', 'setPasswordUrl'],
+  membership_purchase_thank_you: ['firstName', 'planName', 'amount', 'setPasswordUrl'],
   membership_renewal_reminder: ['firstName', 'planName', 'expiresOn'],
   invoice_paid: ['buyerName', 'invoiceNumber', 'total'],
   payment_failed: ['firstName', 'planName'],

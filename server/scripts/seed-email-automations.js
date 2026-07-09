@@ -19,7 +19,7 @@ const AUTOMATIONS = [
     eventKey: 'membership_purchase_thank_you',
     label: 'Membership Purchase — Thank You',
     subject: 'Welcome to {{planName}}!',
-    body: "Hi {{firstName}},\n\nYour {{planName}} purchase is confirmed — thank you for joining Fixer Nation.\n\nAmount charged: {{amount}}\n\nWarmly,\nThe Fixer Nation Team",
+    body: "Hi {{firstName}},\n\nYour {{planName}} membership is confirmed — thank you for joining Fixer Nation.\n\nAmount charged: {{amount}}\n\nSet up your account password to access your membership:\n{{setPasswordUrl}}\n\nWarmly,\nThe Fixer Nation Team",
     reminderDaysBefore: null,
   },
   {
@@ -47,7 +47,7 @@ const AUTOMATIONS = [
     eventKey: 'membership_trial_started',
     label: 'Membership Trial — Started',
     subject: 'Your free trial of {{planName}} has started!',
-    body: "Hi {{firstName}},\n\nYou're all set — your {{trialDays}}-day free trial of {{planName}} has started today. No charge until the trial ends.\n\nHere's what to expect:\n- Full access during your trial period\n- A receipt will be sent when your trial converts and your card is charged\n- You can cancel any time before the trial ends\n\nWarmly,\nThe Fixer Nation Team",
+    body: "Hi {{firstName}},\n\nYou're all set — your {{trialDays}}-day free trial of {{planName}} has started today. No charge until the trial ends.\n\nSet up your account password to get started:\n{{setPasswordUrl}}\n\nHere's what to expect:\n- Full access during your trial period\n- A receipt will be sent when your trial converts and your card is charged\n- You can cancel any time before the trial ends\n\nWarmly,\nThe Fixer Nation Team",
     reminderDaysBefore: null,
   },
   {
