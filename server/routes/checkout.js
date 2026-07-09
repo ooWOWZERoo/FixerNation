@@ -342,10 +342,17 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id, ends_at) VALUES (?, ?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
     );
-    await fireAutomation('membership_purchase_thank_you', {
-      to: metadata.email,
-      mergeFields: { firstName, planName: plan.name },
-    });
+    if (plan.trial_days > 0) {
+      await fireAutomation('membership_trial_started', {
+        to: metadata.email,
+        mergeFields: { firstName, planName: plan.name, trialDays: String(plan.trial_days) },
+      });
+    } else {
+      await fireAutomation('membership_purchase_thank_you', {
+        to: metadata.email,
+        mergeFields: { firstName, planName: plan.name },
+      });
+    }
   }
 }
 

@@ -44,6 +44,13 @@ const AUTOMATIONS = [
     reminderDaysBefore: null,
   },
   {
+    eventKey: 'membership_trial_started',
+    label: 'Membership Trial — Started',
+    subject: 'Your free trial of {{planName}} has started!',
+    body: "Hi {{firstName}},\n\nYou're all set — your {{trialDays}}-day free trial of {{planName}} has started today. No charge until the trial ends.\n\nHere's what to expect:\n- Full access during your trial period\n- A receipt will be sent when your trial converts and your card is charged\n- You can cancel any time before the trial ends\n\nWarmly,\nThe Fixer Nation Team",
+    reminderDaysBefore: null,
+  },
+  {
     eventKey: 'license_seat_invite',
     label: 'License Seat Invite',
     subject: "You've been invited to activate your Fixer Nation license",
