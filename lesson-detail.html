@@ -152,7 +152,7 @@
   <section class="section" style="background:var(--cream-soft); padding-top:10px;">
     <div class="wrap story-block">
       <h3>Overview</h3>
-      <p id="lessonOverview"></p>
+      <div id="lessonOverview"></div>
       <h3 class="spaced">Learning Objectives</h3>
       <ul id="lessonObjectives"></ul>
       <h3 class="spaced">Materials Needed</h3>
@@ -344,7 +344,10 @@ async function renderLessonDetail() {
   renderDetailResources(c);
   renderDetailVideo(c);
 
-  document.getElementById('lessonOverview').textContent = c.overview || c.shortDescription || 'No overview written yet.';
+  const overviewText = c.overview || c.shortDescription || '';
+  document.getElementById('lessonOverview').innerHTML = overviewText
+    ? overviewText.split(/\n\s*\n/).map(p => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`).join('')
+    : '<p>No overview written yet.</p>';
 
   const objectivesEl = document.getElementById('lessonObjectives');
   objectivesEl.innerHTML = (c.objectives || []).length
