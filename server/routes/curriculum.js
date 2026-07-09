@@ -15,8 +15,7 @@ async function gateAccess(curricula, req) {
   const licensed = isAdmin || await hasActiveLicense(siteUser && siteUser.id);
   return curricula.map(c => ({
     ...c,
-    lessonDocument: licensed ? c.lessonDocument : '',
-    lessonDocumentName: licensed ? c.lessonDocumentName : '',
+    documents: licensed ? c.documents : [],
     quiz: licensed ? c.quiz : [],
     access: { licensed, loggedIn: isAdmin || !!siteUser },
   }));
@@ -31,6 +30,7 @@ async function attachChildren(curricula) {
   const [materialRows] = await pool.query('SELECT curriculum_id, material FROM curriculum_materials WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   const [resourceRows] = await pool.query('SELECT curriculum_id, resource, file_path, file_name FROM curriculum_resources WHERE curriculum_id IN (?)', [ids]);
   const [videoRows] = await pool.query('SELECT curriculum_id, name, url, size_label FROM curriculum_videos WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  const [documentRows] = await pool.query('SELECT curriculum_id, file_path, file_name FROM curriculum_documents WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   const [questionRows] = await pool.query('SELECT id, curriculum_id, question, correct_index FROM curriculum_quiz_questions WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   const questionIds = questionRows.map(q => q.id);
   const [optionRows] = questionIds.length
@@ -43,6 +43,7 @@ async function attachChildren(curricula) {
   const materialsByC = group(materialRows, 'curriculum_id');
   const resourcesByC = group(resourceRows, 'curriculum_id');
   const videosByC = group(videoRows, 'curriculum_id');
+  const documentsByC = group(documentRows, 'curriculum_id');
   const optionsByQ = group(optionRows, 'question_id');
   const questionsByC = group(questionRows, 'curriculum_id');
 
@@ -53,6 +54,7 @@ async function attachChildren(curricula) {
     materials: (materialsByC[c.id] || []).map(r => r.material),
     resources: (resourcesByC[c.id] || []).map(r => ({ resource: r.resource, filePath: r.file_path || '', fileName: r.file_name || '' })),
     videos: (videosByC[c.id] || []).map(r => ({ name: r.name, url: r.url, sizeLabel: r.size_label })),
+    documents: (documentsByC[c.id] || []).map(r => ({ filePath: r.file_path, fileName: r.file_name })),
     quiz: (questionsByC[c.id] || []).map(q => ({
       question: q.question,
       correctIndex: q.correct_index,
@@ -70,8 +72,6 @@ function serialize(row) {
     overview: row.overview,
     lessonsCount: row.lessons_count,
     weeksCount: row.weeks_count,
-    lessonDocument: row.lesson_document,
-    lessonDocumentName: row.lesson_document_name,
     downloadLimit: row.download_limit,
     published: !!row.published,
     createdAt: row.created_at,
@@ -80,6 +80,7 @@ function serialize(row) {
     materials: row.materials,
     resources: row.resources,
     videos: row.videos,
+    documents: row.documents,
     quiz: row.quiz,
   };
 }
@@ -107,6 +108,7 @@ async function replaceChildren(connection, id, c) {
   await connection.query('DELETE FROM curriculum_materials WHERE curriculum_id = ?', [id]);
   await connection.query('DELETE FROM curriculum_resources WHERE curriculum_id = ?', [id]);
   await connection.query('DELETE FROM curriculum_videos WHERE curriculum_id = ?', [id]);
+  await connection.query('DELETE FROM curriculum_documents WHERE curriculum_id = ?', [id]);
   await connection.query(
     'DELETE FROM curriculum_quiz_questions WHERE curriculum_id = ?',
     [id]
@@ -159,6 +161,17 @@ async function replaceChildren(connection, id, c) {
       );
     }
   }
+
+  const documents = Array.isArray(c.documents) ? c.documents.slice(0, 5) : [];
+  for (let i = 0; i < documents.length; i++) {
+    const d = documents[i];
+    if (d.filePath) {
+      await connection.query(
+        'INSERT INTO curriculum_documents (curriculum_id, file_path, file_name, sort_order) VALUES (?, ?, ?, ?)',
+        [id, d.filePath, d.fileName || '', i]
+      );
+    }
+  }
 }
 
 router.post('/', requireAuth, async (req, res) => {
@@ -171,9 +184,9 @@ router.post('/', requireAuth, async (req, res) => {
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      `INSERT INTO curricula (title, series, short_description, overview, lessons_count, weeks_count, lesson_document, lesson_document_name, download_limit, published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [c.title, c.series || '', c.shortDescription || '', c.overview || '', c.lessonsCount || null, c.weeksCount || null, c.lessonDocument || '', c.lessonDocumentName || '', c.downloadLimit || 0, c.published ? 1 : 0]
+      `INSERT INTO curricula (title, series, short_description, overview, lessons_count, weeks_count, download_limit, published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [c.title, c.series || '', c.shortDescription || '', c.overview || '', c.lessonsCount || null, c.weeksCount || null, c.downloadLimit || 0, c.published ? 1 : 0]
     );
     await replaceChildren(connection, result.insertId, c);
     await connection.commit();
@@ -202,9 +215,9 @@ router.put('/:id', requireAuth, async (req, res) => {
   try {
     await connection.beginTransaction();
     await connection.query(
-      `UPDATE curricula SET title=?, series=?, short_description=?, overview=?, lessons_count=?, weeks_count=?, lesson_document=?, lesson_document_name=?, download_limit=?, published=?
+      `UPDATE curricula SET title=?, series=?, short_description=?, overview=?, lessons_count=?, weeks_count=?, download_limit=?, published=?
        WHERE id=?`,
-      [c.title, c.series || '', c.shortDescription || '', c.overview || '', c.lessonsCount || null, c.weeksCount || null, c.lessonDocument || '', c.lessonDocumentName || '', c.downloadLimit || 0, c.published ? 1 : 0, req.params.id]
+      [c.title, c.series || '', c.shortDescription || '', c.overview || '', c.lessonsCount || null, c.weeksCount || null, c.downloadLimit || 0, c.published ? 1 : 0, req.params.id]
     );
     await replaceChildren(connection, req.params.id, c);
     await connection.commit();

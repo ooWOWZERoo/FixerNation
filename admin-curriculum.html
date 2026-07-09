@@ -135,13 +135,11 @@
         </div>
 
         <div class="a-field">
-          <label>Lesson Plan Document</label>
-          <div class="a-repeat-row" id="lessonDocPreview" style="display:none;">
-            <div class="info"><div class="name" id="lessonDocName"></div><div class="meta">Attached document</div></div>
-            <button type="button" class="a-repeat-remove" onclick="removeLessonDoc()">✕</button>
-          </div>
-          <input type="file" id="lessonDocFile" accept=".pdf,.doc,.docx">
-          <div class="a-note">PDF or Word document. Uploaded to the server when selected.</div>
+          <label>Lesson Plan Documents <span style="font-weight:400; text-transform:none;">(up to 5)</span></label>
+          <div id="lessonDocList"></div>
+          <input type="file" id="lessonDocFile" accept=".pdf,.doc,.docx" style="display:none;">
+          <button type="button" class="a-dashed-btn" id="lessonDocAddBtn" onclick="document.getElementById('lessonDocFile').click()">+ Add Document</button>
+          <div class="a-note">PDF or Word document. Uploaded to the server when selected. Up to 5 per curriculum.</div>
         </div>
 
         <div class="a-field">
@@ -218,7 +216,7 @@ let editingId = null;
 let currentVideos = [];
 let currentQuiz = [];
 let currentResources = [];
-let currentLessonDoc = { url: '', name: '' };
+let currentLessonDocs = [];
 let activeDownloadCurriculumId = null;
 let curriculaCache = [];
 
@@ -432,21 +430,32 @@ function updateQuestionText(i, val) { currentQuiz[i].question = val; }
 function updateOptionText(qi, oi, val) { currentQuiz[qi].options[oi] = val; }
 function setCorrectOption(qi, oi) { currentQuiz[qi].correctIndex = oi; }
 
-document.getElementById('lessonDocFile').addEventListener('change', async function(e){
+document.getElementById('lessonDocFile').addEventListener('change', async function(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (currentLessonDocs.length >= 5) { fnToast('Maximum 5 documents per curriculum'); e.target.value = ''; return; }
   fnToast('Uploading document…');
   const url = await fnUploadFile(file);
   if (!url) { e.target.value = ''; return; }
-  currentLessonDoc = { url, name: file.name };
-  document.getElementById('lessonDocName').textContent = '📄 ' + file.name;
-  document.getElementById('lessonDocPreview').style.display = 'flex';
+  currentLessonDocs.push({ url, name: file.name });
+  e.target.value = '';
+  renderLessonDocList();
   fnToast('Document uploaded');
 });
-function removeLessonDoc() {
-  currentLessonDoc = { url: '', name: '' };
-  document.getElementById('lessonDocPreview').style.display = 'none';
-  document.getElementById('lessonDocFile').value = '';
+function renderLessonDocList() {
+  const el = document.getElementById('lessonDocList');
+  el.innerHTML = currentLessonDocs.map((d, i) => `
+    <div class="a-repeat-row">
+      <div class="info"><div class="name">📄 ${d.name}</div><div class="meta">Attached document</div></div>
+      <button type="button" class="a-repeat-remove" onclick="removeLessonDoc(${i})">✕</button>
+    </div>
+  `).join('');
+  const btn = document.getElementById('lessonDocAddBtn');
+  if (btn) btn.style.display = currentLessonDocs.length >= 5 ? 'none' : '';
+}
+function removeLessonDoc(i) {
+  currentLessonDocs.splice(i, 1);
+  renderLessonDocList();
 }
 
 function openCurriculumModal() {
@@ -454,7 +463,7 @@ function openCurriculumModal() {
   currentVideos = [];
   currentQuiz = [];
   currentResources = [];
-  currentLessonDoc = { url: '', name: '' };
+  currentLessonDocs = [];
   document.getElementById('curriculumModalTitle').textContent = 'Build New Curriculum';
   document.getElementById('curriculumForm').reset();
   document.getElementById('downloadLimit').value = 3;
@@ -462,7 +471,7 @@ function openCurriculumModal() {
   renderResourceCheckboxes();
   renderVideoList();
   renderQuizList();
-  removeLessonDoc();
+  renderLessonDocList();
   setPublishedToggle(true);
   document.getElementById('curriculumModalOverlay').classList.add('show');
 }
@@ -478,7 +487,7 @@ function editCurriculum(id) {
   currentVideos = JSON.parse(JSON.stringify(c.videos || []));
   currentQuiz = JSON.parse(JSON.stringify(c.quiz || []));
   currentResources = JSON.parse(JSON.stringify(c.resources || []));
-  currentLessonDoc = { url: c.lessonDocument || '', name: c.lessonDocumentName || '' };
+  currentLessonDocs = (c.documents || []).map(d => ({ url: d.filePath, name: d.fileName }));
 
   document.getElementById('curriculumModalTitle').textContent = 'Edit Curriculum';
   document.getElementById('title').value = c.title || '';
@@ -495,13 +504,7 @@ function editCurriculum(id) {
   renderResourceCheckboxes();
   renderVideoList();
   renderQuizList();
-
-  if (currentLessonDoc.name) {
-    document.getElementById('lessonDocName').textContent = '📄 ' + currentLessonDoc.name;
-    document.getElementById('lessonDocPreview').style.display = 'flex';
-  } else {
-    document.getElementById('lessonDocPreview').style.display = 'none';
-  }
+  renderLessonDocList();
 
   setPublishedToggle(!!c.published);
   document.getElementById('curriculumModalOverlay').classList.add('show');
@@ -549,8 +552,7 @@ async function saveCurriculum() {
     weeksCount: document.getElementById('weeksCount').value ? parseInt(document.getElementById('weeksCount').value, 10) : null,
     materials: document.getElementById('materials').value.split('\n').map(s => s.trim()).filter(Boolean),
     resources: currentResources,
-    lessonDocument: currentLessonDoc.url,
-    lessonDocumentName: currentLessonDoc.name,
+    documents: currentLessonDocs.map(d => ({ filePath: d.url, fileName: d.name })),
     videos: currentVideos,
     quiz: currentQuiz,
     downloadLimit: parseInt(document.getElementById('downloadLimit').value, 10) || 0,

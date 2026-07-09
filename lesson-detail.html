@@ -291,13 +291,23 @@ function renderDetailResources(c) {
     return;
   }
 
-  if (!(c.resources || []).length) {
+  const documents = c.documents || [];
+  const resources = c.resources || [];
+
+  if (!documents.length && !resources.length) {
     row.innerHTML = '<span style="font-size:13px; color:var(--ink-soft);">No resources have been marked as included for this lesson yet.</span>';
     return;
   }
-  row.innerHTML = c.resources.map(r =>
+
+  const docHtml = documents.map(d =>
+    `<a href="${d.filePath}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">📄 ${d.fileName || 'Lesson Plan'}</a>`
+  ).join('');
+
+  const resHtml = resources.map(r =>
     `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`
   ).join('');
+
+  row.innerHTML = docHtml + resHtml;
 }
 
 function renderDetailVideo(c) {
