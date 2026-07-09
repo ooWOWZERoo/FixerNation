@@ -30,7 +30,10 @@ async function attachChildren(curricula) {
   const [materialRows] = await pool.query('SELECT curriculum_id, material FROM curriculum_materials WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   const [resourceRows] = await pool.query('SELECT curriculum_id, resource, file_path, file_name FROM curriculum_resources WHERE curriculum_id IN (?)', [ids]);
   const [videoRows] = await pool.query('SELECT curriculum_id, name, url, size_label FROM curriculum_videos WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
-  const [documentRows] = await pool.query('SELECT curriculum_id, file_path, file_name FROM curriculum_documents WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  let documentRows = [];
+  try {
+    [documentRows] = await pool.query('SELECT curriculum_id, file_path, file_name FROM curriculum_documents WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
+  } catch (_) { /* table may not exist yet — migration pending */ }
   const [questionRows] = await pool.query('SELECT id, curriculum_id, question, correct_index FROM curriculum_quiz_questions WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   const questionIds = questionRows.map(q => q.id);
   const [optionRows] = questionIds.length
