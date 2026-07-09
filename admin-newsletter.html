@@ -278,7 +278,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=14"></script>
+<script src="admin-common.js?v=15"></script>
 <script>
 fnRequireAuth();
 
@@ -424,10 +424,7 @@ function applyFiltersAndRender() {
   document.getElementById('statWeek').textContent = all.filter(c => new Date(c.signupDate).getTime() >= weekAgo).length;
 
   let contacts = all.filter(c => {
-    if (searchTerm) {
-      const haystack = [c.name, c.email, c.phone, c.company].filter(Boolean).join(' ').toLowerCase();
-      if (!haystack.includes(searchTerm)) return false;
-    }
+    if (searchTerm && ![c.name, c.email, c.phone, c.company].some(f => fnWildcardTest(searchTerm, f))) return false;
     if (filterGroupId && !(c.groups || []).some(g => String(g.id) === filterGroupId)) return false;
     if (filterStatus && c.status !== filterStatus) return false;
     if (filterSource && c.source !== filterSource) return false;

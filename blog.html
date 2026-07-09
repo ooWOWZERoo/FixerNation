@@ -212,7 +212,7 @@
   </div>
 </footer>
 
-<script src="admin-common.js?v=14"></script>
+<script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
 <script>
 let activeCategory = 'All Posts';
@@ -282,7 +282,7 @@ function renderGrid(posts) {
       <div class="blog-body">
         <span class="blog-cat">${p.category}</span>
         <h3>${p.title}</h3>
-        <p>${truncate(p.excerpt, 110)}</p>
+        <p>${p.excerpt || ''}</p>
         <a href="#" class="btn btn-outline read-more-btn" onclick="openPostRead(${p.id}); return false;">Read More</a>
       </div>
     </div>

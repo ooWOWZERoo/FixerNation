@@ -18,6 +18,19 @@ const FN_BLOG_CATEGORIES = [
   '2D Business and Industry', '2D Government',
 ];
 
+// Wildcard-aware string match for admin search fields.
+// term must already be lowercased. * matches any sequence, ? matches any one char.
+// Falls back to substring match when no wildcards are present.
+function fnWildcardTest(term, value) {
+  if (!term) return true;
+  const v = (value || '').toLowerCase();
+  if (term.includes('*') || term.includes('?')) {
+    const pattern = term.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+    return new RegExp('^' + pattern + '$').test(v);
+  }
+  return v.includes(term);
+}
+
 // Real server-side auth (session cookie). Redirects to the login page if the
 // session check fails or errors out.
 function fnRequireAuth() {

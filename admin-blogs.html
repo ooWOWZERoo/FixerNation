@@ -125,7 +125,8 @@
 
         <div class="a-field">
           <label>Excerpt <span style="font-weight:400; text-transform:none;">(short summary shown on listing cards)</span></label>
-          <textarea id="excerpt" style="min-height:60px;"></textarea>
+          <textarea id="excerpt" maxlength="500" oninput="updateExcerptCounter()" style="min-height:60px;"></textarea>
+          <div id="excerptCounter" style="text-align:right; font-size:12px; color:var(--a-text-soft); margin-top:4px;">0 / 500</div>
         </div>
 
         <div class="a-form-row">
@@ -205,7 +206,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=14"></script>
+<script src="admin-common.js?v=15"></script>
 <script>
 fnRequireAuth();
 
@@ -361,6 +362,7 @@ async function loadFromCalendar() {
   document.getElementById('slug').value = fnSlugify(`${entry.series}: ${entry.theme}`);
   slugManuallyEdited = true;
   document.getElementById('excerpt').value = entry.theme;
+  updateExcerptCounter();
   document.getElementById('publishDate').value = date;
   renderCategoryCheckboxes(['Morning Boost']);
   document.getElementById('calendarLoadNote').textContent = entry.blogPostId
@@ -402,6 +404,7 @@ function editPost(id) {
   document.getElementById('focusKeyword').value = p.focusKeyword || '';
   renderCategoryCheckboxes(p.categories && p.categories.length ? p.categories : [p.category]);
   document.getElementById('excerpt').value = p.excerpt || '';
+  updateExcerptCounter();
   document.getElementById('body').value = p.body || '';
   renderTagCheckboxes(p.tags || []);
   document.getElementById('publishDate').value = p.publishDate || new Date().toISOString().slice(0, 10);
@@ -455,6 +458,13 @@ function setPublishedToggle(on) {
   const l = document.getElementById('publishedLabel');
   if (on) { t.classList.add('on'); l.textContent = 'Published (visible on the site)'; }
   else { t.classList.remove('on'); l.textContent = 'Draft (hidden from the site)'; }
+}
+
+function updateExcerptCounter() {
+  const len = document.getElementById('excerpt').value.length;
+  const el = document.getElementById('excerptCounter');
+  el.textContent = len + ' / 500';
+  el.style.color = len >= 475 ? 'var(--a-danger)' : 'var(--a-text-soft)';
 }
 
 function updateReadingTime() {

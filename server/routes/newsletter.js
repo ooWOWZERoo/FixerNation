@@ -228,6 +228,16 @@ function normalizeDomain(domain) {
   return (domain || '').trim().replace(/^@/, '').toLowerCase();
 }
 
+// Translates a user search term into a SQL LIKE pattern.
+// * → %, ? → _, literal % and _ are escaped. No wildcards → %term% (contains).
+function toSqlLike(term) {
+  const escaped = term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+  if (escaped.includes('*') || escaped.includes('?')) {
+    return escaped.replace(/\*/g, '%').replace(/\?/g, '_');
+  }
+  return `%${escaped}%`;
+}
+
 async function attachPurchaseDetails(purchases) {
   if (purchases.length === 0) return purchases;
   const ids = purchases.map(p => p.id);
@@ -448,7 +458,7 @@ router.get('/purchases/by-domain', requireAuth, async (req, res) => {
 
   const [rows] = await pool.query(
     "SELECT * FROM purchases WHERE product_type = 'group_license' AND school_domain LIKE ? ORDER BY purchased_at DESC",
-    [`%${domain}%`]
+    [toSqlLike(domain)]
   );
   if (!rows.length) return res.json({ purchases: [] });
 
