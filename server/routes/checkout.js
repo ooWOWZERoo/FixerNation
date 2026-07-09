@@ -307,6 +307,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
   if (!plan) return;
 
   const contactId = await findOrCreateContact(metadata.email, 'Membership Signup', `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim());
+  const firstName = (metadata.firstName || '').trim() || 'there';
 
   if (session.mode === 'payment') {
     const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_session_id = ? LIMIT 1', [session.id]);
@@ -325,6 +326,10 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, 'active', purchaseId, endsAt]
     );
+    await fireAutomation('membership_purchase_thank_you', {
+      to: metadata.email,
+      mergeFields: { firstName, planName: plan.name },
+    });
   } else if (session.mode === 'subscription' && session.subscription) {
     const [existing] = await pool.query('SELECT id FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [session.subscription]);
     if (existing.length) return;
@@ -337,6 +342,10 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id, ends_at) VALUES (?, ?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
     );
+    await fireAutomation('membership_purchase_thank_you', {
+      to: metadata.email,
+      mergeFields: { firstName, planName: plan.name },
+    });
   }
 }
 
@@ -344,8 +353,10 @@ async function handleMembershipInvoicePaid(invoice) {
   if (!invoice.subscription) return; // not a subscription invoice — not ours to handle here
 
   const [membershipRows] = await pool.query(
-    `SELECT cm.*, mp.duration_days FROM contact_memberships cm
+    `SELECT cm.*, mp.duration_days, mp.name AS plan_name, nc.email, nc.name AS contact_name
+     FROM contact_memberships cm
      JOIN membership_plans mp ON mp.id = cm.membership_plan_id
+     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
      WHERE cm.stripe_subscription_id = ? LIMIT 1`,
     [invoice.subscription]
   );
@@ -354,6 +365,8 @@ async function handleMembershipInvoicePaid(invoice) {
 
   const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_invoice_id = ? LIMIT 1', [invoice.id]);
   if (existing.length) return; // Stripe retries webhook delivery — guard against double-counting a renewal
+
+  const wasTrial = membership.status === 'trialing';
 
   const purchaseId = await createPurchase(membership.contact_id, {
     productType: 'membership',
@@ -373,6 +386,18 @@ async function handleMembershipInvoicePaid(invoice) {
     "UPDATE contact_memberships SET purchase_id = ?, status = IF(status IN ('past_due','trialing'), 'active', status), ends_at = ?, reminder_sent_at = NULL WHERE id = ?",
     [purchaseId, endsAt, membership.id]
   );
+
+  // Send a receipt when a trial ends and the first real charge succeeds.
+  // Regular renewals (status was already 'active') don't get this email.
+  if (wasTrial) {
+    await fireAutomation('membership_purchase_thank_you', {
+      to: membership.email,
+      mergeFields: {
+        firstName: (membership.contact_name || '').split(' ')[0] || 'there',
+        planName: membership.plan_name,
+      },
+    });
+  }
 }
 
 async function handleMembershipPaymentFailed(invoice) {
