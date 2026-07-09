@@ -21,7 +21,7 @@ const FN_BLOG_CATEGORIES = [
 // Real server-side auth (session cookie). Redirects to the login page if the
 // session check fails or errors out.
 function fnRequireAuth() {
-  fetch('/api/auth/me', { credentials: 'include' })
+  fetch('/api/auth/me?nc=' + Date.now(), { credentials: 'include' })
     .then(r => r.json())
     .then(data => {
       if (!data.loggedIn) window.location.href = 'admin-login.html';

@@ -37,6 +37,7 @@ app.post('/api/checkout/webhook', express.raw({ type: 'application/json' }), che
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
+app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, private'); next(); });
 
 app.use('/api/auth', authRoutes.router);
 app.use('/api/books', bookRoutes);
