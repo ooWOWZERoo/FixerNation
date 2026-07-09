@@ -188,10 +188,29 @@ router.post('/reset-password', async (req, res) => {
 
 router.get('/my-purchases', requireSiteAuth, async (req, res) => {
   const [contactRows] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [req.siteUser.email]);
-  if (!contactRows[0]) return res.json({ purchases: [] });
+  if (!contactRows[0]) return res.json({ purchases: [], memberships: [] });
+  const contactId = contactRows[0].id;
 
-  const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [contactRows[0].id]);
-  res.json({ purchases: await attachPurchaseDetails(rows) });
+  const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [contactId]);
+  const purchases = await attachPurchaseDetails(rows);
+
+  const [membershipRows] = await pool.query(
+    `SELECT cm.id, cm.status, cm.ends_at, mp.name AS plan_name, mp.member_type
+     FROM contact_memberships cm
+     JOIN membership_plans mp ON mp.id = cm.membership_plan_id
+     WHERE cm.contact_id = ?
+     ORDER BY cm.id DESC`,
+    [contactId]
+  );
+  const memberships = membershipRows.map(m => ({
+    id: m.id,
+    planName: m.plan_name,
+    memberType: m.member_type,
+    status: m.status,
+    endsAt: m.ends_at,
+  }));
+
+  res.json({ purchases, memberships });
 });
 
 // Lets the buyer (e.g. a school administrator) hand out an open group-license

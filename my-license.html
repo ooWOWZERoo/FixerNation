@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My License — Fixer Nation</title>
+<title>My Account — Fixer Nation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -20,11 +20,19 @@
   .brand-mark{width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800;}
   .brand-word{font-family:'Fraunces',serif; font-weight:700; font-size:18px; color:var(--teal-dark);}
   h1{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:28px; margin-bottom:6px;}
-  p.sub{font-size:14.5px; color:var(--ink-soft); margin-bottom:28px;}
+  p.sub{font-size:14.5px; color:var(--ink-soft); margin-bottom:32px;}
+  h2.section-heading{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:18px; margin:28px 0 12px;}
+  h2.section-heading:first-child{margin-top:0;}
   a{color:var(--teal-dark);}
-  .card{background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25); padding:26px 28px; margin-bottom:18px;}
+  .card{background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25); padding:26px 28px; margin-bottom:14px;}
   .card-title{font-weight:700; font-size:16px; margin-bottom:2px;}
   .card-sub{font-size:13px; color:var(--ink-soft); margin-bottom:14px;}
+  .card-sub:last-child{margin-bottom:0;}
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-left:8px; vertical-align:middle;}
+  .badge-active{background:#d1fae5; color:#065f46;}
+  .badge-trialing{background:#dbeafe; color:#1e40af;}
+  .badge-past_due{background:#fef3c7; color:#92400e;}
+  .badge-cancelled,.badge-expired{background:#f3f4f6; color:#6b7280;}
   .seat-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--border);}
   .seat-row:first-of-type{border-top:none;}
   .seat-status{font-size:13px;}
@@ -41,12 +49,12 @@
 
 <div class="wrap">
   <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
-  <h1>My License</h1>
-  <p class="sub">Books, licenses, and teacher seats tied to your account.</p>
+  <h1>My Account</h1>
+  <p class="sub">Your memberships, books, and licenses all in one place.</p>
 
-  <div id="purchasesWrap"></div>
+  <div id="accountWrap"></div>
   <div class="empty" id="emptyState" style="display:none;">
-    You don't have any purchases on file yet. If you've bought a book or a teacher license, make sure you're logged in with the same email you used to purchase it.
+    You don't have any purchases on file yet. If you've bought a book, license, or membership, make sure you're logged in with the same email you used to purchase it.
   </div>
 
   <a href="index.html" class="back-link">← Back to Fixer Nation</a>
@@ -66,52 +74,94 @@ function toast(msg) {
 }
 
 function formatDate(iso) {
+  if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-async function loadPurchases() {
+function formatAmount(cents) {
+  if (!cents) return '';
+  return '$' + (cents / 100).toFixed(2);
+}
+
+function statusBadge(status) {
+  const labels = { active: 'Active', trialing: 'Free Trial', past_due: 'Past Due', cancelled: 'Cancelled', expired: 'Expired' };
+  const label = labels[status] || status;
+  return `<span class="badge badge-${status}">${label}</span>`;
+}
+
+async function loadData() {
   const r = await fetch('/api/site-auth/my-purchases', { credentials: 'include' });
-  if (r.status === 401) {
-    window.location.href = 'index.html';
-    return;
-  }
+  if (r.status === 401) { window.location.href = 'index.html'; return; }
   const data = await r.json().catch(() => ({}));
-  render(data.purchases || []);
+  render(data.purchases || [], data.memberships || []);
 }
 
-function render(purchases) {
-  const wrap = document.getElementById('purchasesWrap');
-  document.getElementById('emptyState').style.display = purchases.length === 0 ? 'block' : 'none';
+function render(purchases, memberships) {
+  const wrap = document.getElementById('accountWrap');
+  const books = purchases.filter(p => p.productType === 'book');
+  const licenses = purchases.filter(p => p.productType === 'single_license' || p.productType === 'group_license');
+  const hasAnything = memberships.length || books.length || licenses.length;
 
-  wrap.innerHTML = purchases.map(p => {
-    const dateLabel = formatDate(p.purchasedAt);
-    if (p.productType === 'book') {
-      return card(`📗 ${p.bookTitle || 'Book'}`, `Purchased ${dateLabel}`, '');
-    }
-    if (p.productType === 'single_license') {
-      const seat = p.seats[0];
-      const status = seat && seat.status === 'registered' ? 'Active' : 'Pending activation';
-      return card('🔑 Single Teacher License', `Purchased ${dateLabel} · ${status}`, '');
-    }
-    const registeredCount = p.seats.filter(s => s.status === 'registered').length;
-    const rows = p.seats.map(s => `
-      <div class="seat-row">
-        ${s.status === 'registered'
-          ? `<div class="seat-status">✅ <strong>${s.registeredName}</strong> <span style="color:var(--ink-soft);">(${s.invitedEmail})</span></div>`
-          : `<input type="email" placeholder="teacher@school.org" value="${s.invitedEmail || ''}" data-purchase="${p.id}" data-seat="${s.id}">
-             <button onclick="saveSeatEmail(this)">Save</button>`}
-      </div>
-    `).join('');
-    return card(
-      `🏫 Group License — ${registeredCount}/${p.seatCount} seats used`,
-      `Purchased ${dateLabel} · give a seat to a teacher by entering their email below`,
-      rows
-    );
-  }).join('');
-}
+  document.getElementById('emptyState').style.display = hasAnything ? 'none' : 'block';
+  if (!hasAnything) { wrap.innerHTML = ''; return; }
 
-function card(title, sub, rowsHtml) {
-  return `<div class="card"><div class="card-title">${title}</div><div class="card-sub">${sub}</div>${rowsHtml}</div>`;
+  let html = '';
+
+  if (memberships.length) {
+    html += '<h2 class="section-heading">Memberships</h2>';
+    html += memberships.map(m => {
+      let detail = '';
+      if (m.status === 'trialing' && m.endsAt) detail = `Trial ends ${formatDate(m.endsAt)}`;
+      else if (m.endsAt && (m.status === 'active' || m.status === 'past_due')) detail = `Renews ${formatDate(m.endsAt)}`;
+      else if (m.endsAt && (m.status === 'cancelled' || m.status === 'expired')) detail = `Ended ${formatDate(m.endsAt)}`;
+      return `<div class="card">
+        <div class="card-title">🎟️ ${m.planName}${statusBadge(m.status)}</div>
+        ${detail ? `<div class="card-sub">${detail}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  if (books.length) {
+    html += '<h2 class="section-heading">Books</h2>';
+    html += books.map(p => {
+      const amount = formatAmount(p.amountCents);
+      return `<div class="card">
+        <div class="card-title">📗 ${p.bookTitle || 'Book'}</div>
+        <div class="card-sub">Purchased ${formatDate(p.purchasedAt)}${amount ? ' · ' + amount : ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  if (licenses.length) {
+    html += '<h2 class="section-heading">Licenses</h2>';
+    html += licenses.map(p => {
+      const dateLabel = formatDate(p.purchasedAt);
+      if (p.productType === 'single_license') {
+        const seat = p.seats && p.seats[0];
+        const status = seat && seat.status === 'registered' ? 'Active' : 'Pending activation';
+        return `<div class="card">
+          <div class="card-title">🔑 Single Teacher License</div>
+          <div class="card-sub">Purchased ${dateLabel} · ${status}</div>
+        </div>`;
+      }
+      const registeredCount = (p.seats || []).filter(s => s.status === 'registered').length;
+      const rows = (p.seats || []).map(s => `
+        <div class="seat-row">
+          ${s.status === 'registered'
+            ? `<div class="seat-status">✅ <strong>${s.registeredName}</strong> <span style="color:var(--ink-soft);">(${s.invitedEmail})</span></div>`
+            : `<input type="email" placeholder="teacher@school.org" value="${s.invitedEmail || ''}" data-purchase="${p.id}" data-seat="${s.id}">
+               <button onclick="saveSeatEmail(this)">Save</button>`}
+        </div>
+      `).join('');
+      return `<div class="card">
+        <div class="card-title">🏫 Group License — ${registeredCount}/${p.seatCount} seats used</div>
+        <div class="card-sub">Purchased ${dateLabel} · give a seat to a teacher by entering their email below</div>
+        ${rows}
+      </div>`;
+    }).join('');
+  }
+
+  wrap.innerHTML = html;
 }
 
 async function saveSeatEmail(btn) {
@@ -127,15 +177,12 @@ async function saveSeatEmail(btn) {
     body: JSON.stringify({ invitedEmail: email }),
   });
   const result = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    toast(result.error || 'Could not save that email');
-    return;
-  }
+  if (!r.ok) { toast(result.error || 'Could not save that email'); return; }
   toast('Seat updated — the teacher can now sign up with that email');
-  loadPurchases();
+  loadData();
 }
 
-loadPurchases();
+loadData();
 </script>
 
 </body>
