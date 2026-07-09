@@ -258,28 +258,9 @@
     </div>
     <div class="filter-bar" id="filterBar">
       <div class="chip active" data-series="all">All Series</div>
-      <div class="chip" data-series="Mental Strength">Mental Strength</div>
-      <div class="chip" data-series="Clarity & Focus">Clarity &amp; Focus</div>
-      <div class="chip" data-series="Purpose & Direction">Purpose &amp; Direction</div>
-      <div class="chip" data-series="Confidence & Courage">Confidence &amp; Courage</div>
-      <div class="chip" data-series="Healthy Boundaries">Healthy Boundaries</div>
-      <div class="chip" data-series="Responsibility & Ownership">Responsibility &amp; Ownership</div>
-      <div class="chip" data-series="Respect & Character">Respect &amp; Character</div>
-      <div class="chip" data-series="Problem Solving & Wise Choices">Problem Solving</div>
-      <div class="chip" data-series="Teamwork & Community">Teamwork</div>
     </div>
-    <div class="lesson-grid" id="lessonGrid">
-      <div class="lesson-card" data-series="Mental Strength"><div class="lesson-num">Lesson 4-1 · #1</div><h4>Awareness Builds Strength</h4><div class="lesson-series">Mental Strength</div><p>Students learn that awareness helps them notice thoughts and choices so they can make better decisions.</p></div>
-      <div class="lesson-card" data-series="Clarity & Focus"><div class="lesson-num">Lesson 4-5 · #5</div><h4>Focus Creates Results</h4><div class="lesson-series">Clarity &amp; Focus</div><p>Students learn how awareness, focus, and removing distractions improve daily habits.</p></div>
-      <div class="lesson-card" data-series="Purpose & Direction"><div class="lesson-num">Lesson 4-24 · #24</div><h4>Know What Matters</h4><div class="lesson-series">Purpose &amp; Direction</div><p>Students learn how identifying what matters most helps them make wiser choices.</p></div>
-      <div class="lesson-card" data-series="Confidence & Courage"><div class="lesson-num">Lesson 5-1 · #30</div><h4>Trust Your Growth</h4><div class="lesson-series">Confidence &amp; Courage</div><p>Students learn to recognize progress, avoid comparison, and build confidence.</p></div>
-      <div class="lesson-card" data-series="Healthy Boundaries"><div class="lesson-num">Lesson 5-8 · #35</div><h4>Know Your Limits</h4><div class="lesson-series">Healthy Boundaries</div><p>Students learn that paying attention to stress and overload leads to healthier decisions.</p></div>
-      <div class="lesson-card" id="featuredLessonCard" data-series="Responsibility & Ownership"><div class="lesson-num">Lesson 5-21 · #44</div><h4>Take Responsibility for Your Growth</h4><div class="lesson-series">Responsibility &amp; Ownership</div><p>Students learn that personal growth happens when they choose effort and steady learning.</p></div>
-      <div class="lesson-card" data-series="Respect & Character"><div class="lesson-num">Lesson 6-1 · #51</div><h4>Respect Starts With How You Treat People</h4><div class="lesson-series">Respect &amp; Character</div><p>Students practice respectful words, careful listening, and kind actions.</p></div>
-      <div class="lesson-card" data-series="Problem Solving & Wise Choices"><div class="lesson-num">Lesson 6-15 · #61</div><h4>Name the Real Issue</h4><div class="lesson-series">Problem Solving &amp; Wise Choices</div><p>Students learn to stop guessing or blaming, and choose a wiser next step.</p></div>
-      <div class="lesson-card" data-series="Teamwork & Community"><div class="lesson-num">Lesson 6-22 · #66</div><h4>Show Up for Others</h4><div class="lesson-series">Teamwork &amp; Community</div><p>Students learn that showing up for others makes the group stronger.</p></div>
-    </div>
-    <p class="library-note">Showing 9 of 72+ lessons in the growing library — new lessons added every weekday, Monday through Friday.</p>
+    <div class="lesson-grid" id="lessonGrid"></div>
+    <p class="library-note" id="libraryNote"></p>
     <div class="cta-links">
       <a href="https://www.ed.gov/teaching-and-administration/supporting-students/seac/supporting-student-attendance-and-engagement" class="btn btn-outline">Education Funding Options</a>
       <a href="#quoteForm" class="btn btn-primary">Request a Formal Quotation</a>
@@ -449,6 +430,45 @@ function showInfoToast(msg) {
 
 let curriculaCache = [];
 
+function seriesFromTitle(title) {
+  const m = (title || '').match(/^([^:]+):/);
+  return m ? m[1].trim() : (title || '');
+}
+function themeFromTitle(title) {
+  const m = (title || '').match(/^[^:]+:\s*(.+)/);
+  return m ? m[1].trim() : (title || '');
+}
+
+function renderLessonGrid() {
+  const grid = document.getElementById('lessonGrid');
+  const note = document.getElementById('libraryNote');
+  const filterBar = document.getElementById('filterBar');
+
+  if (!curriculaCache.length) {
+    grid.innerHTML = '<p style="color:var(--ink-soft); grid-column:1/-1;">No lesson plans are published yet — check back soon.</p>';
+    return;
+  }
+
+  const uniqueSeries = [...new Set(curriculaCache.map(c => seriesFromTitle(c.title)))].sort();
+  filterBar.innerHTML = '<div class="chip active" data-series="all">All Series</div>' +
+    uniqueSeries.map(s => `<div class="chip" data-series="${s.replace(/"/g, '&quot;')}">${s}</div>`).join('');
+
+  grid.innerHTML = curriculaCache.map((c, i) => {
+    const series = seriesFromTitle(c.title);
+    const theme = themeFromTitle(c.title);
+    const desc = c.shortDescription || c.overview || '';
+    const url = 'lesson-detail.html?id=' + encodeURIComponent(c.id);
+    return `<div class="lesson-card linked" data-series="${series.replace(/"/g, '&quot;')}" onclick="window.location.href='${url}'">
+      <div class="lesson-num">Lesson #${i + 1}</div>
+      <h4>${theme}</h4>
+      <div class="lesson-series">${series}</div>
+      ${desc ? `<p>${desc}</p>` : ''}
+    </div>`;
+  }).join('');
+
+  if (note) note.textContent = `Showing ${curriculaCache.length} lesson${curriculaCache.length !== 1 ? 's' : ''} in the growing library — new lessons added every weekday, Monday through Friday.`;
+}
+
 function getFeaturedCurriculum() {
   // This spotlight (and the matching card in the library grid below) represents the
   // "Take Responsibility for Your Growth" lesson — match it by title so everything on
@@ -555,6 +575,7 @@ fetch('/api/curricula', { credentials: 'include' })
   .then(r => r.json())
   .then(data => {
     curriculaCache = data.curricula || [];
+    renderLessonGrid();
     renderSpotlightResources();
     renderSpotlightVideo();
     wireFeaturedLessonLinks();
