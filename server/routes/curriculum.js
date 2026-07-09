@@ -111,7 +111,6 @@ async function replaceChildren(connection, id, c) {
   await connection.query('DELETE FROM curriculum_materials WHERE curriculum_id = ?', [id]);
   await connection.query('DELETE FROM curriculum_resources WHERE curriculum_id = ?', [id]);
   await connection.query('DELETE FROM curriculum_videos WHERE curriculum_id = ?', [id]);
-  await connection.query('DELETE FROM curriculum_documents WHERE curriculum_id = ?', [id]);
   await connection.query(
     'DELETE FROM curriculum_quiz_questions WHERE curriculum_id = ?',
     [id]
@@ -165,16 +164,19 @@ async function replaceChildren(connection, id, c) {
     }
   }
 
-  const documents = Array.isArray(c.documents) ? c.documents.slice(0, 5) : [];
-  for (let i = 0; i < documents.length; i++) {
-    const d = documents[i];
-    if (d.filePath) {
-      await connection.query(
-        'INSERT INTO curriculum_documents (curriculum_id, file_path, file_name, sort_order) VALUES (?, ?, ?, ?)',
-        [id, d.filePath, d.fileName || '', i]
-      );
+  try {
+    await connection.query('DELETE FROM curriculum_documents WHERE curriculum_id = ?', [id]);
+    const documents = Array.isArray(c.documents) ? c.documents.slice(0, 5) : [];
+    for (let i = 0; i < documents.length; i++) {
+      const d = documents[i];
+      if (d.filePath) {
+        await connection.query(
+          'INSERT INTO curriculum_documents (curriculum_id, file_path, file_name, sort_order) VALUES (?, ?, ?, ?)',
+          [id, d.filePath, d.fileName || '', i]
+        );
+      }
     }
-  }
+  } catch (_) { /* curriculum_documents table may not exist yet — migration pending */ }
 }
 
 router.post('/', requireAuth, async (req, res) => {
