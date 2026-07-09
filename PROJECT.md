@@ -29,11 +29,11 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Brand Ambassador program (v1 only) | brand-ambassador.html | — |
 | FN Network | fnnetwork.html | fnnetwork-v2.html |
 | Ask The Fixer | askthefixer.html | askthefixer-v2.html |
-| National Education Portal | education-portal.html | education-portal-v2.html |
+| National Education Portal (lesson-plan grid fetches live from `/api/curricula`, dynamic series filters) | education-portal.html | education-portal-v2.html |
 | 2D Education - Schools | education-schools.html | education-schools-v2.html |
 | Programs | programs.html | programs-v2.html |
 | FN Blogs | blog.html | blog-v2.html |
-| Lesson plan detail (v1 only) | lesson-detail.html?id=&lt;curriculumId&gt; | — |
+| Lesson plan detail — overview preserves paragraph/line-break formatting (v1 only) | lesson-detail.html?id=&lt;curriculumId&gt; | — |
 | School license pricing / checkout (v1 only) | licenses.html | — |
 | Shopping cart (v1 only) | cart.html | — |
 | Self-service license management (v1 only) | my-license.html | — |
@@ -49,7 +49,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Dashboard (+ Financial Insights) | admin-dashboard.html |
 | Book product configuration (CRUD, Amazon format pricing) | admin-books.html |
 | Curriculum builder (CRUD, resources, quiz, download-limit testing) | admin-curriculum.html |
-| Blog builder (CRUD, multi-category, SEO fields, membership gating, scheduling, live on the public FN Blogs page) | admin-blogs.html |
+| Blog builder (CRUD, multi-category, SEO fields, membership gating, scheduling; excerpt up to 500 chars with live counter) | admin-blogs.html |
 | Morning Boost Studio (calendar-aware post prefill, ElevenLabs batch voice-over generation) | admin-morning-boost.html |
 | Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
@@ -58,7 +58,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Automated emails (thank-yous, renewal reminder, payment-failed, invoice-paid, seat invite) | admin-automations.html |
 | Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
 | Settings (own password, admin management, contact-form email routing for 4 forms, invoice branding) | admin-settings.html |
-| Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes) |
+| Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes; current version: **v15**) |
 
 Admin styling uses FN's own brand palette (teal/coral/gold) with a light/dark theme, toggled from the topbar and persisted in `localStorage`. `admin-login.html` intentionally stays a fixed brand-teal gradient regardless of theme choice. The login/accept-invite/invoice-print pages have their own self-contained styles and don't participate in the shared theme.
 
