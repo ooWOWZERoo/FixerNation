@@ -100,7 +100,8 @@ CREATE TABLE IF NOT EXISTS newsletter_contacts (
   signup_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(128) NOT NULL DEFAULT 'Homepage',
   status VARCHAR(32) NOT NULL DEFAULT 'Subscribed',
-  notes TEXT -- catch-all for rarely-populated imported fields (secondary email/phone, extra addresses, etc.) so bulk imports don't have to silently drop them
+  notes TEXT, -- catch-all for rarely-populated imported fields (secondary email/phone, extra addresses, etc.) so bulk imports don't have to silently drop them
+  morning_boost_unsubscribed_at DATETIME NULL -- set when the contact clicks the MB-specific unsubscribe link; does not affect other email types
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Contact groups, for categorizing contacts. A contact may belong to any
@@ -129,13 +130,15 @@ CREATE TABLE IF NOT EXISTS contact_group_members (
 CREATE TABLE IF NOT EXISTS license_products (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  description VARCHAR(500),
+  description TEXT,
   seat_count INT UNSIGNED NOT NULL,
   price_cents INT UNSIGNED NOT NULL,
   call_for_quote TINYINT(1) NOT NULL DEFAULT 0, -- for large (1000+ seat) tiers with no fixed price — shows "Call For Quote" instead and can't be added to the self-service cart
   sort_order INT UNSIGNED NOT NULL DEFAULT 0,
   active TINYINT(1) NOT NULL DEFAULT 1,
   auto_assign_group_id INT UNSIGNED NULL,
+  bullet_points TEXT NULL,   -- newline-separated list items for the registration card (education-schools.html)
+  footer_note VARCHAR(255) NULL, -- small footer line, e.g. "Valid for 12 months"
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -160,6 +163,7 @@ CREATE TABLE IF NOT EXISTS membership_plans (
   duration_days INT UNSIGNED NULL, -- how long one purchase/cycle lasts before expiring or renewing; NULL means no expiration is tracked. For 'one_time' plans this is the real membership length (e.g. 90). For 'monthly'/'annual' plans this is informational only (Stripe governs the actual billing cycle) — used to estimate contact_memberships.ends_at for admin display and to size the renewal-reminder window.
   description VARCHAR(1000),
   benefits TEXT, -- one bullet per line, shown as a checklist on the public pricing cards
+  policy TEXT NULL, -- cancellation / refund / terms policy text, shown below benefits on public plan pages
   stripe_price_id VARCHAR(255) NULL, -- synced to a real Stripe Product+Price on save, once Stripe is configured
   sort_order INT UNSIGNED NOT NULL DEFAULT 0,
   active TINYINT(1) NOT NULL DEFAULT 1,
@@ -266,6 +270,20 @@ CREATE TABLE IF NOT EXISTS license_seats (
   registered_at DATETIME NULL,
   FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
   FOREIGN KEY (registered_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tracks admin notification emails sent when a teacher's self-service
+-- eligibility check fails (no seats, plan not active). The 24-hour
+-- window on (school_domain, reason) prevents notification spam when many
+-- teachers attempt registration in quick succession.
+CREATE TABLE IF NOT EXISTS school_admin_notifications (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  school_domain VARCHAR(255) NOT NULL,
+  reason VARCHAR(64) NOT NULL, -- 'no_seats' | 'no_plan' | 'no_school'
+  teacher_email VARCHAR(255) NOT NULL,
+  admin_contact_id INT UNSIGNED NULL,
+  sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_domain_reason_sent (school_domain, reason, sent_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
@@ -482,6 +500,82 @@ CREATE TABLE IF NOT EXISTS morning_boost_calendar (
   blog_post_id INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (blog_post_id) REFERENCES blog_posts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Morning Boost daily email automation
+-- ---------------------------------------------------------------------------
+
+-- Single-row configuration for the daily Morning Boost email broadcast.
+-- id=1 is always the active config; upserted by the admin UI.
+CREATE TABLE IF NOT EXISTS morning_boost_email_config (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  enabled TINYINT(1) NOT NULL DEFAULT 0,
+  send_time TIME NOT NULL DEFAULT '07:00:00', -- local time to send each day
+  send_timezone VARCHAR(64) NOT NULL DEFAULT 'America/New_York',
+  from_name VARCHAR(255) NOT NULL DEFAULT 'Fixer Nation',
+  from_email VARCHAR(255) NOT NULL DEFAULT '',
+  reply_to VARCHAR(255) NULL,
+  subject VARCHAR(255) NOT NULL DEFAULT 'Morning Boost — {{title}}',
+  body TEXT NOT NULL DEFAULT '',
+  body_format VARCHAR(8) NOT NULL DEFAULT 'html',
+  cta_text VARCHAR(255) NOT NULL DEFAULT 'Read Today''s Morning Boost',
+  cta_url_override VARCHAR(500) NULL, -- overrides the post URL when set
+  fallback_message TEXT NULL, -- body to use when no MB post exists for the day
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by INT UNSIGNED NULL -- admin_users.id of the last editor
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Which contact groups are included in Morning Boost distribution.
+CREATE TABLE IF NOT EXISTS morning_boost_email_groups (
+  config_id INT UNSIGNED NOT NULL,
+  group_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (config_id, group_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per daily distribution attempt (automated or manual).
+CREATE TABLE IF NOT EXISTS morning_boost_sends (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  config_id INT UNSIGNED NULL,
+  blog_post_id INT UNSIGNED NULL,
+  boost_date DATE NOT NULL,
+  scheduled_for DATETIME NOT NULL,
+  sent_at DATETIME NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'sending' | 'completed' | 'failed' | 'skipped'
+  subject VARCHAR(255) NULL,
+  from_email VARCHAR(255) NULL,
+  from_name VARCHAR(255) NULL,
+  reply_to VARCHAR(255) NULL,
+  cta_url VARCHAR(500) NULL,
+  group_ids TEXT NULL, -- JSON array of group IDs used
+  recipient_count INT UNSIGNED NOT NULL DEFAULT 0,
+  sent_count INT UNSIGNED NOT NULL DEFAULT 0,
+  failed_count INT UNSIGNED NOT NULL DEFAULT 0,
+  skipped_count INT UNSIGNED NOT NULL DEFAULT 0,
+  failure_reason TEXT NULL,
+  is_resend TINYINT(1) NOT NULL DEFAULT 0,
+  initiated_by INT UNSIGNED NULL, -- NULL = automated; set = manual trigger/resend by admin
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_boost_date (boost_date),
+  FOREIGN KEY (blog_post_id) REFERENCES blog_posts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Per-recipient tracking row for each Morning Boost send.
+CREATE TABLE IF NOT EXISTS morning_boost_send_recipients (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  send_id INT UNSIGNED NOT NULL,
+  contact_id INT UNSIGNED NULL,
+  email VARCHAR(255) NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'sent' | 'failed' | 'skipped'
+  error_message VARCHAR(500) NULL,
+  sent_at DATETIME NULL,
+  open_token VARCHAR(64) NULL UNIQUE,
+  opened_at DATETIME NULL,
+  click_token VARCHAR(64) NULL UNIQUE,
+  clicked_at DATETIME NULL,
+  INDEX idx_send (send_id),
+  FOREIGN KEY (send_id) REFERENCES morning_boost_sends(id) ON DELETE CASCADE,
+  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Master, growing list of selectable blog tags (separate from the fixed FN_BLOG_CATEGORIES set).

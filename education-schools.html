@@ -122,14 +122,43 @@
         <h3 id="regName">2D Education Program</h3>
         <div class="reg-price" id="regPrice">$149</div>
         <p class="note" id="regDesc">For all school-purchased tier plans, this price becomes $0 at checkout. Be sure to use your school email address.</p>
-        <ul class="reg-list">
+        <ul class="reg-list" id="regBulletList">
           <li>Be sure to complete each field on your registration form</li>
           <li>You'll receive an onboarding welcome email when submitted</li>
           <li>Setup instructions included in your second email</li>
         </ul>
-        <button id="regAddBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Add to Cart</button>
-        <div id="regCartMsg" style="font-size:13px; color:var(--teal-dark); font-weight:600; margin-top:10px; min-height:18px;"></div>
-        <div class="valid-note">Valid for 12 months</div>
+
+        <!-- State: eligibility check form (default) -->
+        <div id="regFormState">
+          <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:var(--ink-soft);">First Name</label><input type="text" id="regFirstName" placeholder="First name" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px; box-sizing:border-box;"></div>
+            <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:var(--ink-soft);">Last Name</label><input type="text" id="regLastName" placeholder="Last name" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px; box-sizing:border-box;"></div>
+          </div>
+          <div style="margin-bottom:14px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:var(--ink-soft);">School Email</label><input type="email" id="regEmail" placeholder="you@yourschool.edu" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px; box-sizing:border-box;"></div>
+          <button id="regCheckBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Check Eligibility</button>
+          <div id="regFormMsg" style="font-size:13px; color:var(--coral); font-weight:600; margin-top:10px; min-height:18px; text-align:center;"></div>
+        </div>
+
+        <!-- State: seat reserved — prompt to create account -->
+        <div id="regSuccessState" style="display:none; text-align:center; padding:8px 0;">
+          <div style="font-size:28px; margin-bottom:8px;">✓</div>
+          <p style="font-weight:700; font-size:15px; color:var(--teal-dark); margin:0 0 8px;">Your seat is reserved!</p>
+          <p style="font-size:13.5px; color:var(--ink-soft); margin:0 0 18px;">Create your account with your school email to activate access.</p>
+          <button class="btn btn-primary" style="width:100%; font-family:inherit;" onclick="fnAuthSwitchTab('signup'); fnAuthOpenModal(); document.getElementById('fnAuthSignupEmail').value = document.getElementById('regEmail').value;">Create Account</button>
+        </div>
+
+        <!-- State: failure with options -->
+        <div id="regFailState" style="display:none;">
+          <div id="regFailMsg" style="font-size:13.5px; color:var(--coral); font-weight:600; margin-bottom:14px; text-align:center;"></div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <button id="regBuySoloBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Buy Solo — $<span id="regSoloPrice">149</span></button>
+            <button id="regNotifyAdminBtn" class="btn btn-outline" style="width:100%; font-family:inherit;" onclick="regNotifyAdmin()">Notify School Admin</button>
+          </div>
+          <div id="regNotifyMsg" style="font-size:13px; color:var(--teal-dark); font-weight:600; margin-top:10px; min-height:18px; text-align:center;"></div>
+          <div style="text-align:center; margin-top:12px;"><a href="#" onclick="regReset(); return false;" style="font-size:12.5px; color:var(--ink-soft);">← Try a different email</a></div>
+        </div>
+
+        <div class="valid-note" id="regFooterNote">Valid for 12 months</div>
       </div>
     </div>
   </div>
@@ -201,33 +230,154 @@
 <script src="cart.js"></script>
 <script src="site-auth.js"></script>
 <script>
+let _regProduct = null;
+
 (async function loadRegProduct() {
   try {
     const r = await fetch('/api/license-products');
     const data = await r.json().catch(() => ({}));
-    const products = (data.licenseProducts || []);
-    const reg = products.find(p => p.seatCount === 1);
+    const reg = (data.licenseProducts || []).find(p => p.seatCount === 1);
     if (!reg) return;
+    _regProduct = reg;
 
     document.getElementById('regName').textContent = reg.name;
     document.getElementById('regHeading').textContent = reg.name;
-    const priceLabel = reg.callForQuote ? 'Contact Us' : ('$' + Math.round(reg.price / 100).toLocaleString());
+    const priceLabel = reg.callForQuote ? 'Contact Us' : ('$' + Number(reg.price).toLocaleString());
     document.getElementById('regPrice').textContent = priceLabel;
     if (reg.description) document.getElementById('regDesc').textContent = reg.description;
+    if (reg.bulletPoints && reg.bulletPoints.length) {
+      document.getElementById('regBulletList').innerHTML = reg.bulletPoints.map(b => `<li>${b}</li>`).join('');
+    }
+    if (reg.footerNote !== undefined) {
+      document.getElementById('regFooterNote').textContent = reg.footerNote || '';
+    }
 
-    document.getElementById('regAddBtn').addEventListener('click', function () {
-      if (reg.callForQuote) { window.location.href = 'contact.html'; return; }
-      cartAdd({ type: 'license_product', id: reg.id, name: reg.name, price: reg.price, quantity: 1, schoolDomain: '' });
-      const msg = document.getElementById('regCartMsg');
-      msg.textContent = '✓ Added to cart';
-      setTimeout(() => { msg.textContent = ''; }, 2800);
+    // Wire solo-buy button price label
+    const soloPrice = document.getElementById('regSoloPrice');
+    if (soloPrice) soloPrice.textContent = reg.callForQuote ? 'Call' : Number(reg.price).toLocaleString();
+
+    // Wire solo-buy action
+    document.getElementById('regBuySoloBtn').addEventListener('click', function () {
+      if (!_regProduct) return;
+      if (_regProduct.callForQuote) { window.location.href = 'contact.html'; return; }
+      cartAdd({ type: 'license_product', id: _regProduct.id, name: _regProduct.name, price: _regProduct.price, quantity: 1, schoolDomain: '' });
+      window.location.href = 'cart.html';
     });
 
     document.getElementById('regSection').style.display = 'block';
   } catch (e) {
-    // If the API call fails, the section stays hidden — no visible error
+    // API failure — section stays hidden
   }
 })();
+
+document.getElementById('regCheckBtn').addEventListener('click', async function () {
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const lastName  = document.getElementById('regLastName').value.trim();
+  const email     = document.getElementById('regEmail').value.trim();
+  const msg       = document.getElementById('regFormMsg');
+
+  if (!firstName || !lastName || !email) {
+    msg.textContent = 'Please fill in all fields.';
+    return;
+  }
+  if (!email.includes('@') || !email.includes('.')) {
+    msg.textContent = 'Please enter a valid school email address.';
+    return;
+  }
+
+  msg.textContent = '';
+  document.getElementById('regCheckBtn').disabled = true;
+  document.getElementById('regCheckBtn').textContent = 'Checking…';
+
+  try {
+    const res = await fetch('/api/school-registration/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, firstName, lastName }),
+    });
+    const data = await res.json();
+
+    if (data.eligible) {
+      document.getElementById('regFormState').style.display = 'none';
+      document.getElementById('regSuccessState').style.display = 'block';
+    } else {
+      document.getElementById('regFormState').style.display = 'none';
+      document.getElementById('regFailState').style.display = 'block';
+
+      const failMsg = document.getElementById('regFailMsg');
+      if (data.reason === 'no_school') {
+        failMsg.textContent = 'We don\'t have a school license on file for your email domain.';
+        document.getElementById('regNotifyAdminBtn').style.display = 'none';
+      } else if (data.reason === 'no_plan') {
+        failMsg.textContent = 'Your school\'s license exists but isn\'t active yet — payment may be pending.';
+      } else if (data.reason === 'no_seats') {
+        failMsg.textContent = 'Your school\'s license is full — all available seats are taken.';
+      } else {
+        failMsg.textContent = 'We couldn\'t verify your eligibility. Please try again or contact us.';
+      }
+    }
+  } catch (e) {
+    msg.textContent = 'Something went wrong. Please try again.';
+    document.getElementById('regCheckBtn').disabled = false;
+    document.getElementById('regCheckBtn').textContent = 'Check Eligibility';
+  }
+});
+
+async function regNotifyAdmin() {
+  const email     = document.getElementById('regEmail').value.trim();
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const lastName  = document.getElementById('regLastName').value.trim();
+  const notifyBtn = document.getElementById('regNotifyAdminBtn');
+  const notifyMsg = document.getElementById('regNotifyMsg');
+  const failMsg   = document.getElementById('regFailMsg');
+
+  notifyBtn.disabled = true;
+  notifyBtn.textContent = 'Sending…';
+  notifyMsg.textContent = '';
+
+  // Derive the reason from the failure message shown
+  const msgText = failMsg.textContent;
+  const reason  = msgText.includes('full') ? 'no_seats' : 'no_plan';
+
+  try {
+    const res = await fetch('/api/school-registration/notify-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, firstName, lastName, reason }),
+    });
+    const data = await res.json();
+
+    if (data.sent) {
+      notifyMsg.style.color = '#0E3733';
+      notifyMsg.textContent = '✓ Your school admin has been notified.';
+    } else if (data.reason === 'already_notified_recently') {
+      notifyMsg.style.color = '#6B5F55';
+      notifyMsg.textContent = 'Admin was already notified recently — they\'ll be in touch soon.';
+    } else {
+      notifyMsg.style.color = '#6B5F55';
+      notifyMsg.textContent = 'Notification sent.';
+    }
+    notifyBtn.style.display = 'none';
+  } catch (e) {
+    notifyMsg.style.color = '#F26B4D';
+    notifyMsg.textContent = 'Could not send notification. Please try again.';
+    notifyBtn.disabled = false;
+    notifyBtn.textContent = 'Notify School Admin';
+  }
+}
+
+function regReset() {
+  document.getElementById('regFailState').style.display = 'none';
+  document.getElementById('regSuccessState').style.display = 'none';
+  document.getElementById('regFormState').style.display = 'block';
+  document.getElementById('regNotifyAdminBtn').style.display = '';
+  document.getElementById('regNotifyAdminBtn').disabled = false;
+  document.getElementById('regNotifyAdminBtn').textContent = 'Notify School Admin';
+  document.getElementById('regNotifyMsg').textContent = '';
+  document.getElementById('regFormMsg').textContent = '';
+  document.getElementById('regCheckBtn').disabled = false;
+  document.getElementById('regCheckBtn').textContent = 'Check Eligibility';
+}
 </script>
 
 </body>

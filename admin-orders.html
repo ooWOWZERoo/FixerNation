@@ -32,6 +32,7 @@
       <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
       <a href="admin-memberships.html"><span class="ic">🪪</span><span class="label">Memberships</span></a>
       <a href="admin-morning-boost.html"><span class="ic">🌅</span><span class="label">Morning Boost</span></a>
+      <a href="admin-morning-boost-email.html"><span class="ic">📨</span><span class="label">Morning Email</span></a>
       <a href="admin-orders.html" class="active"><span class="ic">📦</span><span class="label">Orders</span></a>
       <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
     </nav>
@@ -100,11 +101,43 @@ async function loadOrders(start, end) {
   const params = new URLSearchParams();
   if (start) params.set('start', start);
   if (end) params.set('end', end);
-  const r = await fetch(`/api/newsletter/purchases?${params}`, { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return;
-  if (!r.ok) { fnToast('Could not load orders'); return; }
-  const { purchases } = await r.json();
-  renderOrders(purchases);
+  const [purchaseRes, memRes] = await Promise.all([
+    fetch(`/api/newsletter/purchases?${params}`, { credentials: 'include' }),
+    fetch('/api/memberships', { credentials: 'include' }),
+  ]);
+  if (fnHandleUnauthorized(purchaseRes)) return;
+  if (!purchaseRes.ok) { fnToast('Could not load orders'); return; }
+  const { purchases } = await purchaseRes.json();
+
+  // Memberships that have no purchase record (comped, trialing, or pre-webhook)
+  // appear as $0 comped entries so every signup is visible here.
+  let extra = [];
+  if (memRes.ok) {
+    const { memberships } = await memRes.json();
+    extra = memberships
+      .filter(m => m.purchaseId === null)
+      .map(m => ({
+        purchasedAt: m.startedAt,
+        contactId: m.contactId,
+        buyer: m.contact,
+        productType: 'membership',
+        membershipPlanName: m.planName,
+        amount: 0,
+        paymentMethod: 'comped',
+        paymentStatus: 'paid',
+        invoiceId: null,
+      }));
+    // Apply same date filter to the extra entries
+    if (start || end) {
+      extra = extra.filter(m => {
+        const d = m.purchasedAt ? m.purchasedAt.slice(0, 10) : '';
+        return (!start || d >= start) && (!end || d <= end);
+      });
+    }
+  }
+
+  const all = [...purchases, ...extra].sort((a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt));
+  renderOrders(all);
 }
 
 function renderOrders(purchases) {

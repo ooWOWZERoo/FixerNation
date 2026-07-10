@@ -10,7 +10,9 @@ const SYSTEM_GROUPS = [
 
 const ED_PRODUCT = {
   name: 'Registration — 2D Education Program',
-  description: 'Complete your registration for the 2D Education Program. For all school-purchased tier plans this price is comped at checkout — be sure to use your school email address. Valid for 12 months.',
+  description: 'For all school-purchased tier plans, this price becomes $0 at checkout. Be sure to use your school email address.',
+  bulletPoints: 'Be sure to complete each field on your registration form\nYou\'ll receive an onboarding welcome email when submitted\nSetup instructions included in your second email',
+  footerNote: 'Valid for 12 months',
   seatCount: 1,
   priceCents: 14900,
   sortOrder: -1,
@@ -50,6 +52,42 @@ async function main() {
     }
   }
 
+  // --- Add bullet_points column to license_products if missing ---
+  try {
+    await connection.query('ALTER TABLE license_products ADD COLUMN bullet_points TEXT NULL');
+    console.log('Added bullet_points column to license_products');
+  } catch (err) {
+    if (err.code === 'ER_DUP_FIELDNAME' || err.message.includes('Duplicate column')) {
+      console.log('bullet_points column already exists — skipping ALTER');
+    } else {
+      throw err;
+    }
+  }
+
+  // --- Add footer_note column to license_products if missing ---
+  try {
+    await connection.query('ALTER TABLE license_products ADD COLUMN footer_note VARCHAR(255) NULL');
+    console.log('Added footer_note column to license_products');
+  } catch (err) {
+    if (err.code === 'ER_DUP_FIELDNAME' || err.message.includes('Duplicate column')) {
+      console.log('footer_note column already exists — skipping ALTER');
+    } else {
+      throw err;
+    }
+  }
+
+  // --- Add policy column to membership_plans if missing ---
+  try {
+    await connection.query('ALTER TABLE membership_plans ADD COLUMN policy TEXT NULL');
+    console.log('Added policy column to membership_plans');
+  } catch (err) {
+    if (err.code === 'ER_DUP_FIELDNAME' || err.message.includes('Duplicate column')) {
+      console.log('policy column already exists — skipping ALTER');
+    } else {
+      throw err;
+    }
+  }
+
   // --- Upsert 4 system groups ---
   for (const g of SYSTEM_GROUPS) {
     const [existing] = await connection.query('SELECT id FROM contact_groups WHERE system_key = ?', [g.systemKey]);
@@ -70,13 +108,129 @@ async function main() {
   // --- Create "Registration — 2D Education Program" license product ---
   const [existingProd] = await connection.query('SELECT id FROM license_products WHERE name = ?', [ED_PRODUCT.name]);
   if (existingProd.length) {
-    console.log(`License product already exists: ${ED_PRODUCT.name}`);
+    // Update the content fields on the existing product (idempotent)
+    await connection.query(
+      'UPDATE license_products SET description = ?, bullet_points = ?, footer_note = ? WHERE id = ?',
+      [ED_PRODUCT.description, ED_PRODUCT.bulletPoints, ED_PRODUCT.footerNote, existingProd[0].id]
+    );
+    console.log(`Updated license product content: ${ED_PRODUCT.name}`);
   } else {
     await connection.query(
-      'INSERT INTO license_products (name, description, seat_count, price_cents, sort_order, active) VALUES (?, ?, ?, ?, ?, 1)',
-      [ED_PRODUCT.name, ED_PRODUCT.description, ED_PRODUCT.seatCount, ED_PRODUCT.priceCents, ED_PRODUCT.sortOrder]
+      'INSERT INTO license_products (name, description, bullet_points, footer_note, seat_count, price_cents, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+      [ED_PRODUCT.name, ED_PRODUCT.description, ED_PRODUCT.bulletPoints, ED_PRODUCT.footerNote, ED_PRODUCT.seatCount, ED_PRODUCT.priceCents, ED_PRODUCT.sortOrder]
     );
     console.log(`Created license product: ${ED_PRODUCT.name}`);
+  }
+
+  // --- Add morning_boost_unsubscribed_at to newsletter_contacts if missing ---
+  try {
+    await connection.query('ALTER TABLE newsletter_contacts ADD COLUMN morning_boost_unsubscribed_at DATETIME NULL');
+    console.log('Added morning_boost_unsubscribed_at column to newsletter_contacts');
+  } catch (err) {
+    if (err.code === 'ER_DUP_FIELDNAME' || err.message.includes('Duplicate column')) {
+      console.log('morning_boost_unsubscribed_at column already exists — skipping ALTER');
+    } else {
+      throw err;
+    }
+  }
+
+  // --- Add Morning Boost email automation tables if missing ---
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS morning_boost_email_config (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        enabled TINYINT(1) NOT NULL DEFAULT 0,
+        send_time TIME NOT NULL DEFAULT '07:00:00',
+        send_timezone VARCHAR(64) NOT NULL DEFAULT 'America/New_York',
+        from_name VARCHAR(255) NOT NULL DEFAULT 'Fixer Nation',
+        from_email VARCHAR(255) NOT NULL DEFAULT '',
+        reply_to VARCHAR(255) NULL,
+        subject VARCHAR(255) NOT NULL DEFAULT 'Morning Boost — {{title}}',
+        body TEXT NOT NULL DEFAULT '',
+        body_format VARCHAR(8) NOT NULL DEFAULT 'html',
+        cta_text VARCHAR(255) NOT NULL DEFAULT 'Read Today''s Morning Boost',
+        cta_url_override VARCHAR(500) NULL,
+        fallback_message TEXT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        updated_by INT UNSIGNED NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('morning_boost_email_config table ready');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS morning_boost_email_groups (
+        config_id INT UNSIGNED NOT NULL,
+        group_id INT UNSIGNED NOT NULL,
+        PRIMARY KEY (config_id, group_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('morning_boost_email_groups table ready');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS morning_boost_sends (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        config_id INT UNSIGNED NULL,
+        blog_post_id INT UNSIGNED NULL,
+        boost_date DATE NOT NULL,
+        scheduled_for DATETIME NOT NULL,
+        sent_at DATETIME NULL,
+        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+        subject VARCHAR(255) NULL,
+        from_email VARCHAR(255) NULL,
+        from_name VARCHAR(255) NULL,
+        reply_to VARCHAR(255) NULL,
+        cta_url VARCHAR(500) NULL,
+        group_ids TEXT NULL,
+        recipient_count INT UNSIGNED NOT NULL DEFAULT 0,
+        sent_count INT UNSIGNED NOT NULL DEFAULT 0,
+        failed_count INT UNSIGNED NOT NULL DEFAULT 0,
+        skipped_count INT UNSIGNED NOT NULL DEFAULT 0,
+        failure_reason TEXT NULL,
+        is_resend TINYINT(1) NOT NULL DEFAULT 0,
+        initiated_by INT UNSIGNED NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_boost_date (boost_date)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('morning_boost_sends table ready');
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS morning_boost_send_recipients (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        send_id INT UNSIGNED NOT NULL,
+        contact_id INT UNSIGNED NULL,
+        email VARCHAR(255) NOT NULL,
+        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+        error_message VARCHAR(500) NULL,
+        sent_at DATETIME NULL,
+        open_token VARCHAR(64) NULL UNIQUE,
+        opened_at DATETIME NULL,
+        click_token VARCHAR(64) NULL UNIQUE,
+        clicked_at DATETIME NULL,
+        INDEX idx_send (send_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('morning_boost_send_recipients table ready');
+  } catch (err) {
+    console.log('Morning Boost email tables already exist or error:', err.message);
+  }
+
+  // --- Add school_admin_notifications table if missing ---
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS school_admin_notifications (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        school_domain VARCHAR(255) NOT NULL,
+        reason VARCHAR(64) NOT NULL,
+        teacher_email VARCHAR(255) NOT NULL,
+        admin_contact_id INT UNSIGNED NULL,
+        sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_domain_reason_sent (school_domain, reason, sent_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('school_admin_notifications table ready');
+  } catch (err) {
+    console.log('school_admin_notifications table already exists or error:', err.message);
   }
 
   // --- Deactivate "Registration 2D Education Program" membership plan ---
