@@ -171,6 +171,22 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
   res.json({ ok: true });
 });
 
+// Auto-assigns a contact to the correct system group(s) based on what they
+// just purchased. Safe to call repeatedly — INSERT IGNORE prevents duplicates.
+async function assignContactToGroups(contactId, { productType, memberType }) {
+  const keys = [];
+  if (productType === 'book' || memberType === 'consumer') keys.push('consumer');
+  if (memberType === 'service_provider') keys.push('service_provider');
+  if (memberType === 'brand_ambassador') keys.push('brand_ambassador');
+  if (productType === 'single_license' || productType === 'group_license' || memberType === 'teachers') keys.push('teachers');
+  if (!keys.length) return;
+
+  const [groups] = await pool.query('SELECT id FROM contact_groups WHERE system_key IN (?)', [keys]);
+  for (const g of groups) {
+    await pool.query('INSERT IGNORE INTO contact_group_members (contact_id, group_id) VALUES (?, ?)', [contactId, g.id]);
+  }
+}
+
 // --- Contact groups ---
 
 router.get('/groups', requireAuth, async (req, res) => {
@@ -371,6 +387,17 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
         console.error('Thank-you automation lookup failed:', err.message);
       }
     }
+
+    // Auto-assign contact to system user groups based on what they bought.
+    // Best-effort — a missing system_key row never blocks the purchase.
+    try {
+      let memberType = null;
+      if (productType === 'membership' && membershipPlanId) {
+        const [[plan]] = await pool.query('SELECT member_type FROM membership_plans WHERE id = ?', [membershipPlanId]);
+        memberType = plan && plan.member_type;
+      }
+      await assignContactToGroups(contactId, { productType, memberType });
+    } catch (e) { console.error('assignContactToGroups failed:', e.message); }
 
     return purchaseId;
   } catch (err) {
@@ -670,4 +697,4 @@ router.post('/contacts/import', requireAuth, async (req, res) => {
   res.json({ imported, skippedInvalid, skippedDuplicate });
 });
 
-module.exports = { router, attachPurchaseDetails, createPurchase };
+module.exports = { router, attachPurchaseDetails, createPurchase, assignContactToGroups };

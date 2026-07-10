@@ -110,24 +110,25 @@
   </div>
 </section>
 
-<section class="section" style="background:var(--cream-soft);">
+<section class="section" id="regSection" style="background:var(--cream-soft); display:none;">
   <div class="wrap">
     <div class="section-head" style="text-align:center; margin-bottom:40px;">
       <span class="eyebrow">Register Here</span>
-      <h2 style="margin-top:12px; font-size:28px;">Registration — 2D Education Program</h2>
+      <h2 id="regHeading" style="margin-top:12px; font-size:28px;">Registration — 2D Education Program</h2>
     </div>
     <div class="register-wrap">
       <div class="register-card">
         <span class="best-value">Best Value</span>
-        <h3>2D Education Program</h3>
-        <div class="reg-price">$149</div>
-        <p class="note">For all school-purchased tier plans, this price becomes $0 at checkout. Be sure to use your school email address.</p>
+        <h3 id="regName">2D Education Program</h3>
+        <div class="reg-price" id="regPrice">$149</div>
+        <p class="note" id="regDesc">For all school-purchased tier plans, this price becomes $0 at checkout. Be sure to use your school email address.</p>
         <ul class="reg-list">
           <li>Be sure to complete each field on your registration form</li>
           <li>You'll receive an onboarding welcome email when submitted</li>
           <li>Setup instructions included in your second email</li>
         </ul>
-        <a href="#" class="btn btn-primary" style="width:100%;">Select</a>
+        <button id="regAddBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Add to Cart</button>
+        <div id="regCartMsg" style="font-size:13px; color:var(--teal-dark); font-weight:600; margin-top:10px; min-height:18px;"></div>
         <div class="valid-note">Valid for 12 months</div>
       </div>
     </div>
@@ -197,7 +198,37 @@
 
 <script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
+<script src="cart.js"></script>
 <script src="site-auth.js"></script>
+<script>
+(async function loadRegProduct() {
+  try {
+    const r = await fetch('/api/license-products');
+    const data = await r.json().catch(() => ({}));
+    const products = (data.licenseProducts || []);
+    const reg = products.find(p => p.seatCount === 1);
+    if (!reg) return;
+
+    document.getElementById('regName').textContent = reg.name;
+    document.getElementById('regHeading').textContent = reg.name;
+    const priceLabel = reg.callForQuote ? 'Contact Us' : ('$' + Math.round(reg.price / 100).toLocaleString());
+    document.getElementById('regPrice').textContent = priceLabel;
+    if (reg.description) document.getElementById('regDesc').textContent = reg.description;
+
+    document.getElementById('regAddBtn').addEventListener('click', function () {
+      if (reg.callForQuote) { window.location.href = 'contact.html'; return; }
+      cartAdd({ type: 'license_product', id: reg.id, name: reg.name, price: reg.price, quantity: 1, schoolDomain: '' });
+      const msg = document.getElementById('regCartMsg');
+      msg.textContent = '✓ Added to cart';
+      setTimeout(() => { msg.textContent = ''; }, 2800);
+    });
+
+    document.getElementById('regSection').style.display = 'block';
+  } catch (e) {
+    // If the API call fails, the section stays hidden — no visible error
+  }
+})();
+</script>
 
 </body>
 </html>

@@ -3,7 +3,7 @@ const Stripe = require('stripe');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
-const { createPurchase } = require('./newsletter');
+const { createPurchase, assignContactToGroups } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { createToken } = require('../lib/site-tokens');
 
@@ -358,6 +358,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, 'active', purchaseId, endsAt]
     );
+    try { await assignContactToGroups(contactId, { productType: 'membership', memberType: plan.member_type }); } catch (e) { console.error('assignContactToGroups failed:', e.message); }
     let setPasswordUrl = '';
     try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     await fireAutomation('membership_purchase_thank_you', {
@@ -376,6 +377,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id, ends_at) VALUES (?, ?, ?, ?, ?, ?)',
       [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
     );
+    try { await assignContactToGroups(contactId, { productType: 'membership', memberType: plan.member_type }); } catch (e) { console.error('assignContactToGroups failed:', e.message); }
     let setPasswordUrl = '';
     try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     if (plan.trial_days > 0) {
