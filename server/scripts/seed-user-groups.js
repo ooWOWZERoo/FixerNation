@@ -38,6 +38,18 @@ async function main() {
     }
   }
 
+  // --- Add auto_assign_group_id column to license_products if missing ---
+  try {
+    await connection.query('ALTER TABLE license_products ADD COLUMN auto_assign_group_id INT UNSIGNED NULL');
+    console.log('Added auto_assign_group_id column to license_products');
+  } catch (err) {
+    if (err.code === 'ER_DUP_FIELDNAME' || err.message.includes('Duplicate column')) {
+      console.log('auto_assign_group_id column already exists — skipping ALTER');
+    } else {
+      throw err;
+    }
+  }
+
   // --- Upsert 4 system groups ---
   for (const g of SYSTEM_GROUPS) {
     const [existing] = await connection.query('SELECT id FROM contact_groups WHERE system_key = ?', [g.systemKey]);

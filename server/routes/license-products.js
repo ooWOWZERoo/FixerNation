@@ -14,6 +14,7 @@ function serialize(row) {
     callForQuote: !!row.call_for_quote,
     sortOrder: row.sort_order,
     active: !!row.active,
+    autoAssignGroupId: row.auto_assign_group_id || null,
     createdAt: row.created_at,
   };
 }
@@ -43,9 +44,10 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Name, a positive seat count, and (unless Call For Quote) a price are required' });
   }
 
+  const groupId = Number(b.autoAssignGroupId) || null;
   const [result] = await pool.query(
-    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1]
+    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, sort_order, active, auto_assign_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [result.insertId]);
@@ -62,9 +64,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   const [existing] = await pool.query('SELECT id FROM license_products WHERE id = ?', [req.params.id]);
   if (!existing[0]) return res.status(404).json({ error: 'License product not found' });
 
+  const groupId = Number(b.autoAssignGroupId) || null;
   await pool.query(
-    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, sort_order=?, active=? WHERE id=?',
-    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, req.params.id]
+    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, sort_order=?, active=?, auto_assign_group_id=? WHERE id=?',
+    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, req.params.id]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [req.params.id]);

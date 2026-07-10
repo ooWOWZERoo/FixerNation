@@ -98,6 +98,12 @@
         <div class="a-field" id="productPriceField"><label>Price (USD) *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
       </div>
       <div class="a-field"><label>Description</label><input type="text" id="productDescription" placeholder="Optional"></div>
+      <div class="a-field">
+        <label>Assign Buyers to Group</label>
+        <select id="productGroup" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; background:var(--a-surface);">
+          <option value="">— None (default: Teachers) —</option>
+        </select>
+      </div>
       <div class="a-field"><label>Sort Order</label><input type="number" id="productSortOrder" value="0"></div>
       <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:4px;">
         <input type="checkbox" id="productCallForQuote" onchange="onCallForQuoteChange()"> Call For Quote (for 1000+ seat plans — hides the price, shows "Call For Quote" instead)
@@ -124,6 +130,19 @@ function showTab(tab) {
   document.getElementById('tabBtnSchool').className = tab === 'school' ? 'a-btn a-btn-primary' : 'a-btn a-btn-outline';
 }
 showTab('products');
+loadGroups();
+
+/* ---- Contact groups (for the product group assignment dropdown) ---- */
+let groupsCache = [];
+
+async function loadGroups() {
+  const r = await fetch('/api/contacts/groups', { credentials: 'include' });
+  if (!r.ok) return;
+  groupsCache = (await r.json()).groups || [];
+  const sel = document.getElementById('productGroup');
+  sel.innerHTML = '<option value="">— None (default: Teachers) —</option>' +
+    groupsCache.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+}
 
 /* ---- License Products CRUD ---- */
 let productsCache = [];
@@ -177,6 +196,7 @@ function openProductModal(id) {
   document.getElementById('productSortOrder').value = p ? p.sortOrder : 0;
   document.getElementById('productCallForQuote').checked = p ? p.callForQuote : false;
   document.getElementById('productActive').checked = p ? p.active : true;
+  document.getElementById('productGroup').value = p && p.autoAssignGroupId ? p.autoAssignGroupId : '';
   onCallForQuoteChange();
   document.getElementById('productModalOverlay').classList.add('show');
 }
@@ -187,6 +207,7 @@ function closeProductModal() {
 
 async function saveProduct() {
   const callForQuote = document.getElementById('productCallForQuote').checked;
+  const groupVal = document.getElementById('productGroup').value;
   const body = {
     name: document.getElementById('productName').value.trim(),
     seatCount: Number(document.getElementById('productSeatCount').value),
@@ -195,6 +216,7 @@ async function saveProduct() {
     sortOrder: Number(document.getElementById('productSortOrder').value) || 0,
     callForQuote,
     active: document.getElementById('productActive').checked,
+    autoAssignGroupId: groupVal ? Number(groupVal) : null,
   };
   if (!body.name || !(body.seatCount > 0) || (!callForQuote && !(body.price >= 0))) {
     fnToast('Name, seat count, and (unless Call For Quote) price are required');

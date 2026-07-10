@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS license_products (
   call_for_quote TINYINT(1) NOT NULL DEFAULT 0, -- for large (1000+ seat) tiers with no fixed price — shows "Call For Quote" instead and can't be added to the self-service cart
   sort_order INT UNSIGNED NOT NULL DEFAULT 0,
   active TINYINT(1) NOT NULL DEFAULT 1,
+  auto_assign_group_id INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

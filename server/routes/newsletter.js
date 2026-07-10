@@ -173,17 +173,37 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
 
 // Auto-assigns a contact to the correct system group(s) based on what they
 // just purchased. Safe to call repeatedly — INSERT IGNORE prevents duplicates.
-async function assignContactToGroups(contactId, { productType, memberType }) {
-  const keys = [];
-  if (productType === 'book' || memberType === 'consumer') keys.push('consumer');
-  if (memberType === 'service_provider') keys.push('service_provider');
-  if (memberType === 'brand_ambassador') keys.push('brand_ambassador');
-  if (productType === 'single_license' || productType === 'group_license' || memberType === 'teachers') keys.push('teachers');
-  if (!keys.length) return;
+async function assignContactToGroups(contactId, { productType, memberType, licenseProductId }) {
+  const groupIds = new Set();
 
-  const [groups] = await pool.query('SELECT id FROM contact_groups WHERE system_key IN (?)', [keys]);
-  for (const g of groups) {
-    await pool.query('INSERT IGNORE INTO contact_group_members (contact_id, group_id) VALUES (?, ?)', [contactId, g.id]);
+  if (productType === 'single_license' || productType === 'group_license') {
+    if (licenseProductId) {
+      // Use the group configured on the specific license product if set;
+      // fall back to the Teachers system group if none is configured.
+      const [[prod]] = await pool.query('SELECT auto_assign_group_id FROM license_products WHERE id = ?', [licenseProductId]);
+      if (prod && prod.auto_assign_group_id) {
+        groupIds.add(prod.auto_assign_group_id);
+      } else {
+        const [[tg]] = await pool.query("SELECT id FROM contact_groups WHERE system_key = 'teachers'");
+        if (tg) groupIds.add(tg.id);
+      }
+    } else {
+      const [[tg]] = await pool.query("SELECT id FROM contact_groups WHERE system_key = 'teachers'");
+      if (tg) groupIds.add(tg.id);
+    }
+  } else {
+    const keys = [];
+    if (productType === 'book' || memberType === 'consumer') keys.push('consumer');
+    if (memberType === 'service_provider') keys.push('service_provider');
+    if (memberType === 'brand_ambassador') keys.push('brand_ambassador');
+    if (keys.length) {
+      const [groups] = await pool.query('SELECT id FROM contact_groups WHERE system_key IN (?)', [keys]);
+      groups.forEach(g => groupIds.add(g.id));
+    }
+  }
+
+  for (const id of groupIds) {
+    await pool.query('INSERT IGNORE INTO contact_group_members (contact_id, group_id) VALUES (?, ?)', [contactId, id]);
   }
 }
 
@@ -396,7 +416,7 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
         const [[plan]] = await pool.query('SELECT member_type FROM membership_plans WHERE id = ?', [membershipPlanId]);
         memberType = plan && plan.member_type;
       }
-      await assignContactToGroups(contactId, { productType, memberType });
+      await assignContactToGroups(contactId, { productType, memberType, licenseProductId: licenseProductId || null });
     } catch (e) { console.error('assignContactToGroups failed:', e.message); }
 
     return purchaseId;
