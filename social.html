@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{--cream:#FBF5EC;--cream-soft:#F3EBDD;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--radius-md:18px;--shadow:0 20px 45px -18px rgba(22,79,74,0.28);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Fraunces',serif;color:var(--teal-dark);line-height:1.15;font-weight:600;}
+  a{color:inherit;text-decoration:none;}
+  img{max-width:100%;display:block;}
+  ul{list-style:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:999px;font-weight:700;font-size:14px;cursor:pointer;border:none;transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral);color:#fff;box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-sm{padding:7px 15px;font-size:13px;}
+  .btn-outline{background:transparent;color:var(--teal-dark);border:2px solid var(--teal-dark);}
+  header{position:sticky;top:0;z-index:80;background:rgba(251,245,236,0.9);backdrop-filter:blur(10px);border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;}
+  .brand{display:flex;align-items:center;gap:12px;font-family:'Fraunces',serif;font-weight:700;font-size:21px;color:var(--teal-dark);}
+  .brand-mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;}
+  .nav-links{display:flex;align-items:center;gap:22px;font-size:14px;font-weight:600;}
+  .nav-links a{opacity:0.8;}
+  .nav-links a.active,.nav-links a:hover{opacity:1;color:var(--coral-dark);}
+  .nav-cta{display:flex;align-items:center;gap:16px;}
+
+  /* Community layout */
+  .community-wrap{max-width:1200px;margin:0 auto;padding:24px 24px 60px;display:grid;grid-template-columns:240px 1fr 240px;gap:20px;min-height:calc(100vh - 70px);}
+
+  /* Sidebar */
+  .sidebar{display:flex;flex-direction:column;gap:12px;}
+  .sidebar-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 8px 22px -14px rgba(22,79,74,0.2);}
+  .sidebar-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-soft);margin-bottom:10px;}
+  .group-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:background .15s;}
+  .group-item:hover{background:var(--cream-soft);}
+  .group-item.active{background:var(--teal);color:#fff;}
+  .group-item .g-ic{font-size:16px;flex-shrink:0;}
+  .group-item .g-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dm-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13px;transition:background .15s;}
+  .dm-item:hover{background:var(--cream-soft);}
+  .dm-item.active{background:var(--teal);color:#fff;}
+  .dm-badge{background:var(--coral);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:999px;margin-left:auto;}
+
+  /* Feed */
+  .feed{display:flex;flex-direction:column;gap:0;}
+  .composer{background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 22px -14px rgba(22,79,74,0.2);margin-bottom:16px;}
+  .composer textarea{width:100%;border:2px solid rgba(22,79,74,0.12);border-radius:12px;padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;resize:none;min-height:80px;background:var(--cream-soft);transition:border-color .2s;}
+  .composer textarea:focus{outline:none;border-color:var(--teal);}
+  .composer-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+  .composer-hint{font-size:12px;color:var(--ink-soft);}
+  .post-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 6px 18px -12px rgba(22,79,74,0.18);margin-bottom:12px;}
+  .post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .post-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;}
+  .post-author{font-weight:700;font-size:14px;}
+  .post-time{font-size:12px;color:var(--ink-soft);}
+  .post-content{font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:12px;}
+  .post-actions{display:flex;gap:16px;align-items:center;padding-top:10px;border-top:1px solid rgba(22,79,74,0.06);}
+  .post-action-btn{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;background:none;border:none;padding:4px 8px;border-radius:8px;transition:background .15s,color .15s;}
+  .post-action-btn:hover{background:var(--cream-soft);color:var(--teal-dark);}
+  .post-action-btn.liked{color:var(--coral);}
+  .comments-section{margin-top:12px;padding-top:12px;border-top:1px solid rgba(22,79,74,0.06);}
+  .comment{display:flex;gap:8px;margin-bottom:10px;}
+  .comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--cream-soft);color:var(--teal-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+  .comment-body{background:var(--cream-soft);border-radius:10px;padding:8px 12px;flex:1;}
+  .comment-author{font-size:12px;font-weight:700;margin-bottom:2px;}
+  .comment-text{font-size:13.5px;line-height:1.5;}
+  .comment-composer{display:flex;gap:8px;margin-top:8px;}
+  .comment-composer input{flex:1;border:2px solid rgba(22,79,74,0.12);border-radius:20px;padding:7px 14px;font-family:inherit;font-size:13px;background:var(--cream-soft);}
+  .comment-composer input:focus{outline:none;border-color:var(--teal);}
+  .comment-send-btn{padding:7px 14px;border-radius:20px;border:none;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+
+  /* DM panel */
+  .dm-thread{display:flex;flex-direction:column;height:calc(100vh - 130px);background:#fff;border-radius:16px;box-shadow:0 8px 22px -14px rgba(22,79,74,0.2);}
+  .dm-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(22,79,74,0.08);}
+  .dm-header h3{font-size:16px;margin:0;}
+  .dm-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+  .dm-msg{max-width:75%;padding:9px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;}
+  .dm-msg.sent{background:var(--teal);color:#fff;margin-left:auto;border-bottom-right-radius:4px;}
+  .dm-msg.recv{background:var(--cream-soft);border-bottom-left-radius:4px;}
+  .dm-composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid rgba(22,79,74,0.08);}
+  .dm-composer input{flex:1;border:2px solid rgba(22,79,74,0.12);border-radius:20px;padding:9px 16px;font-family:inherit;font-size:14px;background:var(--cream-soft);}
+  .dm-composer input:focus{outline:none;border-color:var(--teal);}
+  .dm-send-btn{padding:9px 18px;border-radius:20px;border:none;background:var(--teal);color:#fff;font-weight:700;cursor:pointer;}
+
+  /* Member list */
+  .member-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(22,79,74,0.06);cursor:pointer;}
+  .member-item:last-child{border-bottom:none;}
+  .member-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+  .member-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .member-school{font-size:11px;color:var(--ink-soft);}
+
+  /* Gate */
+  .gate-panel{background:#fff;border-radius:20px;padding:48px 40px;text-align:center;max-width:480px;margin:60px auto;box-shadow:var(--shadow);}
+  .gate-panel h2{margin-bottom:12px;font-size:26px;}
+  .gate-panel p{color:var(--ink-soft);font-size:15px;margin-bottom:24px;}
+
+  /* Search */
+  .search-input{width:100%;border:2px solid rgba(22,79,74,0.12);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:13px;background:var(--cream-soft);margin-bottom:10px;}
+  .search-input:focus{outline:none;border-color:var(--teal);}
+
+  .loading-msg{text-align:center;color:var(--ink-soft);padding:40px 0;font-size:15px;}
+
+  footer{background:var(--teal-dark);color:rgba(255,255,255,0.82);padding:40px 0 24px;}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12);padding-top:18px;font-size:12.5px;opacity:0.65;text-align:center;}
+  .footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:18px;font-size:14px;}
+
+  @media(max-width:900px){.community-wrap{grid-template-columns:1fr;}.sidebar:first-child{order:-1;}}
+  @media(max-width:600px){.community-wrap{padding:12px 12px 40px;}.nav-links{display:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="books.html">Books</a>
+      <a href="blog.html">FN Blogs</a>
+      <a href="fnnetwork.html">FN Network</a>
+      <a href="education-portal.html">Schools</a>
+      <a href="social.html" class="active">Community</a>
+    </nav>
+    <div class="nav-cta">
+      <div id="fnCartNav"></div>
+      <div id="fnAuthNav"><a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600;font-size:14px;">Log In</a></div>
+      <a href="join.html" class="btn btn-primary btn-sm">Join Fixer Nation</a>
+    </div>
+  </div>
+</header>
+
+<!-- Gate (shown when not logged in or no access) -->
+<div id="gatePanel" class="gate-panel" style="display:none;">
+  <h2>Members-Only Community</h2>
+  <p id="gateMsg">This community is available to licensed teachers and active Fixer Nation members.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="#" onclick="fnAuthOpenModal('login'); return false;" class="btn btn-outline">Log In</a>
+    <a href="join.html" class="btn btn-primary">Get a Membership</a>
+    <a href="licenses.html" class="btn btn-outline">Get a License</a>
+  </div>
+</div>
+
+<!-- Main community layout (shown when access granted) -->
+<div id="communityLayout" class="community-wrap" style="display:none;">
+
+  <!-- Left sidebar: groups + DMs -->
+  <div class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-title">My Groups</div>
+      <div id="groupList"><div class="loading-msg" style="padding:12px 0;font-size:13px;">Loading…</div></div>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-title">Direct Messages</div>
+      <div id="dmList"><div style="font-size:13px;color:var(--ink-soft);padding:4px 0;">No conversations yet.</div></div>
+    </div>
+    <div class="sidebar-card" style="padding:12px 16px;">
+      <a href="social-profile.html?me=1" style="font-size:13px;font-weight:700;color:var(--teal-dark);display:block;">✏️ My Profile &amp; Bio</a>
+    </div>
+  </div>
+
+  <!-- Center: feed or DM thread -->
+  <div id="centerPanel">
+    <div id="feedPanel">
+      <div class="composer" id="composer" style="display:none;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div class="post-avatar" id="myAvatar" style="margin-top:2px;">?</div>
+          <textarea id="postContent" placeholder="Share something with the group…" rows="3"></textarea>
+        </div>
+        <div class="composer-foot">
+          <span class="composer-hint" id="activeGroupName"></span>
+          <button class="btn btn-primary btn-sm" onclick="submitPost()">Post</button>
+        </div>
+      </div>
+      <div id="feedContainer"><div class="loading-msg">Select a group to view posts.</div></div>
+    </div>
+    <div id="dmPanel" style="display:none;"></div>
+  </div>
+
+  <!-- Right sidebar: members -->
+  <div class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-title">Members</div>
+      <input class="search-input" type="text" placeholder="Search members…" oninput="searchMembers(this.value)">
+      <div id="memberList"><div class="loading-msg" style="padding:12px 0;font-size:13px;">Loading…</div></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="privacy-choices.html">Privacy Choices</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="footer-bottom">&copy; 2025 Fixer Nation Education. All rights reserved.</div>
+  </div>
+</footer>
+
+<script src="site-auth.js"></script>
+<script src="cart.js"></script>
+<script>
+const API = '/api/social';
+let me = null;
+let groups = [];
+let activeGroupId = null;
+let dmPartnerId = null;
+let pollTimer = null;
+let feedSince = null;
+let dmSince = null;
+let memberSearchTimer = null;
+let allMembers = [];
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function initials(fn,ln){ return ((fn||'')[0]||'') + ((ln||'')[0]||''); }
+function relTime(s){
+  if(!s) return '';
+  const d = new Date(s), now = new Date();
+  const sec = Math.round((now-d)/1000);
+  if(sec < 60) return 'just now';
+  if(sec < 3600) return Math.floor(sec/60) + 'm ago';
+  if(sec < 86400) return Math.floor(sec/3600) + 'h ago';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+async function init(){
+  // Check auth via site-auth.js (fnGetAuthState is available after fnAuthInit fires)
+  // We'll poll /api/social/profile to check access
+  const res = await fetch(`${API}/profile`,{credentials:'include'});
+  if(res.status === 401){
+    document.getElementById('gatePanel').style.display='';
+    document.getElementById('gateMsg').textContent='Please log in to access the community.';
+    return;
+  }
+  if(res.status === 403){
+    document.getElementById('gatePanel').style.display='';
+    return;
+  }
+  const data = await res.json();
+  me = data.profile;
+  document.getElementById('myAvatar').textContent = initials(me.first_name, me.last_name).toUpperCase();
+  document.getElementById('communityLayout').style.display='';
+  await Promise.all([loadGroups(), loadDmConversations(), loadMembers()]);
+
+  // Check URL params for DM mode
+  const params = new URLSearchParams(location.search);
+  if(params.get('dm')) openDm(Number(params.get('dm')));
+}
+
+// ── Groups ─────────────────────────────────────────────────────────────────
+
+async function loadGroups(){
+  const res = await fetch(`${API}/groups`,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  groups = data.groups;
+  renderGroupList();
+  if(groups.length && !activeGroupId && !dmPartnerId) selectGroup(groups[0].id);
+}
+
+function renderGroupList(){
+  const icons = {all_teachers:'👩‍🏫', school:'🏫', membership:'🪪'};
+  document.getElementById('groupList').innerHTML = groups.map(g =>
+    `<div class="group-item ${g.id===activeGroupId?'active':''}" onclick="selectGroup(${g.id})">
+       <span class="g-ic">${icons[g.type]||'💬'}</span>
+       <span class="g-label" title="${esc(g.name)}">${esc(g.name)}</span>
+     </div>`
+  ).join('') || '<div style="font-size:13px;color:var(--ink-soft);">No groups yet.</div>';
+}
+
+function selectGroup(id){
+  activeGroupId = id;
+  dmPartnerId = null;
+  clearInterval(pollTimer);
+  feedSince = null;
+  document.getElementById('feedPanel').style.display='';
+  document.getElementById('dmPanel').style.display='none';
+  renderGroupList();
+  const g = groups.find(x=>x.id===id);
+  document.getElementById('activeGroupName').textContent = g ? 'Posting to: ' + g.name : '';
+  document.getElementById('composer').style.display='';
+  document.getElementById('feedContainer').innerHTML = '<div class="loading-msg">Loading posts…</div>';
+  pollFeed();
+  pollTimer = setInterval(pollFeed, 5000);
+}
+
+// ── Feed ───────────────────────────────────────────────────────────────────
+
+async function pollFeed(){
+  if(!activeGroupId) return;
+  const url = feedSince
+    ? `${API}/groups/${activeGroupId}/posts?since=${encodeURIComponent(feedSince)}`
+    : `${API}/groups/${activeGroupId}/posts`;
+  const res = await fetch(url,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  const posts = data.posts;
+  if(!posts.length && !feedSince){
+    document.getElementById('feedContainer').innerHTML = '<div class="loading-msg">No posts yet. Be the first!</div>';
+    feedSince = new Date().toISOString();
+    return;
+  }
+  if(!posts.length) return;
+  feedSince = posts[0].created_at;
+  if(feedSince) feedSince = new Date(Math.max(...posts.map(p=>new Date(p.created_at)))+1).toISOString();
+
+  if(!document.getElementById('feedContainer').querySelector('.post-card')){
+    // First load — render all
+    document.getElementById('feedContainer').innerHTML = posts.map(renderPost).join('');
+  } else {
+    // Prepend new posts
+    posts.forEach(p => {
+      const existing = document.getElementById(`post-${p.id}`);
+      if(!existing){
+        document.getElementById('feedContainer').insertAdjacentHTML('afterbegin', renderPost(p));
+      }
+    });
+  }
+}
+
+function renderPost(p){
+  const av = initials(p.first_name, p.last_name).toUpperCase();
+  const liked = p.my_reaction ? ' liked' : '';
+  return `
+  <div class="post-card" id="post-${p.id}">
+    <div class="post-header">
+      <div class="post-avatar" style="cursor:pointer;" onclick="viewProfile(${p.author_id})">${av}</div>
+      <div>
+        <div class="post-author"><a href="social-profile.html?id=${p.author_id}" style="color:inherit;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
+        <div class="post-time">${relTime(p.created_at)}</div>
+      </div>
+    </div>
+    <div class="post-content">${esc(p.content)}</div>
+    <div class="post-actions">
+      <button class="post-action-btn${liked}" onclick="toggleReaction(${p.id}, this)">
+        👍 <span class="react-count">${p.reaction_count}</span>
+      </button>
+      <button class="post-action-btn" onclick="toggleComments(${p.id}, this)">
+        💬 <span>${p.comment_count}</span>
+      </button>
+      <button class="post-action-btn" onclick="openDm(${p.author_id})" title="Send DM">✉️</button>
+    </div>
+    <div class="comments-section" id="comments-${p.id}" style="display:none;"></div>
+  </div>`;
+}
+
+async function toggleReaction(postId, btn){
+  const res = await fetch(`${API}/posts/${postId}/react`,{
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({reaction:'like'})
+  });
+  if(!res.ok) return;
+  const data = await res.json();
+  const countEl = btn.querySelector('.react-count');
+  let n = parseInt(countEl.textContent)||0;
+  if(data.toggled==='added'){ btn.classList.add('liked'); countEl.textContent = n+1; }
+  else { btn.classList.remove('liked'); countEl.textContent = Math.max(0,n-1); }
+}
+
+async function toggleComments(postId, btn){
+  const section = document.getElementById(`comments-${postId}`);
+  if(section.style.display==='none'){
+    section.style.display='';
+    await loadComments(postId);
+  } else {
+    section.style.display='none';
+  }
+}
+
+async function loadComments(postId){
+  const section = document.getElementById(`comments-${postId}`);
+  const res = await fetch(`${API}/posts/${postId}/comments`,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  const commentsHtml = data.comments.map(c => {
+    const av = initials(c.first_name, c.last_name).toUpperCase();
+    return `<div class="comment">
+      <div class="comment-avatar">${av}</div>
+      <div class="comment-body">
+        <div class="comment-author">${esc(c.first_name)} ${esc(c.last_name)}</div>
+        <div class="comment-text">${esc(c.content)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  const myAv = initials(me.first_name, me.last_name).toUpperCase();
+  section.innerHTML = commentsHtml + `
+    <div class="comment-composer">
+      <div class="comment-avatar" style="margin-top:2px;">${myAv}</div>
+      <input type="text" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')addComment(${postId},this)">
+      <button class="comment-send-btn" onclick="addComment(${postId},this.previousElementSibling)">Send</button>
+    </div>`;
+}
+
+async function addComment(postId, input){
+  const content = input.value.trim();
+  if(!content) return;
+  const res = await fetch(`${API}/posts/${postId}/comments`,{
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({content})
+  });
+  if(!res.ok) return;
+  input.value='';
+  await loadComments(postId);
+}
+
+async function submitPost(){
+  const content = document.getElementById('postContent').value.trim();
+  if(!content || !activeGroupId) return;
+  const res = await fetch(`${API}/groups/${activeGroupId}/posts`,{
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({content})
+  });
+  if(!res.ok){ alert('Failed to post. Please try again.'); return; }
+  document.getElementById('postContent').value='';
+  const data = await res.json();
+  const container = document.getElementById('feedContainer');
+  if(container.querySelector('.loading-msg')) container.innerHTML='';
+  container.insertAdjacentHTML('afterbegin', renderPost(data.post));
+}
+
+// ── Direct Messages ─────────────────────────────────────────────────────────
+
+async function loadDmConversations(){
+  const res = await fetch(`${API}/messages/conversations`,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  const el = document.getElementById('dmList');
+  if(!data.conversations.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--ink-soft);">No conversations yet.</div>';
+    return;
+  }
+  el.innerHTML = data.conversations.map(c =>
+    `<div class="dm-item ${c.partner_id===dmPartnerId?'active':''}" onclick="openDm(${c.partner_id})">
+       <div class="member-avatar" style="width:28px;height:28px;font-size:11px;">${initials(c.first_name,c.last_name).toUpperCase()}</div>
+       <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.first_name)} ${esc(c.last_name)}</span>
+       ${c.unread_count>0?`<span class="dm-badge">${c.unread_count}</span>`:''}
+     </div>`
+  ).join('');
+}
+
+async function openDm(partnerId){
+  if(partnerId === me.id) return;
+  clearInterval(pollTimer);
+  dmPartnerId = partnerId;
+  activeGroupId = null;
+  dmSince = null;
+  document.getElementById('feedPanel').style.display='none';
+  const dmPanel = document.getElementById('dmPanel');
+  dmPanel.style.display='';
+  renderGroupList();
+
+  // Fetch partner info
+  const profileRes = await fetch(`${API}/profile/${partnerId}`,{credentials:'include'});
+  const pData = profileRes.ok ? await profileRes.json() : {profile:{first_name:'Member',last_name:''}};
+  const partner = pData.profile;
+
+  dmPanel.innerHTML = `
+    <div class="dm-thread">
+      <div class="dm-header">
+        <div class="member-avatar">${initials(partner.first_name,partner.last_name).toUpperCase()}</div>
+        <div>
+          <h3>${esc(partner.first_name)} ${esc(partner.last_name)}</h3>
+          ${partner.school_domain?`<div style="font-size:12px;color:var(--ink-soft);">${esc(partner.school_domain)}</div>`:''}
+        </div>
+        <a href="social-profile.html?id=${partnerId}" style="margin-left:auto;font-size:13px;color:var(--coral-dark);font-weight:700;">View Profile →</a>
+      </div>
+      <div class="dm-messages" id="dmMessages"><div class="loading-msg">Loading…</div></div>
+      <div class="dm-composer">
+        <input type="text" id="dmInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendDm()">
+        <button class="dm-send-btn" onclick="sendDm()">Send</button>
+      </div>
+    </div>`;
+
+  await pollDm();
+  pollTimer = setInterval(pollDm, 5000);
+  // Update URL so conversation is bookmarkable
+  history.replaceState(null,'',`?dm=${partnerId}`);
+}
+
+async function pollDm(){
+  const url = dmSince
+    ? `${API}/messages?with=${dmPartnerId}&since=${encodeURIComponent(dmSince)}`
+    : `${API}/messages?with=${dmPartnerId}`;
+  const res = await fetch(url,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  const msgs = data.messages;
+  if(!msgs.length && !dmSince){
+    document.getElementById('dmMessages').innerHTML='<div class="loading-msg">No messages yet. Say hello!</div>';
+    dmSince = new Date().toISOString();
+    return;
+  }
+  if(!msgs.length) return;
+  dmSince = new Date(Math.max(...msgs.map(m=>new Date(m.created_at)))+1).toISOString();
+  const container = document.getElementById('dmMessages');
+  if(!container.querySelector('.dm-msg')) container.innerHTML='';
+  msgs.forEach(m => {
+    if(document.getElementById(`dm-${m.id}`)) return;
+    const sent = m.sender_id === me.id;
+    container.insertAdjacentHTML('beforeend',
+      `<div class="dm-msg ${sent?'sent':'recv'}" id="dm-${m.id}">${esc(m.content)}</div>`);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendDm(){
+  const input = document.getElementById('dmInput');
+  const content = input.value.trim();
+  if(!content) return;
+  const res = await fetch(`${API}/messages`,{
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({content, recipientId: dmPartnerId})
+  });
+  if(!res.ok) return;
+  input.value='';
+  await pollDm();
+}
+
+// ── Members ──────────────────────────────────────────────────────────────────
+
+async function loadMembers(){
+  const res = await fetch(`${API}/members`,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  allMembers = data.members;
+  renderMembers(allMembers);
+}
+
+function searchMembers(q){
+  clearTimeout(memberSearchTimer);
+  memberSearchTimer = setTimeout(async () => {
+    if(q.length < 2){ renderMembers(allMembers); return; }
+    const res = await fetch(`${API}/members?q=${encodeURIComponent(q)}`,{credentials:'include'});
+    if(res.ok) renderMembers((await res.json()).members);
+  }, 300);
+}
+
+function renderMembers(members){
+  const el = document.getElementById('memberList');
+  if(!members.length){ el.innerHTML='<div style="font-size:13px;color:var(--ink-soft);">No members found.</div>'; return; }
+  el.innerHTML = members.slice(0,30).map(m =>
+    `<div class="member-item" onclick="openDm(${m.id})">
+       <div class="member-avatar">${initials(m.first_name,m.last_name).toUpperCase()}</div>
+       <div style="overflow:hidden;">
+         <div class="member-name">${esc(m.first_name)} ${esc(m.last_name)}</div>
+         ${m.school_domain?`<div class="member-school">${esc(m.school_domain)}</div>`:''}
+       </div>
+     </div>`
+  ).join('');
+}
+
+function viewProfile(userId){ window.location.href = `social-profile.html?id=${userId}`; }
+
+init();
+</script>
+</body>
+</html>

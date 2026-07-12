@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { createPurchase } = require('./newsletter');
+const { addMemberToSocialGroups } = require('../lib/social-groups');
 
 const router = express.Router();
 const STATUSES = ['trialing', 'active', 'past_due', 'cancelled', 'expired'];
@@ -78,7 +79,7 @@ router.post('/contacts/:contactId', requireAuth, async (req, res) => {
   const membershipPlanId = Number(b.membershipPlanId);
   if (!membershipPlanId) return res.status(400).json({ error: 'membershipPlanId is required' });
 
-  const [contactRows] = await pool.query('SELECT id FROM newsletter_contacts WHERE id = ?', [contactId]);
+  const [contactRows] = await pool.query('SELECT id, email FROM newsletter_contacts WHERE id = ?', [contactId]);
   if (!contactRows[0]) return res.status(404).json({ error: 'Contact not found' });
   const [planRows] = await pool.query('SELECT * FROM membership_plans WHERE id = ?', [membershipPlanId]);
   const plan = planRows[0];
@@ -101,6 +102,8 @@ router.post('/contacts/:contactId', requireAuth, async (req, res) => {
     'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
     [contactId, membershipPlanId, status, purchaseId, endsAt]
   );
+
+  try { await addMemberToSocialGroups(contactRows[0].email); } catch (e) { console.error('addMemberToSocialGroups failed:', e.message); }
 
   const [rows] = await pool.query(SELECT_WITH_PLAN + ' WHERE cm.id = ?', [result.insertId]);
   res.status(201).json({ membership: serialize(rows[0]) });

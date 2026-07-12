@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social — FN Admin</title>
+<link rel="stylesheet" href="admin-common.css?v=15">
+<script>
+  (function(){var t=localStorage.getItem('fn-admin-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<style>
+  .soc-tabs{display:flex; gap:8px; margin-bottom:24px;}
+  .soc-tab{padding:8px 18px; border-radius:8px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); cursor:pointer; font-size:14px;}
+  .soc-tab.active{background:var(--a-accent); color:#fff; border-color:var(--a-accent);}
+  .soc-stat-row{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;}
+  .soc-stat{flex:1; min-width:140px; background:var(--a-card); border:1px solid var(--a-border); border-radius:12px; padding:16px; text-align:center;}
+  .soc-stat .num{font-size:26px; font-weight:700; color:var(--a-accent);}
+  .soc-stat .lbl{font-size:13px; color:var(--a-text-soft); margin-top:4px;}
+  .soc-post{background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; padding:16px; margin-bottom:12px;}
+  .soc-post-meta{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+  .soc-post-author{font-weight:600; font-size:14px;}
+  .soc-post-info{font-size:12px; color:var(--a-text-soft); margin-top:2px;}
+  .soc-post-content{font-size:14px; line-height:1.55; white-space:pre-wrap; word-break:break-word;}
+  .soc-post-footer{display:flex; gap:16px; margin-top:10px; font-size:12px; color:var(--a-text-soft);}
+  .soc-post.deleted{opacity:0.5;}
+  .soc-del-btn{padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid var(--a-danger,#c0392b); color:var(--a-danger,#c0392b); background:transparent; cursor:pointer;}
+  .soc-del-btn:hover{background:var(--a-danger,#c0392b); color:#fff;}
+  .soc-group-card{display:flex; justify-content:space-between; align-items:center; background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; padding:14px 16px; margin-bottom:10px;}
+  .soc-group-name{font-weight:600;}
+  .soc-group-meta{font-size:13px; color:var(--a-text-soft); margin-top:2px;}
+  .soc-group-stats{font-size:13px; color:var(--a-text-soft); text-align:right;}
+  .soc-pagination{display:flex; gap:8px; align-items:center; margin-top:16px; justify-content:center;}
+  .soc-pagination button{padding:6px 14px; border-radius:8px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); cursor:pointer;}
+  .soc-pagination button:disabled{opacity:0.4; cursor:default;}
+  .soc-pagination .page-info{font-size:13px; color:var(--a-text-soft);}
+  .tag-deleted{background:#c0392b22; color:#c0392b; padding:2px 7px; border-radius:4px; font-size:11px; margin-left:6px;}
+  .tag-type{background:var(--a-accent-soft,#e8f5e9); color:var(--a-accent); padding:2px 7px; border-radius:4px; font-size:11px;}
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>
+    <nav class="a-nav">
+      <a href="admin-dashboard.html"><span class="ic">📊</span><span class="label">Dashboard</span></a>
+      <div class="a-nav-divider"></div>
+      <a href="admin-automations.html"><span class="ic">🤖</span><span class="label">Automations</span></a>
+      <a href="admin-blogs.html"><span class="ic">📝</span><span class="label">Blogs</span></a>
+      <a href="admin-books.html"><span class="ic">📚</span><span class="label">Books</span></a>
+      <a href="admin-campaigns.html"><span class="ic">📣</span><span class="label">Campaigns</span></a>
+      <a href="admin-newsletter.html"><span class="ic">✉️</span><span class="label">CRM</span></a>
+      <a href="admin-curriculum.html"><span class="ic">🎓</span><span class="label">Curriculums</span></a>
+      <a href="admin-invoices.html"><span class="ic">🧾</span><span class="label">Invoices</span></a>
+      <a href="admin-licenses.html"><span class="ic">🏫</span><span class="label">Licenses</span></a>
+      <a href="admin-memberships.html"><span class="ic">🪪</span><span class="label">Memberships</span></a>
+      <a href="admin-morning-boost.html"><span class="ic">🌅</span><span class="label">Morning Boost Studio</span></a>
+      <a href="admin-morning-boost-email.html"><span class="ic">📨</span><span class="label">Morning Boost Email</span></a>
+      <a href="admin-orders.html"><span class="ic">📦</span><span class="label">Orders</span></a>
+      <a href="admin-social.html" class="active"><span class="ic">💬</span><span class="label">Social</span></a>
+      <a href="admin-analytics.html"><span class="ic">👣</span><span class="label">Visitor Paths</span></a>
+    </nav>
+    <div class="a-sidebar-foot">
+      <a href="admin-settings.html"><span class="ic">⚙️</span><span class="label">Settings</span></a>
+      <a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>
+      <a href="#" onclick="fnLogout(); return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>
+    </div>
+  </aside>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Social</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+    </div>
+
+    <div class="soc-tabs">
+      <button class="soc-tab active" onclick="showTab('posts')">Recent Posts</button>
+      <button class="soc-tab" onclick="showTab('groups')">Groups</button>
+    </div>
+
+    <!-- Posts Tab -->
+    <div id="tab-posts">
+      <div class="soc-stat-row" id="postsStats"></div>
+      <div id="postsContainer"></div>
+      <div class="soc-pagination">
+        <button id="prevBtn" onclick="loadPage(currentPage-1)" disabled>← Prev</button>
+        <span class="page-info" id="pageInfo"></span>
+        <button id="nextBtn" onclick="loadPage(currentPage+1)" disabled>Next →</button>
+      </div>
+    </div>
+
+    <!-- Groups Tab -->
+    <div id="tab-groups" style="display:none;">
+      <div id="groupsContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+let currentPage = 1;
+let totalPosts = 0;
+const LIMIT = 25;
+
+function showTab(name) {
+  document.querySelectorAll('.soc-tab').forEach((t,i) => t.classList.toggle('active', ['posts','groups'][i] === name));
+  document.getElementById('tab-posts').style.display = name === 'posts' ? '' : 'none';
+  document.getElementById('tab-groups').style.display = name === 'groups' ? '' : 'none';
+  if (name === 'groups') loadGroups();
+}
+
+async function loadPage(page) {
+  const res = await fetch(`/api/social/admin/posts?page=${page}`, { credentials: 'include' });
+  if (!res.ok) { fnShowError('Failed to load posts'); return; }
+  const data = await res.json();
+  totalPosts = data.total;
+  currentPage = data.page;
+
+  const stats = document.getElementById('postsStats');
+  stats.innerHTML = `
+    <div class="soc-stat"><div class="num">${data.total}</div><div class="lbl">Total Posts</div></div>
+  `;
+
+  const container = document.getElementById('postsContainer');
+  if (!data.posts.length) {
+    container.innerHTML = '<p style="color:var(--a-text-soft); text-align:center; padding:40px 0;">No posts yet.</p>';
+  } else {
+    container.innerHTML = data.posts.map(p => {
+      const deleted = p.deleted_at ? ' deleted' : '';
+      const deletedTag = p.deleted_at ? '<span class="tag-deleted">Deleted</span>' : '';
+      return `
+        <div class="soc-post${deleted}">
+          <div class="soc-post-meta">
+            <div>
+              <div class="soc-post-author">${esc(p.first_name)} ${esc(p.last_name)} ${deletedTag}</div>
+              <div class="soc-post-info">${esc(p.email)} &middot; Group: ${esc(p.group_name)} &middot; ${fmtDate(p.created_at)}</div>
+            </div>
+            ${!p.deleted_at ? `<button class="soc-del-btn" onclick="deletePost(${p.id}, this)">Delete</button>` : ''}
+          </div>
+          <div class="soc-post-content">${esc(p.content)}</div>
+          <div class="soc-post-footer">
+            <span>👍 ${p.reaction_count}</span>
+            <span>💬 ${p.comment_count}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  const totalPages = Math.ceil(totalPosts / LIMIT);
+  document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+  document.getElementById('prevBtn').disabled = currentPage <= 1;
+  document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+async function deletePost(id, btn) {
+  if (!confirm('Permanently hide this post? This cannot be undone.')) return;
+  const res = await fetch(`/api/social/posts/${id}`, { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (res.ok) loadPage(currentPage);
+  else fnShowError('Delete failed');
+}
+
+async function loadGroups() {
+  const res = await fetch('/api/social/admin/groups', { credentials: 'include' });
+  if (!res.ok) { fnShowError('Failed to load groups'); return; }
+  const data = await res.json();
+  const container = document.getElementById('groupsContainer');
+  if (!data.groups.length) {
+    container.innerHTML = '<p style="color:var(--a-text-soft); text-align:center; padding:40px 0;">No groups yet. Groups are created automatically when teachers or members join.</p>';
+    return;
+  }
+  container.innerHTML = data.groups.map(g => `
+    <div class="soc-group-card">
+      <div>
+        <div class="soc-group-name">${esc(g.name)} <span class="tag-type">${g.type.replace('_', ' ')}</span></div>
+        <div class="soc-group-meta">${g.school_domain ? 'Domain: ' + esc(g.school_domain) + ' &middot; ' : ''}Created ${fmtDate(g.created_at)}</div>
+      </div>
+      <div class="soc-group-stats">
+        <div>${g.member_count} members</div>
+        <div>${g.post_count} posts</div>
+      </div>
+    </div>`).join('');
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(s) {
+  if (!s) return '';
+  return new Date(s).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+loadPage(1);
+</script>
+</body>
+</html>

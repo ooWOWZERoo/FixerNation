@@ -15,6 +15,8 @@ function serialize(row) {
     sortOrder: row.sort_order,
     active: !!row.active,
     autoAssignGroupId: row.auto_assign_group_id || null,
+    bulletPoints: row.bullet_points ? row.bullet_points.split('\n').filter(Boolean) : [],
+    footerNote: row.footer_note || '',
     createdAt: row.created_at,
   };
 }
@@ -45,9 +47,10 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const groupId = Number(b.autoAssignGroupId) || null;
+  const bulletPoints = Array.isArray(b.bulletPoints) ? b.bulletPoints.filter(Boolean).join('\n') : (b.bulletPoints || '');
   const [result] = await pool.query(
-    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, sort_order, active, auto_assign_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId]
+    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, sort_order, active, auto_assign_group_id, bullet_points, footer_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPoints || null, b.footerNote || null]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [result.insertId]);
@@ -65,9 +68,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!existing[0]) return res.status(404).json({ error: 'License product not found' });
 
   const groupId = Number(b.autoAssignGroupId) || null;
+  const bulletPointsUpd = Array.isArray(b.bulletPoints) ? b.bulletPoints.filter(Boolean).join('\n') : (b.bulletPoints || '');
   await pool.query(
-    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, sort_order=?, active=?, auto_assign_group_id=? WHERE id=?',
-    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, req.params.id]
+    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, sort_order=?, active=?, auto_assign_group_id=?, bullet_points=?, footer_note=? WHERE id=?',
+    [b.name, b.description || '', Number(b.seatCount), callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPointsUpd || null, b.footerNote || null, req.params.id]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [req.params.id]);

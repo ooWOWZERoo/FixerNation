@@ -6,6 +6,7 @@ const pool = require('../db/pool');
 const { createPurchase, assignContactToGroups } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { createToken } = require('../lib/site-tokens');
+const { addMemberToSocialGroups } = require('../lib/social-groups');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -359,6 +360,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       [contactId, membershipPlanId, 'active', purchaseId, endsAt]
     );
     try { await assignContactToGroups(contactId, { productType: 'membership', memberType: plan.member_type }); } catch (e) { console.error('assignContactToGroups failed:', e.message); }
+    try { await addMemberToSocialGroups(metadata.email); } catch (e) { console.error('addMemberToSocialGroups failed:', e.message); }
     let setPasswordUrl = '';
     try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     await fireAutomation('membership_purchase_thank_you', {
@@ -378,6 +380,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
     );
     try { await assignContactToGroups(contactId, { productType: 'membership', memberType: plan.member_type }); } catch (e) { console.error('assignContactToGroups failed:', e.message); }
+    try { await addMemberToSocialGroups(metadata.email); } catch (e) { console.error('addMemberToSocialGroups failed:', e.message); }
     let setPasswordUrl = '';
     try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     if (plan.trial_days > 0) {

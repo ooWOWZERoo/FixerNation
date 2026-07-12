@@ -20,6 +20,7 @@ function serialize(row) {
     durationDays: row.duration_days,
     description: row.description || '',
     benefits: row.benefits ? row.benefits.split('\n') : [],
+    policy: row.policy || '',
     stripeConnected: !!row.stripe_price_id,
     sortOrder: row.sort_order,
     active: !!row.active,
@@ -112,13 +113,14 @@ router.post('/', requireAuth, async (req, res) => {
   if (validationError) return res.status(400).json({ error: validationError });
 
   const [result] = await pool.query(
-    `INSERT INTO membership_plans (name, member_type, price_cents, regular_price_cents, billing_interval, trial_days, duration_days, description, benefits, sort_order, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO membership_plans (name, member_type, price_cents, regular_price_cents, billing_interval, trial_days, duration_days, description, benefits, policy, sort_order, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       b.name, b.memberType, Math.round(Number(b.price) * 100),
       b.regularPrice ? Math.round(Number(b.regularPrice) * 100) : null,
       b.billingInterval, Number(b.trialDays) || 0, b.durationDays ? Number(b.durationDays) : null, b.description || '',
       Array.isArray(b.benefits) ? b.benefits.filter(Boolean).join('\n') : (b.benefits || ''),
+      b.policy || null,
       Number(b.sortOrder) || 0, b.active === false ? 0 : 1,
     ]
   );
@@ -137,12 +139,13 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!existing[0]) return res.status(404).json({ error: 'Membership plan not found' });
 
   await pool.query(
-    `UPDATE membership_plans SET name=?, member_type=?, price_cents=?, regular_price_cents=?, billing_interval=?, trial_days=?, duration_days=?, description=?, benefits=?, sort_order=?, active=? WHERE id=?`,
+    `UPDATE membership_plans SET name=?, member_type=?, price_cents=?, regular_price_cents=?, billing_interval=?, trial_days=?, duration_days=?, description=?, benefits=?, policy=?, sort_order=?, active=? WHERE id=?`,
     [
       b.name, b.memberType, Math.round(Number(b.price) * 100),
       b.regularPrice ? Math.round(Number(b.regularPrice) * 100) : null,
       b.billingInterval, Number(b.trialDays) || 0, b.durationDays ? Number(b.durationDays) : null, b.description || '',
       Array.isArray(b.benefits) ? b.benefits.filter(Boolean).join('\n') : (b.benefits || ''),
+      b.policy || null,
       Number(b.sortOrder) || 0, b.active === false ? 0 : 1, req.params.id,
     ]
   );

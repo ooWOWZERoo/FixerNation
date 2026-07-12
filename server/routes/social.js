@@ -1,0 +1,401 @@
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const pool = require('../db/pool');
+const { SITE_COOKIE_NAME } = require('../lib/session');
+const { hasActiveLicense, hasActiveMembership } = require('../lib/access');
+const { requireAuth } = require('../middleware/auth');
+const { ensureProfile } = require('../lib/social-groups');
+
+const router = express.Router();
+
+// ── Site-user social access ────────────────────────────────────────────────
+
+async function requireSocialAccess(req, res, next) {
+  const token = req.cookies[SITE_COOKIE_NAME];
+  if (!token) return res.status(401).json({ error: 'Login required' });
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.SESSION_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Login required' });
+  }
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
+  if (!rows[0]) return res.status(401).json({ error: 'Login required' });
+  req.siteUser = rows[0];
+
+  const [licensed, member] = await Promise.all([
+    hasActiveLicense(rows[0].id),
+    hasActiveMembership(rows[0].email),
+  ]);
+  if (!licensed && !member) {
+    return res.status(403).json({ error: 'A valid license or membership is required to access the community.' });
+  }
+  next();
+}
+
+// ── Groups ─────────────────────────────────────────────────────────────────
+
+// List groups the current user belongs to
+router.get('/groups', requireSocialAccess, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT sg.id, sg.name, sg.type, sg.school_domain, sg.description,
+            COUNT(DISTINCT sgm2.user_id) AS member_count
+     FROM social_groups sg
+     JOIN social_group_members sgm ON sgm.group_id = sg.id AND sgm.user_id = ?
+     LEFT JOIN social_group_members sgm2 ON sgm2.group_id = sg.id
+     GROUP BY sg.id
+     ORDER BY sg.type, sg.name`,
+    [req.siteUser.id]
+  );
+  res.json({ groups: rows });
+});
+
+// ── Posts ──────────────────────────────────────────────────────────────────
+
+// Poll feed for a group. ?since=ISO limits to posts newer than that timestamp.
+router.get('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+
+  // Verify membership
+  const [mem] = await pool.query(
+    'SELECT 1 FROM social_group_members WHERE group_id = ? AND user_id = ?',
+    [groupId, req.siteUser.id]
+  );
+  if (!mem[0]) return res.status(403).json({ error: 'Not a member of this group' });
+
+  const since = req.query.since;
+  let sql = `
+    SELECT p.id, p.group_id, p.author_id, p.content, p.attachments,
+           p.created_at, p.updated_at,
+           su.first_name, su.last_name,
+           sp.bio_consent, sp.avatar_url,
+           (SELECT COUNT(*) FROM social_reactions r WHERE r.post_id = p.id) AS reaction_count,
+           (SELECT COUNT(*) FROM social_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comment_count,
+           (SELECT r2.reaction FROM social_reactions r2 WHERE r2.post_id = p.id AND r2.user_id = ?) AS my_reaction
+    FROM social_posts p
+    JOIN site_users su ON su.id = p.author_id
+    LEFT JOIN social_profiles sp ON sp.user_id = p.author_id
+    WHERE p.group_id = ? AND p.deleted_at IS NULL`;
+  const params = [req.siteUser.id, groupId];
+  if (since) {
+    sql += ' AND p.created_at > ?';
+    params.push(since);
+  }
+  sql += ' ORDER BY p.created_at DESC LIMIT 50';
+
+  const [rows] = await pool.query(sql, params);
+  res.json({ posts: rows });
+});
+
+// Create a post in a group
+router.post('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const content = (req.body && req.body.content || '').trim();
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+
+  const [mem] = await pool.query(
+    'SELECT 1 FROM social_group_members WHERE group_id = ? AND user_id = ?',
+    [groupId, req.siteUser.id]
+  );
+  if (!mem[0]) return res.status(403).json({ error: 'Not a member of this group' });
+
+  const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
+  const [result] = await pool.query(
+    'INSERT INTO social_posts (group_id, author_id, content, attachments) VALUES (?, ?, ?, ?)',
+    [groupId, req.siteUser.id, content, attachments]
+  );
+
+  const [[post]] = await pool.query(
+    `SELECT p.id, p.group_id, p.author_id, p.content, p.attachments, p.created_at, p.updated_at,
+            su.first_name, su.last_name, sp.bio_consent, sp.avatar_url,
+            0 AS reaction_count, 0 AS comment_count, NULL AS my_reaction
+     FROM social_posts p
+     JOIN site_users su ON su.id = p.author_id
+     LEFT JOIN social_profiles sp ON sp.user_id = p.author_id
+     WHERE p.id = ?`,
+    [result.insertId]
+  );
+  res.status(201).json({ post });
+});
+
+// Admin: soft-delete a post
+router.delete('/posts/:postId', requireAuth, async (req, res) => {
+  const [result] = await pool.query(
+    "UPDATE social_posts SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
+    [req.params.postId]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'Post not found' });
+  res.json({ ok: true });
+});
+
+// ── Reactions ──────────────────────────────────────────────────────────────
+
+router.post('/posts/:postId/react', requireSocialAccess, async (req, res) => {
+  const postId = Number(req.params.postId);
+  const reaction = (req.body && req.body.reaction) || 'like';
+
+  const [existing] = await pool.query(
+    'SELECT 1 FROM social_reactions WHERE post_id = ? AND user_id = ?',
+    [postId, req.siteUser.id]
+  );
+  if (existing[0]) {
+    await pool.query('DELETE FROM social_reactions WHERE post_id = ? AND user_id = ?', [postId, req.siteUser.id]);
+    res.json({ toggled: 'removed' });
+  } else {
+    await pool.query(
+      'INSERT INTO social_reactions (post_id, user_id, reaction) VALUES (?, ?, ?)',
+      [postId, req.siteUser.id, reaction]
+    );
+    res.json({ toggled: 'added', reaction });
+  }
+});
+
+// ── Comments ───────────────────────────────────────────────────────────────
+
+router.get('/posts/:postId/comments', requireSocialAccess, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
+            su.first_name, su.last_name, sp.avatar_url
+     FROM social_comments c
+     JOIN site_users su ON su.id = c.author_id
+     LEFT JOIN social_profiles sp ON sp.user_id = c.author_id
+     WHERE c.post_id = ? AND c.deleted_at IS NULL
+     ORDER BY c.created_at ASC`,
+    [req.params.postId]
+  );
+  res.json({ comments: rows });
+});
+
+router.post('/posts/:postId/comments', requireSocialAccess, async (req, res) => {
+  const postId = Number(req.params.postId);
+  const content = (req.body && req.body.content || '').trim();
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+
+  const [[post]] = await pool.query('SELECT id FROM social_posts WHERE id = ? AND deleted_at IS NULL', [postId]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  const [result] = await pool.query(
+    'INSERT INTO social_comments (post_id, author_id, content) VALUES (?, ?, ?)',
+    [postId, req.siteUser.id, content]
+  );
+
+  const [[comment]] = await pool.query(
+    `SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
+            su.first_name, su.last_name, sp.avatar_url
+     FROM social_comments c
+     JOIN site_users su ON su.id = c.author_id
+     LEFT JOIN social_profiles sp ON sp.user_id = c.author_id
+     WHERE c.id = ?`,
+    [result.insertId]
+  );
+  res.status(201).json({ comment });
+});
+
+// Admin: soft-delete a comment
+router.delete('/comments/:commentId', requireAuth, async (req, res) => {
+  const [result] = await pool.query(
+    "UPDATE social_comments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
+    [req.params.commentId]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'Comment not found' });
+  res.json({ ok: true });
+});
+
+// ── Direct Messages ────────────────────────────────────────────────────────
+
+// List all DM conversations (one row per unique partner, latest message)
+router.get('/messages/conversations', requireSocialAccess, async (req, res) => {
+  const userId = req.siteUser.id;
+  const [rows] = await pool.query(
+    `SELECT
+       partner_id,
+       su.first_name, su.last_name, sp.avatar_url,
+       latest_msg, latest_at,
+       SUM(unread) AS unread_count
+     FROM (
+       SELECT
+         IF(sender_id = ?, recipient_id, sender_id) AS partner_id,
+         content AS latest_msg,
+         created_at AS latest_at,
+         IF(recipient_id = ? AND read_at IS NULL AND deleted_at IS NULL, 1, 0) AS unread
+       FROM social_messages
+       WHERE (sender_id = ? OR recipient_id = ?) AND deleted_at IS NULL
+     ) t
+     JOIN site_users su ON su.id = t.partner_id
+     LEFT JOIN social_profiles sp ON sp.user_id = t.partner_id
+     GROUP BY partner_id, su.first_name, su.last_name, sp.avatar_url
+     ORDER BY MAX(latest_at) DESC`,
+    [userId, userId, userId, userId]
+  );
+  res.json({ conversations: rows });
+});
+
+// Get DM thread with a specific user
+router.get('/messages', requireSocialAccess, async (req, res) => {
+  const userId = req.siteUser.id;
+  const partnerId = Number(req.query.with);
+  if (!partnerId) return res.status(400).json({ error: 'with= parameter required' });
+
+  const since = req.query.since;
+  let sql = `SELECT id, sender_id, recipient_id, content, attachments, read_at, created_at
+             FROM social_messages
+             WHERE deleted_at IS NULL
+             AND ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))`;
+  const params = [userId, partnerId, partnerId, userId];
+  if (since) {
+    sql += ' AND created_at > ?';
+    params.push(since);
+  }
+  sql += ' ORDER BY created_at ASC LIMIT 100';
+
+  const [rows] = await pool.query(sql, params);
+
+  // Mark unread messages from partner as read
+  await pool.query(
+    'UPDATE social_messages SET read_at = NOW() WHERE sender_id = ? AND recipient_id = ? AND read_at IS NULL AND deleted_at IS NULL',
+    [partnerId, userId]
+  );
+
+  res.json({ messages: rows });
+});
+
+// Send a DM
+router.post('/messages', requireSocialAccess, async (req, res) => {
+  const content = (req.body && req.body.content || '').trim();
+  const recipientId = Number(req.body && req.body.recipientId);
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+  if (!recipientId || recipientId === req.siteUser.id) return res.status(400).json({ error: 'Invalid recipient' });
+
+  // Verify recipient has social access (is a member or licensed teacher)
+  const [recipRows] = await pool.query('SELECT id, email FROM site_users WHERE id = ?', [recipientId]);
+  if (!recipRows[0]) return res.status(404).json({ error: 'Recipient not found' });
+  const [rLicensed, rMember] = await Promise.all([
+    hasActiveLicense(recipientId),
+    hasActiveMembership(recipRows[0].email),
+  ]);
+  if (!rLicensed && !rMember) return res.status(403).json({ error: 'Recipient is not a community member' });
+
+  const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
+  const [result] = await pool.query(
+    'INSERT INTO social_messages (sender_id, recipient_id, content, attachments) VALUES (?, ?, ?, ?)',
+    [req.siteUser.id, recipientId, content, attachments]
+  );
+
+  const [[msg]] = await pool.query(
+    'SELECT id, sender_id, recipient_id, content, attachments, read_at, created_at FROM social_messages WHERE id = ?',
+    [result.insertId]
+  );
+  res.status(201).json({ message: msg });
+});
+
+// ── Profiles ───────────────────────────────────────────────────────────────
+
+// Own profile (editable)
+router.get('/profile', requireSocialAccess, async (req, res) => {
+  await ensureProfile(req.siteUser.id);
+  const [[user]] = await pool.query(
+    `SELECT su.id, su.first_name, su.last_name, su.email,
+            sp.bio, sp.bio_consent, sp.avatar_url,
+            (SELECT p.school_domain FROM license_seats ls
+             JOIN purchases p ON p.id = ls.purchase_id
+             WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
+     FROM site_users su
+     LEFT JOIN social_profiles sp ON sp.user_id = su.id
+     WHERE su.id = ?`,
+    [req.siteUser.id]
+  );
+  res.json({ profile: user });
+});
+
+router.put('/profile', requireSocialAccess, async (req, res) => {
+  const b = req.body || {};
+  await ensureProfile(req.siteUser.id);
+  await pool.query(
+    'UPDATE social_profiles SET bio = ?, bio_consent = ? WHERE user_id = ?',
+    [(b.bio || '').trim() || null, b.bioConsent ? 1 : 0, req.siteUser.id]
+  );
+  res.json({ ok: true });
+});
+
+// View another member's profile (bio shown only if bio_consent = 1)
+router.get('/profile/:userId', requireSocialAccess, async (req, res) => {
+  const [[user]] = await pool.query(
+    `SELECT su.id, su.first_name, su.last_name,
+            IF(sp.bio_consent = 1, su.email, NULL) AS email,
+            IF(sp.bio_consent = 1, sp.bio, NULL) AS bio,
+            sp.bio_consent, sp.avatar_url,
+            (SELECT p.school_domain FROM license_seats ls
+             JOIN purchases p ON p.id = ls.purchase_id
+             WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
+     FROM site_users su
+     LEFT JOIN social_profiles sp ON sp.user_id = su.id
+     WHERE su.id = ?`,
+    [req.params.userId]
+  );
+  if (!user) return res.status(404).json({ error: 'Member not found' });
+  res.json({ profile: user });
+});
+
+// ── Members list ───────────────────────────────────────────────────────────
+
+router.get('/members', requireSocialAccess, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  let sql = `SELECT su.id, su.first_name, su.last_name, sp.avatar_url, sp.bio_consent,
+                    IF(sp.bio_consent = 1, su.email, NULL) AS email,
+                    (SELECT p.school_domain FROM license_seats ls
+                     JOIN purchases p ON p.id = ls.purchase_id
+                     WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
+             FROM site_users su
+             INNER JOIN social_profiles sp ON sp.user_id = su.id
+             WHERE 1=1`;
+  const params = [];
+  if (q) {
+    sql += ' AND (su.first_name LIKE ? OR su.last_name LIKE ? OR su.email LIKE ?)';
+    const like = `%${q}%`;
+    params.push(like, like, like);
+  }
+  sql += ' ORDER BY su.first_name, su.last_name LIMIT 100';
+  const [rows] = await pool.query(sql, params);
+  res.json({ members: rows });
+});
+
+// ── Admin moderation ───────────────────────────────────────────────────────
+
+// Recent posts across all groups (admin only)
+router.get('/admin/posts', requireAuth, async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = 25;
+  const offset = (page - 1) * limit;
+  const [rows] = await pool.query(
+    `SELECT p.id, p.group_id, p.author_id, p.content, p.attachments, p.created_at, p.deleted_at,
+            sg.name AS group_name,
+            su.first_name, su.last_name, su.email,
+            (SELECT COUNT(*) FROM social_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comment_count,
+            (SELECT COUNT(*) FROM social_reactions r WHERE r.post_id = p.id) AS reaction_count
+     FROM social_posts p
+     JOIN social_groups sg ON sg.id = p.group_id
+     JOIN site_users su ON su.id = p.author_id
+     ORDER BY p.created_at DESC
+     LIMIT ? OFFSET ?`,
+    [limit, offset]
+  );
+  const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM social_posts');
+  res.json({ posts: rows, total, page, limit });
+});
+
+// Group stats (admin only)
+router.get('/admin/groups', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT sg.id, sg.name, sg.type, sg.school_domain, sg.created_at,
+            COUNT(DISTINCT sgm.user_id) AS member_count,
+            COUNT(DISTINCT sp.id) AS post_count
+     FROM social_groups sg
+     LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
+     LEFT JOIN social_posts sp ON sp.group_id = sg.id AND sp.deleted_at IS NULL
+     GROUP BY sg.id
+     ORDER BY sg.type, sg.name`
+  );
+  res.json({ groups: rows });
+});
+
+module.exports = router;

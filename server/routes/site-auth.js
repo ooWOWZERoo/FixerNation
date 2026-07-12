@@ -7,6 +7,7 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer
 const { createToken, consumeToken } = require('../lib/site-tokens');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
+const { addTeacherToSocialGroups } = require('../lib/social-groups');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,10 +78,13 @@ router.post('/signup', async (req, res) => {
 
   // If a license seat (single or group) was invited to this exact email,
   // signing up claims it — this is what actually grants that teacher access.
-  await pool.query(
+  const [seatResult] = await pool.query(
     "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE invited_email = ? AND status = 'pending'",
     [result.insertId, email]
   );
+  if (seatResult.affectedRows > 0) {
+    try { await addTeacherToSocialGroups(result.insertId); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
+  }
 
   const verifyToken = await createToken(result.insertId, 'verify', 24 * 60 * 60 * 1000);
   const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;
