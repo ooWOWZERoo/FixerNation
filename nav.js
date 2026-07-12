@@ -6,34 +6,41 @@
   'use strict';
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
-  if (!document.getElementById('fn-nav-css')) {
+  // v3: explicit flex-wrap:nowrap + flex layout locks prevent page CSS from
+  //     ever letting the nav wrap to a second line at any viewport width.
+  if (!document.getElementById('fn-nav-css-v3')) {
     var s = document.createElement('style');
-    s.id = 'fn-nav-css';
+    s.id = 'fn-nav-css-v3';
     s.textContent =
-      'header{background:#fff;box-shadow:0 1px 0 rgba(22,79,74,.09);position:sticky;top:0;z-index:999;}' +
-      '.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;}' +
-      '.brand{display:flex;align-items:center;gap:12px;font-family:\'Fraunces\',serif;font-weight:700;font-size:21px;color:var(--teal-dark,#0E3733);text-decoration:none;}' +
-      '.brand-mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--coral,#F26B4D),var(--gold,#EBA657));color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;box-shadow:0 8px 18px -6px rgba(242,107,77,.6);}' +
-      '.nav-links{display:flex;align-items:center;gap:22px;font-size:14.5px;font-weight:600;color:var(--ink,#2C3B33);}' +
-      '.nav-links>a,.fn-nav-parent{opacity:.8;transition:opacity .15s;text-decoration:none;color:inherit;white-space:nowrap;}' +
-      '.nav-links>a:hover,.nav-links>a.active,.fn-nav-parent:hover,.fn-nav-parent.active{opacity:1;color:var(--coral-dark,#D9502F);}' +
-      '.nav-cta{display:flex;align-items:center;gap:18px;}' +
-      '.fn-cart-btn{display:flex;align-items:center;justify-content:center;position:relative;width:38px;height:38px;border-radius:10px;color:var(--teal-dark,#0E3733);text-decoration:none;transition:background .15s;}' +
-      '.fn-cart-btn:hover{background:rgba(22,79,74,.08);}' +
-      '.fn-cart-btn svg{display:block;}' +
-      '.fn-cart-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--coral,#F26B4D);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box;display:none;}' +
-      '.fn-cart-badge.visible{display:block;}' +
-      // Dropdown — JS-controlled, no CSS :hover needed
-      '.fn-nav-dropdown{position:relative;display:flex;align-items:center;}' +
-      '.fn-nav-parent{display:flex;align-items:center;gap:4px;cursor:pointer;}' +
-      '.fn-nav-caret{font-size:10px;opacity:.6;display:inline-block;transition:transform .15s;line-height:1;}' +
-      '.fn-nav-menu{display:none;position:absolute;top:calc(100% + 8px);left:-10px;background:#fff;border-radius:10px;box-shadow:0 8px 28px -8px rgba(22,79,74,.22);min-width:130px;padding:5px 0;z-index:2000;}' +
-      '.fn-nav-menu a{display:block;padding:9px 16px;font-size:13.5px;font-weight:600;opacity:.85;color:var(--ink,#2C3B33);text-decoration:none;white-space:nowrap;transition:background .1s,color .1s;}' +
-      '.fn-nav-menu a:hover,.fn-nav-menu a.active{background:rgba(22,79,74,.06);opacity:1;color:var(--coral-dark,#D9502F);}' +
-      '.fn-nav-dropdown.open .fn-nav-menu{display:block;}' +
-      '.fn-nav-dropdown.open .fn-nav-caret{transform:rotate(180deg);}' +
-      // Mobile
-      '@media(max-width:767px){.nav-links{display:none;}.nav{padding:14px 20px;}}';
+      'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
+      // Outer row: gap:0 neutralises any page .nav{gap:N} rule; flex-wrap:nowrap is the hard lock
+      '.nav{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 24px!important;flex-wrap:nowrap!important;gap:0!important;}' +
+      // Brand: never shrinks, text never breaks
+      '.brand{display:flex!important;align-items:center!important;gap:12px!important;font-family:\'Fraunces\',serif!important;font-weight:700!important;font-size:21px!important;color:var(--teal-dark,#0E3733)!important;text-decoration:none!important;flex-shrink:0!important;white-space:nowrap!important;}' +
+      '.brand-mark{width:42px!important;height:42px!important;border-radius:14px!important;background:linear-gradient(135deg,var(--coral,#F26B4D),var(--gold,#EBA657))!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:16px!important;font-weight:800!important;box-shadow:0 8px 18px -6px rgba(242,107,77,.6)!important;flex-shrink:0!important;}' +
+      // Nav-links: fills middle space, centres items, NEVER wraps internally, clips overflow silently
+      '.nav-links{display:flex!important;align-items:center!important;gap:18px!important;font-size:14px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;flex:1 1 0!important;min-width:0!important;justify-content:center!important;flex-wrap:nowrap!important;overflow:hidden!important;}' +
+      '.nav-links>a,.fn-nav-parent{opacity:.8!important;transition:opacity .15s!important;text-decoration:none!important;color:inherit!important;white-space:nowrap!important;flex-shrink:0!important;}' +
+      '.nav-links>a:hover,.nav-links>a.active,.fn-nav-parent:hover,.fn-nav-parent.active{opacity:1!important;color:var(--coral-dark,#D9502F)!important;}' +
+      // CTA: never shrinks; gap locked to 14px overriding any page rule
+      '.nav-cta{display:flex!important;align-items:center!important;gap:14px!important;flex-shrink:0!important;}' +
+      '.fn-cart-btn{display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;width:38px!important;height:38px!important;border-radius:10px!important;color:var(--teal-dark,#0E3733)!important;text-decoration:none!important;transition:background .15s!important;}' +
+      '.fn-cart-btn:hover{background:rgba(22,79,74,.08)!important;}' +
+      '.fn-cart-btn svg{display:block!important;}' +
+      '.fn-cart-badge{position:absolute!important;top:-4px!important;right:-4px!important;min-width:18px!important;height:18px!important;padding:0 4px!important;border-radius:9px!important;background:var(--coral,#F26B4D)!important;color:#fff!important;font-size:11px!important;font-weight:700!important;line-height:18px!important;text-align:center!important;box-sizing:border-box!important;display:none!important;}' +
+      '.fn-cart-badge.visible{display:block!important;}' +
+      // Dropdown
+      '.fn-nav-dropdown{position:relative!important;display:flex!important;align-items:center!important;flex-shrink:0!important;}' +
+      '.fn-nav-parent{display:flex!important;align-items:center!important;gap:4px!important;cursor:pointer!important;}' +
+      '.fn-nav-caret{font-size:10px!important;opacity:.6!important;display:inline-block!important;transition:transform .15s!important;line-height:1!important;}' +
+      '.fn-nav-menu{display:none!important;position:absolute!important;top:calc(100% + 8px)!important;left:-10px!important;background:#fff!important;border-radius:10px!important;box-shadow:0 8px 28px -8px rgba(22,79,74,.22)!important;min-width:130px!important;padding:5px 0!important;z-index:2000!important;}' +
+      '.fn-nav-menu a{display:block!important;padding:9px 16px!important;font-size:13.5px!important;font-weight:600!important;opacity:.85!important;color:var(--ink,#2C3B33)!important;text-decoration:none!important;white-space:nowrap!important;transition:background .1s,color .1s!important;}' +
+      '.fn-nav-menu a:hover,.fn-nav-menu a.active{background:rgba(22,79,74,.06)!important;opacity:1!important;color:var(--coral-dark,#D9502F)!important;}' +
+      '.fn-nav-dropdown.open .fn-nav-menu{display:block!important;}' +
+      '.fn-nav-dropdown.open .fn-nav-caret{transform:rotate(180deg)!important;}' +
+      // Responsive: hide Join button when nav is tight; hide all links on mobile
+      '@media(max-width:1099px){.fn-nav-join{display:none!important;}}' +
+      '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}}';
     (document.head || document.documentElement).appendChild(s);
   }
 
@@ -82,7 +89,7 @@
           '<span class="fn-cart-badge" id="fnCartBadge"></span>' +
         '</a>' +
         '<div id="fnAuthNav"><a href="#" onclick="if(typeof fnAuthOpenModal===\'function\')fnAuthOpenModal(\'login\');return false;" style="font-weight:600;font-size:14px;">Log In</a></div>' +
-        '<a href="join.html" class="btn btn-primary">Join Fixer Nation</a>' +
+        '<a href="join.html" class="btn btn-primary fn-nav-join">Join Fixer Nation</a>' +
       '</div>' +
     '</div>';
 
