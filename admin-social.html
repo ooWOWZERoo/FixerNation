@@ -4,10 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Social — FN Admin</title>
-<link rel="stylesheet" href="admin-common.css?v=15">
-<script>
-  (function(){var t=localStorage.getItem('fn-admin-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
-</script>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=14">
 <style>
   .soc-tabs{display:flex; gap:8px; margin-bottom:24px;}
   .soc-tab{padding:8px 18px; border-radius:8px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); cursor:pointer; font-size:14px;}
@@ -25,16 +23,42 @@
   .soc-post.deleted{opacity:0.5;}
   .soc-del-btn{padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid var(--a-danger,#c0392b); color:var(--a-danger,#c0392b); background:transparent; cursor:pointer;}
   .soc-del-btn:hover{background:var(--a-danger,#c0392b); color:#fff;}
-  .soc-group-card{display:flex; justify-content:space-between; align-items:center; background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; padding:14px 16px; margin-bottom:10px;}
-  .soc-group-name{font-weight:600;}
-  .soc-group-meta{font-size:13px; color:var(--a-text-soft); margin-top:2px;}
-  .soc-group-stats{font-size:13px; color:var(--a-text-soft); text-align:right;}
   .soc-pagination{display:flex; gap:8px; align-items:center; margin-top:16px; justify-content:center;}
   .soc-pagination button{padding:6px 14px; border-radius:8px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); cursor:pointer;}
   .soc-pagination button:disabled{opacity:0.4; cursor:default;}
   .soc-pagination .page-info{font-size:13px; color:var(--a-text-soft);}
   .tag-deleted{background:#c0392b22; color:#c0392b; padding:2px 7px; border-radius:4px; font-size:11px; margin-left:6px;}
   .tag-type{background:var(--a-accent-soft,#e8f5e9); color:var(--a-accent); padding:2px 7px; border-radius:4px; font-size:11px;}
+  .tag-public{background:#e3f2fd; color:#1565c0; padding:2px 7px; border-radius:4px; font-size:11px;}
+  .tag-private{background:#fce4ec; color:#880e4f; padding:2px 7px; border-radius:4px; font-size:11px;}
+
+  /* Group management */
+  .group-create-form{background:var(--a-card); border:1px solid var(--a-border); border-radius:12px; padding:20px; margin-bottom:20px;}
+  .group-create-form h3{font-size:15px; font-weight:700; margin-bottom:14px; color:var(--a-text);}
+  .form-row{margin-bottom:12px;}
+  .form-row label{display:block; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--a-text-soft); margin-bottom:5px;}
+  .form-row input,.form-row textarea{width:100%; border:1px solid var(--a-border); border-radius:8px; padding:9px 12px; background:var(--a-bg); color:var(--a-text); font-size:14px; font-family:inherit;}
+  .form-row input:focus,.form-row textarea:focus{outline:none; border-color:var(--a-accent);}
+  .form-row textarea{resize:vertical; min-height:60px;}
+  .toggle-row{display:flex; align-items:center; gap:10px;}
+  .toggle-row input[type=checkbox]{width:18px; height:18px; accent-color:var(--a-accent);}
+  .toggle-row span{font-size:14px; color:var(--a-text);}
+  .form-actions{display:flex; gap:8px; margin-top:14px;}
+
+  .soc-group-card{background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; padding:14px 16px; margin-bottom:10px;}
+  .soc-group-card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+  .soc-group-name{font-weight:600; font-size:15px; margin-bottom:3px;}
+  .soc-group-desc{font-size:13px; color:var(--a-text-soft); margin-bottom:6px; line-height:1.45;}
+  .soc-group-meta{font-size:12px; color:var(--a-text-soft);}
+  .soc-group-actions{display:flex; gap:6px; flex-shrink:0;}
+  .soc-btn-sm{padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid var(--a-border); background:transparent; color:var(--a-text); cursor:pointer;}
+  .soc-btn-sm:hover{background:var(--a-accent); color:#fff; border-color:var(--a-accent);}
+  .soc-btn-danger{border-color:var(--a-danger,#c0392b); color:var(--a-danger,#c0392b);}
+  .soc-btn-danger:hover{background:var(--a-danger,#c0392b); color:#fff; border-color:var(--a-danger,#c0392b);}
+
+  /* Inline edit */
+  .inline-edit{display:none; background:var(--a-bg); border:1px solid var(--a-border); border-radius:8px; padding:14px; margin-top:12px;}
+  .inline-edit.open{display:block;}
 </style>
 </head>
 <body>
@@ -71,8 +95,10 @@
     <div class="a-topbar">
       <h1>Social</h1>
       <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
 
+    <div class="a-content">
     <div class="soc-tabs">
       <button class="soc-tab active" onclick="showTab('posts')">Recent Posts</button>
       <button class="soc-tab" onclick="showTab('groups')">Groups</button>
@@ -91,10 +117,34 @@
 
     <!-- Groups Tab -->
     <div id="tab-groups" style="display:none;">
+
+      <!-- Create group form -->
+      <div class="group-create-form">
+        <h3>Create New Group</h3>
+        <div class="form-row">
+          <label for="newGroupName">Group Name</label>
+          <input type="text" id="newGroupName" placeholder="e.g. Elementary Teachers" maxlength="255">
+        </div>
+        <div class="form-row">
+          <label for="newGroupDesc">Description (optional)</label>
+          <textarea id="newGroupDesc" placeholder="What is this group about?"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="toggle-row">
+            <input type="checkbox" id="newGroupPublic" checked>
+            <span>Public — visible to all licensed teachers &amp; members on the Community page</span>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="a-btn" onclick="createGroup()">Create Group</button>
+        </div>
+      </div>
+
       <div id="groupsContainer"></div>
     </div>
-  </div>
-</div>
+    </div><!-- /.a-content -->
+  </div><!-- /.a-main -->
+</div><!-- /.a-shell -->
 
 <script src="admin-common.js?v=15"></script>
 <script>
@@ -109,15 +159,16 @@ function showTab(name) {
   if (name === 'groups') loadGroups();
 }
 
+// ── Posts ─────────────────────────────────────────────────────────────────
+
 async function loadPage(page) {
   const res = await fetch(`/api/social/admin/posts?page=${page}`, { credentials: 'include' });
-  if (!res.ok) { fnShowError('Failed to load posts'); return; }
+  if (!res.ok) { fnToast('Failed to load posts'); return; }
   const data = await res.json();
   totalPosts = data.total;
   currentPage = data.page;
 
-  const stats = document.getElementById('postsStats');
-  stats.innerHTML = `
+  document.getElementById('postsStats').innerHTML = `
     <div class="soc-stat"><div class="num">${data.total}</div><div class="lbl">Total Posts</div></div>
   `;
 
@@ -156,29 +207,126 @@ async function deletePost(id, btn) {
   if (!confirm('Permanently hide this post? This cannot be undone.')) return;
   const res = await fetch(`/api/social/posts/${id}`, { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   if (res.ok) loadPage(currentPage);
-  else fnShowError('Delete failed');
+  else fnToast('Delete failed');
 }
+
+// ── Groups ────────────────────────────────────────────────────────────────
 
 async function loadGroups() {
   const res = await fetch('/api/social/admin/groups', { credentials: 'include' });
-  if (!res.ok) { fnShowError('Failed to load groups'); return; }
+  if (!res.ok) { fnToast('Failed to load groups'); return; }
   const data = await res.json();
+  renderGroups(data.groups);
+}
+
+function renderGroups(groups) {
   const container = document.getElementById('groupsContainer');
-  if (!data.groups.length) {
-    container.innerHTML = '<p style="color:var(--a-text-soft); text-align:center; padding:40px 0;">No groups yet. Groups are created automatically when teachers or members join.</p>';
+  if (!groups.length) {
+    container.innerHTML = '<p style="color:var(--a-text-soft); text-align:center; padding:40px 0;">No groups yet. Create one above.</p>';
     return;
   }
-  container.innerHTML = data.groups.map(g => `
-    <div class="soc-group-card">
-      <div>
-        <div class="soc-group-name">${esc(g.name)} <span class="tag-type">${g.type.replace('_', ' ')}</span></div>
-        <div class="soc-group-meta">${g.school_domain ? 'Domain: ' + esc(g.school_domain) + ' &middot; ' : ''}Created ${fmtDate(g.created_at)}</div>
-      </div>
-      <div class="soc-group-stats">
-        <div>${g.member_count} members</div>
-        <div>${g.post_count} posts</div>
-      </div>
-    </div>`).join('');
+  container.innerHTML = groups.map(g => {
+    const pubTag = g.is_public
+      ? '<span class="tag-public">Public</span>'
+      : '<span class="tag-private">Private</span>';
+    return `
+      <div class="soc-group-card" id="group-card-${g.id}">
+        <div class="soc-group-card-top">
+          <div style="flex:1;min-width:0;">
+            <div class="soc-group-name">${esc(g.name)} ${pubTag}</div>
+            ${g.description ? `<div class="soc-group-desc">${esc(g.description)}</div>` : ''}
+            <div class="soc-group-meta">${g.member_count} member${g.member_count!==1?'s':''} &middot; ${g.post_count} post${g.post_count!==1?'s':''} &middot; Created ${fmtDate(g.created_at)}</div>
+          </div>
+          <div class="soc-group-actions">
+            <button class="soc-btn-sm" onclick="toggleEdit(${g.id})">Edit</button>
+            <button class="soc-btn-sm" onclick="togglePublic(${g.id}, ${g.is_public}, this)">${g.is_public ? 'Make Private' : 'Make Public'}</button>
+            <button class="soc-btn-sm soc-btn-danger" onclick="deleteGroup(${g.id})">Delete</button>
+          </div>
+        </div>
+        <div class="inline-edit" id="edit-${g.id}">
+          <div class="form-row">
+            <label>Name</label>
+            <input type="text" id="edit-name-${g.id}" value="${esc(g.name)}" maxlength="255">
+          </div>
+          <div class="form-row">
+            <label>Description</label>
+            <textarea id="edit-desc-${g.id}">${esc(g.description||'')}</textarea>
+          </div>
+          <div class="form-row">
+            <div class="toggle-row">
+              <input type="checkbox" id="edit-pub-${g.id}" ${g.is_public?'checked':''}>
+              <span>Public</span>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="a-btn" onclick="saveGroup(${g.id})">Save</button>
+            <button class="a-btn a-btn-secondary" onclick="toggleEdit(${g.id})">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleEdit(id) {
+  const el = document.getElementById(`edit-${id}`);
+  el.classList.toggle('open');
+}
+
+async function createGroup() {
+  const name = document.getElementById('newGroupName').value.trim();
+  if (!name) { fnToast('Group name is required'); return; }
+  const description = document.getElementById('newGroupDesc').value.trim();
+  const isPublic = document.getElementById('newGroupPublic').checked;
+
+  const res = await fetch('/api/social/groups', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, isPublic })
+  });
+  if (!res.ok) { fnToast('Failed to create group'); return; }
+  document.getElementById('newGroupName').value = '';
+  document.getElementById('newGroupDesc').value = '';
+  document.getElementById('newGroupPublic').checked = true;
+  fnToast('Group created');
+  loadGroups();
+}
+
+async function saveGroup(id) {
+  const name = document.getElementById(`edit-name-${id}`).value.trim();
+  if (!name) { fnToast('Name is required'); return; }
+  const description = document.getElementById(`edit-desc-${id}`).value.trim();
+  const isPublic = document.getElementById(`edit-pub-${id}`).checked;
+
+  const res = await fetch(`/api/social/groups/${id}`, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, isPublic })
+  });
+  if (!res.ok) { fnToast('Failed to save group'); return; }
+  fnToast('Group saved');
+  loadGroups();
+}
+
+async function togglePublic(id, currentlyPublic, btn) {
+  const nameEl = document.getElementById(`edit-name-${id}`);
+  const descEl = document.getElementById(`edit-desc-${id}`);
+  const name = nameEl ? nameEl.value : btn.closest('.soc-group-card').querySelector('.soc-group-name').childNodes[0].textContent.trim();
+  const description = descEl ? descEl.value : '';
+  const res = await fetch(`/api/social/groups/${id}`, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, isPublic: !currentlyPublic })
+  });
+  if (!res.ok) { fnToast('Failed to update group'); return; }
+  loadGroups();
+}
+
+async function deleteGroup(id) {
+  if (!confirm('Delete this group? All posts and members will be removed from this group.')) return;
+  const res = await fetch(`/api/social/groups/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) { fnToast('Failed to delete group'); return; }
+  fnToast('Group deleted');
+  loadGroups();
 }
 
 function esc(s) {

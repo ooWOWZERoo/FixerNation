@@ -661,9 +661,10 @@ CREATE TABLE IF NOT EXISTS social_profiles (
 CREATE TABLE IF NOT EXISTS social_groups (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  type ENUM('all_teachers','school','membership') NOT NULL,
+  type ENUM('all_teachers','school','membership','custom') NOT NULL DEFAULT 'custom',
   school_domain VARCHAR(255) NULL,
   description TEXT NULL,
+  is_public TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_type (type),
   INDEX idx_school_domain (school_domain)

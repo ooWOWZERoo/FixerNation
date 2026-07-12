@@ -33,21 +33,101 @@ async function requireSocialAccess(req, res, next) {
   next();
 }
 
-// ── Groups ─────────────────────────────────────────────────────────────────
+// ── Groups — admin CRUD ────────────────────────────────────────────────────
 
-// List groups the current user belongs to
+// Admin: create a group
+router.post('/groups', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const name = (b.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Group name is required' });
+  const description = (b.description || '').trim() || null;
+  const isPublic = b.isPublic !== false ? 1 : 0;
+
+  const [result] = await pool.query(
+    "INSERT INTO social_groups (name, type, description, is_public) VALUES (?, 'custom', ?, ?)",
+    [name, description, isPublic]
+  );
+  const [[group]] = await pool.query(
+    'SELECT sg.*, COUNT(DISTINCT sgm.user_id) AS member_count, COUNT(DISTINCT sp.id) AS post_count FROM social_groups sg LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id LEFT JOIN social_posts sp ON sp.group_id = sg.id AND sp.deleted_at IS NULL WHERE sg.id = ? GROUP BY sg.id',
+    [result.insertId]
+  );
+  res.status(201).json({ group });
+});
+
+// Admin: edit a group
+router.put('/groups/:id', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const name = (b.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Group name is required' });
+  await pool.query(
+    'UPDATE social_groups SET name = ?, description = ?, is_public = ? WHERE id = ?',
+    [name, (b.description || '').trim() || null, b.isPublic !== false ? 1 : 0, req.params.id]
+  );
+  res.json({ ok: true });
+});
+
+// Admin: delete a group
+router.delete('/groups/:id', requireAuth, async (req, res) => {
+  const [result] = await pool.query('DELETE FROM social_groups WHERE id = ?', [req.params.id]);
+  if (!result.affectedRows) return res.status(404).json({ error: 'Group not found' });
+  res.json({ ok: true });
+});
+
+// ── Groups — user browsing & joining ──────────────────────────────────────
+
+// All public groups with the current user's membership status
+// IMPORTANT: this route must be declared before /:groupId routes
+router.get('/groups/browse', requireSocialAccess, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT sg.id, sg.name, sg.description, sg.created_at,
+            COUNT(DISTINCT sgm.user_id) AS member_count,
+            MAX(IF(sgm.user_id = ?, 1, 0)) AS is_member
+     FROM social_groups sg
+     LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
+     WHERE sg.is_public = 1
+     GROUP BY sg.id
+     ORDER BY sg.name`,
+    [req.siteUser.id]
+  );
+  res.json({ groups: rows });
+});
+
+// User: list groups the current user has joined
 router.get('/groups', requireSocialAccess, async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT sg.id, sg.name, sg.type, sg.school_domain, sg.description,
+    `SELECT sg.id, sg.name, sg.description,
             COUNT(DISTINCT sgm2.user_id) AS member_count
      FROM social_groups sg
      JOIN social_group_members sgm ON sgm.group_id = sg.id AND sgm.user_id = ?
      LEFT JOIN social_group_members sgm2 ON sgm2.group_id = sg.id
+     WHERE sg.is_public = 1
      GROUP BY sg.id
-     ORDER BY sg.type, sg.name`,
+     ORDER BY sg.name`,
     [req.siteUser.id]
   );
   res.json({ groups: rows });
+});
+
+// User: join a public group
+router.post('/groups/:groupId/join', requireSocialAccess, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const [[group]] = await pool.query('SELECT id FROM social_groups WHERE id = ? AND is_public = 1', [groupId]);
+  if (!group) return res.status(404).json({ error: 'Group not found or not public' });
+  await ensureProfile(req.siteUser.id);
+  await pool.query(
+    'INSERT IGNORE INTO social_group_members (group_id, user_id) VALUES (?, ?)',
+    [groupId, req.siteUser.id]
+  );
+  res.json({ ok: true });
+});
+
+// User: leave a group
+router.delete('/groups/:groupId/leave', requireSocialAccess, async (req, res) => {
+  await pool.query(
+    'DELETE FROM social_group_members WHERE group_id = ? AND user_id = ?',
+    [req.params.groupId, req.siteUser.id]
+  );
+  res.json({ ok: true });
 });
 
 // ── Posts ──────────────────────────────────────────────────────────────────
@@ -56,7 +136,6 @@ router.get('/groups', requireSocialAccess, async (req, res) => {
 router.get('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
   const groupId = Number(req.params.groupId);
 
-  // Verify membership
   const [mem] = await pool.query(
     'SELECT 1 FROM social_group_members WHERE group_id = ? AND user_id = ?',
     [groupId, req.siteUser.id]
@@ -203,7 +282,6 @@ router.delete('/comments/:commentId', requireAuth, async (req, res) => {
 
 // ── Direct Messages ────────────────────────────────────────────────────────
 
-// List all DM conversations (one row per unique partner, latest message)
 router.get('/messages/conversations', requireSocialAccess, async (req, res) => {
   const userId = req.siteUser.id;
   const [rows] = await pool.query(
@@ -230,7 +308,6 @@ router.get('/messages/conversations', requireSocialAccess, async (req, res) => {
   res.json({ conversations: rows });
 });
 
-// Get DM thread with a specific user
 router.get('/messages', requireSocialAccess, async (req, res) => {
   const userId = req.siteUser.id;
   const partnerId = Number(req.query.with);
@@ -250,7 +327,6 @@ router.get('/messages', requireSocialAccess, async (req, res) => {
 
   const [rows] = await pool.query(sql, params);
 
-  // Mark unread messages from partner as read
   await pool.query(
     'UPDATE social_messages SET read_at = NOW() WHERE sender_id = ? AND recipient_id = ? AND read_at IS NULL AND deleted_at IS NULL',
     [partnerId, userId]
@@ -259,14 +335,12 @@ router.get('/messages', requireSocialAccess, async (req, res) => {
   res.json({ messages: rows });
 });
 
-// Send a DM
 router.post('/messages', requireSocialAccess, async (req, res) => {
   const content = (req.body && req.body.content || '').trim();
   const recipientId = Number(req.body && req.body.recipientId);
   if (!content) return res.status(400).json({ error: 'Content is required' });
   if (!recipientId || recipientId === req.siteUser.id) return res.status(400).json({ error: 'Invalid recipient' });
 
-  // Verify recipient has social access (is a member or licensed teacher)
   const [recipRows] = await pool.query('SELECT id, email FROM site_users WHERE id = ?', [recipientId]);
   if (!recipRows[0]) return res.status(404).json({ error: 'Recipient not found' });
   const [rLicensed, rMember] = await Promise.all([
@@ -290,7 +364,6 @@ router.post('/messages', requireSocialAccess, async (req, res) => {
 
 // ── Profiles ───────────────────────────────────────────────────────────────
 
-// Own profile (editable)
 router.get('/profile', requireSocialAccess, async (req, res) => {
   await ensureProfile(req.siteUser.id);
   const [[user]] = await pool.query(
@@ -317,7 +390,6 @@ router.put('/profile', requireSocialAccess, async (req, res) => {
   res.json({ ok: true });
 });
 
-// View another member's profile (bio shown only if bio_consent = 1)
 router.get('/profile/:userId', requireSocialAccess, async (req, res) => {
   const [[user]] = await pool.query(
     `SELECT su.id, su.first_name, su.last_name,
@@ -361,7 +433,6 @@ router.get('/members', requireSocialAccess, async (req, res) => {
 
 // ── Admin moderation ───────────────────────────────────────────────────────
 
-// Recent posts across all groups (admin only)
 router.get('/admin/posts', requireAuth, async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = 25;
@@ -383,17 +454,16 @@ router.get('/admin/posts', requireAuth, async (req, res) => {
   res.json({ posts: rows, total, page, limit });
 });
 
-// Group stats (admin only)
 router.get('/admin/groups', requireAuth, async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT sg.id, sg.name, sg.type, sg.school_domain, sg.created_at,
+    `SELECT sg.id, sg.name, sg.type, sg.description, sg.is_public, sg.created_at,
             COUNT(DISTINCT sgm.user_id) AS member_count,
             COUNT(DISTINCT sp.id) AS post_count
      FROM social_groups sg
      LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
      LEFT JOIN social_posts sp ON sp.group_id = sg.id AND sp.deleted_at IS NULL
      GROUP BY sg.id
-     ORDER BY sg.type, sg.name`
+     ORDER BY sg.name`
   );
   res.json({ groups: rows });
 });

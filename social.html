@@ -101,6 +101,16 @@
   .gate-panel h2{margin-bottom:12px;font-size:26px;}
   .gate-panel p{color:var(--ink-soft);font-size:15px;margin-bottom:24px;}
 
+  /* Browse groups */
+  .browse-group-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid rgba(22,79,74,0.06);}
+  .browse-group-item:last-child{border-bottom:none;}
+  .browse-group-info{flex:1;min-width:0;}
+  .browse-group-label{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .browse-group-count{font-size:11px;color:var(--ink-soft);}
+  .join-btn{flex-shrink:0;padding:4px 10px;border-radius:8px;border:none;background:var(--teal);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s;}
+  .join-btn:hover{background:var(--teal-dark);}
+  .join-btn.joined{background:var(--cream-soft);color:var(--ink-soft);cursor:default;}
+
   /* Search */
   .search-input{width:100%;border:2px solid rgba(22,79,74,0.12);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:13px;background:var(--cream-soft);margin-bottom:10px;}
   .search-input:focus{outline:none;border-color:var(--teal);}
@@ -156,6 +166,10 @@
     <div class="sidebar-card">
       <div class="sidebar-title">My Groups</div>
       <div id="groupList"><div class="loading-msg" style="padding:12px 0;font-size:13px;">Loading…</div></div>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-title">Browse Groups</div>
+      <div id="browseGroupList"><div style="font-size:13px;color:var(--ink-soft);padding:4px 0;">Loading…</div></div>
     </div>
     <div class="sidebar-card">
       <div class="sidebar-title">Direct Messages</div>
@@ -250,7 +264,7 @@ async function init(){
   me = data.profile;
   document.getElementById('myAvatar').textContent = initials(me.first_name, me.last_name).toUpperCase();
   document.getElementById('communityLayout').style.display='';
-  await Promise.all([loadGroups(), loadDmConversations(), loadMembers()]);
+  await Promise.all([loadGroups(), loadBrowseGroups(), loadDmConversations(), loadMembers()]);
 
   // Check URL params for DM mode
   const params = new URLSearchParams(location.search);
@@ -266,6 +280,58 @@ async function loadGroups(){
   groups = data.groups;
   renderGroupList();
   if(groups.length && !activeGroupId && !dmPartnerId) selectGroup(groups[0].id);
+}
+
+async function loadBrowseGroups(){
+  const res = await fetch(`${API}/groups/browse`,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  renderBrowseGroups(data.groups);
+}
+
+function renderBrowseGroups(allGroups){
+  const el = document.getElementById('browseGroupList');
+  if(!allGroups.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--ink-soft);">No public groups yet.</div>';
+    return;
+  }
+  el.innerHTML = allGroups.map(g => {
+    const isMember = Number(g.is_member) === 1;
+    return `<div class="browse-group-item">
+      <div class="browse-group-info">
+        <div class="browse-group-label" title="${esc(g.name)}">${esc(g.name)}</div>
+        <div class="browse-group-count">${g.member_count} member${Number(g.member_count)!==1?'s':''}</div>
+      </div>
+      ${isMember
+        ? `<button class="join-btn joined" disabled>Joined</button>`
+        : `<button class="join-btn" onclick="joinGroup(${g.id}, this)">Add Group</button>`}
+    </div>`;
+  }).join('');
+}
+
+async function joinGroup(groupId, btn){
+  btn.disabled = true;
+  btn.textContent = '…';
+  const res = await fetch(`${API}/groups/${groupId}/join`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'{}'});
+  if(res.ok){
+    // Refresh both sidebars
+    await Promise.all([loadGroups(), loadBrowseGroups()]);
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Add Group';
+    alert('Could not join group. Please try again.');
+  }
+}
+
+async function leaveGroup(groupId){
+  if(!confirm('Leave this group?')) return;
+  await fetch(`${API}/groups/${groupId}/leave`,{method:'DELETE',credentials:'include'});
+  await Promise.all([loadGroups(), loadBrowseGroups()]);
+  if(activeGroupId === groupId){
+    activeGroupId = null;
+    document.getElementById('composer').style.display='none';
+    document.getElementById('feedContainer').innerHTML='<div class="loading-msg">Select a group to view posts.</div>';
+  }
 }
 
 function renderGroupList(){

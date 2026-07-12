@@ -312,6 +312,24 @@ async function main() {
     }
   }
 
+  // --- Add is_public column to social_groups if missing ---
+  try {
+    await connection.query("ALTER TABLE social_groups ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 1");
+    console.log('Added is_public column to social_groups');
+  } catch (err) {
+    if (err.code === 'ER_DUP_FIELDNAME' || err.message.includes('Duplicate column')) {
+      console.log('is_public column already exists — skipping');
+    } else { throw err; }
+  }
+
+  // --- Extend social_groups.type ENUM to include 'custom' ---
+  try {
+    await connection.query("ALTER TABLE social_groups MODIFY COLUMN type ENUM('all_teachers','school','membership','custom') NOT NULL DEFAULT 'custom'");
+    console.log('Extended social_groups.type ENUM with custom');
+  } catch (err) {
+    console.log('social_groups.type ENUM already updated or error:', err.message);
+  }
+
   // --- Create curriculum_documents table if missing + migrate legacy lesson_document column ---
   try {
     await connection.query(`
