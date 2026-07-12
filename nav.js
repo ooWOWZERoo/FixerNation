@@ -1,7 +1,6 @@
 /**
  * nav.js — Global site navigation for Fixer Nation public pages.
- * Include via <script src="nav.js" defer></script> in <head>.
- * Replaces <header></header> placeholder with the full nav.
+ * Include via <script src="nav.js"></script> just before site-auth.js.
  */
 (function () {
   'use strict';
@@ -19,15 +18,15 @@
       '.nav-links>a,.fn-nav-parent{opacity:.8;transition:opacity .15s;text-decoration:none;color:inherit;}' +
       '.nav-links>a:hover,.nav-links>a.active,.fn-nav-parent:hover,.fn-nav-parent.active{opacity:1;color:var(--coral-dark,#D9502F);}' +
       '.nav-cta{display:flex;align-items:center;gap:18px;}' +
-      // Dropdown
-      '.fn-nav-dropdown{position:relative;display:flex;align-items:center;padding-bottom:12px;margin-bottom:-12px;}' +
+      // Dropdown — JS-controlled, no CSS :hover needed
+      '.fn-nav-dropdown{position:relative;display:flex;align-items:center;}' +
       '.fn-nav-parent{display:flex;align-items:center;gap:4px;cursor:pointer;}' +
       '.fn-nav-caret{font-size:10px;opacity:.6;display:inline-block;transition:transform .15s;line-height:1;}' +
-      '.fn-nav-menu{display:none;position:absolute;top:100%;left:-10px;background:#fff;border-radius:10px;box-shadow:0 8px 28px -8px rgba(22,79,74,.22);min-width:130px;padding:5px 0;z-index:2000;}' +
+      '.fn-nav-menu{display:none;position:absolute;top:calc(100% + 8px);left:-10px;background:#fff;border-radius:10px;box-shadow:0 8px 28px -8px rgba(22,79,74,.22);min-width:130px;padding:5px 0;z-index:2000;}' +
       '.fn-nav-menu a{display:block;padding:9px 16px;font-size:13.5px;font-weight:600;opacity:.85;color:var(--ink,#2C3B33);text-decoration:none;white-space:nowrap;transition:background .1s,color .1s;}' +
       '.fn-nav-menu a:hover,.fn-nav-menu a.active{background:rgba(22,79,74,.06);opacity:1;color:var(--coral-dark,#D9502F);}' +
-      '.fn-nav-dropdown:hover .fn-nav-menu,.fn-nav-dropdown.open .fn-nav-menu{display:block;}' +
-      '.fn-nav-dropdown:hover .fn-nav-caret,.fn-nav-dropdown.open .fn-nav-caret{transform:rotate(180deg);}' +
+      '.fn-nav-dropdown.open .fn-nav-menu{display:block;}' +
+      '.fn-nav-dropdown.open .fn-nav-caret{transform:rotate(180deg);}' +
       // Mobile
       '@media(max-width:767px){.nav-links{display:none;}.nav{padding:14px 20px;}}';
     (document.head || document.documentElement).appendChild(s);
@@ -35,14 +34,14 @@
 
   // ── Active page detection ────────────────────────────────────────────────────
   var page = (location.pathname.split('/').pop() || '').replace(/\.html$/, '') || 'index';
-  var homeActive  = page === 'index' || page === 'about' || page === '';
-  var aboutActive = page === 'about';
-  var booksActive = page === 'books' || /^book-/.test(page);
-  var blogActive  = page === 'blog';
-  var netActive   = page === 'fnnetwork';
+  var homeActive    = page === 'index' || page === 'about' || page === '';
+  var aboutActive   = page === 'about';
+  var booksActive   = page === 'books' || /^book-/.test(page);
+  var blogActive    = page === 'blog';
+  var netActive     = page === 'fnnetwork';
   var schoolsActive = page === 'education-portal' || page === 'education-schools' || page === 'programs';
-  var commActive  = page === 'social';
-  var fixerActive = page === 'askthefixer';
+  var commActive    = page === 'social';
+  var fixerActive   = page === 'askthefixer';
 
   function lnk(href, label, isActive) {
     return '<a href="' + href + '"' + (isActive ? ' class="active"' : '') + '>' + label + '</a>';
@@ -61,12 +60,12 @@
             lnk('about.html', 'About', aboutActive) +
           '</div>' +
         '</div>' +
-        lnk('books.html',          'Books',         booksActive) +
-        lnk('blog.html',           'FN Blogs',      blogActive)  +
-        lnk('fnnetwork.html',      'FN Network',    netActive)   +
-        lnk('education-portal.html','Schools',      schoolsActive) +
-        lnk('social.html',         'Community',     commActive)  +
-        lnk('askthefixer.html',    'Ask The Fixer', fixerActive) +
+        lnk('books.html',           'Books',         booksActive)   +
+        lnk('blog.html',            'FN Blogs',      blogActive)    +
+        lnk('fnnetwork.html',       'FN Network',    netActive)     +
+        lnk('education-portal.html','Schools',       schoolsActive) +
+        lnk('social.html',          'Community',     commActive)    +
+        lnk('askthefixer.html',     'Ask The Fixer', fixerActive)   +
       '</nav>' +
       '<div class="nav-cta">' +
         '<div id="fnCartNav"></div>' +
@@ -83,6 +82,39 @@
       document.body.insertBefore(h, document.body.firstChild);
     }
     h.innerHTML = inner;
+
+    // ── Dropdown: JS hover with hide-delay so mouse can travel to menu ─────────
+    var dropdown = h.querySelector('.fn-nav-dropdown');
+    var menu     = h.querySelector('.fn-nav-menu');
+    var caret    = h.querySelector('.fn-nav-caret');
+    var hideTimer;
+
+    function openMenu() {
+      clearTimeout(hideTimer);
+      dropdown.classList.add('open');
+    }
+
+    function closeMenu() {
+      hideTimer = setTimeout(function () {
+        dropdown.classList.remove('open');
+      }, 180);
+    }
+
+    dropdown.addEventListener('mouseenter', openMenu);
+    dropdown.addEventListener('mouseleave', closeMenu);
+    menu.addEventListener('mouseenter', openMenu);   // cancel close when entering menu
+    menu.addEventListener('mouseleave', closeMenu);
+
+    // Click-toggle (mobile fallback / accessibility)
+    dropdown.querySelector('.fn-nav-parent').addEventListener('click', function (e) {
+      e.preventDefault();
+      dropdown.classList.toggle('open');
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function (e) {
+      if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+    });
   }
 
   if (document.readyState === 'loading') {
