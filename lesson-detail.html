@@ -282,39 +282,44 @@ function closeQuizModal() {
 
 function renderDetailResources(c) {
   const row = document.getElementById('detailResources');
-
-  if (c.access && !c.access.licensed) {
-    const loginPrompt = c.access.loggedIn
-      ? ''
-      : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
-    row.innerHTML = `<div class="locked-panel">🔒 The lesson document and quiz for this plan require an active teacher license.
-      <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`;
-    return;
-  }
-
+  const licensed = c.access && c.access.licensed;
+  const loggedIn = c.access && c.access.loggedIn;
   const documents = c.documents || [];
   const resources = c.resources || [];
 
-  if (!documents.length && !resources.length) {
-    row.innerHTML = '<span style="font-size:13px; color:var(--ink-soft);">No resources have been marked as included for this lesson yet.</span>';
-    return;
+  const parts = [];
+
+  // Lesson plan documents — licensed users only
+  if (licensed && documents.length) {
+    documents.forEach(d => {
+      parts.push(`<a href="${d.filePath}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">📄 ${d.fileName || 'Lesson Plan'}</a>`);
+    });
   }
 
-  const docHtml = documents.map(d =>
-    `<a href="${d.filePath}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">📄 ${d.fileName || 'Lesson Plan'}</a>`
-  ).join('');
+  // Resource / handout buttons — visible to all
+  resources.forEach(r => {
+    parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
+  });
 
-  const resHtml = resources.map(r =>
-    `<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`
-  ).join('');
+  // Lock notice for documents + quiz — shown when not licensed
+  if (!licensed) {
+    const loginPrompt = loggedIn
+      ? ''
+      : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
+    parts.push(`<div class="locked-panel" style="margin-top:${resources.length ? '12px' : '0'}">🔒 Lesson plans and the quiz require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`);
+  }
 
-  row.innerHTML = docHtml + resHtml;
+  if (!parts.length) {
+    row.innerHTML = '<span style="font-size:13px; color:var(--ink-soft);">No resources have been added for this lesson yet.</span>';
+  } else {
+    row.innerHTML = parts.join('');
+  }
 }
 
 function renderDetailVideo(c) {
   const slot = document.getElementById('detailVideo');
-  const first = (c.videos && c.videos[0]) || null;
-  slot.innerHTML = first && first.url ? fnVideoEmbedHtml(first.url) : '';
+  const videos = (c.videos || []).filter(v => v.url);
+  slot.innerHTML = videos.map(v => `<div style="margin-bottom:16px;">${fnVideoEmbedHtml(v.url)}</div>`).join('');
 }
 
 async function renderLessonDetail() {

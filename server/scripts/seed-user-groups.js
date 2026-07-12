@@ -233,6 +233,35 @@ async function main() {
     console.log('school_admin_notifications table already exists or error:', err.message);
   }
 
+  // --- Create curriculum_documents table if missing + migrate legacy lesson_document column ---
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS curriculum_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        curriculum_id INT NOT NULL,
+        file_path VARCHAR(255) NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        FOREIGN KEY (curriculum_id) REFERENCES curricula(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('curriculum_documents table ready');
+    // Migrate any data still in the legacy lesson_document column
+    const [legacy] = await connection.query(
+      "SELECT id, lesson_document, lesson_document_name FROM curricula WHERE lesson_document IS NOT NULL AND lesson_document != '' AND id NOT IN (SELECT DISTINCT curriculum_id FROM curriculum_documents)"
+    ).catch(() => [[]]);
+    if (legacy.length) {
+      await connection.query(
+        'INSERT INTO curriculum_documents (curriculum_id, file_path, file_name, sort_order) VALUES ' +
+        legacy.map(() => '(?, ?, ?, 0)').join(', '),
+        legacy.flatMap(r => [r.id, r.lesson_document, r.lesson_document_name || 'Lesson Plan'])
+      );
+      console.log(`Migrated ${legacy.length} legacy lesson document(s) into curriculum_documents`);
+    }
+  } catch (err) {
+    console.log('curriculum_documents migration error:', err.message);
+  }
+
   // --- Deactivate "Registration 2D Education Program" membership plan ---
   const [planResult] = await connection.query(
     "UPDATE membership_plans SET active = 0 WHERE name = 'Registration 2D Education Program' AND active = 1"
