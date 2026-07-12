@@ -68,13 +68,33 @@ function cartTotal() {
   return cartGet().reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
 }
 
-// Renders a small item-count badge into #fnCartNav if that element exists on
-// the page — matches the optimistic-render pattern used by site-auth.js.
+// Inject cart icon CSS once
+(function () {
+  if (document.getElementById('fn-cart-css')) return;
+  const s = document.createElement('style');
+  s.id = 'fn-cart-css';
+  s.textContent =
+    '.fn-cart-btn{display:flex;align-items:center;justify-content:center;position:relative;width:38px;height:38px;border-radius:10px;color:var(--teal-dark,#0E3733);text-decoration:none;transition:background .15s;}' +
+    '.fn-cart-btn:hover{background:rgba(22,79,74,.08);}' +
+    '.fn-cart-btn svg{display:block;}' +
+    '.fn-cart-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--coral,#F26B4D);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box;display:none;}' +
+    '.fn-cart-badge.visible{display:block;}';
+  (document.head || document.documentElement).appendChild(s);
+})();
+
 function cartRenderBadge() {
   const nav = document.getElementById('fnCartNav');
   if (!nav) return;
   const count = cartCount();
-  nav.innerHTML = `<a href="cart.html" style="font-weight:600; font-size:14px; position:relative;">🛒 Cart${count ? ` (${count})` : ''}</a>`;
+  nav.innerHTML =
+    '<a href="cart.html" class="fn-cart-btn" title="Cart">' +
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>' +
+        '<line x1="3" y1="6" x2="21" y2="6"/>' +
+        '<path d="M16 10a4 4 0 0 1-8 0"/>' +
+      '</svg>' +
+      '<span class="fn-cart-badge' + (count ? ' visible' : '') + '">' + (count || '') + '</span>' +
+    '</a>';
 }
 
 cartRenderBadge();
