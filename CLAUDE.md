@@ -1,20 +1,126 @@
-# Working in this repo
+# CLAUDE.md
 
-Fixer Nation Education (fixernationeducation.com) — Node/Express + MariaDB, deployed on Hosting.com/cPanel. See `PROJECT.md` for architecture/feature overview and `CHANGELOG.md` for release history.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Maintain the changelog
+Fixer Nation Education (fixernationeducation.com) — Node/Express + MariaDB backend, plain HTML/CSS/vanilla JS frontend, deployed on Hosting.com/cPanel. See `PROJECT.md` for architecture/feature overview and `CHANGELOG.md` for release history.
 
-**Every time a feature or fix is completed and deployed, add a new release entry to the top of `CHANGELOG.md`** (right below the `Unreleased / Known pending work` section). Keep entries short and business-facing — what changed and why it matters to whoever runs the site, not a line-by-line diff of the code. Match the existing format: a dated `## Release N — YYYY-MM-DD — Title` heading with a short bullet list. Increment `N` from the previous release. If a feature is coded and pushed but intentionally not deployed yet (e.g. blocked on a third-party credential), note it under `Unreleased / Known pending work` instead of as a numbered release.
+## Commands
 
-Also update `PROJECT.md` if the change affects architecture, the page list, or known limitations — it should always describe the *current* state, not history (history belongs in `CHANGELOG.md`).
+```bash
+# Development (from server/)
+npm start          # node app.js
+npm run dev        # node --watch app.js (auto-restart on file change)
+
+# Database (from server/)
+npm run db:migrate # node scripts/migrate.js  — CREATE TABLE IF NOT EXISTS for all tables
+npm run db:seed    # node scripts/seed.js     — seed reference data (run after migrate)
+```
+
+On **cPanel Terminal** (production), `node`/`npm` are not on PATH. Every Node command must activate the nodevenv first — see "Deploy workflow" for the exact prefix.
+
+No local dev environment exists — no local MySQL/MariaDB, and the sandbox blocks outbound DB connections. All verification is done against production via `curl` with a cookie jar. Use `@example.com` emails and obviously-fake school domains for test data and clean them up after.
+
+## Architecture
+
+### Server (`server/`)
+
+`app.js` loads all route modules and mounts them at `/api/*`. The two body-parser rules are load-order sensitive: `express.raw()` for `/api/checkout/webhook` must be registered before `express.json()` (Stripe signature check needs the raw body).
+
+`server/lib/` holds shared utilities — always extract there when two route files would otherwise need to require each other:
+- `mailer.js` — all transactional email (nodemailer SMTP)
+- `access.js` — `getSiteUser(req)`, `hasActiveLicense(userId)` for curriculum/blog gating
+- `settings.js` — `getSetting(key)` key-value store (contact routing, invoice branding)
+- `automations.js` — `fireAutomation(eventKey, contact, mergeFields)` — single call site for all 6 auto-email events
+- `session.js` — JWT cookie constants
+- `site-tokens.js` — email verification and password-reset token generation
+- `campaign-tracking.js` — open-pixel and link-click helpers; `classifySendError()` for bounce/undelivered classification
+
+`server/db/pool.js` exports a `mysql2/promise` pool (connectionLimit 10, `dateStrings: true`). Queries follow this pattern everywhere:
+```js
+const [rows] = await pool.query('SELECT ...', [params]);
+const [[row]] = await pool.query('SELECT ... LIMIT 1', [id]);
+```
+
+### Two separate auth systems — never mix them
+
+| | Admin auth | Site-user auth |
+|---|---|---|
+| Cookie name | `fn_session` | `fn_user_session` |
+| Middleware | `requireAuth` (`middleware/auth.js`) | `requireSiteAuth` (`middleware/siteAuth.js`) |
+| Identity | Single admin account | Teachers / consumers who sign up on the site |
+| Used in | All `admin-*.html` pages, all `requireAuth` routes | Public-facing `/api/site-auth/*`, membership, curriculum access |
+
+`getAuthUser(req)` returns the admin user if the `fn_session` cookie is valid. `getSiteUser(req)` returns the site user from `fn_user_session`. A licensed teacher accessing curriculum uses `getSiteUser` + `hasActiveLicense` — never `getAuthUser`.
+
+### Database schema changes
+
+`server/db/schema.sql` is the source of truth for fresh installs (all `CREATE TABLE IF NOT EXISTS`). `scripts/migrate.js` runs it.
+
+For changes to **existing** tables: write a one-off idempotent script following the `server/scripts/alter-*.js` pattern — check `information_schema.COLUMNS` or `TABLES` before altering, catch and skip `ER_DUP_FIELDNAME`. The growing `seed-user-groups.js` script now consolidates many of these migrations and is safe to re-run. Always update `schema.sql` too so it stays current for fresh installs.
+
+### Cron scripts (`server/scripts/`)
+
+`send-membership-reminders.js` and `send-morning-boost-email.js` run via cPanel Cron Jobs every 5 minutes. Each script is fully self-contained: it loads `.env`, creates its own DB pool, does work, and closes the pool. Scripts check conditions (time window, already-sent guards) so running every 5 minutes is idempotent.
+
+### Frontend
+
+No build step. All public pages are flat HTML files with inline `<style>` and `<script>` blocks. Shared JS files loaded via `<script src="...">`:
+
+- `admin-common.js` / `admin-common.css` — shared by all `admin-*.html` pages. **Cache-busted as `?v=N`** — bump `N` in every admin HTML file whenever either one changes (grep `admin-common.js?v=` to find all references).
+- `site-auth.js` — login/signup modal, auth-state nav rendering, used on every public page.
+- `cart.js` — localStorage cart helper used on every public page with a shopping element.
+
+Public pages write `credentials: 'include'` on every `fetch()` to send the `fn_user_session` cookie. Admin pages rely on the `fn_session` cookie the same way.
+
+CSS variables are defined in `admin-common.css` for admin pages. Public pages define their own `:root` variables inline. The brand palette: `--teal: #164F4A`, `--teal-dark: #0E3733`, `--coral: #F26B4D`, `--coral-dark: #D9502F`, `--gold: #EBA657`, `--cream: #FBF5EC`, `--ink: #2A2420`, `--ink-soft: #6B5F55`. Note: `--muted` and `--border-light` are **not** defined in public pages — never use them there.
+
+## Environment variables
+
+Required in `server/.env`:
+
+```
+PORT=3001
+SESSION_SECRET=          # long random string, required at startup
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
+
+SMTP_HOST=               # cPanel mailbox relay
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=               # full email address of the mailbox
+SMTP_PASSWORD=
+
+SITE_URL=https://fixernationeducation.com
+UPLOADS_DIR=./uploads                    # dev; production uses absolute path
+UPLOADS_URL_PREFIX=/uploads/
+
+SERVE_STATIC=true        # dev only — production has Apache serve static files
+
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+ELEVENLABS_API_KEY=      # not yet live; blocks Morning Boost voice-over
+```
+
+## Admin nav ordering
+
+The icon nav in every `admin-*.html` sidebar is **strictly alphabetical** within the cluster below the divider. Dashboard always stays alone above the divider; Settings/View Site/Log Out always stay in the footer unordered. Insert new nav links alphabetically by label — not at the end, not next to the conceptually related page. Also add the link to **every other** `admin-*.html` file (grep `admin-morning-boost.html` to see the pattern).
 
 ## Deploy workflow
 
-This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → the user runs the following in cPanel's browser Terminal (no SSH access exists into this environment):
+Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → user runs the following in cPanel's browser Terminal:
 
-1. `git pull` in the git clone (`~/repositories/fixernation`)
-2. `rsync` the static files into `~/public_html`:
+1. **Pull:**
+   ```bash
+   cd /home/fixernat/repositories/fixernation && git pull
    ```
+
+2. **Sync static files to `public_html`:**
+   ```bash
    rsync -av --delete \
      --exclude='.git' \
      --exclude='.gitignore' \
@@ -24,31 +130,38 @@ This is a git-based deploy: commit → push to GitHub (`github.com/ooWOWZERoo/Fi
      --exclude='uploads' \
      ~/repositories/fixernation/ ~/public_html/
    ```
-   `api` is cPanel-generated proxy glue (not in git) and `uploads` holds real uploaded files (not in git) — excluding either wrong will silently break the live API or destroy uploaded content. `*.md` covers all repo documentation (`PROJECT.md`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and any future doc file) — none of it is meant to be served publicly.
+   `api/` is cPanel-generated proxy glue (not in git). `uploads/` holds real uploaded files (not in git). Excluding both from `--delete` is intentional — they must never be wiped. **Never add `--delete-excluded`** — it deletes every excluded path found on the destination, including `api/` and `uploads/`. This has happened once and took down all API routes until the Node app was restarted to regenerate `api/`.
 
-   **Never add `--delete-excluded`.** It was tried once to retroactively clean up stray `.md` files that had leaked into `public_html`, but `--delete-excluded` deletes *every* excluded path found on the destination — including `api/` and `uploads/`, which are excluded specifically so `--delete` leaves them alone. It deleted `public_html/api/` (the cPanel-generated proxy glue), which took down every single API route including both admin and site login, until the Node app was stopped/started in cPanel to regenerate it. If a doc file ever leaks into `public_html` again, delete it manually and one-off (`rm -f ~/public_html/whatever.md`) — never fold that into the standing rsync command.
-3. **`node` is not on cPanel Terminal's default PATH — every `node`/`npm` command needs the nodevenv activated first, every single time, in that same command block:**
+3. **Activate nodevenv before any Node command — every single time:**
+   ```bash
+   source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
+     cd /home/fixernat/repositories/fixernation/server
    ```
-   source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && cd /home/fixernat/repositories/fixernation/server
-   ```
-   Chain it with `&&` onto whatever comes next (`npm install`, `node scripts/migrate.js`, etc.) — activating it in one command does NOT carry over to the next command in a fresh instruction block. **Never write a bare `node scripts/whatever.js` or `npm install` instruction without this prefix** — this has caused `bash: node: command not found` twice already from omitting it.
-4. `npm install` (with the activation prefix above) if `server/package.json` changed
-5. **Restart the Node app** if any `server/` code changed — Node does not hot-reload; a `git pull` alone leaves old code running in memory even though the files on disk are current (symptom: new routes 404 with Express's own "Cannot GET/POST" page, not a crash)
-6. For a schema change to an **existing** table: `server/scripts/migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`, so it silently no-ops on altered tables. Write a one-off idempotent script (see `server/scripts/alter-*.js` for the pattern — check `information_schema.COLUMNS`/`TABLES` before altering) and have the user run it via `node scripts/whatever.js` (with the activation prefix above) in cPanel Terminal, in addition to updating `schema.sql` (which stays the source of truth for fresh installs only).
+   Activating in one command does **not** carry over to the next shell instruction. Always chain with `&&`. When giving deploy instructions, always include this prefix — a bare `node scripts/whatever.js` causes `bash: node: command not found`.
 
-No local dev environment exists for this project — there's no local MySQL/MariaDB, and the sandbox blocks direct outbound connections to the remote DB. All verification happens by deploying to production and checking with `curl` + a cookie jar (no browser automation available either). Always use clearly-named test data (e.g. `@example.com` emails, obviously-fake school domains) and clean it up after verifying.
+4. `npm install` (with prefix) if `server/package.json` changed.
 
-## Admin nav ordering
+5. **Restart the Node app** (cPanel → Setup Node.js App panel) if any `server/` code changed. `git pull` alone leaves old code running in memory — new routes 404 with Express's own page, not a server crash. **pm2 is not installed** on this host.
 
-The icon nav in every `admin-*.html` sidebar is **strictly alphabetical** within the cluster below the divider (Dashboard always stays alone above the divider; Settings/View Site/Log Out always stay in the footer, unordered). When adding a new admin page's nav link, insert it alphabetically among the existing labels — not at the end, not next to whatever page it's conceptually related to. Bitten once: "Automations" was added right after "Memberships" (its closest conceptual sibling) instead of alphabetically before "Blogs".
+6. For schema changes to existing tables: run the one-off alter script via `node scripts/alter-whatever.js` (with prefix). `migrate.js` silently no-ops on existing tables.
+
+When giving deploy instructions after a push, always specify:
+- Which HTML files to include in the `rsync` (or use the broad `rsync` above for large changes)
+- Whether a seed/alter script needs to be run
+- Whether a restart is needed
 
 ## Infra gotchas (all previously bitten in this project)
 
-- **cPanel Terminal's default shell has no `node`/`npm` on PATH.** Every deploy instruction involving a Node command must chain the nodevenv activation onto the *same* command block — see "Deploy workflow" step 3 for the exact command. Bitten twice from giving a bare `node scripts/whatever.js` instruction.
-- **`dotenv.config()` needs an explicit path.** Under this host's Passenger/LiteSpeed Node integration, `process.cwd()` isn't the app root — `require('dotenv').config()` with no path silently loads nothing.
+- **`dotenv.config()` needs an explicit path.** Under this host's Passenger/LiteSpeed Node integration, `process.cwd()` isn't the app root — `require('dotenv').config()` with no path silently loads nothing. Use `require('dotenv').config({ path: path.join(__dirname, '.env') })` (or `path.join(__dirname, '..', '.env')` in scripts one level deeper).
 - **Don't use `cookie-session` or any library relying on Express's deferred `on-headers` write hook** — it silently fails to attach `Set-Cookie` on this host. Sign a JWT and attach it via a direct `res.cookie()` call in the route handler itself.
 - **The reverse proxy rejects POST/PUT/DELETE with no body/Content-Type** — returns a bare 400 before Express ever sees it. Every mutating `fetch()` must send `headers: {'Content-Type': 'application/json'}` and a body (`'{}'` if nothing to send), even for actions like logout.
-- **Shared `admin-common.js`/`admin-common.css` are cache-busted as `?v=N`** — bump `N` in every HTML file that references either one, any time either file changes (grep for `admin-common.js?v=` to find them all). `site-auth.js` is not yet under this scheme — watch for staleness if it's edited.
-- **A route file with a bare `GET /:id` must be declared after any more-specific `GET /literal-path` route**, or Express will treat the literal path as an `:id` value (e.g. `campaigns.js`'s public `GET /track-open` pixel endpoint is declared before any `/:id` route).
-- **Watch for circular `require()`s** between route files that both need something from each other (e.g. `newsletter.js` and `site-auth.js` both touch purchases/tokens) — extract the shared function into `server/lib/` instead of having either route file require the other.
-- Don't let a new commit's code assume an *intentionally undeployed* prior commit's schema/dependency is already live — `git pull` always catches the server up to `HEAD`, so if two commits land together, code written against commit B's schema will break commit A's undeployed feature too if B ships first.
+- **A route file with a bare `GET /:id` must be declared after any more-specific `GET /literal-path` route**, or Express treats the literal path as an `:id` value (e.g. `campaigns.js`'s public `GET /track-open` pixel endpoint is declared before any `/:id` route).
+- **Watch for circular `require()`s** between route files that both need something from each other — extract the shared function into `server/lib/` instead.
+- **`admin-common.js`/`admin-common.css` are cache-busted as `?v=N`** — bump `N` in every HTML file referencing them whenever either file changes (grep `admin-common.js?v=`).
+- Don't let a new commit assume an intentionally undeployed prior commit's schema is already live — `git pull` always catches the server up to HEAD, so if two commits land together, code written against commit B's schema can break if B ships before A's migration runs.
+
+## Maintain the changelog
+
+Every time a feature or fix is completed and deployed, add a new release entry to the top of `CHANGELOG.md` (below the `Unreleased / Known pending work` section). Keep entries short and business-facing — what changed and why it matters, not a line-by-line code diff. Format: `## Release N — YYYY-MM-DD — Title` with short bullets. Increment `N` from the previous release. If a feature is coded and pushed but not yet deployed (e.g. blocked on a credential), note it under `Unreleased / Known pending work` instead.
+
+Also update `PROJECT.md` if the change affects architecture, the page list, or known limitations — it describes the current state, not history.
