@@ -113,6 +113,53 @@
   .join-btn.leave-btn{background:transparent;border:1.5px solid var(--ink-soft);color:var(--ink-soft);}
   .join-btn.leave-btn:hover{background:var(--cream-soft);border-color:var(--coral-dark);color:var(--coral-dark);}
 
+  /* Composer toolbar */
+  .composer-toolbar{display:flex;align-items:center;gap:4px;margin-top:8px;flex-wrap:wrap;}
+  .composer-tool-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:17px;border:1.5px solid rgba(22,79,74,0.14);background:var(--cream-soft);transition:background .15s;user-select:none;}
+  .composer-tool-btn:hover{background:rgba(22,79,74,0.1);}
+  .composer-tool-hint{font-size:11px;color:var(--ink-soft);margin-left:6px;font-style:italic;}
+
+  /* Attachment preview strip in composer */
+  .composer-previews{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .composer-preview-item{position:relative;border-radius:8px;overflow:hidden;border:1.5px solid rgba(22,79,74,0.14);}
+  .composer-preview-item img{width:72px;height:72px;object-fit:cover;display:block;}
+  .composer-preview-file{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--cream-soft);font-size:12px;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .composer-preview-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+
+  /* Post content links & hashtags */
+  .post-link{color:var(--teal);text-decoration:underline;word-break:break-all;}
+  .post-hashtag{color:var(--coral-dark);font-weight:700;cursor:pointer;}
+  .post-hashtag:hover{text-decoration:underline;}
+
+  /* Uploaded image grid */
+  .post-images{display:grid;gap:4px;margin-top:10px;border-radius:12px;overflow:hidden;}
+  .post-images-1{grid-template-columns:1fr;}
+  .post-images-2{grid-template-columns:1fr 1fr;}
+  .post-images-3{grid-template-columns:1fr 1fr 1fr;}
+  .post-images-4{grid-template-columns:1fr 1fr;}
+  .post-images a{display:block;overflow:hidden;}
+  .post-images img{width:100%;height:200px;object-fit:cover;display:block;transition:transform .2s;}
+  .post-images-1 img{height:280px;}
+  .post-images a:hover img{transform:scale(1.03);}
+
+  /* Uploaded video */
+  .post-video{margin-top:10px;border-radius:12px;overflow:hidden;background:#000;}
+  .post-video video{width:100%;max-height:360px;display:block;}
+
+  /* YouTube / Vimeo embed */
+  .post-embed{position:relative;padding-bottom:56.25%;height:0;margin-top:10px;border-radius:12px;overflow:hidden;}
+  .post-embed iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;}
+
+  /* File download cards */
+  .post-files{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .post-file-card{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cream-soft);border-radius:10px;border:1.5px solid rgba(22,79,74,0.1);text-decoration:none;color:var(--ink);transition:background .15s;}
+  .post-file-card:hover{background:rgba(22,79,74,0.07);}
+  .post-file-icon{font-size:22px;flex-shrink:0;}
+  .post-file-info{flex:1;min-width:0;}
+  .post-file-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .post-file-size{font-size:11px;color:var(--ink-soft);}
+  .post-file-dl{font-size:16px;color:var(--teal);flex-shrink:0;}
+
   /* Search */
   .search-input{width:100%;border:2px solid rgba(22,79,74,0.12);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:13px;background:var(--cream-soft);margin-bottom:10px;}
   .search-input:focus{outline:none;border-color:var(--teal);}
@@ -188,7 +235,16 @@
       <div class="composer" id="composer" style="display:none;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
           <div class="post-avatar" id="myAvatar" style="margin-top:2px;">?</div>
-          <textarea id="postContent" placeholder="Share something with the group…" rows="3"></textarea>
+          <div style="flex:1;">
+            <textarea id="postContent" placeholder="Share something with the group…" rows="3"></textarea>
+            <div id="composerPreviews" class="composer-previews"></div>
+            <div class="composer-toolbar">
+              <label class="composer-tool-btn" title="Add image">📷<input type="file" accept="image/*" multiple onchange="addFiles('image',this)" style="display:none;"></label>
+              <label class="composer-tool-btn" title="Add video">🎬<input type="file" accept="video/*" onchange="addFiles('video',this)" style="display:none;"></label>
+              <label class="composer-tool-btn" title="Attach file">📎<input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" multiple onchange="addFiles('file',this)" style="display:none;"></label>
+              <span class="composer-tool-hint">Paste a YouTube or Vimeo link to embed</span>
+            </div>
+          </div>
         </div>
         <div class="composer-foot">
           <span class="composer-hint" id="activeGroupName"></span>
@@ -230,6 +286,7 @@ const API = '/api/social';
 let me = null;
 let groups = [];
 let activeGroupId = null;
+let pendingAttachments = [];
 let dmPartnerId = null;
 let pollTimer = null;
 let unreadPollTimer = null;
@@ -417,9 +474,142 @@ async function pollFeed(){
   }
 }
 
+// ── Attachment helpers ───────────────────────────────────────────────────────
+
+function addFiles(type, input){
+  Array.from(input.files).forEach(f => pendingAttachments.push({ type, file: f }));
+  input.value = '';
+  renderComposerPreviews();
+}
+
+function removeAttachment(idx){
+  pendingAttachments.splice(idx, 1);
+  renderComposerPreviews();
+}
+
+function renderComposerPreviews(){
+  const el = document.getElementById('composerPreviews');
+  if(!el) return;
+  if(!pendingAttachments.length){ el.innerHTML=''; return; }
+  el.innerHTML = pendingAttachments.map((a, i) => {
+    if(a.type === 'image'){
+      const url = URL.createObjectURL(a.file);
+      return `<div class="composer-preview-item">
+        <img src="${url}" onload="URL.revokeObjectURL(this.src)">
+        <button class="composer-preview-remove" onclick="removeAttachment(${i})">×</button>
+      </div>`;
+    }
+    return `<div class="composer-preview-item">
+      <div class="composer-preview-file">${getFileIcon(a.file.name)} ${esc(a.file.name)}</div>
+      <button class="composer-preview-remove" onclick="removeAttachment(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+async function uploadFiles(){
+  if(!pendingAttachments.length) return [];
+  const fd = new FormData();
+  pendingAttachments.forEach(a => fd.append('files', a.file));
+  const res = await fetch(`${API}/upload`,{ method:'POST', credentials:'include', body:fd });
+  if(!res.ok){ alert('Upload failed. Please try again.'); return null; }
+  const data = await res.json();
+  return data.attachments;
+}
+
+function getFileIcon(name){
+  const ext = (name.split('.').pop()||'').toLowerCase();
+  if(['pdf'].includes(ext)) return '📄';
+  if(['doc','docx'].includes(ext)) return '📝';
+  if(['xls','xlsx'].includes(ext)) return '📊';
+  if(['ppt','pptx'].includes(ext)) return '📑';
+  return '📎';
+}
+
+function formatFileSize(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+// ── Content rendering helpers ────────────────────────────────────────────────
+
+function renderContent(text){
+  const escaped = esc(text);
+  return escaped
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a class="post-link" href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/#(\w+)/g, '<span class="post-hashtag" onclick="searchHashtag(\'$1\')">#$1</span>')
+    .replace(/\n/g, '<br>');
+}
+
+function detectEmbeds(text){
+  const embeds = [];
+  const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+  const vmRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/g;
+  let m;
+  while((m = ytRegex.exec(text)) !== null){
+    embeds.push({ type:'youtube', id: m[1] });
+  }
+  while((m = vmRegex.exec(text)) !== null){
+    embeds.push({ type:'vimeo', id: m[1] });
+  }
+  return embeds;
+}
+
+function renderPostAttachments(attachments, text){
+  let html = '';
+
+  const embeds = detectEmbeds(text || '');
+  if(embeds.length){
+    embeds.forEach(e => {
+      const src = e.type === 'youtube'
+        ? `https://www.youtube.com/embed/${e.id}`
+        : `https://player.vimeo.com/video/${e.id}`;
+      html += `<div class="post-embed"><iframe src="${src}" allowfullscreen loading="lazy"></iframe></div>`;
+    });
+  }
+
+  if(!attachments || !attachments.length) return html;
+
+  const images = attachments.filter(a => a.type === 'image');
+  const videos = attachments.filter(a => a.type === 'video');
+  const files  = attachments.filter(a => a.type === 'file');
+
+  if(images.length){
+    const gridClass = `post-images-${Math.min(images.length, 4)}`;
+    html += `<div class="post-images ${gridClass}">` +
+      images.map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="${esc(a.name)}" loading="lazy"></a>`).join('') +
+      `</div>`;
+  }
+
+  if(videos.length){
+    html += videos.map(a => `<div class="post-video"><video controls preload="metadata"><source src="${a.url}"><a href="${a.url}">Download video</a></video></div>`).join('');
+  }
+
+  if(files.length){
+    html += `<div class="post-files">` +
+      files.map(a => `<a class="post-file-card" href="${a.url}" download="${esc(a.name)}" target="_blank" rel="noopener">
+        <span class="post-file-icon">${getFileIcon(a.name)}</span>
+        <span class="post-file-info"><div class="post-file-name">${esc(a.name)}</div><div class="post-file-size">${formatFileSize(a.size||0)}</div></span>
+        <span class="post-file-dl">⬇</span>
+      </a>`).join('') +
+      `</div>`;
+  }
+
+  return html;
+}
+
+function searchHashtag(tag){
+  // future: filter feed by hashtag
+}
+
+// ── Post rendering ───────────────────────────────────────────────────────────
+
 function renderPost(p){
   const av = initials(p.first_name, p.last_name).toUpperCase();
   const liked = p.my_reaction ? ' liked' : '';
+  let attachments = null;
+  try { attachments = p.attachments ? (typeof p.attachments === 'string' ? JSON.parse(p.attachments) : p.attachments) : null; } catch(e){}
+  const mediaHtml = renderPostAttachments(attachments, p.content);
   return `
   <div class="post-card" id="post-${p.id}">
     <div class="post-header">
@@ -429,7 +619,8 @@ function renderPost(p){
         <div class="post-time">${relTime(p.created_at)}</div>
       </div>
     </div>
-    <div class="post-content">${esc(p.content)}</div>
+    <div class="post-content">${renderContent(p.content)}</div>
+    ${mediaHtml}
     <div class="post-actions">
       <button class="post-action-btn${liked}" onclick="toggleReaction(${p.id}, this)">
         👍 <span class="react-count">${p.reaction_count}</span>
@@ -504,13 +695,27 @@ async function addComment(postId, input){
 
 async function submitPost(){
   const content = document.getElementById('postContent').value.trim();
-  if(!content || !activeGroupId) return;
+  if((!content && !pendingAttachments.length) || !activeGroupId) return;
+
+  let attachments = [];
+  if(pendingAttachments.length){
+    attachments = await uploadFiles();
+    if(attachments === null) return; // upload failed
+  }
+
+  const body = { content };
+  if(attachments.length) body.attachments = attachments;
+
   const res = await fetch(`${API}/groups/${activeGroupId}/posts`,{
     method:'POST', credentials:'include',
-    headers:{'Content-Type':'application/json'}, body:JSON.stringify({content})
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
   });
   if(!res.ok){ alert('Failed to post. Please try again.'); return; }
+
   document.getElementById('postContent').value='';
+  pendingAttachments = [];
+  renderComposerPreviews();
+
   const data = await res.json();
   const container = document.getElementById('feedContainer');
   if(container.querySelector('.loading-msg')) container.innerHTML='';

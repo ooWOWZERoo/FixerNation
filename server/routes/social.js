@@ -1,10 +1,37 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
 const { hasActiveLicense, hasActiveMembership } = require('../lib/access');
 const { requireAuth } = require('../middleware/auth');
 const { ensureProfile } = require('../lib/social-groups');
+
+// ── File upload for social posts ──────────────────────────────────────────
+
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
+const socialUploadsDir = path.join(uploadsDir, 'social');
+fs.mkdirSync(socialUploadsDir, { recursive: true });
+
+const SOCIAL_ALLOWED = /^(image\/|video\/|application\/pdf|application\/msword|application\/vnd\.|text\/plain)/;
+
+const socialUploadMw = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, socialUploadsDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
+    },
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!SOCIAL_ALLOWED.test(file.mimetype)) return cb(new Error('Unsupported file type: ' + file.mimetype));
+    cb(null, true);
+  },
+});
 
 const router = express.Router();
 
@@ -32,6 +59,22 @@ async function requireSocialAccess(req, res, next) {
   }
   next();
 }
+
+// ── Upload attachments ────────────────────────────────────────────────────
+
+router.post('/upload', requireSocialAccess, socialUploadMw.array('files', 5), (req, res) => {
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
+  const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'social/';
+  const attachments = req.files.map(f => ({
+    type: f.mimetype.startsWith('image/') ? 'image'
+        : f.mimetype.startsWith('video/') ? 'video'
+        : 'file',
+    url: prefix + f.filename,
+    name: f.originalname,
+    size: f.size,
+  }));
+  res.status(201).json({ attachments });
+});
 
 // ── Groups — admin CRUD ────────────────────────────────────────────────────
 
@@ -203,7 +246,8 @@ router.get('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
 router.post('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
   const groupId = Number(req.params.groupId);
   const content = (req.body && req.body.content || '').trim();
-  if (!content) return res.status(400).json({ error: 'Content is required' });
+  const hasAttachments = req.body && Array.isArray(req.body.attachments) && req.body.attachments.length > 0;
+  if (!content && !hasAttachments) return res.status(400).json({ error: 'Content or attachment is required' });
 
   const [mem] = await pool.query(
     'SELECT 1 FROM social_group_members WHERE group_id = ? AND user_id = ?',
@@ -499,6 +543,12 @@ router.get('/admin/groups', requireAuth, async (req, res) => {
      ORDER BY sg.name`
   );
   res.json({ groups: rows });
+});
+
+// Multer error handler (must be 4-param)
+// eslint-disable-next-line no-unused-vars
+router.use((err, req, res, next) => {
+  res.status(400).json({ error: err.message || 'Upload failed' });
 });
 
 module.exports = router;
