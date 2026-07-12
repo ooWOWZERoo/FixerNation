@@ -188,6 +188,43 @@ router.post('/reset-password', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Self-service profile management ---
+
+router.get('/profile', requireSiteAuth, async (req, res) => {
+  const u = req.siteUser;
+  res.json({ firstName: u.first_name, lastName: u.last_name, email: u.email });
+});
+
+router.put('/profile', requireSiteAuth, async (req, res) => {
+  const b = req.body || {};
+  const firstName = (b.firstName || '').trim();
+  const lastName = (b.lastName || '').trim();
+  if (!firstName || !lastName) {
+    return res.status(400).json({ error: 'First name and last name are required' });
+  }
+  await pool.query('UPDATE site_users SET first_name = ?, last_name = ? WHERE id = ?', [firstName, lastName, req.siteUser.id]);
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [req.siteUser.id]);
+  if (rows[0]) setSiteSessionCookie(res, rows[0]);
+  res.json({ ok: true, firstName });
+});
+
+router.put('/change-password', requireSiteAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current and new passwords are required' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+  const matches = await bcrypt.compare(currentPassword, req.siteUser.password_hash);
+  if (!matches) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await pool.query('UPDATE site_users SET password_hash = ? WHERE id = ?', [passwordHash, req.siteUser.id]);
+  res.json({ ok: true });
+});
+
 // --- Self-service license view for logged-in site users (teachers / school admins) ---
 
 router.get('/my-purchases', requireSiteAuth, async (req, res) => {

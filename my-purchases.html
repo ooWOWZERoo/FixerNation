@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purchase History — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --border:rgba(22,79,74,0.15);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; padding:40px 20px;}
+  .wrap{max-width:720px; margin:0 auto;}
+  .brand{display:flex; align-items:center; gap:12px; margin-bottom:20px;}
+  .brand-mark{width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800;}
+  .brand-word{font-family:'Fraunces',serif; font-weight:700; font-size:18px; color:var(--teal-dark);}
+  .account-nav{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:32px; padding-bottom:20px; border-bottom:1px solid var(--border);}
+  .account-nav a{padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; text-decoration:none; color:var(--ink-soft); background:#fff; box-shadow:0 2px 8px -4px rgba(22,79,74,0.15); transition:all .15s;}
+  .account-nav a:hover{color:var(--teal-dark);}
+  .account-nav a.active{background:var(--teal-dark); color:#fff; box-shadow:none;}
+  h1{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:28px; margin-bottom:6px;}
+  p.sub{font-size:14.5px; color:var(--ink-soft); margin-bottom:32px;}
+  .card{background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25); padding:22px 26px; margin-bottom:12px; display:flex; align-items:flex-start; gap:18px;}
+  .card-icon{font-size:24px; flex-shrink:0; margin-top:2px;}
+  .card-body{flex:1;}
+  .card-title{font-weight:700; font-size:15px; margin-bottom:3px;}
+  .card-meta{font-size:13px; color:var(--ink-soft);}
+  .card-amount{font-weight:700; font-size:15px; color:var(--teal-dark); flex-shrink:0; text-align:right;}
+  .empty{text-align:center; color:var(--ink-soft); font-size:14.5px; padding:48px 20px; background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25);}
+  .empty-icon{font-size:30px; margin-bottom:14px;}
+  .section-label{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); margin:24px 0 10px;}
+  .section-label:first-child{margin-top:0;}
+  .back-link{display:inline-block; margin-top:6px; font-size:13.5px; font-weight:600; color:var(--teal-dark); text-decoration:none;}
+  .back-link:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+
+  <nav class="account-nav">
+    <a href="my-profile.html">My Profile</a>
+    <a href="my-memberships.html">My Memberships</a>
+    <a href="my-license.html">My Licenses</a>
+    <a href="my-purchases.html" class="active">Purchase History</a>
+  </nav>
+
+  <h1>Purchase History</h1>
+  <p class="sub">All your books and license purchases, sorted by most recent.</p>
+
+  <div id="purchaseWrap"></div>
+
+  <a href="index.html" class="back-link">← Back to Fixer Nation</a>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script>
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatAmount(cents) {
+  if (!cents) return '';
+  return '$' + (cents / 100).toFixed(2);
+}
+
+async function loadData() {
+  const r = await fetch('/api/site-auth/my-purchases', { credentials: 'include' });
+  if (r.status === 401) { window.location.href = 'index.html'; return; }
+  const data = await r.json().catch(() => ({}));
+  render(data.purchases || []);
+}
+
+function render(purchases) {
+  const wrap = document.getElementById('purchaseWrap');
+
+  if (!purchases.length) {
+    wrap.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🧾</div>
+        <p>No purchases on file yet.<br>
+        If you've bought something, make sure you're signed in with the email you used at checkout.</p>
+      </div>`;
+    return;
+  }
+
+  const books = purchases.filter(p => p.productType === 'book');
+  const licenses = purchases.filter(p => p.productType === 'single_license' || p.productType === 'group_license');
+
+  let html = '';
+
+  if (books.length) {
+    html += '<div class="section-label">Books</div>';
+    html += books.map(p => {
+      const amount = formatAmount(p.amountCents);
+      return `<div class="card">
+        <div class="card-icon">📗</div>
+        <div class="card-body">
+          <div class="card-title">${p.bookTitle || 'Book'}</div>
+          <div class="card-meta">Purchased ${formatDate(p.purchasedAt)}</div>
+        </div>
+        ${amount ? `<div class="card-amount">${amount}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  if (licenses.length) {
+    html += '<div class="section-label">Licenses</div>';
+    html += licenses.map(p => {
+      const amount = formatAmount(p.amountCents);
+      const label = p.productType === 'single_license'
+        ? 'Single Teacher License'
+        : `Group License — ${p.seatCount} seat${p.seatCount !== 1 ? 's' : ''}`;
+      return `<div class="card">
+        <div class="card-icon">🔑</div>
+        <div class="card-body">
+          <div class="card-title">${p.title || label}</div>
+          <div class="card-meta">Purchased ${formatDate(p.purchasedAt)}</div>
+        </div>
+        ${amount ? `<div class="card-amount">${amount}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  wrap.innerHTML = html;
+}
+
+loadData();
+</script>
+
+</body>
+</html>

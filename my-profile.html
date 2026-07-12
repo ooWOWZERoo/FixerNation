@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile — Fixer Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --border:rgba(22,79,74,0.15);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; padding:40px 20px;}
+  .wrap{max-width:720px; margin:0 auto;}
+  .brand{display:flex; align-items:center; gap:12px; margin-bottom:20px;}
+  .brand-mark{width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800;}
+  .brand-word{font-family:'Fraunces',serif; font-weight:700; font-size:18px; color:var(--teal-dark);}
+  .account-nav{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:32px; padding-bottom:20px; border-bottom:1px solid var(--border);}
+  .account-nav a{padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; text-decoration:none; color:var(--ink-soft); background:#fff; box-shadow:0 2px 8px -4px rgba(22,79,74,0.15); transition:all .15s;}
+  .account-nav a:hover{color:var(--teal-dark);}
+  .account-nav a.active{background:var(--teal-dark); color:#fff; box-shadow:none;}
+  h1{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:28px; margin-bottom:6px;}
+  p.sub{font-size:14.5px; color:var(--ink-soft); margin-bottom:32px;}
+  h2.section-heading{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:18px; margin:0 0 16px;}
+  .card{background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25); padding:26px 28px; margin-bottom:20px;}
+  label{display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em;}
+  input[type=text], input[type=email], input[type=password]{width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--border); font-size:14px; font-family:inherit; color:var(--ink); background:#fff; transition:border-color .15s; margin-bottom:14px;}
+  input[type=text]:focus, input[type=email]:focus, input[type=password]:focus{outline:none; border-color:var(--teal);}
+  input[readonly]{background:var(--cream); color:var(--ink-soft); cursor:not-allowed;}
+  .field-row{display:flex; gap:14px;}
+  .field-row > div{flex:1;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; padding:11px 22px; border-radius:999px; font-weight:700; font-size:14px; cursor:pointer; border:none; transition:background .15s; font-family:inherit;}
+  .btn-primary{background:var(--teal-dark); color:#fff;}
+  .btn-primary:hover{background:var(--teal);}
+  .btn-primary:disabled{opacity:0.55; cursor:not-allowed;}
+  .msg{font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-top:12px; display:none;}
+  .msg.success{background:#E4F3EE; color:#164F4A; display:block;}
+  .msg.error{background:#FDECEA; color:#B3261E; display:block;}
+  .back-link{display:inline-block; margin-top:6px; font-size:13.5px; font-weight:600; color:var(--teal-dark); text-decoration:none;}
+  .back-link:hover{text-decoration:underline;}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+
+  <nav class="account-nav">
+    <a href="my-profile.html" class="active">My Profile</a>
+    <a href="my-memberships.html">My Memberships</a>
+    <a href="my-license.html">My Licenses</a>
+    <a href="my-purchases.html">Purchase History</a>
+  </nav>
+
+  <h1>My Profile</h1>
+  <p class="sub">Update your name and password. Your email address cannot be changed here.</p>
+
+  <div class="card">
+    <h2 class="section-heading">Profile Information</h2>
+    <form id="profileForm">
+      <div class="field-row">
+        <div>
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" required>
+        </div>
+        <div>
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" required>
+        </div>
+      </div>
+      <label>Email Address</label>
+      <input type="email" id="emailDisplay" readonly>
+      <button type="submit" class="btn btn-primary" id="profileSaveBtn">Save Changes</button>
+      <div class="msg" id="profileMsg"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 class="section-heading">Change Password</h2>
+    <form id="passwordForm">
+      <label for="currentPassword">Current Password</label>
+      <input type="password" id="currentPassword" required autocomplete="current-password">
+      <label for="newPassword">New Password</label>
+      <input type="password" id="newPassword" required minlength="8" autocomplete="new-password">
+      <label for="confirmPassword">Confirm New Password</label>
+      <input type="password" id="confirmPassword" required autocomplete="new-password">
+      <button type="submit" class="btn btn-primary" id="passwordSaveBtn">Update Password</button>
+      <div class="msg" id="passwordMsg"></div>
+    </form>
+  </div>
+
+  <a href="index.html" class="back-link">← Back to Fixer Nation</a>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script>
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function showMsg(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + kind;
+}
+
+async function loadProfile() {
+  const r = await fetch('/api/site-auth/profile', { credentials: 'include' });
+  if (r.status === 401) { window.location.href = 'index.html'; return; }
+  const data = await r.json().catch(() => ({}));
+  document.getElementById('firstName').value = data.firstName || '';
+  document.getElementById('lastName').value = data.lastName || '';
+  document.getElementById('emailDisplay').value = data.email || '';
+}
+
+document.getElementById('profileForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('profileSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  const r = await fetch('/api/site-auth/profile', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+    }),
+  });
+  const result = await r.json().catch(() => ({}));
+  btn.disabled = false;
+  btn.textContent = 'Save Changes';
+  if (!r.ok) { showMsg('profileMsg', result.error || 'Could not save changes.', 'error'); return; }
+  showMsg('profileMsg', 'Profile updated successfully.', 'success');
+});
+
+document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const newPw = document.getElementById('newPassword').value;
+  const confirmPw = document.getElementById('confirmPassword').value;
+  if (newPw !== confirmPw) { showMsg('passwordMsg', 'New passwords do not match.', 'error'); return; }
+  const btn = document.getElementById('passwordSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Updating…';
+  const r = await fetch('/api/site-auth/change-password', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      currentPassword: document.getElementById('currentPassword').value,
+      newPassword: newPw,
+    }),
+  });
+  const result = await r.json().catch(() => ({}));
+  btn.disabled = false;
+  btn.textContent = 'Update Password';
+  if (!r.ok) { showMsg('passwordMsg', result.error || 'Could not update password.', 'error'); return; }
+  document.getElementById('passwordForm').reset();
+  showMsg('passwordMsg', 'Password updated successfully.', 'success');
+});
+
+loadProfile();
+</script>
+
+</body>
+</html>
