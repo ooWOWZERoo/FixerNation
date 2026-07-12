@@ -312,6 +312,21 @@ async function main() {
     }
   }
 
+  // --- social_group_reads table ---
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS social_group_reads (
+        group_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
+        last_read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (group_id, user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('social_group_reads table ready');
+  } catch (err) {
+    console.log('social_group_reads table already exists or error:', err.message);
+  }
+
   // --- Add is_public column to social_groups if missing ---
   try {
     await connection.query("ALTER TABLE social_groups ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 1");

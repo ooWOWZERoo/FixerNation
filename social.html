@@ -38,11 +38,12 @@
   .sidebar{display:flex;flex-direction:column;gap:12px;}
   .sidebar-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 8px 22px -14px rgba(22,79,74,0.2);}
   .sidebar-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-soft);margin-bottom:10px;}
-  .group-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:background .15s;}
+  .group-item{position:relative;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:background .15s;}
   .group-item:hover{background:var(--cream-soft);}
   .group-item.active{background:var(--teal);color:#fff;}
   .group-item .g-ic{font-size:16px;flex-shrink:0;}
-  .group-item .g-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .group-item .g-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+  .g-unread{position:absolute;top:2px;right:4px;background:var(--coral);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:999px;min-width:16px;text-align:center;line-height:15px;}
   .dm-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13px;transition:background .15s;}
   .dm-item:hover{background:var(--cream-soft);}
   .dm-item.active{background:var(--teal);color:#fff;}
@@ -230,10 +231,12 @@ let groups = [];
 let activeGroupId = null;
 let dmPartnerId = null;
 let pollTimer = null;
+let unreadPollTimer = null;
 let feedSince = null;
 let dmSince = null;
 let memberSearchTimer = null;
 let allMembers = [];
+let unreadCounts = {}; // groupId → unread post count
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function initials(fn,ln){ return ((fn||'')[0]||'') + ((ln||'')[0]||''); }
@@ -265,6 +268,10 @@ async function init(){
   document.getElementById('myAvatar').textContent = initials(me.first_name, me.last_name).toUpperCase();
   document.getElementById('communityLayout').style.display='';
   await Promise.all([loadGroups(), loadBrowseGroups(), loadDmConversations(), loadMembers()]);
+  await loadUnreadCounts();
+
+  // Poll unread counts every 30s for background groups
+  unreadPollTimer = setInterval(loadUnreadCounts, 30000);
 
   // Check URL params for DM mode
   const params = new URLSearchParams(location.search);
@@ -280,6 +287,15 @@ async function loadGroups(){
   groups = data.groups;
   renderGroupList();
   if(groups.length && !activeGroupId && !dmPartnerId) selectGroup(groups[0].id);
+}
+
+async function loadUnreadCounts(){
+  const res = await fetch(`${API}/groups/unread`,{credentials:'include'});
+  if(!res.ok) return;
+  const data = await res.json();
+  unreadCounts = {};
+  data.unread.forEach(r => { unreadCounts[r.group_id] = Number(r.unread_count); });
+  renderGroupList();
 }
 
 async function loadBrowseGroups(){
@@ -336,12 +352,15 @@ async function leaveGroup(groupId){
 
 function renderGroupList(){
   const icons = {all_teachers:'👩‍🏫', school:'🏫', membership:'🪪'};
-  document.getElementById('groupList').innerHTML = groups.map(g =>
-    `<div class="group-item ${g.id===activeGroupId?'active':''}" onclick="selectGroup(${g.id})">
+  document.getElementById('groupList').innerHTML = groups.map(g => {
+    const n = unreadCounts[g.id] || 0;
+    const badge = n > 0 ? `<span class="g-unread">${n > 99 ? '99+' : n}</span>` : '';
+    return `<div class="group-item ${g.id===activeGroupId?'active':''}" onclick="selectGroup(${g.id})">
        <span class="g-ic">${icons[g.type]||'💬'}</span>
        <span class="g-label" title="${esc(g.name)}">${esc(g.name)}</span>
-     </div>`
-  ).join('') || '<div style="font-size:13px;color:var(--ink-soft);">No groups yet.</div>';
+       ${badge}
+     </div>`;
+  }).join('') || '<div style="font-size:13px;color:var(--ink-soft);">No groups yet.</div>';
 }
 
 function selectGroup(id){
@@ -351,7 +370,10 @@ function selectGroup(id){
   feedSince = null;
   document.getElementById('feedPanel').style.display='';
   document.getElementById('dmPanel').style.display='none';
+  // Clear badge immediately, then persist to server
+  unreadCounts[id] = 0;
   renderGroupList();
+  fetch(`${API}/groups/${id}/read`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'{}'});
   const g = groups.find(x=>x.id===id);
   document.getElementById('activeGroupName').textContent = g ? 'Posting to: ' + g.name : '';
   document.getElementById('composer').style.display='';

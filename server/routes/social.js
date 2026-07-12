@@ -108,6 +108,39 @@ router.get('/groups', requireSocialAccess, async (req, res) => {
   res.json({ groups: rows });
 });
 
+// Unread post counts across all joined groups for the current user
+// IMPORTANT: must be declared before /:groupId routes
+router.get('/groups/unread', requireSocialAccess, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT
+       sgm.group_id,
+       COUNT(sp.id) AS unread_count
+     FROM social_group_members sgm
+     LEFT JOIN social_group_reads sgr
+       ON sgr.group_id = sgm.group_id AND sgr.user_id = sgm.user_id
+     LEFT JOIN social_posts sp
+       ON sp.group_id = sgm.group_id
+       AND sp.deleted_at IS NULL
+       AND sp.author_id != sgm.user_id
+       AND sp.created_at > COALESCE(sgr.last_read_at, '1970-01-01 00:00:00')
+     WHERE sgm.user_id = ?
+     GROUP BY sgm.group_id`,
+    [req.siteUser.id]
+  );
+  res.json({ unread: rows });
+});
+
+// Mark a group as fully read (upsert last_read_at to now)
+router.post('/groups/:groupId/read', requireSocialAccess, async (req, res) => {
+  await pool.query(
+    `INSERT INTO social_group_reads (group_id, user_id, last_read_at)
+     VALUES (?, ?, NOW())
+     ON DUPLICATE KEY UPDATE last_read_at = NOW()`,
+    [req.params.groupId, req.siteUser.id]
+  );
+  res.json({ ok: true });
+});
+
 // User: join a public group
 router.post('/groups/:groupId/join', requireSocialAccess, async (req, res) => {
   const groupId = Number(req.params.groupId);
