@@ -18,6 +18,11 @@
       '.nav-links>a,.fn-nav-parent{opacity:.8;transition:opacity .15s;text-decoration:none;color:inherit;}' +
       '.nav-links>a:hover,.nav-links>a.active,.fn-nav-parent:hover,.fn-nav-parent.active{opacity:1;color:var(--coral-dark,#D9502F);}' +
       '.nav-cta{display:flex;align-items:center;gap:18px;}' +
+      '.fn-cart-btn{display:flex;align-items:center;justify-content:center;position:relative;width:38px;height:38px;border-radius:10px;color:var(--teal-dark,#0E3733);text-decoration:none;transition:background .15s;}' +
+      '.fn-cart-btn:hover{background:rgba(22,79,74,.08);}' +
+      '.fn-cart-btn svg{display:block;}' +
+      '.fn-cart-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--coral,#F26B4D);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box;display:none;}' +
+      '.fn-cart-badge.visible{display:block;}' +
       // Dropdown — JS-controlled, no CSS :hover needed
       '.fn-nav-dropdown{position:relative;display:flex;align-items:center;}' +
       '.fn-nav-parent{display:flex;align-items:center;gap:4px;cursor:pointer;}' +
@@ -68,7 +73,14 @@
         lnk('askthefixer.html',     'Ask The Fixer', fixerActive)   +
       '</nav>' +
       '<div class="nav-cta">' +
-        '<div id="fnCartNav"></div>' +
+        '<a href="cart.html" class="fn-cart-btn" title="Cart">' +
+          '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+            '<circle cx="9" cy="21" r="1"/>' +
+            '<circle cx="20" cy="21" r="1"/>' +
+            '<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>' +
+          '</svg>' +
+          '<span class="fn-cart-badge" id="fnCartBadge"></span>' +
+        '</a>' +
         '<div id="fnAuthNav"><a href="#" onclick="if(typeof fnAuthOpenModal===\'function\')fnAuthOpenModal(\'login\');return false;" style="font-weight:600;font-size:14px;">Log In</a></div>' +
         '<a href="join.html" class="btn btn-primary">Join Fixer Nation</a>' +
       '</div>' +
