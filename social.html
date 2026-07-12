@@ -110,7 +110,8 @@
   .browse-group-count{font-size:11px;color:var(--ink-soft);}
   .join-btn{flex-shrink:0;padding:4px 10px;border-radius:8px;border:none;background:var(--teal);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s;}
   .join-btn:hover{background:var(--teal-dark);}
-  .join-btn.joined{background:var(--cream-soft);color:var(--ink-soft);cursor:default;}
+  .join-btn.leave-btn{background:transparent;border:1.5px solid var(--ink-soft);color:var(--ink-soft);}
+  .join-btn.leave-btn:hover{background:var(--cream-soft);border-color:var(--coral-dark);color:var(--coral-dark);}
 
   /* Search */
   .search-input{width:100%;border:2px solid rgba(22,79,74,0.12);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:13px;background:var(--cream-soft);margin-bottom:10px;}
@@ -319,7 +320,7 @@ function renderBrowseGroups(allGroups){
         <div class="browse-group-count">${g.member_count} member${Number(g.member_count)!==1?'s':''}</div>
       </div>
       ${isMember
-        ? `<button class="join-btn joined" disabled>Joined</button>`
+        ? `<button class="join-btn leave-btn" onclick="leaveGroup(${g.id})">Leave</button>`
         : `<button class="join-btn" onclick="joinGroup(${g.id}, this)">Add Group</button>`}
     </div>`;
   }).join('');
