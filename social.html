@@ -842,7 +842,25 @@ async function sendDm(){
     body: JSON.stringify({content, recipientId: dmPartnerId})
   });
   if(!res.ok) return;
+  const data = await res.json();
   input.value='';
+  // Render the sent message directly from the server response so it appears
+  // instantly regardless of any clock skew between client and server.
+  const msg = data.message;
+  if(msg){
+    const container = document.getElementById('dmMessages');
+    if(container){
+      if(!container.querySelector('.dm-msg')) container.innerHTML='';
+      if(!document.getElementById(`dm-${msg.id}`)){
+        container.insertAdjacentHTML('beforeend',
+          `<div class="dm-msg sent" id="dm-${msg.id}">${esc(msg.content)}</div>`);
+        container.scrollTop = container.scrollHeight;
+      }
+      // Anchor dmSince to the server's timestamp so subsequent polls use server time.
+      const t = new Date(msg.created_at);
+      if(!isNaN(t)) dmSince = new Date(t.getTime()+1).toISOString();
+    }
+  }
   await pollDm();
 }
 
