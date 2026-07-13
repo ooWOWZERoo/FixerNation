@@ -720,4 +720,25 @@ router.get('/me/streak', async (req, res) => {
   });
 });
 
+// ── GET /api/brain-games/me/privacy ──────────────────────────────────────────
+router.get('/me/privacy', async (req, res) => {
+  const user = await getSiteUser(req);
+  if (!user) return res.status(401).json({ error: 'Login required' });
+  const [[row]] = await pool.query('SELECT * FROM brain_game_privacy WHERE user_id=?', [user.id]);
+  res.json({ showBadges: row ? !!row.show_badges : true });
+});
+
+// ── PATCH /api/brain-games/me/privacy ────────────────────────────────────────
+router.patch('/me/privacy', async (req, res) => {
+  const user = await getSiteUser(req);
+  if (!user) return res.status(401).json({ error: 'Login required' });
+  const showBadges = (req.body || {}).showBadges !== false ? 1 : 0;
+  await pool.query(
+    `INSERT INTO brain_game_privacy (user_id, show_badges) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE show_badges = VALUES(show_badges)`,
+    [user.id, showBadges]
+  );
+  res.json({ ok: true });
+});
+
 module.exports = router;

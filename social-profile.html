@@ -168,6 +168,7 @@ async function init(){
 
 function renderOwnProfile(profile, page){
   const av = initials(profile.first_name, profile.last_name).toUpperCase();
+  const badgesHtml = renderFeaturedBadges(profile.featuredBadges || [], true);
   page.innerHTML = `
     <div style="margin-bottom:16px;"><a href="social.html" style="font-size:14px;font-weight:700;color:var(--teal-dark);">← Back to Community</a></div>
     <div class="profile-card">
@@ -179,6 +180,7 @@ function renderOwnProfile(profile, page){
           ${esc(profile.email)}
           ${profile.school_domain ? ' &middot; ' + esc(profile.school_domain) : ''}
         </div>
+        ${badgesHtml}
         <div class="edit-form">
           <label for="bioInput">Your Bio</label>
           <textarea id="bioInput" placeholder="Tell other members about yourself — your role, school, interests…">${esc(profile.bio||'')}</textarea>
@@ -187,6 +189,13 @@ function renderOwnProfile(profile, page){
             <div class="consent-text">
               <strong>Share my profile with community members</strong>
               By checking this box, I authorize Fixer Nation Education to display my name, email, school, and bio to other verified community members. I can withdraw this consent at any time by unchecking this box.
+            </div>
+          </div>
+          <div class="consent-row" style="margin-top:8px;">
+            <input type="checkbox" id="badgeCheck" ${profile.show_badges!==0?'checked':''}>
+            <div class="consent-text">
+              <strong>Show my Brain Game badges on my profile</strong>
+              Display your featured badges from Tune Your Brain on your public community profile. You control which badges appear by featuring them in <a href="brain-badges.html" style="color:var(--teal-dark);font-weight:700;">My Badges</a>.
             </div>
           </div>
           <button class="btn btn-primary btn-sm save-btn" onclick="saveProfile()">Save Profile</button>
@@ -199,6 +208,26 @@ function renderOwnProfile(profile, page){
     </div>`;
 }
 
+function renderFeaturedBadges(badges, isOwn) {
+  if (!badges || !badges.length) {
+    if (isOwn) {
+      return `<div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;font-style:italic;">No featured badges yet — <a href="brain-badges.html" style="color:var(--teal-dark);font-weight:700;">earn and feature badges</a> in Tune Your Brain.</div>`;
+    }
+    return '';
+  }
+  const chips = badges.map(b => `
+    <div style="display:inline-flex;align-items:center;gap:7px;background:var(--cream-soft);border:1px solid rgba(22,79,74,0.12);border-radius:10px;padding:7px 13px;font-size:13px;font-weight:700;color:var(--ink);">
+      <span>${b.emoji || '🏅'}</span>
+      <span>${esc(b.name)}</span>
+      <span style="font-size:10px;text-transform:capitalize;color:var(--ink-soft);">${b.rarity}</span>
+    </div>`).join('');
+  return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:8px;">⭐ Brain Game Badges</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">${chips}</div>
+    </div>`;
+}
+
 function renderOtherProfile(profile, page, me){
   const av = initials(profile.first_name, profile.last_name).toUpperCase();
   const bioSection = profile.bio_consent && profile.bio
@@ -206,6 +235,7 @@ function renderOtherProfile(profile, page, me){
     : `<p class="profile-no-bio">This member hasn't shared a bio yet.</p>`;
   const emailLine = profile.bio_consent && profile.email ? `<span>${esc(profile.email)}</span> &middot; ` : '';
   const schoolLine = profile.school_domain ? `<span>${esc(profile.school_domain)}</span>` : '';
+  const badgesHtml = renderFeaturedBadges(profile.featuredBadges || [], false);
 
   page.innerHTML = `
     <div style="margin-bottom:16px;"><a href="social.html" style="font-size:14px;font-weight:700;color:var(--teal-dark);">← Back to Community</a></div>
@@ -215,6 +245,7 @@ function renderOtherProfile(profile, page, me){
         <div class="profile-avatar">${av}</div>
         <h2 class="profile-name">${esc(profile.first_name)} ${esc(profile.last_name)}</h2>
         <div class="profile-meta">${emailLine}${schoolLine}</div>
+        ${badgesHtml}
         ${bioSection}
         <div class="profile-actions">
           <button class="btn btn-primary btn-sm" onclick="window.location.href='social.html?dm=${profile.id}'">✉️ Send Message</button>
@@ -226,10 +257,11 @@ function renderOtherProfile(profile, page, me){
 async function saveProfile(){
   const bio = document.getElementById('bioInput').value.trim();
   const bioConsent = document.getElementById('consentCheck').checked;
+  const showBadges = document.getElementById('badgeCheck').checked;
   const res = await fetch(`${API}/profile`,{
     method:'PUT', credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({bio, bioConsent})
+    body: JSON.stringify({bio, bioConsent, showBadges})
   });
   const msg = document.getElementById('saveSuccess');
   if(res.ok){

@@ -105,6 +105,14 @@
       <div class="featured-badges-row" id="featuredRow">
         <div class="no-featured">No badges featured yet — earn badges and star them to feature them here.</div>
       </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(22,79,74,0.1);display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="shareBadgesCheck" style="width:18px;height:18px;accent-color:#0E3733;flex-shrink:0;" onchange="setPrivacy(this.checked)">
+        <label for="shareBadgesCheck" style="font-size:13px;color:var(--ink);cursor:pointer;">
+          <strong>Show my badges on my community profile</strong>
+          <span style="color:var(--ink-soft);font-weight:400;"> — <a href="social-profile.html" style="color:var(--teal-dark);font-weight:600;">View my profile</a></span>
+        </label>
+        <span id="privacySaved" style="display:none;font-size:12px;color:var(--teal-dark);font-weight:700;margin-left:auto;">Saved ✓</span>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -172,8 +180,36 @@ async function loadPage() {
 
     renderFeatured();
     renderSections();
+    loadPrivacy();
   } catch {
     showNotLoggedIn();
+  }
+}
+
+async function loadPrivacy() {
+  try {
+    const r = await fetch('/api/brain-games/me/privacy', { credentials: 'include' });
+    if (!r.ok) return;
+    const data = await r.json();
+    const cb = document.getElementById('shareBadgesCheck');
+    if (cb) cb.checked = data.showBadges !== false;
+  } catch {}
+}
+
+async function setPrivacy(val) {
+  try {
+    await fetch('/api/brain-games/me/privacy', {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ showBadges: val })
+    });
+    const saved = document.getElementById('privacySaved');
+    if (saved) {
+      saved.style.display = '';
+      setTimeout(() => saved.style.display = 'none', 2000);
+    }
+  } catch {
+    alert('Could not save preference. Please try again.');
   }
 }
 

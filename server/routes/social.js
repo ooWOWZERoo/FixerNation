@@ -446,15 +446,27 @@ router.get('/profile', requireSocialAccess, async (req, res) => {
   const [[user]] = await pool.query(
     `SELECT su.id, su.first_name, su.last_name, su.email,
             sp.bio, sp.bio_consent, sp.avatar_url,
+            COALESCE(bgp.show_badges, 1) AS show_badges,
             (SELECT p.school_domain FROM license_seats ls
              JOIN purchases p ON p.id = ls.purchase_id
              WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
      FROM site_users su
      LEFT JOIN social_profiles sp ON sp.user_id = su.id
+     LEFT JOIN brain_game_privacy bgp ON bgp.user_id = su.id
      WHERE su.id = ?`,
     [req.siteUser.id]
   );
-  res.json({ profile: user });
+  let featuredBadges = [];
+  try {
+    const [rows] = await pool.query(
+      `SELECT b.name, b.emoji, b.rarity, ub.featured_position
+       FROM user_brain_badges ub JOIN brain_badges b ON b.id = ub.badge_id
+       WHERE ub.user_id = ? AND ub.featured = 1 ORDER BY ub.featured_position`,
+      [req.siteUser.id]
+    );
+    featuredBadges = rows;
+  } catch {}
+  res.json({ profile: { ...user, featuredBadges } });
 });
 
 router.put('/profile', requireSocialAccess, async (req, res) => {
@@ -464,6 +476,15 @@ router.put('/profile', requireSocialAccess, async (req, res) => {
     'UPDATE social_profiles SET bio = ?, bio_consent = ? WHERE user_id = ?',
     [(b.bio || '').trim() || null, b.bioConsent ? 1 : 0, req.siteUser.id]
   );
+  if (typeof b.showBadges === 'boolean') {
+    try {
+      await pool.query(
+        `INSERT INTO brain_game_privacy (user_id, show_badges) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE show_badges = VALUES(show_badges)`,
+        [req.siteUser.id, b.showBadges ? 1 : 0]
+      );
+    } catch {}
+  }
   res.json({ ok: true });
 });
 
@@ -473,16 +494,30 @@ router.get('/profile/:userId', requireSocialAccess, async (req, res) => {
             IF(sp.bio_consent = 1, su.email, NULL) AS email,
             IF(sp.bio_consent = 1, sp.bio, NULL) AS bio,
             sp.bio_consent, sp.avatar_url,
+            COALESCE(bgp.show_badges, 1) AS show_badges,
             (SELECT p.school_domain FROM license_seats ls
              JOIN purchases p ON p.id = ls.purchase_id
              WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
      FROM site_users su
      LEFT JOIN social_profiles sp ON sp.user_id = su.id
+     LEFT JOIN brain_game_privacy bgp ON bgp.user_id = su.id
      WHERE su.id = ?`,
     [req.params.userId]
   );
   if (!user) return res.status(404).json({ error: 'Member not found' });
-  res.json({ profile: user });
+  let featuredBadges = [];
+  if (user.show_badges) {
+    try {
+      const [rows] = await pool.query(
+        `SELECT b.name, b.emoji, b.rarity, ub.featured_position
+         FROM user_brain_badges ub JOIN brain_badges b ON b.id = ub.badge_id
+         WHERE ub.user_id = ? AND ub.featured = 1 ORDER BY ub.featured_position`,
+        [req.params.userId]
+      );
+      featuredBadges = rows;
+    } catch {}
+  }
+  res.json({ profile: { ...user, featuredBadges } });
 });
 
 // ── Members list ───────────────────────────────────────────────────────────
