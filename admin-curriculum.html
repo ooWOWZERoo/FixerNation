@@ -101,7 +101,8 @@
           </div>
           <div class="a-field" style="flex:1;">
             <label>Series / Program</label>
-            <input type="text" id="series" placeholder="e.g. SEL Morning Boost">
+            <input type="text" id="series" list="seriesList" placeholder="e.g. SEL Morning Boost" autocomplete="off">
+            <datalist id="seriesList"></datalist>
           </div>
         </div>
 
@@ -319,8 +320,16 @@ async function fetchCurricula() {
   return data.curricula || [];
 }
 
+function refreshSeriesDatalist() {
+  const dl = document.getElementById('seriesList');
+  if (!dl) return;
+  const names = [...new Set(curriculaCache.map(c => c.series).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+}
+
 async function renderCurricula() {
   const list = curriculaCache = await fetchCurricula();
+  refreshSeriesDatalist();
   const tbody = document.querySelector('#curriculumTable tbody');
   tbody.innerHTML = '';
   if (list.length === 0) {
