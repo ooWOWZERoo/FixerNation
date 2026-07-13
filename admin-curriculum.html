@@ -359,13 +359,16 @@ async function addVideoFromInput() {
   const file = input.files[0];
   if (!file) { fnToast('Choose a video file first'); return; }
   const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-  fnToast('Uploading video…');
+  const saveBtn = document.querySelector('.a-btn-primary[onclick="saveCurriculum()"]');
+  if (saveBtn) saveBtn.disabled = true;
+  fnToast('Uploading ' + file.name + ' (' + sizeMb + ' MB)…');
   const url = await fnUploadFile(file);
+  if (saveBtn) saveBtn.disabled = false;
   if (!url) return;
   currentVideos.push({ name: file.name, sizeLabel: sizeMb + ' MB', url });
   input.value = '';
   renderVideoList();
-  fnToast('Video uploaded');
+  fnToast('Video uploaded — click Save to keep it.');
 }
 function removeVideo(i) {
   currentVideos.splice(i, 1);

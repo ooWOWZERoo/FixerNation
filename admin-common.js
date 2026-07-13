@@ -83,16 +83,23 @@ function fnHandleUnauthorized(response) {
 // Uploads a File to the server and returns its public URL, or null on failure
 // (after showing a toast). Shared by books, curriculum, and blog admin pages.
 async function fnUploadFile(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
-  if (fnHandleUnauthorized(r)) return null;
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    fnToast(err.error || 'Upload failed');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const r = await fetch('/api/uploads', { method: 'POST', credentials: 'include', body: formData });
+    if (fnHandleUnauthorized(r)) return null;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      fnToast(err.error || 'Upload failed (status ' + r.status + ')');
+      return null;
+    }
+    const data = await r.json();
+    if (!data.url) { fnToast('Upload error: server returned no URL'); return null; }
+    return data.url;
+  } catch (e) {
+    fnToast('Upload failed: ' + (e.message || 'network error'));
     return null;
   }
-  return (await r.json()).url;
 }
 
 function fnFormatAddress(address, full) {
