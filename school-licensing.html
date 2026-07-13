@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School & District Licensing — Fixer Nation Education</title>
+<meta name="description" content="Bring the 2D SEL program to your school or district. Flexible teacher licensing, easy onboarding, and a dedicated administrator portal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  ul{list-style:none;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+
+  /* Buttons */
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 28px; border-radius:999px; font-weight:700; font-size:14.5px; cursor:pointer; border:none; transition:transform .18s ease, box-shadow .18s ease; font-family:inherit;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-primary:hover{box-shadow:0 18px 32px -10px rgba(242,107,77,0.65);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  .btn-teal{background:var(--teal-dark); color:#fff; box-shadow:0 14px 28px -10px rgba(14,55,51,0.4);}
+  .btn-sm{padding:10px 20px; font-size:13.5px;}
+
+  /* Eyebrow label */
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:7px 14px; border-radius:999px;}
+
+  /* Hero */
+  .hero{position:relative; overflow:hidden; background:linear-gradient(135deg, var(--teal-dark) 0%, #1a6b63 100%);}
+  .hero-img-overlay{position:absolute; inset:0; background-image:url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1600&q=80'); background-size:cover; background-position:center; opacity:0.18;}
+  .hero-content{position:relative; z-index:1; padding:100px 32px 96px; max-width:1180px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;}
+  .hero-text{color:#fff;}
+  .hero-text .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:22px;}
+  .hero-text h1{font-size:46px; color:#fff; line-height:1.1; margin-bottom:18px;}
+  .hero-text p{font-size:16.5px; color:rgba(255,255,255,0.82); line-height:1.65; margin-bottom:32px; max-width:520px;}
+  .hero-btns{display:flex; gap:14px; flex-wrap:wrap;}
+  .hero-card{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:22px; padding:32px; backdrop-filter:blur(8px);}
+  .hero-card h3{color:#fff; font-size:18px; margin-bottom:14px;}
+  .hero-stat{display:flex; flex-direction:column; gap:18px;}
+  .stat-row{display:flex; align-items:center; gap:14px; color:rgba(255,255,255,0.85); font-size:14.5px;}
+  .stat-icon{width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;}
+
+  /* Sections */
+  .section{padding:80px 0;}
+  .section-alt{background:var(--cream-soft);}
+  .section-teal{background:var(--teal-dark);}
+  .section-head{text-align:center; max-width:700px; margin:0 auto 56px;}
+  .section-head h2{font-size:36px; margin:12px 0 16px;}
+  .section-head p{color:var(--ink-soft); font-size:16px;}
+
+  /* Steps */
+  .steps-grid{display:grid; grid-template-columns:1fr 1fr; gap:28px;}
+  .step-card{background:#fff; border-radius:22px; padding:36px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .step-card::before{content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, var(--coral), var(--gold));}
+  .step-num{display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; font-family:'Fraunces', serif; font-size:20px; font-weight:700; margin-bottom:18px;}
+  .step-card h3{font-size:20px; margin-bottom:10px;}
+  .step-card p{color:var(--ink-soft); font-size:14.5px; line-height:1.65; margin-bottom:14px;}
+  .step-card p:last-child{margin-bottom:0;}
+  .step-list{margin-top:12px; display:flex; flex-direction:column; gap:8px;}
+  .step-list li{display:flex; gap:10px; font-size:14px; color:var(--ink-soft);}
+  .step-list li::before{content:"→"; color:var(--coral); font-weight:700; flex-shrink:0;}
+  .step-tag{display:inline-block; padding:4px 12px; border-radius:999px; font-size:11.5px; font-weight:700; margin-bottom:16px;}
+  .tag-exists{background:#d1fae5; color:#065f46;}
+  .tag-contact{background:rgba(242,107,77,0.1); color:var(--coral-dark);}
+
+  /* Inquiry form */
+  .form-wrap{display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:start;}
+  .form-intro h2{font-size:34px; margin-bottom:16px;}
+  .form-intro p{color:var(--ink-soft); font-size:15.5px; line-height:1.65; margin-bottom:24px;}
+  .what-to-expect{background:var(--cream); border-radius:16px; padding:22px 24px; margin-top:4px;}
+  .what-to-expect h4{font-size:13.5px; font-weight:700; color:var(--teal-dark); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px;}
+  .expect-list{display:flex; flex-direction:column; gap:10px;}
+  .expect-list li{display:flex; gap:10px; font-size:13.5px; color:var(--ink-soft);}
+  .expect-list li::before{content:"✓"; color:var(--coral); font-weight:800; flex-shrink:0;}
+  .form-card{background:#fff; border-radius:22px; padding:40px; box-shadow:var(--shadow);}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block; font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:7px;}
+  .field input, .field select, .field textarea{width:100%; padding:12px 15px; border-radius:12px; border:1.5px solid rgba(22,79,74,0.15); font-size:14px; font-family:inherit; background:#fff; color:var(--ink); transition:border-color .15s;}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--teal);}
+  .field textarea{resize:vertical; min-height:100px;}
+  .field select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B5F55' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center;}
+  .grades-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;}
+  .grade-check{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink); cursor:pointer;}
+  .grade-check input{width:16px; height:16px; accent-color:var(--teal); cursor:pointer; flex-shrink:0;}
+  .form-submit-btn{width:100%; padding:15px; border-radius:999px; border:none; background:var(--coral); color:#fff; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit; transition:transform .18s, box-shadow .18s; box-shadow:0 14px 28px -10px rgba(242,107,77,0.5);}
+  .form-submit-btn:hover{transform:translateY(-2px); box-shadow:0 18px 32px -10px rgba(242,107,77,0.6);}
+  .form-submit-btn:disabled{opacity:0.6; cursor:not-allowed; transform:none;}
+  .form-note{font-size:12px; color:var(--ink-soft); text-align:center; margin-top:14px;}
+  .form-success{text-align:center; padding:16px 0;}
+  .form-success .success-icon{font-size:48px; margin-bottom:16px;}
+  .form-success h3{font-size:22px; margin-bottom:10px;}
+  .form-success p{color:var(--ink-soft); font-size:15px; line-height:1.65;}
+  .form-msg{font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:16px; display:none;}
+  .form-msg.error{background:#FDECEA; color:#B3261E; display:block;}
+
+  /* FAQ */
+  .faq-list{max-width:780px; margin:0 auto;}
+  details{background:#fff; border-radius:16px; margin-bottom:12px; box-shadow:0 4px 20px -8px rgba(22,79,74,0.18); overflow:hidden;}
+  details[open]{box-shadow:0 8px 30px -8px rgba(22,79,74,0.22);}
+  summary{display:flex; align-items:center; justify-content:space-between; padding:22px 28px; cursor:pointer; font-size:15.5px; font-weight:700; color:var(--teal-dark); list-style:none; gap:16px;}
+  summary::-webkit-details-marker{display:none;}
+  .faq-chevron{width:28px; height:28px; border-radius:50%; background:var(--cream-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform .2s, background .2s;}
+  details[open] .faq-chevron{transform:rotate(180deg); background:rgba(242,107,77,0.12);}
+  .faq-chevron svg{display:block;}
+  .faq-body{padding:0 28px 24px; font-size:15px; color:var(--ink-soft); line-height:1.7;}
+
+  /* Existing tools band */
+  .tools-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  .tool-card{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:30px 32px; display:flex; flex-direction:column; gap:16px;}
+  .tool-card h3{color:#fff; font-size:18px;}
+  .tool-card p{color:rgba(255,255,255,0.72); font-size:14.5px; line-height:1.6;}
+  .tool-link{display:inline-flex; align-items:center; gap:8px; color:var(--gold); font-weight:700; font-size:14px; transition:gap .15s;}
+  .tool-link:hover{gap:12px;}
+
+  /* District callout */
+  .district-band{background:linear-gradient(135deg, #1a4f4a 0%, var(--teal-dark) 100%); border-radius:24px; padding:52px; display:flex; align-items:center; justify-content:space-between; gap:40px; position:relative; overflow:hidden;}
+  .district-band::before{content:'🏫'; position:absolute; right:52px; top:50%; transform:translateY(-50%); font-size:120px; opacity:0.08;}
+  .district-band h2{font-size:30px; color:#fff; margin-bottom:12px;}
+  .district-band p{color:rgba(255,255,255,0.78); font-size:15px; max-width:580px; line-height:1.65;}
+  .district-band-btns{display:flex; gap:12px; margin-top:24px;}
+
+  /* Footer */
+  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:56px 0 28px;}
+  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:44px;}
+  .footer-brand .brand{color:#fff; display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px;}
+  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;}
+  .footer-credo{font-family:'Fraunces',serif; font-style:italic; color:#F6D9C3; margin-top:14px; font-size:14.5px; max-width:280px;}
+  footer h4{color:#fff; font-size:12.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; opacity:0.9;}
+  footer li{margin-bottom:9px; font-size:14px;}
+  footer a:hover{color:var(--coral);}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:22px; font-size:12.5px; opacity:0.65; text-align:center;}
+
+  @media(max-width:960px){
+    .hero-content{grid-template-columns:1fr; gap:40px;}
+    .hero-card{display:none;}
+    .hero-text h1{font-size:36px;}
+    .steps-grid{grid-template-columns:1fr;}
+    .form-wrap{grid-template-columns:1fr;}
+    .tools-grid{grid-template-columns:1fr;}
+    .district-band{flex-direction:column; padding:36px;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:600px){
+    .wrap{padding:0 20px;}
+    .section{padding:56px 0;}
+    .hero-content{padding:72px 20px 68px;}
+    .hero-text h1{font-size:30px;}
+    .form-row{grid-template-columns:1fr;}
+    .form-card{padding:28px 22px;}
+    .district-band{padding:28px 24px;}
+    .district-band::before{display:none;}
+    .footer-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-img-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-text">
+      <span class="eyebrow">School & District Licensing</span>
+      <h1>Bring 2D SEL to Your School in Four Simple Steps</h1>
+      <p>Whether you're purchasing for a single classroom, an entire school, or a district, Fixer Nation Education makes it easy to implement the 2D SEL program with flexible licensing designed to grow with your needs.</p>
+      <div class="hero-btns">
+        <a href="#inquiry-form" class="btn btn-primary">Request a Proposal</a>
+        <a href="licenses.html" class="btn btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.5);">Buy Licenses Directly</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <h3>What's included with every license</h3>
+      <div class="hero-stat">
+        <div class="stat-row"><div class="stat-icon">📚</div> Full 2D SEL curriculum access</div>
+        <div class="stat-row"><div class="stat-icon">🎓</div> Classroom lessons &amp; supporting resources</div>
+        <div class="stat-row"><div class="stat-icon">☀️</div> Morning Boost daily content</div>
+        <div class="stat-row"><div class="stat-icon">🔑</div> School administrator portal</div>
+        <div class="stat-row"><div class="stat-icon">📊</div> License usage &amp; reporting</div>
+        <div class="stat-row"><div class="stat-icon">🏢</div> District-wide options available</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 4-step process ────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">How It Works</span>
+      <h2>Four Steps to Implementation</h2>
+      <p>From first contact to teachers onboarded — most schools are up and running within one business day of licensing being finalized.</p>
+    </div>
+    <div class="steps-grid">
+
+      <div class="step-card">
+        <span class="tag-contact step-tag">Step 1 — You start here</span>
+        <div class="step-num">1</div>
+        <h3>Contact Our Education Team</h3>
+        <p>Begin by reaching out to discuss your school's goals, grade levels, number of teachers, and implementation timeline. We'll help determine the licensing option that best fits your organization.</p>
+        <p>Whether you're serving one building or an entire district, we'll recommend a solution tailored to your needs.</p>
+        <div style="margin-top:20px;">
+          <a href="#inquiry-form" class="btn btn-primary btn-sm">Request a Proposal →</a>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Receive Your Customized Licensing Proposal</h3>
+        <p>Based on your school's requirements, we'll prepare a licensing proposal that includes:</p>
+        <ul class="step-list">
+          <li>Number of teacher licenses &amp; licensing term</li>
+          <li>Pricing based on your organization's size</li>
+          <li>Optional curriculum resources</li>
+          <li>Professional development or onboarding options</li>
+          <li>Additional services, if requested</li>
+        </ul>
+        <p style="margin-top:14px;">Once approved, your organization can complete the purchase using your preferred procurement process.</p>
+      </div>
+
+      <div class="step-card">
+        <span class="tag-exists step-tag">Already built — Admin Portal</span>
+        <div class="step-num">3</div>
+        <h3>School Administrator Setup</h3>
+        <p>After your purchase is complete, we'll designate one or more School License Administrators for your organization. Your administrator receives access to the Fixer Nation Education Admin Portal, where they can:</p>
+        <ul class="step-list">
+          <li>Invite teachers &amp; assign licenses</li>
+          <li>Monitor license usage</li>
+          <li>Add additional licenses as your program grows</li>
+          <li>Access administrative reports and resources</li>
+        </ul>
+        <div style="margin-top:20px;">
+          <a href="my-license.html" class="btn btn-outline btn-sm">Open Admin Portal →</a>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <span class="tag-exists step-tag">Already built — Teacher Registration</span>
+        <div class="step-num">4</div>
+        <h3>Teacher Onboarding</h3>
+        <p>Teachers receive an invitation by email and create their Fixer Nation Education account using their school-issued email address.</p>
+        <p>Once registered, a license is automatically assigned (if available), giving teachers immediate access to:</p>
+        <ul class="step-list">
+          <li>2D SEL curriculum &amp; classroom lessons</li>
+          <li>Supporting resources &amp; materials</li>
+          <li>Morning Boost daily content</li>
+          <li>Member-exclusive educational materials</li>
+        </ul>
+        <div style="margin-top:20px;">
+          <a href="education-schools.html" class="btn btn-outline btn-sm">Teacher Registration →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Inquiry form ──────────────────────────────────────────────────────── -->
+<section class="section section-alt" id="inquiry-form">
+  <div class="wrap">
+    <div class="form-wrap">
+      <div class="form-intro">
+        <span class="eyebrow">Step 1</span>
+        <h2>Contact Our Education Team</h2>
+        <p>Tell us about your school or district and we'll put together a customized proposal. There's no commitment required — just a conversation to understand what you need.</p>
+        <p>We typically respond within one business day.</p>
+        <div class="what-to-expect">
+          <h4>What happens next</h4>
+          <ul class="expect-list">
+            <li>We review your inquiry and reach out to schedule a brief call or send a proposal by email</li>
+            <li>We prepare a licensing proposal based on your teacher count, grade levels, and goals</li>
+            <li>Your organization can purchase using credit card, purchase order, or your preferred procurement method</li>
+            <li>Licenses are activated and administrators are set up — teachers can begin onboarding the same day</li>
+          </ul>
+        </div>
+      </div>
+      <div class="form-card">
+        <div id="formMsg" class="form-msg"></div>
+        <div id="inquiryForm">
+          <div class="form-row">
+            <div class="field">
+              <label>First Name</label>
+              <input type="text" id="fFirstName" placeholder="First name" required>
+            </div>
+            <div class="field">
+              <label>Last Name</label>
+              <input type="text" id="fLastName" placeholder="Last name" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>School or District Name</label>
+            <input type="text" id="fSchool" placeholder="e.g. Lincoln Elementary or Springfield USD" required>
+          </div>
+          <div class="field">
+            <label>Your Role</label>
+            <select id="fRole">
+              <option value="">Select your role…</option>
+              <option>Principal / Assistant Principal</option>
+              <option>District Administrator</option>
+              <option>Curriculum Coordinator</option>
+              <option>Department Head</option>
+              <option>Teacher</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Email Address</label>
+              <input type="email" id="fEmail" placeholder="you@yourschool.edu" required>
+            </div>
+            <div class="field">
+              <label>Phone (optional)</label>
+              <input type="tel" id="fPhone" placeholder="(555) 000-0000">
+            </div>
+          </div>
+          <div class="field">
+            <label>Approximate Number of Teachers</label>
+            <select id="fTeachers">
+              <option value="">Select range…</option>
+              <option>1–5 teachers</option>
+              <option>6–15 teachers</option>
+              <option>16–30 teachers</option>
+              <option>31–60 teachers</option>
+              <option>60+ teachers</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Grade Levels Served</label>
+            <div class="grades-grid">
+              <label class="grade-check"><input type="checkbox" name="grade" value="Elementary (K–5)"> Elementary (K–5)</label>
+              <label class="grade-check"><input type="checkbox" name="grade" value="Middle School (6–8)"> Middle School (6–8)</label>
+              <label class="grade-check"><input type="checkbox" name="grade" value="High School (9–12)"> High School (9–12)</label>
+              <label class="grade-check"><input type="checkbox" name="grade" value="Higher Education"> Higher Education</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Anything else you'd like us to know? (optional)</label>
+            <textarea id="fMessage" placeholder="Implementation timeline, specific questions, district scope…"></textarea>
+          </div>
+          <button class="form-submit-btn" id="submitBtn" onclick="submitInquiry()">Send Inquiry →</button>
+          <p class="form-note">We'll never share your information. We use it only to respond to your request.</p>
+        </div>
+        <div id="formSuccess" class="form-success" style="display:none;">
+          <div class="success-icon">✅</div>
+          <h3>Inquiry Received!</h3>
+          <p>Thank you — we've received your inquiry and will be in touch within one business day. Check your inbox (and spam folder) for a confirmation.</p>
+          <div style="margin-top:24px;">
+            <a href="education-schools.html" class="btn btn-outline btn-sm">Teacher Registration →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Growing with your school ──────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div style="max-width:900px; margin:0 auto;">
+      <div class="section-head" style="margin-bottom:40px;">
+        <span class="eyebrow">Flexible by Design</span>
+        <h2>Growing With Your School</h2>
+        <p>Your licensing grows as your program does. There's no penalty for starting small — many schools begin with a pilot group and expand over time as more teachers adopt the curriculum.</p>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:22px;">
+        <div style="background:#fff; border-radius:18px; padding:28px; box-shadow:var(--shadow); text-align:center;">
+          <div style="font-size:36px; margin-bottom:12px;">🌱</div>
+          <h3 style="font-size:17px; margin-bottom:8px;">Start Small</h3>
+          <p style="font-size:13.5px; color:var(--ink-soft);">Begin with a single teacher or pilot group. No minimum seat commitment required.</p>
+        </div>
+        <div style="background:#fff; border-radius:18px; padding:28px; box-shadow:var(--shadow); text-align:center;">
+          <div style="font-size:36px; margin-bottom:12px;">➕</div>
+          <h3 style="font-size:17px; margin-bottom:8px;">Add Licenses Anytime</h3>
+          <p style="font-size:13.5px; color:var(--ink-soft);">School License Administrators can request additional licenses at any time as new staff join.</p>
+        </div>
+        <div style="background:#fff; border-radius:18px; padding:28px; box-shadow:var(--shadow); text-align:center;">
+          <div style="font-size:36px; margin-bottom:12px;">🔔</div>
+          <h3 style="font-size:17px; margin-bottom:8px;">Automatic Notifications</h3>
+          <p style="font-size:13.5px; color:var(--ink-soft);">If all seats are taken, teachers can automatically notify the administrator that more licenses are needed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── District callout ──────────────────────────────────────────────────── -->
+<section class="section section-alt">
+  <div class="wrap">
+    <div class="district-band">
+      <div>
+        <span class="eyebrow" style="background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:18px;">District-Wide Licensing</span>
+        <h2>Managing Multiple Schools?</h2>
+        <p>For districts managing multiple buildings, Fixer Nation Education offers district-wide licensing with centralized administration, flexible license allocation across schools, and consolidated reporting.</p>
+        <div class="district-band-btns">
+          <a href="#inquiry-form" class="btn btn-primary">Contact Our Education Team</a>
+          <a href="education-schools.html" class="btn btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.5);">Learn About the Program</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Existing tools ────────────────────────────────────────────────────── -->
+<section class="section section-teal">
+  <div class="wrap">
+    <div class="section-head" style="margin-bottom:44px;">
+      <span class="eyebrow" style="background:rgba(255,255,255,0.12); color:#F6D9C3;">Already Licensed?</span>
+      <h2 style="color:#fff;">Your Tools Are Ready</h2>
+      <p style="color:rgba(255,255,255,0.72);">Both the administrator portal and the teacher registration flow are live and available now.</p>
+    </div>
+    <div class="tools-grid">
+      <div class="tool-card">
+        <h3>School License Administrator Portal</h3>
+        <p>After your purchase is finalized, your designated administrator can log in to manage seats, invite teachers, track license usage, and request additional licenses.</p>
+        <a href="my-license.html" class="tool-link">Open Admin Portal →</a>
+      </div>
+      <div class="tool-card">
+        <h3>Teacher Registration &amp; Eligibility Check</h3>
+        <p>Teachers enter their school email address to check if a seat is available under their school's license. If one is available, they can create an account and gain immediate access.</p>
+        <a href="education-schools.html" class="tool-link">Teacher Registration →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ──────────────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">FAQ</span>
+      <h2>Frequently Asked Questions</h2>
+    </div>
+    <div class="faq-list">
+
+      <details>
+        <summary>Can we start with only a few teachers?
+          <span class="faq-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="#6B5F55" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </summary>
+        <div class="faq-body">Yes. Many schools begin with a pilot group and expand over time as more teachers adopt the curriculum. There's no minimum commitment — you can start with a single teacher license and add more seats at any time.</div>
+      </details>
+
+      <details>
+        <summary>Can we add licenses later?
+          <span class="faq-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="#6B5F55" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </summary>
+        <div class="faq-body">Absolutely. Additional licenses can be purchased at any time. Your School License Administrator can request more seats directly through the admin portal as new staff join your organization.</div>
+      </details>
+
+      <details>
+        <summary>What happens if all licenses are already assigned?
+          <span class="faq-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="#6B5F55" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </summary>
+        <div class="faq-body">Teachers attempting to register will be informed that no licenses are currently available. They may either purchase an individual license or request that the School License Administrator be notified to obtain additional licenses — this notification is sent automatically through the registration flow.</div>
+      </details>
+
+      <details>
+        <summary>Does every teacher need their own account?
+          <span class="faq-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="#6B5F55" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </summary>
+        <div class="faq-body">Yes. Each teacher receives an individual account linked to your school's license so progress, curriculum access, and reporting remain accurate for your organization. Accounts are created using each teacher's school-issued email address.</div>
+      </details>
+
+      <details>
+        <summary>Who manages our licenses?
+          <span class="faq-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="#6B5F55" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </summary>
+        <div class="faq-body">Your designated School License Administrator manages teacher invitations, license assignments, and license availability through the Fixer Nation Education Admin Portal. You can designate one or more administrators for your organization.</div>
+      </details>
+
+      <details>
+        <summary>How long does implementation take?
+          <span class="faq-chevron"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="#6B5F55" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </summary>
+        <div class="faq-body">Most schools can begin onboarding teachers within one business day after licensing is finalized. The teacher registration process takes just a few minutes — teachers enter their school email, create an account, and gain immediate access to the curriculum.</div>
+      </details>
+
+    </div>
+
+    <div style="text-align:center; margin-top:44px;">
+      <p style="color:var(--ink-soft); font-size:15px; margin-bottom:18px;">Have a question that isn't answered here?</p>
+      <a href="#inquiry-form" class="btn btn-primary">Ask Our Education Team</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand"><div class="brand-mark">FN</div> Fixer Nation</div>
+        <p class="footer-credo">"There are no problems in life... only issues and answers."</p>
+      </div>
+      <div><h4>Explore</h4><ul>
+        <li><a href="about.html">About</a></li>
+        <li><a href="books.html">Books</a></li>
+        <li><a href="blog.html">FN Blogs</a></li>
+      </ul></div>
+      <div><h4>Community</h4><ul>
+        <li><a href="fnnetwork.html">FN Network</a></li>
+        <li><a href="askthefixer.html">Ask The Fixer</a></li>
+        <li><a href="join.html">Join Fixer Nation</a></li>
+      </ul></div>
+      <div><h4>Schools</h4><ul>
+        <li><a href="education-portal.html">National Education Portal</a></li>
+        <li><a href="education-schools.html">2D Education — Schools</a></li>
+        <li><a href="school-licensing.html" style="color:var(--gold);">School Licensing</a></li>
+        <li><a href="programs.html">Programs</a></li>
+        <li><a href="licenses.html">Buy Licenses</a></li>
+      </ul></div>
+    </div>
+    <div class="footer-bottom">© 2026 Fixer Nation Issues and Answers. All Rights Reserved. · <a href="privacy-choices.html" style="color:inherit;">Your Privacy Choices</a></div>
+  </div>
+</footer>
+
+<!-- Auth modal -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script src="nav.js?v=3"></script>
+<script src="site-auth.js"></script>
+<script src="cart.js"></script>
+<script>
+async function submitInquiry() {
+  const btn = document.getElementById('submitBtn');
+  const msgEl = document.getElementById('formMsg');
+
+  const firstName = document.getElementById('fFirstName').value.trim();
+  const lastName  = document.getElementById('fLastName').value.trim();
+  const school    = document.getElementById('fSchool').value.trim();
+  const role      = document.getElementById('fRole').value.trim();
+  const email     = document.getElementById('fEmail').value.trim();
+  const phone     = document.getElementById('fPhone').value.trim();
+  const teachers  = document.getElementById('fTeachers').value.trim();
+  const grades    = [...document.querySelectorAll('input[name="grade"]:checked')].map(c => c.value).join(', ');
+  const note      = document.getElementById('fMessage').value.trim();
+
+  msgEl.classList.remove('error');
+  msgEl.style.display = 'none';
+
+  if (!firstName || !lastName || !school || !email) {
+    msgEl.textContent = 'Please fill in your name, school, and email address.';
+    msgEl.classList.add('error');
+    return;
+  }
+  if (!email.includes('@') || !email.includes('.')) {
+    msgEl.textContent = 'Please enter a valid email address.';
+    msgEl.classList.add('error');
+    return;
+  }
+
+  // Build message that surfaces all extra fields in the email the team receives
+  const parts = [];
+  if (role)     parts.push(`Role: ${role}`);
+  if (teachers) parts.push(`Teachers: ${teachers}`);
+  if (grades)   parts.push(`Grade levels: ${grades}`);
+  if (note)     parts.push(`Additional notes:\n${note}`);
+  const message = parts.join('\n');
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const r = await fetch('/api/contact/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, school, phone, message }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Request failed');
+
+    if (typeof fnTrackEvent === 'function') fnTrackEvent('quote_request', 'school_licensing');
+    document.getElementById('inquiryForm').style.display = 'none';
+    document.getElementById('formSuccess').style.display = 'block';
+  } catch (e) {
+    msgEl.textContent = 'Something went wrong — please try again or email us directly.';
+    msgEl.classList.add('error');
+    btn.disabled = false;
+    btn.textContent = 'Send Inquiry →';
+  }
+}
+
+// Allow Enter key in form fields to submit
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' &&
+      document.getElementById('inquiryForm').style.display !== 'none') {
+    e.preventDefault();
+    submitInquiry();
+  }
+});
+
+// Smooth scroll for anchor links (hero CTA → form)
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', function(e) {
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+});
+</script>
+
+</body>
+</html>
