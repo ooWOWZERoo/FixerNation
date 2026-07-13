@@ -10,6 +10,88 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=14">
+<style>
+/* ── Tab bar ─────────────────────────────────────────── */
+.auto-tab-bar{display:flex;gap:0;border-bottom:1px solid var(--a-border);margin-bottom:24px;overflow-x:auto;}
+.auto-tab{background:none;border:none;padding:11px 18px;font-size:13.5px;font-weight:600;color:var(--a-text-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s,border-color .15s;font-family:inherit;}
+.auto-tab:hover{color:var(--a-text);}
+.auto-tab.active{color:var(--a-accent);border-bottom-color:var(--a-accent);}
+
+/* ── Stats grid ──────────────────────────────────────── */
+.auto-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+@media(max-width:1300px){.auto-stat-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* ── Filter bar ──────────────────────────────────────── */
+.auto-filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+.auto-filter-bar input,.auto-filter-bar select{padding:9px 12px;border-radius:10px;border:1px solid var(--a-border);background:var(--a-card);color:var(--a-text);font-size:13.5px;font-family:inherit;}
+.auto-filter-bar input{flex:1;min-width:180px;}
+.auto-filter-bar input:focus,.auto-filter-bar select:focus{outline:none;border-color:var(--a-accent);}
+
+/* ── Template grid ───────────────────────────────────── */
+.tpl-cat-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+.tpl-cat-btn{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1.5px solid var(--a-border);background:var(--a-card);color:var(--a-text-soft);cursor:pointer;transition:all .15s;}
+.tpl-cat-btn:hover{border-color:var(--a-accent);color:var(--a-accent);}
+.tpl-cat-btn.active{background:var(--a-accent-fill);border-color:var(--a-accent-fill);color:#fff;}
+.tpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:1200px){.tpl-grid{grid-template-columns:repeat(2,1fr);}}
+.tpl-card{background:var(--a-card);border-radius:14px;border:1.5px solid var(--a-border);padding:20px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.tpl-card:hover{border-color:var(--a-accent);box-shadow:0 6px 20px -10px rgba(22,79,74,.2);}
+.tpl-card-icon{font-size:24px;margin-bottom:10px;}
+.tpl-card-name{font-weight:700;font-size:14px;margin-bottom:5px;}
+.tpl-card-desc{font-size:12.5px;color:var(--a-text-soft);line-height:1.5;}
+.tpl-card-cat{display:inline-block;margin-top:10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;background:var(--a-accent-soft);color:var(--a-accent-on-soft);}
+
+/* ── Activity feed ───────────────────────────────────── */
+.activity-feed{list-style:none;}
+.activity-feed li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--a-border);}
+.activity-feed li:last-child{border-bottom:none;}
+.act-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;}
+.act-dot.ok{background:var(--a-success);}
+.act-dot.off{background:var(--a-neutral-soft);}
+.act-dot.info{background:var(--a-accent);}
+.act-dot.fail{background:var(--a-danger);}
+.act-text{font-size:13.5px;font-weight:600;}
+.act-time{font-size:12px;color:var(--a-text-soft);margin-top:2px;}
+
+/* ── Builder modal ───────────────────────────────────── */
+.builder-modal{max-width:820px;width:100%;}
+.bstep-track{display:flex;align-items:flex-start;margin-bottom:28px;padding:0 4px;}
+.bstep-item{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;}
+.bstep-item:not(:last-child)::after{content:'';position:absolute;top:13px;left:55%;width:90%;height:2px;background:var(--a-border);}
+.bstep-item.done:not(:last-child)::after{background:var(--a-accent);}
+.bstep-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--a-border);background:var(--a-card);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--a-text-soft);z-index:1;transition:all .15s;}
+.bstep-item.active .bstep-dot{border-color:var(--a-accent);background:var(--a-accent);color:#fff;}
+.bstep-item.done .bstep-dot{border-color:var(--a-accent);background:var(--a-accent-soft);color:var(--a-accent-on-soft);}
+.bstep-label{font-size:10.5px;font-weight:600;color:var(--a-text-soft);margin-top:5px;text-align:center;line-height:1.3;}
+.bstep-item.active .bstep-label{color:var(--a-accent);}
+.bstep-body{display:none;}
+.bstep-body.active{display:block;}
+
+/* ── Conditions & actions ────────────────────────────── */
+.cond-group{background:var(--a-bg);border:1px solid var(--a-border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.cond-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.cond-row select,.cond-row input{padding:8px 10px;border-radius:8px;border:1px solid var(--a-border);background:var(--a-card);color:var(--a-text);font-size:13px;font-family:inherit;}
+.cond-and-label{font-size:11px;font-weight:800;color:var(--a-gold);background:var(--a-gold-soft);padding:2px 8px;border-radius:4px;margin-bottom:8px;display:inline-block;}
+.action-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.action-pick-btn{padding:10px 8px;border-radius:10px;border:1.5px solid var(--a-border);background:var(--a-card);text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--a-text-soft);transition:all .15s;line-height:1.4;}
+.action-pick-btn:hover{border-color:var(--a-accent);color:var(--a-accent);background:var(--a-accent-soft);}
+.action-pick-btn .icon{font-size:18px;display:block;margin-bottom:4px;}
+.action-card{background:var(--a-bg);border:1.5px solid var(--a-border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+.action-card-icon{font-size:20px;flex-shrink:0;}
+.action-card-body{flex:1;}
+.action-card-title{font-weight:700;font-size:13.5px;}
+.action-card-sub{font-size:12px;color:var(--a-text-soft);margin-top:2px;}
+
+/* ── Coming soon placeholder ─────────────────────────── */
+.coming-soon{text-align:center;padding:60px 40px;color:var(--a-text-soft);}
+.coming-soon .cs-icon{font-size:40px;margin-bottom:14px;}
+.coming-soon h3{font-size:17px;font-weight:700;margin-bottom:8px;color:var(--a-text);}
+.coming-soon p{font-size:13.5px;line-height:1.6;max-width:420px;margin:0 auto;}
+
+/* ── Overview two-col ────────────────────────────────── */
+.overview-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:1100px){.overview-cols{grid-template-columns:1fr;}}
+</style>
 </head>
 <body>
 
@@ -49,139 +131,900 @@
     </div>
 
     <div class="a-content">
-      <div class="a-card">
-        <div class="a-card-head">
-          <h2>Automated Emails</h2>
-        </div>
-        <div class="a-note" style="margin-bottom:16px;">These fire automatically from real events — book purchases, membership purchases and renewals, invoices being marked paid, failed subscription payments, and school license seat invites. Turn any of them off, or edit what they say.</div>
-        <table class="a-table" id="automationsTable">
-          <thead><tr><th>Event</th><th>Subject</th><th>Status</th><th>Reminder Window</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
+
+      <!-- Top action row -->
+      <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:20px;gap:10px;">
+        <button class="a-btn a-btn-outline" onclick="switchTab('templates')">Browse Templates</button>
+        <button class="a-btn a-btn-primary" onclick="openBuilder(null)">+ Create Automation</button>
       </div>
+
+      <!-- Tab bar -->
+      <div class="auto-tab-bar" id="autoTabBar">
+        <button class="auto-tab active" data-tab="overview"    onclick="switchTab('overview')">Overview</button>
+        <button class="auto-tab"        data-tab="automations" onclick="switchTab('automations')">Automations</button>
+        <button class="auto-tab"        data-tab="templates"   onclick="switchTab('templates')">Templates</button>
+        <button class="auto-tab"        data-tab="history"     onclick="switchTab('history')">Execution History</button>
+        <button class="auto-tab"        data-tab="analytics"   onclick="switchTab('analytics')">Analytics</button>
+        <button class="auto-tab"        data-tab="audit"       onclick="switchTab('audit')">Audit Log</button>
+        <button class="auto-tab"        data-tab="failures"    onclick="switchTab('failures')">Failure Center</button>
+      </div>
+
+      <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════════ -->
+      <div id="tab-overview">
+        <div class="auto-stat-grid">
+          <div class="a-stat-card"><div class="label">Active Automations</div><div class="value" id="statActive">—</div></div>
+          <div class="a-stat-card"><div class="label">Paused</div><div class="value" id="statPaused">—</div></div>
+          <div class="a-stat-card"><div class="label">Draft</div><div class="value" id="statDraft">—</div></div>
+          <div class="a-stat-card"><div class="label">Failed (24h)</div><div class="value" id="statFailed" style="color:var(--a-danger)">0</div></div>
+          <div class="a-stat-card"><div class="label">Executions Today</div><div class="value" id="statExecToday">—</div></div>
+          <div class="a-stat-card"><div class="label">Messages Sent Today</div><div class="value" id="statMsgs">—</div></div>
+          <div class="a-stat-card"><div class="label">Revenue Attributed (Mo)</div><div class="value" id="statRev">—</div></div>
+          <div class="a-stat-card"><div class="label">Carts Recovered (Mo)</div><div class="value" id="statCarts">—</div></div>
+        </div>
+
+        <div class="overview-cols">
+          <div class="a-card">
+            <div class="a-card-head"><h2>Automation Status</h2></div>
+            <ul class="activity-feed" id="overviewList">
+              <li><div class="act-dot info"></div><div><div class="act-text">Loading…</div></div></li>
+            </ul>
+          </div>
+          <div class="a-card">
+            <div class="a-card-head"><h2>Quick Start</h2></div>
+            <div class="a-note" style="margin-bottom:16px;">Execution history, revenue attribution, and analytics are wired in the next backend phase.</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="a-btn a-btn-outline" style="justify-content:flex-start;gap:10px;" onclick="openBuilder(null)">🚀 <span>Create an automation from scratch</span></button>
+              <button class="a-btn a-btn-outline" style="justify-content:flex-start;gap:10px;" onclick="switchTab('templates')">📋 <span>Browse 66 ready-made templates</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ AUTOMATIONS ═════════════════════════════════════════════════════ -->
+      <div id="tab-automations" style="display:none;">
+        <div class="auto-filter-bar">
+          <input type="text" id="autoSearch" placeholder="Search automations…" oninput="filterAutomations()">
+          <select id="autoStatusFilter" onchange="filterAutomations()">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+          </select>
+          <select id="autoCatFilter" onchange="filterAutomations()">
+            <option value="">All categories</option>
+            <option value="email">Email</option>
+            <option value="membership">Membership</option>
+            <option value="license">School License</option>
+            <option value="ecommerce">E-commerce</option>
+            <option value="curriculum">Curriculum</option>
+            <option value="marketing">Marketing</option>
+          </select>
+        </div>
+        <div class="a-card">
+          <table class="a-table" id="autoTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Trigger</th>
+                <th>Status</th>
+                <th>Reminder Window</th>
+                <th>Executions</th>
+                <th>Success Rate</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="autoTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TEMPLATES ═══════════════════════════════════════════════════════ -->
+      <div id="tab-templates" style="display:none;">
+        <div class="tpl-cat-bar" id="tplCatBar">
+          <button class="tpl-cat-btn active" onclick="filterTpl('all',this)">All (66)</button>
+        </div>
+        <div class="tpl-grid" id="tplGrid"></div>
+      </div>
+
+      <!-- ═══ EXECUTION HISTORY ═══════════════════════════════════════════════ -->
+      <div id="tab-history" style="display:none;">
+        <div class="auto-filter-bar" style="margin-bottom:18px;">
+          <select id="histAutoSel"><option value="">All automations</option></select>
+          <select id="histResultSel">
+            <option value="">All results</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+            <option value="skipped">Skipped</option>
+          </select>
+          <input type="date" id="histFrom">
+          <input type="date" id="histTo">
+          <button class="a-btn a-btn-outline" onclick="fnToast('History API coming in next phase')">Apply</button>
+        </div>
+        <div class="a-card">
+          <table class="a-table">
+            <thead>
+              <tr><th>Automation</th><th>Contact</th><th>Trigger Event</th><th>Result</th><th>Duration</th><th>Ran At</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7">
+                <div class="coming-soon">
+                  <div class="cs-icon">🕐</div>
+                  <h3>Execution History</h3>
+                  <p>Every automation run will be logged here — contact, trigger, result, timing, and a full step-by-step trace. Coming in the next backend phase.</p>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ ANALYTICS ════════════════════════════════════════════════════════ -->
+      <div id="tab-analytics" style="display:none;">
+        <div class="coming-soon">
+          <div class="cs-icon">📈</div>
+          <h3>Automation Analytics</h3>
+          <p>Execution volume over time, per-automation success rates, revenue attribution, message open/click funnels, and A/B comparison reports — coming soon.</p>
+        </div>
+      </div>
+
+      <!-- ═══ AUDIT LOG ════════════════════════════════════════════════════════ -->
+      <div id="tab-audit" style="display:none;">
+        <div class="coming-soon">
+          <div class="cs-icon">📋</div>
+          <h3>Audit Log</h3>
+          <p>A full history of who created, edited, paused, activated, duplicated, or deleted each automation — including before/after snapshots of every change.</p>
+        </div>
+      </div>
+
+      <!-- ═══ FAILURE CENTER ═══════════════════════════════════════════════════ -->
+      <div id="tab-failures" style="display:none;">
+        <div class="coming-soon">
+          <div class="cs-icon">🚨</div>
+          <h3>Failure Center</h3>
+          <p>Failed automation runs with full error details, retry controls, and root-cause analysis surfaced in one place — so nothing slips through the cracks.</p>
+        </div>
+      </div>
+
+    </div><!-- /.a-content -->
+  </div><!-- /.a-main -->
+</div><!-- /.a-shell -->
+
+
+<!-- ═══════════════════════ BUILDER MODAL ═══════════════════════════════════ -->
+<div class="a-modal-overlay" id="builderOverlay">
+  <div class="a-modal builder-modal">
+    <div class="a-modal-head">
+      <h3 id="builderTitle">Create Automation</h3>
+      <button class="a-modal-close" onclick="closeBuilder()">✕</button>
+    </div>
+    <div class="a-modal-body">
+
+      <!-- Step progress track -->
+      <div class="bstep-track" id="bstepTrack"></div>
+
+      <!-- Step 1 — Basic Info -->
+      <div class="bstep-body active" id="bsbody-1">
+        <div class="a-field">
+          <label>Automation Name *</label>
+          <input type="text" id="bName" placeholder="e.g. Welcome New Member">
+        </div>
+        <div class="a-field">
+          <label>Description</label>
+          <textarea id="bDesc" rows="2" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--a-border);font-size:14px;font-family:inherit;background:var(--a-card);color:var(--a-text);" placeholder="What does this automation do?"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="a-field">
+            <label>Category</label>
+            <select id="bCat">
+              <option value="">Select…</option>
+              <option value="email">Email</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="membership">Membership</option>
+              <option value="license">School License</option>
+              <option value="curriculum">Curriculum</option>
+              <option value="blog">Blog</option>
+              <option value="marketing">Marketing</option>
+              <option value="support">Support</option>
+              <option value="schedule">Scheduled</option>
+            </select>
+          </div>
+          <div class="a-field">
+            <label>Initial Status</label>
+            <select id="bStatus">
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 — Trigger -->
+      <div class="bstep-body" id="bsbody-2">
+        <div class="a-field">
+          <label>Trigger Category</label>
+          <select id="bTrigCat" onchange="renderTrigEvents()">
+            <option value="">Select a category…</option>
+            <option value="ecommerce">E-commerce</option>
+            <option value="membership">Membership</option>
+            <option value="license">School Licenses</option>
+            <option value="curriculum">Curriculum</option>
+            <option value="blog">Blog</option>
+            <option value="marketing">Marketing</option>
+            <option value="support">Support</option>
+            <option value="schedule">Schedule</option>
+          </select>
+        </div>
+        <div id="bTrigEvents"></div>
+        <div id="bTrigDelay" style="display:none;">
+          <div class="a-field">
+            <label>Run how many days before/after the event?</label>
+            <input type="number" id="bTrigDays" min="0" value="0" style="width:120px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 — Conditions -->
+      <div class="bstep-body" id="bsbody-3">
+        <div class="a-note" style="margin-bottom:14px;">Narrow who this automation runs for. Leave empty to match everyone who hits the trigger.</div>
+        <div id="bCondWrap"></div>
+        <button class="a-btn a-btn-outline" style="font-size:13px;padding:8px 14px;margin-top:4px;" onclick="addCondition()">+ Add Condition</button>
+      </div>
+
+      <!-- Step 4 — Actions -->
+      <div class="bstep-body" id="bsbody-4">
+        <div class="a-note" style="margin-bottom:14px;">Choose what happens when the automation fires. Actions execute in the order shown.</div>
+        <div class="action-pick-grid">
+          <div class="action-pick-btn" onclick="addAction('email')"><span class="icon">📧</span>Send Email</div>
+          <div class="action-pick-btn" onclick="addAction('inapp')"><span class="icon">🔔</span>In-App Notice</div>
+          <div class="action-pick-btn" onclick="addAction('admin')"><span class="icon">👤</span>Admin Alert</div>
+          <div class="action-pick-btn" onclick="addAction('tag')"><span class="icon">🏷️</span>Add / Remove Tag</div>
+          <div class="action-pick-btn" onclick="addAction('membership')"><span class="icon">🪪</span>Membership Action</div>
+          <div class="action-pick-btn" onclick="addAction('license')"><span class="icon">🏫</span>License Action</div>
+          <div class="action-pick-btn" onclick="addAction('curriculum')"><span class="icon">🎓</span>Curriculum Action</div>
+          <div class="action-pick-btn" onclick="addAction('webhook')"><span class="icon">🔗</span>Webhook</div>
+          <div class="action-pick-btn" onclick="addAction('wait')"><span class="icon">⏳</span>Wait / Delay</div>
+        </div>
+        <div id="bActionsWrap"></div>
+      </div>
+
+      <!-- Step 5 — Delays & Branches -->
+      <div class="bstep-body" id="bsbody-5">
+        <div class="coming-soon" style="padding:30px 0;">
+          <div class="cs-icon">🔀</div>
+          <h3>Branching Logic</h3>
+          <p>Visual branching, parallel paths, and A/B split testing are coming in the next builder phase. Continue to set goals and exit conditions.</p>
+        </div>
+      </div>
+
+      <!-- Step 6 — Goals & Exit -->
+      <div class="bstep-body" id="bsbody-6">
+        <div class="a-field">
+          <label>Goal Event — stops automation for a contact when met</label>
+          <select id="bGoal">
+            <option value="">No goal — always run all actions</option>
+            <option value="purchase">Contact makes any purchase</option>
+            <option value="membership_upgrade">Contact upgrades membership</option>
+            <option value="license_purchase">Contact purchases a license</option>
+            <option value="email_reply">Contact replies to any email</option>
+            <option value="link_click">Contact clicks a link</option>
+          </select>
+        </div>
+        <div class="a-field">
+          <label>Exit Condition — immediately halts the automation for a contact</label>
+          <select id="bExit">
+            <option value="">No special exit</option>
+            <option value="unsubscribe">Contact unsubscribes</option>
+            <option value="membership_cancelled">Membership cancelled or expired</option>
+            <option value="contact_deleted">Contact removed from CRM</option>
+          </select>
+        </div>
+        <div class="a-field">
+          <label>Max Executions Per Contact</label>
+          <select id="bMaxExec">
+            <option value="">Unlimited</option>
+            <option value="1">Once only</option>
+            <option value="3">3 times</option>
+            <option value="5">5 times</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Step 7 — Review -->
+      <div class="bstep-body" id="bsbody-7">
+        <div id="bReview"></div>
+      </div>
+
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" id="bPrevBtn" onclick="bPrev()" style="display:none;">← Back</button>
+      <div style="flex:1;"></div>
+      <button class="a-btn a-btn-outline" onclick="closeBuilder()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="bNextBtn" onclick="bNext()">Next →</button>
     </div>
   </div>
 </div>
 
-<!-- Edit automation modal -->
-<div class="a-modal-overlay" id="automationModalOverlay">
+
+<!-- ═══════════════════════ EDIT EMAIL AUTOMATION MODAL ══════════════════════ -->
+<div class="a-modal-overlay" id="editAutoOverlay">
   <div class="a-modal" style="max-width:560px;">
     <div class="a-modal-head">
-      <h3 id="automationModalTitle">Edit Automation</h3>
-      <button class="a-modal-close" onclick="closeAutomationModal()">✕</button>
+      <h3 id="editAutoTitle">Edit Automation</h3>
+      <button class="a-modal-close" onclick="closeEditAuto()">✕</button>
     </div>
     <div class="a-modal-body">
-      <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-bottom:14px;">
-        <input type="checkbox" id="automationEnabled"> Enabled
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;margin-bottom:14px;">
+        <input type="checkbox" id="editEnabled"> Enabled
       </label>
-      <div class="a-field" id="automationReminderDaysField" style="display:none;">
+      <div class="a-field" id="editReminderField" style="display:none;">
         <label>Send This Many Days Before Expiration</label>
-        <input type="number" id="automationReminderDays" min="1">
+        <input type="number" id="editReminderDays" min="1">
       </div>
-      <div class="a-field"><label>Subject</label><input type="text" id="automationSubject"></div>
-      <div class="a-field"><label>Body</label><textarea id="automationBody" rows="8" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;"></textarea></div>
-      <div class="a-note" id="automationFieldsHint"></div>
+      <div class="a-field"><label>Subject</label><input type="text" id="editSubject"></div>
+      <div class="a-field">
+        <label>Body</label>
+        <textarea id="editBody" rows="8" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--a-border);font-size:14px;font-family:inherit;background:var(--a-card);color:var(--a-text);"></textarea>
+      </div>
+      <div class="a-note" id="editMergeHint"></div>
     </div>
     <div class="a-modal-foot">
-      <button class="a-btn a-btn-outline" onclick="closeAutomationModal()">Cancel</button>
-      <button class="a-btn a-btn-primary" onclick="saveAutomation()">Save Changes</button>
+      <button class="a-btn a-btn-outline" onclick="closeEditAuto()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="saveEditAuto()">Save Changes</button>
     </div>
   </div>
 </div>
+
 
 <script src="admin-common.js?v=15"></script>
 <script>
 fnRequireAuth();
 
-// Must match the mergeFields actually passed by each event's caller in
-// server/routes/*.js — this is display-only, not enforced server-side.
+// ─── Static data ───────────────────────────────────────────────────────────────
+
 const MERGE_FIELDS = {
-  book_purchase_thank_you: ['firstName', 'bookTitle'],
-  membership_trial_started: ['firstName', 'planName', 'trialDays', 'setPasswordUrl'],
-  membership_purchase_thank_you: ['firstName', 'planName', 'amount', 'setPasswordUrl'],
-  membership_renewal_reminder: ['firstName', 'planName', 'expiresOn'],
-  invoice_paid: ['buyerName', 'invoiceNumber', 'total'],
-  payment_failed: ['firstName', 'planName'],
-  license_seat_invite: ['licenseProductName', 'schoolLabel'],
+  book_purchase_thank_you:       ['firstName','bookTitle'],
+  membership_trial_started:      ['firstName','planName','trialDays','setPasswordUrl'],
+  membership_purchase_thank_you: ['firstName','planName','amount','setPasswordUrl'],
+  membership_renewal_reminder:   ['firstName','planName','expiresOn'],
+  invoice_paid:                  ['buyerName','invoiceNumber','total'],
+  payment_failed:                ['firstName','planName'],
+  license_seat_invite:           ['licenseProductName','schoolLabel'],
 };
 
-let automationsCache = [];
-let editingEventKey = null;
+const TRIGGER_EVENTS = {
+  ecommerce:[
+    {key:'cart_abandoned',        label:'Cart Abandoned'},
+    {key:'checkout_started',      label:'Checkout Started'},
+    {key:'order_placed',          label:'Order Placed'},
+    {key:'payment_failed',        label:'Payment Failed'},
+    {key:'payment_retry_success', label:'Payment Retry Succeeded'},
+    {key:'refund_issued',         label:'Refund Issued'},
+  ],
+  membership:[
+    {key:'trial_started',         label:'Trial Started'},
+    {key:'trial_converted',       label:'Trial Converted to Paid'},
+    {key:'membership_purchased',  label:'Membership Purchased'},
+    {key:'membership_renewed',    label:'Membership Renewed'},
+    {key:'membership_cancelled',  label:'Membership Cancelled'},
+    {key:'membership_expired',    label:'Membership Expired'},
+    {key:'membership_paused',     label:'Membership Paused'},
+    {key:'renewal_approaching',   label:'Renewal Approaching (N days before)'},
+  ],
+  license:[
+    {key:'license_purchased',     label:'License Purchased'},
+    {key:'seat_invited',          label:'Seat Invitation Sent'},
+    {key:'seat_activated',        label:'Seat Activated by Teacher'},
+    {key:'license_expiring',      label:'License Expiring (N days before)'},
+    {key:'license_renewed',       label:'License Renewed'},
+    {key:'seats_unused',          label:'Seats Unused (N days)'},
+  ],
+  curriculum:[
+    {key:'curriculum_published',  label:'Curriculum Published'},
+    {key:'lesson_started',        label:'Lesson Started'},
+    {key:'lesson_completed',      label:'Lesson Completed'},
+    {key:'lesson_incomplete',     label:'Lesson Incomplete (N hours after start)'},
+    {key:'quiz_completed',        label:'Quiz Completed'},
+    {key:'curriculum_completed',  label:'Full Curriculum Completed'},
+  ],
+  blog:[
+    {key:'post_published',        label:'Blog Post Published'},
+    {key:'post_commented',        label:'Post Commented On'},
+  ],
+  marketing:[
+    {key:'contact_created',       label:'Contact Created in CRM'},
+    {key:'contact_tagged',        label:'Tag Added to Contact'},
+    {key:'email_opened',          label:'Email Opened'},
+    {key:'link_clicked',          label:'Link Clicked in Email'},
+    {key:'contact_inactive_90',   label:'Contact Inactive for 90 Days'},
+  ],
+  support:[
+    {key:'ticket_created',        label:'Support Request Submitted'},
+    {key:'ticket_resolved',       label:'Support Request Resolved'},
+  ],
+  schedule:[
+    {key:'daily',   label:'Daily at a set time'},
+    {key:'weekly',  label:'Weekly on a set day'},
+    {key:'monthly', label:'Monthly on a set date'},
+    {key:'once',    label:'One-time on a specific date/time'},
+  ],
+};
 
-async function fetchAutomations() {
-  const r = await fetch('/api/automations', { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return [];
-  return (await r.json()).automations || [];
+const TPL_CATS = [
+  {key:'lead',       label:'Lead Generation'},
+  {key:'cart',       label:'Cart & Checkout'},
+  {key:'books',      label:'Books'},
+  {key:'membership', label:'Memberships'},
+  {key:'license',    label:'School Licenses'},
+  {key:'curriculum', label:'Curriculum'},
+  {key:'marketing',  label:'Marketing'},
+  {key:'success',    label:'Customer Success'},
+  {key:'payments',   label:'Payments & Ops'},
+  {key:'reporting',  label:'Reporting'},
+];
+
+const TEMPLATES = [
+  // Lead Generation (7)
+  {id:'lg1',cat:'lead',icon:'👋',name:'Welcome New Subscriber',         desc:'Send a warm welcome to anyone who joins your newsletter list.'},
+  {id:'lg2',cat:'lead',icon:'✅',name:'Newsletter Signup Confirmation',  desc:'Confirm the signup and set expectations for upcoming content.'},
+  {id:'lg3',cat:'lead',icon:'📥',name:'Free Resource Follow-Up',        desc:'Follow up after a lead downloads a free resource.'},
+  {id:'lg4',cat:'lead',icon:'🤝',name:'Referral Program Invitation',    desc:'Invite active members to refer colleagues to Fixer Nation.'},
+  {id:'lg5',cat:'lead',icon:'🔁',name:'Abandoned Signup Recovery',      desc:'Re-engage visitors who started but did not finish signing up.'},
+  {id:'lg6',cat:'lead',icon:'📅',name:'Event Registration Confirmation',desc:'Confirm event registration and provide calendar details.'},
+  {id:'lg7',cat:'lead',icon:'🎥',name:'Webinar Reminder Series',        desc:'3-touch reminder series (24h, 1h, live) before a webinar.'},
+  // Cart & Checkout (6)
+  {id:'cc1',cat:'cart',icon:'🛒',name:'Abandoned Cart — 1-Hour Nudge',         desc:'Gently remind shoppers who left items in their cart.'},
+  {id:'cc2',cat:'cart',icon:'🛍️',name:'Abandoned Cart — 24-Hour Follow-Up',    desc:'Second touchpoint with added urgency for abandoned carts.'},
+  {id:'cc3',cat:'cart',icon:'⏰',name:'Abandoned Cart — 72-Hour Final Notice', desc:'Last-chance notice before the cart is cleared.'},
+  {id:'cc4',cat:'cart',icon:'💳',name:'Checkout Started — Completion Prompt',  desc:'Prompt when checkout is initiated but not completed.'},
+  {id:'cc5',cat:'cart',icon:'❌',name:'Failed Payment Recovery',               desc:'Notify the customer and prompt a retry when a charge fails.'},
+  {id:'cc6',cat:'cart',icon:'🎁',name:'Order Confirmation & Upsell',           desc:'Confirm the order and suggest a complementary product.'},
+  // Books (6)
+  {id:'bk1',cat:'books',icon:'📗',name:'Book Purchase Thank You',     desc:'Thank a buyer immediately after a book purchase.'},
+  {id:'bk2',cat:'books',icon:'📦',name:'Book Delivery Confirmation',  desc:'Confirm digital delivery and share access instructions.'},
+  {id:'bk3',cat:'books',icon:'⭐',name:'Review Request (7 Days)',     desc:'Ask for a review one week after purchase.'},
+  {id:'bk4',cat:'books',icon:'📚',name:'Related Book Recommendation', desc:'Suggest a follow-up title based on what was purchased.'},
+  {id:'bk5',cat:'books',icon:'📖',name:'Reading Progress Check-In',  desc:'Check in at a midpoint to encourage completion.'},
+  {id:'bk6',cat:'books',icon:'🆕',name:'New Book Release Announcement',desc:'Notify past buyers when a new Fixer Nation book is published.'},
+  // Memberships (8)
+  {id:'mb1',cat:'membership',icon:'🎟️',name:'Trial Started — Welcome Sequence', desc:'Onboard new trial members with a multi-day welcome series.'},
+  {id:'mb2',cat:'membership',icon:'💡',name:'Trial Mid-Point Value Check-In',   desc:'Highlight key benefits at the halfway point of the trial.'},
+  {id:'mb3',cat:'membership',icon:'⏳',name:'Trial Ending Soon (3 Days)',        desc:'Warn trial users before their free period ends.'},
+  {id:'mb4',cat:'membership',icon:'🥳',name:'Trial Converted — Paid Welcome',   desc:'Celebrate when a trial converts to a paid membership.'},
+  {id:'mb5',cat:'membership',icon:'🎉',name:'Membership Purchase Thank You',    desc:'Thank a new paid member and explain what is included.'},
+  {id:'mb6',cat:'membership',icon:'🔔',name:'Renewal Reminder (30 Days)',       desc:'Give members 30-day advance notice before their renewal.'},
+  {id:'mb7',cat:'membership',icon:'⚠️',name:'Renewal Reminder (7 Days)',        desc:'Final reminder 7 days before membership renewal date.'},
+  {id:'mb8',cat:'membership',icon:'😢',name:'Membership Lapsed — Win-Back',     desc:'Re-engage former members after their membership expires.'},
+  // School Licenses (8)
+  {id:'sl1',cat:'license',icon:'🏫',name:'License Purchase Confirmation', desc:'Confirm a group or single teacher license purchase.'},
+  {id:'sl2',cat:'license',icon:'📧',name:'Seat Invitation to Teacher',    desc:'Send a seat invite email to a teacher added by the admin.'},
+  {id:'sl3',cat:'license',icon:'👩‍🏫',name:'Seat Activated — Teacher Welcome',desc:'Welcome a teacher once they activate their license seat.'},
+  {id:'sl4',cat:'license',icon:'💺',name:'Unused Seats Reminder',        desc:'Alert admins when seats have been unassigned for 30+ days.'},
+  {id:'sl5',cat:'license',icon:'📅',name:'License Expiring (60 Days)',   desc:'Early notice to renew before the license expires.'},
+  {id:'sl6',cat:'license',icon:'🚨',name:'License Expiring (30 Days)',   desc:'Urgent renewal reminder as the expiry date approaches.'},
+  {id:'sl7',cat:'license',icon:'✅',name:'License Renewal Confirmation', desc:'Confirm a renewed license and updated seat count.'},
+  {id:'sl8',cat:'license',icon:'📊',name:'Group License Usage Report',  desc:'Monthly report on seat usage for group license holders.'},
+  // Curriculum (7)
+  {id:'cu1',cat:'curriculum',icon:'📢',name:'New Curriculum Published Alert',   desc:'Notify eligible members when a new curriculum is live.'},
+  {id:'cu2',cat:'curriculum',icon:'🔓',name:'Lesson Access Granted',            desc:'Tell a student when a lesson is unlocked for them.'},
+  {id:'cu3',cat:'curriculum',icon:'📌',name:'Incomplete Lesson Nudge (48h)',    desc:'Remind a student to finish a lesson they started.'},
+  {id:'cu4',cat:'curriculum',icon:'✏️',name:'Quiz Completion Acknowledgment',  desc:'Acknowledge quiz completion and share the score.'},
+  {id:'cu5',cat:'curriculum',icon:'🏅',name:'Certificate of Completion',       desc:'Issue a digital certificate when a curriculum is finished.'},
+  {id:'cu6',cat:'curriculum',icon:'➡️',name:'Next Curriculum Recommendation', desc:'Suggest the logical next step after completing a unit.'},
+  {id:'cu7',cat:'curriculum',icon:'📦',name:'Curriculum Bundle Suggestion',    desc:'Upsell a related bundle after completing a single curriculum.'},
+  // Marketing (7)
+  {id:'mk1',cat:'marketing',icon:'📰',name:'Monthly Newsletter Broadcast',    desc:'Scheduled monthly email to the full subscriber list.'},
+  {id:'mk2',cat:'marketing',icon:'✍️',name:'New Blog Post Notification',      desc:'Notify subscribers whenever a new post is published.'},
+  {id:'mk3',cat:'marketing',icon:'💬',name:'Social Proof Highlight',          desc:'Share a recent testimonial or success story with contacts.'},
+  {id:'mk4',cat:'marketing',icon:'🎃',name:'Seasonal Promotion',             desc:'Time-limited offer tied to a holiday or school calendar event.'},
+  {id:'mk5',cat:'marketing',icon:'💤',name:'Re-Engagement (90-Day Inactive)',desc:'Win back contacts who have not engaged in 90 days.'},
+  {id:'mk6',cat:'marketing',icon:'🎂',name:'Milestone Celebration (1-Year)', desc:'Celebrate a contact\'s 1-year anniversary with Fixer Nation.'},
+  {id:'mk7',cat:'marketing',icon:'🥳',name:'Birthday / Anniversary Message', desc:'Send a personalized message on a contact\'s key date.'},
+  // Customer Success (6)
+  {id:'cs1',cat:'success',icon:'🚀',name:'Onboarding Drip (Days 1, 3, 7)',   desc:'Three-email sequence guiding a new member through key features.'},
+  {id:'cs2',cat:'success',icon:'💎',name:'Product Feature Spotlight',         desc:'Highlight an underused feature to drive deeper engagement.'},
+  {id:'cs3',cat:'success',icon:'🤲',name:'Community Invitation',              desc:'Invite members to join the FN Network or social community.'},
+  {id:'cs4',cat:'success',icon:'🎫',name:'Support Ticket Follow-Up',          desc:'Check in after a support request is resolved.'},
+  {id:'cs5',cat:'success',icon:'📋',name:'Net Promoter Score Survey',         desc:'One-question NPS survey sent at strategic touchpoints.'},
+  {id:'cs6',cat:'success',icon:'🌟',name:'Customer Success Story Spotlight', desc:'Invite top members to share their story for a feature.'},
+  // Payments & Ops (6)
+  {id:'po1',cat:'payments',icon:'💳',name:'Payment Failed Alert',             desc:'Notify the contact immediately when a payment fails.'},
+  {id:'po2',cat:'payments',icon:'✅',name:'Payment Retry Success Notice',     desc:'Confirm when a failed payment is successfully retried.'},
+  {id:'po3',cat:'payments',icon:'💵',name:'Refund Processed Confirmation',    desc:'Confirm a refund and set expectations on timing.'},
+  {id:'po4',cat:'payments',icon:'🧾',name:'Invoice Paid Receipt',            desc:'Send a receipt when a manual invoice is marked paid.'},
+  {id:'po5',cat:'payments',icon:'⏸️',name:'Subscription Paused Notification',desc:'Notify a contact when their subscription is paused.'},
+  {id:'po6',cat:'payments',icon:'📩',name:'PO Invoice Reminder',             desc:'Follow up on an outstanding purchase-order invoice.'},
+  // Reporting (5)
+  {id:'rp1',cat:'reporting',icon:'📊',name:'Weekly Admin Summary',           desc:'Automated weekly digest of key metrics sent to admins.'},
+  {id:'rp2',cat:'reporting',icon:'💰',name:'Monthly Revenue Report',         desc:'Summary of monthly revenue broken down by source.'},
+  {id:'rp3',cat:'reporting',icon:'📈',name:'Weekly Engagement Digest',       desc:'Open rates, clicks, and page-view summary for the week.'},
+  {id:'rp4',cat:'reporting',icon:'🚨',name:'Daily Failure Alert Summary',    desc:'Once-daily digest of any automation failures.'},
+  {id:'rp5',cat:'reporting',icon:'👥',name:'Monthly New Member Report',      desc:'Count of new members by plan, delivered each month.'},
+];
+
+const ACTION_LABELS = {email:'Send Email',inapp:'In-App Notice',admin:'Admin Alert',tag:'Add / Remove Tag',membership:'Membership Action',license:'License Action',curriculum:'Curriculum Action',webhook:'Webhook',wait:'Wait / Delay'};
+const ACTION_ICONS  = {email:'📧',inapp:'🔔',admin:'👤',tag:'🏷️',membership:'🪪',license:'🏫',curriculum:'🎓',webhook:'🔗',wait:'⏳'};
+const ACTION_HINTS  = {email:'Click to configure subject and body',inapp:'Click to configure notice text',admin:'Alert will be sent to all admins',tag:'Click to choose tag to add or remove',membership:'Click to choose plan action',license:'Click to choose license action',curriculum:'Click to choose curriculum action',webhook:'Click to configure endpoint URL',wait:'Default: 1 day'};
+
+// ─── State ─────────────────────────────────────────────────────────────────────
+let autoCache  = [];
+let editingKey = null;
+
+// ─── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.auto-tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.tab === tab)
+  );
+  ['overview','automations','templates','history','analytics','audit','failures'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'automations') loadAndRenderAutos();
+  if (tab === 'templates')   renderTplGrid('all');
+  if (tab === 'overview')    loadOverview();
+  if (tab === 'history')     populateHistAutoSel();
 }
 
-async function renderAutomations() {
-  automationsCache = await fetchAutomations();
-  const tbody = document.querySelector('#automationsTable tbody');
-  tbody.innerHTML = automationsCache.map(a => `
+// ─── Overview ──────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  try {
+    const r = await fetch('/api/automations', {credentials:'include'});
+    if (fnHandleUnauthorized(r)) return;
+    const data = await r.json();
+    autoCache = data.automations || [];
+  } catch(e) { autoCache = []; }
+
+  document.getElementById('statActive').textContent = autoCache.filter(a => a.enabled).length;
+  document.getElementById('statPaused').textContent = autoCache.filter(a => !a.enabled).length;
+  document.getElementById('statDraft').textContent  = '0';
+
+  const ul = document.getElementById('overviewList');
+  if (!autoCache.length) {
+    ul.innerHTML = '<li><div class="act-dot info"></div><div><div class="act-text">No automations configured yet</div><div class="act-time">Use the Create Automation button to get started</div></div></li>';
+    return;
+  }
+  ul.innerHTML = autoCache.map(a => `
+    <li>
+      <div class="act-dot ${a.enabled ? 'ok' : 'off'}"></div>
+      <div style="flex:1;">
+        <div class="act-text">${a.label}</div>
+        <div class="act-time">${a.enabled ? 'Active' : 'Paused'} · ${fmtKey(a.eventKey)}</div>
+      </div>
+      <button class="a-icon-btn" onclick="openEditAuto('${a.eventKey}')" title="Edit">✏️</button>
+    </li>
+  `).join('');
+}
+
+// ─── Automations tab ───────────────────────────────────────────────────────────
+async function loadAndRenderAutos() {
+  if (!autoCache.length) {
+    try {
+      const r = await fetch('/api/automations', {credentials:'include'});
+      if (fnHandleUnauthorized(r)) return;
+      const data = await r.json();
+      autoCache = data.automations || [];
+    } catch(e) {}
+  }
+  filterAutomations();
+}
+
+function filterAutomations() {
+  const q      = (document.getElementById('autoSearch')?.value || '').toLowerCase();
+  const status = document.getElementById('autoStatusFilter')?.value || '';
+
+  let rows = autoCache;
+  if (q)               rows = rows.filter(a => a.label.toLowerCase().includes(q) || (a.subject||'').toLowerCase().includes(q));
+  if (status==='active') rows = rows.filter(a => a.enabled);
+  if (status==='paused') rows = rows.filter(a => !a.enabled);
+
+  const tbody = document.getElementById('autoTbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--a-text-soft);">No automations match your filters.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(a => `
     <tr>
       <td class="a-cell-title">${a.label}</td>
-      <td style="max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${a.subject}</td>
-      <td><span class="a-pill ${a.enabled ? 'a-pill-success' : 'a-pill-neutral'}">${a.enabled ? 'On' : 'Off'}</span></td>
-      <td>${a.reminderDaysBefore ? a.reminderDaysBefore + ' days before' : '—'}</td>
-      <td><button class="a-icon-btn" title="Edit" onclick="openAutomationModal('${a.eventKey}')">✏️</button></td>
+      <td><span style="font-size:12px;color:var(--a-text-soft);">Email</span></td>
+      <td style="font-size:12.5px;">${fmtKey(a.eventKey)}</td>
+      <td><span class="a-pill ${a.enabled ? 'a-pill-success' : 'a-pill-neutral'}">${a.enabled ? 'Active' : 'Paused'}</span></td>
+      <td style="color:var(--a-text-soft);font-size:13px;">${a.reminderDaysBefore ? a.reminderDaysBefore + ' days before' : '—'}</td>
+      <td style="color:var(--a-text-soft);font-size:13px;">—</td>
+      <td style="color:var(--a-text-soft);font-size:13px;">—</td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="a-icon-btn" title="Edit"   onclick="openEditAuto('${a.eventKey}')">✏️</button>
+          <button class="a-icon-btn" title="${a.enabled?'Pause':'Activate'}" onclick="toggleAuto('${a.eventKey}',${!a.enabled})">${a.enabled?'⏸️':'▶️'}</button>
+        </div>
+      </td>
     </tr>
   `).join('');
 }
 
-function openAutomationModal(eventKey) {
-  editingEventKey = eventKey;
-  const a = automationsCache.find(x => x.eventKey === eventKey);
-  document.getElementById('automationModalTitle').textContent = a.label;
-  document.getElementById('automationEnabled').checked = a.enabled;
-  document.getElementById('automationSubject').value = a.subject;
-  document.getElementById('automationBody').value = a.body;
-  const isReminder = eventKey === 'membership_renewal_reminder';
-  document.getElementById('automationReminderDaysField').style.display = isReminder ? 'block' : 'none';
-  document.getElementById('automationReminderDays').value = a.reminderDaysBefore || 7;
-  const fields = MERGE_FIELDS[eventKey] || [];
-  document.getElementById('automationFieldsHint').textContent = fields.length
-    ? `Available merge fields: ${fields.map(f => `{{${f}}}`).join(', ')}`
+function fmtKey(key) {
+  return (key||'').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+async function toggleAuto(key, enable) {
+  const a = autoCache.find(x => x.eventKey === key);
+  if (!a) return;
+  const r = await fetch(`/api/automations/${key}`, {
+    method:'PUT', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({subject:a.subject, body:a.body, enabled:enable}),
+  });
+  if (!r.ok) { fnToast('Could not update automation'); return; }
+  fnToast(enable ? 'Automation activated' : 'Automation paused');
+  autoCache = [];
+  await loadAndRenderAutos();
+}
+
+// ─── Template tab ──────────────────────────────────────────────────────────────
+function initTplCats() {
+  const bar = document.getElementById('tplCatBar');
+  if (bar.dataset.built) return;
+  bar.dataset.built = '1';
+  TPL_CATS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'tpl-cat-btn';
+    btn.textContent = c.label + ' (' + TEMPLATES.filter(t => t.cat === c.key).length + ')';
+    btn.onclick = () => filterTpl(c.key, btn);
+    bar.appendChild(btn);
+  });
+}
+
+function filterTpl(cat, btn) {
+  document.querySelectorAll('.tpl-cat-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderTplGrid(cat);
+}
+
+function renderTplGrid(cat) {
+  initTplCats();
+  if (cat === 'all') {
+    document.querySelector('.tpl-cat-btn').classList.add('active');
+  }
+  const items = cat === 'all' ? TEMPLATES : TEMPLATES.filter(t => t.cat === cat);
+  document.getElementById('tplGrid').innerHTML = items.map(t => `
+    <div class="tpl-card" onclick="useTemplate('${t.id}')">
+      <div class="tpl-card-icon">${t.icon}</div>
+      <div class="tpl-card-name">${t.name}</div>
+      <div class="tpl-card-desc">${t.desc}</div>
+      ${cat === 'all' ? `<span class="tpl-card-cat">${(TPL_CATS.find(c=>c.key===t.cat)||{}).label||t.cat}</span>` : ''}
+    </div>
+  `).join('');
+}
+
+function useTemplate(id) {
+  const tpl = TEMPLATES.find(t => t.id === id);
+  if (tpl) openBuilder(tpl);
+}
+
+// ─── Builder ───────────────────────────────────────────────────────────────────
+const BSTEP_LABELS = ['Basic Info','Trigger','Conditions','Actions','Delays','Goals & Exit','Review'];
+let bStep     = 1;
+let bCondCnt  = 0;
+
+function openBuilder(tpl) {
+  bStep    = 1;
+  bCondCnt = 0;
+  document.getElementById('builderTitle').textContent = tpl ? 'Template: ' + tpl.name : 'Create Automation';
+  document.getElementById('bName').value   = tpl ? tpl.name : '';
+  document.getElementById('bDesc').value   = tpl ? tpl.desc : '';
+  document.getElementById('bCat').value    = '';
+  document.getElementById('bStatus').value = 'draft';
+  document.getElementById('bTrigCat').value = '';
+  document.getElementById('bTrigEvents').innerHTML  = '';
+  document.getElementById('bTrigDelay').style.display = 'none';
+  document.getElementById('bCondWrap').innerHTML    = '';
+  document.getElementById('bActionsWrap').innerHTML = '';
+  buildStepTrack();
+  activateBStep(1);
+  document.getElementById('builderOverlay').classList.add('show');
+}
+
+function closeBuilder() {
+  document.getElementById('builderOverlay').classList.remove('show');
+}
+
+function buildStepTrack() {
+  document.getElementById('bstepTrack').innerHTML = BSTEP_LABELS.map((label, i) => {
+    const n = i + 1;
+    return '<div class="bstep-item" id="bdot-' + n + '">' +
+      '<div class="bstep-dot">' + n + '</div>' +
+      '<div class="bstep-label">' + label + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function activateBStep(step) {
+  BSTEP_LABELS.forEach((_, i) => {
+    const n    = i + 1;
+    const dot  = document.getElementById('bdot-' + n);
+    const body = document.getElementById('bsbody-' + n);
+    if (dot)  dot.className  = 'bstep-item'  + (n === step ? ' active' : n < step ? ' done' : '');
+    if (body) body.className = 'bstep-body'   + (n === step ? ' active' : '');
+  });
+  document.getElementById('bPrevBtn').style.display = step > 1 ? 'inline-flex' : 'none';
+  document.getElementById('bNextBtn').textContent   = step === BSTEP_LABELS.length ? 'Save Automation' : 'Next →';
+  if (step === BSTEP_LABELS.length) buildBReview();
+}
+
+function bNext() {
+  if (bStep === 1 && !document.getElementById('bName').value.trim()) {
+    fnToast('Please enter a name for this automation');
+    return;
+  }
+  if (bStep === BSTEP_LABELS.length) { saveBuiltAuto(); return; }
+  bStep++;
+  activateBStep(bStep);
+}
+
+function bPrev() {
+  if (bStep > 1) { bStep--; activateBStep(bStep); }
+}
+
+function buildBReview() {
+  const name   = document.getElementById('bName').value   || '(unnamed)';
+  const desc   = document.getElementById('bDesc').value   || '—';
+  const cat    = document.getElementById('bCat').value    || '—';
+  const status = document.getElementById('bStatus').value || 'draft';
+  const trigCat   = document.getElementById('bTrigCat').value || '—';
+  const trigEvSel = document.getElementById('bTrigEventSel');
+  const trigEv    = trigEvSel ? (trigEvSel.options[trigEvSel.selectedIndex]?.text || '—') : '—';
+  document.getElementById('bReview').innerHTML =
+    '<div class="a-card" style="margin-bottom:14px;">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
+    '<div><div class="a-field"><label>Name</label><div style="padding:6px 0;font-size:14px;">' + name + '</div></div></div>' +
+    '<div><div class="a-field"><label>Status</label><div style="padding:6px 0;"><span class="a-pill ' + (status==='active'?'a-pill-success':'a-pill-neutral') + '">' + status + '</span></div></div></div>' +
+    '<div><div class="a-field"><label>Category</label><div style="padding:6px 0;font-size:14px;">' + cat + '</div></div></div>' +
+    '<div><div class="a-field"><label>Trigger</label><div style="padding:6px 0;font-size:14px;">' + fmtKey(trigCat) + ' / ' + trigEv + '</div></div></div>' +
+    '<div style="grid-column:1/-1;"><div class="a-field"><label>Description</label><div style="padding:6px 0;font-size:14px;">' + desc + '</div></div></div>' +
+    '</div></div>' +
+    '<div class="a-note">Full automation builder functionality (conditions, actions, delays, branching) will be wired to the server API in the next development phase. Saving now records the basic automation definition.</div>';
+}
+
+function saveBuiltAuto() {
+  fnToast('Automation definition saved (backend wiring coming in next phase)');
+  closeBuilder();
+}
+
+// Trigger event dropdown
+function renderTrigEvents() {
+  const cat  = document.getElementById('bTrigCat').value;
+  const evts = TRIGGER_EVENTS[cat] || [];
+  const wrap = document.getElementById('bTrigEvents');
+  if (!evts.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML =
+    '<div class="a-field"><label>Trigger Event</label>' +
+    '<select id="bTrigEventSel">' +
+    '<option value="">Select event…</option>' +
+    evts.map(e => '<option value="' + e.key + '">' + e.label + '</option>').join('') +
+    '</select></div>';
+  const showDelay = (cat === 'membership' || cat === 'license');
+  document.getElementById('bTrigDelay').style.display = showDelay ? 'block' : 'none';
+}
+
+// Condition rows
+function addCondition() {
+  bCondCnt++;
+  const wrap = document.getElementById('bCondWrap');
+  const div  = document.createElement('div');
+  div.className = 'cond-group';
+  div.id = 'cond-' + bCondCnt;
+  const andLabel = bCondCnt > 1 ? '<div class="cond-and-label">AND</div>' : '';
+  div.innerHTML = andLabel +
+    '<div class="cond-row">' +
+    '<select>' +
+    '<option value="">Field…</option>' +
+    '<option>Membership Status</option>' +
+    '<option>Member Type</option>' +
+    '<option>Plan Name</option>' +
+    '<option>Total Spent</option>' +
+    '<option>Country</option>' +
+    '<option>Has Tag</option>' +
+    '<option>Email Domain</option>' +
+    '<option>Account Age (days)</option>' +
+    '</select>' +
+    '<select>' +
+    '<option>equals</option>' +
+    '<option>does not equal</option>' +
+    '<option>contains</option>' +
+    '<option>is greater than</option>' +
+    '<option>is less than</option>' +
+    '<option>is empty</option>' +
+    '<option>is not empty</option>' +
+    '</select>' +
+    '<input type="text" placeholder="Value…" style="flex:1;">' +
+    '<button class="a-icon-btn" title="Remove" onclick="document.getElementById(\'cond-' + bCondCnt + '\').remove()">✕</button>' +
+    '</div>';
+  wrap.appendChild(div);
+}
+
+// Action cards
+function addAction(type) {
+  const wrap = document.createElement('div');
+  wrap.className = 'action-card';
+  wrap.innerHTML =
+    '<div class="action-card-icon">' + ACTION_ICONS[type] + '</div>' +
+    '<div class="action-card-body">' +
+    '<div class="action-card-title">' + ACTION_LABELS[type] + '</div>' +
+    '<div class="action-card-sub">' + ACTION_HINTS[type] + '</div>' +
+    '</div>' +
+    '<button class="a-icon-btn" title="Remove" onclick="this.parentElement.remove()">✕</button>';
+  document.getElementById('bActionsWrap').appendChild(wrap);
+}
+
+// ─── Execution history helper ──────────────────────────────────────────────────
+function populateHistAutoSel() {
+  const sel = document.getElementById('histAutoSel');
+  if (!sel || !autoCache.length) return;
+  const existing = new Set(Array.from(sel.options).map(o => o.value));
+  autoCache.forEach(a => {
+    if (!existing.has(a.eventKey)) {
+      const opt = document.createElement('option');
+      opt.value = a.eventKey;
+      opt.textContent = a.label;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+// ─── Edit email automation modal ───────────────────────────────────────────────
+function openEditAuto(key) {
+  editingKey = key;
+  const a = autoCache.find(x => x.eventKey === key);
+  if (!a) return;
+  document.getElementById('editAutoTitle').textContent = a.label;
+  document.getElementById('editEnabled').checked       = a.enabled;
+  document.getElementById('editSubject').value         = a.subject;
+  document.getElementById('editBody').value            = a.body;
+  const isReminder = key === 'membership_renewal_reminder';
+  document.getElementById('editReminderField').style.display = isReminder ? 'block' : 'none';
+  document.getElementById('editReminderDays').value    = a.reminderDaysBefore || 7;
+  const fields = MERGE_FIELDS[key] || [];
+  document.getElementById('editMergeHint').textContent = fields.length
+    ? 'Available merge fields: ' + fields.map(f => '{{' + f + '}}').join(', ')
     : '';
-  document.getElementById('automationModalOverlay').classList.add('show');
+  document.getElementById('editAutoOverlay').classList.add('show');
 }
 
-function closeAutomationModal() {
-  document.getElementById('automationModalOverlay').classList.remove('show');
-  editingEventKey = null;
+function closeEditAuto() {
+  document.getElementById('editAutoOverlay').classList.remove('show');
+  editingKey = null;
 }
 
-async function saveAutomation() {
-  const subject = document.getElementById('automationSubject').value.trim();
-  const body = document.getElementById('automationBody').value.trim();
+async function saveEditAuto() {
+  const subject = document.getElementById('editSubject').value.trim();
+  const body    = document.getElementById('editBody').value.trim();
   if (!subject || !body) { fnToast('Subject and body are required'); return; }
-
   const payload = {
     subject,
     body,
-    enabled: document.getElementById('automationEnabled').checked,
+    enabled: document.getElementById('editEnabled').checked,
   };
-  if (editingEventKey === 'membership_renewal_reminder') {
-    payload.reminderDaysBefore = Number(document.getElementById('automationReminderDays').value) || 7;
+  if (editingKey === 'membership_renewal_reminder') {
+    payload.reminderDaysBefore = Number(document.getElementById('editReminderDays').value) || 7;
   }
-
-  const r = await fetch(`/api/automations/${editingEventKey}`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+  const r = await fetch('/api/automations/' + editingKey, {
+    method:'PUT', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
   });
   if (fnHandleUnauthorized(r)) return;
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    fnToast(err.error || 'Could not save automation');
+    const e = await r.json().catch(() => ({}));
+    fnToast(e.error || 'Could not save automation');
     return;
   }
-  closeAutomationModal();
-  renderAutomations();
+  closeEditAuto();
+  autoCache = [];
   fnToast('Automation updated');
+  loadOverview();
 }
 
-renderAutomations();
+// ─── Init ──────────────────────────────────────────────────────────────────────
+loadOverview();
 </script>
 
 </body>
