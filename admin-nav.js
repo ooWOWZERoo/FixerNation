@@ -16,9 +16,11 @@
 
   aside.innerHTML =
     '<div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>' +
-    '<nav class="a-nav">' +
-      link('admin-dashboard.html',          '📊', 'Dashboard') +
+    '<div class="a-nav-pinned">' +
+      link('admin-dashboard.html', '📊', 'Dashboard') +
       '<div class="a-nav-divider"></div>' +
+    '</div>' +
+    '<nav class="a-nav">' +
       link('admin-automations.html',        '🤖', 'Automations') +
       link('admin-blogs.html',              '📝', 'Blogs') +
       link('admin-books.html',              '📚', 'Books') +
