@@ -154,9 +154,10 @@ async function loadPage() {
     if (!r.ok) { showNotLoggedIn(); return; }
     const data = await r.json();
 
-    allBadges = data.allBadges || [];
-    earnedSet = new Set((data.earnedBadges || []).map(b => b.badgeId));
-    featuredSet = new Set((data.earnedBadges || []).filter(b => b.featured).map(b => b.badgeId));
+    // API returns { badges: [{...earned:bool, featured:bool}], featured: [...] }
+    allBadges = data.badges || [];
+    earnedSet = new Set(allBadges.filter(b => b.earned).map(b => b.id));
+    featuredSet = new Set(allBadges.filter(b => b.featured).map(b => b.id));
 
     document.getElementById('notLoggedIn').style.display = 'none';
     document.getElementById('loggedInContent').style.display = '';
@@ -169,7 +170,7 @@ async function loadPage() {
       ? `${Math.round((earned / allBadges.length) * 100)}% complete`
       : '';
 
-    renderFeatured(data.earnedBadges || []);
+    renderFeatured();
     renderSections();
   } catch {
     showNotLoggedIn();
@@ -181,21 +182,19 @@ function showNotLoggedIn() {
   document.getElementById('loggedInContent').style.display = 'none';
 }
 
-function renderFeatured(earnedBadges) {
-  const featured = earnedBadges.filter(b => b.featured).sort((a,b) => (a.featuredOrder||99)-(b.featuredOrder||99));
+function renderFeatured() {
+  const featured = allBadges.filter(b => b.featured).sort((a,b) => (a.featuredPosition||99)-(b.featuredPosition||99));
   const row = document.getElementById('featuredRow');
   if (!featured.length) {
     row.innerHTML = '<div class="no-featured">No badges featured yet — earn badges and star them to feature them here.</div>';
     return;
   }
-  row.innerHTML = featured.map(b => {
-    const info = allBadges.find(x => x.id === b.badgeId) || {};
-    return `<div class="featured-badge-chip">
-      <span>${info.emoji || '🏅'}</span>
-      <span>${info.name || 'Badge'}</span>
-      <span class="badge-chip ${info.rarity || 'common'}" style="font-size:10px;">${info.rarity || ''}</span>
-    </div>`;
-  }).join('');
+  row.innerHTML = featured.map(b => `
+    <div class="featured-badge-chip">
+      <span>${b.emoji || '🏅'}</span>
+      <span>${b.name}</span>
+      <span class="badge-chip ${b.rarity}" style="font-size:10px;">${b.rarity}</span>
+    </div>`).join('');
 }
 
 function setFilter(f, btn) {
