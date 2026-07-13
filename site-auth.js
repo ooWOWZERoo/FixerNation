@@ -106,9 +106,18 @@ function fnAuthRenderNavOptimistic() {
 }
 fnAuthRenderNavOptimistic();
 
-function fnAuthToggleUserMenu() {
+function fnAuthToggleUserMenu(e) {
+  if (e) e.stopPropagation();
   const menu = document.getElementById('fnAuthUserMenu');
-  if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  if (!menu) return;
+  const opening = menu.style.display === 'none';
+  menu.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    document.addEventListener('click', function _close() {
+      menu.style.display = 'none';
+      document.removeEventListener('click', _close);
+    }, { once: true });
+  }
 }
 
 function fnAuthCheckSession() {
