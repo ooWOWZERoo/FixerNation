@@ -46,7 +46,7 @@
 
   // ── Active page detection ────────────────────────────────────────────────────
   var page = (location.pathname.split('/').pop() || '').replace(/\.html$/, '') || 'index';
-  var homeActive    = page === 'index' || page === 'about' || page === '';
+  var homeActive    = page === 'index' || page === '';
   var aboutActive   = page === 'about';
   var booksActive   = page === 'books' || /^book-/.test(page);
   var blogActive    = page === 'blog';
@@ -64,14 +64,8 @@
     '<div class="nav wrap">' +
       '<a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>' +
       '<nav class="nav-links">' +
-        '<div class="fn-nav-dropdown">' +
-          '<a href="index.html" class="fn-nav-parent' + (homeActive ? ' active' : '') + '">' +
-            'Home <span class="fn-nav-caret">▾</span>' +
-          '</a>' +
-          '<div class="fn-nav-menu">' +
-            lnk('about.html', 'About', aboutActive) +
-          '</div>' +
-        '</div>' +
+        lnk('index.html', 'Home',  homeActive)  +
+        lnk('about.html', 'About', aboutActive) +
         lnk('books.html',           'Books',         booksActive)   +
         lnk('blog.html',            'FN Blogs',      blogActive)    +
         lnk('fnnetwork.html',       'FN Network',    netActive)     +

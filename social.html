@@ -881,6 +881,10 @@ function renderMembers(members){
 function viewProfile(userId){ window.location.href = `social-profile.html?id=${userId}`; }
 
 init();
+document.addEventListener('fn-auth-changed', function () {
+  document.getElementById('gatePanel').style.display = 'none';
+  init();
+});
 </script>
 </body>
 </html>

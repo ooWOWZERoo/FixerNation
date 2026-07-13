@@ -538,6 +538,8 @@ function setPublishedToggle(on) {
 }
 
 async function saveCurriculum() {
+  const pendingUrl = document.getElementById('videoUrlInput');
+  if (pendingUrl && pendingUrl.value.trim()) addVideoFromUrl();
   const title = document.getElementById('title').value.trim();
   const audiences = Array.from(document.querySelectorAll('#audienceRow input:checked')).map(cb => cb.value);
   if (!title) { fnToast('Title is required'); return; }
