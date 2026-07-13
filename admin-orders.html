@@ -70,8 +70,10 @@ fnRequireAuth();
 function describeItem(p) {
   if (p.productType === 'book') return `📗 ${p.bookTitle || 'Book'}`;
   if (p.productType === 'membership') return `🪪 ${p.membershipPlanName || 'Membership'}`;
-  const name = p.licenseProductName || (p.productType === 'single_license' ? 'Single Teacher License' : 'Group License');
-  return `🏫 ${name}${p.schoolDomain ? ` (${p.schoolDomain})` : ''}${p.seatCount ? ` — ${p.seatCount} seat${p.seatCount === 1 ? '' : 's'}` : ''}`;
+  const name = p.licenseProductName || (p.productType === 'single_license' ? 'Single Teacher License' : 'School License');
+  const seats = p.seatCount ? ` — ${p.seatCount} seat${p.seatCount === 1 ? '' : 's'}` : '';
+  const domain = p.schoolDomain ? ` (${p.schoolDomain})` : '';
+  return `🏫 ${name}${domain}${seats}`;
 }
 
 async function loadOrders(start, end) {

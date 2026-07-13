@@ -139,8 +139,8 @@ function render(purchases, memberships) {
         </div>
       `).join('');
       return `<div class="card">
-        <div class="card-title">🏫 Group License — ${registeredCount}/${p.seatCount} seats used</div>
-        <div class="card-sub">Purchased ${dateLabel} · give a seat to a teacher by entering their email below</div>
+        <div class="card-title">🏫 ${p.licenseProductName || 'School License'} — ${registeredCount}/${p.seatCount} seats used</div>
+        <div class="card-sub">Purchased ${dateLabel}${p.schoolDomain ? ' · ' + p.schoolDomain : ''} · give a seat to a teacher by entering their email below</div>
         ${rows}
       </div>`;
     }).join('');

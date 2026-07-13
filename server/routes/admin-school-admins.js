@@ -34,7 +34,7 @@ router.get('/', requireAuth, async (req, res) => {
   );
 
   const [rows] = await pool.query(
-    `SELECT sla.id, sla.permission_level, sla.is_active, sla.created_at,
+    `SELECT sla.id, sla.permission_level, sla.is_active, sla.notes, sla.created_at,
             su.id AS site_user_id, su.first_name, su.last_name, su.email, su.role,
             p.id AS purchase_id, p.school_domain, p.seat_count, p.payment_status,
             lp.name AS plan_name

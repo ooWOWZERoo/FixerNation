@@ -76,7 +76,8 @@
       <div class="a-field">
         <label>Permission Level</label>
         <select id="assignPermission">
-          <option value="full_access">Full Access — can send invitations, revoke seats, view reports</option>
+          <option value="primary">Full Access — can send invitations, revoke seats, view reports</option>
+          <option value="secondary">Secondary — can invite teachers but cannot revoke seats</option>
           <option value="read_only">Read Only — can view reports and teacher list only</option>
         </select>
       </div>
@@ -105,7 +106,8 @@
       <div class="a-field">
         <label>Permission Level</label>
         <select id="editPermission">
-          <option value="full_access">Full Access</option>
+          <option value="primary">Full Access</option>
+          <option value="secondary">Secondary</option>
           <option value="read_only">Read Only</option>
         </select>
       </div>
@@ -168,7 +170,7 @@ async function loadAssignments() {
     if (fnHandleUnauthorized(r)) return;
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed to load');
-    allAssignments = d.assignments || [];
+    allAssignments = d.admins || [];
     renderTable(allAssignments);
   } catch (e) {
     wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
@@ -186,9 +188,12 @@ function renderTable(rows) {
     rows.map(function (r) {
       const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '(new user)';
       const school = r.school_domain || ('Purchase #' + r.purchase_id);
+      const permLabel = r.permission_level === 'read_only' ? 'Read Only' : r.permission_level === 'secondary' ? 'Secondary' : 'Full Access';
       const permPill = r.permission_level === 'read_only'
         ? '<span class="a-pill a-pill-neutral">Read Only</span>'
-        : '<span class="a-pill a-pill-success">Full Access</span>';
+        : r.permission_level === 'secondary'
+          ? '<span class="a-pill a-pill-neutral">Secondary</span>'
+          : '<span class="a-pill a-pill-success">Full Access</span>';
       const statusPill = r.is_active
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Inactive</span>';
@@ -208,16 +213,20 @@ function renderTable(rows) {
 
 async function loadPurchases() {
   try {
-    const r = await fetch('/api/invoices?limit=200', { credentials: 'include' });
+    const r = await fetch('/api/newsletter/purchases', { credentials: 'include' });
     if (fnHandleUnauthorized(r)) return;
     const d = await r.json();
-    const purchases = (d.invoices || []).filter(function (inv) { return inv.plan_name && inv.school_domain; });
+    const purchases = (d.purchases || []).filter(function (p) { return p.productType === 'group_license'; });
     const sel = document.getElementById('assignPurchase');
     sel.innerHTML = purchases.length
       ? '<option value="">Select a purchase…</option>' + purchases.map(function (p) {
-          return '<option value="' + p.purchase_id + '">' + esc(p.school_domain) + ' — ' + esc(p.plan_name) + ' (' + esc(p.payment_status || 'pending') + ')</option>';
+          const label = p.schoolDomain || ('Purchase #' + p.id);
+          const plan = p.licenseProductName ? ' — ' + p.licenseProductName : '';
+          const seats = p.seatCount ? ' (' + p.seatCount + ' seats)' : '';
+          const status = p.paymentStatus ? ' · ' + p.paymentStatus : '';
+          return '<option value="' + p.id + '">' + esc(label + plan + seats + status) + '</option>';
         }).join('')
-      : '<option value="">No group purchases found</option>';
+      : '<option value="">No group license purchases found</option>';
   } catch (e) {
     document.getElementById('assignPurchase').innerHTML = '<option value="">Failed to load purchases</option>';
   }
