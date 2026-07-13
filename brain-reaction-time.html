@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reaction Time — Tune Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css">
+<style>
+  .rt-target {
+    width: 220px; height: 220px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 28px auto; cursor: pointer; user-select: none;
+    transition: background .15s, transform .15s;
+    font-size: 20px; font-weight: 700; color: #fff;
+    text-align: center; line-height: 1.4;
+    box-shadow: 0 12px 40px -12px rgba(0,0,0,0.35);
+  }
+  .rt-target.waiting { background: #6b7280; cursor: default; }
+  .rt-target.ready   { background: var(--game-green); transform: scale(1.04); cursor: pointer; }
+  .rt-target.early   { background: var(--game-red); cursor: default; }
+  .rt-target .big-num { font-size: 40px; font-weight: 800; display: block; }
+  .attempts-row {
+    display: flex; justify-content: center; gap: 10px; margin: 16px 0; flex-wrap: wrap;
+  }
+  .attempt-chip {
+    padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    background: var(--cream-soft); color: var(--ink-soft);
+  }
+  .attempt-chip.valid { background: #dcfce7; color: #15803d; }
+  .attempt-chip.false-start { background: #fee2e2; color: #dc2626; }
+  .round-indicator {
+    display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;
+  }
+  .round-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--cream-soft); border: 2px solid var(--border);
+    transition: background .2s;
+  }
+  .round-dot.done-valid { background: var(--game-green); border-color: var(--game-green); }
+  .round-dot.done-false { background: var(--game-red); border-color: var(--game-red); }
+  .round-dot.current { border-color: var(--teal); }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <div class="game-page-header">
+    <span class="game-icon">⚡</span>
+    <h1>Reaction Time</h1>
+    <p>Wait for green — then tap as fast as you can. Don't click early!</p>
+  </div>
+
+  <!-- INTRO -->
+  <div id="introPanel" class="game-card-panel">
+    <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
+    <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;">
+      The target will turn grey while you wait. When it flashes <strong style="color:var(--game-green)">green</strong>, click or tap immediately!
+      Clicking too early counts as a false start. Complete 5 rounds to see your average.
+    </p>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
+      <div class="difficulty-picker">
+        <button class="diff-btn" data-d="easy">Easy<br><span style="font-size:11px;opacity:.7">Longer wait window</span></button>
+        <button class="diff-btn active" data-d="medium">Medium<br><span style="font-size:11px;opacity:.7">Standard</span></button>
+        <button class="diff-btn" data-d="hard">Hard<br><span style="font-size:11px;opacity:.7">Shorter, unpredictable</span></button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="startGame()">Start Game</button>
+    <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:12px;" id="loginHint"></p>
+  </div>
+
+  <!-- PLAY -->
+  <div id="playPanel" style="display:none;">
+    <div class="game-card-panel" style="text-align:center;padding:24px 20px;">
+      <div class="round-indicator" id="roundDots"></div>
+      <div id="statusMsg" style="font-size:14px;color:var(--ink-soft);margin-bottom:8px;min-height:20px;"></div>
+      <div class="rt-target waiting" id="rtTarget" onclick="handleClick()">
+        <span class="big-num" id="targetEmoji">⏳</span>
+        <span id="targetLabel">Get Ready…</span>
+      </div>
+      <div class="attempts-row" id="attemptsRow"></div>
+      <p style="font-size:13px;color:var(--ink-soft);">Round <span id="roundNum">1</span> of 5</p>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsPanel" style="display:none;" class="game-card-panel results-panel">
+    <div class="pb-banner" id="pbBanner" style="display:none;">⚡ New Personal Best!</div>
+    <div class="results-score" id="finalScore">0</div>
+    <div class="results-label">Score</div>
+    <div class="results-stats">
+      <div class="results-stat"><div class="val" id="rAvg">—</div><div class="lbl">Avg (ms)</div></div>
+      <div class="results-stat"><div class="val" id="rBest">—</div><div class="lbl">Best (ms)</div></div>
+      <div class="results-stat"><div class="val" id="rFalse">—</div><div class="lbl">False Starts</div></div>
+      <div class="results-stat"><div class="val" id="rValid">—</div><div class="lbl">Valid Taps</div></div>
+    </div>
+    <div class="xp-bar-wrap" id="xpSection" style="display:none;">
+      <div class="xp-bar-label"><span id="xpLabel">XP</span><span id="levelLabel"></span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:6px;" id="xpEarned"></div>
+    </div>
+    <div class="new-badge-list" id="newBadges"></div>
+    <div class="guest-prompt" id="guestPrompt" style="display:none;">
+      <h3>Save Your Score!</h3>
+      <p>Create an account to track your reaction time, compare sessions, and earn badges.</p>
+      <button class="btn btn-ghost" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('signup')">Join Free</button>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+      <a href="brain-games.html" class="btn btn-outline">All Games</a>
+    </div>
+  </div>
+</div>
+
+<footer></footer>
+<div class="bg-toast" id="bgToast"></div>
+<script src="nav.js"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js"></script>
+<script>
+const TOTAL_ROUNDS = 5;
+const DIFF_DELAY = { easy:[1500,4000], medium:[1000,3000], hard:[700,2200] };
+
+let difficulty = 'medium', round = 0, phase = 'idle';
+let validTimes = [], falseStarts = 0;
+let waitTimer = null, signalTime = null;
+let sessionToken = null, gameStartMs = null, isLoggedIn = false;
+
+fetch('/api/brain-games/me/progress').then(r => {
+  isLoggedIn = r.ok;
+  if (!isLoggedIn) document.getElementById('loginHint').textContent = 'Log in to save your score and earn badges.';
+}).catch(() => {});
+
+document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', function() {
+  document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('active'));
+  this.classList.add('active');
+  difficulty = this.dataset.d;
+}));
+
+async function startGame() {
+  round = 0; validTimes = []; falseStarts = 0; phase = 'idle';
+  document.getElementById('introPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('playPanel').style.display = '';
+  document.getElementById('attemptsRow').innerHTML = '';
+
+  // Build round dots
+  const dots = document.getElementById('roundDots');
+  dots.innerHTML = Array.from({length: TOTAL_ROUNDS}, (_, i) =>
+    `<div class="round-dot${i===0?' current':''}" id="dot-${i}"></div>`
+  ).join('');
+
+  gameStartMs = Date.now();
+  sessionToken = null;
+  if (isLoggedIn) {
+    try {
+      const r = await fetch('/api/brain-games/sessions', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ gameSlug:'reaction-time', difficulty })
+      });
+      if (r.ok) { const d = await r.json(); sessionToken = d.sessionToken; }
+    } catch {}
+  }
+
+  nextRound();
+}
+
+function nextRound() {
+  if (round >= TOTAL_ROUNDS) { endGame(); return; }
+  document.getElementById('roundNum').textContent = round + 1;
+  const target = document.getElementById('rtTarget');
+  target.className = 'rt-target waiting';
+  document.getElementById('targetEmoji').textContent = '⏳';
+  document.getElementById('targetLabel').textContent = 'Wait for green…';
+  document.getElementById('statusMsg').textContent = '';
+  phase = 'waiting';
+
+  const [minD, maxD] = DIFF_DELAY[difficulty];
+  const delay = minD + Math.random() * (maxD - minD);
+  clearTimeout(waitTimer);
+  waitTimer = setTimeout(showGreen, delay);
+}
+
+function showGreen() {
+  phase = 'ready';
+  const target = document.getElementById('rtTarget');
+  target.className = 'rt-target ready';
+  document.getElementById('targetEmoji').textContent = '⚡';
+  document.getElementById('targetLabel').textContent = 'TAP NOW!';
+  signalTime = Date.now();
+}
+
+function handleClick() {
+  if (phase === 'idle') return;
+
+  if (phase === 'waiting') {
+    // False start
+    clearTimeout(waitTimer);
+    falseStarts++;
+    phase = 'idle';
+    const target = document.getElementById('rtTarget');
+    target.className = 'rt-target early';
+    document.getElementById('targetEmoji').textContent = '❌';
+    document.getElementById('targetLabel').textContent = 'Too early!';
+    document.getElementById('statusMsg').textContent = 'False start — try to wait for green.';
+    addAttemptChip('false', null);
+    markDot(round, 'false');
+    round++;
+    setTimeout(nextRound, 1200);
+    return;
+  }
+
+  if (phase === 'ready') {
+    const rt = Date.now() - signalTime;
+    validTimes.push(rt);
+    phase = 'idle';
+    const target = document.getElementById('rtTarget');
+    target.className = 'rt-target waiting';
+    document.getElementById('targetEmoji').textContent = '✅';
+    document.getElementById('targetLabel').textContent = `${rt} ms`;
+    document.getElementById('statusMsg').textContent = rt < 250 ? '⚡ Lightning fast!' : rt < 350 ? '👍 Nice!' : '🙂 Good';
+    addAttemptChip('valid', rt);
+    markDot(round, 'valid');
+    round++;
+    setTimeout(nextRound, 1000);
+  }
+}
+
+function addAttemptChip(type, ms) {
+  const row = document.getElementById('attemptsRow');
+  const chip = document.createElement('div');
+  chip.className = `attempt-chip ${type === 'valid' ? 'valid' : 'false-start'}`;
+  chip.textContent = type === 'valid' ? `${ms} ms` : '❌ Early';
+  row.appendChild(chip);
+}
+
+function markDot(i, result) {
+  const dot = document.getElementById(`dot-${i}`);
+  if (!dot) return;
+  dot.classList.remove('current');
+  dot.classList.add(result === 'valid' ? 'done-valid' : 'done-false');
+  const next = document.getElementById(`dot-${i+1}`);
+  if (next) next.classList.add('current');
+}
+
+async function endGame() {
+  const durationMs = Date.now() - gameStartMs;
+  const avg = validTimes.length ? Math.round(validTimes.reduce((a,b)=>a+b,0) / validTimes.length) : 0;
+  const best = validTimes.length ? Math.min(...validTimes) : 0;
+
+  document.getElementById('playPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = '';
+  document.getElementById('rAvg').textContent = avg ? avg + ' ms' : '—';
+  document.getElementById('rBest').textContent = best ? best + ' ms' : '—';
+  document.getElementById('rFalse').textContent = falseStarts;
+  document.getElementById('rValid').textContent = validTimes.length;
+
+  if (!sessionToken || !validTimes.length) {
+    document.getElementById('guestPrompt').style.display = '';
+    document.getElementById('finalScore').textContent = avg ? Math.max(0, Math.round(1000 - (avg - 150) * 2)) : 0;
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/brain-games/sessions/${sessionToken}/complete`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ durationMs, metrics: { validTimes, falseStarts } })
+    });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('finalScore').textContent = d.normalizedScore;
+    if (d.isPersonalBest) document.getElementById('pbBanner').style.display = '';
+    showXP(d); showBadges(d.newBadges);
+  } catch {
+    document.getElementById('finalScore').textContent = avg ? Math.max(0, Math.round(1000 - (avg-150)*2)) : 0;
+    document.getElementById('guestPrompt').style.display = '';
+  }
+}
+
+function showXP(d) {
+  if (!d.xpEarned) return;
+  const xpSec = document.getElementById('xpSection');
+  xpSec.style.display = '';
+  document.getElementById('xpEarned').textContent = `+${d.xpEarned} XP earned`;
+  document.getElementById('levelLabel').textContent = `Level ${d.level} ${d.levelName}`;
+  document.getElementById('xpLabel').textContent = `${d.xp} XP`;
+  const pct = d.xpForNext ? Math.min(100, Math.round((d.xp / d.xpForNext) * 100)) : 100;
+  setTimeout(() => document.getElementById('xpFill').style.width = pct + '%', 100);
+}
+
+function showBadges(badges) {
+  if (!badges?.length) return;
+  document.getElementById('newBadges').innerHTML = badges.map(b => `
+    <div class="new-badge-item">
+      <span class="badge-icon">${b.emoji}</span>
+      <div class="badge-info"><h4>🏅 Badge Earned: ${b.name}</h4><p>${b.description}</p></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

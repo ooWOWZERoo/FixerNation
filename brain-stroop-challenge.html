@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stroop Challenge — Tune Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css">
+<style>
+  .stroop-word {
+    font-size: clamp(42px, 8vw, 64px); font-weight: 800;
+    text-align: center; letter-spacing: 0.05em;
+    margin: 28px 0 16px; min-height: 80px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stroop-prompt {
+    text-align: center; font-size: 15px; color: var(--ink-soft);
+    font-weight: 600; margin-bottom: 20px; min-height: 22px;
+  }
+  .color-btns {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    max-width: 400px; margin: 0 auto;
+  }
+  .color-btn {
+    padding: 14px 8px; border-radius: 14px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 700; color: #fff; transition: transform .1s, opacity .1s;
+    font-family: inherit; letter-spacing: 0.02em;
+  }
+  .color-btn:active { transform: scale(0.95); }
+  .color-btn.correct-flash { outline: 3px solid var(--game-green); }
+  .color-btn.wrong-flash   { outline: 3px solid var(--game-red); }
+  .stroop-timer-bar { height: 6px; background: var(--cream-soft); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+  .stroop-timer-fill { height: 100%; border-radius: 99px; background: var(--teal); transition: width .1s linear; }
+  .live-row { display: flex; justify-content: center; gap: 24px; font-size: 14px; color: var(--ink-soft); margin-bottom: 8px; }
+  .live-row strong { display: block; font-size: 20px; color: var(--ink); }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <div class="game-page-header">
+    <span class="game-icon">🎨</span>
+    <h1>Stroop Challenge</h1>
+    <p>Ignore what the word says — identify the ink color as fast as you can.</p>
+  </div>
+
+  <!-- INTRO -->
+  <div id="introPanel" class="game-card-panel">
+    <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
+    <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:12px;">
+      A color word appears on screen. Press the button matching the <strong>ink color</strong> — not what the word reads. Your brain will try to trick you!
+    </p>
+    <div style="text-align:center;padding:12px;background:var(--cream-soft);border-radius:12px;margin-bottom:20px;">
+      <div style="font-size:32px;font-weight:800;color:var(--game-blue);">RED</div>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Answer: BLUE (the ink color)</div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
+      <div class="difficulty-picker">
+        <button class="diff-btn" data-d="easy">Easy<br><span style="font-size:11px;opacity:.7">4 colors · 20s</span></button>
+        <button class="diff-btn active" data-d="medium">Medium<br><span style="font-size:11px;opacity:.7">6 colors · 30s</span></button>
+        <button class="diff-btn" data-d="hard">Hard<br><span style="font-size:11px;opacity:.7">6 colors · 45s, faster</span></button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="startGame()">Start Game</button>
+    <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:12px;" id="loginHint"></p>
+  </div>
+
+  <!-- PLAY -->
+  <div id="playPanel" style="display:none;">
+    <div class="game-card-panel" style="padding:20px;">
+      <div class="live-row">
+        <span><strong id="correctCount">0</strong>Correct</span>
+        <span><strong id="incorrectCount">0</strong>Wrong</span>
+        <span><strong id="streakCount">0</strong>Streak</span>
+        <span><strong id="timeLeft">30</strong>Seconds</span>
+      </div>
+      <div class="stroop-timer-bar"><div class="stroop-timer-fill" id="timerFill" style="width:100%"></div></div>
+      <div class="stroop-prompt" id="stroopPrompt">What color is the ink?</div>
+      <div class="stroop-word" id="stroopWord"></div>
+      <div class="color-btns" id="colorBtns"></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsPanel" style="display:none;" class="game-card-panel results-panel">
+    <div class="pb-banner" id="pbBanner" style="display:none;">🎨 New Personal Best!</div>
+    <div class="results-score" id="finalScore">0</div>
+    <div class="results-label">Score</div>
+    <div class="results-stats">
+      <div class="results-stat"><div class="val" id="rCorrect">—</div><div class="lbl">Correct</div></div>
+      <div class="results-stat"><div class="val" id="rWrong">—</div><div class="lbl">Wrong</div></div>
+      <div class="results-stat"><div class="val" id="rAccuracy">—</div><div class="lbl">Accuracy</div></div>
+      <div class="results-stat"><div class="val" id="rStreak">—</div><div class="lbl">Best Streak</div></div>
+    </div>
+    <div class="xp-bar-wrap" id="xpSection" style="display:none;">
+      <div class="xp-bar-label"><span id="xpLabel">XP</span><span id="levelLabel"></span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:6px;" id="xpEarned"></div>
+    </div>
+    <div class="new-badge-list" id="newBadges"></div>
+    <div class="guest-prompt" id="guestPrompt" style="display:none;">
+      <h3>Save Your Score!</h3>
+      <p>Create an account to track accuracy trends and earn badges.</p>
+      <button class="btn btn-ghost" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('signup')">Join Free</button>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+      <a href="brain-games.html" class="btn btn-outline">All Games</a>
+    </div>
+  </div>
+</div>
+
+<footer></footer>
+<div class="bg-toast" id="bgToast"></div>
+<script src="nav.js"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js"></script>
+<script>
+const ALL_COLORS = [
+  { word:'RED',    hex:'#ef4444' },
+  { word:'BLUE',   hex:'#3b82f6' },
+  { word:'GREEN',  hex:'#22c55e' },
+  { word:'YELLOW', hex:'#ca8a04' },
+  { word:'PURPLE', hex:'#8b5cf6' },
+  { word:'ORANGE', hex:'#f97316' },
+];
+const DIFF_CONFIG = {
+  easy:   { colors: 4, duration: 20 },
+  medium: { colors: 6, duration: 30 },
+  hard:   { colors: 6, duration: 45 },
+};
+
+let difficulty = 'medium', correct = 0, incorrect = 0;
+let currentStreak = 0, longestStreak = 0;
+let responseTimes = [], lastQ = null, qStart = null;
+let timeLeft = 30, timerInterval = null;
+let sessionToken = null, gameStartMs = null, isLoggedIn = false;
+
+fetch('/api/brain-games/me/progress').then(r => {
+  isLoggedIn = r.ok;
+  if (!isLoggedIn) document.getElementById('loginHint').textContent = 'Log in to save your score and earn badges.';
+}).catch(() => {});
+
+document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', function() {
+  document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('active'));
+  this.classList.add('active');
+  difficulty = this.dataset.d;
+}));
+
+async function startGame() {
+  correct = 0; incorrect = 0; currentStreak = 0; longestStreak = 0;
+  responseTimes = [];
+  const cfg = DIFF_CONFIG[difficulty];
+  timeLeft = cfg.duration;
+
+  document.getElementById('introPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('playPanel').style.display = '';
+  document.getElementById('correctCount').textContent = '0';
+  document.getElementById('incorrectCount').textContent = '0';
+  document.getElementById('streakCount').textContent = '0';
+  document.getElementById('timeLeft').textContent = timeLeft;
+
+  // Build color buttons
+  const colors = ALL_COLORS.slice(0, cfg.colors);
+  document.getElementById('colorBtns').innerHTML = colors.map(c =>
+    `<button class="color-btn" style="background:${c.hex};" data-w="${c.word}" onclick="answer('${c.word}')">${c.word}</button>`
+  ).join('');
+  // If easy (4 colors) use 2-col layout
+  if (cfg.colors === 4) document.getElementById('colorBtns').style.gridTemplateColumns = 'repeat(2,1fr)';
+  else document.getElementById('colorBtns').style.gridTemplateColumns = 'repeat(3,1fr)';
+
+  gameStartMs = Date.now();
+  sessionToken = null;
+  if (isLoggedIn) {
+    try {
+      const r = await fetch('/api/brain-games/sessions', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ gameSlug:'stroop-challenge', difficulty })
+      });
+      if (r.ok) { const d = await r.json(); sessionToken = d.sessionToken; }
+    } catch {}
+  }
+
+  nextQuestion();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(tick, 1000);
+}
+
+function tick() {
+  timeLeft--;
+  document.getElementById('timeLeft').textContent = timeLeft;
+  const cfg = DIFF_CONFIG[difficulty];
+  document.getElementById('timerFill').style.width = (timeLeft / cfg.duration * 100) + '%';
+  if (timeLeft <= 0) { clearInterval(timerInterval); endGame(); }
+}
+
+function nextQuestion() {
+  const cfg = DIFF_CONFIG[difficulty];
+  const colors = ALL_COLORS.slice(0, cfg.colors);
+  const inkColor = colors[Math.floor(Math.random() * colors.length)];
+  let textColor;
+  // ~80% chance the word differs from the ink (the Stroop effect)
+  if (Math.random() < 0.8) {
+    do { textColor = colors[Math.floor(Math.random() * colors.length)]; }
+    while (textColor.word === inkColor.word);
+  } else {
+    textColor = inkColor;
+  }
+  lastQ = { correct: inkColor.word };
+  qStart = Date.now();
+  document.getElementById('stroopWord').style.color = inkColor.hex;
+  document.getElementById('stroopWord').textContent = textColor.word;
+}
+
+function answer(word) {
+  if (timeLeft <= 0) return;
+  const rt = Date.now() - qStart;
+  responseTimes.push(rt);
+
+  const btn = document.querySelector(`.color-btn[data-w="${word}"]`);
+  if (word === lastQ.correct) {
+    correct++;
+    currentStreak++;
+    longestStreak = Math.max(longestStreak, currentStreak);
+    if (btn) { btn.classList.add('correct-flash'); setTimeout(() => btn.classList.remove('correct-flash'), 250); }
+  } else {
+    incorrect++;
+    currentStreak = 0;
+    if (btn) { btn.classList.add('wrong-flash'); setTimeout(() => btn.classList.remove('wrong-flash'), 250); }
+  }
+
+  document.getElementById('correctCount').textContent = correct;
+  document.getElementById('incorrectCount').textContent = incorrect;
+  document.getElementById('streakCount').textContent = longestStreak;
+  nextQuestion();
+}
+
+async function endGame() {
+  const durationMs = Date.now() - gameStartMs;
+  const total = correct + incorrect;
+  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const avgResponseMs = responseTimes.length ? Math.round(responseTimes.reduce((a,b)=>a+b,0) / responseTimes.length) : 0;
+
+  document.getElementById('playPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = '';
+  document.getElementById('rCorrect').textContent = correct;
+  document.getElementById('rWrong').textContent = incorrect;
+  document.getElementById('rAccuracy').textContent = accuracy + '%';
+  document.getElementById('rStreak').textContent = longestStreak;
+
+  if (!sessionToken) {
+    document.getElementById('guestPrompt').style.display = '';
+    document.getElementById('finalScore').textContent = calcLocalScore(accuracy, avgResponseMs);
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/brain-games/sessions/${sessionToken}/complete`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ durationMs, metrics: { correct, incorrect, avgResponseMs, longestStreak } })
+    });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('finalScore').textContent = d.normalizedScore;
+    if (d.isPersonalBest) document.getElementById('pbBanner').style.display = '';
+    showXP(d); showBadges(d.newBadges);
+  } catch {
+    document.getElementById('finalScore').textContent = calcLocalScore(accuracy, avgResponseMs);
+    document.getElementById('guestPrompt').style.display = '';
+  }
+}
+
+function calcLocalScore(accuracy, avgMs) {
+  const diff = {easy:0,medium:1,hard:2}[difficulty];
+  const speedBonus = Math.max(0, 200 - Math.floor(avgMs / 10));
+  return Math.max(0, Math.round((accuracy / 100) * 800 + speedBonus + diff * 100));
+}
+
+function showXP(d) {
+  if (!d.xpEarned) return;
+  document.getElementById('xpSection').style.display = '';
+  document.getElementById('xpEarned').textContent = `+${d.xpEarned} XP earned`;
+  document.getElementById('levelLabel').textContent = `Level ${d.level} ${d.levelName}`;
+  document.getElementById('xpLabel').textContent = `${d.xp} XP`;
+  const pct = d.xpForNext ? Math.min(100, Math.round((d.xp / d.xpForNext) * 100)) : 100;
+  setTimeout(() => document.getElementById('xpFill').style.width = pct + '%', 100);
+}
+
+function showBadges(badges) {
+  if (!badges?.length) return;
+  document.getElementById('newBadges').innerHTML = badges.map(b => `
+    <div class="new-badge-item">
+      <span class="badge-icon">${b.emoji}</span>
+      <div class="badge-info"><h4>🏅 Badge Earned: ${b.name}</h4><p>${b.description}</p></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

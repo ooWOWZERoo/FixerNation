@@ -51,6 +51,7 @@
             '<li><a href="about.html">About</a></li>' +
             '<li><a href="books.html">Books</a></li>' +
             '<li><a href="blog.html">FN Blogs</a></li>' +
+            '<li><a href="brain-games.html" style="display:flex;align-items:center;gap:6px;"><span style="font-size:16px;line-height:1;">🧠</span> Tune Your Brain</a></li>' +
           '</ul>' +
         '</div>' +
 

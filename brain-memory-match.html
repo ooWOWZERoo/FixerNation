@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Match — Tune Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css">
+<style>
+  .card-grid {
+    display: grid; gap: 10px;
+    justify-content: center; margin: 20px 0;
+  }
+  .card-grid.easy   { grid-template-columns: repeat(4, 1fr); }
+  .card-grid.medium { grid-template-columns: repeat(5, 1fr); }
+  .card-grid.hard   { grid-template-columns: repeat(6, 1fr); }
+
+  .flip-card {
+    width: 100%; aspect-ratio: 1;
+    perspective: 600px; cursor: pointer;
+    max-width: 80px;
+  }
+  .flip-inner {
+    width: 100%; height: 100%;
+    transition: transform .35s;
+    transform-style: preserve-3d;
+    position: relative;
+  }
+  .flip-card.flipped .flip-inner { transform: rotateY(180deg); }
+  .flip-card.matched .flip-inner { transform: rotateY(180deg); }
+  .flip-face {
+    position: absolute; inset: 0;
+    border-radius: 12px; backface-visibility: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(22px, 4vw, 32px);
+  }
+  .flip-front {
+    background: linear-gradient(135deg, var(--teal-dark), #256b60);
+    border: 2px solid rgba(255,255,255,0.1);
+    color: #fff; font-size: 18px; font-weight: 800;
+  }
+  .flip-back {
+    background: #fff;
+    border: 2px solid var(--border);
+    transform: rotateY(180deg);
+  }
+  .flip-card.matched .flip-back {
+    background: #f0fdf4;
+    border-color: var(--game-green);
+  }
+  .game-timer-bar {
+    height: 6px; background: var(--cream-soft);
+    border-radius: 99px; overflow: hidden; margin-bottom: 16px;
+  }
+  .game-timer-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--teal), var(--gold));
+    transition: width .5s linear;
+  }
+  .live-stats {
+    display: flex; justify-content: center; gap: 24px;
+    font-size: 14px; color: var(--ink-soft); margin-bottom: 16px;
+  }
+  .live-stats strong { color: var(--ink); font-size: 18px; display: block; }
+  @media (max-width: 500px) {
+    .card-grid.medium { grid-template-columns: repeat(4, 1fr); }
+    .card-grid.hard   { grid-template-columns: repeat(5, 1fr); }
+  }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <div class="game-page-header">
+    <span class="game-icon">🃏</span>
+    <h1>Memory Match</h1>
+    <p>Flip cards to reveal pairs. Find all matches as quickly and efficiently as possible.</p>
+  </div>
+
+  <!-- INTRO -->
+  <div id="introPanel" class="game-card-panel">
+    <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
+    <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;">
+      Click any card to flip it over. Then try to find its matching emoji partner.
+      Matched pairs stay face-up. Your score improves with fewer moves and faster completion.
+    </p>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
+      <div class="difficulty-picker">
+        <button class="diff-btn" data-d="easy">Easy<br><span style="font-size:11px;opacity:.7">4×4 · 8 pairs</span></button>
+        <button class="diff-btn active" data-d="medium">Medium<br><span style="font-size:11px;opacity:.7">5×4 · 10 pairs</span></button>
+        <button class="diff-btn" data-d="hard">Hard<br><span style="font-size:11px;opacity:.7">6×5 · 15 pairs</span></button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" id="startBtn" onclick="startGame()">Start Game</button>
+    <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:12px;" id="loginHint"></p>
+  </div>
+
+  <!-- PLAY -->
+  <div id="playPanel" style="display:none;">
+    <div class="game-card-panel" style="padding:20px;">
+      <div class="live-stats">
+        <span><strong id="moveCount">0</strong>Moves</span>
+        <span><strong id="mismatchCount">0</strong>Mismatches</span>
+        <span><strong id="pairsLeft">?</strong>Pairs Left</span>
+        <span><strong id="timerDisplay">0:00</strong>Time</span>
+      </div>
+      <div id="cardGrid"></div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="display:block;margin:0 auto;" onclick="abandonGame()">Give Up</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsPanel" style="display:none;" class="game-card-panel results-panel">
+    <div class="pb-banner" id="pbBanner" style="display:none;">🏆 New Personal Best!</div>
+    <div class="results-score" id="finalScore">0</div>
+    <div class="results-label">Score</div>
+    <div class="results-stats">
+      <div class="results-stat"><div class="val" id="rMoves">—</div><div class="lbl">Moves</div></div>
+      <div class="results-stat"><div class="val" id="rMismatches">—</div><div class="lbl">Mismatches</div></div>
+      <div class="results-stat"><div class="val" id="rTime">—</div><div class="lbl">Time</div></div>
+      <div class="results-stat"><div class="val" id="rAccuracy">—</div><div class="lbl">Accuracy</div></div>
+    </div>
+    <div class="xp-bar-wrap" id="xpSection" style="display:none;">
+      <div class="xp-bar-label"><span id="xpLabel">XP</span><span id="levelLabel"></span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:6px;" id="xpEarned"></div>
+    </div>
+    <div class="new-badge-list" id="newBadges"></div>
+    <div class="guest-prompt" id="guestPrompt" style="display:none;">
+      <h3>Save Your Score!</h3>
+      <p>Create an account or log in to track progress, earn badges, and see your improvement over time.</p>
+      <button class="btn btn-ghost" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('signup')">Join Free</button>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+      <a href="brain-games.html" class="btn btn-outline">All Games</a>
+    </div>
+  </div>
+</div>
+
+<footer></footer>
+<div class="bg-toast" id="bgToast"></div>
+<script src="nav.js"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js"></script>
+<script>
+const EMOJIS = ['🎯','🌟','🎪','🎭','🎨','🦁','🐯','🦊','🐸','🦋','🌺','🎸','🎹','🍕','🍦'];
+const DIFF_CONFIG = { easy:{pairs:8,cols:4}, medium:{pairs:10,cols:5}, hard:{pairs:15,cols:6} };
+
+let difficulty = 'medium', cards = [], flipped = [], moves = 0, mismatches = 0;
+let matched = 0, totalPairs = 0, startTime = null, timerInterval = null;
+let sessionToken = null, gameStartMs = null, isLoggedIn = false;
+
+// Check login state
+fetch('/api/brain-games/me/progress').then(r => {
+  isLoggedIn = r.ok;
+  if (!isLoggedIn) document.getElementById('loginHint').textContent = 'Log in to save your score and earn badges.';
+}).catch(() => {});
+
+document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', function() {
+  document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('active'));
+  this.classList.add('active');
+  difficulty = this.dataset.d;
+}));
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+async function startGame() {
+  const cfg = DIFF_CONFIG[difficulty];
+  totalPairs = cfg.pairs;
+  const emojis = shuffle([...EMOJIS]).slice(0, totalPairs);
+  cards = shuffle([...emojis, ...emojis].map((e, i) => ({ id: i, emoji: e, flipped: false, matched: false })));
+
+  moves = 0; mismatches = 0; matched = 0; flipped = [];
+  document.getElementById('moveCount').textContent = '0';
+  document.getElementById('mismatchCount').textContent = '0';
+  document.getElementById('pairsLeft').textContent = totalPairs;
+  document.getElementById('timerDisplay').textContent = '0:00';
+
+  document.getElementById('introPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('playPanel').style.display = '';
+
+  renderGrid(cfg.cols);
+
+  startTime = Date.now(); gameStartMs = startTime;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 500);
+
+  // Create server session
+  sessionToken = null;
+  if (isLoggedIn) {
+    try {
+      const r = await fetch('/api/brain-games/sessions', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ gameSlug:'memory-match', difficulty })
+      });
+      if (r.ok) { const d = await r.json(); sessionToken = d.sessionToken; }
+    } catch {}
+  }
+}
+
+function renderGrid(cols) {
+  const grid = document.getElementById('cardGrid');
+  grid.className = `card-grid ${difficulty}`;
+  grid.innerHTML = cards.map((c, i) => `
+    <div class="flip-card" id="card-${i}" onclick="flipCard(${i})" aria-label="Card ${i+1}">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">?</div>
+        <div class="flip-face flip-back">${c.emoji}</div>
+      </div>
+    </div>`).join('');
+}
+
+function updateTimer() {
+  const secs = Math.floor((Date.now() - startTime) / 1000);
+  const m = Math.floor(secs / 60), s = secs % 60;
+  document.getElementById('timerDisplay').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+let lockBoard = false;
+function flipCard(i) {
+  if (lockBoard) return;
+  const card = cards[i];
+  if (card.matched || card.flipped) return;
+  if (flipped.length === 2) return;
+
+  card.flipped = true;
+  document.getElementById(`card-${i}`).classList.add('flipped');
+  flipped.push(i);
+
+  if (flipped.length === 2) {
+    moves++;
+    document.getElementById('moveCount').textContent = moves;
+    lockBoard = true;
+    checkMatch();
+  }
+}
+
+function checkMatch() {
+  const [a, b] = flipped;
+  if (cards[a].emoji === cards[b].emoji) {
+    cards[a].matched = cards[b].matched = true;
+    document.getElementById(`card-${a}`).classList.add('matched');
+    document.getElementById(`card-${b}`).classList.add('matched');
+    flipped = []; lockBoard = false; matched++;
+    document.getElementById('pairsLeft').textContent = totalPairs - matched;
+    if (matched === totalPairs) setTimeout(endGame, 300);
+  } else {
+    mismatches++;
+    document.getElementById('mismatchCount').textContent = mismatches;
+    setTimeout(() => {
+      cards[a].flipped = cards[b].flipped = false;
+      document.getElementById(`card-${a}`).classList.remove('flipped');
+      document.getElementById(`card-${b}`).classList.remove('flipped');
+      flipped = []; lockBoard = false;
+    }, 900);
+  }
+}
+
+async function endGame() {
+  clearInterval(timerInterval);
+  const durationMs = Date.now() - gameStartMs;
+  const secs = Math.floor(durationMs / 1000);
+  const m = Math.floor(secs / 60), s = secs % 60;
+
+  document.getElementById('playPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = '';
+
+  const accuracy = Math.round(((moves - mismatches) / Math.max(1, moves)) * 100);
+  document.getElementById('rMoves').textContent = moves;
+  document.getElementById('rMismatches').textContent = mismatches;
+  document.getElementById('rTime').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  document.getElementById('rAccuracy').textContent = accuracy + '%';
+
+  if (!sessionToken) {
+    document.getElementById('guestPrompt').style.display = '';
+    document.getElementById('finalScore').textContent = calcLocalScore();
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/brain-games/sessions/${sessionToken}/complete`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        durationMs,
+        metrics: { pairs: totalPairs, moves, mismatches, durationMs, completed: true }
+      })
+    });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('finalScore').textContent = d.normalizedScore;
+    if (d.isPersonalBest) document.getElementById('pbBanner').style.display = '';
+    showXP(d);
+    showBadges(d.newBadges);
+  } catch {
+    document.getElementById('finalScore').textContent = calcLocalScore();
+    document.getElementById('guestPrompt').style.display = '';
+  }
+}
+
+function calcLocalScore() {
+  const diff = {easy:0,medium:1,hard:2}[difficulty];
+  return Math.max(0, 1000 - Math.max(0, moves - totalPairs) * 12 - mismatches * 25 + diff * 100);
+}
+
+function showXP(d) {
+  if (!d.xpEarned) return;
+  const xpSec = document.getElementById('xpSection');
+  xpSec.style.display = '';
+  document.getElementById('xpEarned').textContent = `+${d.xpEarned} XP earned`;
+  document.getElementById('levelLabel').textContent = `Level ${d.level} ${d.levelName}`;
+  document.getElementById('xpLabel').textContent = `${d.xp} XP`;
+  const pct = d.xpForNext ? Math.min(100, Math.round((d.xp / d.xpForNext) * 100)) : 100;
+  setTimeout(() => document.getElementById('xpFill').style.width = pct + '%', 100);
+}
+
+function showBadges(badges) {
+  if (!badges?.length) return;
+  const list = document.getElementById('newBadges');
+  list.innerHTML = badges.map(b => `
+    <div class="new-badge-item">
+      <span class="badge-icon">${b.emoji}</span>
+      <div class="badge-info">
+        <h4>🏅 Badge Earned: ${b.name}</h4>
+        <p>${b.description}</p>
+      </div>
+    </div>`).join('');
+}
+
+async function abandonGame() {
+  clearInterval(timerInterval);
+  document.getElementById('playPanel').style.display = 'none';
+  document.getElementById('introPanel').style.display = '';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('bgToast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

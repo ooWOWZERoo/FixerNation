@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simon Sequence — Tune Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css">
+<style>
+  .simon-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; max-width: 320px; margin: 24px auto;
+  }
+  .simon-btn {
+    aspect-ratio: 1; border-radius: 20px; border: none; cursor: pointer;
+    transition: opacity .1s, transform .1s; opacity: 0.55;
+    font-size: 28px; display: flex; align-items: center; justify-content: center;
+  }
+  .simon-btn.lit { opacity: 1; transform: scale(1.06); }
+  .simon-btn.user-press { opacity: 1; transform: scale(0.96); }
+  .simon-btn[data-c="red"]    { background: var(--game-red); }
+  .simon-btn[data-c="blue"]   { background: var(--game-blue); }
+  .simon-btn[data-c="green"]  { background: var(--game-green); }
+  .simon-btn[data-c="yellow"] { background: var(--game-yellow); }
+
+  .simon-status {
+    text-align: center; font-size: 16px; font-weight: 700;
+    color: var(--teal-dark); margin-bottom: 8px; min-height: 28px;
+  }
+  .sequence-length {
+    text-align: center; font-size: 36px; font-weight: 800;
+    color: var(--teal-dark); margin: 8px 0;
+  }
+  .sequence-length span { font-size: 14px; color: var(--ink-soft); font-weight: 400; }
+  .progress-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 8px 0 16px; }
+  .progress-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--cream-soft); border: 1px solid var(--border); transition: background .2s;
+  }
+  .progress-dot.done { background: var(--game-green); border-color: var(--game-green); }
+  .progress-dot.current { background: var(--teal); border-color: var(--teal); }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <div class="game-page-header">
+    <span class="game-icon">🎵</span>
+    <h1>Simon Sequence</h1>
+    <p>Watch the pattern light up, then repeat it in order. Each round adds one more step.</p>
+  </div>
+
+  <!-- INTRO -->
+  <div id="introPanel" class="game-card-panel">
+    <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
+    <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;">
+      Watch which colored buttons light up. Then press them in the <strong>same order</strong>.
+      Each round the sequence gets one step longer. See how far you can go!
+    </p>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
+      <div class="difficulty-picker">
+        <button class="diff-btn" data-d="easy">Easy<br><span style="font-size:11px;opacity:.7">Slow flashes</span></button>
+        <button class="diff-btn active" data-d="medium">Medium<br><span style="font-size:11px;opacity:.7">Standard pace</span></button>
+        <button class="diff-btn" data-d="hard">Hard<br><span style="font-size:11px;opacity:.7">Fast flashes</span></button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="startGame()">Start Game</button>
+    <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:12px;" id="loginHint"></p>
+  </div>
+
+  <!-- PLAY -->
+  <div id="playPanel" style="display:none;">
+    <div class="game-card-panel" style="padding:20px;">
+      <div class="sequence-length" id="seqLen">0 <span>steps</span></div>
+      <div class="simon-status" id="simonStatus">Watch carefully…</div>
+      <div class="progress-dots" id="progressDots"></div>
+      <div class="simon-grid">
+        <button class="simon-btn" data-c="red"    onclick="userPress('red')">🟥</button>
+        <button class="simon-btn" data-c="blue"   onclick="userPress('blue')">🟦</button>
+        <button class="simon-btn" data-c="green"  onclick="userPress('green')">🟩</button>
+        <button class="simon-btn" data-c="yellow" onclick="userPress('yellow')">🟨</button>
+      </div>
+      <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-top:4px;">
+        Round <span id="roundNum">1</span> — Score: <span id="liveScore">0</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsPanel" style="display:none;" class="game-card-panel results-panel">
+    <div class="pb-banner" id="pbBanner" style="display:none;">🎵 New Personal Best!</div>
+    <div class="results-score" id="finalScore">0</div>
+    <div class="results-label">Score</div>
+    <div class="results-stats">
+      <div class="results-stat"><div class="val" id="rLen">—</div><div class="lbl">Max Length</div></div>
+      <div class="results-stat"><div class="val" id="rRounds">—</div><div class="lbl">Rounds</div></div>
+      <div class="results-stat"><div class="val" id="rStreak">—</div><div class="lbl">Best Streak</div></div>
+    </div>
+    <div class="xp-bar-wrap" id="xpSection" style="display:none;">
+      <div class="xp-bar-label"><span id="xpLabel">XP</span><span id="levelLabel"></span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:6px;" id="xpEarned"></div>
+    </div>
+    <div class="new-badge-list" id="newBadges"></div>
+    <div class="guest-prompt" id="guestPrompt" style="display:none;">
+      <h3>Save Your Score!</h3>
+      <p>Create an account to track your progress and unlock achievement badges.</p>
+      <button class="btn btn-ghost" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('signup')">Join Free</button>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+      <a href="brain-games.html" class="btn btn-outline">All Games</a>
+    </div>
+  </div>
+</div>
+
+<footer></footer>
+<div class="bg-toast" id="bgToast"></div>
+<script src="nav.js"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js"></script>
+<script>
+const COLORS = ['red','blue','green','yellow'];
+const FLASH_SPEED = { easy: 900, medium: 650, hard: 450 };
+const FLASH_GAP   = { easy: 350, medium: 250, hard: 180 };
+
+let difficulty = 'medium', sequence = [], userInput = [];
+let correctRounds = 0, longestStreak = 0, currentStreak = 0;
+let accepting = false, gameOver = false;
+let sessionToken = null, gameStartMs = null, isLoggedIn = false;
+
+fetch('/api/brain-games/me/progress').then(r => {
+  isLoggedIn = r.ok;
+  if (!isLoggedIn) document.getElementById('loginHint').textContent = 'Log in to save your score and earn badges.';
+}).catch(() => {});
+
+document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', function() {
+  document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('active'));
+  this.classList.add('active');
+  difficulty = this.dataset.d;
+}));
+
+async function startGame() {
+  sequence = []; userInput = []; correctRounds = 0; longestStreak = 0; currentStreak = 0; gameOver = false;
+  document.getElementById('introPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('playPanel').style.display = '';
+  document.getElementById('roundNum').textContent = 1;
+  document.getElementById('liveScore').textContent = 0;
+  setButtonsEnabled(false);
+
+  gameStartMs = Date.now();
+  sessionToken = null;
+  if (isLoggedIn) {
+    try {
+      const r = await fetch('/api/brain-games/sessions', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ gameSlug:'simon-sequence', difficulty })
+      });
+      if (r.ok) { const d = await r.json(); sessionToken = d.sessionToken; }
+    } catch {}
+  }
+
+  addAndPlay();
+}
+
+function addAndPlay() {
+  sequence.push(COLORS[Math.floor(Math.random() * 4)]);
+  document.getElementById('seqLen').innerHTML = `${sequence.length} <span>steps</span>`;
+  updateProgressDots();
+  userInput = [];
+  accepting = false;
+  setButtonsEnabled(false);
+  document.getElementById('simonStatus').textContent = 'Watch carefully…';
+  setTimeout(() => playSequence(), 600);
+}
+
+function updateProgressDots() {
+  const max = Math.min(sequence.length, 20);
+  document.getElementById('progressDots').innerHTML =
+    Array.from({length: max}, (_,i) => `<div class="progress-dot${i < userInput.length ? ' done' : ''}" id="pdot-${i}"></div>`).join('');
+}
+
+function playSequence() {
+  const speed = FLASH_SPEED[difficulty];
+  const gap   = FLASH_GAP[difficulty];
+  sequence.forEach((color, i) => {
+    setTimeout(() => flashButton(color, speed), i * (speed + gap));
+  });
+  const total = sequence.length * (speed + gap);
+  setTimeout(() => {
+    accepting = true;
+    setButtonsEnabled(true);
+    document.getElementById('simonStatus').textContent = 'Your turn!';
+  }, total + 100);
+}
+
+function flashButton(color, duration) {
+  const btn = document.querySelector(`.simon-btn[data-c="${color}"]`);
+  if (!btn) return;
+  btn.classList.add('lit');
+  setTimeout(() => btn.classList.remove('lit'), duration * 0.6);
+}
+
+function setButtonsEnabled(on) {
+  document.querySelectorAll('.simon-btn').forEach(b => b.style.pointerEvents = on ? '' : 'none');
+}
+
+function userPress(color) {
+  if (!accepting || gameOver) return;
+  const btn = document.querySelector(`.simon-btn[data-c="${color}"]`);
+  btn.classList.add('user-press');
+  setTimeout(() => btn.classList.remove('user-press'), 150);
+
+  userInput.push(color);
+  const pos = userInput.length - 1;
+  const dot = document.getElementById(`pdot-${pos}`);
+  if (dot) dot.classList.add('done');
+
+  if (userInput[pos] !== sequence[pos]) {
+    // Wrong
+    gameOver = true;
+    accepting = false;
+    setButtonsEnabled(false);
+    document.getElementById('simonStatus').textContent = '❌ Wrong! Game over.';
+    setTimeout(() => endGame(), 1200);
+    return;
+  }
+
+  if (userInput.length === sequence.length) {
+    // Correct round
+    correctRounds++;
+    currentStreak++;
+    longestStreak = Math.max(longestStreak, currentStreak);
+    accepting = false;
+    setButtonsEnabled(false);
+    const score = calcScore();
+    document.getElementById('liveScore').textContent = score;
+    document.getElementById('roundNum').textContent = sequence.length + 1;
+    document.getElementById('simonStatus').textContent = '✅ Correct!';
+    setTimeout(() => addAndPlay(), 900);
+  }
+}
+
+function calcScore() {
+  const diff = {easy:1,medium:1.2,hard:1.5}[difficulty];
+  return Math.round((sequence.length * 80 + correctRounds * 20) * diff);
+}
+
+async function endGame() {
+  const durationMs = Date.now() - gameStartMs;
+  const maxLength = sequence.length;
+
+  document.getElementById('playPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = '';
+  document.getElementById('rLen').textContent = maxLength;
+  document.getElementById('rRounds').textContent = correctRounds;
+  document.getElementById('rStreak').textContent = longestStreak;
+
+  if (!sessionToken) {
+    document.getElementById('guestPrompt').style.display = '';
+    document.getElementById('finalScore').textContent = calcScore();
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/brain-games/sessions/${sessionToken}/complete`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        durationMs,
+        metrics: { maxLength, correctRounds, longestStreak }
+      })
+    });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('finalScore').textContent = d.normalizedScore;
+    if (d.isPersonalBest) document.getElementById('pbBanner').style.display = '';
+    showXP(d); showBadges(d.newBadges);
+  } catch {
+    document.getElementById('finalScore').textContent = calcScore();
+    document.getElementById('guestPrompt').style.display = '';
+  }
+}
+
+function showXP(d) {
+  if (!d.xpEarned) return;
+  document.getElementById('xpSection').style.display = '';
+  document.getElementById('xpEarned').textContent = `+${d.xpEarned} XP earned`;
+  document.getElementById('levelLabel').textContent = `Level ${d.level} ${d.levelName}`;
+  document.getElementById('xpLabel').textContent = `${d.xp} XP`;
+  const pct = d.xpForNext ? Math.min(100, Math.round((d.xp / d.xpForNext) * 100)) : 100;
+  setTimeout(() => document.getElementById('xpFill').style.width = pct + '%', 100);
+}
+
+function showBadges(badges) {
+  if (!badges?.length) return;
+  document.getElementById('newBadges').innerHTML = badges.map(b => `
+    <div class="new-badge-item">
+      <span class="badge-icon">${b.emoji}</span>
+      <div class="badge-info"><h4>🏅 Badge Earned: ${b.name}</h4><p>${b.description}</p></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

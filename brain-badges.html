@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brain Badges — Tune Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css">
+<style>
+  .badges-hero {
+    background: var(--teal-dark); color: #fff; padding: 48px 32px 40px; text-align: center;
+  }
+  .badges-hero h1 { font-family: 'Fraunces', serif; font-size: 32px; margin-bottom: 6px; }
+  .badges-hero p { opacity: .75; font-size: 15px; }
+  .badge-count-bar {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 16px 24px; background: #fff; border-bottom: 1px solid var(--border);
+    font-size: 15px; font-weight: 600; color: var(--teal-dark); flex-wrap: wrap;
+  }
+  .badge-count-bar span { color: var(--ink-soft); font-size: 13px; font-weight: 400; }
+  .filter-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .filter-btn {
+    padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--border);
+    background: #fff; font-size: 13px; font-weight: 600; color: var(--ink-soft);
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--teal-dark); color: #fff; border-color: var(--teal-dark);
+  }
+  .badges-section-title {
+    font-family: 'Fraunces', serif; font-size: 20px; color: var(--teal-dark);
+    margin: 28px 0 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .badges-section-title .game-icon-sm { font-size: 20px; }
+  .badge-card-full {
+    background: #fff; border-radius: 16px; border: 1px solid var(--border);
+    padding: 16px; display: flex; align-items: flex-start; gap: 14px;
+    transition: box-shadow .15s; position: relative;
+  }
+  .badge-card-full:hover { box-shadow: 0 4px 20px -6px rgba(0,0,0,0.12); }
+  .badge-card-full.locked { opacity: 0.45; }
+  .badge-emoji-big { font-size: 36px; line-height: 1; flex-shrink: 0; }
+  .badge-card-body { flex: 1; min-width: 0; }
+  .badge-card-name { font-weight: 800; font-size: 15px; color: var(--ink); margin-bottom: 3px; }
+  .badge-card-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 6px; }
+  .badge-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge-earned-date { font-size: 11px; color: var(--teal-dark); font-weight: 700; }
+  .badge-card-actions { display: flex; gap: 6px; align-items: center; }
+  .feature-btn {
+    padding: 6px 12px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: #fff; font-size: 12px; font-weight: 700; color: var(--ink-soft);
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .feature-btn.featured { background: var(--gold); border-color: var(--gold); color: #fff; }
+  .feature-btn:hover:not(.featured) { border-color: var(--teal); color: var(--teal); }
+  .lock-icon { position: absolute; top: 12px; right: 12px; font-size: 16px; opacity: .4; }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--ink-soft); }
+  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+  .featured-showcase {
+    background: linear-gradient(135deg, #fff8f0, #fff); border: 1.5px solid var(--gold);
+    border-radius: 20px; padding: 20px 24px; margin-bottom: 28px;
+  }
+  .featured-showcase h3 { font-family: 'Fraunces', serif; color: var(--teal-dark); margin-bottom: 14px; font-size: 18px; }
+  .featured-badges-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .featured-badge-chip {
+    display: flex; align-items: center; gap: 8px; background: #fff;
+    border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+  .no-featured { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="badges-hero">
+  <h1>🏅 My Badges</h1>
+  <p>Earn badges by completing challenges and reaching milestones across all games</p>
+</div>
+
+<div id="badgeCountBar" class="badge-count-bar" style="display:none;">
+  <div><strong id="earnedCount">0</strong> / <strong id="totalCount">44</strong> Badges Earned</div>
+  <span id="completionPct"></span>
+</div>
+
+<div style="max-width:960px;margin:0 auto;padding:28px 24px 60px;" id="mainContent">
+
+  <div id="notLoggedIn" style="display:none;" class="empty-state">
+    <div class="big">🏅</div>
+    <h2 style="font-family:'Fraunces',serif;color:var(--teal-dark);margin-bottom:10px;">Sign In to See Your Badges</h2>
+    <p style="margin-bottom:24px;">Earn badges by playing games and reaching milestones.</p>
+    <button class="btn btn-primary" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('login')">Sign In</button>
+    <a href="brain-games.html" class="btn btn-outline" style="margin-left:12px;">Play Games</a>
+  </div>
+
+  <div id="loggedInContent" style="display:none;">
+    <!-- Featured showcase -->
+    <div class="featured-showcase" id="featuredSection">
+      <h3>⭐ Featured Badges <span style="font-size:12px;font-weight:400;color:var(--ink-soft);">— shown on your public profile</span></h3>
+      <div class="featured-badges-row" id="featuredRow">
+        <div class="no-featured">No badges featured yet — earn badges and star them to feature them here.</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" data-f="earned" onclick="setFilter('earned',this)">Earned</button>
+      <button class="filter-btn" data-f="locked" onclick="setFilter('locked',this)">Locked</button>
+      <button class="filter-btn" data-f="common" onclick="setFilter('common',this)">Common</button>
+      <button class="filter-btn" data-f="uncommon" onclick="setFilter('uncommon',this)">Uncommon</button>
+      <button class="filter-btn" data-f="rare" onclick="setFilter('rare',this)">Rare</button>
+      <button class="filter-btn" data-f="epic" onclick="setFilter('epic',this)">Epic</button>
+      <button class="filter-btn" data-f="legendary" onclick="setFilter('legendary',this)">Legendary</button>
+    </div>
+
+    <div id="badgeSections"></div>
+
+    <div style="text-align:center;margin-top:28px;">
+      <a href="brain-games.html" class="btn btn-primary">Play Games</a>
+      <a href="brain-games-progress.html" class="btn btn-outline" style="margin-left:12px;">My Progress</a>
+    </div>
+  </div>
+</div>
+
+<footer></footer>
+<script src="nav.js"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js"></script>
+<script>
+const GAME_ORDER = [
+  { slug:'memory-match',     name:'Memory Match',     icon:'🃏' },
+  { slug:'reaction-time',    name:'Reaction Time',    icon:'⚡' },
+  { slug:'simon-sequence',   name:'Simon Sequence',   icon:'🎵' },
+  { slug:'stroop-challenge', name:'Stroop Challenge', icon:'🎨' },
+  { slug:'quick-math',       name:'Quick Math',       icon:'➕' },
+  { slug:'number-sequence',  name:'Number Sequence',  icon:'🔢' },
+  { slug:null,               name:'Cross-Game',       icon:'🌟' },
+];
+
+const RARITY_ORDER = ['common','uncommon','rare','epic','legendary'];
+
+let allBadges = [], earnedSet = new Set(), featuredSet = new Set();
+let currentFilter = 'all';
+
+async function loadPage() {
+  try {
+    const r = await fetch('/api/brain-games/me/badges', { credentials:'include' });
+    if (!r.ok) { showNotLoggedIn(); return; }
+    const data = await r.json();
+
+    allBadges = data.allBadges || [];
+    earnedSet = new Set((data.earnedBadges || []).map(b => b.badgeId));
+    featuredSet = new Set((data.earnedBadges || []).filter(b => b.featured).map(b => b.badgeId));
+
+    document.getElementById('notLoggedIn').style.display = 'none';
+    document.getElementById('loggedInContent').style.display = '';
+    document.getElementById('badgeCountBar').style.display = '';
+
+    const earned = earnedSet.size;
+    document.getElementById('earnedCount').textContent = earned;
+    document.getElementById('totalCount').textContent = allBadges.length;
+    document.getElementById('completionPct').textContent = allBadges.length
+      ? `${Math.round((earned / allBadges.length) * 100)}% complete`
+      : '';
+
+    renderFeatured(data.earnedBadges || []);
+    renderSections();
+  } catch {
+    showNotLoggedIn();
+  }
+}
+
+function showNotLoggedIn() {
+  document.getElementById('notLoggedIn').style.display = '';
+  document.getElementById('loggedInContent').style.display = 'none';
+}
+
+function renderFeatured(earnedBadges) {
+  const featured = earnedBadges.filter(b => b.featured).sort((a,b) => (a.featuredOrder||99)-(b.featuredOrder||99));
+  const row = document.getElementById('featuredRow');
+  if (!featured.length) {
+    row.innerHTML = '<div class="no-featured">No badges featured yet — earn badges and star them to feature them here.</div>';
+    return;
+  }
+  row.innerHTML = featured.map(b => {
+    const info = allBadges.find(x => x.id === b.badgeId) || {};
+    return `<div class="featured-badge-chip">
+      <span>${info.emoji || '🏅'}</span>
+      <span>${info.name || 'Badge'}</span>
+      <span class="badge-chip ${info.rarity || 'common'}" style="font-size:10px;">${info.rarity || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSections();
+}
+
+function matchesFilter(badge, isEarned) {
+  if (currentFilter === 'all') return true;
+  if (currentFilter === 'earned') return isEarned;
+  if (currentFilter === 'locked') return !isEarned;
+  return badge.rarity === currentFilter;
+}
+
+function renderSections() {
+  const container = document.getElementById('badgeSections');
+  container.innerHTML = '';
+
+  GAME_ORDER.forEach(game => {
+    const gameBadges = allBadges.filter(b =>
+      game.slug === null ? b.gameSlug === null : b.gameSlug === game.slug
+    );
+    if (!gameBadges.length) return;
+
+    const visible = gameBadges.filter(b => matchesFilter(b, earnedSet.has(b.id)));
+    if (!visible.length) return;
+
+    const section = document.createElement('div');
+    section.innerHTML = `<div class="badges-section-title"><span class="game-icon-sm">${game.icon}</span>${game.name}</div>`;
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:8px;';
+
+    const sorted = visible.slice().sort((a,b) => {
+      const ea = earnedSet.has(a.id) ? 0 : 1, eb = earnedSet.has(b.id) ? 0 : 1;
+      if (ea !== eb) return ea - eb;
+      return RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity);
+    });
+
+    sorted.forEach(badge => {
+      const isEarned = earnedSet.has(badge.id);
+      const isFeatured = featuredSet.has(badge.id);
+      const card = document.createElement('div');
+      card.className = `badge-card-full${isEarned ? '' : ' locked'}`;
+      card.innerHTML = `
+        <div class="badge-emoji-big">${badge.emoji}</div>
+        <div class="badge-card-body">
+          <div class="badge-card-name">${badge.name}</div>
+          <div class="badge-card-desc">${badge.description}</div>
+          <div class="badge-card-meta">
+            <span class="badge-chip ${badge.rarity}">${badge.rarity}</span>
+            ${isEarned ? `<span class="badge-earned-date">✓ Earned</span>` : ''}
+          </div>
+          ${isEarned ? `
+          <div class="badge-card-actions" style="margin-top:8px;">
+            <button class="feature-btn${isFeatured ? ' featured' : ''}" onclick="toggleFeature(${badge.id}, this)">
+              ${isFeatured ? '⭐ Featured' : '☆ Feature'}
+            </button>
+          </div>` : ''}
+        </div>
+        ${!isEarned ? '<div class="lock-icon">🔒</div>' : ''}`;
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+
+  if (!container.children.length) {
+    container.innerHTML = '<div class="empty-state"><div class="big">🔍</div><p>No badges match this filter.</p></div>';
+  }
+}
+
+async function toggleFeature(badgeId, btn) {
+  const isFeatured = btn.classList.contains('featured');
+  try {
+    const r = await fetch(`/api/brain-games/me/badges/${badgeId}/feature`, {
+      method: isFeatured ? 'DELETE' : 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    if (!r.ok) throw new Error();
+    if (isFeatured) {
+      btn.classList.remove('featured');
+      btn.textContent = '☆ Feature';
+      featuredSet.delete(badgeId);
+    } else {
+      btn.classList.add('featured');
+      btn.textContent = '⭐ Featured';
+      featuredSet.add(badgeId);
+    }
+    // Refresh featured showcase
+    const badgeInfo = allBadges.find(b => b.id === badgeId);
+    refreshFeaturedShowcase();
+  } catch {
+    alert('Could not update featured badge. Please try again.');
+  }
+}
+
+function refreshFeaturedShowcase() {
+  const row = document.getElementById('featuredRow');
+  const featured = allBadges.filter(b => featuredSet.has(b.id));
+  if (!featured.length) {
+    row.innerHTML = '<div class="no-featured">No badges featured yet — earn badges and star them to feature them here.</div>';
+    return;
+  }
+  row.innerHTML = featured.map(b => `
+    <div class="featured-badge-chip">
+      <span>${b.emoji}</span><span>${b.name}</span>
+      <span class="badge-chip ${b.rarity}" style="font-size:10px;">${b.rarity}</span>
+    </div>`).join('');
+}
+
+loadPage();
+</script>
+</body>
+</html>

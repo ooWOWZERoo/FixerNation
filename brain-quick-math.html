@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick Math — Tune Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css">
+<style>
+  .math-problem {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(44px, 9vw, 72px); font-weight: 700;
+    text-align: center; color: var(--teal-dark);
+    margin: 20px 0 8px; min-height: 80px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .math-answer-row {
+    display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 20px;
+  }
+  .math-input {
+    font-size: 28px; font-weight: 700; text-align: center;
+    width: 160px; padding: 12px 16px; border-radius: 14px;
+    border: 2px solid var(--border); background: #fff; color: var(--ink);
+    font-family: inherit; transition: border-color .15s;
+    -moz-appearance: textfield;
+  }
+  .math-input::-webkit-outer-spin-button,
+  .math-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .math-input:focus { outline: none; border-color: var(--teal); }
+  .math-input.correct { border-color: var(--game-green); background: #f0fdf4; }
+  .math-input.wrong   { border-color: var(--game-red);   background: #fef2f2; }
+  .submit-btn {
+    padding: 14px 28px; border-radius: 14px; border: none; cursor: pointer;
+    background: var(--teal-dark); color: #fff; font-weight: 700; font-size: 16px;
+    font-family: inherit; transition: background .15s;
+  }
+  .submit-btn:hover { background: var(--teal); }
+  .feedback-msg {
+    text-align: center; font-size: 16px; font-weight: 700;
+    min-height: 24px; margin-bottom: 12px;
+  }
+  .feedback-msg.ok  { color: var(--game-green); }
+  .feedback-msg.err { color: var(--game-red); }
+  .math-timer-bar { height: 6px; background: var(--cream-soft); border-radius: 99px; overflow: hidden; margin-bottom: 12px; }
+  .math-timer-fill { height: 100%; border-radius: 99px; background: var(--teal); transition: width .1s linear; }
+  .math-live { display: flex; justify-content: center; gap: 24px; font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+  .math-live strong { display: block; font-size: 20px; color: var(--ink); }
+  .q-counter { text-align:center; font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <div class="game-page-header">
+    <span class="game-icon">➕</span>
+    <h1>Quick Math</h1>
+    <p>Solve arithmetic problems against the clock. Speed and accuracy both count.</p>
+  </div>
+
+  <!-- INTRO -->
+  <div id="introPanel" class="game-card-panel">
+    <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
+    <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;">
+      A math problem appears on screen. Type your answer and hit <strong>Enter</strong> or press Submit.
+      Answer as many as you can before the timer runs out!
+    </p>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
+      <div class="difficulty-picker">
+        <button class="diff-btn" data-d="easy">Easy<br><span style="font-size:11px;opacity:.7">+ and − only · 60s</span></button>
+        <button class="diff-btn active" data-d="medium">Medium<br><span style="font-size:11px;opacity:.7">+ − × · 60s</span></button>
+        <button class="diff-btn" data-d="hard">Hard<br><span style="font-size:11px;opacity:.7">+ − × ÷ · 90s</span></button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="startGame()">Start Game</button>
+    <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:12px;" id="loginHint"></p>
+  </div>
+
+  <!-- PLAY -->
+  <div id="playPanel" style="display:none;">
+    <div class="game-card-panel" style="padding:20px;">
+      <div class="math-live">
+        <span><strong id="correctCount">0</strong>Correct</span>
+        <span><strong id="incorrectCount">0</strong>Wrong</span>
+        <span><strong id="streakCount">0</strong>Streak</span>
+        <span><strong id="timeLeft">60</strong>Seconds</span>
+      </div>
+      <div class="math-timer-bar"><div class="math-timer-fill" id="timerFill" style="width:100%"></div></div>
+      <div class="q-counter">Question <span id="qNum">1</span></div>
+      <div class="math-problem" id="mathProblem">?</div>
+      <div class="feedback-msg" id="feedbackMsg"></div>
+      <div class="math-answer-row">
+        <input type="number" class="math-input" id="mathInput" placeholder="?" autocomplete="off" onkeydown="handleKey(event)">
+        <button class="submit-btn" onclick="submitAnswer()">→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsPanel" style="display:none;" class="game-card-panel results-panel">
+    <div class="pb-banner" id="pbBanner" style="display:none;">➕ New Personal Best!</div>
+    <div class="results-score" id="finalScore">0</div>
+    <div class="results-label">Score</div>
+    <div class="results-stats">
+      <div class="results-stat"><div class="val" id="rCorrect">—</div><div class="lbl">Correct</div></div>
+      <div class="results-stat"><div class="val" id="rWrong">—</div><div class="lbl">Wrong</div></div>
+      <div class="results-stat"><div class="val" id="rAccuracy">—</div><div class="lbl">Accuracy</div></div>
+      <div class="results-stat"><div class="val" id="rStreak">—</div><div class="lbl">Best Streak</div></div>
+    </div>
+    <div class="xp-bar-wrap" id="xpSection" style="display:none;">
+      <div class="xp-bar-label"><span id="xpLabel">XP</span><span id="levelLabel"></span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:6px;" id="xpEarned"></div>
+    </div>
+    <div class="new-badge-list" id="newBadges"></div>
+    <div class="guest-prompt" id="guestPrompt" style="display:none;">
+      <h3>Save Your Score!</h3>
+      <p>Log in to track math performance across sessions and earn badges.</p>
+      <button class="btn btn-ghost" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('signup')">Join Free</button>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+      <a href="brain-games.html" class="btn btn-outline">All Games</a>
+    </div>
+  </div>
+</div>
+
+<footer></footer>
+<div class="bg-toast" id="bgToast"></div>
+<script src="nav.js"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js"></script>
+<script>
+const DIFF_CONFIG = { easy:{duration:60}, medium:{duration:60}, hard:{duration:90} };
+
+let difficulty = 'medium', correct = 0, incorrect = 0;
+let currentStreak = 0, longestStreak = 0;
+let answerTimes = [], qStart = null, currentAnswer = null;
+let timeLeft = 60, timerInterval = null, qNum = 0;
+let sessionToken = null, gameStartMs = null, isLoggedIn = false;
+
+fetch('/api/brain-games/me/progress').then(r => {
+  isLoggedIn = r.ok;
+  if (!isLoggedIn) document.getElementById('loginHint').textContent = 'Log in to save your score and earn badges.';
+}).catch(() => {});
+
+document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', function() {
+  document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('active'));
+  this.classList.add('active');
+  difficulty = this.dataset.d;
+}));
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateProblem() {
+  const ops = { easy:['+','-'], medium:['+','-','×'], hard:['+','-','×','÷'] }[difficulty];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+
+  if (op === '÷') {
+    const divisor = rand(2, 9);
+    const quotient = rand(2, 12);
+    return { display: `${divisor * quotient} ÷ ${divisor}`, answer: quotient };
+  }
+  if (op === '×') {
+    const a = rand(2, difficulty === 'hard' ? 12 : 9);
+    const b = rand(2, difficulty === 'hard' ? 12 : 9);
+    return { display: `${a} × ${b}`, answer: a * b };
+  }
+  if (op === '-') {
+    const a = rand(10, difficulty === 'hard' ? 99 : 50);
+    const b = rand(1, a);
+    return { display: `${a} − ${b}`, answer: a - b };
+  }
+  // +
+  const a = rand(1, difficulty === 'hard' ? 99 : difficulty === 'medium' ? 50 : 20);
+  const b = rand(1, difficulty === 'hard' ? 99 : difficulty === 'medium' ? 50 : 20);
+  return { display: `${a} + ${b}`, answer: a + b };
+}
+
+async function startGame() {
+  correct = 0; incorrect = 0; currentStreak = 0; longestStreak = 0;
+  answerTimes = []; qNum = 0;
+  const cfg = DIFF_CONFIG[difficulty];
+  timeLeft = cfg.duration;
+
+  document.getElementById('introPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('playPanel').style.display = '';
+  document.getElementById('correctCount').textContent = '0';
+  document.getElementById('incorrectCount').textContent = '0';
+  document.getElementById('streakCount').textContent = '0';
+  document.getElementById('timeLeft').textContent = timeLeft;
+  document.getElementById('feedbackMsg').textContent = '';
+  document.getElementById('mathInput').className = 'math-input';
+
+  gameStartMs = Date.now();
+  sessionToken = null;
+  if (isLoggedIn) {
+    try {
+      const r = await fetch('/api/brain-games/sessions', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ gameSlug:'quick-math', difficulty })
+      });
+      if (r.ok) { const d = await r.json(); sessionToken = d.sessionToken; }
+    } catch {}
+  }
+
+  nextQuestion();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(tick, 1000);
+  setTimeout(() => document.getElementById('mathInput').focus(), 100);
+}
+
+function tick() {
+  timeLeft--;
+  document.getElementById('timeLeft').textContent = timeLeft;
+  const cfg = DIFF_CONFIG[difficulty];
+  document.getElementById('timerFill').style.width = (timeLeft / cfg.duration * 100) + '%';
+  if (timeLeft <= 0) { clearInterval(timerInterval); endGame(); }
+}
+
+function nextQuestion() {
+  const p = generateProblem();
+  currentAnswer = p.answer;
+  qNum++;
+  document.getElementById('qNum').textContent = qNum;
+  document.getElementById('mathProblem').textContent = p.display;
+  document.getElementById('mathInput').value = '';
+  document.getElementById('mathInput').className = 'math-input';
+  document.getElementById('feedbackMsg').textContent = '';
+  qStart = Date.now();
+  setTimeout(() => { if (timeLeft > 0) document.getElementById('mathInput').focus(); }, 50);
+}
+
+function handleKey(e) { if (e.key === 'Enter') submitAnswer(); }
+
+function submitAnswer() {
+  if (timeLeft <= 0) return;
+  const val = parseFloat(document.getElementById('mathInput').value);
+  if (isNaN(val)) return;
+  const rt = Date.now() - qStart;
+  answerTimes.push(rt);
+
+  const inp = document.getElementById('mathInput');
+  const msg = document.getElementById('feedbackMsg');
+
+  if (val === currentAnswer) {
+    correct++;
+    currentStreak++;
+    longestStreak = Math.max(longestStreak, currentStreak);
+    inp.className = 'math-input correct';
+    msg.className = 'feedback-msg ok';
+    msg.textContent = '✓ Correct!';
+    document.getElementById('correctCount').textContent = correct;
+    document.getElementById('streakCount').textContent = longestStreak;
+    setTimeout(nextQuestion, 400);
+  } else {
+    incorrect++;
+    currentStreak = 0;
+    inp.className = 'math-input wrong';
+    msg.className = 'feedback-msg err';
+    msg.textContent = `✗ Answer was ${currentAnswer}`;
+    document.getElementById('incorrectCount').textContent = incorrect;
+    document.getElementById('streakCount').textContent = longestStreak;
+    setTimeout(nextQuestion, 1000);
+  }
+}
+
+async function endGame() {
+  const durationMs = Date.now() - gameStartMs;
+  const total = correct + incorrect;
+  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const avgAnswerMs = answerTimes.length ? Math.round(answerTimes.reduce((a,b)=>a+b,0) / answerTimes.length) : 0;
+
+  document.getElementById('playPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = '';
+  document.getElementById('rCorrect').textContent = correct;
+  document.getElementById('rWrong').textContent = incorrect;
+  document.getElementById('rAccuracy').textContent = accuracy + '%';
+  document.getElementById('rStreak').textContent = longestStreak;
+
+  if (!sessionToken) {
+    document.getElementById('guestPrompt').style.display = '';
+    document.getElementById('finalScore').textContent = calcLocalScore(accuracy, avgAnswerMs);
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/brain-games/sessions/${sessionToken}/complete`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ durationMs, metrics: { correct, incorrect, avgAnswerMs, longestStreak } })
+    });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('finalScore').textContent = d.normalizedScore;
+    if (d.isPersonalBest) document.getElementById('pbBanner').style.display = '';
+    showXP(d); showBadges(d.newBadges);
+  } catch {
+    document.getElementById('finalScore').textContent = calcLocalScore(accuracy, avgAnswerMs);
+    document.getElementById('guestPrompt').style.display = '';
+  }
+}
+
+function calcLocalScore(accuracy, avgMs) {
+  const diff = {easy:0,medium:1,hard:2}[difficulty];
+  const speedBonus = Math.max(0, 300 - Math.floor(avgMs / 10));
+  return Math.max(0, Math.round((accuracy / 100) * 800 + correct * 15 + speedBonus + diff * 100));
+}
+
+function showXP(d) {
+  if (!d.xpEarned) return;
+  document.getElementById('xpSection').style.display = '';
+  document.getElementById('xpEarned').textContent = `+${d.xpEarned} XP earned`;
+  document.getElementById('levelLabel').textContent = `Level ${d.level} ${d.levelName}`;
+  document.getElementById('xpLabel').textContent = `${d.xp} XP`;
+  const pct = d.xpForNext ? Math.min(100, Math.round((d.xp / d.xpForNext) * 100)) : 100;
+  setTimeout(() => document.getElementById('xpFill').style.width = pct + '%', 100);
+}
+
+function showBadges(badges) {
+  if (!badges?.length) return;
+  document.getElementById('newBadges').innerHTML = badges.map(b => `
+    <div class="new-badge-item">
+      <span class="badge-icon">${b.emoji}</span>
+      <div class="badge-info"><h4>🏅 Badge Earned: ${b.name}</h4><p>${b.description}</p></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
