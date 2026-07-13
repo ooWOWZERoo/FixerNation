@@ -58,8 +58,16 @@
           <h2>FN Blogs</h2>
           <button class="a-btn a-btn-primary" onclick="openPostModal()">+ Write New Post</button>
         </div>
+        <div class="a-bulk-bar" id="bulkBar" style="display:none;">
+          <span class="a-bulk-count" id="bulkCount">0 selected</span>
+          <button class="a-btn a-btn-sm" onclick="bulkPublish(true)">✅ Publish</button>
+          <button class="a-btn a-btn-sm" onclick="bulkPublish(false)">🚫 Unpublish</button>
+          <button class="a-btn a-btn-sm" onclick="bulkDuplicate()">📋 Duplicate</button>
+          <button class="a-btn a-btn-sm a-btn-danger" onclick="bulkDelete()">🗑️ Delete</button>
+          <button class="a-btn-text" onclick="clearSelection()">✕ Clear</button>
+        </div>
         <table class="a-table" id="postsTable">
-          <thead><tr><th></th><th>Title</th><th>Category</th><th>Publish Date</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th><th></th><th>Title</th><th>Category</th><th>Publish Date</th><th>Status</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="postsEmpty" style="display:none;">
@@ -298,6 +306,7 @@ async function renderPosts() {
     const statusLabel = !p.published ? 'Draft' : (isScheduled ? 'Scheduled' : 'Published');
     const statusPill = !p.published ? 'a-pill-neutral' : (isScheduled ? 'a-pill-warning' : 'a-pill-success');
     tr.innerHTML = `
+      <td><input type="checkbox" class="row-check" value="${p.id}" onchange="updateBulkBar()"></td>
       <td><img class="a-row-thumb" style="aspect-ratio:16/10; height:auto;" src="${p.featuredImage || ''}" alt="${p.title}" onerror="this.style.opacity=0.2;"></td>
       <td><div class="a-cell-title">${p.title} ${hasVideo ? '🎥' : ''} ${p.requiresMembership ? '🔒' : ''}</div><div class="a-cell-sub">/${p.slug || ''}</div></td>
       <td>${categories.map(c => `<span class="a-pill a-pill-neutral" style="margin:2px;">${c}</span>`).join('')}</td>
@@ -613,6 +622,122 @@ async function savePost() {
   fnToast(editingId ? 'Post updated' : 'Post published');
   closePostModal();
   renderPosts();
+}
+
+// ── Bulk select helpers ──────────────────────────────────────────────────────
+
+function getSelectedIds() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(cb => Number(cb.value));
+}
+
+function updateBulkBar() {
+  const ids = getSelectedIds();
+  document.getElementById('bulkBar').style.display = ids.length ? 'flex' : 'none';
+  document.getElementById('bulkCount').textContent = ids.length + ' selected';
+  const all = document.querySelectorAll('.row-check');
+  const sa = document.getElementById('selectAll');
+  if (sa) sa.indeterminate = ids.length > 0 && ids.length < all.length;
+  if (sa) sa.checked = ids.length === all.length && all.length > 0;
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.row-check').forEach(el => { el.checked = cb.checked; });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  document.querySelectorAll('.row-check').forEach(el => { el.checked = false; });
+  const sa = document.getElementById('selectAll');
+  if (sa) { sa.checked = false; sa.indeterminate = false; }
+  updateBulkBar();
+}
+
+// Converts a postsCache entry into a valid PUT/POST body
+function cacheToBody(p, overrides) {
+  const cats = p.categories && p.categories.length ? p.categories : [p.category].filter(Boolean);
+  return Object.assign({
+    title: p.title,
+    slug: p.slug || fnSlugify(p.title),
+    author: p.author || 'Anthony J. Placito',
+    category: cats[0] || '',
+    categories: cats,
+    featuredImage: p.featuredImage || '',
+    altText: p.altText || '',
+    metaDescription: p.metaDescription || '',
+    focusKeyword: p.focusKeyword || '',
+    excerpt: p.excerpt || '',
+    body: p.body || '',
+    tags: p.tags || [],
+    videoUrl: p.videoUrl || '',
+    videoFileName: p.videoFileName || '',
+    videoFileSize: p.videoFileSize || '',
+    publishDate: p.publishDate || new Date().toISOString().slice(0, 10),
+    featured: !!p.featured,
+    published: !!p.published,
+    requiresMembership: !!p.requiresMembership,
+  }, overrides);
+}
+
+// ── Bulk operations ──────────────────────────────────────────────────────────
+
+async function bulkDelete() {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  if (!confirm(`Delete ${ids.length} post${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+  let ok = 0, fail = 0;
+  for (const id of ids) {
+    const r = await fetch(`/api/blog/posts/${id}`, {
+      method: 'DELETE', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    r.ok ? ok++ : fail++;
+  }
+  await renderPosts();
+  fnToast(ok + ' deleted' + (fail ? `, ${fail} failed` : ''));
+}
+
+async function bulkPublish(published) {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  const label = published ? 'Publish' : 'Unpublish';
+  if (!confirm(`${label} ${ids.length} post${ids.length > 1 ? 's' : ''}?`)) return;
+  let ok = 0, fail = 0;
+  for (const id of ids) {
+    const p = postsCache.find(x => x.id === id);
+    if (!p) { fail++; continue; }
+    const r = await fetch(`/api/blog/posts/${id}`, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cacheToBody(p, { published })),
+    });
+    r.ok ? ok++ : fail++;
+  }
+  await renderPosts();
+  fnToast(ok + (published ? ' published' : ' unpublished') + (fail ? `, ${fail} failed` : ''));
+}
+
+async function bulkDuplicate() {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  if (!confirm(`Duplicate ${ids.length} post${ids.length > 1 ? 's' : ''}? Copies will be saved as drafts.`)) return;
+  let ok = 0, fail = 0;
+  for (const id of ids) {
+    const p = postsCache.find(x => x.id === id);
+    if (!p) { fail++; continue; }
+    const r = await fetch('/api/blog/posts', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cacheToBody(p, {
+        title: 'Copy of ' + p.title,
+        slug: fnSlugify('copy-of-' + (p.slug || p.title)),
+        featured: false,
+        published: false,
+      })),
+    });
+    r.ok ? ok++ : fail++;
+  }
+  await renderPosts();
+  fnToast(ok + ' duplicate' + (ok !== 1 ? 's' : '') + ' created as drafts' + (fail ? `, ${fail} failed` : ''));
 }
 
 (async function init() {
