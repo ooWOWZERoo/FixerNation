@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invitations — School License Administrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=1">
+<style>
+  .empty-state { text-align:center; padding:48px 24px; color:var(--sa-text-soft); }
+  .empty-state .icon { font-size:40px; margin-bottom:12px; }
+  .bulk-tabs { display:flex; gap:0; border-bottom:1.5px solid var(--sa-border); margin-bottom:20px; }
+  .bulk-tab { padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2.5px solid transparent; color:var(--sa-text-soft); background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; }
+  .bulk-tab.active { color:var(--sa-accent); border-bottom-color:var(--sa-accent); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  textarea.bulk-list { width:100%; min-height:120px; padding:10px; border:1.5px solid var(--sa-border); border-radius:9px; font-size:13px; font-family:monospace; resize:vertical; }
+  .csv-drop { border:2px dashed var(--sa-border); border-radius:10px; padding:28px; text-align:center; color:var(--sa-text-soft); font-size:13px; cursor:pointer; transition:border-color .15s; }
+  .csv-drop:hover, .csv-drop.over { border-color:var(--sa-accent); color:var(--sa-accent); }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-admin-nav.js?v=1"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Invitations</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="paymentBanner" class="sa-payment-banner" style="display:none;">
+        <span class="icon">⚠️</span>
+        <div><strong>License payment pending</strong> — Invitations cannot be sent until this school's invoice is paid.</div>
+      </div>
+
+      <div class="sa-toolbar">
+        <input class="sa-search" id="searchInput" type="search" placeholder="Search by name or email…" oninput="debounceLoad()">
+        <select id="statusFilter" onchange="loadInvitations()">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="opened">Opened</option>
+          <option value="registered">Registered</option>
+          <option value="expired">Expired</option>
+          <option value="revoked">Revoked</option>
+        </select>
+        <button class="sa-btn sa-btn-primary" onclick="openInviteModal()">✉️ Invite Teacher</button>
+        <button class="sa-btn sa-btn-secondary" onclick="openBulkModal()">📋 Bulk Invite</button>
+        <a class="sa-btn sa-btn-ghost" href="/api/school-admin/invitations/csv-template?purchaseId=1" id="csvTemplateLink" download>⬇ CSV Template</a>
+      </div>
+
+      <div class="sa-card">
+        <div id="invWrap">
+          <div class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+        </div>
+        <div class="sa-pagination" id="pagination" style="display:none;">
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" id="prevBtn" onclick="changePage(-1)">← Prev</button>
+          <span id="pageInfo" style="font-size:13px;color:var(--sa-text-soft);"></span>
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" id="nextBtn" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Single invite modal -->
+<div class="sa-modal-overlay" id="inviteModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Invite a Teacher</h2>
+      <button class="sa-modal-close" onclick="closeInviteModal()">✕</button>
+    </div>
+    <div id="inviteErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label>First Name</label><input type="text" id="invFirstName" placeholder="Jane"></div>
+      <div class="sa-form-group"><label>Last Name</label><input type="text" id="invLastName" placeholder="Smith"></div>
+    </div>
+    <div class="sa-form-group">
+      <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
+      <input type="email" id="invEmail" placeholder="teacher@school.edu">
+    </div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label>Grade Level</label><input type="text" id="invGrade"></div>
+      <div class="sa-form-group"><label>Department</label><input type="text" id="invDept"></div>
+    </div>
+    <div class="sa-form-group">
+      <label>Personal Message <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
+      <textarea id="invMessage" placeholder="Looking forward to having you in the program!"></textarea>
+    </div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeInviteModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" id="inviteBtn" onclick="sendInvite()">Send Invitation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk invite modal -->
+<div class="sa-modal-overlay" id="bulkModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Bulk Invite Teachers</h2>
+      <button class="sa-modal-close" onclick="closeBulkModal()">✕</button>
+    </div>
+    <div id="bulkErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div id="bulkSuccess" class="sa-alert sa-alert-success" style="display:none;"></div>
+
+    <div class="bulk-tabs">
+      <button class="bulk-tab active" onclick="switchBulkTab('list',this)">Email List</button>
+      <button class="bulk-tab" onclick="switchBulkTab('csv',this)">CSV Upload</button>
+    </div>
+
+    <div id="tabList" class="tab-panel active">
+      <div class="sa-form-group">
+        <label>Email Addresses <span style="color:var(--sa-text-soft);font-weight:400;">— one per line, up to 200</span></label>
+        <textarea class="bulk-list" id="bulkEmails" placeholder="teacher1@school.edu&#10;teacher2@school.edu&#10;teacher3@school.edu"></textarea>
+      </div>
+    </div>
+
+    <div id="tabCsv" class="tab-panel">
+      <p style="font-size:13px;color:var(--sa-text-soft);margin-bottom:12px;">Upload a CSV with columns: email, first_name, last_name, grade_level, department (first 3 required). <a href="#" onclick="downloadTemplate();return false;">Download template →</a></p>
+      <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()">
+        Drop CSV here or click to browse
+        <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="handleCsvFile(this)">
+      </div>
+      <div id="csvPreview" style="margin-top:12px;font-size:13px;color:var(--sa-text-soft);"></div>
+    </div>
+
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeBulkModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" id="bulkBtn" onclick="sendBulk()">Send Invitations</button>
+    </div>
+  </div>
+</div>
+
+<!-- Revoke modal -->
+<div class="sa-modal-overlay" id="revokeModal" style="display:none;">
+  <div class="sa-modal" style="max-width:420px;">
+    <div class="sa-modal-head">
+      <h2>Revoke Invitation</h2>
+      <button class="sa-modal-close" onclick="closeRevoke()">✕</button>
+    </div>
+    <p id="revokeMsg" style="font-size:14px;margin-bottom:16px;"></p>
+    <div class="sa-form-group">
+      <label>Reason <span style="color:var(--sa-danger)">*</span></label>
+      <textarea id="revokeReason" placeholder="Please provide a reason…"></textarea>
+    </div>
+    <div id="revokeErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeRevoke()">Cancel</button>
+      <button class="sa-btn sa-btn-danger" id="revokeBtn" onclick="execRevoke()">Revoke</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var page = 1, totalPages = 1, debounceTimer = null, revokeId = null, csvRows = [];
+var activeBulkTab = 'list';
+
+document.addEventListener('saReady', function () {
+  loadInvitations();
+  // Fix CSV template link
+  const link = document.getElementById('csvTemplateLink');
+  if (link && window.saActivePurchaseId) link.href = '/api/school-admin/invitations/csv-template?purchaseId=' + window.saActivePurchaseId();
+});
+document.addEventListener('saSchoolChanged', function () { page = 1; loadInvitations(); });
+
+function debounceLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(function () { page = 1; loadInvitations(); }, 350); }
+
+async function loadInvitations() {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  const q = document.getElementById('searchInput').value.trim();
+  const status = document.getElementById('statusFilter').value;
+  const url = '/api/school-admin/invitations?purchaseId=' + purchaseId + '&page=' + page + '&limit=25' + (q ? '&q=' + encodeURIComponent(q) : '') + (status ? '&status=' + status : '');
+  const wrap = document.getElementById('invWrap');
+  try {
+    const d = await saFetch(url);
+    totalPages = d.pages || 1;
+    if (d.paymentStatus && d.paymentStatus !== 'paid') document.getElementById('paymentBanner').style.display = 'flex';
+    renderInvitations(d.invitations || []);
+    const pg = document.getElementById('pagination');
+    if (totalPages > 1) {
+      pg.style.display = 'flex';
+      document.getElementById('pageInfo').textContent = 'Page ' + page + ' of ' + totalPages;
+      document.getElementById('prevBtn').disabled = page <= 1;
+      document.getElementById('nextBtn').disabled = page >= totalPages;
+    } else { pg.style.display = 'none'; }
+  } catch (e) {
+    wrap.innerHTML = '<div class="sa-alert sa-alert-danger">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderInvitations(invs) {
+  const wrap = document.getElementById('invWrap');
+  if (!invs.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">✉️</div><div>No invitations found.</div></div>';
+    return;
+  }
+  const statusBadge = { pending:'<span class="sa-badge sa-badge-warn">Pending</span>', opened:'<span class="sa-badge">Opened</span>', registered:'<span class="sa-badge sa-badge-success">Registered</span>', expired:'<span class="sa-badge sa-badge-danger">Expired</span>', revoked:'<span class="sa-badge" style="background:#f3f4f6;color:#6b7280;">Revoked</span>' };
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th>Recipient</th><th>Sent</th><th>Expires</th><th>Status</th><th>Resends</th><th>Actions</th></tr></thead><tbody>' +
+    invs.map(function (inv) {
+      const name = [inv.first_name, inv.last_name].filter(Boolean).join(' ') || '—';
+      const sent = new Date(inv.created_at).toLocaleDateString();
+      const expires = inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : '—';
+      const badge = statusBadge[inv.status] || '<span class="sa-badge">' + esc(inv.status) + '</span>';
+      const resends = inv.resend_count || 0;
+      let actions = '';
+      if (inv.status === 'pending' || inv.status === 'opened' || inv.status === 'expired') {
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="resend(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Resend</button> ';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="extend(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Extend</button> ';
+      }
+      if (inv.status !== 'revoked' && inv.status !== 'registered') {
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Revoke</button>';
+      }
+      return '<tr><td><div style="font-weight:600;font-size:13.5px;">' + esc(name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(inv.invited_email) + '</div></td><td style="font-size:13px;">' + sent + '</td><td style="font-size:13px;">' + expires + '</td><td>' + badge + '</td><td style="font-size:13px;text-align:center;">' + resends + '</td><td>' + actions + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function changePage(dir) { page = Math.max(1, Math.min(totalPages, page + dir)); loadInvitations(); }
+
+async function resend(id, email) {
+  try {
+    await saFetch('/api/school-admin/invitations/' + id + '/resend', { method: 'PUT', body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }) });
+    saToast('Invitation resent to ' + email, 'success');
+    loadInvitations();
+  } catch (e) { saToast(e.message, 'error'); }
+}
+
+async function extend(id, email) {
+  try {
+    await saFetch('/api/school-admin/invitations/' + id + '/extend', { method: 'PUT', body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }) });
+    saToast('Invitation extended for ' + email, 'success');
+    loadInvitations();
+  } catch (e) { saToast(e.message, 'error'); }
+}
+
+function openRevoke(id, email) {
+  revokeId = id;
+  document.getElementById('revokeMsg').textContent = 'Revoke the invitation for ' + email + '? Their reserved seat will be released.';
+  document.getElementById('revokeReason').value = '';
+  document.getElementById('revokeErr').style.display = 'none';
+  document.getElementById('revokeModal').style.display = 'flex';
+}
+function closeRevoke() { document.getElementById('revokeModal').style.display = 'none'; revokeId = null; }
+async function execRevoke() {
+  const btn = document.getElementById('revokeBtn');
+  const reason = document.getElementById('revokeReason').value.trim();
+  const err = document.getElementById('revokeErr');
+  if (!reason) { err.textContent = 'Reason is required.'; err.style.display = 'flex'; return; }
+  btn.disabled = true;
+  try {
+    await saFetch('/api/school-admin/invitations/' + revokeId + '/revoke', { method: 'PUT', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), reason }) });
+    closeRevoke();
+    saToast('Invitation revoked.', 'success');
+    loadInvitations();
+  } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
+  finally { btn.disabled = false; }
+}
+
+// Single invite
+function openInviteModal() { document.getElementById('inviteModal').style.display = 'flex'; }
+function closeInviteModal() {
+  document.getElementById('inviteModal').style.display = 'none';
+  document.getElementById('inviteErr').style.display = 'none';
+  ['invEmail','invFirstName','invLastName','invGrade','invDept','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+}
+async function sendInvite() {
+  const btn = document.getElementById('inviteBtn');
+  const err = document.getElementById('inviteErr');
+  err.style.display = 'none';
+  const email = document.getElementById('invEmail').value.trim();
+  if (!email) { err.textContent = 'Email is required.'; err.style.display = 'flex'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevel: document.getElementById('invGrade').value.trim(), department: document.getElementById('invDept').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
+    closeInviteModal();
+    saToast('Invitation sent to ' + email, 'success');
+    loadInvitations();
+  } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
+  finally { btn.disabled = false; btn.textContent = 'Send Invitation'; }
+}
+
+// Bulk invite
+function openBulkModal() {
+  document.getElementById('bulkModal').style.display = 'flex';
+  document.getElementById('bulkErr').style.display = 'none';
+  document.getElementById('bulkSuccess').style.display = 'none';
+  document.getElementById('bulkEmails').value = '';
+  document.getElementById('csvPreview').textContent = '';
+  csvRows = [];
+}
+function closeBulkModal() { document.getElementById('bulkModal').style.display = 'none'; }
+function switchBulkTab(tab, el) {
+  activeBulkTab = tab;
+  document.querySelectorAll('.bulk-tab').forEach(function (b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+function handleCsvFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const lines = e.target.result.split(/\r?\n/).filter(Boolean);
+    const headers = lines[0].split(',').map(function (h) { return h.trim().toLowerCase(); });
+    csvRows = lines.slice(1).map(function (line) {
+      const vals = line.split(',');
+      const obj = {};
+      headers.forEach(function (h, i) { obj[h] = (vals[i] || '').trim(); });
+      return obj;
+    }).filter(function (r) { return r.email; });
+    document.getElementById('csvPreview').textContent = csvRows.length + ' email(s) ready to invite.';
+  };
+  reader.readAsText(file);
+}
+function downloadTemplate() { window.location.href = '/api/school-admin/invitations/csv-template?purchaseId=' + window.saActivePurchaseId(); }
+async function sendBulk() {
+  const btn = document.getElementById('bulkBtn');
+  const err = document.getElementById('bulkErr');
+  const success = document.getElementById('bulkSuccess');
+  err.style.display = 'none'; success.style.display = 'none';
+
+  let invitations = [];
+  if (activeBulkTab === 'list') {
+    const raw = document.getElementById('bulkEmails').value.trim();
+    if (!raw) { err.textContent = 'Enter at least one email address.'; err.style.display = 'flex'; return; }
+    invitations = raw.split(/\r?\n/).map(function (e) { return { email: e.trim() }; }).filter(function (r) { return r.email; });
+  } else {
+    if (!csvRows.length) { err.textContent = 'Upload a CSV file first.'; err.style.display = 'flex'; return; }
+    invitations = csvRows;
+  }
+
+  if (invitations.length > 200) { err.textContent = 'Maximum 200 invitations per bulk send.'; err.style.display = 'flex'; return; }
+
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const d = await saFetch('/api/school-admin/invitations/bulk', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), invitations }) });
+    success.textContent = (d.sent || 0) + ' invitation(s) sent' + (d.skipped ? ', ' + d.skipped + ' skipped (already invited or registered).' : '.');
+    success.style.display = 'flex';
+    loadInvitations();
+  } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
+  finally { btn.disabled = false; btn.textContent = 'Send Invitations'; }
+}
+
+// CSV drop target
+document.addEventListener('DOMContentLoaded', function () {
+  const drop = document.getElementById('csvDrop');
+  if (!drop) return;
+  drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', function () { drop.classList.remove('over'); });
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault(); drop.classList.remove('over');
+    const file = e.dataTransfer.files[0];
+    if (file) { const fi = document.getElementById('csvFile'); const dt = new DataTransfer(); dt.items.add(file); fi.files = dt.files; handleCsvFile(fi); }
+  });
+});
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

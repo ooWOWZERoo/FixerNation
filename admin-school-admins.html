@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Admins — Fixer Nation</title>
+<link rel="stylesheet" href="admin-common.css?v=1">
+<script>const __THEME_PREF = localStorage.getItem('fnAdminTheme'); if (__THEME_PREF === 'light') document.documentElement.classList.add('light-mode');</script>
+</head>
+<body>
+<aside class="admin-sidebar" id="adminSidebar"></aside>
+<script src="admin-nav.js?v=1"></script>
+
+<div class="admin-main">
+  <div class="admin-topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+      <h1 class="page-title">School License Admins</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">◑</button>
+      <div class="admin-user-pill" id="adminUserPill">…</div>
+    </div>
+  </div>
+
+  <div class="admin-content">
+
+    <div class="toolbar" style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <input type="search" id="searchInput" placeholder="Filter by email or domain…" class="search-input" oninput="debounceLoad()" style="flex:1;max-width:320px;">
+      <button class="btn btn-primary" onclick="openAssignModal()">+ Assign School Admin</button>
+    </div>
+
+    <div id="alertEl"></div>
+
+    <div class="card">
+      <div id="tableWrap">
+        <div class="loading-state"><div class="spinner"></div> Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign modal -->
+<div class="modal-overlay" id="assignModal" style="display:none;">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <h2 id="assignModalTitle">Assign School License Admin</h2>
+      <button class="modal-close" onclick="closeAssignModal()">✕</button>
+    </div>
+    <div id="assignErr" class="alert alert-danger" style="display:none;"></div>
+    <div id="assignSuccess" class="alert alert-success" style="display:none;"></div>
+
+    <div class="form-group">
+      <label>Email Address <span class="required">*</span></label>
+      <input type="email" id="assignEmail" placeholder="admin@school.edu">
+      <div class="form-hint">If this email doesn't have an account, one will be created automatically and a setup link emailed to them.</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" id="assignFirst" placeholder="Jane">
+      </div>
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" id="assignLast" placeholder="Smith">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>School Purchase <span class="required">*</span></label>
+      <select id="assignPurchase">
+        <option value="">Loading purchases…</option>
+      </select>
+      <div class="form-hint">Only group license purchases are shown.</div>
+    </div>
+
+    <div class="form-group">
+      <label>Permission Level</label>
+      <select id="assignPermission">
+        <option value="full_access">Full Access — can send invitations, revoke seats, view reports</option>
+        <option value="read_only">Read Only — can view reports and teacher list, no changes</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Notes <span style="color:var(--text-soft);font-weight:400;">(internal)</span></label>
+      <textarea id="assignNotes" placeholder="e.g. Primary contact for Lincoln Elementary"></textarea>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn btn-primary" id="assignBtn" onclick="doAssign()">Assign Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit permission modal -->
+<div class="modal-overlay" id="editModal" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h2>Edit Assignment</h2>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div id="editErr" class="alert alert-danger" style="display:none;"></div>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label>Permission Level</label>
+      <select id="editPermission">
+        <option value="full_access">Full Access</option>
+        <option value="read_only">Read Only</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Active</label>
+      <select id="editActive">
+        <option value="1">Active</option>
+        <option value="0">Inactive</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="editNotes"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" id="editBtn" onclick="doEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remove confirm modal -->
+<div class="modal-overlay" id="removeModal" style="display:none;">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head">
+      <h2>Remove Assignment</h2>
+      <button class="modal-close" onclick="closeRemoveModal()">✕</button>
+    </div>
+    <p id="removeMsg" style="font-size:14px;margin-bottom:16px;"></p>
+    <div id="removeErr" class="alert alert-danger" style="display:none;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeRemoveModal()">Cancel</button>
+      <button class="btn btn-danger" id="removeBtn" onclick="doRemove()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var allAssignments = [], debounceTimer = null, removeId = null;
+
+document.addEventListener('DOMContentLoaded', function () {
+  loadAssignments();
+  loadPurchases();
+});
+
+function debounceLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(loadAssignments, 300); }
+
+async function loadAssignments() {
+  const q = document.getElementById('searchInput').value.trim();
+  const url = '/api/admin/school-admins' + (q ? '?domain=' + encodeURIComponent(q) : '');
+  const wrap = document.getElementById('tableWrap');
+  try {
+    const d = await apiFetch(url);
+    allAssignments = d.assignments || [];
+    renderTable(allAssignments);
+  } catch (e) {
+    wrap.innerHTML = '<div class="alert alert-danger">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderTable(rows) {
+  const wrap = document.getElementById('tableWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:48px 24px;color:var(--text-soft);">No school admins assigned yet.</div>';
+    return;
+  }
+  wrap.innerHTML = '<table class="data-table"><thead><tr><th>Admin</th><th>Email</th><th>School (Purchase)</th><th>Permission</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '(new user)';
+      const school = r.school_domain || ('Purchase #' + r.purchase_id);
+      const permBadge = r.permission_level === 'read_only'
+        ? '<span class="badge badge-secondary">Read Only</span>'
+        : '<span class="badge badge-success">Full Access</span>';
+      const statusBadge = r.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-warn">Inactive</span>';
+      return '<tr>' +
+        '<td style="font-weight:600;">' + esc(name) + '</td>' +
+        '<td style="font-size:13px;color:var(--text-soft);">' + esc(r.email) + '</td>' +
+        '<td style="font-size:13px;">' + esc(school) + '</td>' +
+        '<td>' + permBadge + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td><button class="btn btn-sm btn-secondary" onclick="openEditModal(' + r.id + ')">Edit</button> <button class="btn btn-sm btn-danger" onclick="openRemoveModal(' + r.id + ',' + JSON.stringify(r.email) + ')">Remove</button></td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+async function loadPurchases() {
+  try {
+    // Fetch group license purchases from newsletter/contacts
+    const d = await apiFetch('/api/invoices?limit=200');
+    const purchases = (d.invoices || []).filter(function (inv) {
+      return inv.plan_name && inv.school_domain;
+    });
+    const sel = document.getElementById('assignPurchase');
+    if (!purchases.length) {
+      sel.innerHTML = '<option value="">No group purchases found</option>';
+    } else {
+      sel.innerHTML = '<option value="">Select a purchase…</option>' +
+        purchases.map(function (p) {
+          return '<option value="' + p.purchase_id + '">' + esc(p.school_domain || 'Unknown') + ' — ' + esc(p.plan_name || 'License') + ' (' + esc(p.payment_status || 'pending') + ')</option>';
+        }).join('');
+    }
+  } catch (e) {
+    document.getElementById('assignPurchase').innerHTML = '<option value="">Failed to load purchases</option>';
+  }
+}
+
+// Assign modal
+function openAssignModal() {
+  document.getElementById('assignModal').style.display = 'flex';
+  document.getElementById('assignErr').style.display = 'none';
+  document.getElementById('assignSuccess').style.display = 'none';
+  ['assignEmail','assignFirst','assignLast','assignNotes'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('assignPermission').value = 'full_access';
+  document.getElementById('assignPurchase').selectedIndex = 0;
+}
+function closeAssignModal() { document.getElementById('assignModal').style.display = 'none'; }
+
+async function doAssign() {
+  const btn = document.getElementById('assignBtn');
+  const err = document.getElementById('assignErr');
+  const success = document.getElementById('assignSuccess');
+  err.style.display = 'none'; success.style.display = 'none';
+
+  const email = document.getElementById('assignEmail').value.trim();
+  const purchaseId = document.getElementById('assignPurchase').value;
+  if (!email) { err.textContent = 'Email is required.'; err.style.display = 'block'; return; }
+  if (!purchaseId) { err.textContent = 'Please select a purchase.'; err.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Assigning…';
+  try {
+    const d = await apiFetch('/api/admin/school-admins/assign', {
+      method: 'POST',
+      body: JSON.stringify({
+        email, firstName: document.getElementById('assignFirst').value.trim(),
+        lastName: document.getElementById('assignLast').value.trim(),
+        purchaseId: Number(purchaseId),
+        permissionLevel: document.getElementById('assignPermission').value,
+        notes: document.getElementById('assignNotes').value.trim(),
+      }),
+    });
+    success.textContent = (d.isNewUser ? 'New user created and setup email sent. ' : '') + email + ' assigned as school admin.';
+    success.style.display = 'block';
+    loadAssignments();
+    // Clear form but keep modal open to show success
+    ['assignEmail','assignFirst','assignLast','assignNotes'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Assign Admin'; }
+}
+
+// Edit modal
+function openEditModal(id) {
+  const r = allAssignments.find(function (a) { return a.id === id; });
+  if (!r) return;
+  document.getElementById('editId').value = id;
+  document.getElementById('editPermission').value = r.permission_level || 'full_access';
+  document.getElementById('editActive').value = r.is_active ? '1' : '0';
+  document.getElementById('editNotes').value = r.notes || '';
+  document.getElementById('editErr').style.display = 'none';
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal() { document.getElementById('editModal').style.display = 'none'; }
+async function doEdit() {
+  const btn = document.getElementById('editBtn');
+  const id = document.getElementById('editId').value;
+  const err = document.getElementById('editErr');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await apiFetch('/api/admin/school-admins/' + id, {
+      method: 'PUT',
+      body: JSON.stringify({
+        permissionLevel: document.getElementById('editPermission').value,
+        isActive: document.getElementById('editActive').value === '1',
+        notes: document.getElementById('editNotes').value.trim(),
+      }),
+    });
+    closeEditModal();
+    showAlert('Assignment updated.', 'success');
+    loadAssignments();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+}
+
+// Remove modal
+function openRemoveModal(id, email) {
+  removeId = id;
+  document.getElementById('removeMsg').textContent = 'Remove the school admin assignment for ' + email + '? If they have no other assignments, their role will revert to "teacher".';
+  document.getElementById('removeErr').style.display = 'none';
+  document.getElementById('removeModal').style.display = 'flex';
+}
+function closeRemoveModal() { document.getElementById('removeModal').style.display = 'none'; removeId = null; }
+async function doRemove() {
+  const btn = document.getElementById('removeBtn');
+  const err = document.getElementById('removeErr');
+  btn.disabled = true; btn.textContent = 'Removing…';
+  try {
+    await apiFetch('/api/admin/school-admins/' + removeId, { method: 'DELETE' });
+    closeRemoveModal();
+    showAlert('Assignment removed.', 'success');
+    loadAssignments();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Remove'; }
+}
+
+function showAlert(msg, type) {
+  var el = document.getElementById('alertEl');
+  el.innerHTML = '<div class="alert alert-' + type + '" style="margin-bottom:16px;">' + esc(msg) + '</div>';
+  setTimeout(function () { el.innerHTML = ''; }, 4000);
+}
+
+async function apiFetch(url, opts) {
+  const r = await fetch(url, Object.assign({ credentials: 'include', headers: { 'Content-Type': 'application/json' } }, opts));
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

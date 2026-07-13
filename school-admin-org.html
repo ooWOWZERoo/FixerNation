@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organization — School License Administrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=1">
+<style>
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 32px; }
+  @media(max-width:600px){ .info-grid { grid-template-columns:1fr; } }
+  .info-item { }
+  .info-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--sa-text-soft); margin-bottom:4px; }
+  .info-value { font-size:14px; font-weight:500; }
+  .co-admin-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--sa-border); font-size:13px; }
+  .co-admin-row:last-child { border-bottom:none; }
+  .co-admin-av { width:32px; height:32px; border-radius:50%; background:var(--sa-accent-soft); color:var(--sa-accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .contact-section { background:var(--sa-bg); border-radius:10px; padding:18px 20px; margin-top:8px; font-size:13px; color:var(--sa-text-soft); line-height:1.7; }
+  .contact-section a { color:var(--sa-accent); }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-admin-nav.js?v=1"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Organization</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+
+        <!-- License info -->
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head">
+            <h2>License Details</h2>
+            <span id="paymentBadge"></span>
+          </div>
+          <div class="info-grid" id="licenseInfo"></div>
+        </div>
+
+        <!-- Utilization -->
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head">
+            <h2>Seat Utilization</h2>
+            <a href="school-admin-licenses.html" class="sa-btn sa-btn-ghost sa-btn-sm">View seats →</a>
+          </div>
+          <div class="sa-util-bar-wrap">
+            <div class="sa-util-bar" id="utilBar" style="width:0%;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sa-text-soft);margin-top:6px;">
+            <span id="utilDetail">— of — seats assigned</span>
+            <span id="utilPct" style="font-weight:700;color:var(--sa-accent);"></span>
+          </div>
+        </div>
+
+        <!-- Co-admins -->
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head">
+            <h2>Co-Administrators</h2>
+            <span style="font-size:12px;color:var(--sa-text-soft);">Assigned by Fixer Nation Education</span>
+          </div>
+          <div id="coAdmins"></div>
+        </div>
+
+        <!-- Contact / Support -->
+        <div class="sa-card">
+          <div class="sa-card-head">
+            <h2>Need Help?</h2>
+          </div>
+          <div class="contact-section">
+            <p>To request additional licenses, update your school information, or report a problem, please contact the Fixer Nation Education team:</p>
+            <p><strong>Email:</strong> <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a></p>
+            <p>Please include your school domain and a brief description of your request. We typically respond within one business day.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('saReady', function () { loadOrg(); });
+document.addEventListener('saSchoolChanged', function () { loadOrg(); });
+
+async function loadOrg() {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  try {
+    const d = await saFetch('/api/school-admin/org?purchaseId=' + purchaseId);
+    renderOrg(d);
+    document.getElementById('pageLoading').style.display = 'none';
+    document.getElementById('pageContent').style.display = 'block';
+  } catch (e) {
+    saToast('Failed to load organization: ' + e.message, 'error');
+  }
+}
+
+function renderOrg(d) {
+  const p = d.purchase || {};
+  const u = d.utilization || {};
+
+  // Payment badge
+  const isPaid = p.paymentStatus === 'paid';
+  document.getElementById('paymentBadge').innerHTML = isPaid
+    ? '<span class="sa-badge sa-badge-success">✓ Active</span>'
+    : '<span class="sa-badge sa-badge-warn">⚠ Payment Pending</span>';
+
+  // License info grid
+  const purchaseDate = p.createdAt ? new Date(p.createdAt).toLocaleDateString([], { year:'numeric', month:'long', day:'numeric' }) : '—';
+  const expiresDate = p.expiresAt ? new Date(p.expiresAt).toLocaleDateString([], { year:'numeric', month:'long', day:'numeric' }) : 'No expiration';
+  document.getElementById('licenseInfo').innerHTML =
+    info('School Domain', p.schoolDomain || '—') +
+    info('Plan', p.planName || '—') +
+    info('Total Licenses', u.total || '—') +
+    info('Payment Status', isPaid ? 'Paid' : 'Pending') +
+    info('Purchase Date', purchaseDate) +
+    info('Expiration', expiresDate);
+
+  // Utilization bar
+  const pct = u.pctUsed || 0;
+  const bar = document.getElementById('utilBar');
+  bar.style.width = pct + '%';
+  bar.className = 'sa-util-bar' + (pct >= 100 ? ' danger' : pct >= 75 ? ' warn' : '');
+  document.getElementById('utilDetail').textContent = (u.assigned || 0) + ' of ' + (u.total || 0) + ' seats assigned';
+  document.getElementById('utilPct').textContent = pct + '%';
+
+  // Co-admins
+  const admins = d.coAdmins || [];
+  const coEl = document.getElementById('coAdmins');
+  if (!admins.length) {
+    coEl.innerHTML = '<div style="font-size:13px;color:var(--sa-text-soft);padding:8px 0;">No co-administrators assigned.</div>';
+  } else {
+    coEl.innerHTML = admins.map(function (a) {
+      const init = ((a.first_name || '?')[0]).toUpperCase();
+      const perm = a.permission_level === 'read_only' ? '<span class="sa-badge" style="margin-left:auto;">Read Only</span>' : '<span class="sa-badge sa-badge-success" style="margin-left:auto;">Full Access</span>';
+      return '<div class="co-admin-row"><div class="co-admin-av">' + init + '</div><div><div style="font-weight:600;">' + esc(a.first_name + ' ' + a.last_name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(a.email) + '</div></div>' + perm + '</div>';
+    }).join('');
+  }
+}
+
+function info(label, value) {
+  return '<div class="info-item"><div class="info-label">' + esc(label) + '</div><div class="info-value">' + esc(String(value)) + '</div></div>';
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

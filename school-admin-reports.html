@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — School License Administrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=1">
+<style>
+  .report-tabs { display:flex; gap:0; border-bottom:1.5px solid var(--sa-border); margin-bottom:24px; }
+  .report-tab { padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2.5px solid transparent; color:var(--sa-text-soft); background:none; border-top:none; border-left:none; border-right:none; font-family:inherit; }
+  .report-tab.active { color:var(--sa-accent); border-bottom-color:var(--sa-accent); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  .report-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .report-header h3 { font-size:15px; font-weight:700; }
+  .empty-state { text-align:center; padding:48px 24px; color:var(--sa-text-soft); }
+  .activity-log { list-style:none; }
+  .activity-log li { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--sa-border); font-size:13px; }
+  .activity-log li:last-child { border-bottom:none; }
+  .activity-log .act-time { font-size:11.5px; color:var(--sa-text-soft); margin-left:auto; white-space:nowrap; }
+  .util-donut { display:flex; align-items:center; gap:32px; }
+  .donut-wrap { position:relative; width:120px; height:120px; flex-shrink:0; }
+  .donut-wrap svg { transform:rotate(-90deg); }
+  .donut-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:22px; font-weight:800; }
+  .donut-center .sub { font-size:11px; font-weight:400; color:var(--sa-text-soft); }
+  .legend { display:flex; flex-direction:column; gap:8px; }
+  .legend-row { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-admin-nav.js?v=1"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Reports</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div class="report-tabs">
+        <button class="report-tab active" onclick="switchTab('utilization',this)">Utilization</button>
+        <button class="report-tab" onclick="switchTab('teachers',this)">Teachers</button>
+        <button class="report-tab" onclick="switchTab('invitations',this)">Invitations</button>
+        <button class="report-tab" onclick="switchTab('activity',this)">Activity Log</button>
+      </div>
+
+      <!-- Utilization -->
+      <div id="tabUtilization" class="tab-panel active">
+        <div class="sa-card" id="utilCard">
+          <div class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+        </div>
+      </div>
+
+      <!-- Teachers -->
+      <div id="tabTeachers" class="tab-panel">
+        <div class="report-header">
+          <h3>Teacher Roster</h3>
+          <a class="sa-btn sa-btn-secondary sa-btn-sm" id="exportTeachersBtn" href="#" onclick="exportCsv('teachers');return false;">⬇ Export CSV</a>
+        </div>
+        <div class="sa-card">
+          <div id="teachersReportWrap"><div class="sa-loading"><div class="sa-spinner"></div> Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Invitations -->
+      <div id="tabInvitations" class="tab-panel">
+        <div class="report-header">
+          <h3>Invitation History</h3>
+          <a class="sa-btn sa-btn-secondary sa-btn-sm" href="#" onclick="exportCsv('invitations');return false;">⬇ Export CSV</a>
+        </div>
+        <div class="sa-card">
+          <div id="invReportWrap"><div class="sa-loading"><div class="sa-spinner"></div> Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Activity Log -->
+      <div id="tabActivity" class="tab-panel">
+        <div class="report-header">
+          <h3>Audit Log</h3>
+          <span style="font-size:12px;color:var(--sa-text-soft);">Immutable record of all admin actions</span>
+        </div>
+        <div class="sa-card">
+          <div id="auditWrap"><div class="sa-loading"><div class="sa-spinner"></div></div></div>
+          <div class="sa-pagination" id="auditPagination" style="display:none;">
+            <button class="sa-btn sa-btn-ghost sa-btn-sm" id="auditPrev" onclick="changeAuditPage(-1)">← Prev</button>
+            <span id="auditPageInfo" style="font-size:13px;color:var(--sa-text-soft);"></span>
+            <button class="sa-btn sa-btn-ghost sa-btn-sm" id="auditNext" onclick="changeAuditPage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var activeTab = 'utilization', loaded = {}, auditPage = 1, auditTotalPages = 1;
+
+document.addEventListener('saReady', function () {
+  // Read tab from URL query string
+  var params = new URLSearchParams(window.location.search);
+  var t = params.get('type');
+  if (t) {
+    var btn = document.querySelector('.report-tab[onclick*="\'' + t + '\'"]');
+    if (btn) switchTab(t, btn);
+  } else {
+    loadTab('utilization');
+  }
+});
+document.addEventListener('saSchoolChanged', function () { loaded = {}; loadTab(activeTab); });
+
+function switchTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.report-tab').forEach(function (b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  if (!loaded[tab]) loadTab(tab);
+}
+
+async function loadTab(tab) {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+
+  if (tab === 'utilization') {
+    const card = document.getElementById('utilCard');
+    try {
+      const d = await saFetch('/api/school-admin/reports?type=utilization&purchaseId=' + purchaseId);
+      renderUtilization(d);
+      loaded.utilization = true;
+    } catch (e) { card.innerHTML = '<div class="sa-alert sa-alert-danger">' + esc(e.message) + '</div>'; }
+  }
+
+  if (tab === 'teachers') {
+    const wrap = document.getElementById('teachersReportWrap');
+    try {
+      const d = await saFetch('/api/school-admin/reports?type=teachers&purchaseId=' + purchaseId);
+      renderTeachersReport(d.teachers || []);
+      loaded.teachers = true;
+    } catch (e) { wrap.innerHTML = '<div class="sa-alert sa-alert-danger">' + esc(e.message) + '</div>'; }
+  }
+
+  if (tab === 'invitations') {
+    const wrap = document.getElementById('invReportWrap');
+    try {
+      const d = await saFetch('/api/school-admin/reports?type=invitations&purchaseId=' + purchaseId);
+      renderInvitationsReport(d.invitations || []);
+      loaded.invitations = true;
+    } catch (e) { wrap.innerHTML = '<div class="sa-alert sa-alert-danger">' + esc(e.message) + '</div>'; }
+  }
+
+  if (tab === 'activity') {
+    loadAudit();
+    loaded.activity = true;
+  }
+}
+
+function renderUtilization(d) {
+  const u = d.utilization || {};
+  const total = u.total || 0;
+  const assigned = u.assigned || 0;
+  const available = u.available || 0;
+  const revoked = u.revoked || 0;
+  const pct = total > 0 ? Math.round(assigned / total * 100) : 0;
+
+  // SVG donut (simple circle, radius 46, circumference ~289)
+  const r = 46, circ = 2 * Math.PI * r;
+  const filled = total > 0 ? circ * (assigned / total) : 0;
+
+  const card = document.getElementById('utilCard');
+  card.innerHTML =
+    '<div class="sa-card-head"><h2>License Utilization</h2><span style="font-size:12px;color:var(--sa-text-soft);">' + esc(d.planName || '') + '</span></div>' +
+    '<div class="util-donut" style="margin-bottom:28px;">' +
+      '<div class="donut-wrap">' +
+        '<svg viewBox="0 0 100 100" width="120" height="120">' +
+          '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="var(--sa-border)" stroke-width="10"/>' +
+          '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + (pct >= 100 ? 'var(--sa-danger)' : pct >= 75 ? 'var(--sa-warn)' : 'var(--sa-accent)') + '" stroke-width="10" stroke-dasharray="' + filled.toFixed(1) + ' ' + (circ - filled).toFixed(1) + '" stroke-linecap="round"/>' +
+        '</svg>' +
+        '<div class="donut-center"><span>' + pct + '%</span><span class="sub">used</span></div>' +
+      '</div>' +
+      '<div class="legend">' +
+        '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-accent);"></div><span><strong>' + assigned + '</strong> assigned (' + (u.registered || 0) + ' active, ' + (u.pending || 0) + ' pending)</span></div>' +
+        '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-border);"></div><span><strong>' + available + '</strong> available</span></div>' +
+        '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-danger);opacity:.5;"></div><span><strong>' + revoked + '</strong> revoked</span></div>' +
+        '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-text-soft);"></div><span><strong>' + total + '</strong> total licenses</span></div>' +
+      '</div>' +
+    '</div>' +
+    (d.history && d.history.length ? '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--sa-text-soft);">Monthly Registrations</h3>' +
+    '<table class="sa-table"><thead><tr><th>Month</th><th style="text-align:right;">New Teachers</th><th style="text-align:right;">Cumulative</th></tr></thead><tbody>' +
+      d.history.map(function (h) {
+        return '<tr><td>' + esc(h.month) + '</td><td style="text-align:right;">' + h.new_count + '</td><td style="text-align:right;">' + h.cumulative + '</td></tr>';
+      }).join('') +
+    '</tbody></table>' : '');
+}
+
+function renderTeachersReport(teachers) {
+  const wrap = document.getElementById('teachersReportWrap');
+  if (!teachers.length) { wrap.innerHTML = '<div class="empty-state"><div class="icon">👩‍🏫</div><div>No teachers yet.</div></div>'; return; }
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th>Name</th><th>Email</th><th>Grade / Dept</th><th>Registered</th><th>Status</th></tr></thead><tbody>' +
+    teachers.map(function (t) {
+      const name = esc(t.first_name + ' ' + t.last_name);
+      const grade = [t.grade_level, t.department].filter(Boolean).join(' / ') || '—';
+      const registered = t.registered_at ? new Date(t.registered_at).toLocaleDateString() : '—';
+      const isActive = t.role !== 'inactive_teacher';
+      const badge = isActive ? '<span class="sa-badge sa-badge-success">Active</span>' : '<span class="sa-badge sa-badge-warn">Inactive</span>';
+      return '<tr><td style="font-weight:600;font-size:13px;">' + name + '</td><td style="font-size:13px;color:var(--sa-text-soft);">' + esc(t.email) + '</td><td style="font-size:13px;">' + esc(grade) + '</td><td style="font-size:13px;">' + registered + '</td><td>' + badge + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function renderInvitationsReport(invs) {
+  const wrap = document.getElementById('invReportWrap');
+  if (!invs.length) { wrap.innerHTML = '<div class="empty-state"><div class="icon">✉️</div><div>No invitations sent yet.</div></div>'; return; }
+  const statusBadge = { pending:'<span class="sa-badge sa-badge-warn">Pending</span>', opened:'<span class="sa-badge">Opened</span>', registered:'<span class="sa-badge sa-badge-success">Registered</span>', expired:'<span class="sa-badge sa-badge-danger">Expired</span>', revoked:'<span class="sa-badge" style="background:#f3f4f6;color:#6b7280;">Revoked</span>' };
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th>Email</th><th>Invited By</th><th>Sent</th><th>Status</th><th>Registered</th></tr></thead><tbody>' +
+    invs.map(function (inv) {
+      const sent = new Date(inv.created_at).toLocaleDateString();
+      const reg = inv.registered_at ? new Date(inv.registered_at).toLocaleDateString() : '—';
+      const badge = statusBadge[inv.status] || '<span class="sa-badge">' + esc(inv.status) + '</span>';
+      const inviter = inv.invited_by_email ? inv.invited_by_email.split('@')[0] : '—';
+      return '<tr><td style="font-size:13px;">' + esc(inv.invited_email) + '</td><td style="font-size:13px;color:var(--sa-text-soft);">' + esc(inviter) + '</td><td style="font-size:13px;">' + sent + '</td><td>' + badge + '</td><td style="font-size:13px;">' + reg + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+async function loadAudit() {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  const wrap = document.getElementById('auditWrap');
+  try {
+    const d = await saFetch('/api/school-admin/audit?purchaseId=' + purchaseId + '&page=' + auditPage + '&limit=50');
+    auditTotalPages = d.pages || 1;
+    renderAudit(d.log || []);
+    const pg = document.getElementById('auditPagination');
+    if (auditTotalPages > 1) {
+      pg.style.display = 'flex';
+      document.getElementById('auditPageInfo').textContent = 'Page ' + auditPage + ' of ' + auditTotalPages;
+      document.getElementById('auditPrev').disabled = auditPage <= 1;
+      document.getElementById('auditNext').disabled = auditPage >= auditTotalPages;
+    } else { pg.style.display = 'none'; }
+  } catch (e) { wrap.innerHTML = '<div class="sa-alert sa-alert-danger">' + esc(e.message) + '</div>'; }
+}
+
+function renderAudit(log) {
+  const wrap = document.getElementById('auditWrap');
+  if (!log.length) { wrap.innerHTML = '<div class="empty-state"><div>No audit events yet.</div></div>'; return; }
+  const icons = { invitation_sent:'✉️', invitation_resent:'🔄', invitation_revoked:'✗', invitation_extended:'📅', license_revoked:'🚫', teacher_deactivated:'⏸', teacher_reactivated:'▶', teacher_removed:'🗑', teacher_registered:'🎉', seat_revoked:'🚫' };
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th>Action</th><th>Target</th><th>Actor</th><th>When</th><th>Notes</th></tr></thead><tbody>' +
+    log.map(function (a) {
+      const icon = icons[a.action] || '•';
+      const label = icon + ' ' + a.action.replace(/_/g,' ');
+      const when = new Date(a.created_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      return '<tr><td style="font-size:13px;white-space:nowrap;">' + esc(label) + '</td><td style="font-size:12px;color:var(--sa-text-soft);">' + esc(a.target_email || '—') + '</td><td style="font-size:12px;color:var(--sa-text-soft);">' + esc(a.actor_email || '—') + '</td><td style="font-size:12px;color:var(--sa-text-soft);white-space:nowrap;">' + when + '</td><td style="font-size:12px;color:var(--sa-text-soft);max-width:200px;">' + esc(a.notes || '—') + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function changeAuditPage(dir) { auditPage = Math.max(1, Math.min(auditTotalPages, auditPage + dir)); loadAudit(); }
+
+function exportCsv(type) {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  window.location.href = '/api/school-admin/reports/export?type=' + type + '&purchaseId=' + purchaseId;
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

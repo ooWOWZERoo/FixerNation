@@ -176,4 +176,86 @@ async function sendAutomationEmail({ to, subject, body }) {
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail };
+// Teacher invitation sent by a school license administrator
+async function sendTeacherInvitationEmail({ to, firstName, inviteUrl, schoolDomain, adminName, personalMessage, expiresAt }) {
+  const expiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '14 days';
+  const personal = personalMessage ? `<p style="font-style:italic;color:#555;">"${personalMessage}"</p>` : '';
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `You're invited to join ${schoolDomain || 'your school'} on Fixer Nation Education`,
+    text: `Hi ${firstName},\n\n${adminName || 'Your school administrator'} has invited you to access licensed 2D SEL curriculum on Fixer Nation Education.\n\n${personalMessage ? `"${personalMessage}"\n\n` : ''}Click the link below to accept your invitation and create your account:\n${inviteUrl}\n\nThis invitation expires on ${expiry}.\n\nIf you have any questions, contact your school administrator.`,
+    html: `<p>Hi ${firstName},</p>
+      <p><strong>${adminName || 'Your school administrator'}</strong> has invited you to access licensed 2D SEL curriculum on Fixer Nation Education.</p>
+      ${personal}
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
+      <p style="font-size:13px;color:#888;">This invitation expires on ${expiry}. If you didn't expect this email, you can safely ignore it.</p>`,
+  });
+}
+
+// Reminder for a previously sent but unaccepted invitation
+async function sendInvitationReminderEmail({ to, firstName, inviteUrl, schoolDomain, expiresAt }) {
+  const expiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'soon';
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `Reminder: Your invitation to Fixer Nation Education expires ${expiry}`,
+    text: `Hi ${firstName},\n\nA reminder that you have a pending invitation to join ${schoolDomain || 'your school'} on Fixer Nation Education.\n\nAccept your invitation here:\n${inviteUrl}\n\nThis invitation expires on ${expiry}.`,
+    html: `<p>Hi ${firstName},</p>
+      <p>Just a reminder that your invitation to join <strong>${schoolDomain || 'your school'}</strong> on Fixer Nation Education is still waiting.</p>
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
+      <p style="font-size:13px;color:#888;">This invitation expires on ${expiry}.</p>`,
+  });
+}
+
+// Sent to a newly assigned school license administrator
+async function sendSchoolAdminWelcomeEmail({ to, firstName, schoolDomain, portalUrl, activateUrl, isNewUser }) {
+  const actionLine = isNewUser
+    ? `Please set your password and access your portal here:\n${activateUrl}`
+    : `Access your School License Administrator portal here:\n${portalUrl}`;
+  const actionHtml = isNewUser
+    ? `<p><a href="${activateUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
+    : `<p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Go to School Admin Portal</a></p>`;
+
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `You're now a School License Administrator for ${schoolDomain || 'your school'} on Fixer Nation Education`,
+    text: `Hi ${firstName},\n\nYou have been assigned as a School License Administrator for ${schoolDomain || 'your school'} on Fixer Nation Education.\n\nAs a School License Administrator, you can invite teachers, manage licenses, and monitor usage from your portal.\n\n${actionLine}\n\nIf you have questions, contact Fixer Nation Education support.`,
+    html: `<p>Hi ${firstName},</p>
+      <p>You have been assigned as a <strong>School License Administrator</strong> for <strong>${schoolDomain || 'your school'}</strong> on Fixer Nation Education.</p>
+      <p>As a School License Administrator, you can:</p>
+      <ul><li>Invite teachers and manage invitations</li><li>Assign and revoke licenses</li><li>Monitor license utilization</li><li>View teacher activity and reports</li></ul>
+      ${actionHtml}
+      <p style="font-size:13px;color:#888;">If you didn't expect this email, contact Fixer Nation Education support.</p>`,
+  });
+}
+
+// Utilization threshold alert to school license administrator
+async function sendLicenseUtilizationAlertEmail({ to, adminName, schoolDomain, totalSeats, assignedSeats, pctUsed, purchaseMoreUrl }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `License alert: ${pctUsed}% of seats used for ${schoolDomain || 'your school'}`,
+    text: `Hi ${adminName || 'Administrator'},\n\nYour school license for ${schoolDomain} has reached ${pctUsed}% utilization.\n\n${assignedSeats} of ${totalSeats} seats are assigned.\n\nTo purchase additional licenses, visit:\n${purchaseMoreUrl}\n\nFixer Nation Education`,
+    html: `<p>Hi ${adminName || 'Administrator'},</p>
+      <p>Your school license for <strong>${schoolDomain}</strong> has reached <strong>${pctUsed}% utilization</strong>.</p>
+      <p>${assignedSeats} of ${totalSeats} seats are currently assigned.</p>
+      <p><a href="${purchaseMoreUrl}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Request Additional Licenses</a></p>`,
+  });
+}
+
+// Notifies admin when a teacher successfully registers
+async function sendTeacherRegisteredNotificationEmail({ to, adminName, teacherName, teacherEmail, schoolDomain }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `${teacherName} has joined ${schoolDomain || 'your school'} on Fixer Nation Education`,
+    text: `Hi ${adminName || 'Administrator'},\n\n${teacherName} (${teacherEmail}) has accepted their invitation and registered on Fixer Nation Education.\n\nOne license has been consumed from your school's pool.\n\nFixer Nation Education`,
+    html: `<p>Hi ${adminName || 'Administrator'},</p>
+      <p><strong>${teacherName}</strong> (${teacherEmail}) has accepted their invitation and registered on Fixer Nation Education.</p>
+      <p>One license has been consumed from your school's pool.</p>`,
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail };

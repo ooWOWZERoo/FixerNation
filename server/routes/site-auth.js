@@ -30,9 +30,11 @@ async function requireSiteAuth(req, res, next) {
 }
 
 function setSiteSessionCookie(res, user) {
-  const token = jwt.sign({ userId: user.id, firstName: user.first_name }, process.env.SESSION_SECRET, {
-    expiresIn: '30d',
-  });
+  const token = jwt.sign(
+    { userId: user.id, firstName: user.first_name, role: user.role || 'teacher' },
+    process.env.SESSION_SECRET,
+    { expiresIn: '30d' }
+  );
   res.cookie(SITE_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -84,6 +86,11 @@ router.post('/signup', async (req, res) => {
   );
   if (seatResult.affectedRows > 0) {
     try { await addTeacherToSocialGroups(result.insertId); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
+    // Mark any school invitations for this email as registered
+    pool.query(
+      "UPDATE school_invitations SET status = 'registered' WHERE invited_email = ? AND status NOT IN ('revoked','registered','expired')",
+      [email.toLowerCase()]
+    ).catch(e => console.error('invitation status update failed:', e.message));
   }
 
   const verifyToken = await createToken(result.insertId, 'verify', 24 * 60 * 60 * 1000);
@@ -139,7 +146,7 @@ router.post('/login', async (req, res) => {
   }
 
   setSiteSessionCookie(res, user);
-  res.json({ ok: true, firstName: user.first_name });
+  res.json({ ok: true, firstName: user.first_name, role: user.role || 'teacher' });
 });
 
 router.post('/logout', (req, res) => {

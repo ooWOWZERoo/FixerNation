@@ -33,6 +33,7 @@
       link('admin-morning-boost.html',      '🌅', 'Morning Boost Studio') +
       link('admin-morning-boost-email.html','📨', 'Morning Boost Email') +
       link('admin-orders.html',             '📦', 'Orders') +
+      link('admin-school-admins.html',      '🏫', 'School Admins') +
       link('admin-social.html',             '💬', 'Social') +
       link('admin-analytics.html',          '👣', 'Visitor Paths') +
     '</nav>' +

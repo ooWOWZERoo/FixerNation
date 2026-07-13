@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teachers — School License Administrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=1">
+<style>
+  .av { width: 34px; height: 34px; border-radius: 50%; background: var(--sa-accent-soft); color: var(--sa-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .teacher-name { font-weight: 600; font-size: 13.5px; }
+  .teacher-meta { font-size: 12px; color: var(--sa-text-soft); }
+  .sa-table td:first-child { width: 38px; }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--sa-text-soft); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-admin-nav.js?v=1"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Teachers</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="paymentBanner" class="sa-payment-banner" style="display:none;">
+        <span class="icon">⚠️</span>
+        <div><strong>License payment pending</strong> — Teacher registration is not yet active for this school.</div>
+      </div>
+
+      <div class="sa-toolbar">
+        <input class="sa-search" id="searchInput" type="search" placeholder="Search by name or email…" oninput="debounceLoad()">
+        <select id="statusFilter" onchange="loadTeachers()" style="padding:7px 10px;border:1.5px solid var(--sa-border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <button class="sa-btn sa-btn-primary" onclick="openInviteModal()">✉️ Invite Teacher</button>
+      </div>
+
+      <div class="sa-card">
+        <div id="teachersWrap">
+          <div class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+        </div>
+        <div class="sa-pagination" id="pagination" style="display:none;">
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" id="prevBtn" onclick="changePage(-1)">← Prev</button>
+          <span id="pageInfo" style="font-size:13px;color:var(--sa-text-soft);"></span>
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" id="nextBtn" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invite modal -->
+<div class="sa-modal-overlay" id="inviteModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Invite a Teacher</h2>
+      <button class="sa-modal-close" onclick="closeInviteModal()">✕</button>
+    </div>
+    <div id="inviteErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label>First Name</label><input type="text" id="invFirstName" placeholder="Jane"></div>
+      <div class="sa-form-group"><label>Last Name</label><input type="text" id="invLastName" placeholder="Smith"></div>
+    </div>
+    <div class="sa-form-group">
+      <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
+      <input type="email" id="invEmail" placeholder="teacher@school.edu">
+    </div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label>Grade Level</label><input type="text" id="invGrade" placeholder="3rd Grade"></div>
+      <div class="sa-form-group"><label>Department</label><input type="text" id="invDept" placeholder="Counseling"></div>
+    </div>
+    <div class="sa-form-group">
+      <label>Personal Message <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
+      <textarea id="invMessage" placeholder="Looking forward to having you in the program!"></textarea>
+    </div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeInviteModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" id="inviteBtn" onclick="sendInvite()">Send Invitation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Action confirm modal -->
+<div class="sa-modal-overlay" id="confirmModal" style="display:none;">
+  <div class="sa-modal" style="max-width:420px;">
+    <div class="sa-modal-head">
+      <h2 id="confirmTitle">Confirm Action</h2>
+      <button class="sa-modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <p id="confirmMsg" style="font-size:14px;margin-bottom:20px;"></p>
+    <div class="sa-form-group" id="reasonWrap" style="display:none;">
+      <label>Reason <span style="color:var(--sa-danger)">*</span></label>
+      <textarea id="confirmReason" placeholder="Please provide a reason…"></textarea>
+    </div>
+    <div id="confirmErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeConfirm()">Cancel</button>
+      <button class="sa-btn sa-btn-danger" id="confirmBtn" onclick="execConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var page = 1, totalPages = 1, debounceTimer = null, confirmFn = null;
+
+document.addEventListener('saReady', function () { loadTeachers(); });
+document.addEventListener('saSchoolChanged', function () { page = 1; loadTeachers(); });
+
+function debounceLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(function () { page = 1; loadTeachers(); }, 350); }
+
+async function loadTeachers() {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  const q = document.getElementById('searchInput').value.trim();
+  const status = document.getElementById('statusFilter').value;
+  const url = '/api/school-admin/teachers?purchaseId=' + purchaseId + '&page=' + page + '&limit=25' + (q ? '&q=' + encodeURIComponent(q) : '') + (status ? '&status=' + status : '');
+  const wrap = document.getElementById('teachersWrap');
+  try {
+    const d = await saFetch(url);
+    totalPages = d.pages || 1;
+    renderTeachers(d.teachers || []);
+
+    // Payment banner
+    if (d.paymentStatus && d.paymentStatus !== 'paid') document.getElementById('paymentBanner').style.display = 'flex';
+
+    // Pagination
+    const pg = document.getElementById('pagination');
+    if (totalPages > 1) {
+      pg.style.display = 'flex';
+      document.getElementById('pageInfo').textContent = 'Page ' + page + ' of ' + totalPages;
+      document.getElementById('prevBtn').disabled = page <= 1;
+      document.getElementById('nextBtn').disabled = page >= totalPages;
+    } else {
+      pg.style.display = 'none';
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div class="sa-alert sa-alert-danger">' + e.message + '</div>';
+  }
+}
+
+function renderTeachers(teachers) {
+  const wrap = document.getElementById('teachersWrap');
+  if (!teachers.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">👩‍🏫</div><div>No teachers found.</div></div>';
+    return;
+  }
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th></th><th>Name</th><th>Email</th><th>Grade / Dept</th><th>Registered</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    teachers.map(function (t) {
+      const init = ((t.first_name || '?')[0]).toUpperCase();
+      const name = esc(t.first_name + ' ' + t.last_name);
+      const registered = t.registered_at ? new Date(t.registered_at).toLocaleDateString() : '—';
+      const grade = [t.grade_level, t.department].filter(Boolean).join(' / ') || '—';
+      const isActive = t.role !== 'inactive_teacher';
+      const badge = isActive ? '<span class="sa-badge sa-badge-success">Active</span>' : '<span class="sa-badge sa-badge-warn">Inactive</span>';
+      const actions = isActive
+        ? '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivateTeacher(' + t.id + ', \'' + esc(t.email) + '\')">Deactivate</button> <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + t.id + ', \'' + esc(t.email) + '\')">Remove</button>'
+        : '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivateTeacher(' + t.id + ', \'' + esc(t.email) + '\')">Reactivate</button>';
+      return '<tr><td><div class="av">' + init + '</div></td><td><div class="teacher-name">' + name + '</div></td><td class="teacher-meta">' + esc(t.email) + '</td><td class="teacher-meta">' + esc(grade) + '</td><td class="teacher-meta">' + registered + '</td><td>' + badge + '</td><td>' + actions + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function changePage(dir) { page = Math.max(1, Math.min(totalPages, page + dir)); loadTeachers(); }
+
+function deactivateTeacher(id, email) {
+  openConfirm('Deactivate Teacher', 'Deactivate ' + email + '? They will lose portal access but their data is preserved.', false, async function (reason) {
+    await saFetch('/api/school-admin/teachers/' + id + '/deactivate', { method: 'PUT', body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }) });
+    saToast(email + ' deactivated.', 'success');
+    loadTeachers();
+  });
+}
+
+function reactivateTeacher(id, email) {
+  openConfirm('Reactivate Teacher', 'Reactivate ' + email + '? They will regain portal access.', false, async function () {
+    await saFetch('/api/school-admin/teachers/' + id + '/reactivate', { method: 'PUT', body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }) });
+    saToast(email + ' reactivated.', 'success');
+    loadTeachers();
+  });
+}
+
+function removeTeacher(id, email) {
+  openConfirm('Remove Teacher', 'Remove ' + email + ' from this school? Their license seat will be released.', true, async function (reason) {
+    await saFetch('/api/school-admin/teachers/' + id, { method: 'DELETE', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), reason }) });
+    saToast(email + ' removed from school.', 'success');
+    loadTeachers();
+  });
+}
+
+function openConfirm(title, msg, needsReason, fn) {
+  confirmFn = fn;
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('reasonWrap').style.display = needsReason ? 'block' : 'none';
+  document.getElementById('confirmReason').value = '';
+  document.getElementById('confirmErr').style.display = 'none';
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+function closeConfirm() { document.getElementById('confirmModal').style.display = 'none'; confirmFn = null; }
+async function execConfirm() {
+  const btn = document.getElementById('confirmBtn');
+  const err = document.getElementById('confirmErr');
+  const reason = document.getElementById('confirmReason').value.trim();
+  const needsReason = document.getElementById('reasonWrap').style.display !== 'none';
+  if (needsReason && !reason) { err.textContent = 'Reason is required.'; err.style.display = 'flex'; return; }
+  btn.disabled = true;
+  try {
+    await confirmFn(reason);
+    closeConfirm();
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'flex';
+  } finally { btn.disabled = false; }
+}
+
+function openInviteModal() { document.getElementById('inviteModal').style.display = 'flex'; }
+function closeInviteModal() {
+  document.getElementById('inviteModal').style.display = 'none';
+  document.getElementById('inviteErr').style.display = 'none';
+  ['invEmail','invFirstName','invLastName','invGrade','invDept','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+}
+async function sendInvite() {
+  const btn = document.getElementById('inviteBtn');
+  const err = document.getElementById('inviteErr');
+  err.style.display = 'none';
+  const email = document.getElementById('invEmail').value.trim();
+  if (!email) { err.textContent = 'Email is required.'; err.style.display = 'flex'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevel: document.getElementById('invGrade').value.trim(), department: document.getElementById('invDept').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
+    closeInviteModal();
+    saToast('Invitation sent to ' + email, 'success');
+    loadTeachers();
+  } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
+  finally { btn.disabled = false; btn.textContent = 'Send Invitation'; }
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

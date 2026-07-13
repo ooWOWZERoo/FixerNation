@@ -25,6 +25,9 @@ const automationRoutes = require('./routes/automations');
 const morningBoostModule = require('./routes/morning-boost');
 const schoolRegistrationRoutes = require('./routes/school-registration');
 const socialRoutes = require('./routes/social');
+const schoolAdminRoutes = require('./routes/school-admin');
+const schoolInviteRoutes = require('./routes/school-invite');
+const adminSchoolAdminsRoutes = require('./routes/admin-school-admins');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -62,6 +65,9 @@ app.use('/api/automations', automationRoutes);
 app.use('/api/morning-boost', morningBoostModule.router);
 app.use('/api/school-registration', schoolRegistrationRoutes);
 app.use('/api/social', socialRoutes);
+app.use('/api/school-admin', schoolAdminRoutes);
+app.use('/api/school-invite', schoolInviteRoutes);
+app.use('/api/admin/school-admins', adminSchoolAdminsRoutes);
 
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, LiteSpeed serves those files
