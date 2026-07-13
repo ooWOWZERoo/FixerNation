@@ -81,6 +81,10 @@
 .action-card-body{flex:1;}
 .action-card-title{font-weight:700;font-size:13.5px;}
 .action-card-sub{font-size:12px;color:var(--a-text-soft);margin-top:2px;}
+.action-card-fields{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+.action-card-fields input,.action-card-fields textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--a-border);background:var(--a-card);color:var(--a-text);font-size:13px;font-family:inherit;}
+.action-card-fields textarea{resize:vertical;min-height:80px;}
+.action-card-fields label{font-size:11px;font-weight:700;color:var(--a-text-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;display:block;}
 
 /* ── Coming soon placeholder ─────────────────────────── */
 .coming-soon{text-align:center;padding:60px 40px;color:var(--a-text-soft);}
@@ -945,13 +949,47 @@ function addCondition() {
 function addAction(type) {
   const wrap = document.createElement('div');
   wrap.className = 'action-card';
+  wrap.style.alignItems = 'flex-start';
+
+  let fieldsHtml = '';
+  if (type === 'email') {
+    fieldsHtml =
+      '<div class="action-card-fields">' +
+      '<div><label>Subject</label><input type="text" placeholder="e.g. Welcome to Fixer Nation!"></div>' +
+      '<div><label>Body</label><textarea placeholder="Email body… use {{first_name}}, {{plan_name}}, etc."></textarea></div>' +
+      '</div>';
+  } else if (type === 'inapp') {
+    fieldsHtml =
+      '<div class="action-card-fields">' +
+      '<div><label>Notice Text</label><textarea rows="2" placeholder="e.g. Your membership is now active."></textarea></div>' +
+      '</div>';
+  } else if (type === 'webhook') {
+    fieldsHtml =
+      '<div class="action-card-fields">' +
+      '<div><label>Endpoint URL</label><input type="url" placeholder="https://…"></div>' +
+      '</div>';
+  } else if (type === 'wait') {
+    fieldsHtml =
+      '<div class="action-card-fields">' +
+      '<div><label>Wait (days)</label><input type="number" min="0" value="1" style="width:100px;"></div>' +
+      '</div>';
+  } else if (type === 'tag') {
+    fieldsHtml =
+      '<div class="action-card-fields">' +
+      '<div><label>Action</label><select style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--a-border);background:var(--a-card);color:var(--a-text);font-size:13px;font-family:inherit;"><option>Add tag</option><option>Remove tag</option></select></div>' +
+      '<div><label>Tag name</label><input type="text" placeholder="e.g. vip-member"></div>' +
+      '</div>';
+  } else {
+    fieldsHtml = '<div class="action-card-sub" style="margin-top:6px;">' + ACTION_HINTS[type] + '</div>';
+  }
+
   wrap.innerHTML =
-    '<div class="action-card-icon">' + ACTION_ICONS[type] + '</div>' +
+    '<div class="action-card-icon" style="margin-top:2px;">' + ACTION_ICONS[type] + '</div>' +
     '<div class="action-card-body">' +
     '<div class="action-card-title">' + ACTION_LABELS[type] + '</div>' +
-    '<div class="action-card-sub">' + ACTION_HINTS[type] + '</div>' +
+    fieldsHtml +
     '</div>' +
-    '<button class="a-icon-btn" title="Remove" onclick="this.parentElement.remove()">✕</button>';
+    '<button class="a-icon-btn" title="Remove" style="margin-top:2px;" onclick="this.parentElement.remove()">✕</button>';
   document.getElementById('bActionsWrap').appendChild(wrap);
 }
 
