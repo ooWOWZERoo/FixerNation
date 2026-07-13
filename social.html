@@ -353,7 +353,7 @@ async function init(){
   await loadUnreadCounts();
 
   // Poll unread counts every 30s for background groups
-  unreadPollTimer = setInterval(loadUnreadCounts, 30000);
+  unreadPollTimer = setInterval(loadUnreadCounts, 15000);
 
   // Check URL params for DM mode
   const params = new URLSearchParams(location.search);
@@ -378,6 +378,7 @@ async function loadUnreadCounts(){
   unreadCounts = {};
   data.unread.forEach(r => { unreadCounts[r.group_id] = Number(r.unread_count); });
   renderGroupList();
+  await loadDmConversations();
 }
 
 async function loadBrowseGroups(){
