@@ -154,9 +154,8 @@
           </div>
           <div class="a-note">Paste a YouTube/Vimeo link, or upload a video file below.</div>
 
-          <input type="file" id="videoFile" accept="video/*" style="margin:14px 0 8px;">
-          <button type="button" class="a-dashed-btn" onclick="addVideoFromInput()">+ Add Video File</button>
-          <div class="a-note">Uploads the video file to the server. Large files may take a moment.</div>
+          <input type="file" id="videoFile" accept="video/*" onchange="addVideoFromInput()" style="margin:14px 0 8px;">
+          <div class="a-note">Choose a video file — upload starts automatically. Large files may take a moment.</div>
         </div>
 
         <div class="a-field">
