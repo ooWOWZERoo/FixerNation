@@ -125,6 +125,7 @@ async function fnAuthLogout() {
     headers: { 'Content-Type': 'application/json' },
     body: '{}',
   });
+  if (typeof cartClear === 'function') cartClear();
   fnAuthRenderNav(false);
 }
 

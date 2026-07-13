@@ -76,13 +76,13 @@ async function loadData() {
   const r = await fetch('/api/site-auth/my-purchases', { credentials: 'include' });
   if (r.status === 401) { window.location.href = 'index.html'; return; }
   const data = await r.json().catch(() => ({}));
-  render(data.purchases || []);
+  render(data.purchases || [], data.memberships || []);
 }
 
-function render(purchases) {
+function render(purchases, memberships) {
   const wrap = document.getElementById('purchaseWrap');
 
-  if (!purchases.length) {
+  if (!purchases.length && !memberships.length) {
     wrap.innerHTML = `
       <div class="empty">
         <div class="empty-icon">🧾</div>
@@ -96,6 +96,26 @@ function render(purchases) {
   const licenses = purchases.filter(p => p.productType === 'single_license' || p.productType === 'group_license');
 
   let html = '';
+
+  if (memberships.length) {
+    html += '<div class="section-label">Memberships</div>';
+    html += memberships.map(m => {
+      const statusLabels = { active: 'Active', trialing: 'Free Trial', past_due: 'Past Due', cancelled: 'Cancelled', expired: 'Expired' };
+      const statusColors = { active: '#d1fae5;color:#065f46', trialing: '#dbeafe;color:#1e40af', past_due: '#fef3c7;color:#92400e', cancelled: '#f3f4f6;color:#6b7280', expired: '#f3f4f6;color:#6b7280' };
+      const label = statusLabels[m.status] || m.status;
+      const style = statusColors[m.status] || '#f3f4f6;color:#6b7280';
+      const dateLabel = m.endsAt
+        ? (m.status === 'cancelled' || m.status === 'expired' ? `Ended ${formatDate(m.endsAt)}` : `Renews ${formatDate(m.endsAt)}`)
+        : '';
+      return `<div class="card">
+        <div class="card-icon">⭐</div>
+        <div class="card-body">
+          <div class="card-title">${m.planName || 'Membership'} <span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:${style};">${label}</span></div>
+          ${dateLabel ? `<div class="card-meta">${dateLabel}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   if (books.length) {
     html += '<div class="section-label">Books</div>';

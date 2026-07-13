@@ -170,16 +170,21 @@ function fnReadingTime(body) {
 
 // Turns a pasted YouTube/Vimeo link (or a direct video file path/URL) into
 // embeddable HTML for a video blog post. Returns '' for an empty/invalid url.
+// Always includes a direct-link fallback so the video is accessible even if
+// the iframe is blocked by a server-side Content-Security-Policy.
 function fnVideoEmbedHtml(url) {
   if (!url) return '';
   url = url.trim();
-  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+  const yt = url.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
   if (yt) {
-    return `<div class="fn-video-embed"><iframe src="https://www.youtube.com/embed/${yt[1]}" title="Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    const vid = yt[1];
+    const watchUrl = `https://www.youtube.com/watch?v=${vid}`;
+    return `<div class="fn-video-embed"><iframe src="https://www.youtube.com/embed/${vid}" title="Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div><div style="text-align:center;margin-top:6px;font-size:13px;opacity:.75;"><a href="${watchUrl}" target="_blank" rel="noopener" style="color:inherit;">Can't see the video? <strong>Watch on YouTube →</strong></a></div>`;
   }
   const vim = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if (vim) {
-    return `<div class="fn-video-embed"><iframe src="https://player.vimeo.com/video/${vim[1]}" title="Video" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+    const watchUrl = `https://vimeo.com/${vim[1]}`;
+    return `<div class="fn-video-embed"><iframe src="https://player.vimeo.com/video/${vim[1]}" title="Video" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div><div style="text-align:center;margin-top:6px;font-size:13px;opacity:.75;"><a href="${watchUrl}" target="_blank" rel="noopener" style="color:inherit;">Can't see the video? <strong>Watch on Vimeo →</strong></a></div>`;
   }
   // Otherwise assume it's a direct video file (local filename or a hosted .mp4/.webm URL).
   // If the referenced file isn't actually reachable (e.g. it was never placed in this
