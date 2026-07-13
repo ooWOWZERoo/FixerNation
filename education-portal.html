@@ -245,52 +245,31 @@
     <p class="library-note" id="libraryNote"></p>
     <div class="cta-links">
       <a href="https://www.ed.gov/teaching-and-administration/supporting-students/seac/supporting-student-attendance-and-engagement" class="btn btn-outline">Education Funding Options</a>
-      <a href="#quoteForm" class="btn btn-primary">Request a Formal Quotation</a>
+      <a href="programs.html" class="btn btn-primary">New to 2D Education? Start Here →</a>
     </div>
   </div>
 </section>
 
-<section class="section" style="background:var(--cream-soft);">
+<section style="background:var(--cream-soft); padding:72px 0;">
   <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">2D Education for Schools</span>
-      <h2>Plans for every size classroom, school, or district</h2>
-      <p>For single educators or teachers registering through a school-purchased plan, use <a href="education-schools.html" style="text-decoration:underline;">Registration</a> instead.</p>
+    <div style="text-align:center; margin-bottom:48px;">
+      <span class="eyebrow">Ready to Get Access?</span>
+      <h2 style="font-size:30px; margin-top:14px;">What's your role?</h2>
+      <p style="color:var(--ink-soft); margin-top:10px; font-size:15px;">Your path is different depending on whether you're a teacher or an administrator.</p>
     </div>
-    <div class="pricing-grid" id="licenseProductsGrid"></div>
-    <div class="cta-links">
-      <a href="https://www.ed.gov/teaching-and-administration/supporting-students/seac/supporting-student-attendance-and-engagement" class="btn btn-outline">Education Funding Options</a>
-      <a href="#quoteForm" class="btn btn-primary">Request a Formal Quotation</a>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="quoteForm">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">Get a Quote</span>
-      <h2>Request a Formal Quotation</h2>
-      <p>Please include the number of licenses you're requesting — determined by how many teachers will be using the Fixer Nation Morning Boost materials.</p>
-      <p style="margin-top:10px; font-size:13.5px;">Just need a single teacher license or a small school license? <a href="licenses.html" style="color:var(--coral-dark); font-weight:700;">Buy one instantly →</a></p>
-    </div>
-    <div class="form-card">
-      <form id="quoteFormEl">
-        <div class="form-row">
-          <div class="form-field"><label>First Name</label><input type="text" id="quoteFirstName"></div>
-          <div class="form-field"><label>Last Name</label><input type="text" id="quoteLastName"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-field"><label>Email</label><input type="email" id="quoteEmail" required></div>
-          <div class="form-field"><label>School</label><input type="text" id="quoteSchool"></div>
-        </div>
-        <div class="form-row" style="grid-template-columns:1fr;">
-          <div class="form-field"><label>Phone</label><input type="tel" id="quotePhone"></div>
-        </div>
-        <div class="form-field" style="margin-bottom:16px;"><label>Message</label><textarea id="quoteMessage" placeholder="Number of licenses / teachers..."></textarea></div>
-        <button type="submit" class="btn btn-primary" style="width:100%;">Request Quotation</button>
-        <div class="success-msg" id="quoteSuccess">Thank you for your interest — we'll follow up shortly.</div>
-        <div class="error-msg" id="quoteErrorMsg" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;">Something went wrong sending your request — please try again.</div>
-      </form>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:28px; max-width:860px; margin:0 auto;">
+      <div style="background:#fff; border-radius:22px; padding:40px 36px; box-shadow:var(--shadow); text-align:center;">
+        <div style="font-size:42px; margin-bottom:16px;">🎓</div>
+        <h3 style="font-size:22px; margin-bottom:10px;">I'm a Teacher</h3>
+        <p style="font-size:14.5px; color:var(--ink-soft); margin-bottom:28px; line-height:1.65;">Check if your school has a license and register for access using your school email — takes less than 2 minutes.</p>
+        <a href="education-schools.html" class="btn btn-primary" style="width:100%; display:flex;">Teacher Registration →</a>
+      </div>
+      <div style="background:#fff; border-radius:22px; padding:40px 36px; box-shadow:var(--shadow); text-align:center;">
+        <div style="font-size:42px; margin-bottom:16px;">🏫</div>
+        <h3 style="font-size:22px; margin-bottom:10px;">I'm a School Administrator</h3>
+        <p style="font-size:14.5px; color:var(--ink-soft); margin-bottom:28px; line-height:1.65;">License the 2D SEL program for your entire school or district. Request a proposal or purchase directly — PO accepted.</p>
+        <a href="school-licensing.html" class="btn" style="width:100%; display:flex; background:var(--gold); color:var(--teal-dark); box-shadow:0 14px 28px -10px rgba(235,166,87,0.5);">License My School →</a>
+      </div>
     </div>
   </div>
 </section>
@@ -336,71 +315,6 @@ document.getElementById('filterBar').addEventListener('click', function(e){
   document.querySelectorAll('.lesson-card').forEach(card => {
     card.style.display = (series === 'all' || card.dataset.series === series) ? 'block' : 'none';
   });
-});
-
-function showCartToast(msg){
-  var toast = document.getElementById('cartToast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2200);
-}
-
-let licenseProductsCache = [];
-
-function addLicenseProductToCart(productId){
-  const product = licenseProductsCache.find(p => p.id === productId);
-  if (!product) return;
-  cartAdd({ type: 'license_product', id: product.id, name: product.name, price: product.price, quantity: 1, schoolDomain: '' });
-  showCartToast('Added "' + product.name + '" to cart');
-}
-
-function renderLicenseProducts(products){
-  licenseProductsCache = products;
-  const grid = document.getElementById('licenseProductsGrid');
-  if (!products.length) {
-    grid.innerHTML = '<p style="color:var(--ink-soft); font-size:14px;">No license plans are published yet — check back soon.</p>';
-    return;
-  }
-  grid.innerHTML = products.map(p => `
-    <div class="plan-card">
-      <span class="new-tag">New</span>
-      <h4>${p.name}</h4>
-      <div class="plan-price">${p.callForQuote ? 'Call For Quote' : '$' + p.price.toLocaleString()}</div>
-      ${p.callForQuote
-        ? `<a href="#quoteForm" class="btn btn-primary">Request a Quote</a>`
-        : `<button class="btn btn-primary" onclick="addLicenseProductToCart(${p.id})">Add to Cart</button>`}
-    </div>
-  `).join('');
-}
-
-fetch('/api/license-products')
-  .then(r => r.json())
-  .then(data => renderLicenseProducts((data.licenseProducts || []).filter(p => p.seatCount > 1)));
-
-document.getElementById('quoteFormEl').addEventListener('submit', async function(e){
-  e.preventDefault();
-  const errorMsg = document.getElementById('quoteErrorMsg');
-  errorMsg.style.display = 'none';
-  try {
-    const r = await fetch('/api/contact/quote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        firstName: document.getElementById('quoteFirstName').value,
-        lastName: document.getElementById('quoteLastName').value,
-        email: document.getElementById('quoteEmail').value,
-        school: document.getElementById('quoteSchool').value,
-        phone: document.getElementById('quotePhone').value,
-        message: document.getElementById('quoteMessage').value,
-      }),
-    });
-    if (!r.ok) throw new Error('request failed');
-    fnTrackEvent('quote_request');
-    document.getElementById('quoteSuccess').style.display = 'block';
-    this.reset();
-  } catch (err) {
-    errorMsg.style.display = 'block';
-  }
 });
 
 function showInfoToast(msg) {

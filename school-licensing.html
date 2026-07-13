@@ -231,7 +231,7 @@
       </div>
 
       <div class="step-card">
-        <span class="tag-exists step-tag">Already built — Admin Portal</span>
+        <span class="tag-exists step-tag">Step 3 — Ready for your team</span>
         <div class="step-num">3</div>
         <h3>School Administrator Setup</h3>
         <p>After your purchase is complete, we'll designate one or more School License Administrators for your organization. Your administrator receives access to the Fixer Nation Education Admin Portal, where they can:</p>
@@ -267,8 +267,24 @@
   </div>
 </section>
 
+<!-- ── License Plans ──────────────────────────────────────────────────────── -->
+<section class="section section-alt" id="license-plans">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Pricing</span>
+      <h2>Current License Plans</h2>
+      <p>Purchase directly by card, or fill out the inquiry form below for a custom proposal — Purchase Orders accepted for all plans.</p>
+    </div>
+    <div id="licensePlansGrid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,320px)); gap:18px; justify-content:center; margin-bottom:32px;"></div>
+    <div style="text-align:center;">
+      <p style="color:var(--ink-soft); font-size:14px; margin-bottom:16px;">Need a custom quote or have district-wide requirements?</p>
+      <a href="#inquiry-form" class="btn btn-outline">Request a Custom Proposal →</a>
+    </div>
+  </div>
+</section>
+
 <!-- ── Inquiry form ──────────────────────────────────────────────────────── -->
-<section class="section section-alt" id="inquiry-form">
+<section class="section" id="inquiry-form">
   <div class="wrap">
     <div class="form-wrap">
       <div class="form-intro">
@@ -640,6 +656,41 @@ document.addEventListener('keydown', function(e) {
     submitInquiry();
   }
 });
+
+// License plans grid
+let _planCache = [];
+(function loadLicensePlans() {
+  fetch('/api/license-products')
+    .then(r => r.json())
+    .then(data => {
+      _planCache = data.licenseProducts || [];
+      const products = _planCache.filter(p => p.seatCount > 1);
+      const grid = document.getElementById('licensePlansGrid');
+      if (!grid) return;
+      if (!products.length) {
+        grid.innerHTML = '<p style="color:var(--ink-soft); text-align:center;">License plans coming soon — contact us below for pricing.</p>';
+        return;
+      }
+      grid.innerHTML = products.map(p => `
+        <div style="background:#fff; border-radius:14px; padding:26px; box-shadow:var(--shadow); position:relative;">
+          <span style="position:absolute; top:14px; right:14px; background:var(--gold); color:var(--teal-dark); font-size:10px; font-weight:800; text-transform:uppercase; padding:4px 8px; border-radius:6px;">School</span>
+          <h4 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:8px;">${p.name}</h4>
+          <div style="font-family:'Fraunces',serif; font-size:28px; color:var(--teal-dark); margin:8px 0 18px;">${p.callForQuote ? 'Contact Us' : '$' + Number(p.price).toLocaleString()}</div>
+          ${p.callForQuote
+            ? `<a href="#inquiry-form" class="btn btn-primary" style="width:100%; text-decoration:none; display:flex;">Request a Quote</a>`
+            : `<button class="btn btn-primary" style="width:100%;" onclick="addPlanToCart(${p.id})">Buy Directly</button>`}
+        </div>
+      `).join('');
+    })
+    .catch(() => {});
+})();
+
+function addPlanToCart(productId) {
+  const p = _planCache.find(x => x.id === productId);
+  if (!p || typeof cartAdd !== 'function') return;
+  cartAdd({ type: 'license_product', id: p.id, name: p.name, price: p.price, quantity: 1, schoolDomain: '' });
+  window.location.href = 'cart.html';
+}
 
 // Smooth scroll for anchor links (hero CTA → form)
 document.querySelectorAll('a[href^="#"]').forEach(a => {
