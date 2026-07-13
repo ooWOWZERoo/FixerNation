@@ -81,7 +81,7 @@ function fnAuthRenderNav(loggedIn, firstName) {
   if (loggedIn) {
     nav.innerHTML = `
       <div style="position:relative;">
-        <a href="#" onclick="fnAuthToggleUserMenu(); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
+        <a href="#" onclick="fnAuthToggleUserMenu(event); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
         <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:175px; z-index:300;">
           <a href="my-profile.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Profile</a>
           <a href="my-memberships.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Memberships</a>
@@ -102,7 +102,7 @@ function fnAuthRenderNav(loggedIn, firstName) {
 // fnAuthCheckSession() still runs right after to confirm/correct it.
 function fnAuthRenderNavOptimistic() {
   const hint = localStorage.getItem(FN_AUTH_HINT_KEY);
-  if (hint) fnAuthRenderNav(true, hint);
+  fnAuthRenderNav(!!hint, hint || null);
 }
 fnAuthRenderNavOptimistic();
 

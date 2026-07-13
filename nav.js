@@ -82,7 +82,7 @@
           '</svg>' +
           '<span class="fn-cart-badge" id="fnCartBadge"></span>' +
         '</a>' +
-        '<div id="fnAuthNav"><a href="#" onclick="if(typeof fnAuthOpenModal===\'function\')fnAuthOpenModal(\'login\');return false;" style="font-weight:600;font-size:14px;">Log In</a></div>' +
+        '<div id="fnAuthNav"></div>' +
         '<a href="join.html" class="btn btn-primary fn-nav-join">Join Fixer Nation</a>' +
       '</div>' +
     '</div>';
