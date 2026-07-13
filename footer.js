@@ -6,7 +6,7 @@
     var s = document.createElement('style');
     s.id = 'fn-footer-styles';
     s.textContent = [
-      'footer{background:#0E3733;color:rgba(255,255,255,0.82);padding:60px 0 32px;font-size:14px;}',
+      'footer{background:#0E3733;color:rgba(255,255,255,0.82);padding:60px 0 32px;font-size:14px;margin-top:64px;}',
       '.fn-fi{max-width:1180px;margin:0 auto;padding:0 32px;}',
       '.fn-fg{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:40px;margin-bottom:48px;}',
       '.fn-flogo{display:flex;align-items:center;gap:12px;font-family:\'Fraunces\',serif;font-weight:700;font-size:21px;color:#fff;text-decoration:none;}',
