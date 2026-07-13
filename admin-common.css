@@ -179,6 +179,8 @@ table.a-table tr:hover td{background:var(--a-bg);}
 .a-modal-body{padding:24px 26px;}
 .a-modal-foot{display:flex; justify-content:flex-end; gap:12px; padding:18px 26px; border-top:1px solid var(--a-border);}
 .a-form-row{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.a-section-head{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--a-accent); background:var(--a-bg); border-top:1.5px solid var(--a-border); margin:8px -26px 18px; padding:10px 26px 0;}
+.a-label-hint{font-weight:400; text-transform:none; letter-spacing:0; color:var(--a-text-soft);}
 .a-image-preview{width:100%; aspect-ratio:3/4; border-radius:10px; background:var(--a-bg); border:1.5px dashed var(--a-border); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px; color:var(--a-text-soft); font-size:13px;}
 .a-image-preview img{width:100%; height:100%; object-fit:contain;}
 .a-tag-row{display:flex; flex-wrap:wrap; gap:8px;}

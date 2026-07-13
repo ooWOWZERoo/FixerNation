@@ -69,7 +69,7 @@
 
 <!-- Add/Edit Curriculum Modal -->
 <div class="a-modal-overlay" id="curriculumModalOverlay">
-  <div class="a-modal" style="max-width:760px;">
+  <div class="a-modal" style="max-width:900px;">
     <div class="a-modal-head">
       <h3 id="curriculumModalTitle">Build New Curriculum</h3>
       <button class="a-modal-close" onclick="closeCurriculumModal()">✕</button>
@@ -78,12 +78,15 @@
       <form id="curriculumForm">
         <input type="hidden" id="curriculumId">
 
+        <!-- ── BASICS ─────────────────────────────────────────────── -->
+        <div class="a-section-head">📋 Basics</div>
+
         <div class="a-form-row">
-          <div class="a-field">
+          <div class="a-field" style="flex:2;">
             <label>Curriculum Title *</label>
             <input type="text" id="title" required>
           </div>
-          <div class="a-field">
+          <div class="a-field" style="flex:1;">
             <label>Series / Program</label>
             <input type="text" id="series" placeholder="e.g. SEL Morning Boost">
           </div>
@@ -94,83 +97,90 @@
           <div class="a-audience-row" id="audienceRow"></div>
         </div>
 
-        <div class="a-field">
-          <label>Short Description <span style="font-weight:400; text-transform:none;">(shown on listing cards)</span></label>
-          <textarea id="shortDescription" style="min-height:60px;"></textarea>
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Short Description <span class="a-label-hint">(shown on listing cards)</span></label>
+            <textarea id="shortDescription" style="min-height:64px;"></textarea>
+          </div>
+          <div class="a-field">
+            <label>Overview <span class="a-label-hint">(full curriculum description)</span></label>
+            <textarea id="overview" style="min-height:64px;"></textarea>
+          </div>
         </div>
 
-        <div class="a-field">
-          <label>Overview <span style="font-weight:400; text-transform:none;">(full curriculum description)</span></label>
-          <textarea id="overview" style="min-height:100px;"></textarea>
+        <div class="a-form-row" style="align-items:flex-end;">
+          <div class="a-field" style="flex:1;">
+            <label>Lessons</label>
+            <input type="number" id="lessonsCount" min="0" placeholder="e.g. 5">
+          </div>
+          <div class="a-field" style="flex:1;">
+            <label>Weeks</label>
+            <input type="number" id="weeksCount" min="0" placeholder="e.g. 1">
+          </div>
+          <div class="a-field" style="flex:1;">
+            <label>Max Downloads / Teacher *</label>
+            <input type="number" id="downloadLimit" min="0" value="3" required>
+          </div>
+          <div class="a-field" style="flex:2;">
+            <label>Publish Status</label>
+            <div class="a-toggle-row" style="margin-top:6px;">
+              <div class="a-toggle on" id="publishedToggle" onclick="togglePublished()"><div class="knob"></div></div>
+              <span id="publishedLabel" style="font-size:14px; font-weight:600;">Published</span>
+            </div>
+          </div>
         </div>
 
-        <div class="a-field">
-          <label>Learning Objectives <span style="font-weight:400; text-transform:none;">(one per line)</span></label>
-          <textarea id="objectives" style="min-height:80px;" placeholder="Identify the difference between effort and outcome&#10;Practice daily reflection on personal choices"></textarea>
-        </div>
+        <!-- ── CONTENT ────────────────────────────────────────────── -->
+        <div class="a-section-head">📝 Content</div>
 
         <div class="a-form-row">
           <div class="a-field">
-            <label>Number of Lessons</label>
-            <input type="number" id="lessonsCount" min="0" placeholder="e.g. 5">
+            <label>Learning Objectives <span class="a-label-hint">(one per line)</span></label>
+            <textarea id="objectives" style="min-height:80px;" placeholder="Identify the difference between effort and outcome&#10;Practice daily reflection on personal choices"></textarea>
           </div>
           <div class="a-field">
-            <label>Number of Week(s)</label>
-            <input type="number" id="weeksCount" min="0" placeholder="e.g. 1">
+            <label>Materials Needed <span class="a-label-hint">(one per line)</span></label>
+            <textarea id="materials" style="min-height:80px;" placeholder="Classroom poster (included)&#10;Student reflection journal"></textarea>
           </div>
         </div>
 
-        <div class="a-field">
-          <label>Max Downloads Per Teacher *</label>
-          <input type="number" id="downloadLimit" min="0" value="3" required>
-        </div>
-
-        <div class="a-field">
-          <label>Materials Needed <span style="font-weight:400; text-transform:none;">(one per line)</span></label>
-          <textarea id="materials" style="min-height:70px;" placeholder="Classroom poster (included)&#10;Student reflection journal"></textarea>
-        </div>
+        <!-- ── RESOURCES & DOCUMENTS ──────────────────────────────── -->
+        <div class="a-section-head">📎 Resources &amp; Documents</div>
 
         <div class="a-field">
           <label>Included Resources</label>
           <div class="a-resource-list" id="resourcesRow"></div>
-          <div class="a-note">Controls which resource buttons appear for this lesson on the public National Education Portal page. Checking a resource (other than Quiz + Answer Key, which uses the Quiz Questions section below) reveals a file upload for that specific resource, which links to its own button on the lesson detail page.</div>
+          <div class="a-note">Checking a resource reveals a file upload for it and shows its button on the public lesson detail page. "Quiz + Answer Key" uses the Quiz section below.</div>
         </div>
 
         <div class="a-field">
-          <label>Lesson Plan Documents <span style="font-weight:400; text-transform:none;">(up to 5)</span></label>
+          <label>Lesson Plan Documents <span class="a-label-hint">(up to 5 — PDF or Word)</span></label>
           <div id="lessonDocList"></div>
           <input type="file" id="lessonDocFile" accept=".pdf,.doc,.docx" style="display:none;">
           <button type="button" class="a-dashed-btn" id="lessonDocAddBtn" onclick="document.getElementById('lessonDocFile').click()">+ Add Document</button>
-          <div class="a-note">PDF or Word document. Uploaded to the server when selected. Up to 5 per curriculum.</div>
         </div>
 
+        <!-- ── VIDEO ──────────────────────────────────────────────── -->
+        <div class="a-section-head">🎬 Video Lessons</div>
+
         <div class="a-field">
-          <label>Video Lessons</label>
           <div class="a-repeat-list" id="videoList"></div>
-
           <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <input type="text" id="videoUrlInput" placeholder="YouTube/Vimeo link, or a local file like trailer-kill-the-bully.mp4" style="flex:1;">
-            <button type="button" class="a-btn a-btn-outline" onclick="addVideoFromUrl()">+ Add Video URL</button>
+            <input type="text" id="videoUrlInput" placeholder="Paste a YouTube / Vimeo URL" style="flex:1;">
+            <button type="button" class="a-btn a-btn-outline" onclick="addVideoFromUrl()">+ Add URL</button>
           </div>
-          <div class="a-note">Paste a YouTube/Vimeo link, or upload a video file below.</div>
-
-          <input type="file" id="videoFile" accept="video/*" onchange="addVideoFromInput()" style="margin:14px 0 8px;">
-          <div class="a-note">Choose a video file — upload starts automatically. Large files may take a moment.</div>
+          <div class="a-note" style="margin-bottom:10px;">Or upload a local video file — upload begins automatically when a file is chosen.</div>
+          <input type="file" id="videoFile" accept="video/*" onchange="addVideoFromInput()">
         </div>
 
+        <!-- ── QUIZ ───────────────────────────────────────────────── -->
+        <div class="a-section-head">❓ Quiz Questions</div>
+
         <div class="a-field">
-          <label>Quiz Questions</label>
           <div id="quizList"></div>
           <button type="button" class="a-dashed-btn" onclick="addQuizQuestion()">+ Add Question</button>
         </div>
 
-        <div class="a-field">
-          <label>Publish Status</label>
-          <div class="a-toggle-row">
-            <div class="a-toggle on" id="publishedToggle" onclick="togglePublished()"><div class="knob"></div></div>
-            <span id="publishedLabel" style="font-size:14px; font-weight:600;">Published (visible to teachers)</span>
-          </div>
-        </div>
       </form>
     </div>
     <div class="a-modal-foot">
