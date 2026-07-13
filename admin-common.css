@@ -115,7 +115,7 @@ button, input, select, textarea{font-family:inherit;}
 .a-nav-pinned a .ic,.a-nav a .ic{width:18px; text-align:center; font-size:15px;}
 .a-nav-pinned a:hover,.a-nav a:hover{background:var(--a-sidebar-soft); color:#fff;}
 .a-nav-pinned a.active,.a-nav a.active{background:var(--a-accent-fill); color:#fff;}
-.a-nav{display:flex; flex-direction:column; gap:3px; flex:1; overflow-y:auto;}
+.a-nav{display:flex; flex-direction:column; gap:3px; flex:1; min-height:0; overflow-y:auto;}
 .a-nav-divider{border-top:1px solid rgba(255,255,255,0.1); margin:8px 12px;}
 .a-sidebar-foot{border-top:1px solid rgba(255,255,255,0.1); padding-top:14px; margin-top:14px; display:flex; flex-direction:column; gap:3px;}
 .a-sidebar-foot a{display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:999px; font-size:13.5px; font-weight:600; color:var(--a-sidebar-text);}
