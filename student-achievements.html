@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Goals &amp; History — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:28px 20px 60px;}
+.wrap{max-width:800px;margin:0 auto;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--teal-dark);}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--teal-dark);text-decoration:none;}
+.back-link:hover{text-decoration:underline;}
+h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:26px;margin-bottom:24px;}
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:22px;border-bottom:2px solid var(--border);}
+.tab-btn{padding:10px 16px;border:none;background:transparent;font-family:inherit;font-weight:700;font-size:14px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.tab-btn.active{color:var(--teal-dark);border-bottom-color:var(--teal-dark);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+/* Goals */
+.goals-card{background:#fff;border-radius:16px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:20px 22px;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:12px;}
+.goal-item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+.goal-item:last-of-type{border-bottom:none;}
+.goal-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;}
+.goal-check.done{background:var(--teal);border-color:var(--teal);color:#fff;}
+.goal-text{font-size:14px;flex:1;}
+.goal-text.done{text-decoration:line-through;color:var(--ink-soft);}
+.goal-date{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+.add-goal{display:flex;gap:8px;margin-top:16px;}
+.add-goal input{flex:1;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13.5px;outline:none;}
+.add-goal input:focus{border-color:var(--teal);}
+.add-goal button{padding:10px 16px;border-radius:10px;border:none;background:var(--teal);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;}
+.add-goal button:hover{background:var(--teal-dark);}
+.sep{margin:20px 0 12px;border-none;}
+/* Lessons */
+.lesson-row{background:#fff;border-radius:14px;box-shadow:0 4px 14px -8px rgba(22,79,74,0.12);padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+.lr-icon{font-size:24px;}
+.lr-body{flex:1;}
+.lr-title{font-weight:700;font-size:14.5px;margin-bottom:2px;}
+.lr-meta{font-size:12.5px;color:var(--ink-soft);}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;}
+.pill-green{background:#d1fae5;color:#065f46;}
+.pill-blue{background:#dbeafe;color:#1e40af;}
+.empty{text-align:center;color:var(--ink-soft);font-size:14px;padding:36px 20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+    <a class="back-link" href="student-home.html">← Home</a>
+  </div>
+
+  <h1>My Goals &amp; History</h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('goals', this)">My Goals</button>
+    <button class="tab-btn" onclick="switchTab('lessons', this)">Lesson History</button>
+  </div>
+
+  <!-- Goals tab -->
+  <div class="tab-panel active" id="tab-goals">
+    <div class="goals-card">
+      <div class="section-label">Active Goals</div>
+      <div id="activeGoals"></div>
+      <div style="margin-top:20px;" class="section-label">Achieved</div>
+      <div id="achievedGoals"></div>
+      <div class="add-goal">
+        <input id="goalInput" placeholder="Add a new goal…" onkeydown="if(event.key==='Enter')addGoal()">
+        <button onclick="addGoal()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lessons tab -->
+  <div class="tab-panel" id="tab-lessons">
+    <div id="lessonHistory"></div>
+  </div>
+</div>
+
+<script>
+var goals = [];
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function load() {
+  // Verify session
+  var me = await fetch('/api/classroom-auth/me', { credentials: 'include' });
+  if (!me.ok) { location.href = 'student-login.html'; return; }
+
+  await Promise.all([loadGoals(), loadLessons()]);
+}
+
+async function loadGoals() {
+  var r = await fetch('/api/student/goals', { credentials: 'include' });
+  if (r.ok) goals = await r.json();
+  renderGoals();
+}
+
+function renderGoals() {
+  var active = goals.filter(function(g){ return !g.is_achieved; });
+  var achieved = goals.filter(function(g){ return g.is_achieved; });
+
+  var activeEl = document.getElementById('activeGoals');
+  if (!active.length) {
+    activeEl.innerHTML = '<div style="color:var(--ink-soft);font-size:13.5px;padding:8px 0;">No active goals. Add one below!</div>';
+  } else {
+    activeEl.innerHTML = active.map(function(g) {
+      return '<div class="goal-item">' +
+        '<div class="goal-check" onclick="toggleGoal(' + g.id + ', false)"></div>' +
+        '<div><div class="goal-text">' + esc(g.goal_text) + '</div>' +
+          (g.target_date ? '<div class="goal-date">By ' + fmtDate(g.target_date) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  var achievedEl = document.getElementById('achievedGoals');
+  if (!achieved.length) {
+    achievedEl.innerHTML = '<div style="color:var(--ink-soft);font-size:13.5px;padding:8px 0 16px;">None yet — keep working!</div>';
+  } else {
+    achievedEl.innerHTML = achieved.map(function(g) {
+      return '<div class="goal-item">' +
+        '<div class="goal-check done" onclick="toggleGoal(' + g.id + ', true)">✓</div>' +
+        '<div><div class="goal-text done">' + esc(g.goal_text) + '</div>' +
+          (g.achieved_at ? '<div class="goal-date">Achieved ' + fmtDate(g.achieved_at) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+async function toggleGoal(id, wasAchieved) {
+  var r = await fetch('/api/student/goals/' + id, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isAchieved: !wasAchieved }),
+  });
+  if (r.ok) {
+    var updated = await r.json();
+    goals = goals.map(function(g){ return g.id === id ? updated : g; });
+    renderGoals();
+  }
+}
+
+async function addGoal() {
+  var text = document.getElementById('goalInput').value.trim();
+  if (!text) return;
+  var r = await fetch('/api/student/goals', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goalText: text }),
+  });
+  if (r.ok) {
+    var g = await r.json();
+    goals.unshift(g);
+    document.getElementById('goalInput').value = '';
+    renderGoals();
+  }
+}
+
+async function loadLessons() {
+  var r = await fetch('/api/student/home', { credentials: 'include' });
+  if (!r.ok) return;
+  var data = await r.json();
+  var assignments = (data.assignments || []).filter(function(a){ return a.started_at; });
+  var el = document.getElementById('lessonHistory');
+  if (!assignments.length) {
+    el.innerHTML = '<div class="empty">No lessons started yet.</div>';
+    return;
+  }
+  var html = '';
+  assignments.forEach(function(a) {
+    var icon = a.completed_at ? '✅' : '📖';
+    var pill = a.completed_at
+      ? '<span class="pill pill-green">Complete</span>'
+      : '<span class="pill pill-blue">In Progress</span>';
+    var quizNote = '';
+    html += '<div class="lesson-row">' +
+      '<div class="lr-icon">' + icon + '</div>' +
+      '<div class="lr-body">' +
+        '<div class="lr-title">' + esc(a.title) + '</div>' +
+        '<div class="lr-meta">' + (a.completed_at ? 'Completed ' + fmtDate(a.completed_at) : 'Started ' + fmtDate(a.started_at)) + '</div>' +
+      '</div>' +
+      pill +
+      '<a href="student-lesson.html?curriculum=' + a.curriculum_id + '" style="font-size:13px;font-weight:700;color:var(--teal-dark);text-decoration:none;white-space:nowrap;margin-left:8px;">Open →</a>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+load();
+</script>
+</body>
+</html>

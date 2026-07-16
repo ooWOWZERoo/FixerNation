@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Login — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.18);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(160deg,#FBF5EC 0%,#e8f4f3 100%);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.outer{width:100%;max-width:440px;}
+.brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:36px;}
+.brand-mark{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;}
+.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:22px;color:var(--teal-dark);}
+.card{background:#fff;border-radius:24px;box-shadow:0 20px 60px -20px rgba(22,79,74,0.25);padding:36px 32px;}
+.card h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:24px;margin-bottom:6px;}
+.card .sub{font-size:14px;color:var(--ink-soft);margin-bottom:28px;}
+.step{display:none;}
+.step.active{display:block;}
+.field{margin-bottom:18px;}
+.field label{display:block;font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.field input{width:100%;padding:13px 15px;border:2px solid var(--border);border-radius:12px;font-family:inherit;font-size:15px;outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--teal);}
+.field input.pin{font-size:22px;font-weight:800;letter-spacing:.15em;text-align:center;}
+.btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:all .15s;}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-dark);}
+.btn-primary:disabled{opacity:.6;cursor:default;}
+.divider{display:flex;align-items:center;gap:12px;margin:22px 0;}
+.divider span{font-size:12.5px;color:var(--ink-soft);white-space:nowrap;}
+.divider hr{flex:1;border:none;border-top:1px solid var(--border);}
+.link-btn{background:none;border:none;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--teal-dark);cursor:pointer;text-decoration:underline;}
+.error{background:#fef2f2;color:#c0392b;border-radius:10px;padding:11px 14px;font-size:13.5px;font-weight:600;margin-bottom:16px;display:none;}
+.error.show{display:block;}
+/* Classroom confirm */
+.classroom-confirm{background:linear-gradient(135deg,rgba(22,79,74,0.08),rgba(22,79,74,0.04));border:1.5px solid rgba(22,79,74,0.15);border-radius:14px;padding:16px 18px;margin-bottom:20px;text-align:center;}
+.classroom-confirm .cc-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:4px;}
+.classroom-confirm .cc-name{font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--teal-dark);}
+/* Credentials reveal */
+.creds-box{background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:20px;margin-bottom:20px;text-align:center;}
+.creds-box .creds-label{font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.creds-row{display:flex;justify-content:center;gap:28px;margin-bottom:12px;}
+.cred{display:flex;flex-direction:column;gap:4px;}
+.cred .cred-lbl{font-size:11.5px;color:#166534;}
+.cred .cred-val{font-size:22px;font-weight:800;letter-spacing:.06em;color:#14532d;}
+.creds-warn{font-size:13px;color:#166534;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="outer">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+
+  <div class="card">
+
+    <!-- Step 1: Enter join code -->
+    <div class="step active" id="step-code">
+      <h1>Join a Classroom</h1>
+      <div class="sub">Enter the join code your teacher gave you.</div>
+      <div class="error" id="err-code"></div>
+      <div class="field"><label>Join Code</label><input id="joinCode" class="pin" placeholder="XXXXXXXX" maxlength="8" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div>
+      <button class="btn btn-primary" onclick="checkCode()">Continue →</button>
+      <div class="divider"><hr><span>Already have an account?</span><hr></div>
+      <button class="link-btn" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);" onclick="goStep('step-login')">Sign In with Username &amp; PIN</button>
+    </div>
+
+    <!-- Step 2: New student registration -->
+    <div class="step" id="step-register">
+      <h1>Create Your Account</h1>
+      <div class="classroom-confirm"><div class="cc-label">Joining</div><div class="cc-name" id="regClassroomName"></div></div>
+      <div class="error" id="err-register"></div>
+      <div class="field"><label>Your Name</label><input id="displayName" placeholder="e.g. Alex" autocomplete="off"></div>
+      <div class="field"><label>Choose a PIN (4–6 digits)</label><input id="regPin" class="pin" type="text" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="new-password"></div>
+      <button class="btn btn-primary" id="regBtn" onclick="register()">Join Classroom →</button>
+      <div style="text-align:center;margin-top:14px;"><button class="link-btn" onclick="goStep('step-code')">← Back</button></div>
+    </div>
+
+    <!-- Step 3: Credentials reveal -->
+    <div class="step" id="step-creds">
+      <h1>You're in!</h1>
+      <div class="sub">Write down your username and PIN — you'll need them to log in next time.</div>
+      <div class="creds-box">
+        <div class="creds-label">Your Login Credentials</div>
+        <div class="creds-row">
+          <div class="cred"><div class="cred-lbl">Username</div><div class="cred-val" id="credsUsername"></div></div>
+          <div class="cred"><div class="cred-lbl">PIN</div><div class="cred-val" id="credsPin"></div></div>
+        </div>
+        <div class="creds-warn">Write these down!</div>
+      </div>
+      <button class="btn btn-primary" onclick="goHome()">Go to My Classroom →</button>
+    </div>
+
+    <!-- Step 4: Returning login -->
+    <div class="step" id="step-login">
+      <h1>Sign In</h1>
+      <div class="sub">Enter your username and PIN.</div>
+      <div class="error" id="err-login"></div>
+      <div class="field"><label>Username</label><input id="loginUsername" autocomplete="username" autocapitalize="none"></div>
+      <div class="field"><label>PIN</label><input id="loginPin" class="pin" type="text" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password"></div>
+      <button class="btn btn-primary" id="loginBtn" onclick="login()">Sign In →</button>
+      <div class="divider"><hr><span>New student?</span><hr></div>
+      <button class="link-btn" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);" onclick="goStep('step-code')">Join with a Join Code</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var pendingJoinCode = '';
+var pendingClassroomName = '';
+var newCredsPin = '';
+
+function goStep(id) {
+  document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+function showError(id, msg) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+async function checkCode() {
+  var code = document.getElementById('joinCode').value.trim().toUpperCase();
+  if (!code) return;
+  hideError('err-code');
+
+  // Verify the code by trying a GET against join with just the code
+  var r = await fetch('/api/classroom-auth/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ joinCode: code }),
+  });
+  var data = await r.json();
+
+  if (r.status === 400 && data.error === 'Display name required') {
+    // Code is valid — move to register step
+    pendingJoinCode = code;
+    pendingClassroomName = data.classroomName || 'Your Classroom';
+    document.getElementById('regClassroomName').textContent = pendingClassroomName;
+    goStep('step-register');
+  } else if (!r.ok) {
+    showError('err-code', data.error || 'Invalid join code. Check with your teacher.');
+  } else {
+    // Unexpected: code worked without a name somehow
+    goHome();
+  }
+}
+
+async function register() {
+  var name = document.getElementById('displayName').value.trim();
+  var pin = document.getElementById('regPin').value.trim();
+  if (!name) { showError('err-register', 'Enter your name.'); return; }
+  if (!pin || pin.length < 4) { showError('err-register', 'PIN must be at least 4 digits.'); return; }
+  hideError('err-register');
+  document.getElementById('regBtn').disabled = true;
+
+  var r = await fetch('/api/classroom-auth/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ joinCode: pendingJoinCode, displayName: name, pin: pin }),
+  });
+  var data = await r.json();
+  document.getElementById('regBtn').disabled = false;
+  if (!r.ok) { showError('err-register', data.error || 'Something went wrong. Try again.'); return; }
+
+  document.getElementById('credsUsername').textContent = data.username;
+  document.getElementById('credsPin').textContent = data.pin;
+  newCredsPin = data.pin;
+  goStep('step-creds');
+}
+
+async function login() {
+  var username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  var pin = document.getElementById('loginPin').value.trim();
+  if (!username || !pin) { showError('err-login', 'Enter your username and PIN.'); return; }
+  hideError('err-login');
+  document.getElementById('loginBtn').disabled = true;
+
+  var r = await fetch('/api/classroom-auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: username, pin: pin }),
+  });
+  var data = await r.json();
+  document.getElementById('loginBtn').disabled = false;
+  if (!r.ok) { showError('err-login', data.error || 'Invalid username or PIN.'); return; }
+  goHome();
+}
+
+function goHome() {
+  window.location.href = 'student-home.html';
+}
+
+// Check if already logged in
+(async function() {
+  var r = await fetch('/api/classroom-auth/me', { credentials: 'include' });
+  if (r.ok) goHome();
+})();
+</script>
+</body>
+</html>

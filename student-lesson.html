@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:28px 20px 60px;}
+.wrap{max-width:800px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--teal-dark);}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:20px;}
+.back-link:hover{text-decoration:underline;}
+/* Hero */
+.lesson-hero{background:linear-gradient(135deg,var(--teal-dark),var(--teal));border-radius:20px;padding:28px 30px;color:#fff;margin-bottom:24px;}
+.lesson-hero .series{font-size:12px;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.lesson-hero h1{font-family:'Fraunces',serif;font-size:26px;margin-bottom:8px;}
+.lesson-hero .status-bar{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap;}
+.progress-pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;}
+/* Cards */
+.card{background:#fff;border-radius:16px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:22px 24px;margin-bottom:16px;}
+.card-title{font-family:'Fraunces',serif;font-size:17px;color:var(--teal-dark);margin-bottom:14px;}
+/* Lists */
+ul.styled{padding-left:0;list-style:none;}
+ul.styled li{padding:5px 0 5px 22px;position:relative;font-size:14px;}
+ul.styled li::before{content:'→';position:absolute;left:0;color:var(--coral);}
+/* Videos */
+.video-item{padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;}
+.video-item:last-child{border-bottom:none;}
+.video-thumb{width:56px;height:40px;background:var(--teal-dark);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0;}
+.video-info .v-title{font-weight:600;font-size:14px;margin-bottom:2px;}
+.video-info .v-meta{font-size:12.5px;color:var(--ink-soft);}
+.video-item a{color:var(--teal-dark);font-weight:700;font-size:13px;margin-left:auto;white-space:nowrap;}
+/* Documents */
+.doc-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.doc-item:last-child{border-bottom:none;}
+.doc-icon{font-size:22px;}
+.doc-name{font-size:14px;font-weight:600;flex:1;}
+.doc-item a{color:var(--teal-dark);font-weight:700;font-size:13px;}
+/* Interactive zone */
+.zone{border:2px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;}
+.zone-title{font-weight:700;font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.zone-title .step-badge{background:var(--teal);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+textarea.reflect-input{width:100%;min-height:110px;resize:vertical;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-family:inherit;font-size:14px;outline:none;}
+textarea.reflect-input:focus{border-color:var(--teal);}
+.btn{padding:11px 20px;border-radius:11px;border:none;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;transition:all .15s;}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-dark);}
+.btn-primary:disabled{opacity:.5;cursor:default;}
+.btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal-dark);}
+.btn-outline:hover{background:rgba(22,79,74,0.06);}
+.btn-success{background:#059669;color:#fff;}
+.btn-success:disabled{opacity:.5;cursor:default;}
+.submitted-note{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 15px;font-size:13.5px;color:#166534;font-weight:600;}
+/* Quiz */
+.quiz-q{margin-bottom:20px;}
+.quiz-q .q-text{font-weight:700;font-size:14.5px;margin-bottom:12px;}
+.quiz-options{display:flex;flex-direction:column;gap:8px;}
+.quiz-opt{display:flex;align-items:center;gap:12px;padding:11px 14px;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;font-size:14px;}
+.quiz-opt:hover:not(.locked){border-color:var(--teal);background:rgba(22,79,74,0.04);}
+.quiz-opt.selected{border-color:var(--teal);background:rgba(22,79,74,0.08);}
+.quiz-opt.locked{cursor:default;}
+.quiz-opt.correct{border-color:#059669;background:#f0fdf4;color:#166534;}
+.quiz-opt.wrong{border-color:#c0392b;background:#fef2f2;color:#c0392b;}
+.quiz-letter{width:28px;height:28px;border-radius:50%;background:rgba(22,79,74,0.1);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.quiz-result-banner{border-radius:12px;padding:14px 16px;font-weight:700;font-size:15px;margin-bottom:16px;text-align:center;}
+.quiz-result-banner.good{background:#f0fdf4;color:#166534;}
+.quiz-result-banner.ok{background:#fef3c7;color:#92400e;}
+/* Goal entry */
+.goal-entry input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;outline:none;margin-bottom:10px;}
+.goal-entry input:focus{border-color:var(--teal);}
+/* Complete button */
+.complete-section{text-align:center;padding:28px 0;}
+.complete-section .big-btn{padding:16px 40px;border-radius:14px;font-size:17px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal-dark);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:2000;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+  <a class="back-link" href="student-home.html">← My Classroom</a>
+
+  <div class="lesson-hero">
+    <div class="series" id="lessonSeries"></div>
+    <h1 id="lessonTitle">Loading…</h1>
+    <div class="status-bar">
+      <span class="progress-pill" id="progressPill">Not started</span>
+    </div>
+  </div>
+
+  <div id="lessonBody"></div>
+
+  <!-- Interactive zone -->
+  <div id="interactiveZone"></div>
+
+  <div class="complete-section" id="completeSection" style="display:none;">
+    <button class="btn btn-success big-btn" id="completeBtn" onclick="markComplete()">Mark as Complete ✓</button>
+    <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Complete the quiz above before marking done.</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var curriculumId = new URLSearchParams(location.search).get('curriculum');
+if (!curriculumId) location.href = 'student-home.html';
+
+var lesson = null;
+var selectedAnswers = {}; // questionId -> selectedIndex
+var quizSubmitted = false;
+var preReflectSubmitted = false;
+var postReflectSubmitted = false;
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var LETTERS = ['A','B','C','D','E','F'];
+
+async function load() {
+  var r = await fetch('/api/student/lesson/' + curriculumId, { credentials: 'include' });
+  if (r.status === 401) { location.href = 'student-login.html'; return; }
+  if (r.status === 403) { location.href = 'student-home.html'; return; }
+  if (!r.ok) { document.getElementById('lessonTitle').textContent = 'Lesson not found'; return; }
+  lesson = await r.json();
+
+  document.title = lesson.title + ' — Fixer Nation';
+  document.getElementById('lessonSeries').textContent = lesson.series || '';
+  document.getElementById('lessonTitle').textContent = lesson.title;
+
+  // Update pill
+  var pill = document.getElementById('progressPill');
+  if (lesson.progress && lesson.progress.completed_at) {
+    pill.textContent = 'Completed ✓'; pill.style.background = 'rgba(16,185,129,0.3)';
+  } else if (lesson.progress && lesson.progress.started_at) {
+    pill.textContent = 'In Progress';
+  }
+
+  // Pre-existing state
+  quizSubmitted = (lesson.quizResponses || []).length > 0;
+  preReflectSubmitted = (lesson.reflections || []).some(function(r){ return r.prompt_key === 'pre_lesson'; });
+  postReflectSubmitted = (lesson.reflections || []).some(function(r){ return r.prompt_key === 'post_lesson'; });
+
+  renderBody();
+  renderInteractive();
+
+  // Auto-start
+  if (!lesson.progress) {
+    fetch('/api/student/lesson/' + curriculumId + '/start', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:'{}' });
+  }
+}
+
+function renderBody() {
+  var html = '';
+
+  // Overview
+  if (lesson.overview) {
+    html += '<div class="card"><div class="card-title">Overview</div><p style="font-size:14px;line-height:1.65;">' + esc(lesson.overview) + '</p></div>';
+  }
+
+  // Objectives
+  if ((lesson.objectives || []).length) {
+    html += '<div class="card"><div class="card-title">What You\'ll Learn</div><ul class="styled">';
+    lesson.objectives.forEach(function(o){ html += '<li>' + esc(o) + '</li>'; });
+    html += '</ul></div>';
+  }
+
+  // Materials
+  if ((lesson.materials || []).length) {
+    html += '<div class="card"><div class="card-title">What You\'ll Need</div><ul class="styled">';
+    lesson.materials.forEach(function(m){ html += '<li>' + esc(m) + '</li>'; });
+    html += '</ul></div>';
+  }
+
+  // Videos
+  if ((lesson.videos || []).length) {
+    html += '<div class="card"><div class="card-title">Videos</div>';
+    lesson.videos.forEach(function(v) {
+      html += '<div class="video-item"><div class="video-thumb">▶</div><div class="video-info"><div class="v-title">' + esc(v.name) + '</div>' + (v.sizeLabel ? '<div class="v-meta">' + esc(v.sizeLabel) + '</div>' : '') + '</div><a href="' + esc(v.url) + '" target="_blank" rel="noopener">Watch ↗</a></div>';
+    });
+    html += '</div>';
+  }
+
+  // Documents
+  if ((lesson.documents || []).length) {
+    html += '<div class="card"><div class="card-title">Downloads</div>';
+    lesson.documents.forEach(function(d) {
+      html += '<div class="doc-item"><div class="doc-icon">📄</div><div class="doc-name">' + esc(d.fileName || d.filePath) + '</div><a href="' + esc(d.filePath) + '" target="_blank" download>Download</a></div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('lessonBody').innerHTML = html;
+}
+
+function renderInteractive() {
+  var el = document.getElementById('interactiveZone');
+  var html = '';
+  var stepNum = 1;
+
+  // Step 1: Pre-lesson reflection
+  if (preReflectSubmitted) {
+    var pre = (lesson.reflections || []).find(function(r){ return r.prompt_key === 'pre_lesson'; });
+    html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> Before the Lesson</div>' +
+      '<div class="submitted-note">✓ Submitted: "' + esc((pre && pre.response_text || '').slice(0, 120)) + (pre && pre.response_text.length > 120 ? '…' : '') + '"</div></div>';
+  } else {
+    html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> Before the Lesson</div>' +
+      '<p style="font-size:14px;color:var(--ink-soft);margin-bottom:12px;">What do you already know about this topic? What are you curious about?</p>' +
+      '<textarea class="reflect-input" id="preReflect" placeholder="Write your thoughts here…"></textarea>' +
+      '<div style="margin-top:10px;text-align:right;"><button class="btn btn-primary" onclick="submitReflect(\'pre_lesson\', \'preReflect\')">Save Response →</button></div>' +
+    '</div>';
+  }
+  stepNum++;
+
+  // Step 2: Quiz
+  if ((lesson.quiz || []).length) {
+    var prevResponses = {};
+    (lesson.quizResponses || []).forEach(function(r){ prevResponses[r.question_id] = r; });
+
+    if (quizSubmitted) {
+      var correct = (lesson.quizResponses || []).filter(function(r){ return r.is_correct; }).length;
+      var total = lesson.quiz.length;
+      var pct = Math.round(correct / total * 100);
+      html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> Quiz</div>';
+      html += '<div class="quiz-result-banner ' + (pct >= 70 ? 'good' : 'ok') + '">' + correct + ' out of ' + total + ' correct (' + pct + '%)</div>';
+      lesson.quiz.forEach(function(q, qi) {
+        var prev = prevResponses[q.id] || {};
+        html += '<div class="quiz-q"><div class="q-text">' + (qi+1) + '. ' + esc(q.question) + '</div><div class="quiz-options">';
+        q.options.forEach(function(opt, oi) {
+          var cls = 'quiz-opt locked';
+          if (oi === q.correctIndex) cls += ' correct';
+          else if (oi === prev.selected_option_index && !prev.is_correct) cls += ' wrong';
+          html += '<div class="' + cls + '"><div class="quiz-letter">' + LETTERS[oi] + '</div>' + esc(opt) + '</div>';
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> Quiz</div>' +
+        '<p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:16px;">Answer all questions, then submit. You get one attempt.</p>';
+      lesson.quiz.forEach(function(q, qi) {
+        html += '<div class="quiz-q" id="qq-' + q.id + '"><div class="q-text">' + (qi+1) + '. ' + esc(q.question) + '</div><div class="quiz-options">';
+        q.options.forEach(function(opt, oi) {
+          html += '<div class="quiz-opt" onclick="selectAnswer(' + q.id + ',' + oi + ',this)">' +
+            '<div class="quiz-letter">' + LETTERS[oi] + '</div>' + esc(opt) + '</div>';
+        });
+        html += '</div></div>';
+      });
+      html += '<div style="margin-top:16px;text-align:right;"><button class="btn btn-primary" id="submitQuizBtn" onclick="submitQuiz()">Submit Quiz →</button></div></div>';
+    }
+    stepNum++;
+  }
+
+  // Step 3: Post-lesson reflection
+  if (postReflectSubmitted) {
+    var post = (lesson.reflections || []).find(function(r){ return r.prompt_key === 'post_lesson'; });
+    html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> After the Lesson</div>' +
+      '<div class="submitted-note">✓ Submitted: "' + esc((post && post.response_text || '').slice(0, 120)) + (post && post.response_text.length > 120 ? '…' : '') + '"</div></div>';
+  } else {
+    html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> After the Lesson</div>' +
+      '<p style="font-size:14px;color:var(--ink-soft);margin-bottom:12px;">What\'s one thing you learned? How will you use it?</p>' +
+      '<textarea class="reflect-input" id="postReflect" placeholder="Write your thoughts here…"></textarea>' +
+      '<div style="margin-top:10px;text-align:right;"><button class="btn btn-primary" onclick="submitReflect(\'post_lesson\', \'postReflect\')">Save Response →</button></div>' +
+    '</div>';
+  }
+  stepNum++;
+
+  // Step 4: Goal
+  html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> Set a Goal</div>' +
+    '<p style="font-size:14px;color:var(--ink-soft);margin-bottom:12px;">What\'s one thing you\'ll practice or try this week?</p>' +
+    '<div class="goal-entry"><input id="goalText" placeholder="e.g. I\'ll practice deep breathing when I feel overwhelmed…"></div>' +
+    '<button class="btn btn-outline" onclick="saveGoal()">Save Goal</button>' +
+  '</div>';
+
+  el.innerHTML = html;
+
+  // Show complete button
+  var showComplete = quizSubmitted || !(lesson.quiz && lesson.quiz.length);
+  if (showComplete) {
+    var cs = document.getElementById('completeSection');
+    cs.style.display = '';
+    var btn = document.getElementById('completeBtn');
+    if (lesson.progress && lesson.progress.completed_at) {
+      btn.textContent = '✓ Completed';
+      btn.disabled = true;
+    }
+  }
+}
+
+function selectAnswer(qId, optIndex, el) {
+  if (quizSubmitted) return;
+  selectedAnswers[qId] = optIndex;
+  var container = document.getElementById('qq-' + qId);
+  container.querySelectorAll('.quiz-opt').forEach(function(o){ o.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+
+async function submitQuiz() {
+  var answers = Object.keys(selectedAnswers).map(function(qId) {
+    return { questionId: Number(qId), selectedOptionIndex: selectedAnswers[qId] };
+  });
+  if (answers.length < lesson.quiz.length) { toast('Please answer all questions first.'); return; }
+
+  document.getElementById('submitQuizBtn').disabled = true;
+  var r = await fetch('/api/student/lesson/' + curriculumId + '/quiz', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers: answers }),
+  });
+  var data = await r.json();
+  if (!r.ok) { toast(data.error || 'Error submitting quiz'); document.getElementById('submitQuizBtn').disabled = false; return; }
+
+  quizSubmitted = true;
+  // Merge results back into lesson for display
+  lesson.quizResponses = (data.results || []).map(function(res) {
+    return { question_id: res.questionId, selected_option_index: res.selectedOptionIndex, is_correct: res.isCorrect ? 1 : 0 };
+  });
+  toast('Quiz submitted! ' + data.score + '/' + data.total + ' correct.');
+  renderInteractive();
+}
+
+async function submitReflect(promptKey, inputId) {
+  var text = document.getElementById(inputId).value.trim();
+  if (!text) { toast('Write something first!'); return; }
+  var r = await fetch('/api/student/lesson/' + curriculumId + '/reflect', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ promptKey: promptKey, responseText: text }),
+  });
+  if (!r.ok) { toast('Could not save. Try again.'); return; }
+  var saved = await r.json();
+  lesson.reflections = lesson.reflections || [];
+  lesson.reflections.push(saved);
+  if (promptKey === 'pre_lesson') preReflectSubmitted = true;
+  else postReflectSubmitted = true;
+  toast('Response saved!');
+  renderInteractive();
+}
+
+async function saveGoal() {
+  var text = document.getElementById('goalText').value.trim();
+  if (!text) { toast('Enter a goal first!'); return; }
+  var r = await fetch('/api/student/goals', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goalText: text }),
+  });
+  if (r.ok) { document.getElementById('goalText').value = ''; toast('Goal saved! Find it on your home page.'); }
+}
+
+async function markComplete() {
+  document.getElementById('completeBtn').disabled = true;
+  var r = await fetch('/api/student/lesson/' + curriculumId + '/complete', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!r.ok) { document.getElementById('completeBtn').disabled = false; toast('Error. Try again.'); return; }
+  document.getElementById('completeBtn').textContent = '✓ Completed';
+  var pill = document.getElementById('progressPill');
+  pill.textContent = 'Completed ✓'; pill.style.background = 'rgba(16,185,129,0.3)';
+  toast('Lesson marked complete!');
+}
+
+load();
+</script>
+</body>
+</html>

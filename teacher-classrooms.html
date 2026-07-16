@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Classrooms — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:40px 20px;}
+.wrap{max-width:900px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
+.btn{padding:10px 20px;border-radius:10px;border:none;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:all .15s;}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-dark);}
+.btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal-dark);}
+.btn-outline:hover{background:rgba(22,79,74,0.06);}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:8px;}
+.classroom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:24px;}
+.classroom-card{background:#fff;border-radius:18px;box-shadow:0 8px 24px -12px rgba(22,79,74,0.2);padding:22px 24px;cursor:pointer;transition:transform .15s,box-shadow .15s;text-decoration:none;color:inherit;display:block;}
+.classroom-card:hover{transform:translateY(-2px);box-shadow:0 16px 40px -16px rgba(22,79,74,0.28);}
+.classroom-card.archived{opacity:0.6;}
+.cc-name{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--teal-dark);margin-bottom:4px;}
+.cc-meta{font-size:13px;color:var(--ink-soft);margin-bottom:14px;}
+.cc-stats{display:flex;gap:16px;font-size:13px;}
+.cc-stat{display:flex;flex-direction:column;gap:1px;}
+.cc-stat .val{font-weight:700;color:var(--ink);font-size:16px;}
+.cc-stat .lbl{color:var(--ink-soft);font-size:11.5px;}
+.cc-code{margin-top:14px;font-size:12px;color:var(--ink-soft);border-top:1px solid var(--border);padding-top:10px;}
+.cc-code code{font-weight:700;color:var(--teal-dark);letter-spacing:.08em;font-size:13.5px;}
+.empty{text-align:center;color:var(--ink-soft);font-size:14px;padding:60px 20px;}
+.empty h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:22px;margin-bottom:8px;}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:480px;box-shadow:0 40px 80px -20px rgba(0,0,0,0.3);}
+.modal h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:20px;margin-bottom:20px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px;color:var(--ink);}
+.field input,.field select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s;}
+.field input:focus,.field select:focus{border-color:var(--teal);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal-dark);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:2000;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.account-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;}
+.account-nav a{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;color:var(--ink-soft);background:#fff;box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);transition:all .15s;}
+.account-nav a:hover{color:var(--teal-dark);}
+.account-nav a.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+
+  <nav class="account-nav">
+    <a href="my-profile.html">My Profile</a>
+    <a href="my-license.html">My Account</a>
+    <a href="teacher-classrooms.html" class="active">My Classrooms</a>
+  </nav>
+
+  <div class="topbar">
+    <h1>My Classrooms</h1>
+    <button class="btn btn-primary" onclick="openCreate()">+ New Classroom</button>
+  </div>
+
+  <div id="classroomGrid"></div>
+</div>
+
+<!-- Create modal -->
+<div class="modal-bg" id="createModal">
+  <div class="modal">
+    <h2>Create Classroom</h2>
+    <div class="field"><label>Classroom Name *</label><input id="cName" placeholder="e.g. 7th Grade SEL"></div>
+    <div class="field"><label>Grade Level</label><input id="cGrade" placeholder="e.g. Grade 7"></div>
+    <div class="field"><label>Subject</label><input id="cSubject" placeholder="e.g. Social-Emotional Learning"></div>
+    <div class="field"><label>Academic Year</label><input id="cYear" placeholder="e.g. 2025–2026"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeCreate()">Cancel</button>
+      <button class="btn btn-primary" id="createBtn" onclick="createClassroom()">Create</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="site-auth.js?v=1"></script>
+<script>
+fnRequireSiteAuth();
+
+var classrooms = [];
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function renderGrid() {
+  var el = document.getElementById('classroomGrid');
+  if (!classrooms.length) {
+    el.innerHTML = '<div class="empty"><h2>No classrooms yet</h2><p>Create your first classroom to get started assigning lessons.</p></div>';
+    return;
+  }
+  var html = '<div class="classroom-grid">';
+  classrooms.forEach(function(c) {
+    var meta = [c.grade_level, c.subject, c.academic_year].filter(Boolean).join(' · ');
+    html += '<a class="classroom-card' + (c.archived_at ? ' archived' : '') + '" href="teacher-classroom.html?id=' + c.id + '">' +
+      '<div class="cc-name">' + esc(c.name) + (c.archived_at ? ' <span style="font-size:12px;color:var(--ink-soft)">(archived)</span>' : '') + '</div>' +
+      '<div class="cc-meta">' + esc(meta || 'No details set') + '</div>' +
+      '<div class="cc-stats">' +
+        '<div class="cc-stat"><div class="val">' + (c.student_count || 0) + '</div><div class="lbl">Students</div></div>' +
+        '<div class="cc-stat"><div class="val">' + (c.assignment_count || 0) + '</div><div class="lbl">Lessons</div></div>' +
+      '</div>' +
+      '<div class="cc-code">Join code: <code>' + esc(c.join_code) + '</code></div>' +
+    '</a>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function load() {
+  var r = await fetch('/api/classrooms', { credentials: 'include' });
+  if (!r.ok) { document.getElementById('classroomGrid').innerHTML = '<div class="empty"><p>Could not load classrooms.</p></div>'; return; }
+  classrooms = await r.json();
+  renderGrid();
+}
+
+function openCreate() { document.getElementById('createModal').classList.add('open'); document.getElementById('cName').focus(); }
+function closeCreate() { document.getElementById('createModal').classList.remove('open'); }
+
+async function createClassroom() {
+  var name = document.getElementById('cName').value.trim();
+  if (!name) { document.getElementById('cName').focus(); return; }
+  document.getElementById('createBtn').disabled = true;
+  var r = await fetch('/api/classrooms', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name,
+      gradeLevel: document.getElementById('cGrade').value.trim() || undefined,
+      subject: document.getElementById('cSubject').value.trim() || undefined,
+      academicYear: document.getElementById('cYear').value.trim() || undefined,
+    }),
+  });
+  var data = await r.json();
+  document.getElementById('createBtn').disabled = false;
+  if (!r.ok) { toast(data.error || 'Error creating classroom'); return; }
+  closeCreate();
+  ['cName','cGrade','cSubject','cYear'].forEach(function(id){ document.getElementById(id).value = ''; });
+  window.location.href = 'teacher-classroom.html?id=' + data.id;
+}
+
+document.getElementById('createModal').addEventListener('click', function(e){ if (e.target === this) closeCreate(); });
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+load();
+</script>
+</body>
+</html>

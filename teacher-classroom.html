@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:40px 20px;}
+.wrap{max-width:960px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:16px;}
+.back-link:hover{text-decoration:underline;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+.topbar-left h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:26px;margin-bottom:2px;}
+.topbar-left .meta{font-size:13px;color:var(--ink-soft);}
+.btn{padding:10px 18px;border-radius:10px;border:none;font-family:inherit;font-weight:600;font-size:13.5px;cursor:pointer;transition:all .15s;}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-dark);}
+.btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal-dark);}
+.btn-outline:hover{background:rgba(22,79,74,0.06);}
+.btn-danger{background:transparent;color:#c0392b;border:1.5px solid #c0392b;}
+.btn-danger:hover{background:#fef2f2;}
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px;}
+.btn-xs{padding:4px 10px;font-size:12px;border-radius:6px;}
+/* Code chip */
+.join-code-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:20px;}
+.join-code-box .label{font-size:12px;color:var(--ink-soft);font-weight:600;}
+.join-code-box code{font-size:18px;font-weight:800;letter-spacing:.1em;color:var(--teal-dark);}
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border);}
+.tab-btn{padding:10px 18px;border:none;background:transparent;font-family:inherit;font-weight:600;font-size:14px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.tab-btn.active{color:var(--teal-dark);border-bottom-color:var(--teal-dark);}
+.tab-btn:hover:not(.active){color:var(--ink);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+/* Table */
+table.data-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);}
+table.data-table th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);}
+table.data-table td{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--border);}
+table.data-table tr:last-child td{border-bottom:none;}
+table.data-table tr:hover td{background:#fafaf9;}
+/* Cards */
+.card{background:#fff;border-radius:14px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:20px 24px;margin-bottom:14px;}
+.card-title{font-weight:700;font-size:15px;margin-bottom:4px;}
+.card-sub{font-size:13px;color:var(--ink-soft);}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:480px;box-shadow:0 40px 80px -20px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;}
+.modal h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:20px;margin-bottom:20px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13.5px;outline:none;transition:border-color .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);}
+.field textarea{resize:vertical;min-height:90px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+/* Pill badges */
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;}
+.pill-green{background:#d1fae5;color:#065f46;}
+.pill-blue{background:#dbeafe;color:#1e40af;}
+.pill-gray{background:#f3f4f6;color:#6b7280;}
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal-dark);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:2000;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* Section toolbar */
+.section-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.section-toolbar h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:17px;}
+/* Assignment card */
+.assign-card{background:#fff;border-radius:14px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:16px 20px;margin-bottom:10px;display:flex;align-items:center;gap:16px;}
+.assign-card-info{flex:1;}
+.assign-card-title{font-weight:700;font-size:14.5px;margin-bottom:2px;}
+.assign-card-meta{font-size:12.5px;color:var(--ink-soft);}
+.assign-card-progress{text-align:right;font-size:12.5px;color:var(--ink-soft);white-space:nowrap;}
+.assign-card-progress .big{font-size:18px;font-weight:800;color:var(--teal-dark);display:block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+  <a class="back-link" href="teacher-classrooms.html">← All Classrooms</a>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 id="classroomName">Loading…</h1>
+      <div class="meta" id="classroomMeta"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="regenCode()">Regenerate Join Code</button>
+      <button class="btn btn-outline btn-sm" onclick="openEditClassroom()">Edit Details</button>
+    </div>
+  </div>
+
+  <div class="join-code-box">
+    <span class="label">JOIN CODE</span>
+    <code id="joinCodeDisplay">—</code>
+    <button class="btn btn-outline btn-xs" onclick="copyCode()">Copy</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('students', this)">Students</button>
+    <button class="tab-btn" onclick="switchTab('assignments', this)">Assignments</button>
+    <button class="tab-btn" onclick="switchTab('progress', this)">Progress</button>
+  </div>
+
+  <!-- STUDENTS TAB -->
+  <div class="tab-panel active" id="tab-students">
+    <div class="section-toolbar">
+      <h2>Roster</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="openBulkImport()">Import CSV</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddStudent()">+ Add Student</button>
+      </div>
+    </div>
+    <div id="studentTable"></div>
+  </div>
+
+  <!-- ASSIGNMENTS TAB -->
+  <div class="tab-panel" id="tab-assignments">
+    <div class="section-toolbar">
+      <h2>Lesson Assignments</h2>
+      <button class="btn btn-primary btn-sm" onclick="openAssignLesson()">+ Assign Lesson</button>
+    </div>
+    <div id="assignmentList"></div>
+    <div class="section-toolbar" style="margin-top:24px;">
+      <h2>Brain Games</h2>
+      <button class="btn btn-outline btn-sm" onclick="openAssignGame()">+ Assign Game</button>
+    </div>
+    <div id="gameList"></div>
+  </div>
+
+  <!-- PROGRESS TAB -->
+  <div class="tab-panel" id="tab-progress">
+    <div id="progressList"></div>
+  </div>
+</div>
+
+<!-- Add Student modal -->
+<div class="modal-bg" id="addStudentModal">
+  <div class="modal">
+    <h2>Add Student</h2>
+    <div class="field"><label>Display Name *</label><input id="sName" placeholder="e.g. Alex Johnson"></div>
+    <div class="field"><label>PIN (4–6 digits) *</label><input id="sPin" type="text" inputmode="numeric" maxlength="6" placeholder="e.g. 482019"></div>
+    <div class="field"><label>Student ID (optional)</label><input id="sNumber" placeholder="School roster number"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('addStudentModal')">Cancel</button>
+      <button class="btn btn-primary" id="addStudentBtn" onclick="addStudent()">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Import modal -->
+<div class="modal-bg" id="bulkModal">
+  <div class="modal">
+    <h2>Import Roster (CSV)</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Paste CSV rows: one student per line.<br><strong>Format:</strong> DisplayName, StudentNumber (optional), PIN (optional — auto-generated if blank)</p>
+    <div class="field"><textarea id="bulkText" placeholder="Alex Johnson, 1042&#10;Sam Lee, 1043, 291847&#10;Jordan Smith"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('bulkModal')">Cancel</button>
+      <button class="btn btn-primary" id="bulkBtn" onclick="bulkImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN Reset modal -->
+<div class="modal-bg" id="pinModal">
+  <div class="modal">
+    <h2>Reset PIN</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Enter a new 4–6 digit PIN for <strong id="pinStudentName"></strong>. Write it down and give it to the student.</p>
+    <div class="field"><input id="newPin" type="text" inputmode="numeric" maxlength="6" placeholder="New PIN"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('pinModal')">Cancel</button>
+      <button class="btn btn-primary" id="pinBtn" onclick="savePin()">Save PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Lesson modal -->
+<div class="modal-bg" id="assignLessonModal">
+  <div class="modal">
+    <h2>Assign Lesson</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Choose a curriculum lesson to assign to this classroom.</p>
+    <div class="field"><select id="lessonSelect"><option value="">Loading curricula…</option></select></div>
+    <div class="field"><label>Due Date (optional)</label><input type="date" id="lessonDue"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('assignLessonModal')">Cancel</button>
+      <button class="btn btn-primary" id="assignLessonBtn" onclick="assignLesson()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Game modal -->
+<div class="modal-bg" id="assignGameModal">
+  <div class="modal">
+    <h2>Assign Brain Game</h2>
+    <div class="field"><select id="gameSelect"><option value="">Loading games…</option></select></div>
+    <div class="field"><label>Due Date (optional)</label><input type="date" id="gameDue"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('assignGameModal')">Cancel</button>
+      <button class="btn btn-primary" id="assignGameBtn" onclick="assignGame()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Classroom modal -->
+<div class="modal-bg" id="editClassroomModal">
+  <div class="modal">
+    <h2>Edit Classroom</h2>
+    <div class="field"><label>Name *</label><input id="ecName"></div>
+    <div class="field"><label>Grade Level</label><input id="ecGrade"></div>
+    <div class="field"><label>Subject</label><input id="ecSubject"></div>
+    <div class="field"><label>Academic Year</label><input id="ecYear"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('editClassroomModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveClassroomEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="site-auth.js?v=1"></script>
+<script>
+fnRequireSiteAuth();
+
+var classroomId = new URLSearchParams(location.search).get('id');
+var classroom = null;
+var pinTargetId = null;
+
+if (!classroomId) location.href = 'teacher-classrooms.html';
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-bg').forEach(function(m){
+  m.addEventListener('click', function(e){ if (e.target === m) m.classList.remove('open'); });
+});
+
+// ---------------------------------------------------------------------------
+// Load classroom
+// ---------------------------------------------------------------------------
+async function load() {
+  var r = await fetch('/api/classrooms/' + classroomId, { credentials: 'include' });
+  if (r.status === 401) { location.href = 'login.html'; return; }
+  if (!r.ok) { toast('Could not load classroom'); return; }
+  classroom = await r.json();
+  renderHeader();
+  renderStudents();
+  renderAssignments();
+  renderProgress();
+}
+
+function renderHeader() {
+  document.title = classroom.name + ' — Fixer Nation';
+  document.getElementById('classroomName').textContent = classroom.name;
+  var meta = [classroom.grade_level, classroom.subject, classroom.academic_year].filter(Boolean).join(' · ');
+  document.getElementById('classroomMeta').textContent = meta || '';
+  document.getElementById('joinCodeDisplay').textContent = classroom.join_code;
+}
+
+// ---------------------------------------------------------------------------
+// Students
+// ---------------------------------------------------------------------------
+function renderStudents() {
+  var active = (classroom.students || []).filter(function(s){ return s.is_active; });
+  var inactive = (classroom.students || []).filter(function(s){ return !s.is_active; });
+  var all = active.concat(inactive);
+  var el = document.getElementById('studentTable');
+  if (!all.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--ink-soft);padding:40px;background:#fff;border-radius:14px;">No students yet. Add students or share the join code so students can self-register.</div>';
+    return;
+  }
+  var html = '<table class="data-table"><thead><tr><th>Name</th><th>Username</th><th>Student ID</th><th>Status</th><th></th></tr></thead><tbody>';
+  all.forEach(function(s) {
+    html += '<tr>' +
+      '<td>' + esc(s.display_name) + '</td>' +
+      '<td><code>' + esc(s.username) + '</code></td>' +
+      '<td>' + esc(s.student_number || '—') + '</td>' +
+      '<td>' + (s.is_active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + '</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="btn btn-outline btn-xs" style="margin-right:6px;" onclick="openPinReset(' + s.id + ',\'' + esc(s.display_name) + '\')">Reset PIN</button>' +
+        (s.is_active ? '<button class="btn btn-danger btn-xs" onclick="deactivateStudent(' + s.id + ')">Deactivate</button>' : '') +
+      '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function openAddStudent() { document.getElementById('addStudentModal').classList.add('open'); document.getElementById('sName').focus(); }
+
+async function addStudent() {
+  var name = document.getElementById('sName').value.trim();
+  var pin = document.getElementById('sPin').value.trim();
+  if (!name || !pin) { toast('Name and PIN required'); return; }
+  document.getElementById('addStudentBtn').disabled = true;
+  var r = await fetch('/api/classrooms/' + classroomId + '/students', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ displayName: name, pin: pin, studentNumber: document.getElementById('sNumber').value.trim() || undefined }),
+  });
+  var data = await r.json();
+  document.getElementById('addStudentBtn').disabled = false;
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  closeModal('addStudentModal');
+  ['sName','sPin','sNumber'].forEach(function(id){ document.getElementById(id).value = ''; });
+  toast('Added ' + data.display_name + ' (username: ' + data.username + ')');
+  classroom.students = classroom.students || [];
+  classroom.students.push(data);
+  renderStudents();
+}
+
+function openBulkImport() { document.getElementById('bulkModal').classList.add('open'); document.getElementById('bulkText').focus(); }
+
+async function bulkImport() {
+  var text = document.getElementById('bulkText').value.trim();
+  if (!text) return;
+  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  var students = lines.map(function(line) {
+    var parts = line.split(',').map(function(p){ return p.trim(); });
+    return { displayName: parts[0], studentNumber: parts[1] || undefined, pin: parts[2] || undefined };
+  });
+  document.getElementById('bulkBtn').disabled = true;
+  var r = await fetch('/api/classrooms/' + classroomId + '/students/bulk', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ students: students }),
+  });
+  var data = await r.json();
+  document.getElementById('bulkBtn').disabled = false;
+  closeModal('bulkModal');
+  document.getElementById('bulkText').value = '';
+  var ok = (data.results || []).filter(function(r){ return !r.error; }).length;
+  var fail = (data.results || []).filter(function(r){ return r.error; }).length;
+  toast('Imported ' + ok + (fail ? ', ' + fail + ' failed' : '') + ' students');
+  await load();
+}
+
+function openPinReset(id, name) {
+  pinTargetId = id;
+  document.getElementById('pinStudentName').textContent = name;
+  document.getElementById('newPin').value = '';
+  document.getElementById('pinModal').classList.add('open');
+  document.getElementById('newPin').focus();
+}
+
+async function savePin() {
+  var pin = document.getElementById('newPin').value.trim();
+  if (!pin) return;
+  document.getElementById('pinBtn').disabled = true;
+  var r = await fetch('/api/classrooms/' + classroomId + '/students/' + pinTargetId, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: pin }),
+  });
+  document.getElementById('pinBtn').disabled = false;
+  if (!r.ok) { toast('Error saving PIN'); return; }
+  closeModal('pinModal');
+  toast('PIN updated');
+}
+
+async function deactivateStudent(id) {
+  if (!confirm('Deactivate this student? They won\'t be able to log in until reactivated.')) return;
+  await fetch('/api/classrooms/' + classroomId + '/students/' + id, {
+    method: 'DELETE', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  classroom.students = classroom.students.map(function(s){ return s.id === id ? Object.assign({}, s, { is_active: 0 }) : s; });
+  renderStudents();
+}
+
+// ---------------------------------------------------------------------------
+// Assignments
+// ---------------------------------------------------------------------------
+function renderAssignments() {
+  var el = document.getElementById('assignmentList');
+  var total = (classroom.students || []).filter(function(s){ return s.is_active; }).length;
+  if (!(classroom.assignments || []).length) {
+    el.innerHTML = '<div class="card"><div class="card-sub">No lessons assigned yet.</div></div>';
+  } else {
+    var html = '';
+    classroom.assignments.forEach(function(a) {
+      html += '<div class="assign-card">' +
+        '<div class="assign-card-info">' +
+          '<div class="assign-card-title">' + esc(a.title) + '</div>' +
+          '<div class="assign-card-meta">' + (a.grade_level ? esc(a.grade_level) + ' · ' : '') + (a.due_date ? 'Due ' + a.due_date : 'No due date') + '</div>' +
+        '</div>' +
+        '<div class="assign-card-progress">' +
+          '<span class="big">' + (a.completed_count || 0) + '/' + total + '</span>completed' +
+        '</div>' +
+        '<a class="btn btn-outline btn-sm" href="teacher-classroom-progress.html?classroom=' + classroomId + '&curriculum=' + a.curriculum_id + '">Progress ↗</a>' +
+        '<button class="btn btn-danger btn-xs" onclick="removeAssignment(' + a.curriculum_id + ')">Remove</button>' +
+      '</div>';
+    });
+    el.innerHTML = html;
+  }
+
+  var gameEl = document.getElementById('gameList');
+  if (!(classroom.gameAssignments || []).length) {
+    gameEl.innerHTML = '<div class="card"><div class="card-sub">No brain games assigned yet.</div></div>';
+  } else {
+    var ghtml = '';
+    classroom.gameAssignments.forEach(function(g) {
+      ghtml += '<div class="assign-card">' +
+        '<div class="assign-card-info"><div class="assign-card-title">' + esc(g.game_title) + '</div><div class="assign-card-meta">' + (g.due_date ? 'Due ' + g.due_date : 'No due date') + '</div></div>' +
+        '<div class="assign-card-progress"><span class="big">' + (g.completion_count || 0) + '</span>plays</div>' +
+        '<button class="btn btn-danger btn-xs" onclick="removeGame(' + g.id + ')">Remove</button>' +
+      '</div>';
+    });
+    gameEl.innerHTML = ghtml;
+  }
+}
+
+async function openAssignLesson() {
+  var r = await fetch('/api/curricula', { credentials: 'include' });
+  var data = r.ok ? await r.json() : [];
+  var curricula = Array.isArray(data) ? data : (data.items || data.curricula || []);
+  var assigned = new Set((classroom.assignments || []).map(function(a){ return a.curriculum_id; }));
+  var available = curricula.filter(function(c){ return !assigned.has(c.id) && c.published; });
+  var sel = document.getElementById('lessonSelect');
+  sel.innerHTML = available.length
+    ? '<option value="">Choose a lesson…</option>' + available.map(function(c){ return '<option value="' + c.id + '">' + esc(c.title) + (c.series ? ' (' + esc(c.series) + ')' : '') + '</option>'; }).join('')
+    : '<option value="">No available lessons (check your license)</option>';
+  document.getElementById('assignLessonModal').classList.add('open');
+}
+
+async function assignLesson() {
+  var cid = document.getElementById('lessonSelect').value;
+  if (!cid) return;
+  document.getElementById('assignLessonBtn').disabled = true;
+  var r = await fetch('/api/classrooms/' + classroomId + '/assignments', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ curriculumId: Number(cid), dueDate: document.getElementById('lessonDue').value || undefined }),
+  });
+  var data = await r.json();
+  document.getElementById('assignLessonBtn').disabled = false;
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  closeModal('assignLessonModal');
+  toast('Lesson assigned');
+  await load();
+}
+
+async function removeAssignment(cid) {
+  if (!confirm('Remove this lesson assignment?')) return;
+  await fetch('/api/classrooms/' + classroomId + '/assignments/' + cid, {
+    method: 'DELETE', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  await load();
+}
+
+async function openAssignGame() {
+  var r = await fetch('/api/brain-games', { credentials: 'include' });
+  var data = r.ok ? await r.json() : [];
+  var games = Array.isArray(data) ? data : (data.items || data.games || []);
+  var sel = document.getElementById('gameSelect');
+  sel.innerHTML = games.length
+    ? '<option value="">Choose a game…</option>' + games.map(function(g){ return '<option value="' + g.id + '">' + esc(g.title) + '</option>'; }).join('')
+    : '<option value="">No games available</option>';
+  document.getElementById('assignGameModal').classList.add('open');
+}
+
+async function assignGame() {
+  var gid = document.getElementById('gameSelect').value;
+  if (!gid) return;
+  document.getElementById('assignGameBtn').disabled = true;
+  var r = await fetch('/api/classrooms/' + classroomId + '/game-assignments', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ gameId: Number(gid), dueDate: document.getElementById('gameDue').value || undefined }),
+  });
+  document.getElementById('assignGameBtn').disabled = false;
+  if (!r.ok) { toast((await r.json()).error || 'Error'); return; }
+  closeModal('assignGameModal');
+  toast('Game assigned');
+  await load();
+}
+
+async function removeGame(gaid) {
+  if (!confirm('Remove this game assignment?')) return;
+  await fetch('/api/classrooms/' + classroomId + '/game-assignments/' + gaid, {
+    method: 'DELETE', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  await load();
+}
+
+// ---------------------------------------------------------------------------
+// Progress
+// ---------------------------------------------------------------------------
+function renderProgress() {
+  var el = document.getElementById('progressList');
+  if (!(classroom.assignments || []).length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--ink-soft);padding:40px;">No lessons assigned yet.</div>';
+    return;
+  }
+  var total = (classroom.students || []).filter(function(s){ return s.is_active; }).length;
+  var html = '';
+  classroom.assignments.forEach(function(a) {
+    var pct = total > 0 ? Math.round(((a.completed_count || 0) / total) * 100) : 0;
+    html += '<div class="card" style="margin-bottom:12px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+        '<div><div class="card-title">' + esc(a.title) + '</div><div class="card-sub">' + (a.grade_level ? esc(a.grade_level) + ' · ' : '') + (a.started_count || 0) + ' started · ' + (a.completed_count || 0) + ' completed</div></div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div style="font-size:22px;font-weight:800;color:var(--teal-dark);">' + pct + '%</div>' +
+          '<a class="btn btn-outline btn-sm" href="teacher-classroom-progress.html?classroom=' + classroomId + '&curriculum=' + a.curriculum_id + '">Details ↗</a>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ---------------------------------------------------------------------------
+// Join code
+// ---------------------------------------------------------------------------
+function copyCode() {
+  if (navigator.clipboard && classroom) {
+    navigator.clipboard.writeText(classroom.join_code);
+    toast('Join code copied!');
+  }
+}
+
+async function regenCode() {
+  if (!confirm('Generate a new join code? The old code will no longer work for new students.')) return;
+  var r = await fetch('/api/classrooms/' + classroomId + '/regen-code', {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  var data = await r.json();
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  classroom.join_code = data.joinCode;
+  document.getElementById('joinCodeDisplay').textContent = data.joinCode;
+  toast('New join code: ' + data.joinCode);
+}
+
+// ---------------------------------------------------------------------------
+// Edit classroom
+// ---------------------------------------------------------------------------
+function openEditClassroom() {
+  document.getElementById('ecName').value = classroom.name || '';
+  document.getElementById('ecGrade').value = classroom.grade_level || '';
+  document.getElementById('ecSubject').value = classroom.subject || '';
+  document.getElementById('ecYear').value = classroom.academic_year || '';
+  document.getElementById('editClassroomModal').classList.add('open');
+}
+
+async function saveClassroomEdit() {
+  var name = document.getElementById('ecName').value.trim();
+  if (!name) return;
+  var r = await fetch('/api/classrooms/' + classroomId, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name,
+      gradeLevel: document.getElementById('ecGrade').value.trim(),
+      subject: document.getElementById('ecSubject').value.trim(),
+      academicYear: document.getElementById('ecYear').value.trim(),
+    }),
+  });
+  var data = await r.json();
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  Object.assign(classroom, data);
+  renderHeader();
+  closeModal('editClassroomModal');
+  toast('Classroom updated');
+}
+
+load();
+</script>
+</body>
+</html>

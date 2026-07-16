@@ -104,6 +104,17 @@
         </div>
       </div>
 
+      <!-- Classrooms monitoring -->
+      <div class="sa-card dash-section" style="margin-bottom:24px;" id="classroomsCard">
+        <div class="sa-card-head">
+          <h2>Classrooms</h2>
+          <span id="classroomSummary" style="font-size:13px;color:var(--sa-text-soft);"></span>
+        </div>
+        <div id="classroomTableWrap">
+          <div class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+        </div>
+      </div>
+
       <!-- Two-column: recent teachers + recent activity -->
       <div class="grid-2">
         <div class="sa-card">
@@ -188,12 +199,46 @@ async function loadDashboard() {
   if (!purchaseId) return;
 
   try {
-    const d = await saFetch('/api/school-admin/dashboard?purchaseId=' + purchaseId);
+    const [d, classrooms] = await Promise.all([
+      saFetch('/api/school-admin/dashboard?purchaseId=' + purchaseId),
+      saFetch('/api/school-admin/classrooms').catch(function(){ return []; }),
+    ]);
     dashData = d;
     renderDashboard(d);
+    renderClassrooms(Array.isArray(classrooms) ? classrooms : []);
   } catch (e) {
     saToast('Failed to load dashboard: ' + e.message, 'error');
   }
+}
+
+function renderClassrooms(classrooms) {
+  var wrap = document.getElementById('classroomTableWrap');
+  var active = classrooms.filter(function(c){ return !c.archived; });
+  document.getElementById('classroomSummary').textContent = active.length + ' active classroom' + (active.length !== 1 ? 's' : '');
+
+  if (!classrooms.length) {
+    wrap.innerHTML = '<div style="color:var(--sa-text-soft);font-size:13px;padding:12px 0;">No classrooms created yet. Teachers create classrooms from their portal.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;">' +
+    '<thead><tr style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sa-text-soft);">' +
+    '<th style="text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--sa-border);">Teacher</th>' +
+    '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Classroom</th>' +
+    '<th style="text-align:center;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Students</th>' +
+    '<th style="text-align:center;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Lessons</th>' +
+    '<th style="text-align:center;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Completion</th>' +
+    '</tr></thead><tbody>';
+  classrooms.forEach(function(c) {
+    html += '<tr style="font-size:13.5px;">' +
+      '<td style="padding:10px 10px 10px 0;border-bottom:1px solid var(--sa-border);color:var(--sa-text-soft);">' + esc(c.teacherName) + '</td>' +
+      '<td style="padding:10px;border-bottom:1px solid var(--sa-border);font-weight:600;">' + esc(c.classroomName) + (c.archived ? ' <span style="font-size:11px;color:var(--sa-text-soft);">(archived)</span>' : '') + '</td>' +
+      '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--sa-border);">' + c.studentCount + '</td>' +
+      '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--sa-border);">' + c.assignmentCount + '</td>' +
+      '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--sa-border);font-weight:700;color:var(--sa-accent);">' + (c.assignmentCount > 0 ? c.completionRate + '%' : '—') + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 
 function renderDashboard(d) {

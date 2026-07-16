@@ -1116,4 +1116,57 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
   res.json({ entries: rows, total: Number(total), page, limit });
 });
 
+// ---------------------------------------------------------------------------
+// Classroom monitoring (read-only; no student names or reflection content)
+// ---------------------------------------------------------------------------
+
+// GET /api/school-admin/classrooms
+// Returns aggregate classroom stats for all licensed teachers in this school.
+router.get('/classrooms', requireSchoolAdmin, async (req, res) => {
+  const purchaseIds = (req.schoolAdmin.purchases || []).map(p => p.id);
+  if (!purchaseIds.length) return res.json([]);
+
+  // All registered seat holders for this school's purchases
+  const [seats] = await pool.query(
+    `SELECT DISTINCT ls.registered_site_user_id AS teacher_id, su.first_name, su.last_name
+     FROM license_seats ls
+     JOIN site_users su ON su.id = ls.registered_site_user_id
+     WHERE ls.purchase_id IN (?) AND ls.status = 'registered'`,
+    [purchaseIds]
+  );
+  if (!seats.length) return res.json([]);
+
+  const teacherIds = seats.map(s => s.teacher_id);
+  const [classrooms] = await pool.query(
+    `SELECT c.id, c.name AS classroom_name, c.teacher_site_user_id,
+            c.grade_level, c.subject, c.academic_year, c.archived_at,
+            (SELECT COUNT(*) FROM classroom_students cs WHERE cs.classroom_id = c.id AND cs.is_active = 1) AS student_count,
+            (SELECT COUNT(*) FROM classroom_assignments ca WHERE ca.classroom_id = c.id) AS assignment_count,
+            (SELECT COUNT(*) FROM student_lesson_progress slp WHERE slp.student_id IN (SELECT id FROM classroom_students WHERE classroom_id = c.id) AND slp.completed_at IS NOT NULL) AS completions,
+            (SELECT COUNT(*) FROM student_lesson_progress slp WHERE slp.student_id IN (SELECT id FROM classroom_students WHERE classroom_id = c.id)) AS starts
+     FROM classrooms c
+     WHERE c.teacher_site_user_id IN (?)
+     ORDER BY c.archived_at IS NOT NULL, c.created_at DESC`,
+    [teacherIds]
+  );
+
+  const teacherMap = {};
+  seats.forEach(s => { teacherMap[s.teacher_id] = `${s.first_name} ${s.last_name}`; });
+
+  const result = classrooms.map(c => ({
+    id: c.id,
+    classroomName: c.classroom_name,
+    teacherName: teacherMap[c.teacher_site_user_id] || 'Unknown',
+    gradeLevel: c.grade_level,
+    subject: c.subject,
+    academicYear: c.academic_year,
+    archived: !!c.archived_at,
+    studentCount: Number(c.student_count),
+    assignmentCount: Number(c.assignment_count),
+    completionRate: c.starts > 0 ? Math.round((c.completions / c.starts) * 100) : 0,
+  }));
+
+  res.json(result);
+});
+
 module.exports = router;

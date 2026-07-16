@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson Progress — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:40px 20px;}
+.wrap{max-width:960px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:16px;}
+.back-link:hover{text-decoration:underline;}
+h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:26px;margin-bottom:4px;}
+.subtitle{font-size:14px;color:var(--ink-soft);margin-bottom:28px;}
+.btn{padding:9px 16px;border-radius:9px;border:none;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;}
+.btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal-dark);}
+.btn-outline:hover{background:rgba(22,79,74,0.06);}
+/* Summary stats */
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;}
+.stat-box{background:#fff;border-radius:14px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:16px 22px;min-width:110px;flex:1;}
+.stat-box .val{font-size:28px;font-weight:800;color:var(--teal-dark);}
+.stat-box .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+/* Student table */
+table.data-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);}
+table.data-table th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);}
+table.data-table td{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:top;}
+table.data-table tr:last-child td{border-bottom:none;}
+table.data-table tr.expandable:hover td{background:#fafaf9;cursor:pointer;}
+/* Pill badges */
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;}
+.pill-green{background:#d1fae5;color:#065f46;}
+.pill-blue{background:#dbeafe;color:#1e40af;}
+.pill-gray{background:#f3f4f6;color:#6b7280;}
+.pill-amber{background:#fef3c7;color:#92400e;}
+/* Reflection panel */
+.reflection-panel{background:var(--cream);border-left:3px solid var(--teal);padding:14px 16px;margin-top:6px;border-radius:0 8px 8px 0;font-size:13.5px;}
+.reflection-panel .ref-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:4px;}
+.reflection-panel .ref-text{color:var(--ink);}
+.expand-btn{font-size:12px;font-weight:600;color:var(--teal-dark);background:none;border:none;cursor:pointer;padding:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+  <a class="back-link" id="backLink" href="#">← Back to Classroom</a>
+
+  <h1 id="lessonTitle">Loading…</h1>
+  <div class="subtitle" id="lessonSubtitle"></div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="val" id="statStarted">—</div><div class="lbl">Started</div></div>
+    <div class="stat-box"><div class="val" id="statCompleted">—</div><div class="lbl">Completed</div></div>
+    <div class="stat-box"><div class="val" id="statQuiz">—</div><div class="lbl">Quiz Score (avg)</div></div>
+    <div class="stat-box"><div class="val" id="statReflections">—</div><div class="lbl">Reflections</div></div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div style="font-size:14px;font-weight:700;color:var(--teal-dark);">Student Progress</div>
+    <button class="btn btn-outline" onclick="exportCsv()">Export CSV</button>
+  </div>
+
+  <div id="progressTable"></div>
+</div>
+
+<script src="site-auth.js?v=1"></script>
+<script>
+fnRequireSiteAuth();
+
+var params = new URLSearchParams(location.search);
+var classroomId = params.get('classroom');
+var curriculumId = params.get('curriculum');
+
+if (!classroomId || !curriculumId) location.href = 'teacher-classrooms.html';
+
+document.getElementById('backLink').href = 'teacher-classroom.html?id=' + classroomId;
+
+var progressData = { students: [], reflections: [] };
+var lessonData = null;
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+
+async function load() {
+  var [cr, pr] = await Promise.all([
+    fetch('/api/curricula/' + curriculumId, { credentials: 'include' }).then(function(r){ return r.ok ? r.json() : null; }),
+    fetch('/api/classrooms/' + classroomId + '/assignments/' + curriculumId + '/progress', { credentials: 'include' }).then(function(r){ return r.ok ? r.json() : { students: [], reflections: [] }; }),
+  ]);
+
+  lessonData = cr;
+  progressData = pr;
+
+  var lesson = cr ? (cr.title || 'Lesson') : 'Lesson';
+  document.title = lesson + ' Progress — Fixer Nation';
+  document.getElementById('lessonTitle').textContent = lesson;
+  document.getElementById('lessonSubtitle').textContent = cr ? (cr.series || '') : '';
+
+  var students = pr.students || [];
+  var started = students.filter(function(s){ return s.started_at; }).length;
+  var completed = students.filter(function(s){ return s.completed_at; }).length;
+  var withQuiz = students.filter(function(s){ return s.quiz_total > 0; });
+  var avgScore = withQuiz.length
+    ? Math.round(withQuiz.reduce(function(a, s){ return a + (s.quiz_correct / Math.max(s.quiz_total, 1)); }, 0) / withQuiz.length * 100)
+    : null;
+  var reflCount = (pr.reflections || []).length;
+
+  document.getElementById('statStarted').textContent = started;
+  document.getElementById('statCompleted').textContent = completed;
+  document.getElementById('statQuiz').textContent = avgScore !== null ? avgScore + '%' : '—';
+  document.getElementById('statReflections').textContent = reflCount;
+
+  renderTable();
+}
+
+var expanded = {};
+
+function renderTable() {
+  var students = progressData.students || [];
+  var reflByStudent = {};
+  (progressData.reflections || []).forEach(function(r) {
+    if (!reflByStudent[r.student_id]) reflByStudent[r.student_id] = [];
+    reflByStudent[r.student_id].push(r);
+  });
+
+  if (!students.length) {
+    document.getElementById('progressTable').innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-soft);background:#fff;border-radius:14px;">No active students in this classroom yet.</div>';
+    return;
+  }
+
+  var html = '<table class="data-table"><thead><tr>' +
+    '<th>Student</th><th>Status</th><th>Quiz Score</th><th>Reflections</th><th></th>' +
+    '</tr></thead><tbody>';
+
+  students.forEach(function(s) {
+    var status = s.completed_at ? 'Completed' : (s.started_at ? 'In Progress' : 'Not Started');
+    var statusPill = s.completed_at ? 'pill-green' : (s.started_at ? 'pill-blue' : 'pill-gray');
+    var quizScore = s.quiz_total > 0 ? (s.quiz_correct + '/' + s.quiz_total) : '—';
+    var refls = reflByStudent[s.id] || [];
+    var hasRefls = refls.length > 0;
+
+    html += '<tr class="expandable" onclick="toggleExpand(' + s.id + ')">' +
+      '<td style="font-weight:600;">' + esc(s.display_name) + '</td>' +
+      '<td><span class="pill ' + statusPill + '">' + status + '</span></td>' +
+      '<td>' + quizScore + (s.quiz_total > 0 ? '<span style="color:var(--ink-soft);font-size:12px;margin-left:6px;">' + Math.round(s.quiz_correct/s.quiz_total*100) + '%</span>' : '') + '</td>' +
+      '<td>' + (hasRefls ? '<span class="pill pill-amber">' + refls.length + ' written</span>' : '<span style="color:var(--ink-soft);">—</span>') + '</td>' +
+      '<td>' + (hasRefls ? '<button class="expand-btn">' + (expanded[s.id] ? '▲ Hide' : '▼ Show') + '</button>' : '') + '</td>' +
+    '</tr>';
+
+    if (expanded[s.id] && hasRefls) {
+      html += '<tr><td colspan="5" style="padding:0 14px 14px;">';
+      refls.forEach(function(r) {
+        var label = r.prompt_key === 'pre_lesson' ? 'Before Lesson' : (r.prompt_key === 'post_lesson' ? 'After Lesson' : r.prompt_key);
+        html += '<div class="reflection-panel">' +
+          '<div class="ref-label">' + esc(label) + ' · ' + fmtDate(r.submitted_at) + '</div>' +
+          '<div class="ref-text">' + esc(r.response_text) + '</div>' +
+        '</div>';
+      });
+      html += '</td></tr>';
+    }
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('progressTable').innerHTML = html;
+}
+
+function toggleExpand(id) {
+  expanded[id] = !expanded[id];
+  renderTable();
+}
+
+function exportCsv() {
+  var students = progressData.students || [];
+  var rows = [['Student', 'Status', 'Started', 'Completed', 'Quiz Correct', 'Quiz Total', 'Reflections']];
+  students.forEach(function(s) {
+    rows.push([
+      s.display_name,
+      s.completed_at ? 'Completed' : (s.started_at ? 'In Progress' : 'Not Started'),
+      s.started_at || '',
+      s.completed_at || '',
+      s.quiz_correct,
+      s.quiz_total,
+      s.reflection_count,
+    ]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'progress.csv';
+  a.click();
+}
+
+load();
+</script>
+</body>
+</html>
