@@ -61,7 +61,7 @@ router.post('/join', async (req, res) => {
   if (!classrooms[0]) return res.status(404).json({ error: 'Classroom not found — check your join code' });
   const classroom = classrooms[0];
 
-  if (!displayName) return res.status(400).json({ error: 'Display name required' });
+  if (!displayName) return res.status(400).json({ error: 'Display name required', classroomName: classroom.name });
 
   const conn = await pool.getConnection();
   try {

@@ -165,6 +165,7 @@ async function register() {
 
   var r = await fetch('/api/classroom-auth/join', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ joinCode: pendingJoinCode, displayName: name, pin: pin }),
   });
@@ -187,6 +188,7 @@ async function login() {
 
   var r = await fetch('/api/classroom-auth/login', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: username, pin: pin }),
   });

@@ -74,6 +74,8 @@
             '<li><a href="education-schools.html">2D Education &mdash; Schools</a></li>' +
             '<li><a href="programs.html">Programs</a></li>' +
             '<li><a href="contact.html">Contact</a></li>' +
+            '<li><a href="teacher-classrooms.html">My Classrooms</a></li>' +
+            '<li><a href="student-login.html">Student Login</a></li>' +
             '<li><a href="admin-login.html">Admin Log In</a></li>' +
           '</ul>' +
         '</div>' +
