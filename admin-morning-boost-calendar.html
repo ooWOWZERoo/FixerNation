@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Boost Calendar — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=16">
+<style>
+.cal-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+.cal-stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.cal-stat { background:var(--a-card); border-radius:12px; padding:14px 20px; min-width:110px; flex:1; }
+.cal-stat .val { font-size:26px; font-weight:700; color:var(--a-text); }
+.cal-stat .lbl { font-size:12px; color:var(--a-text-muted); margin-top:2px; }
+.month-section { margin-bottom:24px; }
+.month-heading { font-size:15px; font-weight:700; color:var(--a-text-muted); text-transform:uppercase; letter-spacing:.05em; padding:10px 0 6px; border-bottom:1px solid var(--a-border); margin-bottom:0; }
+table.cal-table { width:100%; border-collapse:collapse; }
+table.cal-table th { font-size:11px; font-weight:600; color:var(--a-text-muted); text-transform:uppercase; padding:8px 10px; text-align:left; border-bottom:1px solid var(--a-border); }
+table.cal-table td { padding:8px 10px; font-size:13.5px; border-bottom:1px solid var(--a-border); vertical-align:top; }
+table.cal-table tr:last-child td { border-bottom:none; }
+table.cal-table tr:hover td { background:var(--a-bg); }
+.cal-date { white-space:nowrap; font-weight:600; }
+.cal-day { color:var(--a-text-muted); font-size:12px; }
+.cal-series { color:var(--a-text-muted); font-size:12.5px; }
+.pill-linked { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-success-soft,#d1fae5); color:var(--a-success,#065f46); }
+.pill-draft { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-warning-soft,#fef3c7); color:var(--a-warning,#92400e); }
+.pill-none { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-bg); color:var(--a-text-muted); border:1px solid var(--a-border); }
+.a-link { color:var(--a-primary); text-decoration:none; font-weight:500; }
+.a-link:hover { text-decoration:underline; }
+.sel-count { font-size:13px; color:var(--a-text-muted); }
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=1"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Morning Boost Calendar</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <div class="cal-stats" id="statsRow">
+        <div class="cal-stat"><div class="val" id="statTotal">—</div><div class="lbl">Total Days</div></div>
+        <div class="cal-stat"><div class="val" id="statLinked">—</div><div class="lbl">Blog Post Linked</div></div>
+        <div class="cal-stat"><div class="val" id="statMissing">—</div><div class="lbl">No Blog Post Yet</div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="cal-toolbar">
+          <button class="a-btn a-btn-outline" onclick="selectAllUnlinked()">Select All Without Posts</button>
+          <button class="a-btn a-btn-outline" onclick="clearSelection()">Clear Selection</button>
+          <span class="sel-count" id="selCount"></span>
+          <button class="a-btn a-btn-primary" id="createBtn" onclick="createDraftPosts()" disabled style="margin-left:auto;">Create Draft Posts</button>
+        </div>
+        <div id="calBody"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+fnRequireAuth();
+
+var allEntries = [];
+var selectedDates = new Set();
+
+function fmtDate(iso) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function fmtWeekday(iso) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long' });
+}
+function fmtMonthYear(iso) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function updateStats() {
+  var total = allEntries.length;
+  var linked = allEntries.filter(function(e) { return e.blogPostId; }).length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statLinked').textContent = linked;
+  document.getElementById('statMissing').textContent = total - linked;
+}
+
+function updateSelCount() {
+  var n = selectedDates.size;
+  document.getElementById('selCount').textContent = n ? n + ' selected' : '';
+  document.getElementById('createBtn').disabled = !n;
+}
+
+function toggleRow(date, cb) {
+  if (cb.checked) {
+    selectedDates.add(date);
+  } else {
+    selectedDates.delete(date);
+  }
+  updateSelCount();
+}
+
+function selectAllUnlinked() {
+  allEntries.forEach(function(e) {
+    if (!e.blogPostId) selectedDates.add(e.boostDate);
+  });
+  document.querySelectorAll('.row-cb').forEach(function(cb) {
+    var date = cb.dataset.date;
+    if (allEntries.find(function(e) { return e.boostDate === date && !e.blogPostId; })) {
+      cb.checked = true;
+    }
+  });
+  updateSelCount();
+}
+
+function clearSelection() {
+  selectedDates.clear();
+  document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = false; });
+  updateSelCount();
+}
+
+function renderCalendar() {
+  updateStats();
+  var body = document.getElementById('calBody');
+  if (!allEntries.length) {
+    body.innerHTML = '<div class="a-note">No calendar entries found.</div>';
+    return;
+  }
+
+  var byMonth = {};
+  allEntries.forEach(function(e) {
+    var key = e.boostDate.slice(0, 7);
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(e);
+  });
+
+  var html = '';
+  Object.keys(byMonth).sort().forEach(function(monthKey) {
+    var entries = byMonth[monthKey];
+    var heading = fmtMonthYear(monthKey + '-01');
+    html += '<div class="month-section"><div class="month-heading">' + esc(heading) + '</div>';
+    html += '<table class="cal-table"><thead><tr>' +
+      '<th style="width:28px;"><input type="checkbox" class="month-select-all" data-month="' + monthKey + '" onclick="toggleMonth(this)"></th>' +
+      '<th>Date</th><th>Series</th><th>Theme</th><th>Blog Post</th><th></th>' +
+      '</tr></thead><tbody>';
+    entries.forEach(function(e) {
+      var hasPost = !!e.blogPostId;
+      var canSelect = !hasPost;
+      html += '<tr>' +
+        '<td><input type="checkbox" class="row-cb" data-date="' + e.boostDate + '" ' +
+          (canSelect ? '' : 'disabled') + (selectedDates.has(e.boostDate) ? ' checked' : '') +
+          ' onclick="toggleRow(\'' + e.boostDate + '\', this)"></td>' +
+        '<td><div class="cal-date">' + fmtDate(e.boostDate) + '</div><div class="cal-day">' + fmtWeekday(e.boostDate) + '</div></td>' +
+        '<td><span class="cal-series">' + esc(e.series || '') + '</span></td>' +
+        '<td>' + esc(e.theme || '') + '</td>' +
+        '<td>' + (hasPost
+          ? '<span class="pill-linked">Linked</span>'
+          : '<span class="pill-none">None</span>') +
+        '</td>' +
+        '<td style="white-space:nowrap;">' + (hasPost
+          ? '<a class="a-link" href="admin-blogs.html?post=' + e.blogPostId + '" target="_blank">Edit Post ↗</a>'
+          : '<span style="color:var(--a-text-muted);font-size:12px;">Select to create →</span>') +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+
+  body.innerHTML = html;
+}
+
+function toggleMonth(masterCb) {
+  var month = masterCb.dataset.month;
+  var checked = masterCb.checked;
+  allEntries.forEach(function(e) {
+    if (e.boostDate.startsWith(month) && !e.blogPostId) {
+      if (checked) selectedDates.add(e.boostDate);
+      else selectedDates.delete(e.boostDate);
+    }
+  });
+  document.querySelectorAll('.row-cb[data-date^="' + month + '"]').forEach(function(cb) {
+    if (!cb.disabled) cb.checked = checked;
+  });
+  updateSelCount();
+}
+
+async function load() {
+  var r = await fetch('/api/morning-boost', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { document.getElementById('calBody').innerHTML = '<div class="a-note">Could not load calendar.</div>'; return; }
+  var data = await r.json();
+  allEntries = data.calendar || [];
+  renderCalendar();
+}
+
+async function createDraftPosts() {
+  var dates = Array.from(selectedDates);
+  if (!dates.length) return;
+  if (!confirm('Create ' + dates.length + ' draft blog post' + (dates.length === 1 ? '' : 's') + '? You can add content and publish each one in Blogs.')) return;
+
+  var btn = document.getElementById('createBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  var r = await fetch('/api/morning-boost/batch-create-posts', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dates: dates }),
+  });
+  if (fnHandleUnauthorized(r)) { btn.disabled = false; btn.textContent = 'Create Draft Posts'; return; }
+  var data = await r.json();
+
+  if (!r.ok) {
+    fnToast(data.error || 'Error creating posts');
+    btn.disabled = false;
+    btn.textContent = 'Create Draft Posts';
+    return;
+  }
+
+  fnToast('Created ' + data.created + ' post' + (data.created === 1 ? '' : 's') +
+    (data.skipped ? ', ' + data.skipped + ' skipped' : '') +
+    (data.failed ? ', ' + data.failed + ' failed' : ''));
+
+  selectedDates.clear();
+  await load();
+  btn.disabled = false;
+  btn.textContent = 'Create Draft Posts';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+load();
+</script>
+</body>
+</html>

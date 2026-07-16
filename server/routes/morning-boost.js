@@ -147,6 +147,67 @@ router.delete('/audio/:filename', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Batch-creates draft blog posts from calendar entries that don't have one yet.
+router.post('/batch-create-posts', requireAuth, async (req, res) => {
+  const dates = Array.isArray(req.body && req.body.dates) ? req.body.dates : [];
+  if (!dates.length) return res.status(400).json({ error: 'Provide at least one date' });
+  if (dates.length > 50) return res.status(400).json({ error: 'Max 50 dates per batch' });
+
+  const results = [];
+  const connection = await pool.getConnection();
+  try {
+    for (const date of dates) {
+      const [[entry]] = await connection.query(
+        'SELECT * FROM morning_boost_calendar WHERE boost_date = ?', [date]
+      );
+      if (!entry) { results.push({ date, ok: false, error: 'No calendar entry found' }); continue; }
+      if (entry.blog_post_id) { results.push({ date, ok: false, skipped: true, reason: 'Already has a blog post' }); continue; }
+
+      const title = `${entry.series}: ${entry.theme}`;
+      let baseSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      let slug = baseSlug;
+      let n = 2;
+      while (true) {
+        const [existing] = await connection.query('SELECT id FROM blog_posts WHERE slug = ?', [slug]);
+        if (!existing.length) break;
+        slug = `${baseSlug}-${n++}`;
+      }
+
+      try {
+        await connection.beginTransaction();
+        const [ins] = await connection.query(
+          `INSERT INTO blog_posts (title, slug, author, category, excerpt, body, publish_date, featured, published, requires_membership)
+           VALUES (?, ?, 'Fixer Nation', 'Morning Boost', '', '', ?, 0, 0, 0)`,
+          [title, slug, date]
+        );
+        const postId = ins.insertId;
+        await connection.query(
+          'INSERT INTO blog_post_categories (post_id, category) VALUES (?, ?)',
+          [postId, 'Morning Boost']
+        );
+        await connection.query(
+          'UPDATE morning_boost_calendar SET blog_post_id = ? WHERE boost_date = ?',
+          [postId, date]
+        );
+        await connection.commit();
+        results.push({ date, ok: true, postId, slug, title });
+      } catch (err) {
+        await connection.rollback();
+        results.push({ date, ok: false, error: err.message });
+      }
+    }
+  } finally {
+    connection.release();
+  }
+
+  res.json({
+    created: results.filter(r => r.ok).length,
+    skipped: results.filter(r => r.skipped).length,
+    failed: results.filter(r => !r.ok && !r.skipped).length,
+    results,
+  });
+});
+
 router.get('/:date', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM morning_boost_calendar WHERE boost_date = ?', [req.params.date]);
   if (!rows[0]) return res.status(404).json({ error: 'No calendar entry for that date' });
