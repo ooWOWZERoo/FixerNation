@@ -35,10 +35,17 @@ async function createSetPasswordUrl(email, firstName, lastName) {
       [firstName || '', lastName || '', email, placeholderHash]
     );
     userId = result.insertId;
-    // Auto-claim any pending license seat invited to this email, same as normal signup.
+    // Auto-claim any pending license seat invited to this email — only for paid
+    // purchases; domain must match for group licenses (NULL school_domain = no constraint).
     await pool.query(
-      "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE invited_email = ? AND status = 'pending'",
-      [userId, email]
+      `UPDATE license_seats ls
+       JOIN purchases p ON p.id = ls.purchase_id
+       SET ls.status = 'registered', ls.registered_site_user_id = ?, ls.registered_at = NOW()
+       WHERE ls.invited_email = ?
+         AND ls.status = 'pending'
+         AND p.payment_status = 'paid'
+         AND (p.school_domain IS NULL OR LOWER(SUBSTRING_INDEX(?, '@', -1)) = LOWER(p.school_domain))`,
+      [userId, email, email]
     );
   }
   const token = await createToken(userId, 'reset', 7 * 24 * 60 * 60 * 1000);

@@ -788,6 +788,12 @@ router.delete('/teachers/:siteUserId', requireSchoolAdmin, requireWritePermissio
     [req.schoolAdmin.siteUserId, reason, seat.id]
   );
 
+  // Invalidate the teacher's active sessions so they're force-logged-out immediately.
+  await pool.query(
+    'UPDATE site_users SET session_invalidated_at = NOW() WHERE id = ?',
+    [siteUserId]
+  );
+
   // If they were a school_license_admin under this purchase, remove that too
   await pool.query(
     'DELETE FROM school_license_admins WHERE site_user_id = ? AND purchase_id = ?',
@@ -882,6 +888,14 @@ router.put('/seats/:seatId/revoke', requireSchoolAdmin, requireWritePermission, 
       "UPDATE school_invitations SET status = 'revoked', revoked_at = NOW(), revoked_by_site_user_id = ?, revocation_reason = ? WHERE seat_id = ? AND status NOT IN ('revoked','registered')",
       [req.schoolAdmin.siteUserId, reason, seat.id]
     );
+
+    // Invalidate the teacher's active sessions so they're force-logged-out immediately.
+    if (seat.registered_site_user_id) {
+      await conn.query(
+        'UPDATE site_users SET session_invalidated_at = NOW() WHERE id = ?',
+        [seat.registered_site_user_id]
+      );
+    }
 
     await conn.commit();
     conn.release();

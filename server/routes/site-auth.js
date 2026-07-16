@@ -22,6 +22,12 @@ async function requireSiteAuth(req, res, next) {
     const payload = jwt.verify(token, process.env.SESSION_SECRET);
     const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return res.status(401).json({ error: 'Not logged in' });
+    if (rows[0].session_invalidated_at) {
+      const invalidatedMs = new Date(rows[0].session_invalidated_at).getTime();
+      if (payload.iat * 1000 < invalidatedMs) {
+        return res.status(401).json({ error: 'Not logged in', reason: 'revoked' });
+      }
+    }
     req.siteUser = rows[0];
     next();
   } catch {
@@ -79,10 +85,17 @@ router.post('/signup', async (req, res) => {
   }
 
   // If a license seat (single or group) was invited to this exact email,
-  // signing up claims it — this is what actually grants that teacher access.
+  // signing up claims it — only for paid purchases, and domain must match for
+  // group licenses (school_domain NULL means single/book with no domain constraint).
   const [seatResult] = await pool.query(
-    "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE invited_email = ? AND status = 'pending'",
-    [result.insertId, email]
+    `UPDATE license_seats ls
+     JOIN purchases p ON p.id = ls.purchase_id
+     SET ls.status = 'registered', ls.registered_site_user_id = ?, ls.registered_at = NOW()
+     WHERE ls.invited_email = ?
+       AND ls.status = 'pending'
+       AND p.payment_status = 'paid'
+       AND (p.school_domain IS NULL OR LOWER(SUBSTRING_INDEX(?, '@', -1)) = LOWER(p.school_domain))`,
+    [result.insertId, email, email]
   );
   if (seatResult.affectedRows > 0) {
     try { await addTeacherToSocialGroups(result.insertId); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
