@@ -83,6 +83,10 @@
           <div class="label">Expired Invitations</div>
           <div class="value" id="statExpired">—</div>
         </div>
+        <div class="sa-stat-card">
+          <div class="label">Revoked Invitations</div>
+          <div class="value" id="statRevoked">—</div>
+        </div>
       </div>
 
       <!-- Utilization bar -->
@@ -226,6 +230,7 @@ function renderDashboard(d) {
   document.getElementById('statAvailable').textContent = u.available;
   document.getElementById('statPending').textContent = d.invitations.pending;
   document.getElementById('statExpired').textContent = d.invitations.expired;
+  document.getElementById('statRevoked').textContent = d.invitations.revoked;
 
   // Utilization bar
   const pct = u.pctUsed;

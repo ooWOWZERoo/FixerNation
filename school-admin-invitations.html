@@ -219,6 +219,9 @@ function renderInvitations(invs) {
       if (inv.status !== 'revoked' && inv.status !== 'registered') {
         actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Revoke</button>';
       }
+      if (inv.status === 'revoked' || inv.status === 'expired') {
+        actions += ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="deleteInvitation(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Delete</button>';
+      }
       return '<tr><td><div style="font-weight:600;font-size:13.5px;">' + esc(name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(inv.invited_email) + '</div></td><td style="font-size:13px;">' + sent + '</td><td style="font-size:13px;">' + expires + '</td><td>' + badge + '</td><td style="font-size:13px;text-align:center;">' + resends + '</td><td>' + actions + '</td></tr>';
     }).join('') +
     '</tbody></table>';
@@ -263,6 +266,18 @@ async function execRevoke() {
     loadInvitations();
   } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
   finally { btn.disabled = false; }
+}
+
+async function deleteInvitation(id, email) {
+  if (!confirm('Permanently delete the invitation for ' + email + '? This cannot be undone.')) return;
+  try {
+    await saFetch('/api/school-admin/invitations/' + id, {
+      method: 'DELETE',
+      body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }),
+    });
+    saToast('Invitation deleted.', 'success');
+    loadInvitations();
+  } catch (e) { saToast(e.message, 'error'); }
 }
 
 // Single invite

@@ -647,6 +647,36 @@ router.put('/invitations/:id/extend', requireSchoolAdmin, requireWritePermission
   res.json({ ok: true, expiresAt });
 });
 
+// DELETE /api/school-admin/invitations/:id — remove a revoked or expired invitation
+// and release its reserved seat so capacity is freed.
+router.delete('/invitations/:id', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+  const [[inv]] = await pool.query(
+    'SELECT * FROM school_invitations WHERE id = ? AND purchase_id IN (?)',
+    [req.params.id, req.schoolAdmin.purchaseIds]
+  );
+  if (!inv) return res.status(404).json({ error: 'Invitation not found' });
+  if (!['revoked', 'expired'].includes(inv.status)) {
+    return res.status(409).json({ error: `Only revoked or expired invitations can be deleted (this one is ${inv.status})` });
+  }
+
+  if (inv.seat_id) {
+    await pool.query(
+      "DELETE FROM license_seats WHERE id = ? AND status IN ('pending','revoked','expired')",
+      [inv.seat_id]
+    );
+  }
+  await pool.query('DELETE FROM school_invitations WHERE id = ?', [inv.id]);
+
+  await audit(pool, {
+    actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
+    actorEmail: req.schoolAdmin.email, action: 'invitation_deleted',
+    entityType: 'invitation', entityId: inv.id, purchaseId: inv.purchase_id,
+    ipAddress: req.ip,
+  });
+
+  res.json({ ok: true });
+});
+
 // ---------------------------------------------------------------------------
 // Teachers
 // ---------------------------------------------------------------------------
