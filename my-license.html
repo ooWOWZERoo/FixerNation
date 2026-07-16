@@ -57,17 +57,17 @@
 
   <nav class="account-nav">
     <a href="my-profile.html">My Profile</a>
-    <a href="my-memberships.html">My Memberships</a>
-    <a href="my-license.html" class="active">My Licenses</a>
+    <a href="my-license.html" class="active">My Account</a>
     <a href="my-purchases.html">Purchase History</a>
   </nav>
 
-  <h1>My Licenses</h1>
-  <p class="sub">Manage your teacher licenses and assign seats to educators at your school.</p>
+  <h1>My Account</h1>
+  <p class="sub">Your memberships, teacher licenses, and seat assignments.</p>
 
+  <div id="membershipWrap"></div>
   <div id="accountWrap"></div>
   <div class="empty" id="emptyState" style="display:none;">
-    You don't have any licenses on file yet. If you've purchased a license, make sure you're logged in with the same email you used to purchase it.
+    Nothing on file yet. If you've purchased a license or membership, make sure you're logged in with the same email you used at checkout.
   </div>
 
   <a href="index.html" class="back-link">← Back to Fixer Nation</a>
@@ -109,12 +109,36 @@ async function loadData() {
   render(data.purchases || [], data.memberships || []);
 }
 
+function renderMemberships(memberships) {
+  const wrap = document.getElementById('membershipWrap');
+  if (!memberships.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<h2 class="section-heading">Memberships</h2>' + memberships.map(m => {
+    const statusLabels = { active: 'Active', trialing: 'Free Trial', past_due: 'Past Due', cancelled: 'Cancelled', expired: 'Expired' };
+    const typeLabel = { teacher: 'Teacher', ambassador: 'Brand Ambassador', provider: 'Service Provider' }[m.memberType] || '';
+    let detail = '';
+    if (m.status === 'trialing' && m.endsAt) detail = `Free trial ends ${formatDate(m.endsAt)}`;
+    else if (m.endsAt && (m.status === 'active' || m.status === 'past_due')) detail = `Renews ${formatDate(m.endsAt)}`;
+    else if (m.endsAt && (m.status === 'cancelled' || m.status === 'expired')) detail = `Ended ${formatDate(m.endsAt)}`;
+    return `<div class="card">
+      <div class="card-title">🎟️ ${m.planName}
+        <span class="badge badge-${m.status}">${statusLabels[m.status] || m.status}</span>
+        ${typeLabel ? `<span style="font-size:11.5px;font-weight:700;color:var(--ink-soft);background:var(--cream,#FBF5EC);padding:3px 9px;border-radius:999px;border:1px solid var(--border);">${typeLabel}</span>` : ''}
+      </div>
+      ${detail ? `<div class="card-sub" style="margin-top:6px;">${detail}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 function render(purchases, memberships) {
+  renderMemberships(memberships);
+
   const wrap = document.getElementById('accountWrap');
   const licenses = purchases.filter(p => p.productType === 'single_license' || p.productType === 'group_license');
 
-  document.getElementById('emptyState').style.display = licenses.length ? 'none' : 'block';
+  document.getElementById('emptyState').style.display = (!licenses.length && !memberships.length) ? 'block' : 'none';
   if (!licenses.length) { wrap.innerHTML = ''; return; }
+
+  wrap.innerHTML = '<h2 class="section-heading">Licenses</h2>';
 
   let html = '';
 
@@ -146,7 +170,7 @@ function render(purchases, memberships) {
     }).join('');
   }
 
-  wrap.innerHTML = html;
+  wrap.innerHTML += html;
 }
 
 async function saveSeatEmail(btn) {
