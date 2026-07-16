@@ -329,6 +329,7 @@ async function renderMembers() {
             <option value="cancelled">Cancelled</option>
             <option value="expired">Expired</option>
           </select>
+          ${m.endsAt ? `<button class="a-icon-btn" title="Resend renewal reminder email" onclick="resendReminder(${m.id})">📧</button>` : ''}
           <button class="a-icon-btn danger" title="Remove" onclick="deleteMembership(${m.id})">🗑️</button>
         </div>
       </td>
@@ -353,6 +354,19 @@ async function updateMemberStatus(id, status) {
   }
   fnToast('Status updated');
   renderMembers();
+}
+
+async function resendReminder(id) {
+  const r = await fetch(`/api/memberships/${id}/send-reminder`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(data.error || 'Could not send reminder'); return; }
+  fnToast('Renewal reminder sent');
 }
 
 async function deleteMembership(id) {

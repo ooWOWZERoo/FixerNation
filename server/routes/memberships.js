@@ -136,6 +136,34 @@ router.put('/:id', requireAuth, async (req, res) => {
   res.json({ membership: serialize(rows[0]) });
 });
 
+// POST /api/memberships/:id/send-reminder — manually fire the renewal reminder
+// email for one member (for admin use when the scheduled email bounced or was
+// missed). Updates reminder_sent_at so the cron job doesn't double-send.
+router.post('/:id/send-reminder', requireAuth, async (req, res) => {
+  const [[mem]] = await pool.query(
+    `SELECT cm.*, mp.name AS plan_name, nc.email, nc.name AS contact_name
+     FROM contact_memberships cm
+     JOIN membership_plans mp ON mp.id = cm.membership_plan_id
+     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
+     WHERE cm.id = ?`,
+    [req.params.id]
+  );
+  if (!mem) return res.status(404).json({ error: 'Membership not found' });
+  if (!mem.ends_at) return res.status(422).json({ error: 'This membership has no expiration date — reminder not applicable' });
+
+  const { fireAutomation } = require('../lib/automations');
+  const firstName = (mem.contact_name || '').split(' ')[0] || 'there';
+  const expiresOn = new Date(mem.ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  await fireAutomation('membership_renewal_reminder', {
+    to: mem.email,
+    mergeFields: { firstName, planName: mem.plan_name, expiresOn },
+  });
+
+  await pool.query('UPDATE contact_memberships SET reminder_sent_at = NOW() WHERE id = ?', [mem.id]);
+  res.json({ ok: true });
+});
+
 router.delete('/:id', requireAuth, async (req, res) => {
   const [result] = await pool.query('DELETE FROM contact_memberships WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Membership not found' });
