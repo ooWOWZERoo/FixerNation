@@ -282,6 +282,7 @@ function renderSections() {
         <div class="badge-card-body">
           <div class="badge-card-name">${badge.name}</div>
           <div class="badge-card-desc">${badge.description}</div>
+          ${!isEarned && badge.howToEarn ? `<div style="font-size:12px;color:var(--teal-dark);margin-bottom:5px;"><strong>How to earn:</strong> ${badge.howToEarn}</div>` : ''}
           <div class="badge-card-meta">
             <span class="badge-chip ${badge.rarity}">${badge.rarity}</span>
             ${isEarned ? `<span class="badge-earned-date">✓ Earned</span>` : ''}

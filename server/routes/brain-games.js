@@ -6,6 +6,29 @@ const { SITE_COOKIE_NAME } = require('../lib/session');
 
 const router = express.Router();
 
+function describeBadgeCriteria(type, criteriaJson) {
+  try {
+    const c = typeof criteriaJson === 'string' ? JSON.parse(criteriaJson || '{}') : (criteriaJson || {});
+    const ms = n => n >= 1000 ? (n / 1000).toFixed(1) + 's' : n + 'ms';
+    switch (type) {
+      case 'count':         return `Play ${c.count} session${c.count !== 1 ? 's' : ''}`;
+      case 'memory_perfect': return 'Complete a Memory Match game with a perfect score (no mismatches)';
+      case 'difficulty':    return `Complete a game on ${c.difficulty} difficulty`;
+      case 'fast_avg':      return `Average reaction time ≤ ${ms(c.maxAvgMs)} over ${c.minAttempts || 5} rounds`;
+      case 'consistent_reaction': return `Keep reaction time variance ≤ ${ms(c.maxVarianceMs)} across ${c.minAttempts || 5} rounds`;
+      case 'simon_length':  return `Reach a sequence length of ${c.length} in Simon Sequence`;
+      case 'long_streak':   return `Achieve a ${c.streak}-correct streak in a single game`;
+      case 'quick_math_count': return `Answer ${c.count} Quick Math questions correctly in one session`;
+      case 'quick_math_accuracy': return `Reach ${c.accuracy}% accuracy in Quick Math${c.difficulty ? ` on ${c.difficulty} difficulty` : ''}`;
+      case 'fast_accurate': return `Score ${c.accuracy}% accuracy with avg speed ≤ ${ms(c.maxAvgMs)}`;
+      case 'number_level':  return `Reach level ${c.level} in Number Sequence`;
+      case 'login_streak':  return `Log in ${c.days} day${c.days !== 1 ? 's' : ''} in a row`;
+      case 'cross_game':    return `Play ${c.count} different brain games`;
+      default:              return null;
+    }
+  } catch { return null; }
+}
+
 // ── XP / Level system ─────────────────────────────────────────────────────────
 const XP_LEVELS = [
   { level: 1, name: 'Beginner',   xpRequired: 0 },
@@ -631,6 +654,7 @@ router.get('/me/badges', async (req, res) => {
     const e = earnedMap[b.id];
     return {
       id: b.id, name: b.name, slug: b.slug, description: b.description,
+      howToEarn: describeBadgeCriteria(b.criteria_type, b.criteria_json),
       gameName: b.game_name, gameSlug: b.game_slug, gameIcon: b.game_icon,
       category: b.category, rarity: b.rarity, emoji: b.emoji, xpReward: b.xp_reward,
       earned: !!e,
