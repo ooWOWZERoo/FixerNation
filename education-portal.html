@@ -250,8 +250,8 @@
   </div>
 </section>
 
-<section style="background:var(--cream-soft); padding:72px 0;">
-  <div class="wrap">
+<section id="portalCtaSection" style="background:var(--cream-soft); padding:72px 0;">
+  <div class="wrap" id="portalCtaWrap">
     <div style="text-align:center; margin-bottom:48px;">
       <span class="eyebrow">Ready to Get Access?</span>
       <h2 style="font-size:30px; margin-top:14px;">What's your role?</h2>
@@ -513,6 +513,55 @@ fetch('/api/curricula', { credentials: 'include' })
 
 <script src="nav.js?v=4"></script>
 <script src="site-auth.js"></script>
+<script>
+(async function updatePortalCta() {
+  const r = await fetch('/api/site-auth/my-purchases', { credentials: 'include' });
+  if (!r.ok) return; // not logged in — keep static content
+
+  const data = await r.json().catch(() => ({}));
+  const licenses = (data.purchases || []).filter(function(p) {
+    return p.productType === 'single_license' || p.productType === 'group_license';
+  });
+
+  const wrap = document.getElementById('portalCtaWrap');
+  if (!wrap) return;
+
+  const hasActiveSeat = licenses.some(function(p) {
+    return (p.seats || []).some(function(s) { return s.status === 'registered'; });
+  });
+
+  const hasPendingLicense = !hasActiveSeat && licenses.some(function(p) {
+    return p.paymentStatus === 'paid';
+  });
+
+  const CARD = 'background:#fff; border-radius:22px; padding:40px 36px; box-shadow:var(--shadow); text-align:center;';
+
+  if (hasActiveSeat) {
+    wrap.innerHTML = `
+      <div style="text-align:center; margin-bottom:48px;">
+        <span class="eyebrow">You're Licensed</span>
+        <h2 style="font-size:30px; margin-top:14px;">Welcome back!</h2>
+        <p style="color:var(--ink-soft); margin-top:10px; font-size:15px;">Your teacher license is active. Head to the portal to access all lesson plans and resources.</p>
+      </div>
+      <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;">
+        <a href="education-portal.html#lessons" class="btn btn-primary" style="font-size:15px; padding:14px 30px;">Browse Lesson Plans →</a>
+        <a href="my-license.html" class="btn btn-outline" style="font-size:15px; padding:14px 30px;">Manage My License</a>
+      </div>`;
+  } else if (hasPendingLicense) {
+    wrap.innerHTML = `
+      <div style="text-align:center; margin-bottom:48px;">
+        <span class="eyebrow">Almost There</span>
+        <h2 style="font-size:30px; margin-top:14px;">Finish setting up your license</h2>
+        <p style="color:var(--ink-soft); margin-top:10px; font-size:15px;">Your school has a license — you just need to complete your teacher registration.</p>
+      </div>
+      <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;">
+        <a href="education-schools.html" class="btn btn-primary" style="font-size:15px; padding:14px 30px;">Complete Registration →</a>
+        <a href="my-license.html" class="btn btn-outline" style="font-size:15px; padding:14px 30px;">View My License</a>
+      </div>`;
+  }
+  // else: logged in but no license — keep the static "What's your role?" content unchanged
+})();
+</script>
 
 <script src="footer.js?v=1"></script>
 </body>
