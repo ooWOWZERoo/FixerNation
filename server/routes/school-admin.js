@@ -275,14 +275,18 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
 
   const [rows] = await pool.query(
     `SELECT si.id, si.invited_email, si.first_name, si.last_name, si.status,
-            si.grade_level, si.department, si.expires_at, si.resend_count,
+            si.grade_level, si.role_title, si.department, si.subject_area,
+            si.expires_at, si.resend_count,
             si.last_resent_at, si.revoked_at, si.revocation_reason, si.created_at,
+            si.invited_by_site_user_id,
+            inviter.first_name AS inviter_first, inviter.last_name AS inviter_last,
             ls.status AS seat_status, ls.registered_at, ls.registered_site_user_id,
             su.first_name AS teacher_first_name, su.last_name AS teacher_last_name,
             su.email AS teacher_email
      FROM school_invitations si
      LEFT JOIN license_seats ls ON ls.id = si.seat_id
      LEFT JOIN site_users su ON su.id = ls.registered_site_user_id
+     LEFT JOIN site_users inviter ON inviter.id = si.invited_by_site_user_id
      ${where}
      ORDER BY si.created_at DESC
      LIMIT ? OFFSET ?`,

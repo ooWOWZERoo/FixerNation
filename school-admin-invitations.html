@@ -90,6 +90,10 @@
       <div class="sa-form-group"><label>Grade Level</label><input type="text" id="invGrade"></div>
       <div class="sa-form-group"><label>Department</label><input type="text" id="invDept"></div>
     </div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label>Role Title</label><input type="text" id="invRoleTitle" placeholder="e.g. Counselor"></div>
+      <div class="sa-form-group"><label>Subject Area</label><input type="text" id="invSubjectArea" placeholder="e.g. Social Studies"></div>
+    </div>
     <div class="sa-form-group">
       <label>Personal Message <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
       <textarea id="invMessage" placeholder="Looking forward to having you in the program!"></textarea>
@@ -222,7 +226,9 @@ function renderInvitations(invs) {
       if (inv.status === 'revoked' || inv.status === 'expired') {
         actions += ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="deleteInvitation(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Delete</button>';
       }
-      return '<tr><td><div style="font-weight:600;font-size:13.5px;">' + esc(name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(inv.invited_email) + '</div></td><td style="font-size:13px;">' + sent + '</td><td style="font-size:13px;">' + expires + '</td><td>' + badge + '</td><td style="font-size:13px;text-align:center;">' + resends + '</td><td>' + actions + '</td></tr>';
+      var roleLine = [inv.role_title, inv.subject_area].filter(Boolean).join(' · ');
+      var inviterLine = (inv.inviter_first || inv.inviter_last) ? 'Invited by ' + esc([inv.inviter_first, inv.inviter_last].filter(Boolean).join(' ')) : '';
+      return '<tr><td><div style="font-weight:600;font-size:13.5px;">' + esc(name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(inv.invited_email) + '</div>' + (roleLine ? '<div style="font-size:11px;color:var(--sa-text-soft);margin-top:2px;">' + esc(roleLine) + '</div>' : '') + (inviterLine ? '<div style="font-size:11px;color:var(--sa-text-soft);">' + inviterLine + '</div>' : '') + '</td><td style="font-size:13px;">' + sent + '</td><td style="font-size:13px;">' + expires + '</td><td>' + badge + '</td><td style="font-size:13px;text-align:center;">' + resends + '</td><td>' + actions + '</td></tr>';
     }).join('') +
     '</tbody></table>';
 }
@@ -285,7 +291,7 @@ function openInviteModal() { document.getElementById('inviteModal').style.displa
 function closeInviteModal() {
   document.getElementById('inviteModal').style.display = 'none';
   document.getElementById('inviteErr').style.display = 'none';
-  ['invEmail','invFirstName','invLastName','invGrade','invDept','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  ['invEmail','invFirstName','invLastName','invGrade','invDept','invRoleTitle','invSubjectArea','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
 }
 async function sendInvite() {
   const btn = document.getElementById('inviteBtn');
@@ -295,7 +301,7 @@ async function sendInvite() {
   if (!email) { err.textContent = 'Email is required.'; err.style.display = 'flex'; return; }
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevel: document.getElementById('invGrade').value.trim(), department: document.getElementById('invDept').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
+    await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevel: document.getElementById('invGrade').value.trim(), department: document.getElementById('invDept').value.trim(), roleName: document.getElementById('invRoleTitle').value.trim(), subjectArea: document.getElementById('invSubjectArea').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
     closeInviteModal();
     saToast('Invitation sent to ' + email, 'success');
     loadInvitations();
