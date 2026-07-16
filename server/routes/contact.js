@@ -49,6 +49,15 @@ router.post('/quote', async (req, res) => {
     [firstName || '', lastName || '', email, school || '', phone || '', message || '']
   );
 
+  await pool.query(
+    `INSERT INTO newsletter_contacts (name, email, company, source, status)
+     VALUES (?, ?, ?, 'Quote Request', 'Subscribed')
+     ON DUPLICATE KEY UPDATE
+       name    = IF(name    = '' OR name    IS NULL, VALUES(name),    name),
+       company = IF(company = '' OR company IS NULL, VALUES(company), company)`,
+    [`${firstName || ''} ${lastName || ''}`.trim() || email, email, school || null]
+  );
+
   await sendContactFormEmail({
     to: await getSetting('contact_email_quote'),
     formName: 'Request a Formal Quotation',
