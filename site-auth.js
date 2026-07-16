@@ -86,6 +86,7 @@ function fnAuthRenderNav(loggedIn, firstName) {
           <a href="my-profile.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Profile</a>
           <a href="my-memberships.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Memberships</a>
           <a href="my-license.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Licenses</a>
+          <a href="teacher-classrooms.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Classrooms</a>
           <a href="my-purchases.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">Purchase History</a>
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>
           <a href="#" onclick="fnAuthLogout(); return false;" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#D9502F; border-radius:6px;">Log Out</a>
