@@ -142,8 +142,8 @@ function renderOrders(purchases) {
       <td class="a-cell-title">${(p.buyer && (p.buyer.company || p.buyer.name)) || '—'}<div class="a-note">${(p.buyer && p.buyer.email) || ''}</div></td>
       <td>${describeItem(p)}</td>
       <td>${p.amount !== null ? fnFormatCurrency(p.amount) : '—'}</td>
-      <td><span class="a-pill a-pill-neutral">${p.paymentMethod}</span></td>
-      <td><span class="a-pill ${paid ? 'a-pill-success' : 'a-pill-neutral'}">${p.paymentStatus}</span></td>
+      <td><span class="a-pill a-pill-neutral">${{stripe:'Stripe',po:'PO',manual:'Manual'}[p.paymentMethod] || p.paymentMethod}</span></td>
+      <td><span class="a-pill ${paid ? 'a-pill-success' : 'a-pill-neutral'}">${paid ? 'Paid' : 'Unpaid'}</span></td>
       <td>${p.invoiceId ? `<a href="admin-invoice-print.html?id=${p.invoiceId}" target="_blank">View</a>` : '—'}</td>
     `;
     tbody.appendChild(tr);
