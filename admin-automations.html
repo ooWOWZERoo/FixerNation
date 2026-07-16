@@ -154,7 +154,7 @@
             <div class="a-note" style="margin-bottom:16px;">Execution history, revenue attribution, and analytics are wired in the next backend phase.</div>
             <div style="display:flex;flex-direction:column;gap:10px;">
               <button class="a-btn a-btn-outline" style="justify-content:flex-start;gap:10px;" onclick="openBuilder(null)">🚀 <span>Create an automation from scratch</span></button>
-              <button class="a-btn a-btn-outline" style="justify-content:flex-start;gap:10px;" onclick="switchTab('templates')">📋 <span>Browse 66 ready-made templates</span></button>
+              <button class="a-btn a-btn-outline" style="justify-content:flex-start;gap:10px;" onclick="switchTab('templates')">📋 <span id="tplQuickStartBtn">Browse ready-made templates</span></button>
             </div>
           </div>
         </div>
@@ -201,7 +201,7 @@
       <!-- ═══ TEMPLATES ═══════════════════════════════════════════════════════ -->
       <div id="tab-templates" style="display:none;">
         <div class="tpl-cat-bar" id="tplCatBar">
-          <button class="tpl-cat-btn active" onclick="filterTpl('all',this)">All (66)</button>
+          <button class="tpl-cat-btn active" id="tplAllBtn" onclick="filterTpl('all',this)">All</button>
         </div>
         <div class="tpl-grid" id="tplGrid"></div>
       </div>
@@ -472,6 +472,21 @@ const MERGE_FIELDS = {
   license_seat_invite:           ['licenseProductName','schoolLabel'],
 };
 
+const MERGE_FIELD_DESCS = {
+  firstName:          "Recipient's first name",
+  bookTitle:          'Title of the purchased book',
+  planName:           'Name of the membership plan',
+  trialDays:          'Number of trial days',
+  setPasswordUrl:     'One-time link to set or reset their password',
+  amount:             'Payment amount, e.g. $49.00',
+  expiresOn:          'Membership expiration date',
+  buyerName:          "Buyer's full name",
+  invoiceNumber:      'Invoice reference number, e.g. INV-00001',
+  total:              'Invoice total amount',
+  licenseProductName: 'Name of the license product',
+  schoolLabel:        'School name or domain',
+};
+
 const TRIGGER_EVENTS = {
   ecommerce:[
     {key:'cart_abandoned',        label:'Cart Abandoned'},
@@ -544,14 +559,12 @@ const TPL_CATS = [
 ];
 
 const TEMPLATES = [
-  // Lead Generation (7)
+  // Lead Generation (5)
   {id:'lg1',cat:'lead',icon:'👋',name:'Welcome New Subscriber',         desc:'Send a warm welcome to anyone who joins your newsletter list.'},
   {id:'lg2',cat:'lead',icon:'✅',name:'Newsletter Signup Confirmation',  desc:'Confirm the signup and set expectations for upcoming content.'},
   {id:'lg3',cat:'lead',icon:'📥',name:'Free Resource Follow-Up',        desc:'Follow up after a lead downloads a free resource.'},
-  {id:'lg4',cat:'lead',icon:'🤝',name:'Referral Program Invitation',    desc:'Invite active members to refer colleagues to Fixer Nation.'},
   {id:'lg5',cat:'lead',icon:'🔁',name:'Abandoned Signup Recovery',      desc:'Re-engage visitors who started but did not finish signing up.'},
   {id:'lg6',cat:'lead',icon:'📅',name:'Event Registration Confirmation',desc:'Confirm event registration and provide calendar details.'},
-  {id:'lg7',cat:'lead',icon:'🎥',name:'Webinar Reminder Series',        desc:'3-touch reminder series (24h, 1h, live) before a webinar.'},
   // Cart & Checkout (6)
   {id:'cc1',cat:'cart',icon:'🛒',name:'Abandoned Cart — 1-Hour Nudge',         desc:'Gently remind shoppers who left items in their cart.'},
   {id:'cc2',cat:'cart',icon:'🛍️',name:'Abandoned Cart — 24-Hour Follow-Up',    desc:'Second touchpoint with added urgency for abandoned carts.'},
@@ -600,10 +613,9 @@ const TEMPLATES = [
   {id:'mk5',cat:'marketing',icon:'💤',name:'Re-Engagement (90-Day Inactive)',desc:'Win back contacts who have not engaged in 90 days.'},
   {id:'mk6',cat:'marketing',icon:'🎂',name:'Milestone Celebration (1-Year)', desc:'Celebrate a contact\'s 1-year anniversary with Fixer Nation.'},
   {id:'mk7',cat:'marketing',icon:'🥳',name:'Birthday / Anniversary Message', desc:'Send a personalized message on a contact\'s key date.'},
-  // Customer Success (6)
+  // Customer Success (5)
   {id:'cs1',cat:'success',icon:'🚀',name:'Onboarding Drip (Days 1, 3, 7)',   desc:'Three-email sequence guiding a new member through key features.'},
   {id:'cs2',cat:'success',icon:'💎',name:'Product Feature Spotlight',         desc:'Highlight an underused feature to drive deeper engagement.'},
-  {id:'cs3',cat:'success',icon:'🤲',name:'Community Invitation',              desc:'Invite members to join the FN Network or social community.'},
   {id:'cs4',cat:'success',icon:'🎫',name:'Support Ticket Follow-Up',          desc:'Check in after a support request is resolved.'},
   {id:'cs5',cat:'success',icon:'📋',name:'Net Promoter Score Survey',         desc:'One-question NPS survey sent at strategic touchpoints.'},
   {id:'cs6',cat:'success',icon:'🌟',name:'Customer Success Story Spotlight', desc:'Invite top members to share their story for a feature.'},
@@ -744,6 +756,8 @@ function initTplCats() {
   const bar = document.getElementById('tplCatBar');
   if (bar.dataset.built) return;
   bar.dataset.built = '1';
+  document.getElementById('tplAllBtn').textContent = 'All (' + TEMPLATES.length + ')';
+  document.getElementById('tplQuickStartBtn').textContent = 'Browse ' + TEMPLATES.length + ' ready-made templates';
   TPL_CATS.forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'tpl-cat-btn';
@@ -997,15 +1011,34 @@ function openEditAuto(key) {
   document.getElementById('editReminderField').style.display = isReminder ? 'block' : 'none';
   document.getElementById('editReminderDays').value    = a.reminderDaysBefore || 7;
   const fields = MERGE_FIELDS[key] || [];
-  document.getElementById('editMergeHint').textContent = fields.length
-    ? 'Available merge fields: ' + fields.map(f => '{{' + f + '}}').join(', ')
-    : '';
+  const hintEl = document.getElementById('editMergeHint');
+  if (fields.length) {
+    hintEl.innerHTML =
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--a-text-soft);margin-bottom:7px;">Merge Tokens — click to insert at cursor</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      fields.map(function(f) {
+        var desc = MERGE_FIELD_DESCS[f] || f;
+        return '<span onclick="insertMergeToken(\'{{' + f + '}}\')" title="' + desc + '" style="cursor:pointer;padding:3px 10px;border-radius:6px;background:var(--a-accent-soft);color:var(--a-accent-on-soft);font-size:12px;font-weight:600;font-family:monospace;user-select:none;">{{' + f + '}}</span>';
+      }).join('') +
+      '</div>';
+  } else {
+    hintEl.textContent = '';
+  }
   document.getElementById('editAutoOverlay').classList.add('show');
 }
 
 function closeEditAuto() {
   document.getElementById('editAutoOverlay').classList.remove('show');
   editingKey = null;
+}
+
+function insertMergeToken(token) {
+  const ta = document.getElementById('editBody');
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + token + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + token.length;
+  ta.focus();
 }
 
 async function saveEditAuto() {
