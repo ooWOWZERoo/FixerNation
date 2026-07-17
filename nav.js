@@ -40,6 +40,9 @@
       '.fn-nav-dropdown.open .fn-nav-menu{display:block!important;}' +
       '.fn-nav-dropdown.open .fn-nav-caret{transform:rotate(180deg)!important;}' +
       // Responsive: hide Join button when nav is tight; hide all links on mobile
+      // Join button: fully self-contained — never inherits page .btn-primary color
+      '.fn-nav-join{display:inline-flex!important;align-items:center!important;justify-content:center!important;padding:10px 20px!important;border-radius:999px!important;font-weight:700!important;font-size:14px!important;font-family:\'Plus Jakarta Sans\',sans-serif!important;background:#F26B4D!important;color:#fff!important;border:none!important;cursor:pointer!important;white-space:nowrap!important;text-decoration:none!important;box-shadow:0 8px 20px -8px rgba(242,107,77,0.5)!important;transition:background .15s!important;letter-spacing:0!important;}' +
+      '.fn-nav-join:hover{background:#D9502F!important;text-decoration:none!important;}' +
       '@media(max-width:1099px){.fn-nav-join{display:none!important;}}' +
       '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}}';
     (document.head || document.documentElement).appendChild(s);
