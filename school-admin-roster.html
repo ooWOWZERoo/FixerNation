@@ -74,13 +74,10 @@
       <div class="toolbar">
         <input type="search" id="searchInput" placeholder="Search by name or email…" oninput="debounceLoad()">
         <select id="statusFilter" onchange="page=1;loadRoster()">
-          <option value="">All seats</option>
-          <option value="registered">Active</option>
+          <option value="registered" selected>Active teachers</option>
           <option value="inactive">Inactive</option>
-          <option value="pending">Pending invitation</option>
-          <option value="revoked">Revoked</option>
+          <option value="">All teachers</option>
         </select>
-        <a href="school-admin-invitations.html" class="sa-btn sa-btn-primary">✉️ Invite Teacher</a>
       </div>
 
       <!-- Roster table -->
