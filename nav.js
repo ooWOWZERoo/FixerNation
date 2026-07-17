@@ -12,6 +12,7 @@
     var s = document.createElement('style');
     s.id = 'fn-nav-css-v3';
     s.textContent =
+      'a{text-decoration:none!important;}' +
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
       // Outer row: self-contained layout — max-width + centering live here, not on any page .wrap
       '.nav{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 24px!important;flex-wrap:nowrap!important;gap:0!important;max-width:1180px!important;margin:0 auto!important;}' +

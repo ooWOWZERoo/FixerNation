@@ -36,7 +36,7 @@ body {
 }
 
 a { color: var(--sa-accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a:hover { text-decoration: none; }
 
 /* ── Shell layout ── */
 .sa-shell {
