@@ -113,21 +113,21 @@
       }, 180);
     }
 
-    dropdown.addEventListener('mouseenter', openMenu);
-    dropdown.addEventListener('mouseleave', closeMenu);
-    menu.addEventListener('mouseenter', openMenu);   // cancel close when entering menu
-    menu.addEventListener('mouseleave', closeMenu);
+    if (dropdown) {
+      dropdown.addEventListener('mouseenter', openMenu);
+      dropdown.addEventListener('mouseleave', closeMenu);
+      menu.addEventListener('mouseenter', openMenu);
+      menu.addEventListener('mouseleave', closeMenu);
 
-    // Click-toggle (mobile fallback / accessibility)
-    dropdown.querySelector('.fn-nav-parent').addEventListener('click', function (e) {
-      e.preventDefault();
-      dropdown.classList.toggle('open');
-    });
+      dropdown.querySelector('.fn-nav-parent').addEventListener('click', function (e) {
+        e.preventDefault();
+        dropdown.classList.toggle('open');
+      });
 
-    // Close on outside click
-    document.addEventListener('click', function (e) {
-      if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
-    });
+      document.addEventListener('click', function (e) {
+        if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+      });
+    }
 
     // Sync cart badge in case cart.js ran before nav.js injected the DOM
     if (typeof cartRenderBadge === 'function') cartRenderBadge();

@@ -213,6 +213,17 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 
+// Redirect to index.html if the user is not logged in as a site_user.
+// Call at the top of any teacher-facing page that requires a session.
+function fnRequireSiteAuth(redirectTo) {
+  fetch('/api/site-auth/me', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.loggedIn) window.location.href = redirectTo || 'index.html';
+    })
+    .catch(function() { /* server unreachable — page will show its own API errors */ });
+}
+
 async function fnAuthResendVerification() {
   const email = document.getElementById('fnAuthLoginEmail').value.trim();
   if (!email) { fnAuthShowMessage('Enter your email above first.', 'error'); return; }
