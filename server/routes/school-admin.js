@@ -1163,11 +1163,13 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
   );
 
   const [rows] = await pool.query(
-    `SELECT action, entity_type, entity_id, actor_type, actor_email,
-            reason, prev_value, new_value, created_at
-     FROM school_audit_log
-     WHERE purchase_id = ?
-     ORDER BY created_at DESC
+    `SELECT sal.action, sal.entity_type, sal.entity_id, sal.actor_type, sal.actor_email,
+            sal.reason, sal.prev_value, sal.new_value, sal.created_at,
+            su.email AS target_email
+     FROM school_audit_log sal
+     LEFT JOIN site_users su ON su.id = sal.entity_id AND sal.entity_type = 'site_user'
+     WHERE sal.purchase_id = ?
+     ORDER BY sal.created_at DESC
      LIMIT ? OFFSET ?`,
     [purchaseId, limit, offset]
   );
