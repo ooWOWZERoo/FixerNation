@@ -13,8 +13,8 @@
     s.id = 'fn-nav-css-v3';
     s.textContent =
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
-      // Outer row: gap:0 neutralises any page .nav{gap:N} rule; flex-wrap:nowrap is the hard lock
-      '.nav{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 24px!important;flex-wrap:nowrap!important;gap:0!important;}' +
+      // Outer row: self-contained layout — max-width + centering live here, not on any page .wrap
+      '.nav{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 24px!important;flex-wrap:nowrap!important;gap:0!important;max-width:1180px!important;margin:0 auto!important;}' +
       // Brand: never shrinks, text never breaks
       '.brand{display:flex!important;align-items:center!important;gap:12px!important;font-family:\'Fraunces\',serif!important;font-weight:700!important;font-size:21px!important;color:var(--teal-dark,#0E3733)!important;text-decoration:none!important;flex-shrink:0!important;white-space:nowrap!important;}' +
       '.brand-mark{width:42px!important;height:42px!important;border-radius:14px!important;background:linear-gradient(135deg,var(--coral,#F26B4D),var(--gold,#EBA657))!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:16px!important;font-weight:800!important;box-shadow:0 8px 18px -6px rgba(242,107,77,.6)!important;flex-shrink:0!important;}' +
@@ -61,7 +61,7 @@
 
   // ── Nav HTML ─────────────────────────────────────────────────────────────────
   var inner =
-    '<div class="nav wrap">' +
+    '<div class="nav">' +
       '<a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>' +
       '<nav class="nav-links">' +
         lnk('index.html', 'Home',  homeActive)  +
