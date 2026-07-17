@@ -890,7 +890,8 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   }
 
   const q = (req.query.q || '').trim();
-  const statusFilter = req.query.status || '';
+  const statusParam = (req.query.status || '').trim();
+  const statusValues = statusParam ? statusParam.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   const [[purchase]] = await pool.query(
     'SELECT id, seat_count, payment_status, school_domain FROM purchases WHERE id = ?',
@@ -912,9 +913,12 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   // Filtered seat rows for display
   let where = 'WHERE ls.purchase_id = ?';
   const params = [purchaseId];
-  if (statusFilter) {
+  if (statusValues.length === 1) {
     where += ' AND ls.status = ?';
-    params.push(statusFilter);
+    params.push(statusValues[0]);
+  } else if (statusValues.length > 1) {
+    where += ' AND ls.status IN (' + statusValues.map(() => '?').join(',') + ')';
+    params.push(...statusValues);
   }
   if (q) {
     where += ' AND (su.email LIKE ? OR su.first_name LIKE ? OR su.last_name LIKE ? OR ls.invited_email LIKE ?)';

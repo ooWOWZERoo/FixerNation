@@ -76,7 +76,7 @@
         <select id="statusFilter" onchange="page=1;loadRoster()">
           <option value="registered" selected>Active teachers</option>
           <option value="inactive">Inactive</option>
-          <option value="">All teachers</option>
+          <option value="registered,inactive,revoked">All teachers</option>
         </select>
       </div>
 
@@ -212,7 +212,7 @@ function renderRoster(seats) {
     '<th></th><th>Teacher</th><th>Status</th><th>Since</th><th>Notes</th><th>Actions</th>' +
     '</tr></thead><tbody>' +
     slice.map(function (s) {
-      var hasUser = s.status === 'registered' || s.status === 'inactive';
+      var hasUser = !!(s.first_name || s.email);
       var init = hasUser && s.first_name
         ? s.first_name.charAt(0).toUpperCase()
         : (s.invited_email ? s.invited_email.charAt(0).toUpperCase() : '?');
