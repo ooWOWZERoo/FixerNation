@@ -822,46 +822,57 @@ router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, requireWriteP
 // DELETE /api/school-admin/teachers/:siteUserId — remove from school (keeps site_user account)
 router.delete('/teachers/:siteUserId', requireSchoolAdmin, requireWritePermission, async (req, res) => {
   const siteUserId = Number(req.params.siteUserId);
-  const purchaseId = req.query.purchaseId
-    ? Number(req.query.purchaseId)
-    : req.schoolAdmin.purchaseIds[0];
+  const bodyPurchaseId = req.body && req.body.purchaseId ? Number(req.body.purchaseId) : null;
+  const purchaseId = bodyPurchaseId || (req.query.purchaseId ? Number(req.query.purchaseId) : req.schoolAdmin.purchaseIds[0]);
 
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  const [[seat]] = await pool.query(
-    "SELECT id, invited_email FROM license_seats WHERE purchase_id = ? AND registered_site_user_id = ?",
-    [purchaseId, siteUserId]
-  );
-  if (!seat) return res.status(404).json({ error: 'Teacher not found under this school' });
+  try {
+    const [[seat]] = await pool.query(
+      "SELECT id FROM license_seats WHERE purchase_id = ? AND registered_site_user_id = ?",
+      [purchaseId, siteUserId]
+    );
+    if (!seat) return res.status(404).json({ error: 'Teacher not found under this school' });
 
-  const reason = (req.body && req.body.reason) || 'Removed by administrator';
+    const reason = (req.body && req.body.reason) || 'Removed by administrator';
 
-  await pool.query(
-    "UPDATE license_seats SET status = 'revoked', revoked_at = NOW(), revoked_by = ?, revocation_reason = ? WHERE id = ?",
-    [req.schoolAdmin.siteUserId, reason, seat.id]
-  );
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        "UPDATE license_seats SET status = 'revoked', revoked_at = NOW(), revoked_by = ?, revocation_reason = ? WHERE id = ?",
+        [req.schoolAdmin.siteUserId, reason, seat.id]
+      );
+      await conn.query(
+        'UPDATE site_users SET session_invalidated_at = NOW() WHERE id = ?',
+        [siteUserId]
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
 
-  // Invalidate the teacher's active sessions so they're force-logged-out immediately.
-  await pool.query(
-    'UPDATE site_users SET session_invalidated_at = NOW() WHERE id = ?',
-    [siteUserId]
-  );
+    await pool.query(
+      'DELETE FROM school_license_admins WHERE site_user_id = ? AND purchase_id = ?',
+      [siteUserId, purchaseId]
+    );
 
-  // If they were a school_license_admin under this purchase, remove that too
-  await pool.query(
-    'DELETE FROM school_license_admins WHERE site_user_id = ? AND purchase_id = ?',
-    [siteUserId, purchaseId]
-  );
+    await audit(pool, {
+      actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
+      actorEmail: req.schoolAdmin.email, action: 'teacher_removed',
+      entityType: 'site_user', entityId: siteUserId, purchaseId, reason, ipAddress: req.ip,
+    });
 
-  await audit(pool, {
-    actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
-    actorEmail: req.schoolAdmin.email, action: 'teacher_removed',
-    entityType: 'site_user', entityId: siteUserId, purchaseId, reason, ipAddress: req.ip,
-  });
-
-  res.json({ ok: true });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('remove teacher error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ---------------------------------------------------------------------------
