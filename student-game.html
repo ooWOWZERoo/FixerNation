@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brain Game — Fixer Nation Education</title>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);}
+.header{background:#fff;box-shadow:0 1px 0 var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;}
+.game-name{font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:var(--teal-dark);}
+.back-link{font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.back-link:hover{color:var(--teal-dark);}
+.done-btn{padding:9px 20px;border-radius:10px;border:none;background:var(--teal);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.done-btn:hover{background:var(--teal-dark);}
+.done-btn:disabled{opacity:.6;cursor:default;}
+.done-btn.played{background:#16a34a;}
+.game-frame{width:100%;border:none;display:block;}
+.layout{display:flex;flex-direction:column;height:100vh;}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+</head>
+<body>
+<div class="layout">
+  <div class="header">
+    <div class="header-left">
+      <div class="brand-mark">FN</div>
+      <div class="game-name" id="gameName">Brain Game</div>
+    </div>
+    <a class="back-link" href="student-home.html">← My Classroom</a>
+    <button class="done-btn" id="doneBtn" onclick="markDone()">Mark as Done ✓</button>
+  </div>
+  <iframe class="game-frame" id="gameFrame" src="" allowfullscreen style="flex:1;"></iframe>
+</div>
+
+<script>
+var params = new URLSearchParams(location.search);
+var assignmentId = params.get('assignment');
+var slug = params.get('slug');
+var name = params.get('name');
+
+if (!assignmentId || !slug) { location.href = 'student-home.html'; }
+
+document.getElementById('gameName').textContent = name || 'Brain Game';
+document.title = (name || 'Brain Game') + ' — Fixer Nation Education';
+document.getElementById('gameFrame').src = 'brain-' + slug + '.html';
+
+// Verify student is still logged in
+fetch('/api/classroom-auth/me', { credentials: 'include' })
+  .then(function(r) { if (!r.ok) location.href = 'student-login.html'; });
+
+async function markDone() {
+  var btn = document.getElementById('doneBtn');
+  btn.disabled = true;
+  try {
+    var r = await fetch('/api/student/games/' + assignmentId + '/complete', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (r.ok) {
+      btn.textContent = 'Played! ✓';
+      btn.classList.add('played');
+      setTimeout(function() { location.href = 'student-home.html'; }, 800);
+    } else {
+      btn.disabled = false;
+    }
+  } catch(e) {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

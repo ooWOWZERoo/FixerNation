@@ -151,7 +151,7 @@ function renderGames() {
   var html = '';
   games.forEach(function(g) {
     var done = !!g.last_completed_at;
-    html += '<a class="game-card" href="brain-games.html">' +
+    html += '<a class="game-card" href="student-game.html?assignment=' + g.assignment_id + '&slug=' + encodeURIComponent(g.game_slug) + '&name=' + encodeURIComponent(g.game_title) + '">' +
       '<div class="gc-title">' + esc(g.game_title) + '</div>' +
       '<div class="gc-status">' + (done ? '<span class="pill pill-green">Played</span>' : '<span class="pill pill-gray">Not played yet</span>') + (g.due_date ? ' · Due ' + g.due_date : '') + '</div>' +
     '</a>';
