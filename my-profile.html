@@ -14,11 +14,8 @@
     --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --border:rgba(22,79,74,0.15);
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; padding:40px 20px;}
-  .wrap{max-width:720px; margin:0 auto;}
-  .brand{display:flex; align-items:center; gap:12px; margin-bottom:20px;}
-  .brand-mark{width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800;}
-  .brand-word{font-family:'Fraunces',serif; font-weight:700; font-size:18px; color:var(--teal-dark);}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; padding:0;}
+  .wrap{max-width:720px; margin:0 auto; padding:24px 20px 60px;}
   .account-nav{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:32px; padding-bottom:20px; border-bottom:1px solid var(--border);}
   .account-nav a{padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; text-decoration:none; color:var(--ink-soft); background:#fff; box-shadow:0 2px 8px -4px rgba(22,79,74,0.15); transition:all .15s;}
   .account-nav a:hover{color:var(--teal-dark);}
@@ -47,10 +44,8 @@
 </style>
 </head>
 <body>
-
+<header></header>
 <div class="wrap">
-  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
-
   <nav class="account-nav">
     <a href="my-profile.html" class="active">My Profile</a>
     <a href="my-memberships.html">My Memberships</a>
@@ -101,6 +96,8 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="nav.js?v=5"></script>
+<script src="site-auth.js"></script>
 <script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
 <script>

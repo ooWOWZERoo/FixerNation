@@ -11,11 +11,8 @@
 <style>
 :root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:40px 20px;}
-.wrap{max-width:900px;margin:0 auto;}
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
-.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
-.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:0;}
+.wrap{max-width:900px;margin:0 auto;padding:24px 20px 60px;}
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
 h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
 .btn{padding:10px 20px;border-radius:10px;border:none;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:all .15s;}
@@ -50,20 +47,21 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal-dark);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:2000;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.account-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;}
+.account-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
 .account-nav a{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;color:var(--ink-soft);background:#fff;box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);transition:all .15s;}
 .account-nav a:hover{color:var(--teal-dark);}
 .account-nav a.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
 </style>
 </head>
 <body>
+<header></header>
 <div class="wrap">
-  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
-
   <nav class="account-nav">
     <a href="my-profile.html">My Profile</a>
-    <a href="my-license.html">My Account</a>
+    <a href="my-memberships.html">My Memberships</a>
+    <a href="my-license.html">My Licenses</a>
     <a href="teacher-classrooms.html" class="active">My Classrooms</a>
+    <a href="my-purchases.html">Purchase History</a>
   </nav>
 
   <div class="topbar">
@@ -105,6 +103,7 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="nav.js?v=5"></script>
 <script src="site-auth.js?v=2"></script>
 <script>
 fnRequireSiteAuth();
