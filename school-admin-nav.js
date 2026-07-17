@@ -1,6 +1,6 @@
 /* School License Administrator Portal — shared sidebar nav.
    Every portal page has <aside class="sa-sidebar"></aside>
-   followed by <script src="school-admin-nav.js?v=1"></script>. */
+   followed by <script src="school-admin-nav.js?v=2"></script>. */
 (function () {
   var aside = document.querySelector('.sa-sidebar');
   if (!aside) return;
@@ -12,6 +12,8 @@
     return '<a href="' + href + '"' + cls + '><span class="ic">' + icon + '</span><span class="label">' + label + '</span></a>';
   }
 
+  function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
   aside.innerHTML =
     '<div class="sa-logo">' +
       '<div class="mark">FN</div>' +
@@ -21,13 +23,12 @@
       '<select id="saSchoolSelect" onchange="saSelectSchool(this.value)"><option value="">Loading…</option></select>' +
     '</div>' +
     '<nav class="sa-nav">' +
-      link('school-admin-dashboard.html',    '📊', 'Dashboard') +
-      link('school-admin-teachers.html',     '👩‍🏫', 'Teachers') +
-      link('school-admin-invitations.html',  '✉️',  'Invitations') +
-      link('school-admin-licenses.html',     '🪪',  'Licenses') +
-      link('school-admin-reports.html',      '📈',  'Reports') +
-      link('school-admin-org.html',          '🏫',  'Organization') +
+      link('school-admin-dashboard.html',   '📊', 'Dashboard') +
+      link('school-admin-roster.html',      '🪑', 'Roster') +
+      link('school-admin-invitations.html', '✉️',  'Invitations') +
+      link('school-admin-reports.html',     '📈', 'Reports') +
     '</nav>' +
+    '<div id="saSchoolInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +
       '<a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>' +
       '<a href="#" onclick="saLogout();return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>' +
@@ -45,6 +46,8 @@
       // Update user display if topbar exists
       var userEl = document.getElementById('saUserName');
       if (userEl) userEl.textContent = data.firstName + ' ' + (data.lastName || '');
+      var avatarEl = document.getElementById('saUserAvatar');
+      if (avatarEl && data.firstName) avatarEl.textContent = data.firstName.charAt(0).toUpperCase();
 
       // Populate school selector for multi-school admins
       if (data.schools && data.schools.length > 1) {
@@ -53,10 +56,25 @@
         if (wrap && sel) {
           wrap.style.display = '';
           sel.innerHTML = data.schools.map(function (s) {
-            return '<option value="' + s.purchaseId + '">' + (s.schoolDomain || 'School ' + s.purchaseId) + '</option>';
+            return '<option value="' + s.purchaseId + '">' + esc(s.schoolDomain || 'School ' + s.purchaseId) + '</option>';
           }).join('');
           var stored = sessionStorage.getItem('saActivePurchaseId');
           if (stored) sel.value = stored;
+        }
+      }
+
+      // School info block in sidebar footer
+      var infoEl = document.getElementById('saSchoolInfo');
+      if (infoEl && data.schools && data.schools[0]) {
+        var school = data.schools[0];
+        var domain = school.schoolDomain ? esc(school.schoolDomain) : '';
+        var plan = school.planName ? esc(school.planName) : '';
+        var seats = school.seatCount ? school.seatCount + ' seats' : '';
+        if (domain || plan) {
+          infoEl.innerHTML =
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.35);margin-bottom:4px;">Your School</div>' +
+            (domain ? '<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:2px;">' + domain + '</div>' : '') +
+            ((plan || seats) ? '<div style="font-size:11.5px;color:rgba(255,255,255,.4);">' + [plan, seats].filter(Boolean).join(' · ') + '</div>' : '');
         }
       }
 

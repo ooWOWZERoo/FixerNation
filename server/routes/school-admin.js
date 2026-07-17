@@ -868,7 +868,7 @@ router.delete('/teachers/:siteUserId', requireSchoolAdmin, requireWritePermissio
 // Licenses
 // ---------------------------------------------------------------------------
 
-// GET /api/school-admin/licenses?purchaseId=
+// GET /api/school-admin/licenses?purchaseId=&q=&status=
 router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   const purchaseId = req.query.purchaseId
     ? Number(req.query.purchaseId)
@@ -878,10 +878,38 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
+  const q = (req.query.q || '').trim();
+  const statusFilter = req.query.status || '';
+
   const [[purchase]] = await pool.query(
     'SELECT id, seat_count, payment_status, school_domain FROM purchases WHERE id = ?',
     [purchaseId]
   );
+
+  // Unfiltered counts — always reflect the full pool regardless of search/filter
+  const [allSeats] = await pool.query(
+    'SELECT status FROM license_seats WHERE purchase_id = ?',
+    [purchaseId]
+  );
+  const total = purchase ? purchase.seat_count : 0;
+  const active   = allSeats.filter(s => s.status === 'registered').length;
+  const inactive = allSeats.filter(s => s.status === 'inactive').length;
+  const pending  = allSeats.filter(s => s.status === 'pending').length;
+  const revoked  = allSeats.filter(s => s.status === 'revoked').length;
+  const available = Math.max(0, total - active - inactive - pending);
+
+  // Filtered seat rows for display
+  let where = 'WHERE ls.purchase_id = ?';
+  const params = [purchaseId];
+  if (statusFilter) {
+    where += ' AND ls.status = ?';
+    params.push(statusFilter);
+  }
+  if (q) {
+    where += ' AND (su.email LIKE ? OR su.first_name LIKE ? OR su.last_name LIKE ? OR ls.invited_email LIKE ?)';
+    const like = `%${q}%`;
+    params.push(like, like, like, like);
+  }
 
   const [seats] = await pool.query(
     `SELECT ls.id, ls.invited_email, ls.status, ls.registered_at, ls.revoked_at,
@@ -891,20 +919,15 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
      FROM license_seats ls
      LEFT JOIN site_users su ON su.id = ls.registered_site_user_id
      LEFT JOIN school_invitations si ON si.seat_id = ls.id
-     WHERE ls.purchase_id = ?
+     ${where}
      ORDER BY ls.registered_at DESC, ls.id DESC`,
-    [purchaseId]
+    params
   );
-
-  const total = purchase ? purchase.seat_count : 0;
-  const active = seats.filter(s => s.status === 'registered').length;
-  const pending = seats.filter(s => s.status === 'pending').length;
-  const revoked = seats.filter(s => s.status === 'revoked').length;
-  const available = Math.max(0, total - active - pending);
 
   res.json({
     total,
     active,
+    inactive,
     pending,
     revoked,
     available,

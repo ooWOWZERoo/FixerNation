@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roster — School License Administrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=1">
+<style>
+  .roster-stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+  .rst-stat { flex:1; min-width:80px; background:#fff; border:1px solid var(--sa-border); border-radius:10px; padding:10px 14px; text-align:center; }
+  .rst-stat .val { font-size:24px; font-weight:800; line-height:1.1; margin-bottom:3px; color:var(--sa-text); }
+  .rst-stat .lbl { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--sa-text-soft); }
+  .rst-stat.success .val { color:var(--sa-success); }
+  .rst-stat.warn .val { color:var(--sa-warn); }
+  .rst-stat.accent .val { color:var(--sa-accent); }
+  .rst-stat.danger .val { color:var(--sa-danger); }
+  .util-strip { background:#fff; border:1px solid var(--sa-border); border-radius:10px; padding:12px 16px; margin-bottom:20px; }
+  .util-strip-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; }
+  .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .toolbar input[type=search] { flex:1; min-width:160px; padding:8px 12px; border:1px solid var(--sa-border); border-radius:8px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--sa-text); }
+  .toolbar select { padding:8px 12px; border:1px solid var(--sa-border); border-radius:8px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--sa-text); }
+  .av { width:34px; height:34px; border-radius:50%; background:var(--sa-accent-soft); color:var(--sa-accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .av.muted { background:var(--sa-border); color:var(--sa-text-soft); }
+  .teacher-name { font-weight:600; font-size:13px; }
+  .teacher-email { font-size:12px; color:var(--sa-text-soft); }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-admin-nav.js?v=2"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Roster</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="paymentBanner" class="sa-payment-banner" style="display:none;">
+        <span class="icon">⚠️</span>
+        <div>
+          <strong>License payment pending</strong>
+          <p>Your school's group license is not yet active. Teachers cannot register until the associated invoice is marked as paid. Contact Fixer Nation Education for assistance.</p>
+        </div>
+      </div>
+
+      <!-- Seat summary chips -->
+      <div class="roster-stats">
+        <div class="rst-stat"><div class="val" id="stTotal">—</div><div class="lbl">Total Seats</div></div>
+        <div class="rst-stat success"><div class="val" id="stActive">—</div><div class="lbl">Active</div></div>
+        <div class="rst-stat warn"><div class="val" id="stInactive">—</div><div class="lbl">Inactive</div></div>
+        <div class="rst-stat warn"><div class="val" id="stPending">—</div><div class="lbl">Pending</div></div>
+        <div class="rst-stat accent"><div class="val" id="stAvail">—</div><div class="lbl">Available</div></div>
+        <div class="rst-stat danger"><div class="val" id="stRevoked">—</div><div class="lbl">Revoked</div></div>
+      </div>
+
+      <!-- Utilization bar -->
+      <div class="util-strip">
+        <div class="util-strip-top">
+          <span style="color:var(--sa-text-soft);" id="utilDetail">— of — seats assigned</span>
+          <span style="font-weight:800;color:var(--sa-accent);" id="utilPct">—%</span>
+        </div>
+        <div class="sa-util-bar-wrap"><div class="sa-util-bar" id="utilBar" style="width:0%;"></div></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input type="search" id="searchInput" placeholder="Search by name or email…" oninput="debounceLoad()">
+        <select id="statusFilter" onchange="page=1;loadRoster()">
+          <option value="">All seats</option>
+          <option value="registered">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="pending">Pending invitation</option>
+          <option value="revoked">Revoked</option>
+        </select>
+        <a href="school-admin-invitations.html" class="sa-btn sa-btn-primary">✉️ Invite Teacher</a>
+      </div>
+
+      <!-- Roster table -->
+      <div class="sa-card">
+        <div id="rosterWrap"><div class="sa-loading"><div class="sa-spinner"></div> Loading…</div></div>
+        <div class="sa-pagination" id="pagination" style="display:none;">
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" id="prevBtn" onclick="changePage(-1)">← Prev</button>
+          <span id="pageInfo" style="font-size:13px;color:var(--sa-text-soft);"></span>
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" id="nextBtn" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Revoke pending-invitation modal -->
+<div class="sa-modal-overlay" id="revokeModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Revoke Invitation</h2>
+      <button class="sa-modal-close" onclick="closeRevoke()">✕</button>
+    </div>
+    <p id="revokeMsg" style="font-size:13.5px;margin-bottom:16px;color:var(--sa-text-soft);"></p>
+    <div class="sa-form-group">
+      <label>Reason <span style="color:var(--sa-danger)">*</span></label>
+      <textarea id="revokeReason" placeholder="Why is this invitation being revoked?"></textarea>
+    </div>
+    <div id="revokeErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeRevoke()">Cancel</button>
+      <button class="sa-btn sa-btn-danger" id="revokeBtn" onclick="execRevoke()">Revoke</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm action modal (deactivate / reactivate / remove) -->
+<div class="sa-modal-overlay" id="confirmModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2 id="confirmTitle">Confirm</h2>
+      <button class="sa-modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <p id="confirmMsg" style="font-size:13.5px;margin-bottom:16px;color:var(--sa-text-soft);"></p>
+    <div class="sa-form-group" id="reasonWrap" style="display:none;">
+      <label>Reason <span style="color:var(--sa-danger)">*</span></label>
+      <textarea id="confirmReason" placeholder="Why is this teacher being removed?"></textarea>
+    </div>
+    <div id="confirmErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeConfirm()">Cancel</button>
+      <button class="sa-btn sa-btn-danger" id="confirmBtn" onclick="execConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var page = 1, totalPages = 1, debounceTimer = null;
+var revokeSeatId = null;
+var confirmFn = null;
+
+var PAGE_SIZE = 25;
+
+document.addEventListener('saReady', function () { loadRoster(); });
+document.addEventListener('saSchoolChanged', function () { page = 1; loadRoster(); });
+
+function debounceLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(function () { page = 1; loadRoster(); }, 350);
+}
+
+async function loadRoster() {
+  var purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  var q = document.getElementById('searchInput').value.trim();
+  var status = document.getElementById('statusFilter').value;
+  var url = '/api/school-admin/licenses?purchaseId=' + purchaseId +
+    (q ? '&q=' + encodeURIComponent(q) : '') +
+    (status ? '&status=' + status : '');
+  var wrap = document.getElementById('rosterWrap');
+  wrap.innerHTML = '<div class="sa-loading"><div class="sa-spinner"></div> Loading…</div>';
+  try {
+    var d = await saFetch(url);
+
+    if (d.paymentStatus && d.paymentStatus !== 'paid') {
+      document.getElementById('paymentBanner').style.display = 'flex';
+    }
+
+    // Counts always reflect the full unfiltered pool
+    document.getElementById('stTotal').textContent = d.total || 0;
+    document.getElementById('stActive').textContent = d.active || 0;
+    document.getElementById('stInactive').textContent = d.inactive || 0;
+    document.getElementById('stPending').textContent = d.pending || 0;
+    document.getElementById('stAvail').textContent = d.available || 0;
+    document.getElementById('stRevoked').textContent = d.revoked || 0;
+
+    var assigned = (d.active || 0) + (d.pending || 0);
+    var pct = d.total ? Math.round(assigned / d.total * 100) : 0;
+    var bar = document.getElementById('utilBar');
+    bar.style.width = pct + '%';
+    bar.className = 'sa-util-bar' + (pct >= 100 ? ' danger' : pct >= 75 ? ' warn' : '');
+    document.getElementById('utilPct').textContent = pct + '%';
+    document.getElementById('utilDetail').textContent = assigned + ' of ' + (d.total || 0) + ' seats assigned';
+
+    renderRoster(d.seats || []);
+  } catch (e) {
+    wrap.innerHTML = '<div class="sa-alert sa-alert-danger">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderRoster(seats) {
+  var wrap = document.getElementById('rosterWrap');
+
+  // Client-side pagination
+  totalPages = Math.max(1, Math.ceil(seats.length / PAGE_SIZE));
+  page = Math.max(1, Math.min(page, totalPages));
+  var slice = seats.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  if (!seats.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon" style="font-size:36px;">🪑</div><div>No seats match your filter.</div></div>';
+    document.getElementById('pagination').style.display = 'none';
+    return;
+  }
+
+  var statusBadge = {
+    registered: '<span class="sa-badge sa-badge-success">Active</span>',
+    inactive:   '<span class="sa-badge sa-badge-warn">Inactive</span>',
+    pending:    '<span class="sa-badge sa-badge-warn">Pending</span>',
+    revoked:    '<span class="sa-badge sa-badge-danger">Revoked</span>',
+  };
+
+  wrap.innerHTML = '<table class="sa-table"><thead><tr>' +
+    '<th></th><th>Teacher</th><th>Status</th><th>Since</th><th>Notes</th><th>Actions</th>' +
+    '</tr></thead><tbody>' +
+    slice.map(function (s) {
+      var hasUser = s.status === 'registered' || s.status === 'inactive';
+      var init = hasUser && s.first_name
+        ? s.first_name.charAt(0).toUpperCase()
+        : (s.invited_email ? s.invited_email.charAt(0).toUpperCase() : '?');
+
+      var avatar = '<div class="av' + (hasUser ? '' : ' muted') + '">' + init + '</div>';
+
+      var nameCell = hasUser
+        ? '<div class="teacher-name">' + esc((s.first_name || '') + ' ' + (s.last_name || '')).trim() + '</div>' +
+          '<div class="teacher-email">' + esc(s.email || '') + '</div>'
+        : '<div class="teacher-email">' + esc(s.invited_email || '—') + '</div>' +
+          '<div class="teacher-email" style="font-style:italic;">Invitation pending</div>';
+
+      var badge = statusBadge[s.status] || '<span class="sa-badge">' + esc(s.status || '') + '</span>';
+
+      var since = '—';
+      if (s.registered_at) since = new Date(s.registered_at).toLocaleDateString();
+      else if (s.invited_at) since = 'Invited ' + new Date(s.invited_at).toLocaleDateString();
+
+      var notes = esc(s.revocation_reason || '—');
+
+      var actions = '—';
+      if (s.status === 'registered') {
+        actions =
+          '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivate(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Deactivate</button>' +
+          ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Remove</button>';
+      } else if (s.status === 'inactive') {
+        actions =
+          '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivate(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Reactivate</button>' +
+          ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Remove</button>';
+      } else if (s.status === 'pending') {
+        actions = '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + s.id + ',\'' + esc(s.invited_email || '') + '\')">Revoke</button>';
+      }
+
+      return '<tr>' +
+        '<td style="width:46px;">' + avatar + '</td>' +
+        '<td>' + nameCell + '</td>' +
+        '<td>' + badge + '</td>' +
+        '<td style="font-size:13px;white-space:nowrap;">' + since + '</td>' +
+        '<td style="font-size:12px;color:var(--sa-text-soft);max-width:180px;">' + notes + '</td>' +
+        '<td style="white-space:nowrap;">' + actions + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  var pg = document.getElementById('pagination');
+  if (totalPages > 1) {
+    pg.style.display = 'flex';
+    document.getElementById('pageInfo').textContent = 'Page ' + page + ' of ' + totalPages;
+    document.getElementById('prevBtn').disabled = page <= 1;
+    document.getElementById('nextBtn').disabled = page >= totalPages;
+  } else {
+    pg.style.display = 'none';
+  }
+}
+
+function changePage(dir) {
+  page = Math.max(1, Math.min(totalPages, page + dir));
+  loadRoster();
+}
+
+// --- Revoke pending invitation ---
+function openRevoke(seatId, email) {
+  revokeSeatId = seatId;
+  document.getElementById('revokeMsg').textContent = 'Revoke the pending invitation for ' + email + '? This will free the seat for reassignment.';
+  document.getElementById('revokeReason').value = '';
+  document.getElementById('revokeErr').style.display = 'none';
+  document.getElementById('revokeModal').style.display = 'flex';
+}
+function closeRevoke() { document.getElementById('revokeModal').style.display = 'none'; revokeSeatId = null; }
+
+async function execRevoke() {
+  var btn = document.getElementById('revokeBtn');
+  var reason = document.getElementById('revokeReason').value.trim();
+  var err = document.getElementById('revokeErr');
+  if (!reason) { err.textContent = 'Reason is required.'; err.style.display = 'flex'; return; }
+  btn.disabled = true;
+  try {
+    await saFetch('/api/school-admin/seats/' + revokeSeatId + '/revoke', {
+      method: 'PUT',
+      body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), reason }),
+    });
+    closeRevoke();
+    saToast('Invitation revoked.', 'success');
+    loadRoster();
+  } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
+  finally { btn.disabled = false; }
+}
+
+// --- Confirm modal (deactivate / reactivate / remove) ---
+function openConfirm(title, msg, needsReason, fn) {
+  confirmFn = fn;
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('reasonWrap').style.display = needsReason ? 'block' : 'none';
+  document.getElementById('confirmReason').value = '';
+  document.getElementById('confirmErr').style.display = 'none';
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+function closeConfirm() { document.getElementById('confirmModal').style.display = 'none'; confirmFn = null; }
+
+async function execConfirm() {
+  if (!confirmFn) return;
+  var btn = document.getElementById('confirmBtn');
+  var err = document.getElementById('confirmErr');
+  err.style.display = 'none';
+  btn.disabled = true;
+  try {
+    await confirmFn(document.getElementById('confirmReason').value.trim());
+    closeConfirm();
+    loadRoster();
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'flex';
+  } finally { btn.disabled = false; }
+}
+
+function deactivate(userId, email) {
+  openConfirm(
+    'Deactivate Teacher',
+    'Deactivate ' + email + '? Their portal access will be suspended. Data is preserved and you can reactivate them at any time.',
+    false,
+    async function () {
+      await saFetch('/api/school-admin/teachers/' + userId + '/deactivate', {
+        method: 'PUT',
+        body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }),
+      });
+      saToast(email + ' deactivated.', 'success');
+    }
+  );
+}
+
+function reactivate(userId, email) {
+  openConfirm(
+    'Reactivate Teacher',
+    'Reactivate ' + email + '? They will regain portal access.',
+    false,
+    async function () {
+      await saFetch('/api/school-admin/teachers/' + userId + '/reactivate', {
+        method: 'PUT',
+        body: JSON.stringify({ purchaseId: window.saActivePurchaseId() }),
+      });
+      saToast(email + ' reactivated.', 'success');
+    }
+  );
+}
+
+function removeTeacher(userId, email) {
+  openConfirm(
+    'Remove Teacher',
+    'Remove ' + email + ' from this school? Their license seat will be released back to the pool. This cannot be undone.',
+    true,
+    async function (reason) {
+      if (!reason) throw new Error('A reason is required to remove a teacher.');
+      await saFetch('/api/school-admin/teachers/' + userId, {
+        method: 'DELETE',
+        body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), reason }),
+      });
+      saToast(email + ' removed from school.', 'success');
+    }
+  );
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

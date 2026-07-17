@@ -9,29 +9,17 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="school-admin-common.css?v=1">
 <style>
-  .dash-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; }
-  .dash-section { margin-bottom: 28px; }
-  .dash-section h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--sa-text-soft); margin-bottom: 12px; }
   .activity-list { list-style: none; }
   .activity-list li { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--sa-border); font-size: 13px; }
   .activity-list li:last-child { border-bottom: none; }
   .activity-list .act-icon { font-size: 15px; }
   .activity-list .act-time { font-size: 11.5px; color: var(--sa-text-soft); margin-left: auto; white-space: nowrap; }
-  .teachers-list { list-style: none; }
-  .teachers-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--sa-border); font-size: 13px; }
-  .teachers-list li:last-child { border-bottom: none; }
-  .teachers-list .av { width: 32px; height: 32px; border-radius: 50%; background: var(--sa-accent-soft); color: var(--sa-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
-  .teachers-list .name { font-weight: 600; }
-  .teachers-list .email { font-size: 12px; color: var(--sa-text-soft); }
-  .teachers-list .when { font-size: 12px; color: var(--sa-text-soft); margin-left: auto; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width:800px) { .grid-2 { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
-  <script src="school-admin-nav.js?v=1"></script>
+  <script src="school-admin-nav.js?v=2"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -53,44 +41,24 @@
 
       <div id="alertBanner" style="display:none;"></div>
 
-      <!-- Quick actions -->
-      <div class="dash-actions">
-        <button class="sa-btn sa-btn-primary" onclick="openInviteModal()">✉️ Invite Teacher</button>
-        <a href="school-admin-invitations.html" class="sa-btn sa-btn-secondary">📋 View Invitations</a>
-        <a href="school-admin-teachers.html" class="sa-btn sa-btn-secondary">👩‍🏫 Manage Teachers</a>
-        <a href="school-admin-reports.html" class="sa-btn sa-btn-secondary">📈 Reports</a>
-      </div>
-
-      <!-- Stat cards -->
-      <div class="sa-stat-grid">
-        <div class="sa-stat-card">
-          <div class="label">Total Licenses</div>
-          <div class="value" id="statTotal">—</div>
-        </div>
+      <!-- 3 key stats -->
+      <div class="sa-stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
         <div class="sa-stat-card success">
           <div class="label">Active Teachers</div>
           <div class="value" id="statRegistered">—</div>
         </div>
         <div class="sa-stat-card accent">
-          <div class="label">Available Licenses</div>
+          <div class="label">Available Seats</div>
           <div class="value" id="statAvailable">—</div>
         </div>
         <div class="sa-stat-card warn">
           <div class="label">Pending Invitations</div>
           <div class="value" id="statPending">—</div>
         </div>
-        <div class="sa-stat-card">
-          <div class="label">Expired Invitations</div>
-          <div class="value" id="statExpired">—</div>
-        </div>
-        <div class="sa-stat-card">
-          <div class="label">Revoked Invitations</div>
-          <div class="value" id="statRevoked">—</div>
-        </div>
       </div>
 
       <!-- Utilization bar -->
-      <div class="sa-card dash-section" style="margin-bottom:24px;">
+      <div class="sa-card" style="margin-bottom:24px;">
         <div class="sa-card-head">
           <h2>License Utilization</h2>
           <span id="utilPct" style="font-weight:700;font-size:18px;color:var(--sa-accent);">—%</span>
@@ -104,252 +72,94 @@
         </div>
       </div>
 
-      <!-- Classrooms monitoring -->
-      <div class="sa-card dash-section" style="margin-bottom:24px;" id="classroomsCard">
+      <!-- Recent activity (full width) -->
+      <div class="sa-card">
         <div class="sa-card-head">
-          <h2>Classrooms</h2>
-          <span id="classroomSummary" style="font-size:13px;color:var(--sa-text-soft);"></span>
-        </div>
-        <div id="classroomTableWrap">
-          <div class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
-        </div>
-      </div>
-
-      <!-- Two-column: recent teachers + recent activity -->
-      <div class="grid-2">
-        <div class="sa-card">
-          <div class="sa-card-head">
-            <h2>Recent Registrations</h2>
-            <a href="school-admin-teachers.html" class="sa-btn sa-btn-ghost sa-btn-sm">View all</a>
+          <h2>Recent Activity</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <a href="school-admin-invitations.html" class="sa-btn sa-btn-primary sa-btn-sm">✉️ Invite Teacher</a>
+            <a href="school-admin-reports.html?type=activity" class="sa-btn sa-btn-ghost sa-btn-sm">View all →</a>
           </div>
-          <ul class="teachers-list" id="recentTeachersList">
-            <li class="sa-loading"><div class="sa-spinner"></div> Loading…</li>
-          </ul>
         </div>
-
-        <div class="sa-card">
-          <div class="sa-card-head">
-            <h2>Recent Activity</h2>
-            <a href="school-admin-reports.html?type=activity" class="sa-btn sa-btn-ghost sa-btn-sm">View all</a>
-          </div>
-          <ul class="activity-list" id="activityList">
-            <li class="sa-loading"><div class="sa-spinner"></div> Loading…</li>
-          </ul>
-        </div>
+        <ul class="activity-list" id="activityList">
+          <li class="sa-loading"><div class="sa-spinner"></div> Loading…</li>
+        </ul>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- Invite modal -->
-<div class="sa-modal-overlay" id="inviteModal" style="display:none;">
-  <div class="sa-modal">
-    <div class="sa-modal-head">
-      <h2>Invite a Teacher</h2>
-      <button class="sa-modal-close" onclick="closeInviteModal()">✕</button>
-    </div>
-    <div id="inviteErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
-    <div class="sa-form-row">
-      <div class="sa-form-group">
-        <label>First Name</label>
-        <input type="text" id="invFirstName" placeholder="Jane">
-      </div>
-      <div class="sa-form-group">
-        <label>Last Name</label>
-        <input type="text" id="invLastName" placeholder="Smith">
-      </div>
-    </div>
-    <div class="sa-form-group">
-      <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
-      <input type="email" id="invEmail" placeholder="teacher@school.edu">
-    </div>
-    <div class="sa-form-row">
-      <div class="sa-form-group">
-        <label>Grade Level</label>
-        <input type="text" id="invGrade" placeholder="e.g. 3rd Grade">
-      </div>
-      <div class="sa-form-group">
-        <label>Department</label>
-        <input type="text" id="invDept" placeholder="e.g. Counseling">
-      </div>
-    </div>
-    <div class="sa-form-group">
-      <label>Personal Message <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
-      <textarea id="invMessage" placeholder="Looking forward to having you in the program!"></textarea>
-    </div>
-    <div class="sa-modal-foot">
-      <button class="sa-btn sa-btn-secondary" onclick="closeInviteModal()">Cancel</button>
-      <button class="sa-btn sa-btn-primary" id="inviteBtn" onclick="sendInvite()">Send Invitation</button>
     </div>
   </div>
 </div>
 
 <script>
-let dashData = null;
-
-document.addEventListener('saReady', function () {
-  loadDashboard();
-});
-document.addEventListener('saSchoolChanged', function () {
-  loadDashboard();
-});
+document.addEventListener('saReady', function () { loadDashboard(); });
+document.addEventListener('saSchoolChanged', function () { loadDashboard(); });
 
 async function loadDashboard() {
-  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  var purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
   if (!purchaseId) return;
-
   try {
-    const [d, classrooms] = await Promise.all([
-      saFetch('/api/school-admin/dashboard?purchaseId=' + purchaseId),
-      saFetch('/api/school-admin/classrooms').catch(function(){ return []; }),
-    ]);
-    dashData = d;
+    var d = await saFetch('/api/school-admin/dashboard?purchaseId=' + purchaseId);
     renderDashboard(d);
-    renderClassrooms(Array.isArray(classrooms) ? classrooms : []);
   } catch (e) {
     saToast('Failed to load dashboard: ' + e.message, 'error');
   }
 }
 
-function renderClassrooms(classrooms) {
-  var wrap = document.getElementById('classroomTableWrap');
-  var active = classrooms.filter(function(c){ return !c.archived; });
-  document.getElementById('classroomSummary').textContent = active.length + ' active classroom' + (active.length !== 1 ? 's' : '');
-
-  if (!classrooms.length) {
-    wrap.innerHTML = '<div style="color:var(--sa-text-soft);font-size:13px;padding:12px 0;">No classrooms created yet. Teachers create classrooms from their portal.</div>';
-    return;
-  }
-  var html = '<table style="width:100%;border-collapse:collapse;">' +
-    '<thead><tr style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sa-text-soft);">' +
-    '<th style="text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--sa-border);">Teacher</th>' +
-    '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Classroom</th>' +
-    '<th style="text-align:center;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Students</th>' +
-    '<th style="text-align:center;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Lessons</th>' +
-    '<th style="text-align:center;padding:8px 10px;border-bottom:1px solid var(--sa-border);">Completion</th>' +
-    '</tr></thead><tbody>';
-  classrooms.forEach(function(c) {
-    html += '<tr style="font-size:13.5px;">' +
-      '<td style="padding:10px 10px 10px 0;border-bottom:1px solid var(--sa-border);color:var(--sa-text-soft);">' + esc(c.teacherName) + '</td>' +
-      '<td style="padding:10px;border-bottom:1px solid var(--sa-border);font-weight:600;">' + esc(c.classroomName) + (c.archived ? ' <span style="font-size:11px;color:var(--sa-text-soft);">(archived)</span>' : '') + '</td>' +
-      '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--sa-border);">' + c.studentCount + '</td>' +
-      '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--sa-border);">' + c.assignmentCount + '</td>' +
-      '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--sa-border);font-weight:700;color:var(--sa-accent);">' + (c.assignmentCount > 0 ? c.completionRate + '%' : '—') + '</td>' +
-    '</tr>';
-  });
-  html += '</tbody></table>';
-  wrap.innerHTML = html;
-}
-
 function renderDashboard(d) {
-  const u = d.licenses;
-
-  // User avatar initials
-  const nameEl = document.getElementById('saUserName');
-  const avatarEl = document.getElementById('saUserAvatar');
-  if (window.saPortalData) {
-    const n = (window.saPortalData.firstName || '?');
-    if (avatarEl) avatarEl.textContent = n.charAt(0).toUpperCase();
-  }
+  var u = d.licenses;
 
   // Payment gate banner
-  if (d.purchase.paymentStatus !== 'paid') {
+  if (d.purchase && d.purchase.paymentStatus !== 'paid') {
     document.getElementById('paymentBanner').style.display = 'flex';
-  } else {
-    document.getElementById('paymentBanner').style.display = 'none';
   }
 
-  // Utilization alerts
-  if (d.purchase.paymentStatus === 'paid') {
-    const pct = u.pctUsed;
-    let alertHtml = '';
-    if (pct >= 100) alertHtml = '<div class="sa-alert sa-alert-danger">🚨 <div><strong>No licenses remaining</strong><p>All seats are assigned. <a href="school-admin-org.html">Request additional licenses</a> to onboard more teachers.</p></div></div>';
-    else if (pct >= 90) alertHtml = '<div class="sa-alert sa-alert-warn">⚠️ <div><strong>' + pct + '% of licenses used</strong><p>You are nearly out of available seats. Consider <a href="school-admin-org.html">requesting additional licenses</a>.</p></div></div>';
-    document.getElementById('alertBanner').innerHTML = alertHtml;
-    document.getElementById('alertBanner').style.display = alertHtml ? 'block' : 'none';
+  // Utilization alerts — link to support email instead of removed org page
+  if (d.purchase && d.purchase.paymentStatus === 'paid') {
+    var pct = u.pctUsed;
+    var alertHtml = '';
+    if (pct >= 100) {
+      alertHtml = '<div class="sa-alert sa-alert-danger">🚨 <div><strong>No licenses remaining</strong><p>All seats are assigned. Email <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a> to request additional licenses.</p></div></div>';
+    } else if (pct >= 90) {
+      alertHtml = '<div class="sa-alert sa-alert-warn">⚠️ <div><strong>' + pct + '% of licenses used</strong><p>You are nearly out of available seats. Email <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a> to request more.</p></div></div>';
+    }
+    var alertEl = document.getElementById('alertBanner');
+    alertEl.innerHTML = alertHtml;
+    alertEl.style.display = alertHtml ? 'block' : 'none';
   }
 
   // Stats
-  document.getElementById('statTotal').textContent = u.total;
   document.getElementById('statRegistered').textContent = u.registered;
   document.getElementById('statAvailable').textContent = u.available;
   document.getElementById('statPending').textContent = d.invitations.pending;
-  document.getElementById('statExpired').textContent = d.invitations.expired;
-  document.getElementById('statRevoked').textContent = d.invitations.revoked;
 
   // Utilization bar
-  const pct = u.pctUsed;
-  const bar = document.getElementById('utilBar');
+  var pct = u.pctUsed;
+  var bar = document.getElementById('utilBar');
   bar.style.width = pct + '%';
   bar.className = 'sa-util-bar' + (pct >= 100 ? ' danger' : pct >= 75 ? ' warn' : '');
   document.getElementById('utilPct').textContent = pct + '%';
   document.getElementById('utilDetail').textContent = u.assigned + ' of ' + u.total + ' seats assigned';
-  document.getElementById('utilPlan').textContent = d.purchase.planName || '';
-
-  // Recent teachers
-  const tl = document.getElementById('recentTeachersList');
-  if (!d.recentTeachers || !d.recentTeachers.length) {
-    tl.innerHTML = '<li style="color:var(--sa-text-soft);padding:16px 0;font-size:13px;">No teacher registrations in the last 7 days.</li>';
-  } else {
-    tl.innerHTML = d.recentTeachers.map(function (t) {
-      const init = ((t.first_name || '?').charAt(0)).toUpperCase();
-      const when = t.registered_at ? new Date(t.registered_at).toLocaleDateString() : '';
-      return '<li><div class="av">' + init + '</div><div><div class="name">' + esc(t.first_name + ' ' + t.last_name) + '</div><div class="email">' + esc(t.email) + '</div></div><div class="when">' + when + '</div></li>';
-    }).join('');
-  }
+  document.getElementById('utilPlan').textContent = d.purchase ? (d.purchase.planName || '') : '';
 
   // Recent activity
-  const al = document.getElementById('activityList');
+  var al = document.getElementById('activityList');
   if (!d.recentActivity || !d.recentActivity.length) {
     al.innerHTML = '<li style="color:var(--sa-text-soft);padding:16px 0;font-size:13px;">No recent activity.</li>';
   } else {
-    const icons = { invitation_sent:'✉️', invitation_resent:'🔄', invitation_revoked:'✗', license_revoked:'🚫', teacher_deactivated:'⏸', teacher_reactivated:'▶', teacher_removed:'🗑', teacher_registered:'🎉' };
+    var icons = {
+      invitation_sent: '✉️', invitation_resent: '🔄', invitation_revoked: '✗',
+      license_revoked: '🚫', teacher_deactivated: '⏸', teacher_reactivated: '▶',
+      teacher_removed: '🗑', teacher_registered: '🎉',
+    };
     al.innerHTML = d.recentActivity.map(function (a) {
-      const icon = icons[a.action] || '•';
-      const label = a.action.replace(/_/g, ' ');
-      const when = a.created_at ? new Date(a.created_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
-      return '<li><span class="act-icon">' + icon + '</span><span>' + label + (a.actor_email ? ' by ' + esc(a.actor_email.split('@')[0]) : '') + '</span><span class="act-time">' + when + '</span></li>';
+      var icon = icons[a.action] || '•';
+      var label = a.action.replace(/_/g, ' ');
+      var when = a.created_at
+        ? new Date(a.created_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+        : '';
+      return '<li><span class="act-icon">' + icon + '</span><span>' + label +
+        (a.actor_email ? ' by ' + esc(a.actor_email.split('@')[0]) : '') +
+        '</span><span class="act-time">' + when + '</span></li>';
     }).join('');
-  }
-}
-
-function openInviteModal() { document.getElementById('inviteModal').style.display = 'flex'; }
-function closeInviteModal() {
-  document.getElementById('inviteModal').style.display = 'none';
-  document.getElementById('inviteErr').style.display = 'none';
-  ['invEmail','invFirstName','invLastName','invGrade','invDept','invMessage'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-}
-
-async function sendInvite() {
-  const btn = document.getElementById('inviteBtn');
-  const err = document.getElementById('inviteErr');
-  err.style.display = 'none';
-  const email = document.getElementById('invEmail').value.trim();
-  if (!email) { err.textContent = 'Email is required.'; err.style.display = 'flex'; return; }
-  btn.disabled = true; btn.textContent = 'Sending…';
-
-  try {
-    const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
-    await saFetch('/api/school-admin/invitations', {
-      method: 'POST',
-      body: JSON.stringify({
-        purchaseId,
-        email,
-        firstName: document.getElementById('invFirstName').value.trim(),
-        lastName: document.getElementById('invLastName').value.trim(),
-        gradeLevel: document.getElementById('invGrade').value.trim(),
-        department: document.getElementById('invDept').value.trim(),
-        personalMessage: document.getElementById('invMessage').value.trim(),
-      }),
-    });
-    closeInviteModal();
-    saToast('Invitation sent to ' + email, 'success');
-    loadDashboard();
-  } catch (e) {
-    err.textContent = e.message;
-    err.style.display = 'flex';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Send Invitation';
   }
 }
 
