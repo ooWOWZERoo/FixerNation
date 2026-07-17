@@ -127,19 +127,19 @@ async function loadSeats() {
     if (d.paymentStatus && d.paymentStatus !== 'paid') document.getElementById('paymentBanner').style.display = 'flex';
 
     // Summary stats
-    const u = d.utilization || {};
-    document.getElementById('sTotal').textContent = u.total || 0;
-    document.getElementById('sActive').textContent = u.registered || 0;
-    document.getElementById('sPending').textContent = u.pending || 0;
-    document.getElementById('sAvail').textContent = u.available || 0;
-    document.getElementById('sRevoked').textContent = u.revoked || 0;
+    document.getElementById('sTotal').textContent = d.total || 0;
+    document.getElementById('sActive').textContent = d.active || 0;
+    document.getElementById('sPending').textContent = d.pending || 0;
+    document.getElementById('sAvail').textContent = d.available || 0;
+    document.getElementById('sRevoked').textContent = d.revoked || 0;
 
-    const pct = u.pctUsed || 0;
+    const assigned = (d.active || 0) + (d.pending || 0);
+    const pct = d.total ? Math.round(assigned / d.total * 100) : 0;
     const bar = document.getElementById('utilBar');
     bar.style.width = pct + '%';
     bar.className = 'sa-util-bar' + (pct >= 100 ? ' danger' : pct >= 75 ? ' warn' : '');
     document.getElementById('utilPct').textContent = pct + '%';
-    document.getElementById('utilDetail').textContent = (u.assigned || 0) + ' of ' + (u.total || 0) + ' seats assigned';
+    document.getElementById('utilDetail').textContent = assigned + ' of ' + (d.total || 0) + ' seats assigned';
 
     renderSeats(d.seats || []);
     const pg = document.getElementById('pagination');
@@ -164,19 +164,21 @@ function renderSeats(seats) {
     active: '<span class="sa-badge sa-badge-success">Active</span>',
     pending: '<span class="sa-badge sa-badge-warn">Pending</span>',
     available: '<span class="sa-badge">Available</span>',
+    inactive: '<span class="sa-badge sa-badge-warn">Inactive</span>',
     revoked: '<span class="sa-badge sa-badge-danger">Revoked</span>',
   };
-  wrap.innerHTML = '<table class="sa-table"><thead><tr><th>Teacher</th><th>Email</th><th>Assigned</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead><tbody>' +
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th>Teacher</th><th>Email</th><th>Registered</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead><tbody>' +
     seats.map(function (s) {
-      const name = s.teacher_name || (s.invited_email ? '(pending)' : '(available)');
-      const email = s.teacher_email || s.invited_email || '—';
-      const assigned = s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '—';
-      const status = s.revoked_at ? 'revoked' : (s.teacher_email ? 'active' : (s.invited_email ? 'pending' : 'available'));
+      const fullName = s.first_name ? (s.first_name + ' ' + (s.last_name || '')).trim() : '';
+      const name = fullName || (s.invited_email ? '(pending)' : '(unassigned)');
+      const email = s.email || s.invited_email || '—';
+      const registered = s.registered_at ? new Date(s.registered_at).toLocaleDateString() : '—';
+      const status = s.status === 'registered' ? 'active' : (s.status || 'available');
       const badge = statusBadge[status] || '<span class="sa-badge">' + status + '</span>';
-      const notes = esc(s.notes || s.revocation_reason || '—');
-      const canRevoke = status === 'active' || status === 'pending';
+      const notes = esc(s.revocation_reason || '—');
+      const canRevoke = s.status === 'registered' || s.status === 'pending';
       const actions = canRevoke ? '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + s.id + ',' + JSON.stringify(email) + ')">Revoke</button>' : '—';
-      return '<tr><td style="font-weight:600;font-size:13px;">' + esc(name) + '</td><td style="font-size:13px;color:var(--sa-text-soft);">' + esc(email) + '</td><td style="font-size:13px;">' + assigned + '</td><td>' + badge + '</td><td style="font-size:12px;color:var(--sa-text-soft);max-width:180px;">' + notes + '</td><td>' + actions + '</td></tr>';
+      return '<tr><td style="font-weight:600;font-size:13px;">' + esc(name) + '</td><td style="font-size:13px;color:var(--sa-text-soft);">' + esc(email) + '</td><td style="font-size:13px;">' + registered + '</td><td>' + badge + '</td><td style="font-size:12px;color:var(--sa-text-soft);max-width:180px;">' + notes + '</td><td>' + actions + '</td></tr>';
     }).join('') +
     '</tbody></table>';
 }

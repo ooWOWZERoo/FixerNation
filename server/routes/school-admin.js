@@ -98,6 +98,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
        COUNT(*) AS total_seats_created,
        SUM(CASE WHEN status = 'registered' THEN 1 ELSE 0 END) AS registered,
        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+       SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive,
        SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) AS revoked
      FROM license_seats WHERE purchase_id = ?`,
     [purchaseId]
@@ -111,7 +112,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
        SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) AS expired,
        SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) AS revoked,
        SUM(CASE WHEN status = 'registered' THEN 1 ELSE 0 END) AS registered
-     FROM school_invitations WHERE purchase_id = ? AND status NOT IN ('revoked')`,
+     FROM school_invitations WHERE purchase_id = ?`,
     [purchaseId]
   );
 
@@ -138,7 +139,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
   );
 
   const totalSeats = purchase.seat_count;
-  const assigned = Number(counts.registered || 0) + Number(counts.pending || 0);
+  const assigned = Number(counts.registered || 0) + Number(counts.pending || 0) + Number(counts.inactive || 0);
   const available = Math.max(0, totalSeats - assigned);
   const pctUsed = totalSeats > 0 ? Math.round((assigned / totalSeats) * 100) : 0;
 
@@ -704,14 +705,14 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
   let where = 'WHERE ls.purchase_id = ? AND ls.status = ?';
   const params = [purchaseId, 'registered'];
 
+  if (statusFilter === 'inactive') {
+    where = 'WHERE ls.purchase_id = ? AND su.role = ?';
+    params.splice(0, params.length, purchaseId, 'inactive_teacher');
+  }
   if (q) {
     where += ' AND (su.email LIKE ? OR su.first_name LIKE ? OR su.last_name LIKE ?)';
     const like = `%${q}%`;
     params.push(like, like, like);
-  }
-  if (statusFilter === 'inactive') {
-    where = 'WHERE ls.purchase_id = ? AND su.role = ?';
-    params.splice(0, params.length, purchaseId, 'inactive_teacher');
   }
 
   const [[{ total }]] = await pool.query(
@@ -756,8 +757,18 @@ router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, requireWriteP
   );
   if (!seat) return res.status(404).json({ error: 'Teacher not found under this school' });
 
-  await pool.query("UPDATE license_seats SET status = 'inactive' WHERE id = ?", [seat.id]);
-  await pool.query("UPDATE site_users SET role = 'inactive_teacher' WHERE id = ?", [siteUserId]);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query("UPDATE license_seats SET status = 'inactive' WHERE id = ?", [seat.id]);
+    await conn.query("UPDATE site_users SET role = 'inactive_teacher' WHERE id = ?", [siteUserId]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 
   await audit(pool, {
     actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
@@ -786,8 +797,18 @@ router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, requireWriteP
   );
   if (!seat) return res.status(404).json({ error: 'Inactive teacher not found under this school' });
 
-  await pool.query("UPDATE license_seats SET status = 'registered' WHERE id = ?", [seat.id]);
-  await pool.query("UPDATE site_users SET role = 'teacher' WHERE id = ?", [siteUserId]);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query("UPDATE license_seats SET status = 'registered' WHERE id = ?", [seat.id]);
+    await conn.query("UPDATE site_users SET role = 'teacher' WHERE id = ?", [siteUserId]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 
   await audit(pool, {
     actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
@@ -1123,7 +1144,7 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
 // GET /api/school-admin/classrooms
 // Returns aggregate classroom stats for all licensed teachers in this school.
 router.get('/classrooms', requireSchoolAdmin, async (req, res) => {
-  const purchaseIds = (req.schoolAdmin.purchases || []).map(p => p.id);
+  const purchaseIds = req.schoolAdmin.purchaseIds;
   if (!purchaseIds.length) return res.json([]);
 
   // All registered seat holders for this school's purchases

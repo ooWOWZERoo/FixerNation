@@ -165,8 +165,8 @@ function renderTeachers(teachers) {
       const isActive = t.role !== 'inactive_teacher';
       const badge = isActive ? '<span class="sa-badge sa-badge-success">Active</span>' : '<span class="sa-badge sa-badge-warn">Inactive</span>';
       const actions = isActive
-        ? '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivateTeacher(' + t.id + ', \'' + esc(t.email) + '\')">Deactivate</button> <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + t.id + ', \'' + esc(t.email) + '\')">Remove</button>'
-        : '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivateTeacher(' + t.id + ', \'' + esc(t.email) + '\')">Reactivate</button>';
+        ? '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivateTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Deactivate</button> <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Remove</button>'
+        : '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivateTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Reactivate</button>';
       return '<tr><td><div class="av">' + init + '</div></td><td><div class="teacher-name">' + name + '</div></td><td class="teacher-meta">' + esc(t.email) + '</td><td class="teacher-meta">' + esc(grade) + '</td><td class="teacher-meta">' + registered + '</td><td>' + badge + '</td><td>' + actions + '</td></tr>';
     }).join('') +
     '</tbody></table>';
