@@ -280,7 +280,7 @@ router.get('/:id/assignments', requireSiteAuth, async (req, res) => {
   const classroom = await ownedClassroom(req, res);
   if (!classroom) return;
   const [rows] = await pool.query(
-    `SELECT ca.*, cur.title, cur.grade_level, cur.description
+    `SELECT ca.*, cur.title, cur.series AS grade_level
      FROM classroom_assignments ca
      JOIN curricula cur ON cur.id = ca.curriculum_id
      WHERE ca.classroom_id = ?
@@ -381,7 +381,7 @@ router.post('/:id/game-assignments', requireSiteAuth, async (req, res) => {
     [classroom.id, gameId, req.siteUser.id, dueDate || null]
   );
   const [[row]] = await pool.query(
-    `SELECT cga.*, bg.title AS game_title, bg.slug AS game_slug
+    `SELECT cga.*, bg.name AS game_title, bg.slug AS game_slug
      FROM classroom_game_assignments cga JOIN brain_games bg ON bg.id = cga.game_id WHERE cga.id = ?`,
     [r.insertId]
   );

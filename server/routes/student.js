@@ -81,13 +81,13 @@ router.get('/home', async (req, res) => {
   );
   const [gameAssignments] = await pool.query(
     `SELECT cga.id AS assignment_id, cga.game_id, cga.due_date,
-            bg.title AS game_title, bg.slug AS game_slug,
+            bg.name AS game_title, bg.slug AS game_slug,
             MAX(sgc.completed_at) AS last_completed_at
      FROM classroom_game_assignments cga
      JOIN brain_games bg ON bg.id = cga.game_id
      LEFT JOIN student_game_completions sgc ON sgc.game_assignment_id = cga.id AND sgc.student_id = ?
      WHERE cga.classroom_id = ?
-     GROUP BY cga.id, cga.game_id, cga.due_date, bg.title, bg.slug`,
+     GROUP BY cga.id, cga.game_id, cga.due_date, bg.name, bg.slug`,
     [s.id, s.classroom_id]
   );
   const [goals] = await pool.query(
@@ -296,14 +296,14 @@ router.delete('/goals/:id', async (req, res) => {
 router.get('/games', async (req, res) => {
   const [rows] = await pool.query(
     `SELECT cga.id AS assignment_id, cga.game_id, cga.due_date,
-            bg.title AS game_title, bg.slug AS game_slug,
+            bg.name AS game_title, bg.slug AS game_slug,
             MAX(sgc.completed_at) AS last_completed_at,
             COUNT(sgc.id) AS completion_count
      FROM classroom_game_assignments cga
      JOIN brain_games bg ON bg.id = cga.game_id
      LEFT JOIN student_game_completions sgc ON sgc.game_assignment_id = cga.id AND sgc.student_id = ?
      WHERE cga.classroom_id = ?
-     GROUP BY cga.id, cga.game_id, cga.due_date, bg.title, bg.slug`,
+     GROUP BY cga.id, cga.game_id, cga.due_date, bg.name, bg.slug`,
     [req.student.id, req.student.classroom_id]
   );
   res.json(rows);
