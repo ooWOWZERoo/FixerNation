@@ -77,6 +77,7 @@
             '<li><a href="teacher-classrooms.html">My Classrooms</a></li>' +
             '<li><a href="student-login.html">Student Login</a></li>' +
             '<li><a href="admin-login.html">Admin Log In</a></li>' +
+            '<li><a href="school-admin-login.html">School Admin Portal</a></li>' +
           '</ul>' +
         '</div>' +
 
