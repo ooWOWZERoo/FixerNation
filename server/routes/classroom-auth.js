@@ -132,7 +132,7 @@ router.get('/me', requireStudentAuth, async (req, res) => {
   const s = req.student;
   const [assignments] = await pool.query(
     `SELECT ca.id, ca.curriculum_id, ca.sort_order, ca.due_date,
-            cur.title, cur.grade_level,
+            cur.title, cur.series AS grade_level,
             slp.started_at, slp.completed_at
      FROM classroom_assignments ca
      JOIN curricula cur ON cur.id = ca.curriculum_id
@@ -143,7 +143,7 @@ router.get('/me', requireStudentAuth, async (req, res) => {
   );
   const [games] = await pool.query(
     `SELECT cga.id AS assignment_id, cga.game_id, cga.due_date,
-            bg.title AS game_title, bg.slug AS game_slug,
+            bg.name AS game_title, bg.slug AS game_slug,
             MAX(sgc.completed_at) AS last_completed_at
      FROM classroom_game_assignments cga
      JOIN brain_games bg ON bg.id = cga.game_id
