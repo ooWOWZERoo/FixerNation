@@ -81,7 +81,7 @@ router.get('/:id', requireSiteAuth, async (req, res) => {
     [classroom.id]
   );
   const [assignments] = await pool.query(
-    `SELECT ca.*, cur.title, cur.grade_level, cur.description,
+    `SELECT ca.*, cur.title, cur.series AS grade_level,
        (SELECT COUNT(*) FROM student_lesson_progress slp WHERE slp.curriculum_id = ca.curriculum_id AND slp.student_id IN (SELECT id FROM classroom_students WHERE classroom_id = ca.classroom_id)) AS started_count,
        (SELECT COUNT(*) FROM student_lesson_progress slp WHERE slp.curriculum_id = ca.curriculum_id AND slp.completed_at IS NOT NULL AND slp.student_id IN (SELECT id FROM classroom_students WHERE classroom_id = ca.classroom_id)) AS completed_count
      FROM classroom_assignments ca
@@ -91,7 +91,7 @@ router.get('/:id', requireSiteAuth, async (req, res) => {
     [classroom.id]
   );
   const [gameAssignments] = await pool.query(
-    `SELECT cga.*, bg.title AS game_title, bg.slug AS game_slug,
+    `SELECT cga.*, bg.name AS game_title, bg.slug AS game_slug,
        (SELECT COUNT(*) FROM student_game_completions sgc WHERE sgc.game_assignment_id = cga.id) AS completion_count
      FROM classroom_game_assignments cga
      JOIN brain_games bg ON bg.id = cga.game_id
