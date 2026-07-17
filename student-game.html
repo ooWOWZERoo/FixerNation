@@ -47,7 +47,14 @@ if (!assignmentId || !slug) { location.href = 'student-home.html'; }
 
 document.getElementById('gameName').textContent = name || 'Brain Game';
 document.title = (name || 'Brain Game') + ' — Fixer Nation Education';
-document.getElementById('gameFrame').src = 'brain-' + slug + '.html';
+var frame = document.getElementById('gameFrame');
+frame.src = 'brain-' + slug + '.html';
+frame.addEventListener('load', function() {
+  try {
+    var h = this.contentDocument.querySelector('header');
+    if (h) h.style.display = 'none';
+  } catch(e) {}
+});
 
 // Verify student is still logged in
 fetch('/api/classroom-auth/me', { credentials: 'include' })
