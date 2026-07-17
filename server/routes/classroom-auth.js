@@ -149,7 +149,7 @@ router.get('/me', requireStudentAuth, async (req, res) => {
      JOIN brain_games bg ON bg.id = cga.game_id
      LEFT JOIN student_game_completions sgc ON sgc.game_assignment_id = cga.id AND sgc.student_id = ?
      WHERE cga.classroom_id = ?
-     GROUP BY cga.id, cga.game_id, cga.due_date, bg.title, bg.slug`,
+     GROUP BY cga.id, cga.game_id, cga.due_date, bg.name, bg.slug`,
     [s.id, s.classroom_id]
   );
   res.json({
