@@ -314,15 +314,6 @@ function showInfoToast(msg) {
 
 let curriculaCache = [];
 
-function seriesFromTitle(title) {
-  const m = (title || '').match(/^([^:]+):/);
-  return m ? m[1].trim() : (title || '');
-}
-function themeFromTitle(title) {
-  const m = (title || '').match(/^[^:]+:\s*(.+)/);
-  return m ? m[1].trim() : (title || '');
-}
-
 function renderLessonGrid() {
   const grid = document.getElementById('lessonGrid');
   const note = document.getElementById('libraryNote');
@@ -333,19 +324,18 @@ function renderLessonGrid() {
     return;
   }
 
-  const uniqueSeries = [...new Set(curriculaCache.map(c => seriesFromTitle(c.title)))].sort();
+  const uniqueSeries = [...new Set(curriculaCache.map(c => c.series).filter(Boolean))].sort();
   filterBar.innerHTML = '<div class="chip active" data-series="all">All Series</div>' +
     uniqueSeries.map(s => `<div class="chip" data-series="${s.replace(/"/g, '&quot;')}">${s}</div>`).join('');
 
   grid.innerHTML = curriculaCache.map((c, i) => {
-    const series = seriesFromTitle(c.title);
-    const theme = themeFromTitle(c.title);
+    const series = c.series || '';
     const desc = c.shortDescription || c.overview || '';
     const url = 'lesson-detail.html?id=' + encodeURIComponent(c.id);
     return `<div class="lesson-card linked" data-series="${series.replace(/"/g, '&quot;')}" onclick="window.location.href='${url}'">
       <div class="lesson-num">Lesson #${i + 1}</div>
-      <h4>${theme}</h4>
-      <div class="lesson-series">${series}</div>
+      <h4>${c.title}</h4>
+      ${series ? `<div class="lesson-series">${series}</div>` : ''}
       ${desc ? `<p>${desc}</p>` : ''}
     </div>`;
   }).join('');
