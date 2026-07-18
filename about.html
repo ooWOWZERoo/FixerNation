@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About Anthony J. Placito — Fixer Nation</title>
+<title>About the Mission — Fixer Nation Education</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -28,70 +28,57 @@
   .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
   .btn-outline:hover{background:var(--teal-dark); color:#fff;}
   header{position:sticky; top:0; z-index:50; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
-  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
-  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
-  .brand-mark{width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, var(--coral), var(--gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; box-shadow:0 8px 18px -6px rgba(242,107,77,0.6);}
-  .nav-links{display:flex; align-items:center; gap:30px; font-size:14.5px; font-weight:600; color:var(--ink);}
-  .nav-links a{opacity:0.8; transition:opacity .15s;}
-  .nav-links a.active, .nav-links a:hover{opacity:1; color:var(--coral-dark);}
-  .nav-cta{display:flex; align-items:center; gap:18px;}
-  .section{padding:80px 0;}
-  .section-head{text-align:center; max-width:640px; margin:0 auto 52px;}
-  .section-head h2{font-size:36px; margin-top:14px;}
-  .section-head p{color:var(--ink-soft); font-size:16px; margin-top:14px;}
-  footer{background:var(--teal-dark); color:rgba(255,255,255,0.82); padding:64px 0 32px;}
-  .footer-grid{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:40px; margin-bottom:48px;}
-  .footer-brand .brand{color:#fff;}
-  .footer-credo{font-family:'Fraunces',serif; font-style:italic; color:#F6D9C3; margin-top:16px; font-size:15px; max-width:280px;}
-  footer h4{color:#fff; font-size:13.5px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:16px; opacity:0.9;}
-  footer ul{list-style:none;}
-  footer li{margin-bottom:10px; font-size:14.5px;}
-  footer a:hover{color:var(--coral);}
-  .social-row{display:flex; gap:12px; margin-top:20px;}
-  .social-row a{width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:14px;}
-  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:24px; font-size:13px; opacity:0.65; text-align:center;}
 
-  /* PAGE SPECIFIC */
-  .about-hero{padding:64px 0 20px;}
-  .about-hero-grid{display:grid; grid-template-columns:0.9fr 1.1fr; gap:56px; align-items:center;}
+  .section{padding:80px 0;}
+
+  /* ── Hero grid ── */
+  .about-hero{padding:64px 0 56px;}
+  .about-hero-grid{display:grid; grid-template-columns:0.85fr 1.15fr; gap:56px; align-items:center;}
   .about-photo{border-radius:32px; overflow:hidden; box-shadow:var(--shadow); aspect-ratio:3/3.7; position:relative;}
   .about-photo img{width:100%; height:100%; object-fit:cover;}
-  .about-hero h1{font-size:44px; margin:16px 0 20px;}
-  .about-hero p.lead{font-size:17.5px; color:var(--ink-soft); margin-bottom:26px;}
+  .about-hero h1{font-size:40px; margin:16px 0 18px; line-height:1.12;}
+  .about-hero p.lead{font-size:16.5px; color:var(--ink-soft); margin-bottom:20px; line-height:1.7;}
   .signature{font-family:'Fraunces',serif; font-style:italic; font-size:22px; color:var(--teal); margin-top:18px;}
-  .stat-strip{display:flex; gap:48px; margin-top:36px; flex-wrap:wrap;}
+  .stat-strip{display:flex; gap:44px; margin-top:34px; flex-wrap:wrap;}
   .stat-strip .stat b{display:block; font-family:'Fraunces',serif; font-size:28px; color:var(--coral-dark);}
-  .stat-strip .stat span{font-size:12.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);}
+  .stat-strip .stat span{font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);}
 
-  .story-block{max-width:760px; margin:0 auto; font-size:16.5px; color:var(--ink);}
-  .story-block p{margin-bottom:22px;}
-  .story-block h2{font-size:30px; margin-bottom:24px; text-align:center;}
+  /* ── Story ── */
+  .story-block{max-width:760px; margin:0 auto; font-size:16px; color:var(--ink);}
+  .story-block p{margin-bottom:22px; line-height:1.75;}
+  .story-block h2{font-size:30px; margin-bottom:22px; text-align:center;}
   .pull-quote{
     font-family:'Fraunces',serif; font-style:italic; font-size:24px; color:var(--teal-dark);
     text-align:center; max-width:640px; margin:50px auto; line-height:1.4;
     border-top:2px solid var(--coral); border-bottom:2px solid var(--coral); padding:28px 0;
   }
+
+  /* ── Mission statement ── */
+  .mission-box{background:var(--teal-dark); border-radius:var(--radius-md); padding:44px 48px; max-width:820px; margin:0 auto; text-align:center;}
+  .mission-box h3{color:#fff; font-size:22px; margin-bottom:16px;}
+  .mission-box p{color:rgba(255,255,255,0.82); font-size:16px; line-height:1.75;}
+
+  /* ── Books ── */
   .books-strip{background:var(--cream-soft);}
   .mini-books{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
   .mini-book{border-radius:18px; overflow:hidden; aspect-ratio:3/2.1; display:flex; align-items:flex-end; padding:18px; color:#fff; font-family:'Fraunces',serif; font-weight:700; font-size:16px;}
   .mini-book.has-photo{background:#fff; align-items:center; justify-content:center; padding:10px;}
   .mini-book.has-photo img{width:100%; height:100%; object-fit:contain;}
-  .bc1{background:linear-gradient(160deg,#1B5E58,#0E3733);}
-  .bc2{background:linear-gradient(160deg,#F2825F,#D9502F);}
-  .bc3{background:linear-gradient(160deg,#E8B15E,#B4762A);}
-  .bc4{background:linear-gradient(160deg,#3E6E86,#20404F);}
-  .cta-band{background:linear-gradient(120deg, var(--teal-dark), var(--teal) 55%, #1E6B62); color:#fff; padding:72px 0; text-align:center;}
-  .cta-band h2{color:#fff; font-size:30px; margin-bottom:26px; max-width:600px; margin-left:auto; margin-right:auto;}
+
+  /* ── CTA band ── */
+  .cta-band{background:linear-gradient(135deg, var(--coral), var(--coral-dark)); color:#fff; padding:72px 0; text-align:center;}
+  .cta-band h2{color:#fff; font-size:28px; margin-bottom:22px; max-width:600px; margin-left:auto; margin-right:auto;}
   .btn-light{background:#fff; color:var(--teal-dark);}
 
   @media (max-width:900px){
-    .nav-links{display:none;}
     .about-hero-grid{grid-template-columns:1fr;}
-    .about-hero h1{font-size:34px;}
-    .mini-books, .footer-grid{grid-template-columns:1fr 1fr;}
+    .about-hero h1{font-size:32px;}
+    .mini-books{grid-template-columns:1fr 1fr;}
+    .mission-box{padding:32px 28px;}
   }
   @media (max-width:560px){
-    .mini-books, .footer-grid{grid-template-columns:1fr;}
+    .wrap{padding:0 20px;}
+    .mini-books{grid-template-columns:1fr;}
     .stat-strip{gap:26px;}
   }
 </style>
@@ -100,44 +87,59 @@
 
 <header></header>
 
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
 <section class="about-hero">
   <div class="wrap about-hero-grid">
     <div class="about-photo">
       <img src="anthony.png" alt="Anthony J. Placito">
     </div>
     <div>
-      <span class="eyebrow">Meet the Fixer</span>
-      <h1>Anthony J. Placito</h1>
-      <p class="lead">Helping you build confidence, overcome challenge, and cultivate resilience — through real-life experience, psychological insight, and strategic thinking.</p>
+      <span class="eyebrow">About the Founder</span>
+      <h1>The Fixer Nation story — and why it belongs in every school morning.</h1>
+      <p class="lead">Anthony J. Placito built Fixer Nation Education from one conviction: social-emotional skills don't develop from a single lesson — they develop from daily practice. FNE puts that practice in the classroom, every school morning, at scale.</p>
       <div style="display:flex; gap:16px; flex-wrap:wrap;">
-        <a href="books.html" class="btn btn-primary">Explore Books</a>
-        <a href="askthefixer.html" class="btn btn-outline">Ask The Fixer</a>
+        <a href="how-it-works.html" class="btn btn-primary">How the Platform Works →</a>
+        <a href="contact.html" class="btn btn-outline">Contact the Team →</a>
       </div>
       <p class="signature">— Anthony</p>
       <div class="stat-strip">
         <div class="stat"><b>4</b><span>Books Published</span></div>
-        <div class="stat"><b>1</b><span>Fixer Nation Credo</span></div>
-        <div class="stat"><b>1000s</b><span>Lives Impacted</span></div>
+        <div class="stat"><b>1</b><span>Proprietary Framework</span></div>
+        <div class="stat"><b>170+</b><span>Lessons Per School Year</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section">
+<!-- ── Story ─────────────────────────────────────────────────────────────── -->
+<section class="section" style="padding-top:0;">
   <div class="wrap story-block">
-    <h2>Building Confidence, Overcoming Challenge</h2>
-    <p>Anthony J. Placito is dedicated to helping individuals overcome obstacles, build confidence, and make smarter decisions. With a passion for personal growth and resilience, he shares powerful insights through his books: <em>Your Past Doesn't Define You</em>, <em>Kill the Bully</em>, <em>Think with 5 Brains Then Make Up Your Mind</em>, and <em>How to Lie and Get Away with It Every Time</em>.</p>
-    <p>Drawing from real-life experiences, psychological principles, and strategic thinking, Anthony's work provides readers with the tools they need to break free from self-doubt, silence their inner and outer critics, and navigate life's toughest challenges with confidence. His books offer a roadmap to personal empowerment, blending practical advice with compelling storytelling to inspire meaningful and lasting change.</p>
-    <div class="pull-quote">"There are no problems in life... only issues and answers."</div>
-    <p>Through his writing, Anthony challenges readers to rethink their past, redefine their future, and approach decision-making with clarity and purpose. Whether you are seeking to overcome a difficult past, stand up to the negativity around you, or develop a sharper, more strategic mindset, his books serve as a guiding light on the journey to success and self-discovery.</p>
+    <h2>One idea. One framework. One platform.</h2>
+    <p>Anthony's work started from a simple reframe: there are no problems in life — only issues and answers. That philosophy — that every challenge is solvable when you slow down, consider your options, and choose a responsible response — became the foundation of everything he has written and built.</p>
+    <p>What he saw, working with students and schools, was a gap. SEL programs existed, but they were periodic — delivered in units, once a month, a few times a year. Students would encounter a lesson on resilience in October and not revisit it until spring. The skills that mattered most were getting the least consistent practice.</p>
+    <div class="pull-quote">"Skills that matter outside the classroom only develop through consistent daily practice — not from a lesson students hear once."</div>
+    <p>FNE was built to close that gap. The Issues-to-Answers method — Recognize the Issue → Understand the Impact → Consider Possible Answers → Choose a Responsible Response → Reflect and Reinforce — became the structural scaffold for every Morning Boost lesson. Not a one-time curriculum. A daily routine.</p>
+    <p>That's the difference between a lesson a student heard and a habit a student has.</p>
   </div>
 </section>
 
+<!-- ── Mission Statement ──────────────────────────────────────────────────── -->
+<section style="padding:0 0 72px;">
+  <div class="wrap">
+    <div class="mission-box">
+      <h3>The FNE Mission</h3>
+      <p>To give every K–12 student a structured daily opportunity to practice the social-emotional, character, and life skills that school can introduce — but only consistent repetition can develop into lasting habits. To give every teacher a ready tool that makes that practice possible without adding to their load. And to give every school a program that builds a common SEL language across every classroom, every morning, throughout the year.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Books ──────────────────────────────────────────────────────────────── -->
 <section class="section books-strip">
   <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">The Books</span>
-      <h2>Four Titles, One Philosophy</h2>
+    <div style="text-align:center; margin-bottom:36px;">
+      <span class="eyebrow">The Fixer Nation Library</span>
+      <h2 style="font-size:30px; margin-top:14px;">The books that started it all</h2>
+      <p style="color:var(--ink-soft); font-size:15px; margin-top:12px; max-width:600px; margin-left:auto; margin-right:auto; line-height:1.7;">The same themes FNE teaches daily — resilience, decision-making, character, and responsibility — run through Anthony's four titles. They reinforce what the Morning Boost introduces in the classroom and extend it to the home.</p>
     </div>
     <div class="mini-books">
       <a href="books.html" class="mini-book has-photo"><img src="cover-kill-the-bully.png" alt="Kill the Bully book cover"></a>
@@ -145,20 +147,27 @@
       <a href="books.html" class="mini-book has-photo"><img src="cover-5-brains.png" alt="Think with 5 Brains, Then Make Up Your Mind book cover"></a>
       <a href="books.html" class="mini-book has-photo"><img src="cover-how-to-lie.png" alt="How to Lie and Get Away With It Every Time book cover"></a>
     </div>
+    <div style="text-align:center; margin-top:28px;">
+      <a href="https://fixernation.com" style="font-size:14px; color:var(--ink-soft); font-weight:600;">Shop books and personal development resources at fixernation.com →</a>
+    </div>
   </div>
 </section>
 
+<!-- ── CTA Band ───────────────────────────────────────────────────────────── -->
 <section class="cta-band">
   <div class="wrap">
-    <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">Join Fixer Nation</span>
-    <h2 style="margin-top:18px;">Ready to turn your issues into answers?</h2>
-    <a href="join.html" class="btn btn-light">Join Fixer Nation</a>
+    <span class="eyebrow" style="background:rgba(255,255,255,0.18); color:#fff; margin-bottom:22px; display:inline-flex;">Bring FNE to Your School</span>
+    <h2>A daily SEL routine — ready before the bell rings.</h2>
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+      <a href="school-licensing.html" class="btn btn-light">License My School →</a>
+      <a href="education-portal.html" class="btn btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.6);">Browse the Lesson Library</a>
+    </div>
   </div>
 </section>
 
 <footer></footer>
 
-<!-- Log In / Sign Up modal (site-auth.js) -->
+<!-- Log In / Sign Up modal -->
 <div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
   <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -166,11 +175,9 @@
         <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
         <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
       </div>
-      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
     </div>
-
     <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
-
     <div id="fnAuthLoginView">
       <form id="fnAuthLoginForm">
         <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
@@ -180,16 +187,14 @@
       </form>
       <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
     </div>
-
     <div id="fnAuthForgotView" style="display:none;">
-      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
       <form id="fnAuthForgotForm">
         <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
         <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
       </form>
-      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
     </div>
-
     <div id="fnAuthSignupView" style="display:none;">
       <form id="fnAuthSignupForm">
         <div style="display:flex; gap:10px; margin-bottom:12px;">
@@ -209,7 +214,6 @@
 <script src="nav.js?v=5"></script>
 <script src="site-auth.js"></script>
 <script src="cart.js"></script>
-
 <script src="footer.js?v=1"></script>
 </body>
 </html>
