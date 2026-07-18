@@ -10,6 +10,12 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=16">
+<style>
+  .series-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+  .series-chip { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; cursor:pointer; background:var(--a-bg-hover,#f3f4f6); border:1px solid var(--a-border,#e5e7eb); color:var(--a-text,#111); transition:background 0.15s; }
+  .series-chip:hover { background:var(--a-accent,#164f4a); color:#fff; border-color:var(--a-accent,#164f4a); }
+  .series-chip.active { background:var(--a-accent,#164f4a); color:#fff; border-color:var(--a-accent,#164f4a); }
+</style>
 </head>
 <body>
 
@@ -77,8 +83,8 @@
           </div>
           <div class="a-field" style="flex:1;">
             <label>Series / Program</label>
-            <input type="text" id="series" list="seriesList" placeholder="e.g. SEL Morning Boost" autocomplete="off">
-            <datalist id="seriesList"></datalist>
+            <input type="text" id="series" placeholder="e.g. SEL Morning Boost" autocomplete="off" oninput="highlightSeriesChip()">
+            <div class="series-chips" id="seriesChips"></div>
           </div>
         </div>
 
@@ -297,10 +303,24 @@ async function fetchCurricula() {
 }
 
 function refreshSeriesDatalist() {
-  const dl = document.getElementById('seriesList');
-  if (!dl) return;
+  const wrap = document.getElementById('seriesChips');
+  if (!wrap) return;
   const names = [...new Set(curriculaCache.map(c => c.series).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+  wrap.innerHTML = names.map(n =>
+    `<span class="series-chip" onclick="pickSeries('${n.replace(/'/g, "\\'")}')">${n}</span>`
+  ).join('');
+}
+
+function pickSeries(name) {
+  document.getElementById('series').value = name;
+  highlightSeriesChip();
+}
+
+function highlightSeriesChip() {
+  const val = (document.getElementById('series').value || '').trim().toLowerCase();
+  document.querySelectorAll('.series-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.textContent.trim().toLowerCase() === val);
+  });
 }
 
 async function renderCurricula() {
@@ -507,6 +527,7 @@ function editCurriculum(id) {
   document.getElementById('curriculumModalTitle').textContent = 'Edit Curriculum';
   document.getElementById('title').value = c.title || '';
   document.getElementById('series').value = c.series || '';
+  highlightSeriesChip();
   document.getElementById('shortDescription').value = c.shortDescription || '';
   document.getElementById('overview').value = c.overview || '';
   document.getElementById('objectives').value = (c.objectives || []).join('\n');
