@@ -229,16 +229,26 @@
   }
   .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:24px; font-size:13px; opacity:0.65; text-align:center;}
 
+  /* School sections */
+  .cards-4{display:grid; grid-template-columns:repeat(4,1fr); gap:22px;}
+  .school-tile{background:#fff; border-radius:var(--radius-md); padding:28px 24px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.25); transition:transform .2s ease;}
+  .school-tile:hover{transform:translateY(-5px);}
+  .school-tile-icon{font-size:28px; margin-bottom:14px;}
+  .school-tile h3{font-size:17px; margin-bottom:8px; color:var(--teal-dark);}
+  .school-tile p{font-size:13.5px; color:var(--ink-soft);}
+
   @media (max-width:900px){
     .nav-links{display:none;}
     .hero-grid, .about-grid{grid-template-columns:1fr;}
     .hero h1{font-size:38px;}
     .cards-3, .books-grid, .pricing-grid, .footer-grid{grid-template-columns:1fr 1fr;}
     .price-card.featured{transform:none;}
+    .cards-4{grid-template-columns:1fr 1fr;}
   }
   @media (max-width:560px){
     .cards-3, .books-grid, .pricing-grid, .footer-grid{grid-template-columns:1fr;}
     .stat-row{gap:30px;}
+    .cards-4{grid-template-columns:1fr;}
   }
 </style>
 </head>
@@ -249,28 +259,83 @@
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <span class="eyebrow">Positivity · Health · Wellness</span>
-      <h1>There are no problems in life —<br><em>only issues and answers.</em></h1>
-      <p class="lead">Fixer Nation exists to help you build confidence, overcome challenge, and cultivate resilience — through the books, mentorship, and daily tools of Anthony J. Placito.</p>
+      <span class="eyebrow">Fixer Nation Education</span>
+      <h1>Helping SEL <em>Face the World</em></h1>
+      <p class="lead">Daily social-emotional learning, character, wellness, and morning mindset resources — released every school day, ready to use every morning.</p>
+      <p style="font-size:15.5px; color:var(--ink-soft); max-width:520px; margin-bottom:32px;">Fixer Nation Education is designed to help schools reinforce SEL, character, wellness, and life skills through consistent daily engagement — not just a lesson scheduled once a week.</p>
       <div class="hero-actions">
-        <a href="join.html" class="btn btn-primary">Join Fixer Nation</a>
-        <a href="books.html" class="btn btn-outline">Explore the Books</a>
+        <a href="education-portal.html" class="btn btn-primary">Explore the Daily Program →</a>
+        <a href="education-portal.html#lessons" class="btn btn-outline">Browse Lesson Plans</a>
       </div>
       <div class="trust-row">
-        <div class="trust-item"><span class="trust-dot"></span> Daily Morning Boost emails</div>
-        <div class="trust-item"><span class="trust-dot"></span> Vetted Professional Network</div>
-        <div class="trust-item"><span class="trust-dot"></span> Ask The Fixer, anytime</div>
+        <div class="trust-item"><span class="trust-dot"></span> New lesson every school day</div>
+        <div class="trust-item"><span class="trust-dot"></span> K–12 ready</div>
+        <div class="trust-item"><span class="trust-dot"></span> Classroom poster + quiz + handout included</div>
       </div>
     </div>
     <div class="hero-visual">
       <div class="hero-photo">
-        <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?w=900&q=80" alt="Two people in a warm, supportive conversation">
+        <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=900&q=80" alt="Students in a morning classroom SEL session">
       </div>
-      <div class="floating-badge">30-Day<br>Free Trial</div>
       <div class="floating-card">
-        <p>"Everyone has the power to take control of their story."</p>
+        <p>"One lesson plants a seed. Daily practice helps it grow."</p>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ── What We Believe ──────────────────────────────────────────────────── -->
+<section class="section" style="background:var(--teal-dark); padding:72px 0;">
+  <div class="wrap" style="max-width:780px; margin:0 auto; text-align:center;">
+    <span class="eyebrow" style="background:rgba(255,255,255,0.12); color:#F6D9C3;">What We Believe</span>
+    <h2 style="color:#fff; font-size:34px; margin:20px 0 18px;">"One lesson plants a seed.<br>Daily practice helps it grow."</h2>
+    <p style="color:rgba(255,255,255,0.8); font-size:16.5px; line-height:1.75;">SEL skills — resilience, responsibility, empathy, decision-making — don't become habits from a lesson scheduled once a week. Fixer Nation is designed to put SEL at the start of every school day, reinforcing the same values through consistent, fresh daily engagement that teachers, students, and classrooms can count on.</p>
+  </div>
+</section>
+
+<!-- ── For Schools ──────────────────────────────────────────────────────── -->
+<section class="section" id="for-schools">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">K–12 Education</span>
+      <h2>A complete daily SEL platform — not just lesson plans</h2>
+    </div>
+    <div class="cards-4">
+      <div class="school-tile">
+        <div class="school-tile-icon">☀️</div>
+        <h3>Daily Morning Boost</h3>
+        <p>Fresh SEL lesson released every Monday–Friday. Video, script, handout, poster, and quiz in every kit.</p>
+      </div>
+      <div class="school-tile">
+        <div class="school-tile-icon">🖥️</div>
+        <h3>Digital Classroom Portal</h3>
+        <p>Teachers create classrooms, assign lessons, and track each student's quiz scores and progress — all in one place.</p>
+      </div>
+      <div class="school-tile">
+        <div class="school-tile-icon">🧑‍🎓</div>
+        <h3>Student Portal</h3>
+        <p>Students join via class code, complete lessons and digital quizzes, submit reflections, and set personal goals.</p>
+      </div>
+      <div class="school-tile">
+        <div class="school-tile-icon">🏫</div>
+        <h3>School Administrator View</h3>
+        <p>Principals and admins see classroom adoption and teacher engagement across the entire building.</p>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:40px;">
+      <a href="education-portal.html" class="btn btn-primary">See the full platform →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Why Different teaser ─────────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap" style="max-width:820px; margin:0 auto; text-align:center;">
+    <span class="eyebrow">Why Fixer Nation</span>
+    <h2 style="font-size:32px; margin:18px 0 20px;">Students don't become resilient from one lesson. They become resilient from daily practice.</h2>
+    <p style="color:var(--ink-soft); font-size:16px; line-height:1.75; margin-bottom:12px;">A single lesson can introduce a concept. But SEL skills — resilience, decision-making, responsibility, empathy — develop through repetition and reinforcement. Fixer Nation delivers that reinforcement every school day, building the muscle memory students carry with them.</p>
+    <p style="color:var(--ink-soft); font-size:16px; line-height:1.75; margin-bottom:30px;">And with the Fixer Nation Digital Classroom, teachers can see exactly who's engaging — quiz by quiz, lesson by lesson.</p>
+    <a href="why-fixer-nation.html" class="btn btn-outline">Read Why We're Different →</a>
   </div>
 </section>
 

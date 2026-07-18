@@ -55,7 +55,7 @@
   var booksActive   = page === 'books' || /^book-/.test(page);
   var blogActive    = page === 'blog';
   var netActive     = page === 'fnnetwork';
-  var schoolsActive = page === 'education-portal' || page === 'education-schools' || page === 'programs';
+  var schoolsActive = page === 'education-portal' || page === 'education-schools' || page === 'programs' || page === 'why-fixer-nation' || page === 'school-licensing';
   var commActive    = page === 'social';
   var fixerActive   = page === 'askthefixer';
 
@@ -73,7 +73,14 @@
         lnk('books.html',           'Books',         booksActive)   +
         lnk('blog.html',            'FN Blogs',      blogActive)    +
         lnk('fnnetwork.html',       'FN Network',    netActive)     +
-        lnk('education-portal.html','Schools',       schoolsActive) +
+        '<div class="fn-nav-dropdown">' +
+          '<span class="fn-nav-parent' + (schoolsActive ? ' active' : '') + '">Schools <span class="fn-nav-caret">▾</span></span>' +
+          '<div class="fn-nav-menu">' +
+            '<a href="education-portal.html"' + ((page === 'education-portal' || page === 'education-schools' || page === 'programs') ? ' class="active"' : '') + '>Education Portal</a>' +
+            '<a href="why-fixer-nation.html"' + (page === 'why-fixer-nation' ? ' class="active"' : '') + '>Why We\'re Different</a>' +
+            '<a href="school-licensing.html"' + (page === 'school-licensing' ? ' class="active"' : '') + '>School Licensing</a>' +
+          '</div>' +
+        '</div>' +
         lnk('social.html',          'Community',     commActive)    +
         lnk('askthefixer.html',     'Ask The Fixer', fixerActive)   +
       '</nav>' +
