@@ -175,6 +175,7 @@
     <div class="hero-text">
       <span class="eyebrow">School & District Licensing</span>
       <h1>Bring 2D SEL to Your School in Four Simple Steps</h1>
+      <p style="font-size:13.5px; color:rgba(255,255,255,0.6); font-style:italic; margin-bottom:8px;">2D SEL: daily practice across every dimension of social-emotional learning — delivered fresh every school day.</p>
       <p>Whether you're purchasing for a single classroom, an entire school, or a district, Fixer Nation Education makes it easy to implement the 2D SEL program with flexible licensing designed to grow with your needs.</p>
       <div class="hero-btns">
         <a href="#inquiry-form" class="btn btn-primary">Request a Proposal</a>
@@ -311,6 +312,7 @@
       <h2>Current License Plans</h2>
       <p>Purchase directly by card, or fill out the inquiry form below for a custom proposal — Purchase Orders accepted for all plans.</p>
     </div>
+    <p style="text-align:center; color:var(--ink-soft); font-size:15px; font-style:italic; margin-bottom:28px;">School licenses are designed to cost less than a single professional development workshop day — with fresh content delivered every school day for the rest of the year.</p>
     <div id="licensePlansGrid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,320px)); gap:18px; justify-content:center; margin-bottom:32px;"></div>
     <div style="text-align:center;">
       <p style="color:var(--ink-soft); font-size:14px; margin-bottom:16px;">Need a custom quote or have district-wide requirements?</p>
@@ -408,7 +410,9 @@
           <div class="success-icon">✅</div>
           <h3>Inquiry Received!</h3>
           <p>Thank you — we've received your inquiry and will be in touch within one business day. Check your inbox (and spam folder) for a confirmation.</p>
-          <div style="margin-top:24px;">
+          <p style="color:var(--ink-soft); font-size:14px; margin-top:14px;">While we prepare your proposal, explore the lesson library to see what your teachers will use every morning.</p>
+          <div style="margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+            <a href="education-portal.html" class="btn btn-primary btn-sm">Browse the Lesson Library →</a>
             <a href="education-schools.html" class="btn btn-outline btn-sm">Teacher Registration →</a>
           </div>
         </div>
@@ -677,7 +681,7 @@ let _planCache = [];
       const grid = document.getElementById('licensePlansGrid');
       if (!grid) return;
       if (!products.length) {
-        grid.innerHTML = '<p style="color:var(--ink-soft); text-align:center;">License plans coming soon — contact us below for pricing.</p>';
+        grid.innerHTML = '<p style="color:var(--ink-soft); text-align:center; max-width:520px; margin:0 auto; line-height:1.7;">Licensing plans are available for individual classrooms, whole schools, and districts.<br><strong>Fill out the form below</strong> to receive a customized proposal — most schools hear back within one business day.</p>';
         return;
       }
       grid.innerHTML = products.map(p => `

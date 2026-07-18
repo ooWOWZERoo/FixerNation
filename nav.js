@@ -79,6 +79,7 @@
             '<a href="education-portal.html"' + ((page === 'education-portal' || page === 'education-schools' || page === 'programs') ? ' class="active"' : '') + '>Education Portal</a>' +
             '<a href="why-fixer-nation.html"' + (page === 'why-fixer-nation' ? ' class="active"' : '') + '>Why We\'re Different</a>' +
             '<a href="school-licensing.html"' + (page === 'school-licensing' ? ' class="active"' : '') + '>School Licensing</a>' +
+            '<a href="education-schools.html"' + (page === 'education-schools' ? ' class="active"' : '') + '>Teacher Registration</a>' +
           '</div>' +
         '</div>' +
         lnk('social.html',          'Community',     commActive)    +
