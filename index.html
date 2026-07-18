@@ -229,6 +229,10 @@
   }
   .footer-bottom{border-top:1px solid rgba(255,255,255,0.12); padding-top:24px; font-size:13px; opacity:0.65; text-align:center;}
 
+  .role-chip{display:inline-flex;align-items:center;padding:8px 18px;border-radius:999px;border:1.5px solid rgba(22,79,74,0.22);font-size:13.5px;font-weight:600;color:var(--teal-dark);white-space:nowrap;transition:background .15s,border-color .15s;}
+  .role-chip:hover{background:rgba(22,79,74,0.06);border-color:rgba(22,79,74,0.45);}
+  .steps-5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;max-width:980px;margin:0 auto 40px;}
+
   /* School sections */
   .cards-4{display:grid; grid-template-columns:repeat(4,1fr); gap:22px;}
   .school-tile{background:#fff; border-radius:var(--radius-md); padding:28px 24px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.25); transition:transform .2s ease;}
@@ -244,11 +248,13 @@
     .cards-3, .books-grid, .pricing-grid, .footer-grid{grid-template-columns:1fr 1fr;}
     .price-card.featured{transform:none;}
     .cards-4{grid-template-columns:1fr 1fr;}
+    .steps-5{grid-template-columns:repeat(3,1fr);}
   }
   @media (max-width:560px){
     .cards-3, .books-grid, .pricing-grid, .footer-grid{grid-template-columns:1fr;}
     .stat-row{gap:30px;}
     .cards-4{grid-template-columns:1fr;}
+    .steps-5{grid-template-columns:1fr 1fr;}
   }
 </style>
 </head>
@@ -266,6 +272,11 @@
       <div class="hero-actions">
         <a href="education-portal.html" class="btn btn-primary">Explore the Daily Program →</a>
         <a href="school-licensing.html" class="btn btn-outline">License My School →</a>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;">
+        <a href="for-teachers.html" class="role-chip">I'm a Teacher</a>
+        <a href="for-schools.html" class="role-chip">I'm a School Leader</a>
+        <a href="for-schools.html" class="role-chip">I'm a District Leader</a>
       </div>
       <div class="trust-row">
         <div class="trust-item"><span class="trust-dot"></span> New lesson every school day</div>
@@ -337,6 +348,47 @@
   </div>
 </section>
 
+<!-- ── How a Morning Boost Works ────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">The Daily Routine</span>
+      <h2>How a Morning Boost works</h2>
+      <p>A consistent five-step routine, every school morning. No prep required.</p>
+    </div>
+    <div class="steps-5">
+      <div style="text-align:center; padding:28px 16px; background:#fff; border-radius:var(--radius-md); box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);">
+        <div style="width:44px; height:44px; border-radius:50%; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:19px; font-weight:700; margin:0 auto 14px;">1</div>
+        <div style="font-weight:800; font-size:15px; color:var(--teal-dark); margin-bottom:8px;">Watch</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Play the daily video lesson — classroom-ready, no setup required.</p>
+      </div>
+      <div style="text-align:center; padding:28px 16px; background:#fff; border-radius:var(--radius-md); box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);">
+        <div style="width:44px; height:44px; border-radius:50%; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:19px; font-weight:700; margin:0 auto 14px;">2</div>
+        <div style="font-weight:800; font-size:15px; color:var(--teal-dark); margin-bottom:8px;">Discuss</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Open the floor with one guiding prompt. The materials guide the lesson while you lead the conversation.</p>
+      </div>
+      <div style="text-align:center; padding:28px 16px; background:#fff; border-radius:var(--radius-md); box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);">
+        <div style="width:44px; height:44px; border-radius:50%; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:19px; font-weight:700; margin:0 auto 14px;">3</div>
+        <div style="font-weight:800; font-size:15px; color:var(--teal-dark); margin-bottom:8px;">Reflect</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Students write their personal connection to the issue and consider their own response.</p>
+      </div>
+      <div style="text-align:center; padding:28px 16px; background:#fff; border-radius:var(--radius-md); box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);">
+        <div style="width:44px; height:44px; border-radius:50%; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:19px; font-weight:700; margin:0 auto 14px;">4</div>
+        <div style="font-weight:800; font-size:15px; color:var(--teal-dark); margin-bottom:8px;">Assess</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">A short digital quiz checks comprehension and gives teachers immediate insight.</p>
+      </div>
+      <div style="text-align:center; padding:28px 16px; background:#fff; border-radius:var(--radius-md); box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);">
+        <div style="width:44px; height:44px; border-radius:50%; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:19px; font-weight:700; margin:0 auto 14px;">5</div>
+        <div style="font-weight:800; font-size:15px; color:var(--teal-dark); margin-bottom:8px;">Reinforce</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Students set a personal goal tied to that day's theme — building the habit of self-direction.</p>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <a href="how-it-works.html" class="btn btn-outline">See the full platform →</a>
+    </div>
+  </div>
+</section>
+
 <!-- ── SEL Research Proof Bar ──────────────────────────────────────────── -->
 <section class="section">
   <div class="wrap">
@@ -381,9 +433,9 @@
     <div class="about-copy">
       <span class="eyebrow">Meet the Fixer</span>
       <h2 style="margin-top:14px;">Anthony J. Placito</h2>
-      <p>Bestselling author Anthony J. Placito draws on real-life experience, psychological insight, and strategic thinking to help readers silence self-doubt, redefine their future, and navigate life's toughest moments with clarity and purpose.</p>
-      <p>His books — <em>Your Past Doesn't Define You</em>, <em>Kill the Bully</em>, <em>Think with 5 Brains</em>, and <em>How to Lie and Get Away With It Every Time</em> — form the foundation of the Fixer Nation philosophy.</p>
-      <a href="about.html" class="btn btn-outline">Read His Story</a>
+      <p>Anthony J. Placito built the Issues-to-Answers framework from one conviction: there are no problems in life — only issues and answers. Every Fixer Nation Education lesson is built on that philosophy.</p>
+      <p>As a bestselling author and the founder of FNE, Anthony created the 2D SEL platform to give teachers a structured daily routine for the skills that school can introduce but only consistent practice can develop — resilience, character, decision-making, and life skills.</p>
+      <a href="about.html" class="btn btn-outline">About the Mission</a>
     </div>
   </div>
 </section>
@@ -391,9 +443,9 @@
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <span class="eyebrow">From the Library</span>
-      <h2>Books from Fixer Nation</h2>
-      <p>Four titles rooted in real-life experience, psychological insight, and strategic thinking.</p>
+      <span class="eyebrow">The Fixer Nation Library</span>
+      <h2>Books that reinforce what the program teaches</h2>
+      <p>The same themes from daily lessons — resilience, decision-making, character, responsibility — explored in depth in Anthony's four titles.</p>
     </div>
     <div class="books-grid">
       <div class="book-card">
@@ -430,9 +482,9 @@
 
 <section class="newsletter-band">
   <div class="wrap newsletter-inner">
-    <span class="eyebrow" style="background:rgba(255,255,255,0.12); color:#F6D9C3;">Stay Connected</span>
-    <h2 style="margin-top:14px;">Get the Fixer Nation newsletter</h2>
-    <p>A monthly dose of positivity, book news, and mindset tools — straight to your inbox.</p>
+    <span class="eyebrow" style="background:rgba(255,255,255,0.12); color:#F6D9C3;">For Educators</span>
+    <h2 style="margin-top:14px;">Stay in the loop</h2>
+    <p>New lessons, platform updates, and SEL resources — delivered monthly to educators who want to stay ahead.</p>
     <form class="newsletter-form" id="newsletterForm">
       <input type="text" id="newsletterName" placeholder="First name (optional)">
       <input type="email" id="newsletterEmail" placeholder="you@email.com" required>

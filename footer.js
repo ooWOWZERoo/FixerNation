@@ -1,6 +1,5 @@
-/* Fixer Nation — shared public footer (mirrors nav.js pattern). Every public
-   page has an empty <footer></footer> placeholder; this script fills it in and
-   injects the shared CSS once. */
+/* Fixer Nation Education — shared footer. Every public page has an empty
+   <footer></footer> placeholder; this script fills it in and injects CSS once. */
 (function () {
   if (!document.getElementById('fn-footer-styles')) {
     var s = document.createElement('style');
@@ -20,7 +19,10 @@
       'footer ul li{margin-bottom:9px;}',
       'footer ul a{color:rgba(255,255,255,0.72);text-decoration:none;font-size:14px;transition:color .15s;}',
       'footer ul a:hover{color:#fff;}',
-      '.fn-fb{border-top:1px solid rgba(255,255,255,0.12);padding-top:24px;font-size:12.5px;opacity:0.6;text-align:center;}',
+      '.fn-consumer-link{text-align:center;font-size:13px;color:rgba(255,255,255,0.45);border-top:1px solid rgba(255,255,255,0.12);padding-top:20px;margin-bottom:14px;}',
+      '.fn-consumer-link a{color:rgba(255,255,255,0.65);text-decoration:none;transition:color .15s;}',
+      '.fn-consumer-link a:hover{color:#fff;}',
+      '.fn-fb{font-size:12.5px;opacity:0.6;text-align:center;}',
       '@media(max-width:900px){.fn-fg{grid-template-columns:1fr 1fr;}}',
       '@media(max-width:600px){.fn-fg{grid-template-columns:1fr;}.fn-fi{padding:0 20px;}}',
     ].join('');
@@ -34,6 +36,7 @@
     '<div class="fn-fi">' +
       '<div class="fn-fg">' +
 
+        // Column 1 — Brand
         '<div>' +
           '<a class="fn-flogo" href="index.html"><div class="fn-fmark">FN</div> Fixer Nation</a>' +
           '<p class="fn-fcredo">&ldquo;There are no problems in life&hellip; only issues and answers.&rdquo;</p>' +
@@ -45,42 +48,44 @@
           '</div>' +
         '</div>' +
 
+        // Column 2 — Explore
         '<div>' +
           '<h4>Explore</h4>' +
           '<ul>' +
-            '<li><a href="about.html">About</a></li>' +
-            '<li><a href="books.html">Books</a></li>' +
-            '<li><a href="blog.html">FN Blogs</a></li>' +
-            '<li><a href="brain-games.html" style="display:flex;align-items:center;gap:6px;"><span style="font-size:16px;line-height:1;">🧠</span> Tune Your Brain</a></li>' +
+            '<li><a href="why-fixer-nation.html">Why FNE</a></li>' +
+            '<li><a href="how-it-works.html">How It Works</a></li>' +
+            '<li><a href="education-portal.html">Lesson Library</a></li>' +
+            '<li><a href="research.html">Research &amp; Alignment</a></li>' +
           '</ul>' +
         '</div>' +
 
+        // Column 3 — Schools
         '<div>' +
-          '<h4>Community</h4>' +
+          '<h4>Schools</h4>' +
           '<ul>' +
-            '<li><a href="fnnetwork.html">FN Network</a></li>' +
-            '<li><a href="social.html">Community</a></li>' +
-            '<li><a href="askthefixer.html">Ask The Fixer</a></li>' +
-            '<li><a href="join.html">Join Fixer Nation</a></li>' +
-            '<li><a href="service-providers.html">Service Providers</a></li>' +
-            '<li><a href="brand-ambassador.html">Brand Ambassador</a></li>' +
+            '<li><a href="for-teachers.html">For Teachers</a></li>' +
+            '<li><a href="for-schools.html">For Schools</a></li>' +
+            '<li><a href="school-licensing.html">Pricing &amp; Licensing</a></li>' +
+            '<li><a href="education-schools.html">Teacher Registration</a></li>' +
           '</ul>' +
         '</div>' +
 
+        // Column 4 — Access
         '<div>' +
-          '<h4>Schools &amp; Company</h4>' +
+          '<h4>Access</h4>' +
           '<ul>' +
-            '<li><a href="education-portal.html">National Education Portal</a></li>' +
-            '<li><a href="education-schools.html">2D Education &mdash; Schools</a></li>' +
-            '<li><a href="programs.html">Programs</a></li>' +
-            '<li><a href="contact.html">Contact</a></li>' +
-            '<li><a href="teacher-classrooms.html">My Classrooms</a></li>' +
+            '<li><a href="teacher-classrooms.html">Teacher Login</a></li>' +
             '<li><a href="student-login.html">Student Login</a></li>' +
-            '<li><a href="admin-login.html">Admin Log In</a></li>' +
-            '<li><a href="school-admin-login.html">School Admin Portal</a></li>' +
+            '<li><a href="school-admin-login.html">School Admin</a></li>' +
+            '<li><a href="privacy-choices.html">Privacy Choices</a></li>' +
+            '<li><a href="student-data-privacy.html">Student Data Privacy</a></li>' +
+            '<li><a href="contact.html">Contact</a></li>' +
           '</ul>' +
         '</div>' +
 
+      '</div>' +
+      '<div class="fn-consumer-link">' +
+        'Looking for Fixer Nation books and personal development? <a href="https://fixernation.com">Visit fixernation.com &rarr;</a>' +
       '</div>' +
       '<div class="fn-fb">' +
         '&copy; 2026 Fixer Nation Issues and Answers. All Rights Reserved.' +

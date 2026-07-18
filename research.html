@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Research &amp; Alignment — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 26px; border-radius:999px; font-weight:700; font-size:14.5px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn-outline:hover{background:var(--teal-dark); color:#fff;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{position:relative; overflow:hidden; background:linear-gradient(135deg, var(--teal-dark) 0%, #1a6b63 100%); padding:92px 32px 88px;}
+  .hero-inner{position:relative; z-index:1; max-width:760px; margin:0 auto; text-align:center;}
+  .hero-inner .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:20px;}
+  .hero-inner h1{font-size:38px; color:#fff; line-height:1.12; margin-bottom:18px;}
+  .hero-inner p{font-size:16px; color:rgba(255,255,255,0.82); line-height:1.7; max-width:640px; margin:0 auto;}
+
+  /* Prominent attribution notice */
+  .attribution-bar{background:#fff; border-left:4px solid var(--gold); border-radius:0 var(--radius-md) var(--radius-md) 0; padding:22px 28px; max-width:860px; margin:0 auto; box-shadow:0 8px 20px -12px rgba(22,79,74,0.18);}
+  .attribution-bar p{font-size:14.5px; color:var(--ink); line-height:1.65;}
+  .attribution-bar strong{color:var(--teal-dark);}
+
+  .section{padding:72px 0;}
+  .section-head{text-align:center; max-width:680px; margin:0 auto 44px;}
+  .section-head h2{font-size:32px; margin-top:12px;}
+  .section-head p{color:var(--ink-soft); font-size:15.5px; margin-top:12px; line-height:1.7;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; max-width:980px; margin:0 auto 16px;}
+  .stat-card{background:#fff; border-radius:16px; padding:28px 22px; text-align:center; box-shadow:var(--shadow);}
+  .stat-num{font-family:'Fraunces',serif; font-size:42px; font-weight:700; color:var(--teal-dark); line-height:1;}
+  .stat-label{font-size:12px; font-weight:700; color:var(--coral-dark); margin:6px 0 8px; text-transform:uppercase; letter-spacing:0.09em;}
+  .stat-card p{font-size:13px; color:var(--ink-soft); line-height:1.55;}
+  .stat-citation{font-size:11px; color:var(--ink-soft); font-style:italic; display:block; margin-top:6px;}
+
+  .casel-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px; max-width:980px; margin:0 auto 32px;}
+  .casel-card{background:#fff; border-radius:16px; padding:24px 20px; box-shadow:0 10px 24px -16px rgba(22,79,74,0.18);}
+  .casel-pill{display:inline-block; background:var(--teal-dark); color:#fff; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:4px 12px; border-radius:999px; margin-bottom:12px;}
+  .casel-card h4{font-size:14.5px; font-weight:800; color:var(--teal-dark); margin-bottom:6px;}
+  .casel-card p{font-size:13px; color:var(--ink-soft); line-height:1.55;}
+  .casel-disclaimer{background:var(--cream-soft); border-radius:14px; padding:16px 20px; max-width:980px; margin:0 auto 40px; font-size:13px; color:var(--ink-soft); line-height:1.6;}
+
+  .ita-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; max-width:960px; margin:0 auto 32px;}
+  .ita-step{background:#fff; border-radius:14px; padding:22px 18px; text-align:center; box-shadow:0 10px 24px -16px rgba(22,79,74,0.15);}
+  .ita-num{width:36px; height:36px; border-radius:50%; background:var(--coral); color:#fff; font-family:'Fraunces',serif; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;}
+  .ita-step h4{font-size:13.5px; font-weight:800; color:var(--teal-dark); line-height:1.3;}
+
+  .measures-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:860px; margin:0 auto 40px;}
+  .measures-col h3{font-size:18px; margin-bottom:16px;}
+  .measures-col ul{list-style:none;}
+  .measures-col li{display:flex; gap:10px; margin-bottom:11px; font-size:14px; line-height:1.55; color:var(--ink);}
+  .measures-col li::before{flex-shrink:0; font-size:15px;}
+  .measures-yes li::before{content:"✓"; color:var(--teal-dark); font-weight:900;}
+  .measures-no li::before{content:"✕"; color:var(--ink-soft);}
+  .measures-no li{color:var(--ink-soft);}
+
+  .honest-box{background:var(--cream-soft); border-radius:var(--radius-md); padding:36px 40px; max-width:860px; margin:0 auto 32px; border:1.5px solid rgba(22,79,74,0.1);}
+  .honest-box h3{font-size:20px; margin-bottom:14px;}
+  .honest-box p{font-size:14.5px; color:var(--ink-soft); line-height:1.7; margin-bottom:10px;}
+  .honest-box p:last-child{margin-bottom:0;}
+
+  .review-placeholder{background:var(--teal-dark); color:#fff; border-radius:var(--radius-md); padding:36px 40px; max-width:860px; margin:0 auto 32px; text-align:center;}
+  .review-placeholder h3{color:#fff; font-size:20px; margin-bottom:12px;}
+  .review-placeholder p{font-size:14.5px; color:rgba(255,255,255,0.78); line-height:1.7;}
+
+  @media(max-width:900px){
+    .hero-inner h1{font-size:30px;}
+    .measures-grid{grid-template-columns:1fr;}
+    .casel-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:600px){
+    .hero{padding:72px 20px 68px;}
+    .wrap{padding:0 20px;}
+    .casel-grid{grid-template-columns:1fr;}
+    .honest-box,.review-placeholder{padding:24px 22px;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">Evidence &amp; Alignment</span>
+    <h1>Why social-emotional learning matters — and what the research shows.</h1>
+    <p>How Fixer Nation Education aligns with SEL research, CASEL competencies, and the evidence base for daily social-emotional practice.</p>
+  </div>
+</section>
+
+<!-- ── Attribution Notice ────────────────────────────────────────────────── -->
+<section style="padding:40px 0 0;">
+  <div class="wrap">
+    <div class="attribution-bar">
+      <p><strong>Important attribution notice:</strong> The statistics on this page reflect published national research on social-emotional learning generally. They are not presented as outcomes of Fixer Nation Education programs. FNE does not currently have published outcome studies measuring changes in student SEL competency or academic achievement. See the "What FNE Measures" and "What FNE Does Not Yet Claim" sections below.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── SEL Research Stats ─────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Published SEL Research</span>
+      <h2>What the research on social-emotional learning shows</h2>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num">11</div>
+        <div class="stat-label">percentile points</div>
+        <p>Average academic-achievement advantage found in students who participated in high-quality SEL programs compared to those who did not.</p>
+        <span class="stat-citation">Durlak, J.A., Weissberg, R.P., Dymnicki, A.B., Taylor, R.D., &amp; Schellinger, K.B. (2011). The impact of enhancing students' social and emotional learning: A meta-analysis of school-based universal interventions. <em>Child Development, 82</em>(1), 405–432.</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">270K+</div>
+        <div class="stat-label">students studied</div>
+        <p>Number of K–12 students included in the landmark 213-program meta-analysis establishing the evidence base for schoolwide SEL programs.</p>
+        <span class="stat-citation">Durlak et al. (2011). <em>Child Development.</em> The largest meta-analysis of school-based SEL interventions published at that time.</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">83%</div>
+        <div class="stat-label">of U.S. schools</div>
+        <p>Principals reporting use of an SEL program in their school during the 2023–24 academic year — reflecting broad mainstream adoption.</p>
+        <span class="stat-citation">RAND Corporation. (2024). <em>American School Leader Panel: 2023–2024 School Year.</em></span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">9 in 10</div>
+        <div class="stat-label">teachers</div>
+        <p>Teachers who report addressing social and emotional learning in their classrooms — recognizing it as a core instructional responsibility.</p>
+        <span class="stat-citation">RAND Corporation. (2024). <em>State of the American Teacher.</em></span>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:12px; color:var(--ink-soft); font-style:italic; max-width:700px; margin:0 auto 32px;">Statistics above reflect published national research and do not represent outcomes of Fixer Nation Education programs. Citations link to publicly available research summaries.</p>
+  </div>
+</section>
+
+<!-- ── CASEL Alignment ────────────────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">CASEL Competency Alignment</span>
+      <h2>How FNE content maps to the CASEL framework</h2>
+      <p>Fixer Nation Education lessons are designed to address the five core social-emotional competencies defined by CASEL (the Collaborative for Academic, Social, and Emotional Learning).</p>
+    </div>
+    <div class="casel-grid">
+      <div class="casel-card">
+        <div class="casel-pill">Self-Awareness</div>
+        <h4>Recognizing one's own emotions, values, and identity</h4>
+        <p>FNE lessons frequently ask students to recognize the emotional and situational context of an issue before responding — building the habit of self-assessment.</p>
+      </div>
+      <div class="casel-card">
+        <div class="casel-pill">Self-Management</div>
+        <h4>Regulating emotions, thoughts, and behaviors</h4>
+        <p>The Issues-to-Answers method requires students to pause and consider options before acting — a structured practice in impulse regulation and intentional choice.</p>
+      </div>
+      <div class="casel-card">
+        <div class="casel-pill">Social Awareness</div>
+        <h4>Perspective-taking, empathy, and diversity</h4>
+        <p>Many Morning Boost videos depict multi-character scenarios, asking students to consider perspectives beyond their own before selecting a responsible response.</p>
+      </div>
+      <div class="casel-card">
+        <div class="casel-pill">Relationship Skills</div>
+        <h4>Communication, teamwork, and conflict resolution</h4>
+        <p>Lesson themes in communication, collaboration, and conflict resolution address CASEL's relationship skills competency directly and explicitly.</p>
+      </div>
+      <div class="casel-card">
+        <div class="casel-pill">Responsible Decision-Making</div>
+        <h4>Ethical reasoning, consequences, and choices</h4>
+        <p>The Issues-to-Answers method is designed around this competency: evaluate the issue, consider possible answers, and choose a responsible response.</p>
+      </div>
+    </div>
+    <div class="casel-disclaimer">
+      <strong>Alignment note:</strong> This competency mapping represents FNE's thematic alignment to CASEL's framework — not a formal review, endorsement, or certification by CASEL. CASEL's CARES guide (Collaborating States Initiative) identifies specific criteria for formally reviewed programs, which FNE has not yet pursued. For schools requiring formally reviewed programs under ESSA evidence standards, see the <a href="https://casel.org/guide/" style="color:var(--teal-dark); font-weight:700;">CASEL CARES Guide</a>.
+    </div>
+  </div>
+</section>
+
+<!-- ── Issues-to-Answers Method ───────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">FNE's Instructional Approach</span>
+      <h2>The Issues-to-Answers method</h2>
+      <p>Every FNE lesson is built on a five-step instructional framework developed by Anthony J. Placito. This is FNE's proprietary method — not an externally validated program or published clinical protocol.</p>
+    </div>
+    <div class="ita-grid">
+      <div class="ita-step">
+        <div class="ita-num">1</div>
+        <h4>Recognize the Issue</h4>
+      </div>
+      <div class="ita-step">
+        <div class="ita-num">2</div>
+        <h4>Understand the Impact</h4>
+      </div>
+      <div class="ita-step">
+        <div class="ita-num">3</div>
+        <h4>Consider Possible Answers</h4>
+      </div>
+      <div class="ita-step">
+        <div class="ita-num">4</div>
+        <h4>Choose a Responsible Response</h4>
+      </div>
+      <div class="ita-step">
+        <div class="ita-num">5</div>
+        <h4>Reflect and Reinforce</h4>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:13px; color:var(--ink-soft); max-width:660px; margin:0 auto 32px; line-height:1.65;">The Issues-to-Answers method provides the consistent structural scaffold across all Morning Boost lessons — giving students a repeatable framework for approaching social and ethical issues that builds into habit over time.</p>
+    <div style="text-align:center;">
+      <a href="how-it-works.html" class="btn btn-outline">See the full How It Works page →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── What FNE Measures ───────────────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Measurement Transparency</span>
+      <h2>What FNE measures — and what it doesn't yet claim</h2>
+    </div>
+    <div class="measures-grid">
+      <div class="measures-col measures-yes">
+        <h3>What FNE tracks</h3>
+        <ul>
+          <li>Lesson completion rates by student and classroom</li>
+          <li>Quiz scores per lesson</li>
+          <li>Reflection submissions (text, not sentiment-scored)</li>
+          <li>Goal-setting entries by students</li>
+          <li>Teacher adoption and lesson-assignment frequency</li>
+          <li>Classroom-level engagement over time</li>
+        </ul>
+        <p style="font-size:13px; color:var(--ink-soft); margin-top:14px; line-height:1.6;">These are <strong>engagement measures</strong> — they describe participation and usage, not validated assessments of social-emotional development or behavioral change.</p>
+      </div>
+      <div class="measures-col measures-no">
+        <h3>What FNE does not yet claim</h3>
+        <ul>
+          <li>Published outcome studies on student SEL competency change</li>
+          <li>Randomized control trial (RCT) data</li>
+          <li>Academic achievement impact data</li>
+          <li>Behavioral reduction data (suspensions, incidents)</li>
+          <li>Validated SEL assessment scores (e.g., DESSA, SSIS)</li>
+          <li>CASEL CARES designation or ESSA evidence tier</li>
+        </ul>
+      </div>
+    </div>
+    <div class="honest-box">
+      <h3>What we're working toward</h3>
+      <p>FNE is designing a pilot evaluation framework to begin collecting outcome data in partner schools. Our goal is to move from engagement metrics to measurable evidence of SEL habit formation — and we're committed to being transparent about the difference between the two in the meantime.</p>
+      <p>If your school or district requires ESSA-aligned evidence tiers for procurement, we recommend reviewing the CASEL CARES Guide for formally reviewed programs. We're happy to discuss FNE's alignment documentation in context.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Content Review Process ────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="review-placeholder">
+      <h3>Content Review Process</h3>
+      <p>How Morning Boost lessons are written, reviewed for age-appropriateness, and aligned to the Issues-to-Answers framework.</p>
+      <p style="margin-top:12px; font-size:13px; opacity:0.7;">[This section will be updated with specific details about the lesson development and review process.]</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA Band ───────────────────────────────────────────────────────────── -->
+<section style="background:var(--teal-dark); padding:72px 0; text-align:center;">
+  <div class="wrap">
+    <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">Next Steps</span>
+    <h2 style="color:#fff; font-size:28px; margin:16px 0 14px;">Explore the lesson library or request alignment documentation.</h2>
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+      <a href="education-portal.html" style="display:inline-flex; align-items:center; gap:8px; background:#fff; color:var(--teal-dark); padding:14px 28px; border-radius:999px; font-weight:700; font-size:15px;">Browse the Lesson Library →</a>
+      <a href="contact.html" style="display:inline-flex; align-items:center; gap:8px; background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.5); padding:13px 26px; border-radius:999px; font-weight:700; font-size:14.5px;">Request Alignment Documentation →</a>
+    </div>
+  </div>
+</section>
+
+<footer></footer>
+
+<!-- Log In / Sign Up modal -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="nav.js?v=5"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

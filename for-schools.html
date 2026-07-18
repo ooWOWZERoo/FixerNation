@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Schools &amp; Districts — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 26px; border-radius:999px; font-weight:700; font-size:14.5px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn-outline:hover{background:var(--teal-dark); color:#fff;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{position:relative; overflow:hidden; background:linear-gradient(135deg, var(--teal-dark) 0%, #1a6b63 100%); padding:92px 32px 88px;}
+  .hero-inner{position:relative; z-index:1; max-width:760px; margin:0 auto; text-align:center;}
+  .hero-inner .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:20px;}
+  .hero-inner h1{font-size:40px; color:#fff; line-height:1.12; margin-bottom:18px;}
+  .hero-inner p{font-size:16.5px; color:rgba(255,255,255,0.82); line-height:1.7; max-width:640px; margin:0 auto 28px;}
+  .hero-cta{display:inline-flex; align-items:center; gap:8px; background:#fff; color:var(--teal-dark); padding:14px 28px; border-radius:999px; font-weight:700; font-size:15px; border:none; cursor:pointer; text-decoration:none;}
+  .hero-cta:hover{background:var(--cream);}
+
+  .section{padding:72px 0;}
+  .section-head{text-align:center; max-width:680px; margin:0 auto 44px;}
+  .section-head h2{font-size:32px; margin-top:12px;}
+  .section-head p{color:var(--ink-soft); font-size:15.5px; margin-top:12px; line-height:1.7;}
+
+  .benefit-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:24px; max-width:900px; margin:0 auto 40px;}
+  .benefit-card{background:#fff; border-radius:var(--radius-md); padding:32px 28px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);}
+  .benefit-num{font-family:'Fraunces',serif; font-size:32px; color:var(--coral); font-weight:700; margin-bottom:10px; line-height:1;}
+  .benefit-card h3{font-size:18px; margin-bottom:10px;}
+  .benefit-card p{font-size:14px; color:var(--ink-soft); line-height:1.65;}
+
+  .license-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:22px; max-width:900px; margin:0 auto 40px;}
+  .license-card{background:#fff; border-radius:var(--radius-md); padding:32px 26px; box-shadow:var(--shadow); position:relative;}
+  .license-card.featured{border:2px solid var(--coral);}
+  .license-badge{position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--coral); color:#fff; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:6px 14px; border-radius:999px; white-space:nowrap;}
+  .license-card h3{font-size:19px; margin-bottom:10px;}
+  .license-card p{font-size:14px; color:var(--ink-soft); line-height:1.65; margin-bottom:20px;}
+  .license-card ul{list-style:none; font-size:13.5px; margin-bottom:24px;}
+  .license-card li{display:flex; gap:8px; margin-bottom:9px; color:var(--ink);}
+  .license-card li::before{content:"✓"; color:var(--coral); font-weight:800; flex-shrink:0;}
+
+  .impl-steps{max-width:720px; margin:0 auto 40px;}
+  .impl-step{display:flex; gap:20px; margin-bottom:24px;}
+  .impl-step-num{flex-shrink:0; width:40px; height:40px; border-radius:50%; background:var(--teal-dark); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:17px; font-weight:700;}
+  .impl-step-body h4{font-size:15px; font-weight:800; color:var(--teal-dark); margin-bottom:4px;}
+  .impl-step-body p{font-size:13.5px; color:var(--ink-soft); line-height:1.55;}
+
+  .admin-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:20px; max-width:860px; margin:0 auto 40px;}
+  .admin-item{background:#fff; border-radius:16px; padding:22px 20px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.2); display:flex; gap:14px; align-items:flex-start;}
+  .admin-icon{font-size:24px; flex-shrink:0; margin-top:2px;}
+  .admin-item h4{font-size:14.5px; font-weight:800; color:var(--teal-dark); margin-bottom:4px;}
+  .admin-item p{font-size:13px; color:var(--ink-soft); line-height:1.55;}
+
+  .cta-band{background:linear-gradient(135deg, var(--teal-dark), #1E6B62); padding:72px 0; text-align:center;}
+  .cta-band h2{color:#fff; font-size:30px; margin-bottom:22px;}
+  .cta-band .eyebrow{background:rgba(255,255,255,0.14); color:#F6D9C3; margin-bottom:16px;}
+
+  @media(max-width:900px){
+    .hero-inner h1{font-size:32px;}
+    .benefit-grid{grid-template-columns:1fr;}
+    .license-grid{grid-template-columns:1fr;}
+    .admin-grid{grid-template-columns:1fr;}
+  }
+  @media(max-width:600px){
+    .hero{padding:72px 20px 68px;}
+    .wrap{padding:0 20px;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">For Schools &amp; Districts</span>
+    <h1>A schoolwide SEL routine administrators can support and teachers can actually sustain.</h1>
+    <p>Fixer Nation Education (FNE) is a licensed 2D SEL platform — delivering daily social-emotional learning, character, and life skills content to every classroom, every school day, with the visibility administrators need and the simplicity teachers require.</p>
+    <a href="school-licensing.html" class="hero-cta">Licensing Information →</a>
+  </div>
+</section>
+
+<!-- ── What Your School Gets ─────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Institutional Benefits</span>
+      <h2>What FNE delivers at the school level</h2>
+      <p>Consistent daily SEL isn't just a teacher benefit — it's a structural one. FNE gives the whole building a shared framework and shared language.</p>
+    </div>
+    <div class="benefit-grid">
+      <div class="benefit-card">
+        <div class="benefit-num">01</div>
+        <h3>Consistent Daily Delivery</h3>
+        <p>Every teacher in the building has access to the same new lesson every school morning — creating a coherent daily SEL touchpoint across classrooms, not just where one teacher champions it.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-num">02</div>
+        <h3>Common Language Across Classrooms</h3>
+        <p>Students hear the same Issues-to-Answers framework repeated throughout the day and across grade levels. Shared vocabulary builds the habits that isolated lessons cannot.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-num">03</div>
+        <h3>Implementation Visibility</h3>
+        <p>The School Admin dashboard shows which teachers are assigning lessons, which classrooms are completing them, and where adoption is lagging — without surfacing individual student data.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-num">04</div>
+        <h3>Centralized License Management</h3>
+        <p>The school administrator assigns teacher seats, monitors usage, and manages the school's license from a single dashboard — no per-teacher billing, no spreadsheet tracking.</p>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <a href="for-teachers.html" class="btn btn-outline">See what teachers experience →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Administrator View ─────────────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">The School Admin Dashboard</span>
+      <h2>Visibility without micromanagement.</h2>
+      <p>Administrators see adoption and engagement data at the classroom and school level. Student-level PII is never surfaced in the admin view.</p>
+    </div>
+    <div class="admin-grid">
+      <div class="admin-item">
+        <div class="admin-icon">📊</div>
+        <div>
+          <h4>Teacher Adoption Rate</h4>
+          <p>See how many licensed teachers are actively assigning Morning Boost lessons and at what frequency.</p>
+        </div>
+      </div>
+      <div class="admin-item">
+        <div class="admin-icon">✅</div>
+        <div>
+          <h4>Classroom Completion Rates</h4>
+          <p>View lesson completion data at the classroom level — how many students completed each assigned lesson.</p>
+        </div>
+      </div>
+      <div class="admin-item">
+        <div class="admin-icon">🏫</div>
+        <div>
+          <h4>School-Wide Engagement</h4>
+          <p>A single view of how consistently FNE is being used across the building — useful for coaches and curriculum leads.</p>
+        </div>
+      </div>
+      <div class="admin-item">
+        <div class="admin-icon">🔑</div>
+        <div>
+          <h4>Seat &amp; License Management</h4>
+          <p>Assign teacher seats, remove departing staff, and view license capacity from the admin portal without contacting support.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Licensing Options ──────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Licensing Options</span>
+      <h2>Structured for every school size.</h2>
+      <p>FNE licenses are school-level purchases. Contact us for pricing — every proposal is scoped to your actual building size.</p>
+    </div>
+    <div class="license-grid">
+      <div class="license-card">
+        <h3>Individual Educator</h3>
+        <p>For a single teacher whose school does not yet have a license. Includes one teacher seat, one classroom, and the full lesson library.</p>
+        <ul>
+          <li>Full lesson library access</li>
+          <li>One Digital Classroom</li>
+          <li>Student portal for enrolled students</li>
+          <li>Quiz and reflection tracking</li>
+        </ul>
+        <a href="school-licensing.html" class="btn btn-outline" style="width:100%;">View Details →</a>
+      </div>
+      <div class="license-card featured">
+        <div class="license-badge">Most Popular</div>
+        <h3>School License</h3>
+        <p>For a full building. Multiple teacher seats, school admin dashboard, and a common SEL framework across every classroom.</p>
+        <ul>
+          <li>Full lesson library for all teachers</li>
+          <li>Multiple Digital Classrooms</li>
+          <li>School admin adoption dashboard</li>
+          <li>Centralized seat management</li>
+        </ul>
+        <a href="school-licensing.html" class="btn btn-primary" style="width:100%;">Request a Proposal →</a>
+      </div>
+      <div class="license-card">
+        <h3>District License</h3>
+        <p>For multi-school rollout. District-level oversight with per-school admin panels and unified license management.</p>
+        <ul>
+          <li>All school license features</li>
+          <li>Multiple school deployments</li>
+          <li>District-level admin view</li>
+          <li>Volume pricing by building count</li>
+        </ul>
+        <a href="school-licensing.html" class="btn btn-outline" style="width:100%;">Talk to the Team →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Implementation Process ────────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Getting Started</span>
+      <h2>From proposal to first lesson — in a few steps.</h2>
+    </div>
+    <div class="impl-steps">
+      <div class="impl-step">
+        <div class="impl-step-num">1</div>
+        <div class="impl-step-body">
+          <h4>Select a License Plan</h4>
+          <p>Choose Individual, School, or District, or contact us for a custom scope and proposal.</p>
+        </div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-step-num">2</div>
+        <div class="impl-step-body">
+          <h4>Complete Purchase or PO</h4>
+          <p>Pay by card or submit a purchase order. PO-based schools receive an invoice for approval.</p>
+        </div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-step-num">3</div>
+        <div class="impl-step-body">
+          <h4>License Activated</h4>
+          <p>Once payment is confirmed, your school's license is activated and your admin account is created.</p>
+        </div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-step-num">4</div>
+        <div class="impl-step-body">
+          <h4>Admin Configures the School</h4>
+          <p>The school admin sets up the building in the admin portal and assigns seats to teachers.</p>
+        </div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-step-num">5</div>
+        <div class="impl-step-body">
+          <h4>Teachers Register</h4>
+          <p>Teachers use their school email on the Teacher Registration page to verify eligibility and create accounts.</p>
+        </div>
+      </div>
+      <div class="impl-step">
+        <div class="impl-step-num">6</div>
+        <div class="impl-step-body">
+          <h4>Classrooms Created, Students Enrolled</h4>
+          <p>Teachers create Digital Classrooms and invite students via class code. First lesson can run the same day.</p>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <a href="school-licensing.html" class="btn btn-primary">See Full Licensing Details →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── SEL Proof Bar ──────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Why SEL Matters</span>
+      <h2>What the research on SEL shows</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; max-width:980px; margin:0 auto 16px;">
+      <div style="background:#fff; border-radius:16px; padding:28px 22px; text-align:center; box-shadow:var(--shadow);">
+        <div style="font-family:'Fraunces',serif; font-size:40px; font-weight:700; color:var(--teal-dark); line-height:1;">11</div>
+        <div style="font-size:13px; font-weight:700; color:var(--coral-dark); margin:6px 0 8px; text-transform:uppercase; letter-spacing:0.08em;">percentile points</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Average academic-achievement advantage associated with effective SEL programs (Durlak et al., 213-program meta-analysis)</p>
+      </div>
+      <div style="background:#fff; border-radius:16px; padding:28px 22px; text-align:center; box-shadow:var(--shadow);">
+        <div style="font-family:'Fraunces',serif; font-size:40px; font-weight:700; color:var(--teal-dark); line-height:1;">270K+</div>
+        <div style="font-size:13px; font-weight:700; color:var(--coral-dark); margin:6px 0 8px; text-transform:uppercase; letter-spacing:0.08em;">students studied</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">In the landmark SEL meta-analysis that established evidence for schoolwide social-emotional programs</p>
+      </div>
+      <div style="background:#fff; border-radius:16px; padding:28px 22px; text-align:center; box-shadow:var(--shadow);">
+        <div style="font-family:'Fraunces',serif; font-size:40px; font-weight:700; color:var(--teal-dark); line-height:1;">83%</div>
+        <div style="font-size:13px; font-weight:700; color:var(--coral-dark); margin:6px 0 8px; text-transform:uppercase; letter-spacing:0.08em;">of U.S. schools</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Principals reporting use of an SEL program (RAND, 2023&#8211;24 school year)</p>
+      </div>
+      <div style="background:#fff; border-radius:16px; padding:28px 22px; text-align:center; box-shadow:var(--shadow);">
+        <div style="font-family:'Fraunces',serif; font-size:40px; font-weight:700; color:var(--teal-dark); line-height:1;">9 in 10</div>
+        <div style="font-size:13px; font-weight:700; color:var(--coral-dark); margin:6px 0 8px; text-transform:uppercase; letter-spacing:0.08em;">teachers</div>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.55;">Report addressing SEL in their classrooms (RAND, 2024 State of the American Teacher)</p>
+      </div>
+    </div>
+    <p style="text-align:center; font-size:12px; color:var(--ink-soft); font-style:italic; max-width:700px; margin:0 auto 28px;">Statistics reflect published national research on social-emotional learning generally. They are not presented as outcomes of Fixer Nation Education programs.</p>
+    <div style="text-align:center;">
+      <a href="research.html" class="btn btn-outline">Full Research &amp; Alignment →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA Band ───────────────────────────────────────────────────────────── -->
+<section class="cta-band">
+  <div class="wrap">
+    <span class="eyebrow">Ready to License?</span>
+    <h2 style="margin-top:14px;">Start with a proposal or contact the education team.</h2>
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+      <a href="school-licensing.html" class="hero-cta">Request a Proposal →</a>
+      <a href="contact.html" style="display:inline-flex; align-items:center; gap:8px; background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.5); padding:13px 26px; border-radius:999px; font-weight:700; font-size:14.5px;">Talk to the Education Team →</a>
+    </div>
+  </div>
+</section>
+
+<footer></footer>
+
+<!-- Log In / Sign Up modal -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="nav.js?v=5"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

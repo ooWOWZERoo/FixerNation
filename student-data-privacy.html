@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Data Privacy — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:var(--teal-dark); text-decoration:none; font-weight:600;}
+  a:hover{text-decoration:underline;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{background:var(--teal-dark); padding:80px 32px 76px; text-align:center;}
+  .hero .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:20px;}
+  .hero h1{font-size:36px; color:#fff; line-height:1.13; max-width:700px; margin:0 auto 14px;}
+  .hero p{font-size:15.5px; color:rgba(255,255,255,0.8); max-width:600px; margin:0 auto; line-height:1.7;}
+
+  .content-wrap{max-width:780px; margin:0 auto; padding:0 32px;}
+
+  /* Placeholder styling — visually distinct warning boxes */
+  .placeholder{background:#FFF8E6; border:2px dashed #EBA657; border-radius:12px; padding:18px 22px; margin:18px 0;}
+  .placeholder-label{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; color:#9A6B00; margin-bottom:6px;}
+  .placeholder p{font-size:13.5px; color:#7A5200; line-height:1.6; font-style:italic;}
+
+  .section{padding:56px 0;}
+  .section-inner{border-bottom:1px solid rgba(22,79,74,0.1); padding-bottom:44px; margin-bottom:0;}
+  .section-inner:last-child{border-bottom:none;}
+  .section h2{font-size:22px; margin-bottom:14px; color:var(--teal-dark);}
+  .section p{font-size:14.5px; color:var(--ink); line-height:1.7; margin-bottom:12px;}
+  .section p:last-child{margin-bottom:0;}
+  .section ul{list-style:none; margin:12px 0; padding:0;}
+  .section ul li{display:flex; gap:10px; font-size:14px; color:var(--ink); line-height:1.6; margin-bottom:10px;}
+  .section ul li::before{content:"✓"; color:var(--teal-dark); font-weight:900; flex-shrink:0; margin-top:1px;}
+  .section ul.no-list li::before{content:"✕"; color:var(--ink-soft);}
+  .section ul.no-list li{color:var(--ink-soft);}
+
+  .toc{background:#fff; border-radius:var(--radius-md); padding:28px 28px; box-shadow:0 8px 20px -14px rgba(22,79,74,0.18); margin:44px 0 52px; max-width:780px; margin-left:auto; margin-right:auto;}
+  .toc h3{font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:0.09em; color:var(--ink-soft); margin-bottom:14px;}
+  .toc ol{list-style:decimal; padding-left:20px;}
+  .toc li{font-size:14px; margin-bottom:7px;}
+  .toc a{color:var(--teal-dark); font-weight:600; text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+
+  .contact-box{background:var(--teal-dark); color:#fff; border-radius:var(--radius-md); padding:36px 40px; text-align:center; margin:48px 0 0;}
+  .contact-box h2{color:#fff; font-size:22px; margin-bottom:12px;}
+  .contact-box p{font-size:14.5px; color:rgba(255,255,255,0.82); line-height:1.7; margin-bottom:20px;}
+  .contact-box a{color:var(--gold); font-weight:700;}
+
+  @media(max-width:600px){
+    .hero{padding:64px 20px 60px;}
+    .hero h1{font-size:28px;}
+    .wrap,.content-wrap{padding:0 20px;}
+    .contact-box{padding:24px 20px;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="eyebrow">Student Data Privacy</div>
+  <h1>What we collect, why, and how we protect it.</h1>
+  <p>Fixer Nation Education is designed for K–12 classrooms. Student data protection is a core design principle, not a compliance afterthought.</p>
+</section>
+
+<!-- ── Table of Contents ─────────────────────────────────────────────────── -->
+<div class="wrap">
+  <div class="toc">
+    <h3>Sections on This Page</h3>
+    <ol>
+      <li><a href="#what-we-collect">What data is collected from students</a></li>
+      <li><a href="#what-we-dont-collect">What data is NOT collected</a></li>
+      <li><a href="#ferpa">FERPA</a></li>
+      <li><a href="#coppa">COPPA applicability</a></li>
+      <li><a href="#parental-consent">Parental consent model</a></li>
+      <li><a href="#data-retention">Data retention and deletion</a></li>
+      <li><a href="#advertising">Advertising policy</a></li>
+      <li><a href="#security">Security controls</a></li>
+      <li><a href="#contact">Contact for data requests</a></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ── Sections ──────────────────────────────────────────────────────────── -->
+<div class="content-wrap">
+
+  <div class="section">
+
+    <!-- 1. What We Collect -->
+    <div class="section-inner" id="what-we-collect">
+      <h2>1. What data is collected from students</h2>
+      <p>Student accounts in Fixer Nation Education are created under the supervision of a licensed teacher. The following information is collected from students:</p>
+      <ul>
+        <li>First and last name (provided by the student during enrollment)</li>
+        <li>Email address (for account login; may be a school-issued address)</li>
+        <li>Lesson completion records (which lessons were completed, and when)</li>
+        <li>Quiz responses and scores for assigned lessons</li>
+        <li>Written reflections submitted in the student portal</li>
+        <li>Personal goals entered by the student</li>
+        <li>Class enrollment data (which Digital Classroom the student belongs to)</li>
+      </ul>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Confirm whether IP address, browser/device type, or session metadata are logged for student accounts and under what retention policy. Add any additional data types collected that aren't listed above.</p>
+      </div>
+    </div>
+
+    <!-- 2. What We Don't Collect -->
+    <div class="section-inner" id="what-we-dont-collect">
+      <h2>2. What data is NOT collected from students</h2>
+      <p>FNE is explicitly designed to exclude the following categories of data from student accounts:</p>
+      <ul class="no-list">
+        <li>Location data (GPS, city, or address)</li>
+        <li>Biometric data of any kind</li>
+        <li>Social graph data (friends, followers, connections)</li>
+        <li>Behavioral tracking for advertising purposes</li>
+        <li>Public-facing profiles or user-generated content visible to other students</li>
+        <li>Health or wellness survey data</li>
+        <li>Racial, ethnic, or demographic categorization beyond what the school provides</li>
+      </ul>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Review the actual data model and confirm this exclusion list is complete and accurate. Add any other categories your school data agreements explicitly prohibit.</p>
+      </div>
+    </div>
+
+    <!-- 3. FERPA -->
+    <div class="section-inner" id="ferpa">
+      <h2>3. FERPA</h2>
+      <p>The Family Educational Rights and Privacy Act (FERPA) gives parents and eligible students rights over education records maintained by schools. When a school licenses Fixer Nation Education, student data collected through the platform constitutes education records subject to FERPA.</p>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Confirm: (a) whether FNE operates as a "school official" under FERPA with a legitimate educational interest, (b) whether a data processing agreement or school official agreement is executed with each licensed school, (c) how FNE responds to FERPA-governed parent/student data access requests. Provide your legal team's reviewed language here.</p>
+      </div>
+      <p>Parents of students enrolled through a licensed school may direct FERPA-related data requests to their school's administration. Schools may then work with FNE to fulfill those requests. See Section 9 for contact information.</p>
+    </div>
+
+    <!-- 4. COPPA -->
+    <div class="section-inner" id="coppa">
+      <h2>4. COPPA applicability</h2>
+      <p>The Children's Online Privacy Protection Act (COPPA) applies to online services that collect personal information from children under 13. FNE serves K–12 students, which includes children under 13.</p>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Confirm: (a) whether FNE relies on school consent (the "school authority exception") to collect data from children under 13 enrolled through licensed schools, (b) whether FNE has independently obtained verifiable parental consent for any direct student sign-up path that bypasses school enrollment, (c) the exact mechanism for COPPA compliance in each enrollment scenario. Have this language reviewed by legal counsel before publishing.</p>
+      </div>
+    </div>
+
+    <!-- 5. Parental Consent Model -->
+    <div class="section-inner" id="parental-consent">
+      <h2>5. Parental consent model</h2>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Document the complete consent flow: (a) how parents of students under 13 are notified that their child is enrolled in FNE through the school, (b) what opt-out mechanism (if any) exists for parents who object, (c) whether the school's existing technology use agreement covers FNE enrollment, or whether a separate FNE-specific notice/consent is issued, (d) how consent is recorded and stored.</p>
+      </div>
+    </div>
+
+    <!-- 6. Data Retention and Deletion -->
+    <div class="section-inner" id="data-retention">
+      <h2>6. Data retention and deletion</h2>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Define the retention policy: (a) how long student data is retained after a school's license expires, (b) how long inactive student accounts are retained, (c) what happens to data when a teacher removes a student from a Digital Classroom, (d) what the process is for a school to request full deletion of student data (right to erasure / deletion request), (e) whether deletion is cascading (removes quiz scores, reflections, goals) or soft-deletes the account only.</p>
+      </div>
+      <p>Schools and authorized administrators can submit data deletion requests by contacting the FNE education team. See Section 9.</p>
+    </div>
+
+    <!-- 7. Advertising Policy -->
+    <div class="section-inner" id="advertising">
+      <h2>7. Advertising policy</h2>
+      <p>Fixer Nation Education does not display advertising to students. Student data is never sold to third parties. Student engagement data is not used for behavioral advertising or marketing profiling.</p>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Confirm whether any third-party analytics services (e.g., Google Analytics, Mixpanel, Segment) receive student-identifiable data. If so, describe what is shared, under what terms, and whether those vendors are listed in a sub-processor or vendor disclosure. Many state student privacy laws (e.g., SOPIPA, NY Ed Law 2-d) require this disclosure.</p>
+      </div>
+    </div>
+
+    <!-- 8. Security Controls -->
+    <div class="section-inner" id="security">
+      <h2>8. Security controls</h2>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Describe the technical and organizational security measures in place, including: (a) data encryption in transit (TLS version) and at rest, (b) access controls and authentication requirements for staff accessing student data, (c) incident response and breach notification process, (d) hosting environment and data residency (e.g., US-based servers), (e) whether a third-party security audit or penetration test has been performed and at what cadence. Many district procurement reviews require this information.</p>
+      </div>
+      <p>To report a potential security concern or data incident, contact <a href="contact.html">the FNE education team</a> immediately.</p>
+    </div>
+
+    <!-- 9. Contact for Data Requests -->
+    <div class="section-inner" id="contact">
+      <h2>9. Contact for data requests</h2>
+      <p>Schools, parents, or students with questions about data practices, access requests, or deletion requests may contact the Fixer Nation Education team using the information below.</p>
+      <div class="placeholder">
+        <div class="placeholder-label">To Fill In</div>
+        <p>Provide the designated privacy contact or data protection officer: name (or role title), email address, mailing address, and expected response time. Confirm this contact is able to handle FERPA and COPPA data access/deletion requests within the legally required timeframes.</p>
+      </div>
+      <p>For general inquiries, visit the <a href="contact.html">Contact page</a>.</p>
+    </div>
+
+  </div><!-- /.section -->
+
+  <div class="contact-box">
+    <h2>Questions about student data?</h2>
+    <p>The FNE education team is available to provide data processing agreements, sub-processor disclosures, and answers to procurement privacy questionnaires for licensed schools and districts.</p>
+    <a href="contact.html">Contact the Education Team →</a>
+  </div>
+
+</div><!-- /.content-wrap -->
+
+<div style="padding:48px 0;"></div>
+
+<footer></footer>
+
+<!-- Log In / Sign Up modal -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="nav.js?v=5"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

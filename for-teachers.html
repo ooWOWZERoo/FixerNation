@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Teachers — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 26px; border-radius:999px; font-weight:700; font-size:14.5px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn-outline:hover{background:var(--teal-dark); color:#fff;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{position:relative; overflow:hidden; background:linear-gradient(135deg, var(--teal-dark) 0%, #1a6b63 100%); padding:92px 32px 88px;}
+  .hero-inner{position:relative; z-index:1; max-width:760px; margin:0 auto; text-align:center;}
+  .hero-inner .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:20px;}
+  .hero-inner h1{font-size:40px; color:#fff; line-height:1.12; margin-bottom:18px;}
+  .hero-inner p{font-size:16.5px; color:rgba(255,255,255,0.82); line-height:1.7; max-width:640px; margin:0 auto 28px;}
+  .hero-cta{display:inline-flex; align-items:center; gap:8px; background:#fff; color:var(--teal-dark); padding:14px 28px; border-radius:999px; font-weight:700; font-size:15px; border:none; cursor:pointer; text-decoration:none;}
+  .hero-cta:hover{background:var(--cream);}
+
+  .section{padding:72px 0;}
+  .section-head{text-align:center; max-width:680px; margin:0 auto 44px;}
+  .section-head h2{font-size:32px; margin-top:12px;}
+  .section-head p{color:var(--ink-soft); font-size:15.5px; margin-top:12px; line-height:1.7;}
+
+  .resource-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; max-width:900px; margin:0 auto 40px;}
+  .resource-item{background:#fff; border-radius:16px; padding:24px 18px; text-align:center; box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);}
+  .resource-icon{font-size:30px; margin-bottom:10px;}
+  .resource-item h4{font-size:14px; font-weight:800; color:var(--teal-dark);}
+  .resource-item p{font-size:12.5px; color:var(--ink-soft); margin-top:6px; line-height:1.5;}
+
+  .feature-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:960px; margin:0 auto 40px;}
+  .feature-card{background:#fff; border-radius:var(--radius-md); padding:28px 24px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.2);}
+  .feature-card h3{font-size:17px; margin-bottom:10px; color:var(--teal-dark);}
+  .feature-card p{font-size:14px; color:var(--ink-soft); line-height:1.65;}
+
+  .access-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:780px; margin:0 auto 40px;}
+  .access-card{background:#fff; border-radius:var(--radius-md); padding:32px 28px; box-shadow:var(--shadow); text-align:center;}
+  .access-card h3{font-size:18px; margin-bottom:12px;}
+  .access-card p{font-size:14px; color:var(--ink-soft); line-height:1.65; margin-bottom:20px;}
+
+  .quote-card{background:#fff; border-radius:var(--radius-md); padding:36px 32px; box-shadow:var(--shadow); max-width:620px; margin:0 auto;}
+  .quote-text{font-family:'Fraunces',serif; font-style:italic; font-size:20px; color:var(--teal-dark); line-height:1.5; margin-bottom:18px;}
+  .quote-attr{font-size:13px; color:var(--ink-soft); font-weight:600;}
+
+  .cta-band{background:linear-gradient(135deg, var(--teal-dark), #1E6B62); padding:72px 0; text-align:center;}
+  .cta-band h2{color:#fff; font-size:30px; margin-bottom:22px;}
+  .cta-band .eyebrow{background:rgba(255,255,255,0.14); color:#F6D9C3; margin-bottom:16px;}
+
+  @media(max-width:900px){
+    .hero-inner h1{font-size:32px;}
+    .resource-grid{grid-template-columns:repeat(2,1fr);}
+    .feature-grid{grid-template-columns:1fr;}
+    .access-grid{grid-template-columns:1fr;}
+  }
+  @media(max-width:600px){
+    .hero{padding:72px 20px 68px;}
+    .wrap{padding:0 20px;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">For Teachers</span>
+    <h1>Ready before the bell.<br>Meaningful after the lesson.</h1>
+    <p>Fixer Nation Education puts a complete 2D SEL lesson on your screen every school morning — video, discussion guide, handout, quiz, and more. No planning required. You bring the classroom.</p>
+    <a href="education-schools.html" class="hero-cta">Check My School's License →</a>
+  </div>
+</section>
+
+<!-- ── 8 Resources ────────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">What You Get Every Morning</span>
+      <h2>Eight resources. Every school day. No prep.</h2>
+      <p>Every Morning Boost is a complete lesson kit — eight components that work together or independently, for any instructional style.</p>
+    </div>
+    <div class="resource-grid">
+      <div class="resource-item">
+        <div class="resource-icon">▶️</div>
+        <h4>Video</h4>
+        <p>Under five minutes. Classroom-ready the moment you open it.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">📄</div>
+        <h4>Read-Along Script</h4>
+        <p>For teachers who prefer or need a text alternative to video.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">📋</div>
+        <h4>Teacher Guide</h4>
+        <p>Discussion prompts, facilitation tips, and key talking points.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">📓</div>
+        <h4>Student Handout</h4>
+        <p>Printable or digital — students follow along and reflect.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">✅</div>
+        <h4>Quiz</h4>
+        <p>Digital, short, and auto-graded. Results visible in your classroom dashboard.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">🔑</div>
+        <h4>Answer Key</h4>
+        <p>Included with every quiz — no guesswork on the right responses.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">🖼️</div>
+        <h4>Classroom Poster</h4>
+        <p>One-page visual summary to post, project, or share after the lesson.</p>
+      </div>
+      <div class="resource-item">
+        <div class="resource-icon">🎯</div>
+        <h4>Objectives &amp; Alignment</h4>
+        <p>Learning goals and SEL competency alignment for each lesson.</p>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <a href="how-it-works.html" class="btn btn-outline">See how a morning works →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Digital Classroom ─────────────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Your Digital Classroom</span>
+      <h2>Assign. Track. Know what's working.</h2>
+      <p>The Digital Classroom is your command center — create classrooms, assign lessons by date, and see exactly who completed each assignment and how they scored.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Create Multiple Classrooms</h3>
+        <p>Set up one classroom per period, subject, or cohort. Each classroom has its own lesson assignments and student roster.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Assign by Date</h3>
+        <p>Schedule Morning Boost lessons in advance or assign on the day. Students see their assignments when they log in.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Track Completion in Real Time</h3>
+        <p>See assignment completion, quiz scores, and reflections submitted for each student — without paper or manual grading.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── No Prep Messaging ─────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap" style="max-width:780px; margin:0 auto; text-align:center;">
+    <span class="eyebrow">No Prep Required</span>
+    <h2 style="font-size:30px; margin:16px 0 18px;">Open the morning with a video and a prompt.</h2>
+    <p style="color:var(--ink-soft); font-size:16px; line-height:1.75; margin-bottom:14px;">The materials guide the lesson while you lead the conversation. Every script, discussion question, handout, and quiz is already written and formatted. You focus on your students — FNE handles the content.</p>
+    <p style="color:var(--ink-soft); font-size:16px; line-height:1.75; margin-bottom:30px;">Five to fifteen minutes every morning. Consistent daily practice. The skills that accumulate over a school year are the skills that last.</p>
+    <a href="how-it-works.html" class="btn btn-outline">How a Morning Boost works →</a>
+  </div>
+</section>
+
+<!-- ── Testimonial Placeholder ───────────────────────────────────────────── -->
+<section class="section" style="background:var(--cream-soft);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">From Teachers</span>
+      <h2>What educators are saying</h2>
+    </div>
+    <div class="quote-card">
+      <p class="quote-text">"The daily routine changed how my students start the morning. They walk in expecting a conversation — and that sets the tone for everything else."</p>
+      <p class="quote-attr">Middle School Teacher &mdash; Licensed School</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Access Paths ───────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">How to Get Access</span>
+      <h2>Two ways in. Both take under five minutes.</h2>
+    </div>
+    <div class="access-grid">
+      <div class="access-card">
+        <span class="eyebrow" style="margin-bottom:16px; display:inline-flex;">My school has a license</span>
+        <h3>Register with your school email</h3>
+        <p>If your school has an active Fixer Nation Education license, use your school email to verify eligibility and create your teacher account in under two minutes.</p>
+        <a href="education-schools.html" class="btn btn-primary" style="width:100%;">Check My Eligibility →</a>
+      </div>
+      <div class="access-card">
+        <span class="eyebrow" style="margin-bottom:16px; display:inline-flex;">My school doesn't have one yet</span>
+        <h3>Share the licensing page with your admin</h3>
+        <p>Licensing is a school-level purchase made by a principal or curriculum coordinator. Share this link with the right person in your building to get the conversation started.</p>
+        <a href="school-licensing.html" class="btn btn-outline" style="width:100%;">Licensing Information →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA Band ───────────────────────────────────────────────────────────── -->
+<section class="cta-band">
+  <div class="wrap">
+    <span class="eyebrow">Ready to Start?</span>
+    <h2 style="margin-top:14px;">Check your school's license and register today.</h2>
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+      <a href="education-schools.html" class="hero-cta">Check My School's License →</a>
+      <a href="education-portal.html" style="display:inline-flex; align-items:center; gap:8px; background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.5); padding:13px 26px; border-radius:999px; font-weight:700; font-size:14.5px;">Browse the Lesson Library →</a>
+    </div>
+  </div>
+</section>
+
+<footer></footer>
+
+<!-- Log In / Sign Up modal -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="nav.js?v=5"></script>
+<script src="site-auth.js"></script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>
