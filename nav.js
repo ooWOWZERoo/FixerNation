@@ -16,9 +16,11 @@
       '.brand-mark{width:42px!important;height:42px!important;border-radius:14px!important;background:linear-gradient(135deg,var(--coral,#F26B4D),var(--gold,#EBA657))!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:0!important;font-size:16px!important;font-weight:800!important;box-shadow:0 8px 18px -6px rgba(242,107,77,.6)!important;flex-shrink:0!important;}' +
       '.bm-init{font-size:13px!important;font-weight:800!important;line-height:1.1!important;}' +
       '.bm-sub{font-size:7.5px!important;font-weight:700!important;letter-spacing:0.1em!important;opacity:0.8!important;line-height:1!important;}' +
-      '.nav-links{display:flex!important;align-items:center!important;gap:10px!important;font-size:14px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;flex:1 1 0!important;min-width:0!important;justify-content:center!important;flex-wrap:nowrap!important;overflow:hidden!important;}' +
+      '.nav-links{display:flex!important;align-items:center!important;gap:14px!important;font-size:14px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;flex:1 1 0!important;min-width:0!important;justify-content:center!important;flex-wrap:nowrap!important;overflow:hidden!important;}' +
       '.nav-links>a{opacity:.8!important;transition:opacity .15s!important;text-decoration:none!important;color:inherit!important;white-space:nowrap!important;flex-shrink:0!important;}' +
       '.nav-links>a:hover,.nav-links>a.active{opacity:1!important;color:var(--coral-dark,#D9502F)!important;}' +
+      '.fn-nav-parent{background:none!important;border:none!important;padding:0!important;cursor:pointer!important;font-family:inherit!important;font-size:14px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;opacity:.8!important;transition:opacity .15s,color .15s!important;white-space:nowrap!important;display:flex!important;align-items:center!important;gap:4px!important;}' +
+      '.fn-nav-parent:hover,.fn-nav-parent.active{opacity:1!important;color:var(--coral-dark,#D9502F)!important;}' +
       '.nav-cta{display:flex!important;align-items:center!important;gap:14px!important;flex-shrink:0!important;}' +
       '.fn-cart-btn{display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;width:38px!important;height:38px!important;border-radius:10px!important;color:var(--teal-dark,#0E3733)!important;text-decoration:none!important;transition:background .15s!important;}' +
       '.fn-cart-btn:hover{background:rgba(22,79,74,.08)!important;}' +
@@ -68,9 +70,14 @@
       '<a href="index.html" class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div> Fixer Nation Education</a>' +
       '<nav class="nav-links">' +
         lnk('why-fixer-nation.html', 'Why FNE',        whyActive)      +
-        lnk('how-it-works.html',     'How It Works',   howActive)      +
-        lnk('for-teachers.html',     'For Teachers',   teachersActive) +
-        lnk('for-schools.html',      'For Schools',    schoolsActive)  +
+        '<div class="fn-nav-dropdown">' +
+          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive ? ' active' : '') + '">How It Works <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<div class="fn-nav-menu">' +
+            '<a href="how-it-works.html"'  + (howActive      ? ' class="active"' : '') + '>How It Works</a>'  +
+            '<a href="for-teachers.html"'  + (teachersActive ? ' class="active"' : '') + '>For Teachers</a>'  +
+            '<a href="for-schools.html"'   + (schoolsActive  ? ' class="active"' : '') + '>For Schools</a>'   +
+          '</div>' +
+        '</div>' +
         lnk('education-portal.html', 'Lesson Library', libraryActive)  +
         lnk('brain-games.html',      'Brain Games',    brainActive)    +
         lnk('social.html',           'Community',      communityActive)+
