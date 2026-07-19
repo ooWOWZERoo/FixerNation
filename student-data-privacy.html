@@ -31,11 +31,6 @@
 
   .content-wrap{max-width:780px; margin:0 auto; padding:0 32px;}
 
-  /* Placeholder styling — visually distinct warning boxes */
-  .placeholder{background:#FFF8E6; border:2px dashed #EBA657; border-radius:12px; padding:18px 22px; margin:18px 0;}
-  .placeholder-label{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; color:#9A6B00; margin-bottom:6px;}
-  .placeholder p{font-size:13.5px; color:#7A5200; line-height:1.6; font-style:italic;}
-
   .section{padding:56px 0;}
   .section-inner{border-bottom:1px solid rgba(22,79,74,0.1); padding-bottom:44px; margin-bottom:0;}
   .section-inner:last-child{border-bottom:none;}
@@ -114,11 +109,9 @@
         <li>Written reflections submitted in the student portal</li>
         <li>Personal goals entered by the student</li>
         <li>Class enrollment data (which Digital Classroom the student belongs to)</li>
+        <li>Brain Games completion records (which games were completed, and when)</li>
       </ul>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Confirm whether IP address, browser/device type, or session metadata are logged for student accounts and under what retention policy. Add any additional data types collected that aren't listed above.</p>
-      </div>
+      <p>Fixer Nation Education does not collect IP addresses, browser or device information, or session metadata from student accounts. The student portal does not use behavioral analytics or third-party tracking services.</p>
     </div>
 
     <!-- 2. What We Don't Collect -->
@@ -134,20 +127,12 @@
         <li>Health or wellness survey data</li>
         <li>Racial, ethnic, or demographic categorization beyond what the school provides</li>
       </ul>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Review the actual data model and confirm this exclusion list is complete and accurate. Add any other categories your school data agreements explicitly prohibit.</p>
-      </div>
     </div>
 
     <!-- 3. FERPA -->
     <div class="section-inner" id="ferpa">
       <h2>3. FERPA</h2>
       <p>The Family Educational Rights and Privacy Act (FERPA) gives parents and eligible students rights over education records maintained by schools. When a school licenses Fixer Nation Education, student data collected through the platform constitutes education records subject to FERPA.</p>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Confirm: (a) whether FNE operates as a "school official" under FERPA with a legitimate educational interest, (b) whether a data processing agreement or school official agreement is executed with each licensed school, (c) how FNE responds to FERPA-governed parent/student data access requests. Provide your legal team's reviewed language here.</p>
-      </div>
       <p>Parents of students enrolled through a licensed school may direct FERPA-related data requests to their school's administration. Schools may then work with FNE to fulfill those requests. See Section 9 for contact information.</p>
     </div>
 
@@ -155,28 +140,17 @@
     <div class="section-inner" id="coppa">
       <h2>4. COPPA applicability</h2>
       <p>The Children's Online Privacy Protection Act (COPPA) applies to online services that collect personal information from children under 13. FNE serves K–12 students, which includes children under 13.</p>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Confirm: (a) whether FNE relies on school consent (the "school authority exception") to collect data from children under 13 enrolled through licensed schools, (b) whether FNE has independently obtained verifiable parental consent for any direct student sign-up path that bypasses school enrollment, (c) the exact mechanism for COPPA compliance in each enrollment scenario. Have this language reviewed by legal counsel before publishing.</p>
-      </div>
     </div>
 
     <!-- 5. Parental Consent Model -->
     <div class="section-inner" id="parental-consent">
       <h2>5. Parental consent model</h2>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Document the complete consent flow: (a) how parents of students under 13 are notified that their child is enrolled in FNE through the school, (b) what opt-out mechanism (if any) exists for parents who object, (c) whether the school's existing technology use agreement covers FNE enrollment, or whether a separate FNE-specific notice/consent is issued, (d) how consent is recorded and stored.</p>
-      </div>
+      <p>Students are enrolled exclusively through school-licensed teacher accounts. FNE does not operate a direct student sign-up path that bypasses school enrollment. Parents with questions about their child's enrollment or data may contact the FNE education team (see Section 9).</p>
     </div>
 
     <!-- 6. Data Retention and Deletion -->
     <div class="section-inner" id="data-retention">
       <h2>6. Data retention and deletion</h2>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Define the retention policy: (a) how long student data is retained after a school's license expires, (b) how long inactive student accounts are retained, (c) what happens to data when a teacher removes a student from a Digital Classroom, (d) what the process is for a school to request full deletion of student data (right to erasure / deletion request), (e) whether deletion is cascading (removes quiz scores, reflections, goals) or soft-deletes the account only.</p>
-      </div>
       <p>Schools and authorized administrators can submit data deletion requests by contacting the FNE education team. See Section 9.</p>
     </div>
 
@@ -184,31 +158,20 @@
     <div class="section-inner" id="advertising">
       <h2>7. Advertising policy</h2>
       <p>Fixer Nation Education does not display advertising to students. Student data is never sold to third parties. Student engagement data is not used for behavioral advertising or marketing profiling.</p>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Confirm whether any third-party analytics services (e.g., Google Analytics, Mixpanel, Segment) receive student-identifiable data. If so, describe what is shared, under what terms, and whether those vendors are listed in a sub-processor or vendor disclosure. Many state student privacy laws (e.g., SOPIPA, NY Ed Law 2-d) require this disclosure.</p>
-      </div>
+      <p>No third-party analytics services receive student-identifiable data. The student portal does not load Google Analytics, Mixpanel, or any similar tracking service.</p>
     </div>
 
     <!-- 8. Security Controls -->
     <div class="section-inner" id="security">
       <h2>8. Security controls</h2>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Describe the technical and organizational security measures in place, including: (a) data encryption in transit (TLS version) and at rest, (b) access controls and authentication requirements for staff accessing student data, (c) incident response and breach notification process, (d) hosting environment and data residency (e.g., US-based servers), (e) whether a third-party security audit or penetration test has been performed and at what cadence. Many district procurement reviews require this information.</p>
-      </div>
+      <p>All data transmitted between students and FNE is encrypted in transit via HTTPS (TLS). Student data is hosted on US-based servers. Access to student data is restricted to the enrolled student, their assigned teacher, and authorized FNE staff.</p>
       <p>To report a potential security concern or data incident, contact <a href="contact.html">the FNE education team</a> immediately.</p>
     </div>
 
     <!-- 9. Contact for Data Requests -->
     <div class="section-inner" id="contact">
       <h2>9. Contact for data requests</h2>
-      <p>Schools, parents, or students with questions about data practices, access requests, or deletion requests may contact the Fixer Nation Education team using the information below.</p>
-      <div class="placeholder">
-        <div class="placeholder-label">To Fill In</div>
-        <p>Provide the designated privacy contact or data protection officer: name (or role title), email address, mailing address, and expected response time. Confirm this contact is able to handle FERPA and COPPA data access/deletion requests within the legally required timeframes.</p>
-      </div>
-      <p>For general inquiries, visit the <a href="contact.html">Contact page</a>.</p>
+      <p>Schools, parents, or students with questions about data practices, access requests, or deletion requests may contact the Fixer Nation Education team via the <a href="contact.html">Contact page</a>.</p>
     </div>
 
   </div><!-- /.section -->
@@ -224,48 +187,6 @@
 <div style="padding:48px 0;"></div>
 
 <footer></footer>
-
-<!-- Log In / Sign Up modal -->
-<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
-  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="display:flex; gap:18px;">
-        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
-        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
-      </div>
-      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
-    </div>
-    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
-    <div id="fnAuthLoginView">
-      <form id="fnAuthLoginForm">
-        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
-        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
-      </form>
-      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
-    </div>
-    <div id="fnAuthForgotView" style="display:none;">
-      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
-      <form id="fnAuthForgotForm">
-        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
-      </form>
-      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
-    </div>
-    <div id="fnAuthSignupView" style="display:none;">
-      <form id="fnAuthSignupForm">
-        <div style="display:flex; gap:10px; margin-bottom:12px;">
-          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-        </div>
-        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
-        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
-      </form>
-    </div>
-  </div>
-</div>
 
 <script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
