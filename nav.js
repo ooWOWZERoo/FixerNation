@@ -71,7 +71,7 @@
       '<nav class="nav-links">' +
         lnk('why-fixer-nation.html', 'Why FNE',        whyActive)      +
         '<div class="fn-nav-dropdown">' +
-          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive ? ' active' : '') + '">How It Works <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive ? ' active' : '') + '">Explore <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu">' +
             '<a href="how-it-works.html"'  + (howActive      ? ' class="active"' : '') + '>How It Works</a>'  +
             '<a href="for-teachers.html"'  + (teachersActive ? ' class="active"' : '') + '>For Teachers</a>'  +
