@@ -15,7 +15,9 @@ a{text-decoration:none;}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:28px 20px 60px;}
 .wrap{max-width:800px;margin:0 auto;}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
-.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;font-weight:800;}
+.bm-init{font-size:11px;font-weight:800;line-height:1.1;}
+.bm-sub{font-size:6.5px;font-weight:700;letter-spacing:0.1em;opacity:0.8;line-height:1;}
 .brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--teal-dark);}
 .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:20px;}
 .back-link:hover{text-decoration:underline;}
@@ -86,7 +88,7 @@ textarea.reflect-input:focus{border-color:var(--teal);}
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+  <div class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div><div class="brand-word">Fixer Nation Education</div></div>
   <a class="back-link" href="student-home.html">← My Classroom</a>
 
   <div class="lesson-hero">
