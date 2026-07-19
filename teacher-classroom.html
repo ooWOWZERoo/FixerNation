@@ -11,13 +11,8 @@
 <style>
 :root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:40px 20px;}
-.wrap{max-width:960px;margin:0 auto;}
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
-.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;font-weight:800;box-shadow:0 8px 18px -6px rgba(242,107,77,.55);}
-.bm-init{font-size:12px;font-weight:800;line-height:1.1;}
-.bm-sub{font-size:7px;font-weight:700;letter-spacing:0.1em;opacity:0.8;line-height:1;}
-.brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:0;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 60px;}
 .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:16px;}
 .back-link:hover{text-decoration:none;}
 .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
@@ -85,8 +80,8 @@ table.data-table tr:hover td{background:#fafaf9;}
 </style>
 </head>
 <body>
+<header></header>
 <div class="wrap">
-  <div class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div><div class="brand-word">Fixer Nation Education</div></div>
   <a class="back-link" href="teacher-classrooms.html">← All Classrooms</a>
 
   <div class="topbar">
@@ -228,6 +223,8 @@ table.data-table tr:hover td{background:#fafaf9;}
 
 <div class="toast" id="toast"></div>
 
+<script src="cart.js"></script>
+<script src="nav.js?v=7"></script>
 <script src="site-auth.js?v=3"></script>
 <script>
 fnRequireSiteAuth();
