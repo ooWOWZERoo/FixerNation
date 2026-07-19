@@ -35,7 +35,8 @@
       '.fn-nav-menu-right{left:auto!important;right:0!important;}' +
       '.fn-nav-login{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:9px 18px!important;border-radius:999px!important;font-weight:700!important;font-size:14px!important;font-family:\'Plus Jakarta Sans\',sans-serif!important;background:rgba(14,55,51,0.08)!important;color:var(--teal-dark,#0E3733)!important;border:none!important;cursor:pointer!important;white-space:nowrap!important;transition:background .15s!important;}' +
       '.fn-nav-login:hover,.fn-nav-login.active{background:rgba(14,55,51,0.14)!important;color:var(--teal-dark,#0E3733)!important;}' +
-      '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}}';
+      '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}}' +
+      '.fn-user-authed .fn-login-dd{display:none!important;}';
     (document.head || document.documentElement).appendChild(s);
   }
 

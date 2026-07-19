@@ -77,8 +77,7 @@ function fnAuthRenderNav(loggedIn, firstName) {
   } else {
     localStorage.removeItem(FN_AUTH_HINT_KEY);
   }
-  const loginDd = document.querySelector('.fn-login-dd');
-  if (loginDd) loginDd.style.display = loggedIn ? 'none' : '';
+  document.body.classList.toggle('fn-user-authed', !!loggedIn);
   if (!nav) return;
   if (loggedIn) {
     nav.innerHTML = `
