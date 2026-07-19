@@ -5,9 +5,9 @@
   'use strict';
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
-  if (!document.getElementById('fn-nav-css-v7')) {
+  if (!document.getElementById('fn-nav-css-v8')) {
     var s = document.createElement('style');
-    s.id = 'fn-nav-css-v7';
+    s.id = 'fn-nav-css-v8';
     s.textContent =
       'a{text-decoration:none!important;}' +
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
@@ -69,7 +69,13 @@
     '<div class="nav">' +
       '<a href="index.html" class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div> Fixer Nation Education</a>' +
       '<nav class="nav-links">' +
-        lnk('why-fixer-nation.html', 'Why FNE',        whyActive)      +
+        '<div class="fn-nav-dropdown">' +
+          '<button class="fn-nav-parent' + (whyActive || researchActive ? ' active' : '') + '">Why FNE <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<div class="fn-nav-menu">' +
+            '<a href="why-fixer-nation.html"' + (whyActive      ? ' class="active"' : '') + '>Why FNE</a>'    +
+            '<a href="research.html"'          + (researchActive ? ' class="active"' : '') + '>Research</a>'   +
+          '</div>' +
+        '</div>' +
         '<div class="fn-nav-dropdown">' +
           '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive ? ' active' : '') + '">Explore <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu">' +
@@ -79,10 +85,9 @@
           '</div>' +
         '</div>' +
         lnk('education-portal.html', 'Lesson Library', libraryActive)  +
+        lnk('school-licensing.html', 'Pricing',        pricingActive)  +
         lnk('brain-games.html',      'Brain Games',    brainActive)    +
         lnk('social.html',           'Community',      communityActive)+
-        lnk('research.html',         'Research',       researchActive) +
-        lnk('school-licensing.html', 'Pricing',        pricingActive)  +
       '</nav>' +
       '<div class="nav-cta">' +
         '<a href="cart.html" class="fn-cart-btn" title="Cart">' +
