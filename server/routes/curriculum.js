@@ -91,8 +91,8 @@ function serialize(row) {
 router.get('/', async (req, res) => {
   const wantsAll = req.query.all === 'true' && !!getAuthUser(req);
   const [rows] = wantsAll
-    ? await pool.query('SELECT * FROM curricula ORDER BY created_at DESC')
-    : await pool.query('SELECT * FROM curricula WHERE published = 1 ORDER BY created_at DESC');
+    ? await pool.query('SELECT * FROM curricula ORDER BY sort_order ASC, created_at DESC')
+    : await pool.query('SELECT * FROM curricula WHERE published = 1 ORDER BY sort_order ASC, created_at DESC');
   const curricula = (await attachChildren(rows)).map(serialize);
   res.json({ curricula: await gateAccess(curricula, req) });
 });
@@ -103,6 +103,25 @@ router.get('/:id', async (req, res) => {
   const [curriculum] = await attachChildren(rows);
   const [gated] = await gateAccess([serialize(curriculum)], req);
   res.json({ curriculum: gated });
+});
+
+router.put('/reorder', requireAuth, async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    for (let i = 0; i < ids.length; i++) {
+      await connection.query('UPDATE curricula SET sort_order = ? WHERE id = ?', [i + 1, ids[i]]);
+    }
+    await connection.commit();
+    res.json({ ok: true });
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 });
 
 async function replaceChildren(connection, id, c) {

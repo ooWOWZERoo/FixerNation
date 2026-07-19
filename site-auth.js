@@ -94,7 +94,7 @@ function fnAuthRenderNav(loggedIn, firstName) {
       </div>
     `;
   } else {
-    nav.innerHTML = `<a href="#" onclick="fnAuthOpenModal('login'); return false;" style="font-weight:600; font-size:14px;">Log In</a>`;
+    nav.innerHTML = '';
   }
 }
 

@@ -15,6 +15,10 @@
   .series-chip { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer; background:var(--a-accent-soft); border:1.5px solid transparent; color:var(--a-accent-on-soft); letter-spacing:0.01em; transition:background 0.15s, color 0.15s; }
   .series-chip:hover { background:var(--a-accent-fill); color:#fff; }
   .series-chip.active { background:var(--a-accent-fill); color:#fff; border-color:var(--a-accent-fill-hover); }
+  .drag-handle { cursor:grab; color:var(--a-muted); font-size:16px; user-select:none; text-align:center; width:28px; }
+  .drag-handle:active { cursor:grabbing; }
+  tr.drag-over { border-top:2px solid var(--a-accent-fill); }
+  tr.dragging { opacity:0.4; }
 </style>
 </head>
 <body>
@@ -48,6 +52,7 @@
 
         <table class="a-table" id="curriculumTable">
           <thead><tr>
+            <th style="width:28px;" title="Drag to reorder"></th>
             <th style="width:36px;padding-left:14px;"><input type="checkbox" id="selectAll" title="Select all" onchange="toggleSelectAll(this)"></th>
             <th>Title</th><th>Audience</th><th>Contents</th><th>Downloads</th><th>Status</th><th></th>
           </tr></thead>
@@ -339,10 +344,12 @@ async function renderCurricula() {
   list.forEach(c => {
     const tr = document.createElement('tr');
     tr.dataset.id = c.id;
+    tr.draggable = true;
     const audienceBadges = (c.audiences || []).map(a => `<span class="a-audience-badge">${a}</span>`).join('');
     const vCount = (c.videos || []).length, qCount = (c.quiz || []).length, rCount = (c.resources || []).length;
     const contents = `${vCount} video${vCount===1?'':'s'} · ${qCount} quiz Q${qCount===1?'':'s'} · ${rCount}/${FN_CURRICULUM_RESOURCES.length} resources`;
     tr.innerHTML = `
+      <td class="drag-handle" title="Drag to reorder">⠿</td>
       <td style="padding-left:14px;"><input type="checkbox" class="row-check" value="${c.id}" onchange="updateBulkBar()"></td>
       <td><div class="a-cell-title">${c.title}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
       <td>${audienceBadges || '<span class="a-cell-sub">Not set</span>'}</td>
@@ -359,6 +366,55 @@ async function renderCurricula() {
     `;
     tbody.appendChild(tr);
   });
+  initCurriculumDnD();
+}
+
+function initCurriculumDnD() {
+  const tbody = document.querySelector('#curriculumTable tbody');
+  let dragSrc = null;
+
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('dragstart', e => {
+      dragSrc = tr;
+      tr.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    tr.addEventListener('dragend', () => {
+      dragSrc = null;
+      tbody.querySelectorAll('tr').forEach(r => r.classList.remove('dragging', 'drag-over'));
+    });
+    tr.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+      if (tr !== dragSrc) tr.classList.add('drag-over');
+    });
+    tr.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!dragSrc || dragSrc === tr) return;
+      const rows = [...tbody.querySelectorAll('tr')];
+      const srcIdx = rows.indexOf(dragSrc);
+      const tgtIdx = rows.indexOf(tr);
+      if (srcIdx < tgtIdx) tr.after(dragSrc); else tr.before(dragSrc);
+      tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+      saveCurriculumOrder();
+    });
+  });
+}
+
+async function saveCurriculumOrder() {
+  const ids = [...document.querySelectorAll('#curriculumTable tbody tr')].map(r => Number(r.dataset.id));
+  try {
+    const res = await fetch('/api/curricula/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    fnToast('Order saved');
+  } catch {
+    fnToast('Failed to save order — reload and try again');
+  }
 }
 
 function renderVideoList() {

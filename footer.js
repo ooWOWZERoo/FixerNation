@@ -19,9 +19,6 @@
       'footer ul li{margin-bottom:9px;}',
       'footer ul a{color:rgba(255,255,255,0.72);text-decoration:none;font-size:14px;transition:color .15s;}',
       'footer ul a:hover{color:#fff;}',
-      '.fn-consumer-link{text-align:center;font-size:13px;color:rgba(255,255,255,0.45);border-top:1px solid rgba(255,255,255,0.12);padding-top:20px;margin-bottom:14px;}',
-      '.fn-consumer-link a{color:rgba(255,255,255,0.65);text-decoration:none;transition:color .15s;}',
-      '.fn-consumer-link a:hover{color:#fff;}',
       '.fn-fb{font-size:12.5px;opacity:0.6;text-align:center;}',
       '@media(max-width:900px){.fn-fg{grid-template-columns:1fr 1fr;}}',
       '@media(max-width:600px){.fn-fg{grid-template-columns:1fr;}.fn-fi{padding:0 20px;}}',
@@ -83,9 +80,6 @@
           '</ul>' +
         '</div>' +
 
-      '</div>' +
-      '<div class="fn-consumer-link">' +
-        'Looking for Fixer Nation books and personal development? <a href="https://fixernation.com">Visit fixernation.com &rarr;</a>' +
       '</div>' +
       '<div class="fn-fb">' +
         '&copy; 2026 Fixer Nation Issues and Answers. All Rights Reserved.' +

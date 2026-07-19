@@ -154,8 +154,8 @@
 <section class="cta-band">
   <div class="wrap">
     <span class="eyebrow" style="background:rgba(255,255,255,0.14); color:#F6D9C3;">Full Access</span>
-    <h2 style="margin-top:18px;">Unlock the full Positivity, Health &amp; Wellness Library</h2>
-    <a href="join.html" class="btn btn-light">Join Fixer Nation</a>
+    <h2 style="margin-top:18px;">Unlock the full resource library for licensed educators</h2>
+    <a href="education-schools.html" class="btn btn-light">Register Your School →</a>
   </div>
 </section>
 
@@ -200,7 +200,7 @@ function renderFeatured(posts) {
         <h2>${featured.title}</h2>
         <p>${featured.excerpt || ''}</p>
         <a href="#" class="btn btn-primary" style="align-self:flex-start;" onclick="openPostRead(${featured.id}); return false;">Read the Post</a>
-        <div class="meta-row"><div class="avatar"></div> ${featured.author || 'Anthony J. Placito'} · ${featured.featured ? 'Featured' : fnFormatDate(featured.publishDate)}</div>
+        <div class="meta-row"><div class="avatar"></div> ${featured.author || 'Fixer Nation Education'} · ${featured.featured ? 'Featured' : fnFormatDate(featured.publishDate)}</div>
       </div>
     </div>
   `;
@@ -250,13 +250,13 @@ function openPostRead(id) {
   document.getElementById('postReadImg').innerHTML = post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}">` : '';
   document.getElementById('postReadCategory').textContent = post.category;
   document.getElementById('postReadTitle').textContent = post.title;
-  document.getElementById('postReadMeta').textContent = `${post.author || 'Anthony J. Placito'} · ${fnFormatDate(post.publishDate)}${post.locked ? '' : ' · ' + fnReadingTime(post.body)}`;
+  document.getElementById('postReadMeta').textContent = `${post.author || 'Fixer Nation Education'} · ${fnFormatDate(post.publishDate)}${post.locked ? '' : ' · ' + fnReadingTime(post.body)}`;
 
   if (post.locked) {
     document.getElementById('postReadBody').innerHTML = `
       <p>${post.excerpt || ''}</p>
       <div class="a-note" style="background:var(--cream-soft); border-radius:10px; padding:16px 18px; margin-top:10px;">
-        🔒 This post is for Fixer Nation members. <a href="join.html" style="color:var(--coral-dark); font-weight:700;">Join Fixer Nation</a> to watch and read the full post.
+        🔒 This post is for licensed educators. <a href="education-schools.html" style="color:var(--coral-dark); font-weight:700;">Register your school</a> to access the full resource library.
       </div>
     `;
     document.getElementById('postReadOverlay').classList.add('show');
