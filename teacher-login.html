@@ -61,6 +61,8 @@
 
 <header></header>
 
+<div id="pageContent" style="visibility:hidden">
+
 <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="hero-inner">
@@ -104,15 +106,19 @@
   </div>
 </section>
 
+</div><!-- /pageContent -->
+
 <footer></footer>
 
 <script src="nav.js?v=4"></script>
 <script src="site-auth.js?v=2"></script>
 <script>
-  // If already logged in, go straight to the classroom
+  function showPage() { document.getElementById('pageContent').style.visibility = 'visible'; }
+
+  // If already logged in, redirect silently; otherwise reveal the page
   fetch('/api/auth/me', { credentials: 'include' })
-    .then(function(r) { if (r.ok) location.href = 'teacher-classrooms.html'; })
-    .catch(function() {});
+    .then(function(r) { if (r.ok) { location.href = 'teacher-classrooms.html'; } else { showPage(); } })
+    .catch(showPage);
 
   // After successful login via the modal, redirect to the classroom
   document.addEventListener('fnAuthSuccess', function() {
