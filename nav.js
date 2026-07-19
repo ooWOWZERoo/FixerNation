@@ -5,9 +5,9 @@
   'use strict';
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
-  if (!document.getElementById('fn-nav-css-v3')) {
+  if (!document.getElementById('fn-nav-css-v7')) {
     var s = document.createElement('style');
-    s.id = 'fn-nav-css-v3';
+    s.id = 'fn-nav-css-v7';
     s.textContent =
       'a{text-decoration:none!important;}' +
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
@@ -43,14 +43,16 @@
   // ── Active page detection ────────────────────────────────────────────────────
   var page = (location.pathname.split('/').pop() || '').replace(/\.html$/, '') || 'index';
 
-  var whyActive      = page === 'why-fixer-nation';
-  var howActive      = page === 'how-it-works';
-  var teachersActive = page === 'for-teachers';
-  var schoolsActive  = page === 'for-schools';
-  var libraryActive  = page === 'education-portal';
-  var researchActive = page === 'research';
-  var pricingActive  = page === 'school-licensing' || page === 'licenses' || page === 'education-schools';
-  var loginActive    = page === 'teacher-classrooms' || page === 'teacher-classroom' ||
+  var whyActive       = page === 'why-fixer-nation';
+  var howActive       = page === 'how-it-works';
+  var teachersActive  = page === 'for-teachers';
+  var schoolsActive   = page === 'for-schools';
+  var libraryActive   = page === 'education-portal';
+  var researchActive  = page === 'research';
+  var pricingActive   = page === 'school-licensing' || page === 'licenses' || page === 'education-schools';
+  var brainActive     = page === 'brain-games' || page.indexOf('brain-') === 0;
+  var communityActive = page === 'social' || page === 'social-profile' || page === 'fnnetwork';
+  var loginActive     = page === 'teacher-classrooms' || page === 'teacher-classroom' ||
                        page === 'teacher-classroom-progress' ||
                        page === 'student-login' || page === 'student-home' || page === 'student-lesson' ||
                        page === 'school-admin-login' || page === 'school-admin-dashboard' ||
@@ -70,6 +72,8 @@
         lnk('for-teachers.html',     'For Teachers',   teachersActive) +
         lnk('for-schools.html',      'For Schools',    schoolsActive)  +
         lnk('education-portal.html', 'Lesson Library', libraryActive)  +
+        lnk('brain-games.html',      'Brain Games',    brainActive)    +
+        lnk('social.html',           'Community',      communityActive)+
         lnk('research.html',         'Research',       researchActive) +
         lnk('school-licensing.html', 'Pricing',        pricingActive)  +
       '</nav>' +

@@ -52,6 +52,8 @@
             '<li><a href="why-fixer-nation.html">Why FNE</a></li>' +
             '<li><a href="how-it-works.html">How It Works</a></li>' +
             '<li><a href="education-portal.html">Lesson Library</a></li>' +
+            '<li><a href="brain-games.html">Brain Games</a></li>' +
+            '<li><a href="social.html">Community</a></li>' +
             '<li><a href="research.html">Research &amp; Alignment</a></li>' +
           '</ul>' +
         '</div>' +
