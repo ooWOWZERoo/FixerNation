@@ -84,8 +84,8 @@
 <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="hero-inner">
-    <span class="eyebrow">Teacher Access</span>
-    <h1>Your school has a Fixer Nation license.<br>Let's get you set up.</h1>
+    <span class="eyebrow">Get Access</span>
+    <h1>Let's get you set up.</h1>
     <p>If your school has an active Fixer Nation Education (FNE) license, you can register in under two minutes using your school email. You'll get immediate access to the full 2D SEL Morning Boost library, plus the Digital Classroom to assign lessons and track your students.</p>
     <a href="#register" class="hero-cta">Check My Eligibility →</a>
   </div>
@@ -317,6 +317,9 @@ document.getElementById('regCheckBtn').addEventListener('click', async function 
       if (data.reason === 'no_school') {
         failMsg.textContent = 'We don\'t have a school license on file for your email domain.';
         document.getElementById('regNotifyAdminBtn').style.display = 'none';
+        const soloBtn = document.getElementById('regBuySoloBtn');
+        soloBtn.textContent = 'Contact Us';
+        soloBtn.onclick = function () { window.location.href = 'contact.html'; };
       } else if (data.reason === 'no_plan') {
         failMsg.textContent = 'Your school\'s license exists but isn\'t active yet. Payment may be pending.';
       } else if (data.reason === 'no_seats') {
