@@ -56,6 +56,9 @@
   .loading-msg{text-align:center;color:var(--ink-soft);padding:60px 0;font-size:15px;}
   .error-msg{text-align:center;color:var(--coral-dark);padding:60px 0;font-size:15px;}
 
+  .gate-panel{background:#fff;border-radius:20px;padding:48px 40px;text-align:center;max-width:480px;margin:60px auto;box-shadow:var(--shadow);}
+  .gate-panel h2{margin-bottom:12px;font-size:26px;}
+  .gate-panel p{color:var(--ink-soft);font-size:15px;margin-bottom:24px;}
   footer{background:var(--teal-dark);color:rgba(255,255,255,0.82);padding:40px 0 24px;}
   .footer-bottom{border-top:1px solid rgba(255,255,255,0.12);padding-top:18px;font-size:12.5px;opacity:0.65;text-align:center;}
   .footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:18px;font-size:14px;}
@@ -65,24 +68,21 @@
 </head>
 <body>
 
-<header>
-  <div class="nav">
-    <a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>
-    <nav class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="about.html">About</a>
-      <a href="books.html">Books</a>
-      <a href="blog.html">FN Blogs</a>
-      <a href="fnnetwork.html">FN Network</a>
-      <a href="education-portal.html">Schools</a>
-      <a href="social.html">Community</a>
-    </nav>
-    <div class="nav-cta">
-      <div id="fnCartNav"></div>
-      <div id="fnAuthNav"></div>
-    </div>
+<header></header>
+
+<div id="gatePanel" class="gate-panel" style="display:none;">
+  <h2>Members-Only Community</h2>
+  <p id="gateMsg"></p>
+  <div id="gateBtns401" style="display:none;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="#" onclick="fnAuthOpenModal('login'); return false;" class="btn btn-primary">Log In</a>
+    <a href="join.html" class="btn btn-outline">Get a Membership</a>
+    <a href="licenses.html" class="btn btn-outline">Get a License</a>
   </div>
-</header>
+  <div id="gateBtns403" style="display:none;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="join.html" class="btn btn-primary">Get a Membership</a>
+    <a href="licenses.html" class="btn btn-outline">Get a License</a>
+  </div>
+</div>
 
 <div class="profile-page" id="profilePage">
   <div class="loading-msg">Loading profile…</div>
@@ -147,8 +147,18 @@ async function init(){
 
   // Verify social access by fetching own profile first
   const meRes = await fetch(`${API}/profile`,{credentials:'include'});
-  if(meRes.status === 401 || meRes.status === 403){
-    page.innerHTML = `<div class="error-msg">Please <a href="#" onclick="fnAuthOpenModal('login');return false;" style="color:var(--coral-dark);font-weight:700;">log in</a> and have an active license or membership to view profiles.</div>`;
+  if(meRes.status === 401){
+    page.style.display='none';
+    document.getElementById('gateMsg').textContent="Fixer Nation Education's Community is available to licensed teachers and active members. Sign in to continue, or get started below.";
+    document.getElementById('gateBtns401').style.display='flex';
+    document.getElementById('gatePanel').style.display='';
+    return;
+  }
+  if(meRes.status === 403){
+    page.style.display='none';
+    document.getElementById('gateMsg').textContent='Community access requires an active Fixer Nation license or membership. Get started with one of the options below.';
+    document.getElementById('gateBtns403').style.display='flex';
+    document.getElementById('gatePanel').style.display='';
     return;
   }
   const meData = await meRes.json();
@@ -272,7 +282,16 @@ async function saveProfile(){
 }
 
 init();
+
+document.addEventListener('fn-auth-changed', function () {
+  document.getElementById('gatePanel').style.display='none';
+  document.getElementById('profilePage').style.display='';
+  document.getElementById('gateBtns401').style.display='none';
+  document.getElementById('gateBtns403').style.display='none';
+  init();
+});
 </script>
+<script src="nav.js?v=7"></script>
 <script src="footer.js?v=1"></script>
 </body>
 </html>

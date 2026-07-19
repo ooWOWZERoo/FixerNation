@@ -181,9 +181,13 @@
 <!-- Gate (shown when not logged in or no access) -->
 <div id="gatePanel" class="gate-panel" style="display:none;">
   <h2>Members-Only Community</h2>
-  <p id="gateMsg">This community is available to licensed teachers and active Fixer Nation members.</p>
-  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-    <a href="#" onclick="fnAuthOpenModal('login'); return false;" class="btn btn-outline">Log In</a>
+  <p id="gateMsg"></p>
+  <div id="gateBtns401" style="display:none;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="#" onclick="fnAuthOpenModal('login'); return false;" class="btn btn-primary">Log In</a>
+    <a href="join.html" class="btn btn-outline">Get a Membership</a>
+    <a href="licenses.html" class="btn btn-outline">Get a License</a>
+  </div>
+  <div id="gateBtns403" style="display:none;gap:12px;justify-content:center;flex-wrap:wrap;">
     <a href="join.html" class="btn btn-primary">Get a Membership</a>
     <a href="licenses.html" class="btn btn-outline">Get a License</a>
   </div>
@@ -327,11 +331,14 @@ async function init(){
   // We'll poll /api/social/profile to check access
   const res = await fetch(`${API}/profile`,{credentials:'include'});
   if(res.status === 401){
+    document.getElementById('gateMsg').textContent="Fixer Nation Education's Community is available to licensed teachers and active members. Sign in to continue, or get started below.";
+    document.getElementById('gateBtns401').style.display='flex';
     document.getElementById('gatePanel').style.display='';
-    document.getElementById('gateMsg').textContent='Please log in to access the community.';
     return;
   }
   if(res.status === 403){
+    document.getElementById('gateMsg').textContent='Community access requires an active Fixer Nation license or membership. Get started with one of the options below.';
+    document.getElementById('gateBtns403').style.display='flex';
     document.getElementById('gatePanel').style.display='';
     return;
   }
