@@ -14,7 +14,9 @@
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:40px 20px;}
 .wrap{max-width:960px;margin:0 auto;}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
-.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;font-weight:800;box-shadow:0 8px 18px -6px rgba(242,107,77,.55);}
+.bm-init{font-size:12px;font-weight:800;line-height:1.1;}
+.bm-sub{font-size:7px;font-weight:700;letter-spacing:0.1em;opacity:0.8;line-height:1;}
 .brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
 .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:16px;}
 .back-link:hover{text-decoration:none;}
@@ -84,7 +86,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><div class="brand-mark">FN</div><div class="brand-word">Fixer Nation</div></div>
+  <div class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div><div class="brand-word">Fixer Nation Education</div></div>
   <a class="back-link" href="teacher-classrooms.html">← All Classrooms</a>
 
   <div class="topbar">
@@ -274,7 +276,7 @@ async function load() {
 }
 
 function renderHeader() {
-  document.title = classroom.name + ' — Fixer Nation';
+  document.title = classroom.name + ' — Fixer Nation Education';
   document.getElementById('classroomName').textContent = classroom.name;
   var meta = [classroom.grade_level, classroom.subject, classroom.academic_year].filter(Boolean).join(' · ');
   document.getElementById('classroomMeta').textContent = meta || '';
