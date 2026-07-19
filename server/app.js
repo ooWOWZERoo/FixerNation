@@ -77,17 +77,19 @@ app.use('/api/classroom-auth', classroomAuthRoutes.router);
 app.use('/api/classrooms', classroomsRoutes);
 app.use('/api/student', studentRoutes);
 
+// Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
+// In production LiteSpeed checks public_html/uploads/ first; if the file isn't
+// there (because UPLOADS_DIR still points to server/uploads/) it falls through
+// to Node, which handles it here.
+const uploadsPath = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // In development, also serve the static site from the repo root so the whole
 // site can be exercised at one URL. In production, LiteSpeed serves those files
 // directly from public_html and this app only ever handles /api/*.
 if (process.env.SERVE_STATIC === 'true') {
   const siteRoot = path.join(__dirname, '..');
   app.use(express.static(siteRoot));
-  // Also serve uploaded files at /uploads/ so video/image previews work in dev.
-  // In production, UPLOADS_DIR must point to public_html/uploads/ so LiteSpeed
-  // can serve the files directly without this middleware.
-  const uploadsPath = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
-  app.use('/uploads', express.static(uploadsPath));
 }
 
 app.use((err, req, res, next) => {
