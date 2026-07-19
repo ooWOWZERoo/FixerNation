@@ -211,10 +211,25 @@ table.data-table tr:hover td{background:#fafaf9;}
 <div class="modal-bg" id="editClassroomModal">
   <div class="modal">
     <h2>Edit Classroom</h2>
-    <div class="field"><label>Name *</label><input id="ecName"></div>
-    <div class="field"><label>Grade Level</label><input id="ecGrade"></div>
-    <div class="field"><label>Subject</label><input id="ecSubject"></div>
-    <div class="field"><label>Academic Year</label><input id="ecYear"></div>
+    <div class="field"><label>Classroom Name *</label><input id="ecName"></div>
+    <div class="field"><label>Grade Level</label>
+      <select id="ecGrade">
+        <option value="">— Select grade —</option>
+        <option>Pre-K</option><option>Kindergarten</option>
+        <option>1st Grade</option><option>2nd Grade</option><option>3rd Grade</option>
+        <option>4th Grade</option><option>5th Grade</option><option>6th Grade</option>
+        <option>7th Grade</option><option>8th Grade</option><option>9th Grade</option>
+        <option>10th Grade</option><option>11th Grade</option><option>12th Grade</option>
+        <option>Multiple Grades</option><option>College</option>
+      </select>
+    </div>
+    <div class="field"><label>Subject</label><input id="ecSubject" placeholder="e.g. Social-Emotional Learning"></div>
+    <div class="field"><label>Academic Year</label>
+      <select id="ecYear">
+        <option value="">— Select year —</option>
+        <option>2024–2025</option><option>2025–2026</option><option>2026–2027</option><option>2027–2028</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('editClassroomModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveClassroomEdit()">Save</button>
