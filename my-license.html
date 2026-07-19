@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Account — Fixer Nation</title>
+<title>My Licenses — Fixer Nation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -18,8 +18,6 @@
   .wrap{max-width:720px; margin:0 auto; padding:24px 20px 60px;}
   h1{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:28px; margin-bottom:6px;}
   p.sub{font-size:14.5px; color:var(--ink-soft); margin-bottom:32px;}
-  h2.section-heading{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:18px; margin:28px 0 12px;}
-  h2.section-heading:first-child{margin-top:0;}
   a{color:var(--teal-dark);}
   .card{background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25); padding:26px 28px; margin-bottom:14px;}
   .card-title{font-weight:700; font-size:16px; margin-bottom:2px;}
@@ -37,8 +35,6 @@
   .account-nav a.active{background:var(--teal-dark); color:#fff; box-shadow:none;}
   .back-link{display:inline-block; margin-top:6px; font-size:13.5px; font-weight:600; color:var(--teal-dark); text-decoration:none;}
   .back-link:hover{text-decoration:underline;}
-  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s;}
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -52,10 +48,9 @@
     <a href="my-purchases.html">Purchase History</a>
   </nav>
 
-  <h1>My Account</h1>
-  <p class="sub">Your memberships, teacher licenses, and seat assignments.</p>
+  <h1>My Licenses</h1>
+  <p class="sub">Your active teacher and school licenses.</p>
 
-  <div id="membershipWrap"></div>
   <div id="accountWrap"></div>
   <div class="empty" id="emptyState" style="display:none;">
     Nothing on file yet. If you've purchased a license or membership, make sure you're logged in with the same email you used at checkout.
@@ -71,98 +66,47 @@
 
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script src="nav.js?v=7"></script>
 <script src="site-auth.js"></script>
 <script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
 <script>
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
-}
-
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatAmount(cents) {
-  if (!cents) return '';
-  return '$' + (cents / 100).toFixed(2);
-}
-
-function statusBadge(status) {
-  const labels = { active: 'Active', trialing: 'Free Trial', past_due: 'Past Due', cancelled: 'Cancelled', expired: 'Expired' };
-  const label = labels[status] || status;
-  return `<span class="badge badge-${status}">${label}</span>`;
 }
 
 async function loadData() {
   const r = await fetch('/api/site-auth/my-purchases', { credentials: 'include' });
   if (r.status === 401) { window.location.href = 'index.html'; return; }
   const data = await r.json().catch(() => ({}));
-  render(data.purchases || [], data.memberships || []);
+  render(data.purchases || []);
 }
 
-function renderMemberships(memberships) {
-  const wrap = document.getElementById('membershipWrap');
-  if (!memberships.length) { wrap.innerHTML = ''; return; }
-  wrap.innerHTML = '<h2 class="section-heading">Memberships</h2>' + memberships.map(m => {
-    const statusLabels = { active: 'Active', trialing: 'Free Trial', past_due: 'Past Due', cancelled: 'Cancelled', expired: 'Expired' };
-    const typeLabel = { teacher: 'Teacher', ambassador: 'Brand Ambassador', provider: 'Service Provider' }[m.memberType] || '';
-    let detail = '';
-    if (m.status === 'trialing' && m.endsAt) detail = `Free trial ends ${formatDate(m.endsAt)}`;
-    else if (m.endsAt && (m.status === 'active' || m.status === 'past_due')) detail = `Renews ${formatDate(m.endsAt)}`;
-    else if (m.endsAt && (m.status === 'cancelled' || m.status === 'expired')) detail = `Ended ${formatDate(m.endsAt)}`;
-    return `<div class="card">
-      <div class="card-title">🎟️ ${m.planName}
-        <span class="badge badge-${m.status}">${statusLabels[m.status] || m.status}</span>
-        ${typeLabel ? `<span style="font-size:11.5px;font-weight:700;color:var(--ink-soft);background:var(--cream,#FBF5EC);padding:3px 9px;border-radius:999px;border:1px solid var(--border);">${typeLabel}</span>` : ''}
-      </div>
-      ${detail ? `<div class="card-sub" style="margin-top:6px;">${detail}</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-function render(purchases, memberships) {
-  renderMemberships(memberships);
-
+function render(purchases) {
   const wrap = document.getElementById('accountWrap');
   const licenses = purchases.filter(p => p.productType === 'single_license' || p.productType === 'group_license');
 
-  document.getElementById('emptyState').style.display = (!licenses.length && !memberships.length) ? 'block' : 'none';
+  document.getElementById('emptyState').style.display = !licenses.length ? 'block' : 'none';
   if (!licenses.length) { wrap.innerHTML = ''; return; }
 
-  wrap.innerHTML = '<h2 class="section-heading">Licenses</h2>';
-
-  let html = '';
-
-  if (licenses.length) {
-    html += licenses.map(p => {
-      const dateLabel = formatDate(p.purchasedAt);
-      if (p.productType === 'single_license') {
-        const seat = p.seats && p.seats[0];
-        const status = seat && seat.status === 'registered' ? 'Active' : 'Pending activation';
-        return `<div class="card">
-          <div class="card-title">🔑 Single Teacher License</div>
-          <div class="card-sub">Purchased ${dateLabel} · ${status}</div>
-        </div>`;
-      }
-      const registeredCount = (p.seats || []).filter(s => s.status === 'registered').length;
+  wrap.innerHTML = licenses.map(p => {
+    const dateLabel = formatDate(p.purchasedAt);
+    if (p.productType === 'single_license') {
+      const seat = p.seats && p.seats[0];
+      const status = seat && seat.status === 'registered' ? 'Active' : 'Pending activation';
       return `<div class="card">
-        <div class="card-title">🏫 ${p.licenseProductName || 'School License'} — ${registeredCount}/${p.seatCount} seats used</div>
-        <div class="card-sub">Purchased ${dateLabel}${p.schoolDomain ? ' · ' + p.schoolDomain : ''}</div>
-        <a href="school-admin-dashboard.html" style="display:inline-block;margin-top:12px;padding:9px 20px;border-radius:999px;background:var(--teal-dark);color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">Manage Seats →</a>
+        <div class="card-title">🔑 Single Teacher License</div>
+        <div class="card-sub">Purchased ${dateLabel} · ${status}</div>
       </div>`;
-    }).join('');
-  }
-
-  wrap.innerHTML += html;
+    }
+    const registeredCount = (p.seats || []).filter(s => s.status === 'registered').length;
+    return `<div class="card">
+      <div class="card-title">🏫 ${p.licenseProductName || 'School License'} — ${registeredCount}/${p.seatCount} seats used</div>
+      <div class="card-sub">Purchased ${dateLabel}${p.schoolDomain ? ' · ' + p.schoolDomain : ''}</div>
+      <a href="school-admin-dashboard.html" style="display:inline-block;margin-top:12px;padding:9px 20px;border-radius:999px;background:var(--teal-dark);color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">Manage Seats →</a>
+    </div>`;
+  }).join('');
 }
 
 loadData();
