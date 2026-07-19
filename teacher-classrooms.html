@@ -55,7 +55,7 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
 </head>
 <body>
 <header></header>
-<div class="wrap">
+<div class="wrap" id="mainWrap" style="visibility:hidden">
   <nav class="account-nav">
     <a href="my-profile.html">My Profile</a>
     <a href="my-memberships.html">My Memberships</a>
@@ -141,9 +141,15 @@ function renderGrid() {
 
 async function load() {
   var r = await fetch('/api/classrooms', { credentials: 'include' });
-  if (!r.ok) { if (r.status === 401) { location.href = 'teacher-login.html'; return; } document.getElementById('classroomGrid').innerHTML = '<div class="empty"><p>Could not load classrooms.</p></div>'; return; }
+  if (!r.ok) {
+    if (r.status === 401) { location.href = 'teacher-login.html'; return; }
+    document.getElementById('classroomGrid').innerHTML = '<div class="empty"><p>Could not load classrooms.</p></div>';
+    document.getElementById('mainWrap').style.visibility = 'visible';
+    return;
+  }
   classrooms = await r.json();
   renderGrid();
+  document.getElementById('mainWrap').style.visibility = 'visible';
 }
 
 function openCreate() { document.getElementById('createModal').classList.add('open'); document.getElementById('cName').focus(); }
