@@ -86,7 +86,7 @@
   <div class="hero-inner">
     <span class="eyebrow">Teacher Access</span>
     <h1>Your school has a Fixer Nation license.<br>Let's get you set up.</h1>
-    <p>If your school has an active Fixer Nation Education license, you can register in under two minutes using your school email. You'll get immediate access to the full 2D SEL Morning Boost library — plus the Digital Classroom to assign lessons and track your students.</p>
+    <p>If your school has an active Fixer Nation Education license, you can register in under two minutes using your school email. You'll get immediate access to the full 2D SEL Morning Boost library, plus the Digital Classroom to assign lessons and track your students.</p>
     <a href="#register" class="hero-cta">Check My Eligibility →</a>
   </div>
 </section>
@@ -102,17 +102,17 @@
       <div class="get-card">
         <div class="get-card-icon">📚</div>
         <h3>The Full Lesson Library</h3>
-        <p>Every Morning Boost lesson, released Monday–Friday. Video, script, handout, quiz, poster, and teacher guide in every kit — no extras required.</p>
+        <p>Every Morning Boost lesson, released Monday–Friday. Video, script, handout, quiz, poster, and teacher guide in every kit. No extras required.</p>
       </div>
       <div class="get-card">
         <div class="get-card-icon">🖥️</div>
         <h3>Your Digital Classroom</h3>
-        <p>Create a classroom, assign lessons, and see each student's quiz scores and reflections — all in one place. No paper grading. No manual tracking.</p>
+        <p>Create a classroom, assign lessons, and see each student's quiz scores and reflections, all in one place. No paper grading. No manual tracking.</p>
       </div>
       <div class="get-card">
         <div class="get-card-icon">▶️</div>
         <h3>No Prep. Just Press Play.</h3>
-        <p>Lesson materials are ready the moment you open them. Five to fifteen minutes every morning — the materials guide the lesson while the teacher leads the conversation.</p>
+        <p>Lesson materials are ready the moment you open them. Five to fifteen minutes every morning: the materials guide the lesson while the teacher leads the conversation.</p>
       </div>
     </div>
   </div>
@@ -133,7 +133,7 @@
         <div class="reg-price" id="regPrice">$0</div>
         <p class="note" id="regDesc">For all school-purchased tier plans, this price becomes $0 at checkout. Be sure to use your school email address.</p>
         <ul class="reg-list" id="regBulletList">
-          <li>Uses your school's existing license — no separate purchase needed</li>
+          <li>Uses your school's existing license. No separate purchase needed.</li>
           <li>You'll receive access confirmation and onboarding email</li>
           <li>Setup instructions included in your second email</li>
         </ul>
@@ -161,7 +161,7 @@
         <div id="regFailState" style="display:none;">
           <div id="regFailMsg" style="font-size:13.5px; color:var(--coral); font-weight:600; margin-bottom:14px; text-align:center;"></div>
           <div style="display:flex; flex-direction:column; gap:10px;">
-            <button id="regBuySoloBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Buy Solo — $<span id="regSoloPrice">149</span></button>
+            <button id="regBuySoloBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Buy Solo: $<span id="regSoloPrice">149</span></button>
             <button id="regNotifyAdminBtn" class="btn btn-outline" style="width:100%; font-family:inherit;" onclick="regNotifyAdmin()">Notify School Admin</button>
           </div>
           <div id="regNotifyMsg" style="font-size:13px; color:var(--teal-dark); font-weight:600; margin-top:10px; min-height:18px; text-align:center;"></div>
@@ -179,7 +179,7 @@
   <div class="wrap" style="max-width:720px; margin:0 auto; text-align:center;">
     <span class="eyebrow">For Administrators</span>
     <h2 style="font-size:28px; margin:16px 0 14px;">Does your school need a license first?</h2>
-    <p style="color:var(--ink-soft); font-size:15.5px; line-height:1.75; margin-bottom:28px;">Teachers need an active school license to register. If your school doesn't have one yet, share the link below with your principal or curriculum coordinator — licensing takes a few minutes and gives every teacher in the building access.</p>
+    <p style="color:var(--ink-soft); font-size:15.5px; line-height:1.75; margin-bottom:28px;">Teachers need an active school license to register. If your school doesn't have one yet, share the link below with your principal or curriculum coordinator. Licensing takes a few minutes and gives every teacher in the building access.</p>
     <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
       <a href="school-licensing.html" class="btn btn-primary">Licensing Information for Administrators →</a>
       <a href="why-fixer-nation.html" class="btn btn-outline">Why Fixer Nation Is Different →</a>
@@ -318,9 +318,9 @@ document.getElementById('regCheckBtn').addEventListener('click', async function 
         failMsg.textContent = 'We don\'t have a school license on file for your email domain.';
         document.getElementById('regNotifyAdminBtn').style.display = 'none';
       } else if (data.reason === 'no_plan') {
-        failMsg.textContent = 'Your school\'s license exists but isn\'t active yet — payment may be pending.';
+        failMsg.textContent = 'Your school\'s license exists but isn\'t active yet. Payment may be pending.';
       } else if (data.reason === 'no_seats') {
-        failMsg.textContent = 'Your school\'s license is full — all available seats are taken.';
+        failMsg.textContent = 'Your school\'s license is full. All available seats are taken.';
       } else {
         failMsg.textContent = 'We couldn\'t verify your eligibility. Please try again or contact us.';
       }
@@ -361,7 +361,7 @@ async function regNotifyAdmin() {
       notifyMsg.textContent = '✓ Your school admin has been notified.';
     } else if (data.reason === 'already_notified_recently') {
       notifyMsg.style.color = '#6B5F55';
-      notifyMsg.textContent = 'Admin was already notified recently — they\'ll be in touch soon.';
+      notifyMsg.textContent = 'Admin was already notified recently. They\'ll be in touch soon.';
     } else {
       notifyMsg.style.color = '#6B5F55';
       notifyMsg.textContent = 'Notification sent.';
