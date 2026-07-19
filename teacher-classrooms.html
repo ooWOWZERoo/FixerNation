@@ -141,7 +141,7 @@ function renderGrid() {
 
 async function load() {
   var r = await fetch('/api/classrooms', { credentials: 'include' });
-  if (!r.ok) { document.getElementById('classroomGrid').innerHTML = '<div class="empty"><p>Could not load classrooms.</p></div>'; return; }
+  if (!r.ok) { if (r.status === 401) { location.href = 'teacher-login.html'; return; } document.getElementById('classroomGrid').innerHTML = '<div class="empty"><p>Could not load classrooms.</p></div>'; return; }
   classrooms = await r.json();
   renderGrid();
 }

@@ -12,8 +12,10 @@
       'a{text-decoration:none!important;}' +
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
       '.nav{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 24px!important;flex-wrap:nowrap!important;gap:0!important;max-width:1180px!important;margin:0 auto!important;}' +
-      '.brand{display:flex!important;align-items:center!important;gap:12px!important;font-family:\'Fraunces\',serif!important;font-weight:700!important;font-size:21px!important;color:var(--teal-dark,#0E3733)!important;text-decoration:none!important;flex-shrink:0!important;white-space:nowrap!important;}' +
-      '.brand-mark{width:42px!important;height:42px!important;border-radius:14px!important;background:linear-gradient(135deg,var(--coral,#F26B4D),var(--gold,#EBA657))!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:16px!important;font-weight:800!important;box-shadow:0 8px 18px -6px rgba(242,107,77,.6)!important;flex-shrink:0!important;}' +
+      '.brand{display:flex!important;align-items:center!important;gap:12px!important;font-family:\'Fraunces\',serif!important;font-weight:700!important;font-size:18px!important;color:var(--teal-dark,#0E3733)!important;text-decoration:none!important;flex-shrink:0!important;white-space:nowrap!important;}' +
+      '.brand-mark{width:42px!important;height:42px!important;border-radius:14px!important;background:linear-gradient(135deg,var(--coral,#F26B4D),var(--gold,#EBA657))!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:0!important;font-size:16px!important;font-weight:800!important;box-shadow:0 8px 18px -6px rgba(242,107,77,.6)!important;flex-shrink:0!important;}' +
+      '.bm-init{font-size:13px!important;font-weight:800!important;line-height:1.1!important;}' +
+      '.bm-sub{font-size:7.5px!important;font-weight:700!important;letter-spacing:0.1em!important;opacity:0.8!important;line-height:1!important;}' +
       '.nav-links{display:flex!important;align-items:center!important;gap:16px!important;font-size:14px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;flex:1 1 0!important;min-width:0!important;justify-content:center!important;flex-wrap:nowrap!important;overflow:hidden!important;}' +
       '.nav-links>a{opacity:.8!important;transition:opacity .15s!important;text-decoration:none!important;color:inherit!important;white-space:nowrap!important;flex-shrink:0!important;}' +
       '.nav-links>a:hover,.nav-links>a.active{opacity:1!important;color:var(--coral-dark,#D9502F)!important;}' +
@@ -50,7 +52,8 @@
   var loginActive    = page === 'teacher-classrooms' || page === 'teacher-classroom' ||
                        page === 'teacher-classroom-progress' ||
                        page === 'student-login' || page === 'student-home' || page === 'student-lesson' ||
-                       page === 'school-admin-login' || page === 'school-admin-dashboard';
+                       page === 'school-admin-login' || page === 'school-admin-dashboard' ||
+                       page === 'teacher-login';
 
   function lnk(href, label, isActive) {
     return '<a href="' + href + '"' + (isActive ? ' class="active"' : '') + '>' + label + '</a>';
@@ -59,7 +62,7 @@
   // ── Nav HTML ─────────────────────────────────────────────────────────────────
   var inner =
     '<div class="nav">' +
-      '<a href="index.html" class="brand"><div class="brand-mark">FN</div> Fixer Nation</a>' +
+      '<a href="index.html" class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div> Fixer Nation Education</a>' +
       '<nav class="nav-links">' +
         lnk('why-fixer-nation.html', 'Why FNE',        whyActive)      +
         lnk('how-it-works.html',     'How It Works',   howActive)      +
@@ -82,7 +85,7 @@
         '<div class="fn-nav-dropdown fn-login-dd">' +
           '<button class="fn-nav-login' + (loginActive ? ' active' : '') + '">Log In <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu fn-nav-menu-right">' +
-            '<a href="teacher-classrooms.html"' + (page === 'teacher-classrooms' || page === 'teacher-classroom' || page === 'teacher-classroom-progress' ? ' class="active"' : '') + '>Teacher Login</a>' +
+            '<a href="teacher-login.html"' + (page === 'teacher-classrooms' || page === 'teacher-classroom' || page === 'teacher-classroom-progress' || page === 'teacher-login' ? ' class="active"' : '') + '>Teacher Login</a>' +
             '<a href="student-login.html"' + (page === 'student-login' || page === 'student-home' || page === 'student-lesson' ? ' class="active"' : '') + '>Student Login</a>' +
             '<a href="school-admin-login.html"' + (page === 'school-admin-login' || page === 'school-admin-dashboard' ? ' class="active"' : '') + '>School Admin</a>' +
           '</div>' +
