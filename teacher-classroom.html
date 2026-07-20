@@ -71,6 +71,24 @@ table.data-table tr:hover td{background:#fafaf9;}
 /* Section toolbar */
 .section-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .section-toolbar h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:17px;}
+/* Lesson picker */
+.lesson-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.lesson-chip{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;background:#f0f4f3;border:1.5px solid transparent;color:var(--teal-dark);transition:background .15s,color .15s;}
+.lesson-chip:hover{background:#d4e5e3;}
+.lesson-chip.active{background:var(--teal);color:#fff;border-color:var(--teal-dark);}
+.lesson-search{width:100%;padding:9px 12px 9px 36px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13.5px;outline:none;transition:border-color .15s;color:var(--ink);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236B5F55' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;}
+.lesson-search:focus{border-color:var(--teal);}
+.lesson-results{max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:9px;margin-top:8px;background:#fff;}
+.lesson-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s;display:flex;align-items:center;gap:10px;}
+.lesson-item:last-child{border-bottom:none;}
+.lesson-item:hover{background:#f5f9f8;}
+.lesson-item.selected{background:#eaf3f2;}
+.lesson-item-check{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;}
+.lesson-item.selected .lesson-item-check{background:var(--teal);border-color:var(--teal);}
+.lesson-item-body{flex:1;min-width:0;}
+.lesson-item-title{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lesson-item-series{font-size:11.5px;color:var(--ink-soft);margin-top:1px;}
+.lesson-empty{padding:20px 14px;text-align:center;color:var(--ink-soft);font-size:13px;}
 /* Assignment card */
 .assign-card{background:#fff;border-radius:14px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:16px 20px;margin-bottom:10px;display:flex;align-items:center;gap:16px;}
 .assign-card-info{flex:1;}
@@ -182,11 +200,13 @@ table.data-table tr:hover td{background:#fafaf9;}
 
 <!-- Assign Lesson modal -->
 <div class="modal-bg" id="assignLessonModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <h2>Assign Lesson</h2>
-    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Choose a curriculum lesson to assign to this classroom.</p>
-    <div class="field"><select id="lessonSelect"><option value="">Loading curricula…</option></select></div>
-    <div class="field"><label>Due Date (optional)</label><input type="date" id="lessonDue"></div>
+    <div class="lesson-chips" id="lessonSeriesChips"></div>
+    <input class="lesson-search" id="lessonSearch" type="text" placeholder="Search lessons…" oninput="filterLessons()" autocomplete="off">
+    <div class="lesson-results" id="lessonResults"></div>
+    <input type="hidden" id="lessonSelectId">
+    <div class="field" style="margin-top:14px;"><label>Due Date (optional)</label><input type="date" id="lessonDue"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('assignLessonModal')">Cancel</button>
       <button class="btn btn-primary" id="assignLessonBtn" onclick="assignLesson()">Assign</button>
@@ -450,22 +470,74 @@ function renderAssignments() {
   }
 }
 
+var lessonPool = [];
+var lessonSeriesFilter = '';
+
 async function openAssignLesson() {
   var r = await fetch('/api/curricula', { credentials: 'include' });
   var data = r.ok ? await r.json() : [];
   var curricula = Array.isArray(data) ? data : (data.items || data.curricula || []);
   var assigned = new Set((classroom.assignments || []).map(function(a){ return a.curriculum_id; }));
-  var available = curricula.filter(function(c){ return !assigned.has(c.id) && c.published; });
-  var sel = document.getElementById('lessonSelect');
-  sel.innerHTML = available.length
-    ? '<option value="">Choose a lesson…</option>' + available.map(function(c){ return '<option value="' + c.id + '">' + esc(c.title) + (c.series ? ' (' + esc(c.series) + ')' : '') + '</option>'; }).join('')
-    : '<option value="">No available lessons (check your license)</option>';
+  lessonPool = curricula.filter(function(c){ return !assigned.has(c.id) && c.published; });
+  lessonSeriesFilter = '';
+  document.getElementById('lessonSearch').value = '';
+  document.getElementById('lessonSelectId').value = '';
+  buildLessonSeriesChips();
+  filterLessons();
   document.getElementById('assignLessonModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('lessonSearch').focus(); }, 80);
+}
+
+function buildLessonSeriesChips() {
+  var series = ['All'].concat(
+    [...new Set(lessonPool.map(function(c){ return c.series; }).filter(Boolean))].sort()
+  );
+  document.getElementById('lessonSeriesChips').innerHTML = series.map(function(s) {
+    var isAll = s === 'All';
+    var active = isAll ? lessonSeriesFilter === '' : lessonSeriesFilter === s;
+    return '<span class="lesson-chip' + (active ? ' active' : '') + '" onclick="pickLessonSeries(' + (isAll ? "''" : "'" + s.replace(/'/g, "\\'") + "'") + ')">' + esc(s) + '</span>';
+  }).join('');
+}
+
+function pickLessonSeries(series) {
+  lessonSeriesFilter = series;
+  buildLessonSeriesChips();
+  filterLessons();
+}
+
+function filterLessons() {
+  var q = (document.getElementById('lessonSearch').value || '').trim().toLowerCase();
+  var selected = document.getElementById('lessonSelectId').value;
+  var filtered = lessonPool.filter(function(c) {
+    var matchesSeries = !lessonSeriesFilter || c.series === lessonSeriesFilter;
+    var matchesSearch = !q || c.title.toLowerCase().includes(q) || (c.series || '').toLowerCase().includes(q);
+    return matchesSeries && matchesSearch;
+  });
+  var wrap = document.getElementById('lessonResults');
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="lesson-empty">' + (lessonPool.length ? 'No lessons match — try a different search or series.' : 'No available lessons. Check your license.') + '</div>';
+    return;
+  }
+  wrap.innerHTML = filtered.map(function(c) {
+    var isSel = String(c.id) === String(selected);
+    return '<div class="lesson-item' + (isSel ? ' selected' : '') + '" onclick="pickLesson(' + c.id + ')">' +
+      '<div class="lesson-item-check">' + (isSel ? '✓' : '') + '</div>' +
+      '<div class="lesson-item-body">' +
+        '<div class="lesson-item-title">' + esc(c.title) + '</div>' +
+        (c.series ? '<div class="lesson-item-series">' + esc(c.series) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function pickLesson(id) {
+  document.getElementById('lessonSelectId').value = id;
+  filterLessons();
 }
 
 async function assignLesson() {
-  var cid = document.getElementById('lessonSelect').value;
-  if (!cid) return;
+  var cid = document.getElementById('lessonSelectId').value;
+  if (!cid) { toast('Pick a lesson first'); return; }
   document.getElementById('assignLessonBtn').disabled = true;
   var r = await fetch('/api/classrooms/' + classroomId + '/assignments', {
     method: 'POST', credentials: 'include',
