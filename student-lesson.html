@@ -174,12 +174,14 @@ function renderBody() {
     html += '<div class="card"><div class="card-title">Overview</div><p style="font-size:14px;line-height:1.65;">' + esc(lesson.overview) + '</p></div>';
   }
 
-  // Student Handout
-  var handout = (lesson.resources || []).find(function(r){ return r.resource === 'Student Handout'; });
-  if (handout && handout.filePath) {
+  // Student Handout — check resources table first, then fall back to lesson documents
+  var handoutResource = (lesson.resources || []).find(function(r){ return r.resource === 'Student Handout'; });
+  var handoutUrl = (handoutResource && handoutResource.filePath) ? handoutResource.filePath
+    : ((lesson.documents || []).length ? lesson.documents[0].filePath : null);
+  if (handoutUrl) {
     html += '<div class="card"><div class="card-title">What You\'ll Learn</div>';
-    html += '<iframe src="' + esc(handout.filePath) + '" style="width:100%;height:480px;border:none;border-radius:8px;" title="Student Handout"></iframe>';
-    html += '<div style="margin-top:10px;text-align:right;"><a href="' + esc(handout.filePath) + '" target="_blank" rel="noopener" download style="font-size:13px;color:var(--teal-dark);font-weight:600;">Open handout ↗</a></div>';
+    html += '<iframe src="' + handoutUrl + '" style="width:100%;height:480px;border:none;border-radius:8px;" title="Student Handout"></iframe>';
+    html += '<div style="margin-top:10px;text-align:right;"><a href="' + handoutUrl + '" target="_blank" rel="noopener" style="font-size:13px;color:var(--teal-dark);font-weight:600;">Open handout ↗</a></div>';
     html += '</div>';
   }
 
