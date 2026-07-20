@@ -174,18 +174,13 @@ function renderBody() {
     html += '<div class="card"><div class="card-title">Overview</div><p style="font-size:14px;line-height:1.65;">' + esc(lesson.overview) + '</p></div>';
   }
 
-  // Objectives
-  if ((lesson.objectives || []).length) {
-    html += '<div class="card"><div class="card-title">What You\'ll Learn</div><ul class="styled">';
-    lesson.objectives.forEach(function(o){ html += '<li>' + esc(o) + '</li>'; });
-    html += '</ul></div>';
-  }
-
-  // Materials
-  if ((lesson.materials || []).length) {
-    html += '<div class="card"><div class="card-title">What You\'ll Need</div><ul class="styled">';
-    lesson.materials.forEach(function(m){ html += '<li>' + esc(m) + '</li>'; });
-    html += '</ul></div>';
+  // Student Handout
+  var handout = (lesson.resources || []).find(function(r){ return r.resource === 'Student Handout'; });
+  if (handout && handout.filePath) {
+    html += '<div class="card"><div class="card-title">What You\'ll Learn</div>';
+    html += '<iframe src="' + esc(handout.filePath) + '" style="width:100%;height:480px;border:none;border-radius:8px;" title="Student Handout"></iframe>';
+    html += '<div style="margin-top:10px;text-align:right;"><a href="' + esc(handout.filePath) + '" target="_blank" rel="noopener" download style="font-size:13px;color:var(--teal-dark);font-weight:600;">Open handout ↗</a></div>';
+    html += '</div>';
   }
 
   // Videos
