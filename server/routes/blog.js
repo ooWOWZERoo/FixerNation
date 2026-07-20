@@ -27,6 +27,8 @@ function serialize(row) {
   return {
     id: row.id,
     title: row.title,
+    theme: row.theme || '',
+    series: row.series || '',
     slug: row.slug,
     author: row.author,
     category: row.category,
@@ -106,10 +108,10 @@ router.post('/posts', requireAuth, async (req, res) => {
       await connection.query('UPDATE blog_posts SET featured = 0');
     }
     const [result] = await connection.query(
-      `INSERT INTO blog_posts (title, slug, author, category, featured_image, excerpt, body, video_url, video_file_name, video_file_size_label, alt_text, meta_description, focus_keyword, requires_membership, publish_date, featured, published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO blog_posts (title, theme, series, slug, author, category, featured_image, excerpt, body, video_url, video_file_name, video_file_size_label, alt_text, meta_description, focus_keyword, requires_membership, publish_date, featured, published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        p.title, slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '',
+        p.title, p.theme || '', p.series || '', slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '',
         p.videoUrl || '', p.videoFileName || '', p.videoFileSize || '',
         p.altText || '', p.metaDescription || '', p.focusKeyword || '', p.requiresMembership ? 1 : 0,
         p.publishDate || null, p.featured ? 1 : 0, p.published ? 1 : 0,
@@ -151,10 +153,10 @@ router.put('/posts/:id', requireAuth, async (req, res) => {
       await connection.query('UPDATE blog_posts SET featured = 0 WHERE id != ?', [req.params.id]);
     }
     await connection.query(
-      `UPDATE blog_posts SET title=?, slug=?, author=?, category=?, featured_image=?, excerpt=?, body=?, video_url=?, video_file_name=?, video_file_size_label=?, alt_text=?, meta_description=?, focus_keyword=?, requires_membership=?, publish_date=?, featured=?, published=?
+      `UPDATE blog_posts SET title=?, theme=?, series=?, slug=?, author=?, category=?, featured_image=?, excerpt=?, body=?, video_url=?, video_file_name=?, video_file_size_label=?, alt_text=?, meta_description=?, focus_keyword=?, requires_membership=?, publish_date=?, featured=?, published=?
        WHERE id=?`,
       [
-        p.title, slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '',
+        p.title, p.theme || '', p.series || '', slug, p.author || '', p.category, p.featuredImage || '', p.excerpt || '', p.body || '',
         p.videoUrl || '', p.videoFileName || '', p.videoFileSize || '',
         p.altText || '', p.metaDescription || '', p.focusKeyword || '', p.requiresMembership ? 1 : 0,
         p.publishDate || null, p.featured ? 1 : 0, p.published ? 1 : 0, req.params.id,

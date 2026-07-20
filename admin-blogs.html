@@ -13,6 +13,10 @@
 <style>
   .a-tag-check{position:relative;}
   .a-reading-time{font-size:12.5px; color:var(--a-text-soft); margin-top:6px;}
+  .series-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .series-chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--a-accent-soft);border:1.5px solid transparent;color:var(--a-accent-on-soft);letter-spacing:0.01em;transition:background 0.15s,color 0.15s;}
+  .series-chip:hover{background:var(--a-accent-fill);color:#fff;}
+  .series-chip.active{background:var(--a-accent-fill);color:#fff;border-color:var(--a-accent-fill-hover);}
 </style>
 </head>
 <body>
@@ -92,6 +96,18 @@
         <div class="a-field">
           <label>Title *</label>
           <input type="text" id="title" required>
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Theme</label>
+            <input type="text" id="postTheme" placeholder="e.g. Handling Peer Pressure">
+          </div>
+          <div class="a-field">
+            <label>Series / Program</label>
+            <input type="text" id="postSeries" placeholder="e.g. SEL Morning Boost" autocomplete="off" oninput="highlightSeriesChip()">
+            <div class="series-chips" id="seriesChips"></div>
+          </div>
         </div>
 
         <div class="a-field">
@@ -264,6 +280,7 @@ async function fetchPosts() {
 
 async function renderPosts() {
   const posts = postsCache = await fetchPosts();
+  refreshSeriesChips();
   const tbody = document.querySelector('#postsTable tbody');
   tbody.innerHTML = '';
   if (posts.length === 0) {
@@ -302,6 +319,28 @@ async function renderPosts() {
   });
 }
 
+function refreshSeriesChips() {
+  const wrap = document.getElementById('seriesChips');
+  if (!wrap) return;
+  const names = [...new Set(postsCache.map(p => p.series).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  wrap.innerHTML = names.map(n =>
+    `<span class="series-chip" onclick="pickSeries('${n.replace(/'/g, "\\'")}')">${n}</span>`
+  ).join('');
+  highlightSeriesChip();
+}
+
+function pickSeries(name) {
+  document.getElementById('postSeries').value = name;
+  highlightSeriesChip();
+}
+
+function highlightSeriesChip() {
+  const val = (document.getElementById('postSeries').value || '').trim().toLowerCase();
+  document.querySelectorAll('.series-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.textContent.trim().toLowerCase() === val);
+  });
+}
+
 function openPostModal() {
   editingId = null;
   currentImageData = '';
@@ -314,6 +353,9 @@ function openPostModal() {
   document.getElementById('calendarLoadField').style.display = 'block';
   document.getElementById('calendarLoadNote').textContent = '';
   document.getElementById('author').value = 'Anthony J. Placito';
+  document.getElementById('postTheme').value = '';
+  document.getElementById('postSeries').value = '';
+  highlightSeriesChip();
   document.getElementById('altText').value = '';
   document.getElementById('metaDescription').value = '';
   document.getElementById('focusKeyword').value = '';
@@ -348,6 +390,9 @@ async function loadFromCalendar() {
   document.getElementById('title').value = `${entry.series}: ${entry.theme}`;
   document.getElementById('slug').value = fnSlugify(`${entry.series}: ${entry.theme}`);
   slugManuallyEdited = true;
+  document.getElementById('postTheme').value = entry.theme;
+  document.getElementById('postSeries').value = entry.series;
+  highlightSeriesChip();
   document.getElementById('excerpt').value = entry.theme;
   updateExcerptCounter();
   document.getElementById('publishDate').value = date;
@@ -384,6 +429,9 @@ function editPost(id) {
   document.getElementById('postModalTitle').textContent = 'Edit Post';
   document.getElementById('calendarLoadField').style.display = 'none';
   document.getElementById('title').value = p.title || '';
+  document.getElementById('postTheme').value = p.theme || '';
+  document.getElementById('postSeries').value = p.series || '';
+  highlightSeriesChip();
   document.getElementById('slug').value = p.slug || '';
   document.getElementById('author').value = p.author || '';
   document.getElementById('altText').value = p.altText || '';
@@ -550,6 +598,8 @@ async function savePost() {
 
   const postData = {
     title,
+    theme: document.getElementById('postTheme').value.trim(),
+    series: document.getElementById('postSeries').value.trim(),
     slug: fnSlugify(document.getElementById('slug').value || title),
     author: document.getElementById('author').value.trim() || 'Anthony J. Placito',
     category: categories[0],
@@ -633,6 +683,8 @@ function cacheToBody(p, overrides) {
   const cats = p.categories && p.categories.length ? p.categories : [p.category].filter(Boolean);
   return Object.assign({
     title: p.title,
+    theme: p.theme || '',
+    series: p.series || '',
     slug: p.slug || fnSlugify(p.title),
     author: p.author || 'Anthony J. Placito',
     category: cats[0] || '',

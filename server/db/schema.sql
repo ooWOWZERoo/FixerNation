@@ -450,6 +450,8 @@ CREATE TABLE IF NOT EXISTS curriculum_downloads (
 CREATE TABLE IF NOT EXISTS blog_posts (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
+  theme VARCHAR(255),
+  series VARCHAR(255),
   slug VARCHAR(255) NOT NULL UNIQUE,
   author VARCHAR(255),
   category VARCHAR(64) NOT NULL, -- primary category, kept for backward compat; blog_post_categories below is the authoritative filterable set (a post can belong to several)
