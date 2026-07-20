@@ -732,8 +732,7 @@ let _planCache = [];
       }
       grid.innerHTML = products.map(p => `
         <div style="background:#fff; border-radius:14px; padding:26px; box-shadow:var(--shadow); position:relative;">
-          <span style="position:absolute; top:14px; right:14px; background:var(--gold); color:var(--teal-dark); font-size:10px; font-weight:800; text-transform:uppercase; padding:4px 8px; border-radius:6px;">School</span>
-          <h4 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:8px;">${p.name}</h4>
+<h4 style="font-family:'Fraunces',serif; font-size:16px; margin-bottom:8px;">${p.name}</h4>
           <div style="font-family:'Fraunces',serif; font-size:28px; color:var(--teal-dark); margin:8px 0 18px;">${p.callForQuote ? 'Contact Us' : '$' + Number(p.price).toLocaleString()}</div>
           ${p.callForQuote
             ? `<a href="#inquiry-form" class="btn btn-primary" style="width:100%; text-decoration:none; display:flex;">Request a Quote</a>`
