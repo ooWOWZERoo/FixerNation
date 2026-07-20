@@ -139,8 +139,12 @@ async function load() {
   if (r.status === 403) { location.href = 'student-home.html'; return; }
   if (!r.ok) { document.getElementById('lessonTitle').textContent = 'Lesson not found'; return; }
   lesson = await r.json();
-  console.log('[FN DEBUG] resources:', JSON.stringify(lesson.resources));
-  console.log('[FN DEBUG] documents:', JSON.stringify(lesson.documents));
+  if (new URLSearchParams(location.search).get('debug') === '1') {
+    var dbg = document.createElement('pre');
+    dbg.style.cssText = 'background:#111;color:#0f0;font-size:11px;padding:12px;margin:12px;border-radius:6px;overflow:auto;white-space:pre-wrap;word-break:break-all;';
+    dbg.textContent = 'resources: ' + JSON.stringify(lesson.resources, null, 2) + '\n\ndocuments: ' + JSON.stringify(lesson.documents, null, 2);
+    document.body.prepend(dbg);
+  }
 
   document.title = lesson.title + ' — Fixer Nation';
   document.getElementById('lessonSeries').textContent = lesson.series || '';
