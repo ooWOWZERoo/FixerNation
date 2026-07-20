@@ -96,33 +96,8 @@
       <div class="note">We'll link your purchase to this email — sign up (or log in) on the site with the same address afterward to manage it.</div>
     </div>
 
-    <div class="plans">
-      <div class="plan-card">
-        <h3>Single Teacher License</h3>
-        <div class="price">$49<small> one-time</small></div>
-        <ul>
-          <li>Full access to every lesson document</li>
-          <li>Quiz + answer key for every lesson</li>
-          <li>For one teacher account</li>
-        </ul>
-        <button class="btn btn-primary" style="width:100%;" onclick="buy('single_license', this)">Buy Now</button>
-      </div>
-
-      <div class="plan-card">
-        <h3>Group License (School)</h3>
-        <div class="price">$39<small> / seat</small></div>
-        <ul>
-          <li>Everything in the single license</li>
-          <li>Hand out seats to any teacher by email</li>
-          <li>Manage seats anytime from My License</li>
-        </ul>
-        <div class="seat-count-row">
-          <label for="seatCount" style="font-size:13px; font-weight:700; color:var(--ink-soft);">Seats:</label>
-          <input type="number" id="seatCount" min="1" value="5" oninput="updateGroupTotal()">
-        </div>
-        <div class="seat-total" id="groupTotal">Total: $195.00</div>
-        <button class="btn btn-primary" style="width:100%;" onclick="buy('group_license', this)">Buy Now</button>
-      </div>
+    <div class="plans" id="plansContainer">
+      <div class="plan-card" style="text-align:center;color:var(--ink-soft);min-height:160px;display:flex;align-items:center;justify-content:center;">Loading…</div>
     </div>
   </div>
 </section>
@@ -142,27 +117,24 @@ function toast(msg) {
   window._toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-function updateGroupTotal() {
-  const seats = Math.max(1, Number(document.getElementById('seatCount').value) || 1);
-  document.getElementById('groupTotal').textContent = 'Total: $' + (seats * 39).toFixed(2);
+function updateTotal(productId, pricePerSeat) {
+  const input = document.getElementById('seats-' + productId);
+  const totalEl = document.getElementById('total-' + productId);
+  if (!input || !totalEl) return;
+  const seats = Math.max(1, Number(input.value) || 1);
+  totalEl.textContent = 'Total: $' + (seats * pricePerSeat).toFixed(2);
 }
-updateGroupTotal();
 
-async function buy(productType, btn) {
+async function buy(productId, pricePerSeat, btn) {
   const email = document.getElementById('buyerEmail').value.trim();
   if (!email) { toast('Enter your email first'); return; }
-
-  const body = { productType, email };
-  if (productType === 'group_license') {
-    body.seatCount = Number(document.getElementById('seatCount').value);
-    if (!(body.seatCount > 0)) { toast('Seat count must be at least 1'); return; }
-  }
+  const seatCount = Math.max(1, Number(document.getElementById('seats-' + productId).value) || 1);
 
   btn.disabled = true;
   const r = await fetch('/api/checkout/create-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ productId, seatCount, email }),
   });
   const result = await r.json().catch(() => ({}));
   if (!r.ok) {
@@ -172,6 +144,46 @@ async function buy(productType, btn) {
   }
   window.location.href = result.url;
 }
+
+async function loadPlans() {
+  const container = document.getElementById('plansContainer');
+  try {
+    const r = await fetch('/api/license-products');
+    const data = r.ok ? await r.json() : {};
+    const products = (data.licenseProducts || []).filter(p => p.variableSeats && p.active);
+
+    if (!products.length) {
+      container.innerHTML = '<div class="plan-card" style="text-align:center;color:var(--ink-soft);">No license plans available at this time. Please check back soon.</div>';
+      return;
+    }
+
+    container.innerHTML = products.map(p => {
+      const bullets = p.bulletPoints && p.bulletPoints.length
+        ? '<ul>' + p.bulletPoints.map(b => '<li>' + b + '</li>').join('') + '</ul>'
+        : '';
+      const desc = p.description ? '<p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">' + p.description + '</p>' : '';
+      const footer = p.footerNote ? '<p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">' + p.footerNote + '</p>' : '';
+      const initialTotal = '$' + p.price.toFixed(2);
+      return `
+        <div class="plan-card">
+          <h3>${p.name}</h3>
+          <div class="price">$${p.price.toFixed(2)}<small> / seat</small></div>
+          ${desc}
+          ${bullets}
+          <div class="seat-count-row">
+            <label for="seats-${p.id}" style="font-size:13px;font-weight:700;color:var(--ink-soft);">Seats:</label>
+            <input type="number" id="seats-${p.id}" min="1" value="1" oninput="updateTotal(${p.id}, ${p.price})">
+          </div>
+          <div class="seat-total" id="total-${p.id}">Total: ${initialTotal}</div>
+          <button class="btn btn-primary" style="width:100%;" onclick="buy(${p.id}, ${p.price}, this)">Buy Now</button>
+          ${footer}
+        </div>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="plan-card" style="text-align:center;color:var(--ink-soft);">Could not load license plans. Please refresh and try again.</div>';
+  }
+}
+loadPlans();
 
 function renderStatusBanner() {
   const params = new URLSearchParams(window.location.search);

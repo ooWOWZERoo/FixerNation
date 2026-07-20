@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS license_products (
   auto_assign_group_id INT UNSIGNED NULL,
   bullet_points TEXT NULL,   -- newline-separated list items for the registration card (education-schools.html)
   footer_note VARCHAR(255) NULL, -- small footer line, e.g. "Valid for 12 months"
+  variable_seats TINYINT(1) NOT NULL DEFAULT 0, -- buyer picks seat count on licenses.html; price_cents is the per-seat rate
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

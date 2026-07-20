@@ -79,14 +79,53 @@ const PRICING = {
 
 router.post('/create-session', async (req, res) => {
   const b = req.body || {};
-  const productType = b.productType;
   const email = (b.email || '').trim();
 
-  if (!PRICING[productType]) {
-    return res.status(400).json({ error: 'productType must be single_license or group_license' });
-  }
   if (!email || !EMAIL_PATTERN.test(email)) {
     return res.status(400).json({ error: 'A valid email is required' });
+  }
+
+  const siteUrl = process.env.SITE_URL || '';
+
+  // New path: productId from license_products (variable-seat, admin-controlled price)
+  if (b.productId) {
+    const productId = Number(b.productId);
+    const seatCount = Number(b.seatCount);
+    if (!productId) return res.status(400).json({ error: 'Invalid productId' });
+    if (!(seatCount > 0)) return res.status(400).json({ error: 'seatCount must be a positive number' });
+
+    const [rows] = await pool.query(
+      'SELECT id, name, price_cents, variable_seats, active FROM license_products WHERE id = ?',
+      [productId]
+    );
+    const lp = rows[0];
+    if (!lp || !lp.active || !lp.variable_seats) {
+      return res.status(400).json({ error: 'License product not found or not available' });
+    }
+
+    const session = await getStripe().checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      customer_email: email,
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: lp.name },
+          unit_amount: lp.price_cents,
+        },
+        quantity: seatCount,
+      }],
+      metadata: { productId: String(productId), seatCount: String(seatCount), email },
+      success_url: `${siteUrl}/licenses.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/licenses.html?checkout=cancelled`,
+    });
+    return res.json({ url: session.url });
+  }
+
+  // Legacy path: hardcoded productType (single_license / group_license)
+  const productType = b.productType;
+  if (!PRICING[productType]) {
+    return res.status(400).json({ error: 'productType must be single_license or group_license' });
   }
 
   const quantity = productType === 'group_license' ? Number(b.seatCount) : 1;
@@ -95,7 +134,6 @@ router.post('/create-session', async (req, res) => {
   }
 
   const product = PRICING[productType];
-  const siteUrl = process.env.SITE_URL || '';
 
   const session = await getStripe().checkout.sessions.create({
     mode: 'payment',
@@ -525,6 +563,18 @@ async function webhookHandler(req, res) {
           stripeSessionId: session.id,
           paymentMethod: 'stripe',
           paymentStatus: 'paid',
+        });
+      } else if (metadata.productId) {
+        // New variable-seat flow from licenses.html — price/name from license_products.
+        await createPurchase(contactId, {
+          productType: 'group_license',
+          licenseProductId: Number(metadata.productId),
+          seatCount: Number(metadata.seatCount),
+          source: 'Stripe',
+          stripeSessionId: session.id,
+          paymentMethod: 'stripe',
+          paymentStatus: 'paid',
+          amountCents: session.amount_total,
         });
       } else if (metadata.productType) {
         // Legacy single-item flow from licenses.html.

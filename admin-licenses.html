@@ -72,7 +72,7 @@
     <div class="a-modal-body">
       <div class="a-field"><label>Name *</label><input type="text" id="productName" placeholder="e.g. Small Team Plan (Up to 5 Educators)"></div>
       <div class="a-form-row">
-        <div class="a-field"><label>Seat Count *</label><input type="number" id="productSeatCount" min="1"></div>
+        <div class="a-field" id="productSeatCountField"><label>Seat Count *</label><input type="number" id="productSeatCount" min="1"></div>
         <div class="a-field" id="productPriceField"><label>Price (USD) *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
       </div>
       <div class="a-field"><label>Description / Note</label><textarea id="productDescription" rows="3" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Shown below the price on the registration card (e.g. school pricing note)"></textarea></div>
@@ -86,6 +86,9 @@
       </div>
       <div class="a-field"><label>Sort Order</label><input type="number" id="productSortOrder" value="0"></div>
       <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:4px;">
+        <input type="checkbox" id="productVariableSeats" onchange="onVariableSeatsChange()"> Variable seat count — buyer picks quantity on licenses.html (price is per seat)
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:10px;">
         <input type="checkbox" id="productCallForQuote" onchange="onCallForQuoteChange()"> Call For Quote (for 1000+ seat plans — hides the price, shows "Call For Quote" instead)
       </label>
       <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:10px;">
@@ -159,6 +162,11 @@ async function renderProducts() {
   });
 }
 
+function onVariableSeatsChange() {
+  const isVariable = document.getElementById('productVariableSeats').checked;
+  document.getElementById('productSeatCountField').style.display = isVariable ? 'none' : 'block';
+}
+
 function onCallForQuoteChange() {
   const isQuote = document.getElementById('productCallForQuote').checked;
   document.getElementById('productPriceField').style.display = isQuote ? 'none' : 'block';
@@ -176,9 +184,11 @@ function openProductModal(id) {
   document.getElementById('productBulletPoints').value = p && p.bulletPoints && p.bulletPoints.length ? p.bulletPoints.join('\n') : '';
   document.getElementById('productFooterNote').value = p ? (p.footerNote || '') : '';
   document.getElementById('productSortOrder').value = p ? p.sortOrder : 0;
+  document.getElementById('productVariableSeats').checked = p ? p.variableSeats : false;
   document.getElementById('productCallForQuote').checked = p ? p.callForQuote : false;
   document.getElementById('productActive').checked = p ? p.active : true;
   document.getElementById('productGroup').value = p && p.autoAssignGroupId ? p.autoAssignGroupId : '';
+  onVariableSeatsChange();
   onCallForQuoteChange();
   document.getElementById('productModalOverlay').classList.add('show');
 }
@@ -190,19 +200,21 @@ function closeProductModal() {
 async function saveProduct() {
   const callForQuote = document.getElementById('productCallForQuote').checked;
   const groupVal = document.getElementById('productGroup').value;
+  const variableSeats = document.getElementById('productVariableSeats').checked;
   const body = {
     name: document.getElementById('productName').value.trim(),
-    seatCount: Number(document.getElementById('productSeatCount').value),
+    seatCount: variableSeats ? 1 : Number(document.getElementById('productSeatCount').value),
     price: Number(document.getElementById('productPrice').value) || 0,
     description: document.getElementById('productDescription').value.trim(),
     bulletPoints: document.getElementById('productBulletPoints').value.trim() || null,
     footerNote: document.getElementById('productFooterNote').value.trim() || null,
     sortOrder: Number(document.getElementById('productSortOrder').value) || 0,
+    variableSeats,
     callForQuote,
     active: document.getElementById('productActive').checked,
     autoAssignGroupId: groupVal ? Number(groupVal) : null,
   };
-  if (!body.name || !(body.seatCount > 0) || (!callForQuote && !(body.price >= 0))) {
+  if (!body.name || (!variableSeats && !(body.seatCount > 0)) || (!callForQuote && !(body.price >= 0))) {
     fnToast('Name, seat count, and (unless Call For Quote) price are required');
     return;
   }
