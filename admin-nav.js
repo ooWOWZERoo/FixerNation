@@ -27,6 +27,7 @@
       link('admin-campaigns.html',          '📣', 'Campaigns') +
       link('admin-newsletter.html',         '✉️', 'CRM') +
       link('admin-curriculum.html',         '🎓', 'Curriculums') +
+      link('admin-downloads.html',          '⬇️', 'Downloads') +
       link('admin-invoices.html',           '🧾', 'Invoices') +
       link('admin-licenses.html',           '🏫', 'Licenses') +
       link('admin-memberships.html',        '🪪', 'Memberships') +

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curriculum Downloads — Fixer Nation Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=16">
+<style>
+  .dl-breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13.5px;}
+  .dl-breadcrumb a{color:var(--a-accent);text-decoration:none;font-weight:600;}
+  .dl-breadcrumb a:hover{text-decoration:underline;}
+  .dl-breadcrumb .sep{color:var(--a-text-soft);}
+  .dl-breadcrumb .current{color:var(--a-text);font-weight:600;}
+  .dl-count-bar{display:flex;align-items:center;gap:6px;}
+  .dl-bar-track{flex:1;height:6px;background:var(--a-border);border-radius:3px;overflow:hidden;}
+  .dl-bar-fill{height:100%;background:var(--a-accent);border-radius:3px;transition:width .3s;}
+  .dl-bar-fill.full{background:var(--a-danger,#e05252);}
+  .dl-count-text{font-size:12px;color:var(--a-text-soft);white-space:nowrap;}
+  .dl-reset-btn{background:none;border:1px solid var(--a-border);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--a-text-soft);}
+  .dl-reset-btn:hover{border-color:var(--a-accent);color:var(--a-accent);}
+  .a-table td.teacher-name{font-weight:600;}
+  .a-table td.no-data{color:var(--a-text-soft);font-style:italic;}
+  .dl-row-clickable{cursor:pointer;}
+  .dl-row-clickable:hover td{background:var(--a-hover,rgba(0,0,0,.04));}
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=2"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Curriculum Downloads</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <!-- ── View 1: Summary ── -->
+      <div id="viewSummary">
+        <div class="a-card">
+          <div class="a-card-head">
+            <h2>All Curricula</h2>
+          </div>
+          <table class="a-table" id="summaryTable">
+            <thead>
+              <tr>
+                <th>Curriculum</th>
+                <th>Series</th>
+                <th style="text-align:center;">Teachers</th>
+                <th style="text-align:center;">Total Downloads</th>
+                <th>Last Download</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="a-empty" id="summaryEmpty" style="display:none;">
+            <div class="big">📥</div>
+            No downloads recorded yet.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── View 2: Detail ── -->
+      <div id="viewDetail" style="display:none;">
+        <div class="dl-breadcrumb">
+          <a href="#" onclick="showSummary();return false;">← All Curricula</a>
+          <span class="sep">/</span>
+          <span class="current" id="detailTitle"></span>
+        </div>
+        <div class="a-card">
+          <div class="a-card-head">
+            <h2>Teacher Downloads</h2>
+            <button class="a-btn a-btn-outline" id="resetAllBtn" onclick="resetAll()" style="font-size:13px;">Reset All Counts</button>
+          </div>
+          <table class="a-table" id="detailTable">
+            <thead>
+              <tr>
+                <th>Teacher</th>
+                <th>Email</th>
+                <th>School</th>
+                <th>Downloads</th>
+                <th>Last Download</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="a-empty" id="detailEmpty" style="display:none;">
+            <div class="big">✅</div>
+            No downloads recorded for this curriculum.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+fnRequireAuth();
+
+var activeCurriculumId = null;
+
+// ── Summary view ──────────────────────────────────────────────
+
+async function loadSummary() {
+  const r = await fetch('/api/curricula/downloads/summary', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not load downloads'); return; }
+  const { curricula } = await r.json();
+  renderSummary(curricula);
+}
+
+function renderSummary(curricula) {
+  const tbody = document.querySelector('#summaryTable tbody');
+  document.getElementById('summaryEmpty').style.display = curricula.length ? 'none' : '';
+  document.querySelector('#summaryTable').style.display = curricula.length ? '' : 'none';
+  tbody.innerHTML = curricula.map(c => `
+    <tr class="dl-row-clickable" onclick="showDetail(${c.id}, ${JSON.stringify(c.title)})">
+      <td class="teacher-name">${fnEsc(c.title)}</td>
+      <td>${fnEsc(c.series || '—')}</td>
+      <td style="text-align:center;">${c.teacher_count}</td>
+      <td style="text-align:center;">${c.total_downloads}</td>
+      <td>${c.last_download ? fnFormatDate(c.last_download) : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Detail view ───────────────────────────────────────────────
+
+async function showDetail(id, title) {
+  activeCurriculumId = id;
+  document.getElementById('detailTitle').textContent = title;
+  document.getElementById('pageTitle').textContent = 'Curriculum Downloads';
+  document.getElementById('viewSummary').style.display = 'none';
+  document.getElementById('viewDetail').style.display = '';
+  await loadDetail();
+}
+
+async function loadDetail() {
+  const r = await fetch('/api/curricula/' + activeCurriculumId + '/downloads', { credentials: 'include' });
+  if (!r.ok) { fnToast('Could not load teacher downloads'); return; }
+  const { downloads } = await r.json();
+  renderDetail(downloads);
+}
+
+function renderDetail(downloads) {
+  const tbody = document.querySelector('#detailTable tbody');
+  document.getElementById('detailEmpty').style.display = downloads.length ? 'none' : '';
+  document.getElementById('detailTable').style.display = downloads.length ? '' : 'none';
+  document.getElementById('resetAllBtn').style.display = downloads.length ? '' : 'none';
+
+  tbody.innerHTML = downloads.map(d => {
+    var name = (d.firstName || d.lastName) ? fnEsc(d.firstName + ' ' + d.lastName).trim() : '';
+    var limitText = d.downloadLimit > 0
+      ? d.count + ' / ' + d.downloadLimit
+      : d.count + '';
+    var barPct = d.downloadLimit > 0
+      ? Math.min(100, Math.round(d.count / d.downloadLimit * 100))
+      : 0;
+    var full = d.downloadLimit > 0 && d.count >= d.downloadLimit;
+    var barHtml = d.downloadLimit > 0
+      ? '<div class="dl-count-bar"><div class="dl-bar-track"><div class="dl-bar-fill' + (full ? ' full' : '') + '" style="width:' + barPct + '%"></div></div></div>'
+      : '';
+    return `
+      <tr>
+        <td class="${name ? 'teacher-name' : 'no-data'}">${name || '(unregistered)'}</td>
+        <td>${fnEsc(d.teacherEmail)}</td>
+        <td class="${d.school ? '' : 'no-data'}">${d.school ? fnEsc(d.school) : '—'}</td>
+        <td>
+          <span style="font-variant-numeric:tabular-nums;">${fnEsc(limitText)}</span>
+          ${barHtml}
+          <div class="dl-count-text">${full ? 'Limit reached' : ''}</div>
+        </td>
+        <td>${d.lastDownload ? fnFormatDate(d.lastDownload) : '—'}</td>
+        <td>
+          <button class="dl-reset-btn" onclick="resetOne(${JSON.stringify(d.teacherEmail)})">↺ Reset</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function showSummary() {
+  activeCurriculumId = null;
+  document.getElementById('viewDetail').style.display = 'none';
+  document.getElementById('viewSummary').style.display = '';
+  loadSummary();
+}
+
+// ── Reset actions ─────────────────────────────────────────────
+
+async function resetOne(email) {
+  if (!confirm('Reset download count for ' + email + '?')) return;
+  const r = await fetch(
+    '/api/curricula/' + activeCurriculumId + '/downloads?teacherEmail=' + encodeURIComponent(email),
+    { method: 'DELETE', credentials: 'include' }
+  );
+  if (!r.ok) { fnToast('Reset failed'); return; }
+  fnToast('Count reset for ' + email);
+  await loadDetail();
+  loadSummary();
+}
+
+async function resetAll() {
+  const titleEl = document.getElementById('detailTitle');
+  if (!confirm('Reset all download counts for "' + titleEl.textContent + '"?')) return;
+  const r = await fetch(
+    '/api/curricula/' + activeCurriculumId + '/downloads',
+    { method: 'DELETE', credentials: 'include' }
+  );
+  if (!r.ok) { fnToast('Reset failed'); return; }
+  fnToast('All counts reset');
+  await loadDetail();
+  loadSummary();
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function fnEsc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadSummary();
+</script>
+</body>
+</html>

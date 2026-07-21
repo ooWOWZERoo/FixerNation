@@ -98,6 +98,20 @@ router.get('/', async (req, res) => {
   res.json({ curricula: await gateAccess(curricula, req) });
 });
 
+router.get('/downloads/summary', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(`
+    SELECT c.id, c.title, c.series, c.download_limit,
+           COUNT(DISTINCT cd.teacher_email) AS teacher_count,
+           SUM(cd.count)                    AS total_downloads,
+           MAX(cd.last_download)            AS last_download
+    FROM curricula c
+    INNER JOIN curriculum_downloads cd ON cd.curriculum_id = c.id
+    GROUP BY c.id, c.title, c.series, c.download_limit
+    ORDER BY last_download DESC
+  `);
+  res.json({ curricula: rows });
+});
+
 router.get('/:id', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM curricula WHERE id = ?', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Curriculum not found' });
@@ -377,8 +391,38 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // --- Download-limit simulator ---
 
 router.get('/:id/downloads', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT teacher_email, count, last_download FROM curriculum_downloads WHERE curriculum_id = ?', [req.params.id]);
-  res.json({ downloads: rows.map(r => ({ teacherEmail: r.teacher_email, count: r.count, lastDownload: r.last_download })) });
+  const [rows] = await pool.query(`
+    SELECT
+      cd.teacher_email,
+      cd.count,
+      cd.last_download,
+      su.first_name,
+      su.last_name,
+      nc.company           AS school_company,
+      MAX(p.school_domain) AS school_domain,
+      c.download_limit
+    FROM curriculum_downloads cd
+    LEFT JOIN curricula c            ON c.id = cd.curriculum_id
+    LEFT JOIN site_users su          ON su.email = cd.teacher_email
+    LEFT JOIN newsletter_contacts nc ON nc.email = cd.teacher_email
+    LEFT JOIN license_seats ls       ON ls.registered_site_user_id = su.id
+    LEFT JOIN purchases p            ON p.id = ls.purchase_id
+    WHERE cd.curriculum_id = ?
+    GROUP BY cd.id, cd.teacher_email, cd.count, cd.last_download,
+             su.first_name, su.last_name, nc.company, c.download_limit
+    ORDER BY cd.last_download DESC
+  `, [req.params.id]);
+  res.json({
+    downloads: rows.map(r => ({
+      teacherEmail:  r.teacher_email,
+      firstName:     r.first_name  || '',
+      lastName:      r.last_name   || '',
+      school:        r.school_company || r.school_domain || '',
+      count:         r.count,
+      lastDownload:  r.last_download,
+      downloadLimit: r.download_limit || 0,
+    })),
+  });
 });
 
 router.post('/:id/downloads', requireAuth, async (req, res) => {
