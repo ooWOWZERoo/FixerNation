@@ -178,26 +178,31 @@ router.get('/:id/file', async (req, res) => {
 
   // Licensed teachers on an explicit download: check limit and record
   if (forceDownload && licensed && !isAdmin && siteUser) {
-    const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
-    const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
+    try {
+      const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
+      const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
 
-    if (limit > 0) {
-      const [existing] = await pool.query(
-        'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?',
+      if (limit > 0) {
+        const [existing] = await pool.query(
+          'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?',
+          [id, siteUser.email]
+        );
+        const currentCount = existing[0] ? existing[0].count : 0;
+        if (currentCount >= limit) {
+          return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit });
+        }
+      }
+
+      await pool.query(
+        `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
+         VALUES (?, ?, 1, NOW())
+         ON DUPLICATE KEY UPDATE count = count + 1, last_download = NOW()`,
         [id, siteUser.email]
       );
-      const currentCount = existing[0] ? existing[0].count : 0;
-      if (currentCount >= limit) {
-        return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit });
-      }
+    } catch (err) {
+      console.error('curriculum_downloads tracking error:', err.message);
+      // Allow the download to proceed — tracking failure should not block the teacher
     }
-
-    await pool.query(
-      `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
-       VALUES (?, ?, 1, NOW())
-       ON DUPLICATE KEY UPDATE count = count + 1, last_download = NOW()`,
-      [id, siteUser.email]
-    );
   }
 
   const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
