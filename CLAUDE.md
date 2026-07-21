@@ -150,6 +150,36 @@ When giving deploy instructions after a push, always specify:
 - Whether a seed/alter script needs to be run
 - Whether a restart is needed
 
+## Access control design rules
+
+**Always write the access matrix before building any endpoint that gates access.**
+Write every role (anonymous, student, licensed teacher, admin) × every action (view, download, edit) for the specific resource. Share it, confirm it, implement once against it. The file-serving endpoint was fully rewritten because this was skipped — it blocked teachers who had valid licenses.
+
+Example matrix for curriculum file endpoints:
+```
+Role              | View file | Download file | View Quiz+Key | View docs
+------------------+-----------+---------------+---------------+----------
+Anonymous         |    YES    |      NO       |      NO       |    NO
+Student (class)   |    YES*   |      NO       |      NO       |    NO
+Licensed teacher  |    YES    |  YES (counted)|      YES      |   YES
+Admin             |    YES    |      YES      |      YES      |   YES
+* Student Handout only
+```
+
+**Never block the old access path until the new one is proven live.**
+Build and verify the replacement in production first; block the old path second. Adding an `.htaccess` `Deny from all` to `uploads/` before the Node `/file` endpoint was running would have taken down every file link. The rule: prove the replacement works, then optionally add the block.
+
+**Grep the entire codebase before calling any security or access migration complete.**
+When file access was migrated from raw `/uploads/` URLs to the `/api/.../file` endpoint, a fourth page (`education-portal.html`) was missed and only caught by manual production testing. Before closing any cross-cutting change, run:
+```bash
+grep -rn "old pattern" --include="*.html" --include="*.js" .
+```
+
+**Server-side protection and browser-side protection are different problems.**
+Securing the API endpoint (who can call it) is not the same as preventing the user at the browser from saving the rendered content. Opening a file in a new tab via the API still exposes the native PDF viewer's Download button and right-click Save As. PDF.js canvas rendering addresses the browser-side threat: no download button, right-click yields a single-page PNG, URL never appears in the address bar.
+
+**PDF iframes are unreliable.** They fail on iOS/iPadOS and when `Content-Disposition: attachment` is set. Use PDF.js canvas rendering in a modal (`pdf-modal.js`) or open in a new tab via the API. Test on mobile before shipping any file-display feature.
+
 ## Infra gotchas (all previously bitten in this project)
 
 - **`dotenv.config()` needs an explicit path.** Under this host's Passenger/LiteSpeed Node integration, `process.cwd()` isn't the app root — `require('dotenv').config()` with no path silently loads nothing. Use `require('dotenv').config({ path: path.join(__dirname, '.env') })` (or `path.join(__dirname, '..', '.env')` in scripts one level deeper).
@@ -159,6 +189,18 @@ When giving deploy instructions after a push, always specify:
 - **Watch for circular `require()`s** between route files that both need something from each other — extract the shared function into `server/lib/` instead.
 - **`admin-common.js`/`admin-common.css` are cache-busted as `?v=N`** — bump `N` in every HTML file referencing them whenever either file changes (grep `admin-common.js?v=`).
 - Don't let a new commit assume an intentionally undeployed prior commit's schema is already live — `git pull` always catches the server up to HEAD, so if two commits land together, code written against commit B's schema can break if B ships before A's migration runs.
+
+## Working with this codebase in an AI-assisted session
+
+**Give a constraint inventory at the start of any new session.** This codebase runs on Hosting.com/cPanel shared hosting with no SSH, no pm2, no local DB, and no Docker. The AI will suggest those tools unless told not to. The relevant constraints are all documented in this file — point a new session here first.
+
+**Requirements before code, always.** For any feature touching access control, billing, or user-facing auth behavior: write the requirement explicitly, get it confirmed, then ask for implementation. Both the file protection endpoint and the download counter were rebuilt because this step was skipped.
+
+**Cross-cutting changes need a codebase-wide grep.** After any migration (URL patterns, auth patterns, analytics instrumentation), ask: "Are there any other pages in the codebase where this same pattern exists?" before closing the work. A missed page is always worse than the cost of one grep.
+
+**Save learnings to persistent memory during the session.** Context compacts on long sessions. Any correction or discovery that should hold for future sessions belongs in the memory system — not just in the current context window.
+
+**Token/cost hygiene.** Specific prompts cost less than vague ones. File path + line number saves a full read. Batch related edits into one prompt. End sessions at clean boundaries (feature complete, deployed) rather than mid-task. Put everything that would need re-explaining into this file.
 
 ## Maintain the changelog
 
