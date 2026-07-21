@@ -265,16 +265,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
 // --- Download-limit simulator ---
 
-// Temporary: admin-only raw DB inspection for debugging the student handout issue
-router.get('/:id/debug-student', requireAuth, async (req, res) => {
-  const id = req.params.id;
-  const [cur] = await pool.query('SELECT id, title, published FROM curricula WHERE id = ?', [id]);
-  const [resources] = await pool.query('SELECT resource, file_path, file_name FROM curriculum_resources WHERE curriculum_id = ?', [id]);
-  let documents = [];
-  try { [documents] = await pool.query('SELECT file_path, file_name, sort_order FROM curriculum_documents WHERE curriculum_id = ? ORDER BY sort_order', [id]); } catch (_) {}
-  res.json({ curriculum: cur[0] || null, resources, documents });
-});
-
 router.get('/:id/downloads', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT teacher_email, count, last_download FROM curriculum_downloads WHERE curriculum_id = ?', [req.params.id]);
   res.json({ downloads: rows.map(r => ({ teacherEmail: r.teacher_email, count: r.count, lastDownload: r.last_download })) });
