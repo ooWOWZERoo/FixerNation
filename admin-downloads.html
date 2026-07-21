@@ -187,7 +187,7 @@ function renderDetail() {
         </td>
         <td>${d.lastDownload ? fnFormatDate(d.lastDownload) : '—'}</td>
         <td style="white-space:nowrap;">
-          <button class="dl-reset-btn" onclick="editCount(${i})" title="Set count">✏️</button>
+          <button class="dl-reset-btn" onclick="editCount(${i})">Edit</button>
           <button class="dl-reset-btn" onclick="resetOne(${JSON.stringify(d.teacherEmail)})">↺ Reset</button>
         </td>
       </tr>
