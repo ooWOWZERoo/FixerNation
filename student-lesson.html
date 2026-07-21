@@ -185,7 +185,7 @@ function renderBody() {
     html += '<div style="display:flex;align-items:center;gap:14px;padding:18px;background:var(--surface-alt,#f5f7f9);border-radius:10px;">';
     html += '<div style="font-size:36px;line-height:1;">📄</div>';
     html += '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(handoutName) + '</div><div style="font-size:12px;color:var(--text-muted,#888);margin-top:3px;">Student Handout</div></div>';
-    html += '<a href="' + handoutUrl + '" target="_blank" rel="noopener" style="flex-shrink:0;background:var(--teal-dark);color:#fff;font-size:13px;font-weight:700;padding:10px 18px;border-radius:8px;text-decoration:none;white-space:nowrap;">View Handout ↗</a>';
+    html += '<button onclick="openPdfModal(\'' + handoutUrl + '\', \'Student Handout\')" style="flex-shrink:0;background:var(--teal-dark);color:#fff;font-size:13px;font-weight:700;padding:10px 18px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;">View Handout</button>';
     html += '</div>';
     html += '</div>';
   }
@@ -382,5 +382,6 @@ async function markComplete() {
 
 load();
 </script>
+<script src="pdf-modal.js?v=1"></script>
 </body>
 </html>

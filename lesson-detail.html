@@ -208,11 +208,11 @@ async function openResource(curriculumId, resourceName) {
     return;
   }
   fnTrackEvent('resource_open', resourceName);
-  window.open('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), '_blank');
+  openPdfModal('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), resourceName);
 }
 
 function openDoc(curriculumId, docIndex) {
-  window.open('/api/curricula/' + curriculumId + '/file?doc=' + docIndex, '_blank');
+  openPdfModal('/api/curricula/' + curriculumId + '/file?doc=' + docIndex, 'Lesson Plan');
 }
 
 async function _fetchAndDownload(url, fallbackName) {
@@ -438,6 +438,7 @@ renderLessonDetail();
 <script src="site-auth.js"></script>
 <script src="cart.js"></script>
 
+<script src="pdf-modal.js?v=1"></script>
 <script src="footer.js?v=1"></script>
 </body>
 </html>

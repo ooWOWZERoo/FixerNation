@@ -469,7 +469,7 @@ function openResource(curriculumId, resourceName) {
   }
   const entry = (c.resources || []).find(x => x.resource === resourceName);
   if (entry && entry.filePath) {
-    window.open('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), '_blank');
+    openPdfModal('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), resourceName);
   } else {
     showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet. Add one in the Curriculum Builder.');
   }
@@ -639,6 +639,7 @@ fetch('/api/curricula', { credentials: 'include' })
 })();
 </script>
 
+<script src="pdf-modal.js?v=1"></script>
 <script src="footer.js?v=1"></script>
 </body>
 </html>
