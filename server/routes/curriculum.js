@@ -460,6 +460,21 @@ router.post('/:id/downloads', requireAuth, async (req, res) => {
   res.json({ ok: true, count: newCount, limit });
 });
 
+router.put('/:id/downloads', requireAuth, async (req, res) => {
+  const { teacherEmail, count } = req.body || {};
+  if (!teacherEmail) return res.status(400).json({ error: 'teacherEmail required' });
+  const newCount = parseInt(count, 10);
+  if (isNaN(newCount) || newCount < 0) return res.status(400).json({ error: 'count must be a non-negative integer' });
+  const email = teacherEmail.trim().toLowerCase();
+  await pool.query(
+    `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
+     VALUES (?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE count = ?`,
+    [req.params.id, email, newCount, newCount]
+  );
+  res.json({ ok: true, count: newCount });
+});
+
 router.delete('/:id/downloads', requireAuth, async (req, res) => {
   if (req.query.teacherEmail) {
     await pool.query('DELETE FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?', [req.params.id, req.query.teacherEmail.trim().toLowerCase()]);

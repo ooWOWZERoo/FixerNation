@@ -23,6 +23,7 @@
   .dl-count-text{font-size:12px;color:var(--a-text-soft);white-space:nowrap;}
   .dl-reset-btn{background:none;border:1px solid var(--a-border);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--a-text-soft);}
   .dl-reset-btn:hover{border-color:var(--a-accent);color:var(--a-accent);}
+  .dl-count-input{width:60px;padding:3px 6px;border:1px solid var(--a-accent);border-radius:5px;font-size:13px;background:var(--a-surface);color:var(--a-text);}
   .a-table td.teacher-name{font-weight:600;}
   .a-table td.no-data{color:var(--a-text-soft);font-style:italic;}
   .dl-row-clickable{cursor:pointer;}
@@ -110,6 +111,7 @@
 fnRequireAuth();
 
 var activeCurriculumId = null;
+var activeDownloads = [];
 
 // ── Summary view ──────────────────────────────────────────────
 
@@ -150,17 +152,18 @@ async function showDetail(id, title) {
 async function loadDetail() {
   const r = await fetch('/api/curricula/' + activeCurriculumId + '/downloads', { credentials: 'include' });
   if (!r.ok) { fnToast('Could not load teacher downloads'); return; }
-  const { downloads } = await r.json();
-  renderDetail(downloads);
+  const data = await r.json();
+  activeDownloads = data.downloads;
+  renderDetail();
 }
 
-function renderDetail(downloads) {
+function renderDetail() {
   const tbody = document.querySelector('#detailTable tbody');
-  document.getElementById('detailEmpty').style.display = downloads.length ? 'none' : '';
-  document.getElementById('detailTable').style.display = downloads.length ? '' : 'none';
-  document.getElementById('resetAllBtn').style.display = downloads.length ? '' : 'none';
+  document.getElementById('detailEmpty').style.display = activeDownloads.length ? 'none' : '';
+  document.getElementById('detailTable').style.display = activeDownloads.length ? '' : 'none';
+  document.getElementById('resetAllBtn').style.display = activeDownloads.length ? '' : 'none';
 
-  tbody.innerHTML = downloads.map(d => {
+  tbody.innerHTML = activeDownloads.map((d, i) => {
     var name = (d.firstName || d.lastName) ? fnEsc(d.firstName + ' ' + d.lastName).trim() : '';
     var limitText = d.downloadLimit > 0
       ? d.count + ' / ' + d.downloadLimit
@@ -177,13 +180,14 @@ function renderDetail(downloads) {
         <td class="${name ? 'teacher-name' : 'no-data'}">${name || '(unregistered)'}</td>
         <td>${fnEsc(d.teacherEmail)}</td>
         <td class="${d.school ? '' : 'no-data'}">${d.school ? fnEsc(d.school) : '—'}</td>
-        <td>
+        <td id="dlcount_${i}">
           <span style="font-variant-numeric:tabular-nums;">${fnEsc(limitText)}</span>
           ${barHtml}
           <div class="dl-count-text">${full ? 'Limit reached' : ''}</div>
         </td>
         <td>${d.lastDownload ? fnFormatDate(d.lastDownload) : '—'}</td>
-        <td>
+        <td style="white-space:nowrap;">
+          <button class="dl-reset-btn" onclick="editCount(${i})" title="Set count">✏️</button>
           <button class="dl-reset-btn" onclick="resetOne(${JSON.stringify(d.teacherEmail)})">↺ Reset</button>
         </td>
       </tr>
@@ -195,6 +199,37 @@ function showSummary() {
   activeCurriculumId = null;
   document.getElementById('viewDetail').style.display = 'none';
   document.getElementById('viewSummary').style.display = '';
+  loadSummary();
+}
+
+// ── Edit count ────────────────────────────────────────────────
+
+function editCount(idx) {
+  var d = activeDownloads[idx];
+  if (!d) return;
+  document.getElementById('dlcount_' + idx).innerHTML =
+    '<input class="dl-count-input" type="number" min="0" id="dlcount_input_' + idx + '" value="' + d.count + '">' +
+    '<button class="dl-reset-btn" style="margin-left:4px;" onclick="saveCount(' + idx + ')">Save</button>' +
+    '<button class="dl-reset-btn" onclick="renderDetail()">✕</button>';
+  var inp = document.getElementById('dlcount_input_' + idx);
+  inp.focus();
+  inp.select();
+}
+
+async function saveCount(idx) {
+  var d = activeDownloads[idx];
+  if (!d) return;
+  var newCount = parseInt(document.getElementById('dlcount_input_' + idx).value, 10);
+  if (isNaN(newCount) || newCount < 0) { fnToast('Enter a valid number (0 or more)'); return; }
+  var r = await fetch('/api/curricula/' + activeCurriculumId + '/downloads', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teacherEmail: d.teacherEmail, count: newCount }),
+  });
+  if (!r.ok) { fnToast('Could not update count'); return; }
+  fnToast('Count updated');
+  await loadDetail();
   loadSummary();
 }
 
