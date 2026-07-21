@@ -178,7 +178,7 @@ function renderBody() {
   var handoutResource = (lesson.resources || []).find(function(r){ return r.resource === 'Student Handout'; });
   var handoutUrl = handoutResource
     ? '/api/curricula/' + lesson.id + '/file?resource=Student+Handout'
-    : ((lesson.documents || []).length ? lesson.documents[0].filePath : null);
+    : ((lesson.documents || []).length ? '/api/curricula/' + lesson.id + '/file?doc=0' : null);
   if (handoutUrl) {
     var handoutName = (handoutResource && handoutResource.fileName) ? handoutResource.fileName : 'Student Handout';
     html += '<div class="card"><div class="card-title">What You\'ll Learn</div>';
@@ -202,8 +202,8 @@ function renderBody() {
   // Documents
   if ((lesson.documents || []).length) {
     html += '<div class="card"><div class="card-title">Downloads</div>';
-    lesson.documents.forEach(function(d) {
-      html += '<div class="doc-item"><div class="doc-icon">📄</div><div class="doc-name">' + esc(d.fileName || d.filePath) + '</div><a href="' + esc(d.filePath) + '" target="_blank" download>Download</a></div>';
+    lesson.documents.forEach(function(d, i) {
+      html += '<div class="doc-item"><div class="doc-icon">📄</div><div class="doc-name">' + esc(d.fileName || d.filePath) + '</div><a href="/api/curricula/' + lesson.id + '/file?doc=' + i + '&download=1" target="_blank" rel="noopener">Download</a></div>';
     });
     html += '</div>';
   }
