@@ -99,17 +99,22 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/downloads/summary', requireAuth, async (req, res) => {
-  const [rows] = await pool.query(`
-    SELECT c.id, c.title, c.series, c.download_limit,
-           COUNT(DISTINCT cd.teacher_email) AS teacher_count,
-           SUM(cd.count)                    AS total_downloads,
-           MAX(cd.last_download)            AS last_download
-    FROM curricula c
-    INNER JOIN curriculum_downloads cd ON cd.curriculum_id = c.id
-    GROUP BY c.id, c.title, c.series, c.download_limit
-    ORDER BY last_download DESC
-  `);
-  res.json({ curricula: rows });
+  try {
+    const [rows] = await pool.query(`
+      SELECT c.id, c.title, c.series, c.download_limit,
+             COUNT(DISTINCT cd.teacher_email) AS teacher_count,
+             SUM(cd.count)                    AS total_downloads,
+             MAX(cd.last_download)            AS last_download
+      FROM curricula c
+      INNER JOIN curriculum_downloads cd ON cd.curriculum_id = c.id
+      GROUP BY c.id, c.title, c.series, c.download_limit
+      ORDER BY last_download DESC
+    `);
+    res.json({ curricula: rows });
+  } catch (err) {
+    console.error('downloads/summary error:', err.message);
+    res.status(500).json({ error: 'Could not load download summary. The curriculum_downloads table may need to be created — run alter-add-curriculum-downloads.js.' });
+  }
 });
 
 router.get('/:id', async (req, res) => {
@@ -192,21 +197,23 @@ router.get('/:id/file', async (req, res) => {
 
   // Licensed teachers on an explicit download: check limit and record
   if (forceDownload && licensed && !isAdmin && siteUser) {
-    try {
-      const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
-      const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
+    const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
+    const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
 
-      if (limit > 0) {
-        const [existing] = await pool.query(
-          'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?',
-          [id, siteUser.email]
-        );
-        const currentCount = existing[0] ? existing[0].count : 0;
-        if (currentCount >= limit) {
-          return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit });
-        }
+    if (limit > 0) {
+      const [existing] = await pool.query(
+        'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?',
+        [id, siteUser.email]
+      );
+      const currentCount = existing[0] ? existing[0].count : 0;
+      if (currentCount >= limit) {
+        return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit });
       }
+    }
 
+    // Record the download — only this step uses try/catch so a write failure
+    // does not silently bypass the limit check above
+    try {
       await pool.query(
         `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
          VALUES (?, ?, 1, NOW())
@@ -214,8 +221,7 @@ router.get('/:id/file', async (req, res) => {
         [id, siteUser.email]
       );
     } catch (err) {
-      console.error('curriculum_downloads tracking error:', err.message);
-      // Allow the download to proceed — tracking failure should not block the teacher
+      console.error('curriculum_downloads insert error:', err.message);
     }
   }
 
@@ -391,38 +397,43 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // --- Download-limit simulator ---
 
 router.get('/:id/downloads', requireAuth, async (req, res) => {
-  const [rows] = await pool.query(`
-    SELECT
-      cd.teacher_email,
-      cd.count,
-      cd.last_download,
-      su.first_name,
-      su.last_name,
-      nc.company           AS school_company,
-      MAX(p.school_domain) AS school_domain,
-      c.download_limit
-    FROM curriculum_downloads cd
-    LEFT JOIN curricula c            ON c.id = cd.curriculum_id
-    LEFT JOIN site_users su          ON su.email = cd.teacher_email
-    LEFT JOIN newsletter_contacts nc ON nc.email = cd.teacher_email
-    LEFT JOIN license_seats ls       ON ls.registered_site_user_id = su.id
-    LEFT JOIN purchases p            ON p.id = ls.purchase_id
-    WHERE cd.curriculum_id = ?
-    GROUP BY cd.id, cd.teacher_email, cd.count, cd.last_download,
-             su.first_name, su.last_name, nc.company, c.download_limit
-    ORDER BY cd.last_download DESC
-  `, [req.params.id]);
-  res.json({
-    downloads: rows.map(r => ({
-      teacherEmail:  r.teacher_email,
-      firstName:     r.first_name  || '',
-      lastName:      r.last_name   || '',
-      school:        r.school_company || r.school_domain || '',
-      count:         r.count,
-      lastDownload:  r.last_download,
-      downloadLimit: r.download_limit || 0,
-    })),
-  });
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        cd.teacher_email,
+        cd.count,
+        cd.last_download,
+        su.first_name,
+        su.last_name,
+        nc.company           AS school_company,
+        MAX(p.school_domain) AS school_domain,
+        c.download_limit
+      FROM curriculum_downloads cd
+      LEFT JOIN curricula c            ON c.id = cd.curriculum_id
+      LEFT JOIN site_users su          ON su.email = cd.teacher_email
+      LEFT JOIN newsletter_contacts nc ON nc.email = cd.teacher_email
+      LEFT JOIN license_seats ls       ON ls.registered_site_user_id = su.id
+      LEFT JOIN purchases p            ON p.id = ls.purchase_id
+      WHERE cd.curriculum_id = ?
+      GROUP BY cd.id, cd.teacher_email, cd.count, cd.last_download,
+               su.first_name, su.last_name, nc.company, c.download_limit
+      ORDER BY cd.last_download DESC
+    `, [req.params.id]);
+    res.json({
+      downloads: rows.map(r => ({
+        teacherEmail:  r.teacher_email,
+        firstName:     r.first_name  || '',
+        lastName:      r.last_name   || '',
+        school:        r.school_company || r.school_domain || '',
+        count:         r.count,
+        lastDownload:  r.last_download,
+        downloadLimit: r.download_limit || 0,
+      })),
+    });
+  } catch (err) {
+    console.error('/:id/downloads error:', err.message);
+    res.status(500).json({ error: 'Could not load download records.' });
+  }
 });
 
 router.post('/:id/downloads', requireAuth, async (req, res) => {
