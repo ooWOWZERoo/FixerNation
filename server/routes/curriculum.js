@@ -6,6 +6,11 @@ const { getSiteUser, hasActiveLicense } = require('../lib/access');
 
 const router = express.Router();
 
+function toSqlLike(q) {
+  if (!q.includes('*') && !q.includes('?')) return '%' + q + '%';
+  return q.replace(/\*/g, '%').replace(/\?/g, '_');
+}
+
 // Strips the actual downloadable content (lesson document + quiz) from each
 // curriculum unless the requester is an admin or a site_user with an active
 // license seat. Everything else (theme, series, overview, objectives,
@@ -98,22 +103,68 @@ router.get('/', async (req, res) => {
   res.json({ curricula: await gateAccess(curricula, req) });
 });
 
-router.get('/downloads/summary', requireAuth, async (req, res) => {
+router.get('/downloads', requireAuth, async (req, res) => {
   try {
+    const page   = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit  = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const offset = (page - 1) * limit;
+    const rawQ   = (req.query.q || '').trim();
+
+    let whereSQL    = '';
+    let whereParams = [];
+
+    if (rawQ) {
+      const pat = toSqlLike(rawQ);
+      whereSQL = `WHERE (
+        cd.teacher_email LIKE ? OR
+        su.first_name    LIKE ? OR
+        su.last_name     LIKE ? OR
+        CONCAT(COALESCE(su.first_name,''), ' ', COALESCE(su.last_name,'')) LIKE ? OR
+        nc.company       LIKE ? OR
+        c.title          LIKE ? OR
+        c.series         LIKE ?
+      )`;
+      whereParams = Array(7).fill(pat);
+    }
+
+    const joinSQL = `
+      FROM curriculum_downloads cd
+      LEFT JOIN curricula c            ON c.id    = cd.curriculum_id
+      LEFT JOIN site_users su          ON su.email = cd.teacher_email
+      LEFT JOIN newsletter_contacts nc ON nc.email = cd.teacher_email
+    `;
+
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM (SELECT 1 ${joinSQL} ${whereSQL} GROUP BY cd.curriculum_id, cd.teacher_email) _cnt`,
+      whereParams
+    );
+
     const [rows] = await pool.query(`
-      SELECT c.id, c.title, c.series, c.download_limit,
-             COUNT(DISTINCT cd.teacher_email) AS teacher_count,
-             SUM(cd.count)                    AS total_downloads,
-             MAX(cd.last_download)            AS last_download
-      FROM curricula c
-      INNER JOIN curriculum_downloads cd ON cd.curriculum_id = c.id
-      GROUP BY c.id, c.title, c.series, c.download_limit
-      ORDER BY last_download DESC
-    `);
-    res.json({ curricula: rows });
+      SELECT
+        cd.curriculum_id                               AS curriculumId,
+        cd.teacher_email                               AS teacherEmail,
+        cd.count,
+        cd.last_download                               AS lastDownload,
+        su.first_name                                  AS firstName,
+        su.last_name                                   AS lastName,
+        c.title                                        AS curriculumTitle,
+        c.series,
+        c.download_limit                               AS downloadLimit,
+        COALESCE(nc.company, MAX(p.school_domain), '') AS school
+      ${joinSQL}
+      LEFT JOIN license_seats ls ON ls.registered_site_user_id = su.id
+      LEFT JOIN purchases p      ON p.id = ls.purchase_id
+      ${whereSQL}
+      GROUP BY cd.curriculum_id, cd.teacher_email, cd.count, cd.last_download,
+               su.first_name, su.last_name, c.title, c.series, c.download_limit, nc.company
+      ORDER BY cd.last_download DESC
+      LIMIT ? OFFSET ?
+    `, [...whereParams, limit, offset]);
+
+    res.json({ downloads: rows, total, page, pages: Math.ceil(total / limit) || 1, limit });
   } catch (err) {
-    console.error('downloads/summary error:', err.message);
-    res.status(500).json({ error: 'Could not load download summary. The curriculum_downloads table may need to be created — run alter-add-curriculum-downloads.js.' });
+    console.error('GET /downloads error:', err.message);
+    res.status(500).json({ error: 'Could not load downloads.' });
   }
 });
 

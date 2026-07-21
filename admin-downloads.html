@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Curriculum Downloads — Fixer Nation Admin</title>
+<title>Teacher Downloads — Fixer Nation Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -11,23 +11,23 @@
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=16">
 <style>
-  .dl-breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13.5px;}
-  .dl-breadcrumb a{color:var(--a-accent);text-decoration:none;font-weight:600;}
-  .dl-breadcrumb a:hover{text-decoration:underline;}
-  .dl-breadcrumb .sep{color:var(--a-text-soft);}
-  .dl-breadcrumb .current{color:var(--a-text);font-weight:600;}
-  .dl-count-bar{display:flex;align-items:center;gap:6px;}
-  .dl-bar-track{flex:1;height:6px;background:var(--a-border);border-radius:3px;overflow:hidden;}
+  .dl-search-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .dl-search-input{flex:1;min-width:200px;padding:7px 12px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);outline:none;}
+  .dl-search-input:focus{border-color:var(--a-accent);}
+  .dl-search-hint{font-size:11px;color:var(--a-text-soft);padding:0 0 10px;}
+  .dl-pagination{display:flex;align-items:center;gap:10px;padding:14px 0 4px;font-size:13px;color:var(--a-text-soft);}
+  .dl-pagination-info{flex:1;}
+  .dl-count-bar{display:flex;align-items:center;gap:6px;margin-top:3px;}
+  .dl-bar-track{flex:1;min-width:40px;height:6px;background:var(--a-border);border-radius:3px;overflow:hidden;}
   .dl-bar-fill{height:100%;background:var(--a-accent);border-radius:3px;transition:width .3s;}
   .dl-bar-fill.full{background:var(--a-danger,#e05252);}
-  .dl-count-text{font-size:12px;color:var(--a-text-soft);white-space:nowrap;}
+  .dl-count-text{font-size:11px;color:var(--a-text-soft);white-space:nowrap;margin-top:2px;}
   .dl-reset-btn{background:none;border:1px solid var(--a-border);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--a-text-soft);}
   .dl-reset-btn:hover{border-color:var(--a-accent);color:var(--a-accent);}
+  .dl-reset-btn:disabled{opacity:.45;cursor:default;}
   .dl-count-input{width:60px;padding:3px 6px;border:1px solid var(--a-accent);border-radius:5px;font-size:13px;background:var(--a-surface);color:var(--a-text);}
   .a-table td.teacher-name{font-weight:600;}
   .a-table td.no-data{color:var(--a-text-soft);font-style:italic;}
-  .dl-row-clickable{cursor:pointer;}
-  .dl-row-clickable:hover td{background:var(--a-hover,rgba(0,0,0,.04));}
 </style>
 </head>
 <body>
@@ -38,70 +38,48 @@
 
   <div class="a-main">
     <div class="a-topbar">
-      <h1 id="pageTitle">Curriculum Downloads</h1>
+      <h1>Teacher Downloads</h1>
       <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
       <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
 
     <div class="a-content">
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>All Downloads</h2>
+          <div class="dl-search-wrap">
+            <input type="text" id="searchInput" class="dl-search-input" placeholder="Search teacher, email, school, curriculum…">
+            <button class="a-btn a-btn-outline" id="clearBtn" onclick="clearSearch()" style="display:none;font-size:13px;">Clear</button>
+          </div>
+        </div>
+        <div class="dl-search-hint">Use * as wildcard — e.g. <code>smith*</code> or <code>*algebra*</code></div>
 
-      <!-- ── View 1: Summary ── -->
-      <div id="viewSummary">
-        <div class="a-card">
-          <div class="a-card-head">
-            <h2>All Curricula</h2>
-          </div>
-          <table class="a-table" id="summaryTable">
-            <thead>
-              <tr>
-                <th>Curriculum</th>
-                <th>Series</th>
-                <th style="text-align:center;">Teachers</th>
-                <th style="text-align:center;">Total Downloads</th>
-                <th>Last Download</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div class="a-empty" id="summaryEmpty" style="display:none;">
-            <div class="big">📥</div>
-            No downloads recorded yet.
-          </div>
+        <table class="a-table" id="dlTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Teacher</th>
+              <th>Email</th>
+              <th>School</th>
+              <th>Curriculum</th>
+              <th>Downloads</th>
+              <th>Last Download</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dlTbody"></tbody>
+        </table>
+
+        <div class="a-empty" id="dlEmpty" style="display:none;">
+          <div class="big">&#128229;</div>
+          No downloads found.
+        </div>
+
+        <div class="dl-pagination" id="dlPagination" style="display:none;">
+          <span class="dl-pagination-info" id="dlPageInfo"></span>
+          <button class="dl-reset-btn" id="prevBtn" onclick="goPage(currentPage - 1)">&#8592; Prev</button>
+          <button class="dl-reset-btn" id="nextBtn" onclick="goPage(currentPage + 1)">Next &#8594;</button>
         </div>
       </div>
-
-      <!-- ── View 2: Detail ── -->
-      <div id="viewDetail" style="display:none;">
-        <div class="dl-breadcrumb">
-          <a href="#" onclick="showSummary();return false;">← All Curricula</a>
-          <span class="sep">/</span>
-          <span class="current" id="detailTitle"></span>
-        </div>
-        <div class="a-card">
-          <div class="a-card-head">
-            <h2>Teacher Downloads</h2>
-            <button class="a-btn a-btn-outline" id="resetAllBtn" onclick="resetAll()" style="font-size:13px;">Reset All Counts</button>
-          </div>
-          <table class="a-table" id="detailTable">
-            <thead>
-              <tr>
-                <th>Teacher</th>
-                <th>Email</th>
-                <th>School</th>
-                <th>Downloads</th>
-                <th>Last Download</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div class="a-empty" id="detailEmpty" style="display:none;">
-            <div class="big">✅</div>
-            No downloads recorded for this curriculum.
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
@@ -110,99 +88,129 @@
 <script>
 fnRequireAuth();
 
-var activeCurriculumId = null;
 var activeDownloads = [];
+var currentPage    = 1;
+var totalPages     = 1;
+var totalRecords   = 0;
+var currentQuery   = '';
+var searchTimer    = null;
+var PAGE_SIZE      = 25;
 
-// ── Summary view ──────────────────────────────────────────────
+// ── Fetch ─────────────────────────────────────────────────────
 
-async function loadSummary() {
-  const r = await fetch('/api/curricula/downloads/summary', { credentials: 'include' });
+async function loadDownloads(q, page) {
+  q    = (q || '').trim();
+  page = page || 1;
+  currentQuery = q;
+  currentPage  = page;
+
+  var params = new URLSearchParams({ page: page, limit: PAGE_SIZE });
+  if (q) params.set('q', q);
+
+  var r = await fetch('/api/curricula/downloads?' + params, { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
   if (!r.ok) { fnToast('Could not load downloads'); return; }
-  const { curricula } = await r.json();
-  renderSummary(curricula);
+  var data = await r.json();
+
+  activeDownloads = data.downloads || [];
+  totalPages      = data.pages    || 1;
+  totalRecords    = data.total    || 0;
+
+  document.getElementById('clearBtn').style.display = q ? '' : 'none';
+  renderTable();
+  renderPagination();
 }
 
-function renderSummary(curricula) {
-  const tbody = document.querySelector('#summaryTable tbody');
-  document.getElementById('summaryEmpty').style.display = curricula.length ? 'none' : '';
-  document.querySelector('#summaryTable').style.display = curricula.length ? '' : 'none';
-  tbody.innerHTML = curricula.map(c => `
-    <tr class="dl-row-clickable" onclick="showDetail(${c.id}, ${JSON.stringify(c.title)})">
-      <td class="teacher-name">${fnEsc(c.title)}</td>
-      <td>${fnEsc(c.series || '—')}</td>
-      <td style="text-align:center;">${c.teacher_count}</td>
-      <td style="text-align:center;">${c.total_downloads}</td>
-      <td>${c.last_download ? fnFormatDate(c.last_download) : '—'}</td>
-    </tr>
-  `).join('');
-}
+// ── Render table ──────────────────────────────────────────────
 
-// ── Detail view ───────────────────────────────────────────────
+function renderTable() {
+  var tbody = document.getElementById('dlTbody');
+  var empty = document.getElementById('dlEmpty');
+  var table = document.getElementById('dlTable');
 
-async function showDetail(id, title) {
-  activeCurriculumId = id;
-  document.getElementById('detailTitle').textContent = title;
-  document.getElementById('pageTitle').textContent = 'Curriculum Downloads';
-  document.getElementById('viewSummary').style.display = 'none';
-  document.getElementById('viewDetail').style.display = '';
-  await loadDetail();
-}
+  if (!activeDownloads.length) {
+    table.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+  table.style.display = '';
+  empty.style.display = 'none';
 
-async function loadDetail() {
-  const r = await fetch('/api/curricula/' + activeCurriculumId + '/downloads', { credentials: 'include' });
-  if (!r.ok) { fnToast('Could not load teacher downloads'); return; }
-  const data = await r.json();
-  activeDownloads = data.downloads;
-  renderDetail();
-}
-
-function renderDetail() {
-  const tbody = document.querySelector('#detailTable tbody');
-  document.getElementById('detailEmpty').style.display = activeDownloads.length ? 'none' : '';
-  document.getElementById('detailTable').style.display = activeDownloads.length ? '' : 'none';
-  document.getElementById('resetAllBtn').style.display = activeDownloads.length ? '' : 'none';
-
-  tbody.innerHTML = activeDownloads.map((d, i) => {
-    var name = (d.firstName || d.lastName) ? fnEsc(d.firstName + ' ' + d.lastName).trim() : '';
+  tbody.innerHTML = activeDownloads.map(function(d, i) {
+    var name = (d.firstName || d.lastName)
+      ? fnEsc((d.firstName || '') + ' ' + (d.lastName || '')).trim()
+      : '';
     var limitText = d.downloadLimit > 0
       ? d.count + ' / ' + d.downloadLimit
-      : d.count + '';
+      : '' + d.count;
     var barPct = d.downloadLimit > 0
       ? Math.min(100, Math.round(d.count / d.downloadLimit * 100))
       : 0;
-    var full = d.downloadLimit > 0 && d.count >= d.downloadLimit;
+    var full    = d.downloadLimit > 0 && d.count >= d.downloadLimit;
     var barHtml = d.downloadLimit > 0
       ? '<div class="dl-count-bar"><div class="dl-bar-track"><div class="dl-bar-fill' + (full ? ' full' : '') + '" style="width:' + barPct + '%"></div></div></div>'
       : '';
-    return `
-      <tr>
-        <td class="${name ? 'teacher-name' : 'no-data'}">${name || '(unregistered)'}</td>
-        <td>${fnEsc(d.teacherEmail)}</td>
-        <td class="${d.school ? '' : 'no-data'}">${d.school ? fnEsc(d.school) : '—'}</td>
-        <td id="dlcount_${i}">
-          <span style="font-variant-numeric:tabular-nums;">${fnEsc(limitText)}</span>
-          ${barHtml}
-          <div class="dl-count-text">${full ? 'Limit reached' : ''}</div>
-        </td>
-        <td>${d.lastDownload ? fnFormatDate(d.lastDownload) : '—'}</td>
-        <td style="white-space:nowrap;">
-          <button class="dl-reset-btn" onclick="editCount(${i})">Edit</button>
-          <button class="dl-reset-btn" onclick="resetOne(${JSON.stringify(d.teacherEmail)})">↺ Reset</button>
-        </td>
-      </tr>
-    `;
+    return '<tr>' +
+      '<td class="' + (name ? 'teacher-name' : 'no-data') + '">' + (name || '(unregistered)') + '</td>' +
+      '<td>' + fnEsc(d.teacherEmail) + '</td>' +
+      '<td class="' + (d.school ? '' : 'no-data') + '">' + (d.school ? fnEsc(d.school) : '&mdash;') + '</td>' +
+      '<td>' + fnEsc(d.curriculumTitle || '') + '</td>' +
+      '<td id="dlcount_' + i + '">' +
+        '<span style="font-variant-numeric:tabular-nums;">' + fnEsc(limitText) + '</span>' +
+        barHtml +
+        '<div class="dl-count-text">' + (full ? 'Limit reached' : '') + '</div>' +
+      '</td>' +
+      '<td>' + (d.lastDownload ? fnFormatDate(d.lastDownload) : '&mdash;') + '</td>' +
+      '<td><button class="dl-reset-btn" onclick="editCount(' + i + ')">Edit</button></td>' +
+      '</tr>';
   }).join('');
 }
 
-function showSummary() {
-  activeCurriculumId = null;
-  document.getElementById('viewDetail').style.display = 'none';
-  document.getElementById('viewSummary').style.display = '';
-  loadSummary();
+// ── Pagination ────────────────────────────────────────────────
+
+function renderPagination() {
+  var pag     = document.getElementById('dlPagination');
+  var info    = document.getElementById('dlPageInfo');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+
+  if (totalRecords === 0) { pag.style.display = 'none'; return; }
+  pag.style.display = '';
+
+  var start = (currentPage - 1) * PAGE_SIZE + 1;
+  var end   = Math.min(currentPage * PAGE_SIZE, totalRecords);
+  info.textContent = 'Showing ' + start + '–' + end + ' of ' + totalRecords;
+
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
 }
 
-// ── Edit count ────────────────────────────────────────────────
+function goPage(page) {
+  if (page < 1 || page > totalPages) return;
+  loadDownloads(currentQuery, page);
+}
+
+// ── Search ────────────────────────────────────────────────────
+
+function doSearch() {
+  loadDownloads(document.getElementById('searchInput').value, 1);
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  loadDownloads('', 1);
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 350);
+});
+
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { clearTimeout(searchTimer); doSearch(); }
+});
+
+// ── Inline edit ───────────────────────────────────────────────
 
 function editCount(idx) {
   var d = activeDownloads[idx];
@@ -210,7 +218,7 @@ function editCount(idx) {
   document.getElementById('dlcount_' + idx).innerHTML =
     '<input class="dl-count-input" type="number" min="0" id="dlcount_input_' + idx + '" value="' + d.count + '">' +
     '<button class="dl-reset-btn" style="margin-left:4px;" onclick="saveCount(' + idx + ')">Save</button>' +
-    '<button class="dl-reset-btn" onclick="renderDetail()">✕</button>';
+    '<button class="dl-reset-btn" onclick="renderTable()">✕</button>';
   var inp = document.getElementById('dlcount_input_' + idx);
   inp.focus();
   inp.select();
@@ -221,7 +229,7 @@ async function saveCount(idx) {
   if (!d) return;
   var newCount = parseInt(document.getElementById('dlcount_input_' + idx).value, 10);
   if (isNaN(newCount) || newCount < 0) { fnToast('Enter a valid number (0 or more)'); return; }
-  var r = await fetch('/api/curricula/' + activeCurriculumId + '/downloads', {
+  var r = await fetch('/api/curricula/' + d.curriculumId + '/downloads', {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -229,35 +237,8 @@ async function saveCount(idx) {
   });
   if (!r.ok) { fnToast('Could not update count'); return; }
   fnToast('Count updated');
-  await loadDetail();
-  loadSummary();
-}
-
-// ── Reset actions ─────────────────────────────────────────────
-
-async function resetOne(email) {
-  if (!confirm('Reset download count for ' + email + '?')) return;
-  const r = await fetch(
-    '/api/curricula/' + activeCurriculumId + '/downloads?teacherEmail=' + encodeURIComponent(email),
-    { method: 'DELETE', credentials: 'include' }
-  );
-  if (!r.ok) { fnToast('Reset failed'); return; }
-  fnToast('Count reset for ' + email);
-  await loadDetail();
-  loadSummary();
-}
-
-async function resetAll() {
-  const titleEl = document.getElementById('detailTitle');
-  if (!confirm('Reset all download counts for "' + titleEl.textContent + '"?')) return;
-  const r = await fetch(
-    '/api/curricula/' + activeCurriculumId + '/downloads',
-    { method: 'DELETE', credentials: 'include' }
-  );
-  if (!r.ok) { fnToast('Reset failed'); return; }
-  fnToast('All counts reset');
-  await loadDetail();
-  loadSummary();
+  activeDownloads[idx].count = newCount;
+  renderTable();
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -266,7 +247,7 @@ function fnEsc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-loadSummary();
+loadDownloads('', 1);
 </script>
 </body>
 </html>
