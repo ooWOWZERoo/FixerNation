@@ -176,7 +176,8 @@ function renderBody() {
 
   // Student Handout — check resources table first, then fall back to lesson documents
   var handoutResource = (lesson.resources || []).find(function(r){ return r.resource === 'Student Handout'; });
-  var handoutUrl = (handoutResource && handoutResource.filePath) ? handoutResource.filePath
+  var handoutUrl = handoutResource
+    ? '/api/curricula/' + lesson.id + '/file?resource=Student+Handout'
     : ((lesson.documents || []).length ? lesson.documents[0].filePath : null);
   if (handoutUrl) {
     var handoutName = (handoutResource && handoutResource.fileName) ? handoutResource.fileName : 'Student Handout';

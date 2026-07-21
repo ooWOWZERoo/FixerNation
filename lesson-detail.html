@@ -211,7 +211,7 @@ async function openResource(curriculumId, resourceName) {
   }
   const entry = (c.resources || []).find(x => x.resource === resourceName);
   if (entry && entry.filePath) {
-    window.open(entry.filePath, '_blank');
+    window.open('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), '_blank');
   } else {
     showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Curriculum Builder.');
   }

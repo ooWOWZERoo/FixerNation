@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
 const { getSiteUser, hasActiveLicense } = require('../lib/access');
@@ -103,6 +104,73 @@ router.get('/:id', async (req, res) => {
   const [curriculum] = await attachChildren(rows);
   const [gated] = await gateAccess([serialize(curriculum)], req);
   res.json({ curriculum: gated });
+});
+
+// Protected file serving — auth checked, download limit enforced for licensed teachers
+router.get('/:id/file', async (req, res) => {
+  const id = req.params.id;
+  const resourceType = req.query.resource;
+  const forceDownload = req.query.download === '1';
+
+  if (!resourceType) return res.status(400).json({ error: 'resource query param required' });
+
+  const isAdmin = !!getAuthUser(req);
+  const siteUser = isAdmin ? null : await getSiteUser(req);
+
+  if (!isAdmin && !siteUser) {
+    return res.status(401).json({ error: 'Sign in to access this file' });
+  }
+
+  const licensed = isAdmin || await hasActiveLicense(siteUser.id);
+
+  // Students (authenticated but unlicensed) may only access the Student Handout
+  if (!licensed && resourceType !== 'Student Handout') {
+    return res.status(403).json({ error: 'A teacher license is required to access this resource' });
+  }
+
+  const [rows] = await pool.query(
+    'SELECT file_path, file_name FROM curriculum_resources WHERE curriculum_id = ? AND resource = ?',
+    [id, resourceType]
+  );
+  if (!rows[0] || !rows[0].file_path) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+
+  const { file_path, file_name } = rows[0];
+
+  // For licensed teachers on an explicit download: enforce limit and record
+  if (licensed && !isAdmin && forceDownload) {
+    const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
+    const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
+
+    if (limit > 0) {
+      const [existing] = await pool.query(
+        'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?',
+        [id, siteUser.email]
+      );
+      const currentCount = existing[0] ? existing[0].count : 0;
+      if (currentCount >= limit) {
+        return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit });
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
+       VALUES (?, ?, 1, NOW())
+       ON DUPLICATE KEY UPDATE count = count + 1, last_download = NOW()`,
+      [id, siteUser.email]
+    );
+  }
+
+  const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
+  const filename = path.basename(file_path);
+  const absolutePath = path.join(uploadsDir, filename);
+
+  res.setHeader('Content-Disposition',
+    `${forceDownload ? 'attachment' : 'inline'}; filename="${file_name || filename}"`);
+  res.sendFile(absolutePath, { dotfiles: 'deny' }, function(err) {
+    if (err && !res.headersSent) res.status(404).json({ error: 'File not found on disk' });
+  });
 });
 
 router.put('/reorder', requireAuth, async (req, res) => {
