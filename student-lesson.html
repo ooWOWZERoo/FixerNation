@@ -199,14 +199,7 @@ function renderBody() {
     html += '</div>';
   }
 
-  // Documents
-  if ((lesson.documents || []).length) {
-    html += '<div class="card"><div class="card-title">Downloads</div>';
-    lesson.documents.forEach(function(d, i) {
-      html += '<div class="doc-item"><div class="doc-icon">📄</div><div class="doc-name">' + esc(d.fileName || d.filePath) + '</div><a href="/api/curricula/' + lesson.id + '/file?doc=' + i + '&download=1" target="_blank" rel="noopener">Download</a></div>';
-    });
-    html += '</div>';
-  }
+  // Lesson plan documents are teacher-only — do not render for students
 
   document.getElementById('lessonBody').innerHTML = html;
 }

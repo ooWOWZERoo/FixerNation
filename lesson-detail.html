@@ -302,7 +302,10 @@ function renderDetailResources(c) {
     });
   }
 
-  // Resource buttons — viewable by everyone; download only for licensed teachers
+  // Resource buttons:
+  //   Student Handout, Classroom Poster — view for everyone; download for licensed only
+  //   Everything else (Teacher Copy, Quiz + Answer Key, etc.) — licensed only
+  const PUBLIC_VIEW = ['Student Handout', 'Classroom Poster'];
   resources.forEach(r => {
     if (r.resource === 'Quiz + Answer Key') {
       if (licensed) {
@@ -311,19 +314,22 @@ function renderDetailResources(c) {
       return;
     }
     if (r.filePath) {
-      parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
+      const canView = licensed || PUBLIC_VIEW.includes(r.resource);
+      if (canView) {
+        parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
+      }
       if (licensed) {
         parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;" title="Download ${r.resource}">↓</a>`);
       }
     }
   });
 
-  // Lock notice for documents + quiz — shown when not licensed
+  // Lock notice — shown when not licensed
   if (!licensed) {
     const loginPrompt = loggedIn
       ? ''
       : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
-    parts.push(`<div class="locked-panel" style="margin-top:${resources.length ? '12px' : '0'}">🔒 Lesson plans and the quiz require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`);
+    parts.push(`<div class="locked-panel" style="margin-top:${resources.length ? '12px' : '0'}">🔒 Teacher Copy, lesson plans, and the quiz require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`);
   }
 
   if (!parts.length) {

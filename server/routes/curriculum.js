@@ -106,9 +106,14 @@ router.get('/:id', async (req, res) => {
   res.json({ curriculum: gated });
 });
 
-// File serving — viewing is public; downloading requires a teacher license.
-// ?resource=<type>  curriculum_resources file (public view; teacher-only download; quiz always teacher-only)
-// ?doc=<index>      curriculum_documents file (teacher-only view and download)
+// File serving access rules:
+//   Student Handout  — anyone can view; download requires a teacher license
+//   Classroom Poster — anyone can view; download requires a teacher license
+//   Teacher Copy     — requires teacher license for view AND download
+//   Quiz + Answer Key — requires teacher license for view AND download
+//   Lesson plan docs (?doc=) — requires teacher license for view AND download
+// ?resource=<type>  curriculum_resources file
+// ?doc=<index>      curriculum_documents file
 // &download=1       attachment mode — checked and tracked for licensed teachers
 router.get('/:id/file', async (req, res) => {
   const id = req.params.id;
@@ -145,14 +150,17 @@ router.get('/:id/file', async (req, res) => {
     file_path = doc.file_path;
     file_name = doc.file_name;
   } else {
-    // Quiz + Answer Key requires teacher license even to view
-    if (resourceType === 'Quiz + Answer Key' && !licensed) {
+    // Public-viewable resources — anyone can open these in the modal viewer
+    const PUBLIC_VIEW_RESOURCES = ['Student Handout', 'Classroom Poster'];
+
+    // Quiz + Answer Key and all non-public resources require teacher license even to view
+    if (!licensed && (resourceType === 'Quiz + Answer Key' || !PUBLIC_VIEW_RESOURCES.includes(resourceType))) {
       return siteUser
-        ? res.status(403).json({ error: 'A teacher license is required to access the Quiz + Answer Key' })
-        : res.status(401).json({ error: 'Sign in to access this file' });
+        ? res.status(403).json({ error: 'A teacher license is required to access this resource' })
+        : res.status(401).json({ error: 'Sign in to access this resource' });
     }
 
-    // Downloading requires a teacher license; viewing is public
+    // Student Handout / Classroom Poster: downloading still requires a teacher license
     if (forceDownload && !licensed) {
       return siteUser
         ? res.status(403).json({ error: 'A teacher license is required to download files' })
