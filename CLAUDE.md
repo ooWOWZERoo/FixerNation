@@ -143,7 +143,13 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
 
 5. **Restart the Node app** (cPanel → Setup Node.js App panel) if any `server/` code changed. `git pull` alone leaves old code running in memory — new routes 404 with Express's own page, not a server crash. **pm2 is not installed** on this host.
 
-6. For schema changes to existing tables: run the one-off alter script via `node scripts/alter-whatever.js` (with prefix). `migrate.js` silently no-ops on existing tables.
+6. For schema changes to existing tables: run the one-off alter script with the nodevenv prefix:
+   ```bash
+   source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
+     cd /home/fixernat/repositories/fixernation/server && \
+     node scripts/alter-whatever.js
+   ```
+   `migrate.js` silently no-ops on existing tables.
 
 When giving deploy instructions after a push, always specify:
 - Which HTML files to include in the `rsync` (or use the broad `rsync` above for large changes)
