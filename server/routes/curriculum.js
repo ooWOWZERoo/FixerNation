@@ -106,40 +106,70 @@ router.get('/:id', async (req, res) => {
   res.json({ curriculum: gated });
 });
 
-// Protected file serving — auth checked, download limit enforced for licensed teachers
+// File serving — viewing is public; downloading requires a teacher license.
+// ?resource=<type>  curriculum_resources file (public view; teacher-only download; quiz always teacher-only)
+// ?doc=<index>      curriculum_documents file (teacher-only view and download)
+// &download=1       attachment mode — checked and tracked for licensed teachers
 router.get('/:id/file', async (req, res) => {
   const id = req.params.id;
   const resourceType = req.query.resource;
+  const docIndex = req.query.doc !== undefined ? parseInt(req.query.doc, 10) : null;
   const forceDownload = req.query.download === '1';
 
-  if (!resourceType) return res.status(400).json({ error: 'resource query param required' });
+  if (!resourceType && docIndex === null) {
+    return res.status(400).json({ error: 'resource or doc query param required' });
+  }
 
   const isAdmin = !!getAuthUser(req);
   const siteUser = isAdmin ? null : await getSiteUser(req);
+  const licensed = isAdmin || !!(siteUser && await hasActiveLicense(siteUser.id));
 
-  if (!isAdmin && !siteUser) {
-    return res.status(401).json({ error: 'Sign in to access this file' });
+  let file_path, file_name;
+
+  if (docIndex !== null) {
+    // Lesson plan documents — always require teacher license
+    if (!licensed) {
+      return siteUser
+        ? res.status(403).json({ error: 'A teacher license is required to access lesson plan documents' })
+        : res.status(401).json({ error: 'Sign in to access this file' });
+    }
+    let docRows = [];
+    try {
+      [docRows] = await pool.query(
+        'SELECT file_path, file_name FROM curriculum_documents WHERE curriculum_id = ? ORDER BY sort_order',
+        [id]
+      );
+    } catch (_) {}
+    const doc = docRows[docIndex];
+    if (!doc || !doc.file_path) return res.status(404).json({ error: 'Document not found' });
+    file_path = doc.file_path;
+    file_name = doc.file_name;
+  } else {
+    // Quiz + Answer Key requires teacher license even to view
+    if (resourceType === 'Quiz + Answer Key' && !licensed) {
+      return siteUser
+        ? res.status(403).json({ error: 'A teacher license is required to access the Quiz + Answer Key' })
+        : res.status(401).json({ error: 'Sign in to access this file' });
+    }
+
+    // Downloading requires a teacher license; viewing is public
+    if (forceDownload && !licensed) {
+      return siteUser
+        ? res.status(403).json({ error: 'A teacher license is required to download files' })
+        : res.status(401).json({ error: 'Sign in to download files' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT file_path, file_name FROM curriculum_resources WHERE curriculum_id = ? AND resource = ?',
+      [id, resourceType]
+    );
+    if (!rows[0] || !rows[0].file_path) return res.status(404).json({ error: 'File not found' });
+    file_path = rows[0].file_path;
+    file_name = rows[0].file_name;
   }
 
-  const licensed = isAdmin || await hasActiveLicense(siteUser.id);
-
-  // Students (authenticated but unlicensed) may only access the Student Handout
-  if (!licensed && resourceType !== 'Student Handout') {
-    return res.status(403).json({ error: 'A teacher license is required to access this resource' });
-  }
-
-  const [rows] = await pool.query(
-    'SELECT file_path, file_name FROM curriculum_resources WHERE curriculum_id = ? AND resource = ?',
-    [id, resourceType]
-  );
-  if (!rows[0] || !rows[0].file_path) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-
-  const { file_path, file_name } = rows[0];
-
-  // For licensed teachers on an explicit download: enforce limit and record
-  if (licensed && !isAdmin && forceDownload) {
+  // Licensed teachers on an explicit download: check limit and record
+  if (forceDownload && licensed && !isAdmin && siteUser) {
     const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
     const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
 

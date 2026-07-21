@@ -200,21 +200,57 @@ function showInfoToast(msg) {
 }
 
 async function openResource(curriculumId, resourceName) {
-  const r = await fetch(`/api/curricula/${curriculumId}`, { credentials: 'include' });
-  if (!r.ok) return;
-  const c = (await r.json()).curriculum;
-  if (!c) return;
-  fnTrackEvent('resource_open', `${c.title} — ${resourceName}`);
   if (resourceName === 'Quiz + Answer Key') {
-    openQuizModal(c);
+    const r = await fetch(`/api/curricula/${curriculumId}`, { credentials: 'include' });
+    if (!r.ok) return;
+    const c = (await r.json()).curriculum;
+    if (c) openQuizModal(c);
     return;
   }
-  const entry = (c.resources || []).find(x => x.resource === resourceName);
-  if (entry && entry.filePath) {
-    window.open('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), '_blank');
-  } else {
-    showInfoToast(resourceName + ' is marked as included by the admin, but no file is attached yet — add one in the Curriculum Builder.');
+  fnTrackEvent('resource_open', resourceName);
+  window.open('/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName), '_blank');
+}
+
+function openDoc(curriculumId, docIndex) {
+  window.open('/api/curricula/' + curriculumId + '/file?doc=' + docIndex, '_blank');
+}
+
+async function _fetchAndDownload(url, fallbackName) {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (r.status === 429) {
+      const data = await r.json();
+      showInfoToast('Download limit reached (' + data.count + '/' + data.limit + ') for this curriculum.');
+      return;
+    }
+    if (!r.ok) {
+      showInfoToast('Could not download this file — please try again.');
+      return;
+    }
+    const cd = r.headers.get('Content-Disposition');
+    const match = cd && cd.match(/filename="(.+)"/);
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = match ? match[1] : fallbackName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    showInfoToast('Download failed — please check your connection.');
   }
+}
+
+function downloadResource(curriculumId, resourceName) {
+  _fetchAndDownload(
+    '/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(resourceName) + '&download=1',
+    resourceName + '.pdf'
+  );
+}
+
+function downloadDoc(curriculumId, docIndex) {
+  _fetchAndDownload('/api/curricula/' + curriculumId + '/file?doc=' + docIndex + '&download=1', 'document.pdf');
 }
 
 function optionLetter(index) {
@@ -258,16 +294,28 @@ function renderDetailResources(c) {
 
   const parts = [];
 
-  // Lesson plan documents — licensed users only
+  // Lesson plan documents — licensed teachers: view + download
   if (licensed && documents.length) {
-    documents.forEach(d => {
-      parts.push(`<a href="${d.filePath}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">📄 ${d.fileName || 'Lesson Plan'}</a>`);
+    documents.forEach((d, i) => {
+      parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openDoc(${c.id}, ${i}); return false;">📄 ${d.fileName || 'Lesson Plan'}</a>`);
+      parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadDoc(${c.id}, ${i}); return false;" title="Download">↓</a>`);
     });
   }
 
-  // Resource / handout buttons — visible to all
+  // Resource buttons — viewable by everyone; download only for licensed teachers
   resources.forEach(r => {
-    parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
+    if (r.resource === 'Quiz + Answer Key') {
+      if (licensed) {
+        parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, 'Quiz + Answer Key'); return false;">Quiz + Answer Key</a>`);
+      }
+      return;
+    }
+    if (r.filePath) {
+      parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
+      if (licensed) {
+        parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;" title="Download ${r.resource}">↓</a>`);
+      }
+    }
   });
 
   // Lock notice for documents + quiz — shown when not licensed
