@@ -11,6 +11,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 - **Auth:** two independent JWT-in-cookie systems — `fn_session` for the single admin login, `fn_user_session` for public site-user accounts (teachers/schools). They never cross.
 - **Email:** real SMTP via `nodemailer` (`server/lib/mailer.js`), currently a cPanel-hosted mailbox. No third-party ESP (SendGrid/Mailgun/etc.) — see the Known Limitations note on email tracking below.
 - **File uploads:** `/api/uploads`, real files (not just filename references) for book covers, curriculum videos/documents, blog images.
+- **Curriculum file serving:** curriculum resources (handouts, teacher copies, posters, videos) and lesson-plan documents are never linked directly from `/uploads/`. They are served exclusively through `GET /api/curricula/:id/file?resource=<name>` (or `?doc=<index>`), which enforces the access matrix (view-only for anonymous, counted download for licensed teachers, unrestricted for admin) and records hits in `curriculum_downloads`. Files render via `pdf-modal.js` on the front end — no native browser PDF viewer, no direct URL exposure.
 - **Deploy workflow:** commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation`, **public repo — never commit real PII or secrets**) → in cPanel Terminal: `git pull` in the git clone, `rsync` the static files into `public_html` (excluding `server/`, `api/`, `uploads/` — see `CLAUDE.md`), `npm install` if `server/package.json` changed, restart the Node app if any `server/` code changed. Schema changes to *existing* tables need a manual one-off migration script (see `server/scripts/alter-*.js` for examples) since `migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`.
 
 ## Public site pages (v1 = primary, `-v2` = frozen alternate)
@@ -34,6 +35,7 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Programs | programs.html | programs-v2.html |
 | FN Blogs | blog.html | blog-v2.html |
 | Lesson plan detail — overview preserves paragraph/line-break formatting (v1 only) | lesson-detail.html?id=&lt;curriculumId&gt; | — |
+| Student classroom view (assigned curricula, handout/quiz access, gated by seat) | student-lesson.html?id=&lt;curriculumId&gt; | — |
 | School license pricing / checkout (v1 only) | licenses.html | — |
 | Shopping cart (v1 only) | cart.html | — |
 | Self-service license management (v1 only) | my-license.html | — |
@@ -50,7 +52,9 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Book product configuration (CRUD, Amazon format pricing) | admin-books.html |
 | Curriculum builder (CRUD, resources, quiz, download-limit testing) | admin-curriculum.html |
 | Blog builder (CRUD, multi-category, SEO fields, membership gating, scheduling; excerpt up to 500 chars with live counter) | admin-blogs.html |
+| Teacher Downloads — cross-curriculum download tracking (search/paginate by teacher/email/school/curriculum, reset per-teacher or per-curriculum) | admin-downloads.html |
 | Morning Boost Studio (calendar-aware post prefill, ElevenLabs batch voice-over generation) | admin-morning-boost.html |
+| Morning Boost Email (schedule & status, manual send trigger for the daily email) | admin-morning-boost-email.html |
 | Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
 | Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
 | License products, school-domain lookup/management | admin-licenses.html |
@@ -58,7 +62,8 @@ Production site and admin backend for Fixer Nation Education, live at **fixernat
 | Automated emails (thank-yous, renewal reminder, payment-failed, invoice-paid, seat invite) | admin-automations.html |
 | Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
 | Settings (own password, admin management, contact-form email routing for 4 forms, invoice branding) | admin-settings.html |
-| Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes; current version: **v15**) |
+| Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes; current version: **v16**) |
+| Shared curriculum file viewer | pdf-modal.js — lazy-loads PDF.js 3.11.174 (cdnjs), renders PDFs as canvas and images as `<img>` in a modal overlay. Exposes `window.openPdfModal(url, title)` / `window.closePdfModal()`. Used by education-portal.html, lesson-detail.html, student-lesson.html. |
 
 Admin styling uses FN's own brand palette (teal/coral/gold) with a light/dark theme, toggled from the topbar and persisted in `localStorage`. `admin-login.html` intentionally stays a fixed brand-teal gradient regardless of theme choice. The login/accept-invite/invoice-print pages have their own self-contained styles and don't participate in the shared theme.
 
@@ -105,6 +110,7 @@ Email campaigns (`admin-campaigns.html`) send for real via SMTP, always excludin
 - **Stripe checkout isn't live yet** — see Licensing & checkout and Memberships above.
 - **ElevenLabs voice-over generation isn't live yet** — see Blog & Morning Boost above. Image generation and video assembly for Morning Boost remain fully manual by design (deferred, not started).
 - **The renewal-reminder/expiry cron depends on the cPanel Cron Job staying configured** — if it's ever removed or misconfigured, reminders/expirations just silently stop (no alerting on a missed run). Verify with `node scripts/send-membership-reminders.js` in cPanel Terminal if renewal reminders seem to have stopped.
+- **Curriculum download limits are enforced per-teacher per-curriculum**, tracked in `curriculum_downloads`. A `download_limit` of 0 on the curriculum row means unlimited. The limit is checked server-side in the file-serving endpoint; the front end shows no special UI for it (a teacher who has hit their limit gets a 429 response shown inline in the PDF modal).
 - **No automated tests.** All verification is manual (curl with cookie jars, or the browser) after each deploy.
 - **`-v2` pages are frozen** by original project decision, not neglected.
 - **`privacy-choices.html`'s "we don't sell/share data" framing reflects what's actually implemented today** — no third-party ad trackers, no data brokers, sessionStorage-only anonymous analytics. This isn't legal advice; if a real third-party data relationship is ever added, that page needs to be revisited. The analytics opt-out toggle on that page sets a real `localStorage` flag (`fnAnalyticsOptOut`) that `fnTrackEvent`/`fnTrackPageview` check before firing.
