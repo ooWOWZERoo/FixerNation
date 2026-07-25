@@ -123,6 +123,13 @@ router.post('/posts', requireAuth, async (req, res) => {
     }
     const categories = Array.isArray(p.categories) && p.categories.length ? [...new Set(p.categories)] : [p.category];
     await connection.query('INSERT INTO blog_post_categories (post_id, category) VALUES ' + categories.map(() => '(?, ?)').join(', '), categories.flatMap(c => [result.insertId, c]));
+    if (p.publishDate && /^\d{4}-\d{2}-\d{2}$/.test(p.publishDate) && categories.some(c => c.toLowerCase().trim() === 'morning boost')) {
+      await connection.query(
+        `INSERT INTO morning_boost_calendar (boost_date, blog_post_id) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE blog_post_id = VALUES(blog_post_id)`,
+        [p.publishDate, result.insertId]
+      );
+    }
     await connection.commit();
 
     const [rows] = await pool.query('SELECT * FROM blog_posts WHERE id = ?', [result.insertId]);
@@ -170,6 +177,13 @@ router.put('/posts/:id', requireAuth, async (req, res) => {
     await connection.query('DELETE FROM blog_post_categories WHERE post_id = ?', [req.params.id]);
     const categories = Array.isArray(p.categories) && p.categories.length ? [...new Set(p.categories)] : [p.category];
     await connection.query('INSERT INTO blog_post_categories (post_id, category) VALUES ' + categories.map(() => '(?, ?)').join(', '), categories.flatMap(c => [req.params.id, c]));
+    if (p.publishDate && /^\d{4}-\d{2}-\d{2}$/.test(p.publishDate) && categories.some(c => c.toLowerCase().trim() === 'morning boost')) {
+      await connection.query(
+        `INSERT INTO morning_boost_calendar (boost_date, blog_post_id) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE blog_post_id = VALUES(blog_post_id)`,
+        [p.publishDate, req.params.id]
+      );
+    }
     await connection.commit();
 
     const [rows] = await pool.query('SELECT * FROM blog_posts WHERE id = ?', [req.params.id]);
