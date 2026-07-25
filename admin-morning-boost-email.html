@@ -211,8 +211,8 @@
           </div>
           <p style="font-size:13px;color:var(--a-text-soft);margin-bottom:16px;">Connect a blog post to each date. When the daily email runs, it pulls the post linked to that day. No link means the email falls back to your fallback message.</p>
           <table class="sched-table">
-            <thead><tr><th>Date</th><th>Linked Post</th><th style="width:200px;"></th></tr></thead>
-            <tbody id="schedBody"><tr><td colspan="3" style="text-align:center;padding:32px;color:var(--a-text-soft);">Loading…</td></tr></tbody>
+            <thead><tr><th>Date</th><th>Theme / Series</th><th>Linked Post</th><th style="width:220px;"></th></tr></thead>
+            <tbody id="schedBody"><tr><td colspan="4" style="text-align:center;padding:32px;color:var(--a-text-soft);">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -556,16 +556,43 @@ async function loadSchedule() {
     const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     const entry = entryMap[iso];
     const hasPost = entry && entry.blogPostId;
+    const themeCell = entry
+      ? `<div style="font-size:12px;font-weight:600;">${entry.theme || '—'}</div><div style="font-size:11px;color:var(--a-text-soft);">${entry.series || ''}</div>`
+      : `<span style="color:var(--a-text-soft);font-size:12px;">—</span>`;
     const postCell = hasPost
       ? `<span class="post-linked">${entry.postTitle || '(untitled)'}</span><span class="pub-badge ${entry.postPublished ? 'pub-yes' : 'pub-no'}">${entry.postPublished ? 'Published' : 'Draft'}</span>`
       : `<span class="post-unlinked">— not linked —</span>`;
-    const actions = hasPost
-      ? `<button class="a-btn" style="font-size:12px;padding:5px 10px;" onclick="openLinkModal('${iso}')">Change</button>
-         <button class="a-btn" style="font-size:12px;padding:5px 10px;margin-left:6px;" onclick="unlinkPost('${iso}')">Unlink</button>`
-      : `<button class="a-btn a-btn-primary" style="font-size:12px;padding:5px 10px;" onclick="openLinkModal('${iso}')">Link Post</button>`;
-    rows.push(`<tr><td style="white-space:nowrap;font-weight:500;">${label}</td><td>${postCell}</td><td>${actions}</td></tr>`);
+    let actions;
+    if (hasPost) {
+      actions = `<a href="admin-blogs.html?edit=${entry.blogPostId}" class="a-btn" style="font-size:12px;padding:5px 10px;">Edit Post</a>
+         <button class="a-btn" style="font-size:12px;padding:5px 10px;margin-left:6px;" onclick="openLinkModal('${iso}')">Change</button>
+         <button class="a-btn" style="font-size:12px;padding:5px 10px;margin-left:6px;" onclick="unlinkPost('${iso}')">Unlink</button>`;
+    } else if (entry) {
+      actions = `<button class="a-btn a-btn-primary" style="font-size:12px;padding:5px 10px;" onclick="createPost('${iso}')">Create Post</button>
+         <button class="a-btn" style="font-size:12px;padding:5px 10px;margin-left:6px;" onclick="openLinkModal('${iso}')">Link Post</button>`;
+    } else {
+      actions = `<button class="a-btn a-btn-primary" style="font-size:12px;padding:5px 10px;" onclick="openLinkModal('${iso}')">Link Post</button>`;
+    }
+    rows.push(`<tr><td style="white-space:nowrap;font-weight:500;">${label}</td><td>${themeCell}</td><td>${postCell}</td><td>${actions}</td></tr>`);
   }
-  document.getElementById('schedBody').innerHTML = rows.join('');
+  document.getElementById('schedBody').innerHTML = rows.join('') || `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--a-text-soft);">No calendar entries in this range.</td></tr>`;
+}
+
+async function createPost(date) {
+  const res = await fetch('/api/morning-boost/batch-create-posts', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dates: [date] }),
+  });
+  const data = await res.json().catch(() => ({}));
+  const result = data.results && data.results[0];
+  if (result && result.ok && result.postId) {
+    location.href = `admin-blogs.html?edit=${result.postId}`;
+  } else if (result && result.skipped) {
+    fnToast('A post already exists for this date — use Link Post to connect it.');
+  } else {
+    fnToast((result && result.error) || data.error || 'Could not create post.');
+  }
 }
 
 async function openLinkModal(date) {

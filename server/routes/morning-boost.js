@@ -213,7 +213,7 @@ router.post('/batch-create-posts', requireAuth, async (req, res) => {
 router.get('/schedule', requireAuth, async (req, res) => {
   const days = Math.min(Number(req.query.days) || 14, 60);
   const [rows] = await pool.query(
-    `SELECT mbc.boost_date, mbc.blog_post_id,
+    `SELECT mbc.boost_date, mbc.blog_post_id, mbc.theme, mbc.series,
             bp.title AS post_title, bp.published AS post_published,
             bp.publish_date AS post_publish_date
      FROM morning_boost_calendar mbc
@@ -226,6 +226,8 @@ router.get('/schedule', requireAuth, async (req, res) => {
     entries: rows.map(r => ({
       date: r.boost_date ? r.boost_date.toString().slice(0, 10) : null,
       blogPostId: r.blog_post_id || null,
+      theme: r.theme || null,
+      series: r.series || null,
       postTitle: r.post_title || null,
       postPublished: r.post_published === 1,
       postPublishDate: r.post_publish_date ? r.post_publish_date.toString().slice(0, 10) : null,

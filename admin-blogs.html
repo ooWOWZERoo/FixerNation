@@ -770,7 +770,9 @@ async function bulkDuplicate() {
 
 (async function init() {
   blogTagsCache = await fetchBlogTags();
-  renderPosts();
+  await renderPosts();
+  const editId = new URLSearchParams(location.search).get('edit');
+  if (editId) editPost(Number(editId));
 })();
 </script>
 
