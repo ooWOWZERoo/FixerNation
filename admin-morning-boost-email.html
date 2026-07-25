@@ -263,6 +263,9 @@ async function loadConfig() {
   if (grpRes.ok) {
     const gd = await grpRes.json();
     _groups = gd.groups || [];
+  } else {
+    const fallback = await fetch('/api/newsletter/groups', { credentials: 'include' });
+    if (fallback.ok) { const gd = await fallback.json(); _groups = gd.groups || []; }
   }
 
   if (cfgRes.ok) {
