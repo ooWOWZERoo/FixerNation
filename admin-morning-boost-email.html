@@ -12,13 +12,13 @@
 <link rel="stylesheet" href="admin-common.css?v=16">
 <style>
 .mb-tabs{display:flex;gap:0;border-bottom:2px solid var(--a-border);margin-bottom:24px;}
-.mb-tab{padding:10px 22px;font-weight:600;font-size:14px;cursor:pointer;border:none;background:none;color:var(--a-muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
+.mb-tab{padding:10px 22px;font-weight:600;font-size:14px;cursor:pointer;border:none;background:none;color:var(--a-text-soft);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
 .mb-tab.active{color:var(--a-accent);border-bottom-color:var(--a-accent);}
 .mb-panel{display:none;}.mb-panel.active{display:block;}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .field-row.one{grid-template-columns:1fr;}
 .field-row.three{grid-template-columns:1fr 1fr 1fr;}
-.a-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--a-muted);}
+.a-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--a-text-soft);}
 .a-field input,.a-field select,.a-field textarea{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--a-border);background:var(--a-bg);color:var(--a-text);font-size:14px;font-family:inherit;}
 .a-field textarea{resize:vertical;min-height:120px;}
 .toggle-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
@@ -32,27 +32,27 @@
 .group-chip{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;border:1px solid var(--a-border);cursor:pointer;font-size:13px;font-weight:600;transition:background .15s,border-color .15s;}
 .group-chip.selected{background:var(--a-accent-soft);border-color:var(--a-accent);color:var(--a-accent);}
 .body-format-toggle{display:flex;gap:0;margin-bottom:10px;border:1px solid var(--a-border);border-radius:8px;overflow:hidden;width:fit-content;}
-.body-format-toggle button{padding:6px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--a-muted);transition:background .15s,color .15s;}
+.body-format-toggle button{padding:6px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--a-text-soft);transition:background .15s,color .15s;}
 .body-format-toggle button.active{background:var(--a-accent);color:#fff;}
-.merge-help{font-size:12px;color:var(--a-muted);margin-top:4px;line-height:1.5;}
+.merge-help{font-size:12px;color:var(--a-text-soft);margin-top:4px;line-height:1.5;}
 .merge-help code{background:var(--a-card);padding:1px 5px;border-radius:4px;font-family:monospace;}
 .status-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;gap:5px;}
 .chip-completed{background:#d1fadf;color:#0a5c2f;}
 .chip-failed{background:#fee2e2;color:#991b1b;}
 .chip-sending{background:#fef3c7;color:#92400e;}
-.chip-skipped{background:var(--a-card);color:var(--a-muted);}
-.chip-pending{background:var(--a-card);color:var(--a-muted);}
+.chip-skipped{background:var(--a-card);color:var(--a-text-soft);}
+.chip-pending{background:var(--a-card);color:var(--a-text-soft);}
 [data-theme=dark] .chip-completed{background:#0a3d20;color:#6ee7b7;}
 [data-theme=dark] .chip-failed{background:#450a0a;color:#fca5a5;}
 [data-theme=dark] .chip-sending{background:#451a03;color:#fcd34d;}
 .stat-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;}
 .stat-box{text-align:center;flex:1;min-width:80px;background:var(--a-card);border-radius:10px;padding:14px 10px;}
 .stat-box .sv{font-size:22px;font-weight:800;color:var(--a-accent);}
-.stat-box .sl{font-size:11px;color:var(--a-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.stat-box .sl{font-size:11px;color:var(--a-text-soft);font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
 .send-row{cursor:pointer;transition:background .15s;}
 .send-row:hover{background:var(--a-card);}
 .recip-table{width:100%;border-collapse:collapse;font-size:13px;}
-.recip-table th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--a-border);}
+.recip-table th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--a-text-soft);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--a-border);}
 .recip-table td{padding:8px 10px;border-bottom:1px solid var(--a-border);}
 </style>
 </head>
@@ -104,7 +104,7 @@
               </select>
             </div>
           </div>
-          <p style="font-size:12px;color:var(--a-muted);">The cron job must run every 5 minutes. Cron command: <code style="font-size:11px;background:var(--a-card);padding:2px 6px;border-radius:4px;">source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate &amp;&amp; cd /home/fixernat/repositories/fixernation/server &amp;&amp; node scripts/send-morning-boost-email.js</code></p>
+          <p style="font-size:12px;color:var(--a-text-soft);">The cron job must run every 5 minutes. Cron command: <code style="font-size:11px;background:var(--a-card);padding:2px 6px;border-radius:4px;">source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate &amp;&amp; cd /home/fixernat/repositories/fixernation/server &amp;&amp; node scripts/send-morning-boost-email.js</code></p>
         </div>
 
         <div class="a-card" style="margin-bottom:20px;">
@@ -121,7 +121,7 @@
           </div>
           <div class="field-row one">
             <div class="a-field">
-              <label>Reply-To Email <span style="font-weight:400;color:var(--a-muted);">(optional)</span></label>
+              <label>Reply-To Email <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></label>
               <input type="email" id="cfgReplyTo" placeholder="Leave blank to use From Email">
             </div>
           </div>
@@ -129,8 +129,8 @@
 
         <div class="a-card" style="margin-bottom:20px;">
           <div class="a-card-head"><h2>Recipient Groups</h2></div>
-          <p style="font-size:13px;color:var(--a-muted);margin-bottom:12px;">Select which contact groups receive the Morning Boost email. Contacts in multiple groups are deduplicated. Unsubscribed and MB-opted-out contacts are always excluded.</p>
-          <div class="group-grid" id="groupGrid"><span style="color:var(--a-muted);font-size:13px;">Loading groups…</span></div>
+          <p style="font-size:13px;color:var(--a-text-soft);margin-bottom:12px;">Select which contact groups receive the Morning Boost email. Contacts in multiple groups are deduplicated. Unsubscribed and MB-opted-out contacts are always excluded.</p>
+          <div class="group-grid" id="groupGrid"><span style="color:var(--a-text-soft);font-size:13px;">Loading groups…</span></div>
         </div>
 
         <div class="a-card" style="margin-bottom:20px;">
@@ -153,7 +153,7 @@
           </div>
           <div class="field-row one">
             <div class="a-field">
-              <label>Fallback Message <span style="font-weight:400;color:var(--a-muted);">(used when no Morning Boost post exists for the day; leave blank to skip send instead)</span></label>
+              <label>Fallback Message <span style="font-weight:400;color:var(--a-text-soft);">(used when no Morning Boost post exists for the day; leave blank to skip send instead)</span></label>
               <textarea id="cfgFallback" rows="4" placeholder="No Morning Boost post was scheduled today, but here's a reminder to start your day with a positive mindset..."></textarea>
             </div>
           </div>
@@ -167,7 +167,7 @@
               <input type="text" id="cfgCtaText" placeholder="Read Today's Morning Boost">
             </div>
             <div class="a-field">
-              <label>Destination URL Override <span style="font-weight:400;color:var(--a-muted);">(overrides the blog post URL)</span></label>
+              <label>Destination URL Override <span style="font-weight:400;color:var(--a-text-soft);">(overrides the blog post URL)</span></label>
               <input type="url" id="cfgCtaUrl" placeholder="Leave blank to auto-link to today's post">
             </div>
           </div>
@@ -184,20 +184,20 @@
         <div class="a-card">
           <div class="a-card-head">
             <h2>Send History</h2>
-            <span id="historyTotal" style="font-size:13px;color:var(--a-muted);"></span>
+            <span id="historyTotal" style="font-size:13px;color:var(--a-text-soft);"></span>
           </div>
           <div id="historyWrap">
             <table class="a-table" style="width:100%;">
               <thead><tr>
                 <th>Date</th><th>Status</th><th>Subject</th><th>Recipients</th><th>Sent</th><th>Failed</th><th>Actions</th>
               </tr></thead>
-              <tbody id="historyBody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--a-muted);">Loading…</td></tr></tbody>
+              <tbody id="historyBody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--a-text-soft);">Loading…</td></tr></tbody>
             </table>
           </div>
           <div style="display:flex;gap:10px;margin-top:16px;align-items:center;">
             <button class="a-btn" onclick="loadHistory(historyOffset - 50)" id="histPrev" disabled>← Prev</button>
             <button class="a-btn" onclick="loadHistory(historyOffset + 50)" id="histNext" disabled>Next →</button>
-            <span id="historyPage" style="font-size:13px;color:var(--a-muted);"></span>
+            <span id="historyPage" style="font-size:13px;color:var(--a-text-soft);"></span>
           </div>
         </div>
       </div>
@@ -212,7 +212,7 @@
     <button onclick="closeDetail()" style="position:absolute;top:16px;right:16px;background:var(--a-card);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">✕</button>
     <h2 id="detailHeading" style="margin-bottom:20px;font-size:20px;">Send Detail</h2>
     <div class="stat-row" id="detailStats"></div>
-    <div id="detailMeta" style="font-size:13px;color:var(--a-muted);margin-bottom:20px;"></div>
+    <div id="detailMeta" style="font-size:13px;color:var(--a-text-soft);margin-bottom:20px;"></div>
     <div style="display:flex;gap:10px;margin-bottom:20px;">
       <button class="a-btn" onclick="resendFailed()" id="resendFailedBtn" style="display:none;">Resend to Failed</button>
       <button class="a-btn" onclick="resendAll()" id="resendAllBtn">Resend to All</button>
@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=15"></script>
+<script src="admin-common.js?v=16"></script>
 <script>
 let _groups = [];
 let _selectedGroupIds = new Set();
@@ -287,11 +287,11 @@ async function loadConfig() {
 
 function renderGroupGrid() {
   const grid = document.getElementById('groupGrid');
-  if (!_groups.length) { grid.innerHTML = '<span style="color:var(--a-muted);font-size:13px;">No groups found.</span>'; return; }
+  if (!_groups.length) { grid.innerHTML = '<span style="color:var(--a-text-soft);font-size:13px;">No groups found.</span>'; return; }
   grid.innerHTML = _groups.map(g => `
     <div class="group-chip${_selectedGroupIds.has(g.id) ? ' selected' : ''}" onclick="toggleGroup(${g.id}, this)">
       <span>${g.name}</span>
-      <span style="font-size:11px;color:var(--a-muted);">(${g.memberCount || 0})</span>
+      <span style="font-size:11px;color:var(--a-text-soft);">(${g.memberCount || 0})</span>
     </div>
   `).join('');
 }
@@ -381,12 +381,12 @@ async function loadHistory(offset = 0) {
 
   const tbody = document.getElementById('historyBody');
   if (!sends.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--a-muted);">No sends yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--a-text-soft);">No sends yet.</td></tr>';
   } else {
     tbody.innerHTML = sends.map(s => `
       <tr class="send-row" onclick="openDetail(${s.id})">
         <td>${s.boostDate || '—'}</td>
-        <td><span class="status-chip chip-${s.status}">${s.status}</span>${s.isResend ? ' <span style="font-size:11px;color:var(--a-muted);">(resend)</span>' : ''}</td>
+        <td><span class="status-chip chip-${s.status}">${s.status}</span>${s.isResend ? ' <span style="font-size:11px;color:var(--a-text-soft);">(resend)</span>' : ''}</td>
         <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.subject || '—'}</td>
         <td>${s.recipientCount}</td>
         <td>${s.sentCount}</td>
@@ -410,7 +410,7 @@ async function openDetail(sendId) {
   document.getElementById('detailHeading').textContent = 'Loading…';
   document.getElementById('detailStats').innerHTML = '';
   document.getElementById('detailMeta').innerHTML = '';
-  document.getElementById('detailRecipients').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--a-muted);">Loading…</td></tr>';
+  document.getElementById('detailRecipients').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--a-text-soft);">Loading…</td></tr>';
 
   const res = await fetch(`/api/morning-boost/email/sends/${sendId}`, { credentials: 'include' });
   const data = await res.json().catch(() => ({}));
@@ -441,12 +441,12 @@ async function openDetail(sendId) {
   document.getElementById('detailRecipients').innerHTML = (recipients || []).map(r => `
     <tr>
       <td>${r.email}</td>
-      <td><span class="status-chip chip-${r.status}">${r.status}</span>${r.error ? ` <span style="font-size:11px;color:var(--a-muted);">${r.error.slice(0, 60)}</span>` : ''}</td>
+      <td><span class="status-chip chip-${r.status}">${r.status}</span>${r.error ? ` <span style="font-size:11px;color:var(--a-text-soft);">${r.error.slice(0, 60)}</span>` : ''}</td>
       <td>${r.sentAt ? new Date(r.sentAt).toLocaleTimeString() : '—'}</td>
       <td>${r.openedAt ? '✓' : '—'}</td>
       <td>${r.clickedAt ? '✓' : '—'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--a-muted);">No recipients recorded.</td></tr>';
+  `).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--a-text-soft);">No recipients recorded.</td></tr>';
 }
 
 function closeDetail() {
