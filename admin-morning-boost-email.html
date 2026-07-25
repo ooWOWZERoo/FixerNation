@@ -54,6 +54,21 @@
 .recip-table{width:100%;border-collapse:collapse;font-size:13px;}
 .recip-table th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--a-text-soft);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--a-border);}
 .recip-table td{padding:8px 10px;border-bottom:1px solid var(--a-border);}
+.sched-table{width:100%;border-collapse:collapse;font-size:13px;}
+.sched-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:700;color:var(--a-text-soft);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--a-border);}
+.sched-table td{padding:10px 12px;border-bottom:1px solid var(--a-border);vertical-align:middle;}
+.sched-table tr:last-child td{border-bottom:none;}
+.post-linked{font-weight:600;color:var(--a-text);}
+.post-unlinked{color:var(--a-text-soft);font-style:italic;}
+.pub-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-left:8px;}
+.pub-yes{background:#d1fadf;color:#0a5c2f;}
+.pub-no{background:var(--a-card);color:var(--a-text-soft);}
+[data-theme=dark] .pub-yes{background:#0a3d20;color:#6ee7b7;}
+.post-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--a-border);transition:background .1s;}
+.post-item:last-child{border-bottom:none;}
+.post-item:hover{background:var(--a-card);}
+.post-item-title{font-weight:600;font-size:13px;}
+.post-item-meta{font-size:11px;color:var(--a-text-soft);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -74,6 +89,7 @@
       <div class="mb-tabs">
         <button class="mb-tab active" onclick="switchTab('config')">Configuration</button>
         <button class="mb-tab" onclick="switchTab('history')">Send History</button>
+        <button class="mb-tab" onclick="switchTab('schedule')">Schedule</button>
       </div>
 
       <!-- CONFIG TAB -->
@@ -179,6 +195,28 @@
         </div>
       </div>
 
+      <!-- SCHEDULE TAB -->
+      <div id="tabSchedule" class="mb-panel">
+        <div class="a-card">
+          <div class="a-card-head">
+            <h2>Schedule</h2>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <select id="schedDays" onchange="loadSchedule()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--a-border);background:var(--a-bg);color:var(--a-text);font-size:13px;font-family:inherit;">
+                <option value="7">Next 7 days</option>
+                <option value="14" selected>Next 14 days</option>
+                <option value="30">Next 30 days</option>
+              </select>
+              <button class="a-btn" onclick="loadSchedule()">↺ Refresh</button>
+            </div>
+          </div>
+          <p style="font-size:13px;color:var(--a-text-soft);margin-bottom:16px;">Connect a blog post to each date. When the daily email runs, it pulls the post linked to that day. No link means the email falls back to your fallback message.</p>
+          <table class="sched-table">
+            <thead><tr><th>Date</th><th>Linked Post</th><th style="width:200px;"></th></tr></thead>
+            <tbody id="schedBody"><tr><td colspan="3" style="text-align:center;padding:32px;color:var(--a-text-soft);">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- HISTORY TAB -->
       <div id="tabHistory" class="mb-panel">
         <div class="a-card">
@@ -203,6 +241,19 @@
       </div>
 
     </div>
+  </div>
+</div>
+
+<!-- Link post modal -->
+<div id="linkModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:400;overflow:auto;padding:24px;" onclick="if(event.target===this)closeLinkModal()">
+  <div style="background:var(--a-bg);border-radius:16px;max-width:540px;margin:0 auto;padding:32px;position:relative;">
+    <button onclick="closeLinkModal()" style="position:absolute;top:16px;right:16px;background:var(--a-card);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;">✕</button>
+    <h2 style="margin-bottom:4px;font-size:18px;">Link a Post</h2>
+    <p id="linkModalDate" style="font-size:13px;color:var(--a-text-soft);margin-bottom:16px;"></p>
+    <input type="text" id="postSearch" placeholder="Search by title…" oninput="filterPostList()"
+      style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--a-border);background:var(--a-bg);color:var(--a-text);font-size:14px;font-family:inherit;margin-bottom:10px;box-sizing:border-box;">
+    <div id="postList" style="max-height:340px;overflow:auto;border:1px solid var(--a-border);border-radius:8px;"></div>
+    <div id="linkMsg" style="font-size:13px;font-weight:600;color:var(--a-accent);margin-top:12px;min-height:20px;"></div>
   </div>
 </div>
 
@@ -239,10 +290,12 @@ let historyTotal = 0;
 
 // ---- Tab switching ----
 function switchTab(name) {
-  document.querySelectorAll('.mb-tab').forEach((t, i) => t.classList.toggle('active', ['config','history'][i] === name));
+  document.querySelectorAll('.mb-tab').forEach((t, i) => t.classList.toggle('active', ['config','history','schedule'][i] === name));
   document.getElementById('tabConfig').classList.toggle('active', name === 'config');
   document.getElementById('tabHistory').classList.toggle('active', name === 'history');
+  document.getElementById('tabSchedule').classList.toggle('active', name === 'schedule');
   if (name === 'history') loadHistory(0);
+  if (name === 'schedule') loadSchedule();
 }
 
 // ---- Body format ----
@@ -480,6 +533,109 @@ async function doResend(onlyFailed) {
     msgEl.style.color = 'var(--a-danger)';
     msgEl.textContent = (data.errors || ['Resend failed.']).join(' ');
   }
+}
+
+// ---- Schedule tab ----
+let _schedDate = null;
+let _allPosts = [];
+
+async function loadSchedule() {
+  const days = Number(document.getElementById('schedDays').value) || 14;
+  const res = await fetch(`/api/morning-boost/schedule?days=${days}`, { credentials: 'include' });
+  const data = await res.json().catch(() => ({}));
+  const entryMap = {};
+  (data.entries || []).forEach(e => { entryMap[e.date] = e; });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const rows = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const entry = entryMap[iso];
+    const hasPost = entry && entry.blogPostId;
+    const postCell = hasPost
+      ? `<span class="post-linked">${entry.postTitle || '(untitled)'}</span><span class="pub-badge ${entry.postPublished ? 'pub-yes' : 'pub-no'}">${entry.postPublished ? 'Published' : 'Draft'}</span>`
+      : `<span class="post-unlinked">— not linked —</span>`;
+    const actions = hasPost
+      ? `<button class="a-btn" style="font-size:12px;padding:5px 10px;" onclick="openLinkModal('${iso}')">Change</button>
+         <button class="a-btn" style="font-size:12px;padding:5px 10px;margin-left:6px;" onclick="unlinkPost('${iso}')">Unlink</button>`
+      : `<button class="a-btn a-btn-primary" style="font-size:12px;padding:5px 10px;" onclick="openLinkModal('${iso}')">Link Post</button>`;
+    rows.push(`<tr><td style="white-space:nowrap;font-weight:500;">${label}</td><td>${postCell}</td><td>${actions}</td></tr>`);
+  }
+  document.getElementById('schedBody').innerHTML = rows.join('');
+}
+
+async function openLinkModal(date) {
+  _schedDate = date;
+  const d = new Date(date + 'T00:00');
+  document.getElementById('linkModalDate').textContent = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('postSearch').value = '';
+  document.getElementById('linkMsg').textContent = '';
+  document.getElementById('postList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--a-text-soft);">Loading…</div>';
+  document.getElementById('linkModal').style.display = 'block';
+
+  if (!_allPosts.length) {
+    const res = await fetch('/api/blog/posts?all=true', { credentials: 'include' });
+    const data = await res.json().catch(() => ({}));
+    _allPosts = (data.posts || []).sort((a, b) => (b.publishDate || '').localeCompare(a.publishDate || ''));
+  }
+  filterPostList();
+}
+
+function filterPostList() {
+  const q = (document.getElementById('postSearch').value || '').toLowerCase();
+  const filtered = _allPosts.filter(p => !q || (p.title || '').toLowerCase().includes(q));
+  const el = document.getElementById('postList');
+  if (!filtered.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--a-text-soft);">No posts match.</div>';
+    return;
+  }
+  el.innerHTML = filtered.slice(0, 60).map(p => `
+    <div class="post-item" onclick="selectPost(${p.id}, ${JSON.stringify(p.title || '')})">
+      <div class="post-item-title">${p.title || '(untitled)'}</div>
+      <div class="post-item-meta">${p.published ? 'Published' : 'Draft'} · ${fnFormatDate(p.publishDate) || '—'}</div>
+    </div>
+  `).join('');
+}
+
+async function selectPost(postId, title) {
+  if (!_schedDate) return;
+  const res = await fetch(`/api/morning-boost/${_schedDate}/blog-post`, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blogPostId: postId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  const msgEl = document.getElementById('linkMsg');
+  if (data.ok) {
+    msgEl.style.color = 'var(--a-accent)';
+    msgEl.textContent = `"${title}" linked to ${_schedDate}.`;
+    _allPosts = [];
+    setTimeout(() => { closeLinkModal(); loadSchedule(); }, 1200);
+  } else {
+    msgEl.style.color = 'var(--a-danger)';
+    msgEl.textContent = data.error || 'Link failed.';
+  }
+}
+
+async function unlinkPost(date) {
+  if (!confirm(`Remove the linked post from ${date}?`)) return;
+  const res = await fetch(`/api/morning-boost/${date}/blog-post`, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blogPostId: null }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (data.ok) loadSchedule();
+  else fnToast(data.error || 'Unlink failed.');
+}
+
+function closeLinkModal() {
+  document.getElementById('linkModal').style.display = 'none';
+  _schedDate = null;
 }
 
 loadConfig();

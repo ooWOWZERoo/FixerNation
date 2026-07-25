@@ -208,6 +208,31 @@ router.post('/batch-create-posts', requireAuth, async (req, res) => {
   });
 });
 
+// Returns calendar entries for the next N days (default 14), with linked blog post info.
+// Used by the Schedule tab on admin-morning-boost-email.html to show/manage post linkage.
+router.get('/schedule', requireAuth, async (req, res) => {
+  const days = Math.min(Number(req.query.days) || 14, 60);
+  const [rows] = await pool.query(
+    `SELECT mbc.boost_date, mbc.blog_post_id,
+            bp.title AS post_title, bp.published AS post_published,
+            bp.publish_date AS post_publish_date
+     FROM morning_boost_calendar mbc
+     LEFT JOIN blog_posts bp ON bp.id = mbc.blog_post_id
+     WHERE mbc.boost_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
+     ORDER BY mbc.boost_date`,
+    [days - 1]
+  );
+  res.json({
+    entries: rows.map(r => ({
+      date: r.boost_date ? r.boost_date.toString().slice(0, 10) : null,
+      blogPostId: r.blog_post_id || null,
+      postTitle: r.post_title || null,
+      postPublished: r.post_published === 1,
+      postPublishDate: r.post_publish_date ? r.post_publish_date.toString().slice(0, 10) : null,
+    }))
+  });
+});
+
 router.get('/:date', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM morning_boost_calendar WHERE boost_date = ?', [req.params.date]);
   if (!rows[0]) return res.status(404).json({ error: 'No calendar entry for that date' });
@@ -231,8 +256,19 @@ router.get('/audio/:filename', requireAuth, (req, res) => {
 // double-publishing the same day.
 router.put('/:date/blog-post', requireAuth, async (req, res) => {
   const blogPostId = req.body && req.body.blogPostId ? Number(req.body.blogPostId) : null;
-  const [result] = await pool.query('UPDATE morning_boost_calendar SET blog_post_id = ? WHERE boost_date = ?', [blogPostId, req.params.date]);
-  if (result.affectedRows === 0) return res.status(404).json({ error: 'No calendar entry for that date' });
+  const date = req.params.date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date format.' });
+  if (blogPostId) {
+    // Upsert: creates the calendar entry if none exists yet for this date
+    await pool.query(
+      `INSERT INTO morning_boost_calendar (boost_date, blog_post_id)
+       VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE blog_post_id = VALUES(blog_post_id)`,
+      [date, blogPostId]
+    );
+  } else {
+    await pool.query('UPDATE morning_boost_calendar SET blog_post_id = NULL WHERE boost_date = ?', [date]);
+  }
   res.json({ ok: true });
 });
 
