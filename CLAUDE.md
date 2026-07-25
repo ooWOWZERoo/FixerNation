@@ -114,14 +114,20 @@ The icon nav in every `admin-*.html` sidebar is **strictly alphabetical** within
 
 Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → user runs the following in cPanel's browser Terminal.
 
-**Git credentials:** `credential.helper osxkeychain` is now configured globally (`~/.gitconfig`). On first push after a new macOS session, the terminal will prompt for GitHub username (`ooWOWZERoo`) and a personal access token (PAT) as the password — macOS Keychain caches it from then on. **Claude's Bash tool cannot push to GitHub directly** (non-interactive, can't authenticate) — always commit from the Bash tool, then have the user run `git push` from their own terminal.
+**Git credentials:** `credential.helper osxkeychain` is now configured globally (`~/.gitconfig`). On first push after a new macOS session, the terminal will prompt for GitHub username (`ooWOWZERoo`) and a personal access token (PAT) as the password — macOS Keychain caches it from then on. **Claude's Bash tool cannot push to GitHub directly** (non-interactive, can't authenticate) — always commit from the Bash tool, then instruct the user to complete step 1 below before any cPanel step.
 
-1. **Pull:**
+1. **Push to GitHub** (run on your local Mac terminal — not cPanel):
+   ```bash
+   git push
+   ```
+   Do not proceed to cPanel until this succeeds. A cPanel `git pull` will return "Already up to date" if this step is skipped.
+
+2. **Pull:**
    ```bash
    cd /home/fixernat/repositories/fixernation && git pull
    ```
 
-2. **Sync static files to `public_html`:**
+3. **Sync static files to `public_html`:**
    ```bash
    rsync -av --delete \
      --exclude='.git' \
@@ -134,18 +140,18 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
    ```
    `api/` is cPanel-generated proxy glue (not in git). `uploads/` holds real uploaded files (not in git). Excluding both from `--delete` is intentional — they must never be wiped. **Never add `--delete-excluded`** — it deletes every excluded path found on the destination, including `api/` and `uploads/`. This has happened once and took down all API routes until the Node app was restarted to regenerate `api/`.
 
-3. **Activate nodevenv before any Node command — every single time:**
+4. **Activate nodevenv before any Node command — every single time:**
    ```bash
    source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
      cd /home/fixernat/repositories/fixernation/server
    ```
    Activating in one command does **not** carry over to the next shell instruction. Always chain with `&&`. When giving deploy instructions, always include this prefix — a bare `node scripts/whatever.js` causes `bash: node: command not found`.
 
-4. `npm install` (with prefix) if `server/package.json` changed.
+5. `npm install` (with prefix) if `server/package.json` changed.
 
-5. **Restart the Node app** (cPanel → Setup Node.js App panel) if any `server/` code changed. `git pull` alone leaves old code running in memory — new routes 404 with Express's own page, not a server crash. **pm2 is not installed** on this host.
+6. **Restart the Node app** (cPanel → Setup Node.js App panel) if any `server/` code changed. `git pull` alone leaves old code running in memory — new routes 404 with Express's own page, not a server crash. **pm2 is not installed** on this host.
 
-6. For schema changes to existing tables: run the one-off alter script with the nodevenv prefix:
+7. For schema changes to existing tables: run the one-off alter script with the nodevenv prefix:
    ```bash
    source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
      cd /home/fixernat/repositories/fixernation/server && \
