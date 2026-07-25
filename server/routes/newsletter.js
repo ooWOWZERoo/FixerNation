@@ -210,7 +210,13 @@ async function assignContactToGroups(contactId, { productType, memberType, licen
 // --- Contact groups ---
 
 router.get('/groups', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT id, name FROM contact_groups ORDER BY name');
+  const [rows] = await pool.query(
+    `SELECT g.id, g.name, COUNT(cgm.contact_id) AS memberCount
+     FROM contact_groups g
+     LEFT JOIN contact_group_members cgm ON cgm.group_id = g.id
+     GROUP BY g.id, g.name
+     ORDER BY g.name`
+  );
   res.json({ groups: rows });
 });
 
