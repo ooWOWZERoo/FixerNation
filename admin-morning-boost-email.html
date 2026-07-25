@@ -256,7 +256,7 @@ function setFormat(fmt) {
 async function loadConfig() {
   const [cfgRes, grpRes] = await Promise.all([
     fetch('/api/morning-boost/email/config', { credentials: 'include' }),
-    fetch('/api/newsletter/groups', { credentials: 'include' }),
+    fetch('/api/morning-boost/email/groups', { credentials: 'include' }),
   ]);
   if (fnHandleUnauthorized(cfgRes)) return;
 

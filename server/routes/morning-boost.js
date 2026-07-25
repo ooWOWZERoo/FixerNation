@@ -320,6 +320,18 @@ router.post('/generate-audio', requireAuth, async (req, res) => {
 // Morning Boost Email Automation routes
 // ============================================================
 
+// GET /api/morning-boost/email/groups — contact groups with live member counts
+router.get('/email/groups', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT g.id, g.name, COUNT(cgm.contact_id) AS memberCount
+     FROM contact_groups g
+     LEFT JOIN contact_group_members cgm ON cgm.group_id = g.id
+     GROUP BY g.id, g.name
+     ORDER BY g.name`
+  );
+  res.json({ groups: rows.map(r => ({ id: r.id, name: r.name, memberCount: Number(r.memberCount) })) });
+});
+
 // GET /api/morning-boost/email/config — admin: get config + assigned groups
 router.get('/email/config', requireAuth, async (req, res) => {
   await ensureConfig();
