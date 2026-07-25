@@ -87,16 +87,16 @@ async function main() {
     return;
   }
 
-  // Already sent today?
-  const [[existingSend]] = await pool.query(
-    "SELECT id FROM morning_boost_sends WHERE boost_date = ? AND status IN ('completed','sending')",
-    [todayDate]
-  );
-  if (existingSend) {
-    console.log(`[mb-email] Already sent for ${todayDate} (send #${existingSend.id}) — skipping.`);
-    await pool.end();
-    return;
-  }
+  // TESTING: already-sent guard temporarily disabled — restore before going back to production
+  // const [[existingSend]] = await pool.query(
+  //   "SELECT id FROM morning_boost_sends WHERE boost_date = ? AND status IN ('completed','sending')",
+  //   [todayDate]
+  // );
+  // if (existingSend) {
+  //   console.log(`[mb-email] Already sent for ${todayDate} (send #${existingSend.id}) — skipping.`);
+  //   await pool.end();
+  //   return;
+  // }
 
   console.log(`[mb-email] Starting Morning Boost send for ${todayDate}...`);
   const result = await runMorningBoostSend({ targetDate: todayDate, initiatedBy: null, isResend: false });
