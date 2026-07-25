@@ -164,6 +164,23 @@
 const MB_CATEGORY = 'Morning Boost';
 let postsCache = [];
 
+// admin-common.js's fnHandleVideoError shows an admin-facing message — not
+// appropriate on a public page. Override it: featured slot falls back to the
+// post image; everywhere else (the read modal) just clears the video wrapper.
+function fnHandleVideoError(videoEl) {
+  const wrap = videoEl.closest('.fn-video-embed');
+  if (!wrap) return;
+  const fi = wrap.closest('.featured-img');
+  if (fi) {
+    const featured = postsCache.find(p => p.featured) || postsCache[0];
+    fi.innerHTML = featured && featured.featuredImage
+      ? `<img src="${featured.featuredImage}" alt="${featured.title || ''}" style="width:100%;height:100%;object-fit:cover;">`
+      : '';
+  } else {
+    wrap.innerHTML = '';
+  }
+}
+
 function truncate(str, n) {
   if (!str) return '';
   return str.length > n ? str.slice(0, n).trim() + '…' : str;
