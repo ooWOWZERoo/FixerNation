@@ -206,7 +206,12 @@ function fnHandleVideoError(videoEl, label) {
 }
 
 function fnFormatDate(iso) {
-  const d = new Date(iso);
+  if (!iso) return '';
+  // Date-only strings (YYYY-MM-DD) are parsed as UTC midnight by spec, which
+  // shifts the displayed date back one day in US timezones. Appending T00:00
+  // (no timezone) forces the parser to treat it as local midnight instead.
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? iso + 'T00:00' : iso;
+  const d = new Date(normalized);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
