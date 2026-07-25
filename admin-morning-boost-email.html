@@ -620,12 +620,13 @@ function filterPostList() {
     el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--a-text-soft);">No posts match.</div>';
     return;
   }
-  el.innerHTML = filtered.slice(0, 60).map(p => `
-    <div class="post-item" onclick="selectPost(${p.id}, ${JSON.stringify(p.title || '')})">
+  el.innerHTML = filtered.slice(0, 60).map(p => {
+    const safeTitle = JSON.stringify(p.title || '').replace(/"/g, '&quot;');
+    return `<div class="post-item" onclick="selectPost(${p.id}, ${safeTitle})">
       <div class="post-item-title">${p.title || '(untitled)'}</div>
       <div class="post-item-meta">${p.published ? 'Published' : 'Draft'} · ${fnFormatDate(p.publishDate) || '—'}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function selectPost(postId, title) {
