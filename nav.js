@@ -49,7 +49,8 @@
   var howActive       = page === 'how-it-works';
   var teachersActive  = page === 'for-teachers';
   var schoolsActive   = page === 'for-schools';
-  var libraryActive   = page === 'education-portal';
+  var libraryActive        = page === 'education-portal';
+  var morningBoostActive   = page === 'morning-boost-blog';
   var researchActive  = page === 'research';
   var pricingActive   = page === 'school-licensing' || page === 'licenses' || page === 'education-schools';
   var brainActive     = page === 'brain-games' || page.indexOf('brain-') === 0;
@@ -84,8 +85,9 @@
             '<a href="for-schools.html"'   + (schoolsActive  ? ' class="active"' : '') + '>For Schools</a>'   +
           '</div>' +
         '</div>' +
-        lnk('education-portal.html', 'Lesson Library', libraryActive)  +
-        lnk('school-licensing.html', 'Pricing',        pricingActive)  +
+        lnk('education-portal.html',    'Lesson Library', libraryActive)       +
+        lnk('morning-boost-blog.html', 'Morning Boost',  morningBoostActive)  +
+        lnk('school-licensing.html',   'Pricing',        pricingActive)       +
         lnk('brain-games.html',      'Brain Games',    brainActive)    +
         lnk('social.html',           'Community',      communityActive)+
       '</nav>' +
