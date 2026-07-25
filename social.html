@@ -602,7 +602,7 @@ function renderPostAttachments(attachments, text){
   }
 
   if(videos.length){
-    html += videos.map(a => `<div class="post-video"><video controls preload="metadata"><source src="${a.url}"><a href="${a.url}">Download video</a></video></div>`).join('');
+    html += videos.map(a => `<div class="post-video"><video controls controlsList="nodownload" oncontextmenu="return false;" preload="metadata"><source src="${a.url}"></video></div>`).join('');
   }
 
   if(files.length){

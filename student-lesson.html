@@ -131,6 +131,14 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function videoWatchHtml(v) {
+  var url = v.url || '';
+  if (/youtu\.be|youtube\.com|vimeo\.com/i.test(url)) {
+    return '<a href="' + esc(url) + '" target="_blank" rel="noopener">Watch ↗</a>';
+  }
+  return '<video controls controlsList="nodownload" oncontextmenu="return false;" src="' + esc(url) + '" style="max-width:100%;border-radius:6px;margin-top:6px;"></video>';
+}
+
 var LETTERS = ['A','B','C','D','E','F'];
 
 async function load() {
@@ -194,7 +202,7 @@ function renderBody() {
   if ((lesson.videos || []).length) {
     html += '<div class="card"><div class="card-title">Videos</div>';
     lesson.videos.forEach(function(v) {
-      html += '<div class="video-item"><div class="video-thumb">▶</div><div class="video-info"><div class="v-title">' + esc(v.name) + '</div>' + (v.sizeLabel ? '<div class="v-meta">' + esc(v.sizeLabel) + '</div>' : '') + '</div><a href="' + esc(v.url) + '" target="_blank" rel="noopener">Watch ↗</a></div>';
+      html += '<div class="video-item"><div class="video-thumb">▶</div><div class="video-info"><div class="v-title">' + esc(v.name) + '</div>' + (v.sizeLabel ? '<div class="v-meta">' + esc(v.sizeLabel) + '</div>' : '') + '</div>' + videoWatchHtml(v) + '</div>';
     });
     html += '</div>';
   }

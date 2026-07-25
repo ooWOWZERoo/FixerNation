@@ -196,7 +196,7 @@ function fnVideoEmbedHtml(url) {
   // Otherwise assume it's a direct video file (local filename or a hosted .mp4/.webm URL).
   // If the referenced file isn't actually reachable (e.g. it was never placed in this
   // folder), show a clear message instead of a silently broken player.
-  return `<div class="fn-video-embed"><video controls src="${url}" onerror="fnHandleVideoError(this, '${url.replace(/'/g, "\\'")}')"></video></div>`;
+  return `<div class="fn-video-embed"><video controls controlsList="nodownload" oncontextmenu="return false;" src="${url}" onerror="fnHandleVideoError(this, '${url.replace(/'/g, "\\'")}')"></video></div>`;
 }
 
 function fnHandleVideoError(videoEl, label) {
