@@ -42,9 +42,10 @@
     box-shadow:var(--shadow); background:#fff; margin-bottom:56px;
   }
   .featured-img{position:relative; min-height:320px; background:#000;}
-  .featured-img img{width:100%; height:100%; object-fit:cover; display:block;}
+  .featured-img img{width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; user-select:none;}
   .featured-img .fn-video-embed{border-radius:0; margin-bottom:0; height:100%; aspect-ratio:unset; min-height:320px;}
   .featured-img .fn-video-embed iframe,.featured-img .fn-video-embed video{height:100%;}
+  .post-modal-img img{width:100%; height:100%; object-fit:cover; pointer-events:none; -webkit-user-drag:none; user-select:none;}
   .featured-copy{padding:44px; display:flex; flex-direction:column; justify-content:center;}
   .featured-copy .eyebrow{margin-bottom:16px; align-self:flex-start;}
   .featured-copy h2{font-size:28px; margin-bottom:14px;}
@@ -56,7 +57,7 @@
   .blog-card{background:#fff; border-radius:22px; overflow:hidden; box-shadow:0 16px 34px -22px rgba(22,79,74,0.25); transition:transform .2s ease;}
   .blog-card:hover{transform:translateY(-6px);}
   .blog-thumb{aspect-ratio:16/10; overflow:hidden; position:relative;}
-  .blog-thumb img{width:100%; height:100%; object-fit:cover;}
+  .blog-thumb img{width:100%; height:100%; object-fit:cover; pointer-events:none; -webkit-user-drag:none; user-select:none;}
   .blog-body{padding:22px 22px 26px;}
   .blog-cat{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--coral-dark); margin-bottom:10px; display:block;}
   .blog-body h3{font-size:18px; margin-bottom:10px;}
@@ -283,6 +284,13 @@ function openPostRead(id) {
 function closePostRead() {
   document.getElementById('postReadOverlay').classList.remove('show');
 }
+
+// Block right-click save on all content images and video embeds
+document.addEventListener('contextmenu', function(e) {
+  if (e.target.closest('.featured-img, .blog-thumb, .post-modal-img, .fn-video-embed')) {
+    e.preventDefault();
+  }
+}, false);
 
 fetch('/api/blog/posts', { credentials: 'include' })
   .then(r => r.json())
