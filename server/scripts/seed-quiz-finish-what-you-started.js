@@ -6,8 +6,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const pool = require('../db/pool');
 
-const TITLE = 'Finish What You Started';
-const SERIES = '7-17-#85';
+const TITLE = 'Finish What You Started - Lesson Plan 7 - 17 - #85';
 
 const QUESTIONS = [
   {
@@ -117,25 +116,14 @@ async function run() {
   try {
     // Find the curriculum
     const [rows] = await connection.query(
-      'SELECT id, title, series FROM curricula WHERE title = ? AND series = ? LIMIT 1',
-      [TITLE, SERIES]
+      'SELECT id, title, series FROM curricula WHERE title = ? LIMIT 1',
+      [TITLE]
     );
 
     if (!rows.length) {
-      // Fall back to title-only match in case series is stored differently
-      const [fallback] = await connection.query(
-        'SELECT id, title, series FROM curricula WHERE title = ? LIMIT 5',
-        [TITLE]
-      );
-      if (!fallback.length) {
-        console.error(`No curriculum found with title "${TITLE}". Available rows with similar titles:`);
-        const [all] = await connection.query('SELECT id, title, series FROM curricula ORDER BY title');
-        all.forEach(r => console.log(`  id=${r.id}  title="${r.title}"  series="${r.series}"`));
-        process.exit(1);
-      }
-      console.log('Exact series match not found. Candidates:');
-      fallback.forEach(r => console.log(`  id=${r.id}  title="${r.title}"  series="${r.series}"`));
-      console.log('Update SERIES constant in this script to match the correct row, then rerun.');
+      console.error(`No curriculum found with title "${TITLE}". Available curricula:`);
+      const [all] = await connection.query('SELECT id, title, series FROM curricula ORDER BY title');
+      all.forEach(r => console.log(`  id=${r.id}  title="${r.title}"  series="${r.series}"`));
       process.exit(1);
     }
 
