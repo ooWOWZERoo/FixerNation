@@ -3,6 +3,7 @@
 // Run from server/ directory after activating the Node env.
 // Idempotent — clears existing questions for this curriculum before inserting.
 
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const pool = require('../db/pool');
 
 const TITLE = 'Finish What You Started';
