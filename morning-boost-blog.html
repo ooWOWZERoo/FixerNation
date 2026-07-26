@@ -278,6 +278,7 @@ function openPostRead(id) {
 
   const paragraphs = (post.body || post.excerpt || '').split(/\n+/).filter(Boolean);
   document.getElementById('postReadBody').innerHTML = videoHtml + paragraphs.map(t => `<p>${t}</p>`).join('');
+  document.querySelector('.post-modal').scrollTop = 0;
   document.getElementById('postReadOverlay').classList.add('show');
 }
 
