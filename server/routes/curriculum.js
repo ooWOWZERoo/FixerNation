@@ -1,8 +1,60 @@
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
+const AdmZip = require('adm-zip');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
 const { getSiteUser, hasActiveLicense } = require('../lib/access');
+
+const quizUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+function parseQuizDocx(buffer) {
+  const zip = new AdmZip(buffer);
+  const raw = zip.readAsText('word/document.xml');
+  const text = raw
+    .replace(/<\/w:p>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#x2013;/g, '–').replace(/&#x2014;/g, '—');
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let curriculumTitle = null;
+  const questions = [];
+  let current = null;
+
+  for (const line of lines) {
+    const cm = line.match(/^CURRICULUM\s*:\s*(.+)$/i);
+    if (cm) { curriculumTitle = cm[1].trim(); continue; }
+
+    const qm = line.match(/^Q\s*(\d+)\s*[.)]\s*(.+)$/i);
+    if (qm) {
+      if (current) questions.push(current);
+      current = { question: qm[2].trim(), options: [], correctIndex: null };
+      continue;
+    }
+
+    const om = line.match(/^([A-D])\s*[.)]\s*(.+)$/i);
+    if (om && current) { current.options.push(om[2].trim()); continue; }
+
+    const am = line.match(/^ANSWER\s*:\s*([A-D])\b/i);
+    if (am && current) {
+      current.correctIndex = ['A','B','C','D'].indexOf(am[1].toUpperCase());
+      continue;
+    }
+  }
+  if (current) questions.push(current);
+
+  const errors = [];
+  if (!curriculumTitle) errors.push('Missing CURRICULUM: line.');
+  questions.forEach((q, i) => {
+    if (q.options.length !== 4) errors.push(`Q${i+1}: expected 4 options, found ${q.options.length}.`);
+    if (q.correctIndex === null || q.correctIndex === -1) errors.push(`Q${i+1}: missing or invalid ANSWER: line.`);
+  });
+  if (errors.length) throw new Error(errors.join(' '));
+  if (!questions.length) throw new Error('No questions found. Ensure questions start with Q1., Q2., etc.');
+
+  return { curriculumTitle, questions };
+}
 
 const router = express.Router();
 
@@ -165,6 +217,55 @@ router.get('/downloads', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('GET /downloads error:', err.message);
     res.status(500).json({ error: 'Could not load downloads.' });
+  }
+});
+
+router.post('/import-quiz', requireAuth, quizUpload.single('quiz'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
+  if (!req.file.originalname.toLowerCase().endsWith('.docx')) {
+    return res.status(400).json({ error: 'File must be a .docx document.' });
+  }
+  let parsed;
+  try {
+    parsed = parseQuizDocx(req.file.buffer);
+  } catch (err) {
+    return res.status(422).json({ error: err.message });
+  }
+  const { curriculumTitle, questions } = parsed;
+  const [rows] = await pool.query('SELECT id, title FROM curricula WHERE title = ? LIMIT 1', [curriculumTitle]);
+  if (!rows.length) {
+    const [all] = await pool.query('SELECT title FROM curricula ORDER BY title');
+    return res.status(404).json({
+      error: `No curriculum found matching "${curriculumTitle}".`,
+      available: all.map(r => r.title),
+    });
+  }
+  const curriculumId = rows[0].id;
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query('DELETE FROM curriculum_quiz_questions WHERE curriculum_id = ?', [curriculumId]);
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const [qRes] = await connection.query(
+        'INSERT INTO curriculum_quiz_questions (curriculum_id, question, correct_index, sort_order) VALUES (?, ?, ?, ?)',
+        [curriculumId, q.question, q.correctIndex, i]
+      );
+      for (let oi = 0; oi < q.options.length; oi++) {
+        await connection.query(
+          'INSERT INTO curriculum_quiz_options (question_id, option_text, sort_order) VALUES (?, ?, ?)',
+          [qRes.insertId, q.options[oi], oi]
+        );
+      }
+    }
+    await connection.commit();
+    res.json({ ok: true, curriculumTitle, curriculumId, questionsInserted: questions.length });
+  } catch (err) {
+    await connection.rollback();
+    console.error('import-quiz error:', err.message);
+    res.status(500).json({ error: 'Database error during import.' });
+  } finally {
+    connection.release();
   }
 });
 

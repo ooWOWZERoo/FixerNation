@@ -19,6 +19,18 @@
   .drag-handle:active { cursor:grabbing; }
   tr.drag-over { border-top:2px solid var(--a-accent-fill); }
   tr.dragging { opacity:0.4; }
+  .quiz-drop-zone { border:2px dashed var(--a-border); border-radius:10px; padding:32px 24px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s; color:var(--a-muted); }
+  .quiz-drop-zone:hover, .quiz-drop-zone.drag-active { border-color:var(--a-accent-fill); background:var(--a-accent-soft); color:var(--a-accent-on-soft); }
+  .quiz-drop-zone .drop-icon { font-size:28px; margin-bottom:8px; }
+  .quiz-drop-zone .drop-label { font-size:14px; font-weight:600; }
+  .quiz-drop-zone .drop-hint { font-size:12.5px; margin-top:4px; opacity:.7; }
+  .quiz-file-chosen { display:none; align-items:center; gap:10px; padding:10px 14px; background:var(--a-accent-soft); border-radius:8px; font-size:13.5px; font-weight:600; color:var(--a-accent-on-soft); }
+  .quiz-file-chosen .qfc-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quiz-file-chosen .qfc-clear { cursor:pointer; opacity:.6; font-size:16px; flex-shrink:0; }
+  .quiz-file-chosen .qfc-clear:hover { opacity:1; }
+  .quiz-import-result { display:none; border-radius:8px; padding:14px 16px; font-size:13.5px; margin-top:4px; }
+  .quiz-import-result.success { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+  .quiz-import-result.error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
 </style>
 </head>
 <body>
@@ -38,7 +50,10 @@
       <div class="a-card">
         <div class="a-card-head">
           <h2>Curriculum Catalog</h2>
-          <button class="a-btn a-btn-primary" onclick="openCurriculumModal()">+ Build New Curriculum</button>
+          <div style="display:flex;gap:10px;">
+            <button class="a-btn a-btn-outline" onclick="openQuizImportModal()">⬆ Import Quiz</button>
+            <button class="a-btn a-btn-primary" onclick="openCurriculumModal()">+ Build New Curriculum</button>
+          </div>
         </div>
 
         <div id="bulkBar" class="a-bulk-bar" style="display:none;">
@@ -220,10 +235,121 @@
   </div>
 </div>
 
+<div class="a-modal-overlay" id="quizImportOverlay">
+  <div class="a-modal" style="max-width:480px;">
+    <div class="a-modal-head">
+      <h3>Import Quiz from .docx</h3>
+      <button class="a-modal-close" onclick="closeQuizImportModal()">✕</button>
+    </div>
+    <div class="a-modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="quiz-drop-zone" id="quizDropZone" onclick="document.getElementById('quizFileInput').click()">
+        <div class="drop-icon">📄</div>
+        <div class="drop-label">Click to browse or drag a .docx file here</div>
+        <div class="drop-hint">File must include a CURRICULUM: line matching the lesson title</div>
+      </div>
+      <input type="file" id="quizFileInput" accept=".docx" style="display:none;" onchange="quizFileChosen(this)">
+      <div class="quiz-file-chosen" id="quizFileChosen">
+        <span>📄</span>
+        <span class="qfc-name" id="quizFileName"></span>
+        <span class="qfc-clear" onclick="clearQuizFile()" title="Remove">✕</span>
+      </div>
+      <div class="quiz-import-result" id="quizImportResult"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeQuizImportModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="quizImportBtn" onclick="submitQuizImport()" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
 <script src="admin-common.js?v=15"></script>
 <script>
 fnRequireAuth();
 
+// ── Quiz Import Modal ─────────────────────────────────────────────────────
+let quizImportFile = null;
+
+function openQuizImportModal() {
+  clearQuizFile();
+  document.getElementById('quizImportResult').style.display = 'none';
+  document.getElementById('quizImportOverlay').style.display = 'flex';
+}
+function closeQuizImportModal() {
+  document.getElementById('quizImportOverlay').style.display = 'none';
+}
+function quizFileChosen(input) {
+  const file = input.files[0];
+  if (!file) return;
+  quizImportFile = file;
+  document.getElementById('quizFileName').textContent = file.name;
+  document.getElementById('quizFileChosen').style.display = 'flex';
+  document.getElementById('quizDropZone').style.display = 'none';
+  document.getElementById('quizImportBtn').disabled = false;
+  document.getElementById('quizImportResult').style.display = 'none';
+}
+function clearQuizFile() {
+  quizImportFile = null;
+  document.getElementById('quizFileInput').value = '';
+  document.getElementById('quizFileChosen').style.display = 'none';
+  document.getElementById('quizDropZone').style.display = '';
+  document.getElementById('quizImportBtn').disabled = true;
+}
+async function submitQuizImport() {
+  if (!quizImportFile) return;
+  const btn = document.getElementById('quizImportBtn');
+  const result = document.getElementById('quizImportResult');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+  result.style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('quiz', quizImportFile);
+  try {
+    const r = await fetch('/api/curricula/import-quiz', { method: 'POST', credentials: 'include', body: fd });
+    const data = await r.json();
+    result.style.display = 'block';
+    if (r.ok) {
+      result.className = 'quiz-import-result success';
+      result.innerHTML = '✅ <strong>' + data.questionsInserted + ' question' + (data.questionsInserted !== 1 ? 's' : '') + ' imported</strong> for &ldquo;' + data.curriculumTitle + '&rdquo;';
+      clearQuizFile();
+    } else {
+      result.className = 'quiz-import-result error';
+      let msg = data.error || 'Import failed.';
+      if (data.available && data.available.length) {
+        msg += '<br><br><strong>Available lesson titles:</strong><ul style="margin:6px 0 0;padding-left:18px;">' +
+          data.available.map(t => '<li>' + t + '</li>').join('') + '</ul>';
+      }
+      result.innerHTML = '⚠️ ' + msg;
+    }
+  } catch {
+    result.style.display = 'block';
+    result.className = 'quiz-import-result error';
+    result.textContent = '⚠️ Network error — please try again.';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Import';
+}
+
+// Drag-and-drop on the drop zone
+(function() {
+  const zone = document.getElementById('quizDropZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-active'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-active'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-active');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const inp = document.getElementById('quizFileInput');
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      inp.files = dt.files;
+      quizFileChosen(inp);
+    }
+  });
+})();
+
+// ─────────────────────────────────────────────────────────────────────────
 let editingId = null;
 let currentVideos = [];
 let currentQuiz = [];
