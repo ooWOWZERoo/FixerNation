@@ -117,6 +117,7 @@ async function attachChildren(curricula) {
     videos: (videosByC[c.id] || []).map(r => ({ name: r.name, url: r.url, sizeLabel: r.size_label })),
     documents: (documentsByC[c.id] || []).map(r => ({ filePath: r.file_path, fileName: r.file_name })),
     quiz: (questionsByC[c.id] || []).map(q => ({
+      id: q.id,
       question: q.question,
       correctIndex: q.correct_index,
       options: (optionsByQ[q.id] || []).map(o => o.option_text),
