@@ -245,6 +245,9 @@ function renderInteractive() {
   if ((lesson.quiz || []).length) {
     var prevResponses = {};
     (lesson.quizResponses || []).forEach(function(r){ prevResponses[r.question_id] = r; });
+    console.log('[quiz-debug] q ids:', (lesson.quiz||[]).map(function(q){return q.id;}));
+    console.log('[quiz-debug] response question_ids:', (lesson.quizResponses||[]).map(function(r){return r.question_id;}));
+    console.log('[quiz-debug] sample response[0]:', lesson.quizResponses && lesson.quizResponses[0]);
 
     if (quizSubmitted) {
       var correct = (lesson.quizResponses || []).filter(function(r){ return r.is_correct; }).length;
