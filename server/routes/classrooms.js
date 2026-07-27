@@ -365,6 +365,18 @@ router.get('/:id/assignments/:cid/progress', requireSiteAuth, async (req, res) =
   res.json({ students, reflections });
 });
 
+// DELETE /:id/assignments/:cid/quiz/:studentId — reset a student's quiz responses
+router.delete('/:id/assignments/:cid/quiz/:studentId', requireSiteAuth, async (req, res) => {
+  const classroom = await ownedClassroom(req, res);
+  if (!classroom) return;
+
+  await pool.query(
+    'DELETE FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ?',
+    [req.params.studentId, req.params.cid]
+  );
+  res.json({ ok: true });
+});
+
 // ---------------------------------------------------------------------------
 // Brain game assignments
 // ---------------------------------------------------------------------------
