@@ -245,9 +245,6 @@ function renderInteractive() {
   if ((lesson.quiz || []).length) {
     var prevResponses = {};
     (lesson.quizResponses || []).forEach(function(r){ prevResponses[r.question_id] = r; });
-    console.log('[quiz-debug] q ids:', (lesson.quiz||[]).map(function(q){return q.id;}));
-    console.log('[quiz-debug] response question_ids:', (lesson.quizResponses||[]).map(function(r){return r.question_id;}));
-    console.log('[quiz-debug] sample response[0]:', lesson.quizResponses && lesson.quizResponses[0]);
 
     if (quizSubmitted) {
       var correct = (lesson.quizResponses || []).filter(function(r){ return r.is_correct; }).length;
@@ -256,7 +253,7 @@ function renderInteractive() {
       html += '<div class="zone"><div class="zone-title"><span class="step-badge">' + stepNum + '</span> Quiz</div>';
       html += '<div class="quiz-result-banner ' + (pct >= 70 ? 'good' : 'ok') + '">' + correct + ' out of ' + total + ' correct (' + pct + '%)</div>';
       lesson.quiz.forEach(function(q, qi) {
-        var prev = prevResponses[q.id] || {};
+        var prev = prevResponses[q.id] || (lesson.quizResponses || [])[qi] || {};
         var passed = prev.is_correct ? true : false;
         html += '<div class="quiz-q"><div class="q-text"><span class="q-result-icon ' + (passed ? 'pass' : 'fail') + '">' + (passed ? '✓' : '✗') + '</span>' + (qi+1) + '. ' + esc(q.question) + '</div><div class="quiz-options">';
         q.options.forEach(function(opt, oi) {

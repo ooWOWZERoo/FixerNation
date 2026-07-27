@@ -119,7 +119,7 @@ router.get('/lesson/:curriculumId', async (req, res) => {
     [req.student.id, req.params.curriculumId]
   );
   const [quizResponses] = await pool.query(
-    'SELECT question_id, selected_option_index, is_correct FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ?',
+    'SELECT question_id, selected_option_index, is_correct FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ? ORDER BY question_id ASC',
     [req.student.id, req.params.curriculumId]
   );
   const [reflections] = await pool.query(
