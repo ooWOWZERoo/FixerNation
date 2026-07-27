@@ -66,7 +66,10 @@ textarea.reflect-input:focus{border-color:var(--teal);}
 .submitted-note{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 15px;font-size:13.5px;color:#166534;font-weight:600;}
 /* Quiz */
 .quiz-q{margin-bottom:20px;}
-.quiz-q .q-text{font-weight:700;font-size:14.5px;margin-bottom:12px;}
+.quiz-q .q-text{font-weight:700;font-size:14.5px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;}
+.q-result-icon{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-top:1px;}
+.q-result-icon.pass{background:#dcfce7;color:#166534;}
+.q-result-icon.fail{background:#fee2e2;color:#991b1b;}
 .quiz-options{display:flex;flex-direction:column;gap:8px;}
 .quiz-opt{display:flex;align-items:center;gap:12px;padding:11px 14px;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;font-size:14px;}
 .quiz-opt:hover:not(.locked){border-color:var(--teal);background:rgba(22,79,74,0.04);}
@@ -75,6 +78,11 @@ textarea.reflect-input:focus{border-color:var(--teal);}
 .quiz-opt.correct{border-color:#059669;background:#f0fdf4;color:#166534;}
 .quiz-opt.wrong{border-color:#c0392b;background:#fef2f2;color:#c0392b;}
 .quiz-letter{width:28px;height:28px;border-radius:50%;background:rgba(22,79,74,0.1);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.quiz-opt.correct .quiz-letter{background:#bbf7d0;color:#166534;}
+.quiz-opt.wrong .quiz-letter{background:#fecaca;color:#991b1b;}
+.quiz-opt-label{font-size:11px;font-weight:700;letter-spacing:0.04em;margin-left:auto;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.quiz-opt.correct .quiz-opt-label{background:#bbf7d0;color:#166534;}
+.quiz-opt.wrong .quiz-opt-label{background:#fecaca;color:#991b1b;}
 .quiz-result-banner{border-radius:12px;padding:14px 16px;font-weight:700;font-size:15px;margin-bottom:16px;text-align:center;}
 .quiz-result-banner.good{background:#f0fdf4;color:#166534;}
 .quiz-result-banner.ok{background:#fef3c7;color:#92400e;}
@@ -246,12 +254,22 @@ function renderInteractive() {
       html += '<div class="quiz-result-banner ' + (pct >= 70 ? 'good' : 'ok') + '">' + correct + ' out of ' + total + ' correct (' + pct + '%)</div>';
       lesson.quiz.forEach(function(q, qi) {
         var prev = prevResponses[q.id] || {};
-        html += '<div class="quiz-q"><div class="q-text">' + (qi+1) + '. ' + esc(q.question) + '</div><div class="quiz-options">';
+        var passed = prev.is_correct ? true : false;
+        html += '<div class="quiz-q"><div class="q-text"><span class="q-result-icon ' + (passed ? 'pass' : 'fail') + '">' + (passed ? '✓' : '✗') + '</span>' + (qi+1) + '. ' + esc(q.question) + '</div><div class="quiz-options">';
         q.options.forEach(function(opt, oi) {
           var cls = 'quiz-opt locked';
-          if (oi === q.correctIndex) cls += ' correct';
-          else if (oi === prev.selected_option_index && !prev.is_correct) cls += ' wrong';
-          html += '<div class="' + cls + '"><div class="quiz-letter">' + LETTERS[oi] + '</div>' + esc(opt) + '</div>';
+          var letterContent = LETTERS[oi];
+          var labelHtml = '';
+          if (oi === q.correctIndex) {
+            cls += ' correct';
+            letterContent = '✓';
+            labelHtml = '<span class="quiz-opt-label">' + (passed ? 'Your answer' : 'Correct answer') + '</span>';
+          } else if (oi === prev.selected_option_index && !prev.is_correct) {
+            cls += ' wrong';
+            letterContent = '✗';
+            labelHtml = '<span class="quiz-opt-label">Your answer</span>';
+          }
+          html += '<div class="' + cls + '"><div class="quiz-letter">' + letterContent + '</div>' + esc(opt) + labelHtml + '</div>';
         });
         html += '</div></div>';
       });
