@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-# deploy.sh  —  Run this in cPanel Terminal after pushing
-# Usage:  bash deploy.sh
+# deploy.sh  —  Run this in cPanel Terminal
+# Usage:  ./deploy.sh
 # ============================================================
 set -e
 
@@ -9,11 +9,28 @@ REPO=~/repositories/fixernation
 SERVER_DIR="$REPO/server"
 NODE_ACTIVATE="$HOME/nodevenv/repositories/fixernation/server/24/bin/activate"
 
+cd "$REPO"
+
 # ── STEP 1: Pull latest code from GitHub ─────────────────────
 echo ""
 echo "STEP 1: Pulling latest code..."
-cd "$REPO"
+BEFORE=$(git rev-parse HEAD)
 git pull
+AFTER=$(git rev-parse HEAD)
+
+# Detect whether any server/ files changed in this pull
+SERVER_CHANGED=false
+if [ "$BEFORE" != "$AFTER" ] && git diff --name-only "$BEFORE" "$AFTER" | grep -q '^server/'; then
+  SERVER_CHANGED=true
+fi
+
+if [ "$BEFORE" = "$AFTER" ]; then
+  echo "  Already up to date."
+elif [ "$SERVER_CHANGED" = "true" ]; then
+  echo "  Server files changed — full deploy."
+else
+  echo "  Frontend-only changes."
+fi
 
 # ── STEP 2: Sync static files to public_html ─────────────────
 echo ""
@@ -31,30 +48,34 @@ rsync -a --delete \
   ~/public_html/
 echo "  Done."
 
-# ── STEP 3: Activate the Node.js environment ─────────────────
-echo ""
-echo "STEP 3: Activating Node.js..."
-source "$NODE_ACTIVATE"
+# ── STEPS 3-5: Server-only (skip for frontend-only changes) ──
+if [ "$SERVER_CHANGED" = "true" ]; then
 
-# ── STEP 4: Install any new npm packages ─────────────────────
-echo ""
-echo "STEP 4: Running npm install..."
-cd "$SERVER_DIR"
-npm install
-echo "  Done."
+  echo ""
+  echo "STEP 3: Activating Node.js..."
+  source "$NODE_ACTIVATE"
 
-# ── STEP 5: Run database migrations ──────────────────────────
-echo ""
-echo "STEP 5: Running database migrations..."
-node scripts/migrate.js
-echo "  Done."
+  echo ""
+  echo "STEP 4: Running npm install..."
+  cd "$SERVER_DIR"
+  npm install
+  echo "  Done."
 
-# ── STEP 6: Restart the Node.js app ──────────────────────────
-echo ""
-echo "STEP 6: Restarting the app..."
-mkdir -p "$SERVER_DIR/tmp"
-touch "$SERVER_DIR/tmp/restart.txt"
-echo "  Done."
+  echo ""
+  echo "STEP 5: Running database migrations..."
+  node scripts/migrate.js
+  echo "  Done."
+
+  echo ""
+  echo "STEP 6: Restarting the app..."
+  mkdir -p "$SERVER_DIR/tmp"
+  touch "$SERVER_DIR/tmp/restart.txt"
+  echo "  Done."
+
+else
+  echo ""
+  echo "STEPS 3-6: Skipped (no server/ changes)."
+fi
 
 # ── Finished ──────────────────────────────────────────────────
 echo ""
