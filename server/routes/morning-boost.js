@@ -21,6 +21,13 @@ function getTransporter() {
   return _transporter;
 }
 
+// mysql2 dateStrings:true returns "YYYY-MM-DD HH:mm:ss" with no timezone marker.
+// Append Z so browsers parse it as UTC instead of local time.
+function toUtcIso(str) {
+  if (!str) return null;
+  return str.replace(' ', 'T') + '.000Z';
+}
+
 function mbUnsubscribeToken(email) {
   return crypto.createHmac('sha256', process.env.SESSION_SECRET).update(email.toLowerCase()).digest('hex');
 }
@@ -466,8 +473,8 @@ router.get('/email/sends', requireAuth, async (req, res) => {
   res.json({
     sends: rows.map(s => ({
       id: s.id, boostDate: s.boost_date, status: s.status,
-      subject: s.subject, fromEmail: s.from_email, scheduledFor: s.scheduled_for,
-      sentAt: s.sent_at, recipientCount: s.recipient_count, sentCount: s.sent_count,
+      subject: s.subject, fromEmail: s.from_email, scheduledFor: toUtcIso(s.scheduled_for),
+      sentAt: toUtcIso(s.sent_at), recipientCount: s.recipient_count, sentCount: s.sent_count,
       failedCount: s.failed_count, skippedCount: s.skipped_count, isResend: !!s.is_resend,
       failureReason: s.failure_reason, postTitle: s.post_title, postSlug: s.post_slug,
     })),
@@ -503,8 +510,8 @@ router.get('/email/sends/:id', requireAuth, async (req, res) => {
     send: {
       id: send.id, boostDate: send.boost_date, status: send.status,
       subject: send.subject, fromEmail: send.from_email, fromName: send.from_name,
-      replyTo: send.reply_to, ctaUrl: send.cta_url, scheduledFor: send.scheduled_for,
-      sentAt: send.sent_at, recipientCount: send.recipient_count,
+      replyTo: send.reply_to, ctaUrl: send.cta_url, scheduledFor: toUtcIso(send.scheduled_for),
+      sentAt: toUtcIso(send.sent_at), recipientCount: send.recipient_count,
       isResend: !!send.is_resend, failureReason: send.failure_reason,
       postTitle: send.post_title, groupIds: send.group_ids ? JSON.parse(send.group_ids) : [],
     },
@@ -515,7 +522,7 @@ router.get('/email/sends/:id', requireAuth, async (req, res) => {
     },
     recipients: recipients.map(r => ({
       email: r.email, status: r.status, error: r.error_message,
-      sentAt: r.sent_at, openedAt: r.opened_at, clickedAt: r.clicked_at,
+      sentAt: toUtcIso(r.sent_at), openedAt: toUtcIso(r.opened_at), clickedAt: toUtcIso(r.clicked_at),
     })),
   });
 });
