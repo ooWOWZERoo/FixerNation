@@ -629,7 +629,7 @@ async function runMorningBoostSend({ targetDate, initiatedBy = null, isResend = 
 
   // Find today's Morning Boost calendar entry and published blog post
   const [[calEntry]] = await pool.query(
-    'SELECT mbc.*, bp.title, bp.slug, bp.author, bp.excerpt, bp.publish_date, bp.status AS bp_status FROM morning_boost_calendar mbc LEFT JOIN blog_posts bp ON bp.id = mbc.blog_post_id WHERE mbc.boost_date = ?',
+    'SELECT mbc.*, bp.title, bp.slug, bp.author, bp.excerpt, bp.publish_date, bp.published AS bp_published FROM morning_boost_calendar mbc LEFT JOIN blog_posts bp ON bp.id = mbc.blog_post_id WHERE mbc.boost_date = ?',
     [targetDate]
   );
 
@@ -641,7 +641,7 @@ async function runMorningBoostSend({ targetDate, initiatedBy = null, isResend = 
   if (calEntry && calEntry.blog_post_id) {
     const publishedByDate = calEntry.publish_date &&
       calEntry.publish_date.toString().slice(0, 10) <= targetDate;
-    const postPublished = publishedByDate || calEntry.bp_status === 'published';
+    const postPublished = publishedByDate || !!calEntry.bp_published;
 
     if (!postPublished) {
       errors.push('The associated Morning Boost blog post is not yet published.');
