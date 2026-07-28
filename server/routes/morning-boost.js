@@ -34,6 +34,16 @@ function renderTemplate(template, vars) {
   return (template || '').replace(/\{\{(\w+)\}\}/g, (_, key) => (vars[key] !== undefined ? vars[key] : ''));
 }
 
+// Convert plain-text newlines to HTML paragraphs/breaks for email rendering.
+// Skipped if the body already contains HTML block elements.
+function plainTextToEmailHtml(str) {
+  if (/<(p|br|div|h[1-6]|ul|ol|li|blockquote)\b/i.test(str)) return str;
+  return str
+    .split(/\n\n+/)
+    .map(para => `<p style="margin:0 0 14px 0;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;">${para.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
 // Build a plain-text version from an HTML body (strip tags, collapse whitespace).
 function htmlToPlainText(html) {
   return (html || '')
@@ -58,7 +68,7 @@ function buildMorningBoostEmail(config, vars, recipientEmail) {
   const ctaUrl = vars.cta_url;
   const ctaText = config.cta_text || "Read Today's Morning Boost";
 
-  let bodyHtml = renderTemplate(config.body, vars);
+  let bodyHtml = plainTextToEmailHtml(renderTemplate(config.body, vars));
   let bodyText = config.body_format === 'html' ? htmlToPlainText(bodyHtml) : renderTemplate(config.body, vars);
 
   const ctaHtml = `<div style="margin:24px 0; text-align:center;"><a href="${ctaUrl}" style="display:inline-block; background:#F26B4D; color:#fff; padding:13px 28px; border-radius:999px; font-weight:700; font-size:15px; text-decoration:none;">${ctaText}</a></div>`;
