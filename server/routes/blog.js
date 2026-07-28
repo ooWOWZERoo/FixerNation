@@ -43,7 +43,7 @@ function serialize(row) {
     metaDescription: row.meta_description || '',
     focusKeyword: row.focus_keyword || '',
     requiresMembership: !!row.requires_membership,
-    publishDate: row.publish_date,
+    publishDate: row.publish_date ? new Date(row.publish_date).toISOString().slice(0, 10) : null,
     featured: !!row.featured,
     published: !!row.published,
     createdAt: row.created_at,
