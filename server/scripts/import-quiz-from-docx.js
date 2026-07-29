@@ -126,19 +126,37 @@ async function run() {
   console.log(`Curriculum : "${curriculumTitle}"`);
   console.log(`Questions  : ${questions.length}`);
 
+  // Strip punctuation + collapse whitespace for fuzzy title matching
+  function normalizeTitle(str) {
+    return str.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
   const connection = await pool.getConnection();
   try {
-    const [rows] = await connection.query(
+    // Pass 1: exact match
+    let [rows] = await connection.query(
       'SELECT id, title FROM curricula WHERE title = ? LIMIT 1',
       [curriculumTitle]
     );
 
+    // Pass 2: normalized match (ignores punctuation differences)
     if (!rows.length) {
-      console.error(`\nNo curriculum found with title "${curriculumTitle}".`);
-      console.error('Available curricula:');
       const [all] = await connection.query('SELECT id, title FROM curricula ORDER BY title');
-      all.forEach(r => console.log(`  id=${r.id}  "${r.title}"`));
-      process.exit(1);
+      const needle = normalizeTitle(curriculumTitle);
+      const fuzzy = all.filter(r => normalizeTitle(r.title) === needle);
+      if (fuzzy.length === 1) {
+        console.log(`Fuzzy match: "${curriculumTitle}" → "${fuzzy[0].title}"`);
+        rows = fuzzy;
+      } else if (fuzzy.length > 1) {
+        console.error(`\nAmbiguous title "${curriculumTitle}" matches multiple curricula:`);
+        fuzzy.forEach(r => console.log(`  id=${r.id}  "${r.title}"`));
+        process.exit(1);
+      } else {
+        console.error(`\nNo curriculum found with title "${curriculumTitle}".`);
+        console.error('Available curricula:');
+        all.forEach(r => console.log(`  id=${r.id}  "${r.title}"`));
+        process.exit(1);
+      }
     }
 
     const curriculumId = rows[0].id;
