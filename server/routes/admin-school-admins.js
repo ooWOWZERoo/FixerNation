@@ -35,7 +35,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const [rows] = await pool.query(
     `SELECT sla.id, sla.permission_level, sla.is_active, sla.notes, sla.created_at,
-            su.id AS site_user_id, su.first_name, su.last_name, su.email, su.role,
+            su.id AS site_user_id, su.first_name, su.last_name, su.email, su.role, su.email_verified,
             p.id AS purchase_id, p.school_domain, p.seat_count, p.payment_status,
             lp.name AS plan_name
      FROM school_license_admins sla
@@ -151,6 +151,39 @@ router.post('/assign', requireAuth, async (req, res) => {
     conn.release();
     throw err;
   }
+});
+
+// POST /api/admin/school-admins/:assignmentId/resend-welcome
+router.post('/:assignmentId/resend-welcome', requireAuth, async (req, res) => {
+  const [[assignment]] = await pool.query(
+    `SELECT sla.id, sla.site_user_id, p.school_domain
+     FROM school_license_admins sla
+     JOIN purchases p ON p.id = sla.purchase_id
+     WHERE sla.id = ?`,
+    [req.params.assignmentId]
+  );
+  if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
+
+  const [[user]] = await pool.query(
+    'SELECT id, first_name, email, email_verified FROM site_users WHERE id = ?',
+    [assignment.site_user_id]
+  );
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const siteUrl = process.env.SITE_URL || '';
+  const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000);
+  const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
+
+  await sendSchoolAdminWelcomeEmail({
+    to: user.email,
+    firstName: user.first_name,
+    schoolDomain: assignment.school_domain,
+    portalUrl: `${siteUrl}/school-admin-dashboard.html`,
+    activateUrl,
+    isNewUser: false,
+  });
+
+  res.json({ ok: true });
 });
 
 // DELETE /api/admin/school-admins/:assignmentId

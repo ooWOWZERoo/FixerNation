@@ -194,16 +194,23 @@ function renderTable(rows) {
         : r.permission_level === 'secondary'
           ? '<span class="a-pill a-pill-neutral">Secondary</span>'
           : '<span class="a-pill a-pill-success">Full Access</span>';
+      const verifiedPill = r.email_verified
+        ? ''
+        : ' <span class="a-pill a-pill-warn" title="Has not completed account setup">Unverified</span>';
       const statusPill = r.is_active
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Inactive</span>';
+      const resendBtn = !r.email_verified
+        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',' + JSON.stringify(r.email) + ')">Resend Welcome</button> '
+        : '';
       return '<tr>' +
         '<td style="font-weight:600;">' + esc(name) + '</td>' +
-        '<td style="font-size:13px;color:var(--a-text-soft);">' + esc(r.email) + '</td>' +
+        '<td style="font-size:13px;color:var(--a-text-soft);">' + esc(r.email) + verifiedPill + '</td>' +
         '<td style="font-size:13px;">' + esc(school) + '</td>' +
         '<td>' + permPill + '</td>' +
         '<td>' + statusPill + '</td>' +
         '<td style="white-space:nowrap;">' +
+          resendBtn +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEditModal(' + r.id + ')">Edit</button> ' +
           '<button class="a-btn a-btn-danger a-btn-sm" onclick="openRemoveModal(' + r.id + ',' + JSON.stringify(r.email) + ')">Remove</button>' +
         '</td></tr>';
@@ -343,6 +350,21 @@ async function doRemove() {
     loadAssignments();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
   finally { btn.disabled = false; btn.textContent = 'Remove'; }
+}
+
+async function resendWelcome(id, email) {
+  if (!confirm('Resend the welcome/setup email to ' + email + '?')) return;
+  try {
+    const r = await fetch('/api/admin/school-admins/' + id + '/resend-welcome', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Welcome email resent to ' + email + '.');
+  } catch (e) { alert(e.message); }
 }
 
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
