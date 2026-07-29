@@ -233,13 +233,24 @@ router.post('/import-quiz', requireAuth, quizUpload.single('quiz'), async (req, 
     return res.status(422).json({ error: err.message });
   }
   const { curriculumTitle, questions } = parsed;
-  const [rows] = await pool.query('SELECT id, title FROM curricula WHERE title = ? LIMIT 1', [curriculumTitle]);
+
+  function normalizeTitle(str) {
+    return str.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  let [rows] = await pool.query('SELECT id, title FROM curricula WHERE title = ? LIMIT 1', [curriculumTitle]);
   if (!rows.length) {
-    const [all] = await pool.query('SELECT title FROM curricula ORDER BY title');
-    return res.status(404).json({
-      error: `No curriculum found matching "${curriculumTitle}".`,
-      available: all.map(r => r.title),
-    });
+    const [all] = await pool.query('SELECT id, title FROM curricula ORDER BY title');
+    const needle = normalizeTitle(curriculumTitle);
+    const fuzzy = all.filter(r => normalizeTitle(r.title) === needle);
+    if (fuzzy.length === 1) {
+      rows = fuzzy;
+    } else {
+      return res.status(404).json({
+        error: `No curriculum found matching "${curriculumTitle}".`,
+        available: all.map(r => r.title),
+      });
+    }
   }
   const curriculumId = rows[0].id;
   const connection = await pool.getConnection();
