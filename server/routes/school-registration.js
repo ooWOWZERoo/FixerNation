@@ -79,6 +79,13 @@ router.post('/check', async (req, res) => {
     await conn.commit();
     conn.release();
 
+    // Fire-and-forget audit log
+    pool.query(
+      `INSERT INTO school_audit_log (actor_type, actor_email, action, entity_type, entity_id, purchase_id, school_domain)
+       VALUES ('teacher', ?, 'teacher_self_registered', 'seat', ?, ?, ?)`,
+      [email.toLowerCase(), result.insertId, schoolPurchase.id, domain]
+    ).catch(e => console.error('audit log error:', e.message));
+
     return res.json({
       eligible: true,
       seatId: result.insertId,

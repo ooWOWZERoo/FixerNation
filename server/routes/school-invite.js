@@ -136,6 +136,13 @@ router.post('/claim', async (req, res) => {
 
   await pool.query("UPDATE school_invitations SET status = 'registered' WHERE id = ?", [inv.id]);
 
+  // Fire-and-forget audit log
+  pool.query(
+    `INSERT INTO school_audit_log (actor_type, actor_id, actor_email, action, entity_type, entity_id, purchase_id, school_domain)
+     VALUES ('teacher', ?, ?, 'teacher_registered', 'site_user', ?, ?, ?)`,
+    [loggedInUser.id, loggedInUser.email.toLowerCase(), loggedInUser.id, inv.purchase_id, inv.school_domain]
+  ).catch(e => console.error('audit log error:', e.message));
+
   try {
     const { addTeacherToSocialGroups } = require('../lib/social-groups');
     await addTeacherToSocialGroups(loggedInUser.id);
@@ -216,6 +223,13 @@ router.post('/register', async (req, res) => {
     ).catch(() => {});
 
     await conn.commit();
+
+    // Fire-and-forget audit log
+    pool.query(
+      `INSERT INTO school_audit_log (actor_type, actor_id, actor_email, action, entity_type, entity_id, purchase_id, school_domain)
+       VALUES ('teacher', ?, ?, 'teacher_registered', 'site_user', ?, ?, ?)`,
+      [newUserId, email, newUserId, inv.purchase_id, inv.school_domain]
+    ).catch(e => console.error('audit log error:', e.message));
 
     // Issue a session cookie so the user lands already logged in
     try {

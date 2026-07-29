@@ -1119,13 +1119,24 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
     const [rows] = await pool.query(
       `SELECT si.invited_email, si.first_name, si.last_name, si.status,
               si.grade_level, si.department, si.created_at, si.expires_at,
-              si.resend_count, si.revoked_at, si.revocation_reason
+              si.resend_count, si.revoked_at, si.revocation_reason,
+              su.email AS invited_by_email
        FROM school_invitations si
+       LEFT JOIN site_users su ON su.id = si.invited_by_site_user_id
        WHERE si.purchase_id = ?
        ORDER BY si.created_at DESC`,
       [purchaseId]
     );
-    return res.json({ invitations: rows });
+    // Seats created by self-registration (no invitation row)
+    const [selfRows] = await pool.query(
+      `SELECT ls.id AS seat_id, ls.invited_email, ls.status
+       FROM license_seats ls
+       LEFT JOIN school_invitations si ON si.seat_id = ls.id
+       WHERE ls.purchase_id = ? AND si.id IS NULL
+       ORDER BY ls.id DESC`,
+      [purchaseId]
+    );
+    return res.json({ invitations: rows, selfRegistered: selfRows });
   }
 
   if (type === 'activity') {
@@ -1231,9 +1242,10 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
   const [rows] = await pool.query(
     `SELECT sal.action, sal.entity_type, sal.entity_id, sal.actor_type, sal.actor_email,
             sal.reason, sal.prev_value, sal.new_value, sal.created_at,
-            su.email AS target_email
+            COALESCE(su.email, ls.invited_email) AS target_email
      FROM school_audit_log sal
      LEFT JOIN site_users su ON su.id = sal.entity_id AND sal.entity_type = 'site_user'
+     LEFT JOIN license_seats ls ON ls.id = sal.entity_id AND sal.entity_type = 'seat'
      WHERE sal.purchase_id = ?
      ORDER BY sal.created_at DESC
      LIMIT ? OFFSET ?`,
