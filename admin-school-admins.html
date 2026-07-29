@@ -201,7 +201,7 @@ function renderTable(rows) {
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Inactive</span>';
       const resendBtn = !r.email_verified
-        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',' + JSON.stringify(r.email) + ')">Resend Welcome</button> '
+        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',' + JSON.stringify(r.email) + ',this)">Resend Welcome</button> '
         : '';
       return '<tr>' +
         '<td style="font-weight:600;">' + esc(name) + '</td>' +
@@ -352,8 +352,9 @@ async function doRemove() {
   finally { btn.disabled = false; btn.textContent = 'Remove'; }
 }
 
-async function resendWelcome(id, email) {
+async function resendWelcome(id, email, btn) {
   if (!confirm('Resend the welcome/setup email to ' + email + '?')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   try {
     const r = await fetch('/api/admin/school-admins/' + id + '/resend-welcome', {
       method: 'POST', credentials: 'include',
@@ -361,10 +362,18 @@ async function resendWelcome(id, email) {
       body: '{}',
     });
     if (fnHandleUnauthorized(r)) return;
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Failed');
-    fnToast('Welcome email resent to ' + email + '.');
-  } catch (e) { alert(e.message); }
+    let d = {};
+    try { d = await r.json(); } catch (_) {}
+    if (!r.ok) throw new Error(d.error || 'Server error (' + r.status + ')');
+    if (btn) { btn.textContent = 'Sent ✓'; btn.style.color = 'var(--a-success)'; }
+    fnToast('Welcome email sent to ' + email + '.');
+    setTimeout(() => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Resend Welcome'; btn.style.color = ''; }
+    }, 3000);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Resend Welcome'; }
+    fnToast('Could not send email: ' + e.message);
+  }
 }
 
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
