@@ -1082,19 +1082,20 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
   if (type === 'utilization') {
     const [[purchase]] = await pool.query('SELECT seat_count, payment_status FROM purchases WHERE id = ?', [purchaseId]);
     const [[counts]] = await pool.query(
-      "SELECT COUNT(*) AS total, SUM(status='registered') AS active, SUM(status='pending') AS pending, SUM(status='revoked') AS revoked FROM license_seats WHERE purchase_id = ?",
+      `SELECT SUM(status='registered') AS active, SUM(status='pending') AS pending,
+              SUM(status='inactive') AS inactive, SUM(status='revoked') AS revoked
+       FROM license_seats WHERE purchase_id = ?`,
       [purchaseId]
     );
-    const registered = Number(counts.active || 0);
-    const pending    = Number(counts.pending || 0);
+    const registered = Number(counts.active   || 0);
+    const pending    = Number(counts.pending  || 0);
+    const inactive   = Number(counts.inactive || 0);
+    const revoked    = Number(counts.revoked  || 0);
+    const total      = purchase ? purchase.seat_count : 0;
+    const assigned   = registered + pending + inactive;
+    const available  = Math.max(0, total - assigned);
     return res.json({
-      utilization: {
-        total:      purchase ? purchase.seat_count : 0,
-        assigned:   registered + pending,
-        registered,
-        pending,
-        revoked:    Number(counts.revoked || 0),
-      },
+      utilization: { total, assigned, available, registered, pending, inactive, revoked },
       paymentStatus: purchase ? purchase.payment_status : null,
     });
   }
