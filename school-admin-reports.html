@@ -241,7 +241,7 @@ function renderInvitationsReport(invs, selfReg) {
   }
 
   if (selfReg && selfReg.length) {
-    const seatStatusBadge = { pending:'<span class="sa-badge sa-badge-warn">Waiting on account setup</span>', registered:'<span class="sa-badge sa-badge-success">Completed</span>', inactive:'<span class="sa-badge">Inactive</span>', revoked:'<span class="sa-badge" style="background:#f3f4f6;color:#6b7280;">Removed</span>' };
+    const seatStatusBadge = { pending:'<span class="sa-badge sa-badge-warn">Self-Registration, Waiting on account setup</span>', registered:'<span class="sa-badge sa-badge-success">Completed</span>', inactive:'<span class="sa-badge">Inactive</span>', revoked:'<span class="sa-badge" style="background:#f3f4f6;color:#6b7280;">Removed</span>' };
     html += '<h4 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sa-text-soft);margin:' + (invs.length ? '24px' : '0') + ' 0 6px;">Pending Self-Registrations</h4>';
     html += '<p style="font-size:12.5px;color:var(--sa-text-soft);margin:0 0 10px;">These teachers entered your school email during signup but haven\'t finished creating their account yet.</p>';
     html += '<table class="sa-table"><thead><tr><th>Email</th><th>Status</th></tr></thead><tbody>';
