@@ -309,6 +309,13 @@ async function attachPurchaseDetails(purchases) {
   const membershipPlanById = {};
   membershipPlanRows.forEach(mp => { membershipPlanById[mp.id] = mp; });
 
+  const registeredUserIds = seatRows.map(s => s.registered_site_user_id).filter(Boolean);
+  const [audRows] = registeredUserIds.length
+    ? await pool.query('SELECT site_user_id, audience FROM site_user_audiences WHERE site_user_id IN (?)', [registeredUserIds])
+    : [[]];
+  const audiencesByUser = {};
+  audRows.forEach(r => { (audiencesByUser[r.site_user_id] = audiencesByUser[r.site_user_id] || []).push(r.audience); });
+
   const seatsByPurchase = {};
   seatRows.forEach(s => {
     (seatsByPurchase[s.purchase_id] = seatsByPurchase[s.purchase_id] || []).push({
@@ -317,6 +324,7 @@ async function attachPurchaseDetails(purchases) {
       status: s.status,
       registeredName: s.registered_site_user_id ? `${s.first_name} ${s.last_name}` : null,
       registeredAt: s.registered_at,
+      audiences: s.registered_site_user_id ? (audiencesByUser[s.registered_site_user_id] || []) : [],
     });
   });
 
@@ -697,6 +705,36 @@ router.post('/purchases/:purchaseId/seats/:seatId/unregister', requireAuth, asyn
     [seat.id]
   );
   res.json({ ok: true });
+});
+
+const VALID_AUDIENCES = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
+
+// Update the grade-level audience selections for a specific registered seat (super-admin).
+router.put('/seats/:seatId/audiences', requireAuth, async (req, res) => {
+  const [[seat]] = await pool.query(
+    'SELECT id, registered_site_user_id FROM license_seats WHERE id = ?',
+    [req.params.seatId]
+  );
+  if (!seat) return res.status(404).json({ error: 'Seat not found' });
+  if (!seat.registered_site_user_id) return res.status(422).json({ error: 'Seat has no registered teacher yet' });
+
+  const audiences = Array.isArray(req.body && req.body.audiences) ? req.body.audiences : [];
+  const invalid = audiences.find(a => !VALID_AUDIENCES.includes(a));
+  if (invalid) return res.status(400).json({ error: `Invalid audience value: ${invalid}` });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.query('DELETE FROM site_user_audiences WHERE site_user_id = ?', [seat.registered_site_user_id]);
+    if (audiences.length > 0) {
+      await conn.query(
+        'INSERT INTO site_user_audiences (site_user_id, audience) VALUES ' + audiences.map(() => '(?, ?)').join(', '),
+        audiences.flatMap(a => [seat.registered_site_user_id, a])
+      );
+    }
+  } finally {
+    conn.release();
+  }
+  res.json({ ok: true, audiences });
 });
 
 // Bulk import — rows already parsed client-side from CSV.

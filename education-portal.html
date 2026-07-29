@@ -322,6 +322,13 @@
       <h2>Browse the growing library</h2>
       <p>New lessons are added every weekday. A representative sample is shown below.</p>
     </div>
+    <div class="filter-bar" id="audienceFilterBar">
+      <div class="chip" data-audience="all">All Levels</div>
+      <div class="chip" data-audience="Elementary School">Elementary</div>
+      <div class="chip" data-audience="Middle School">Middle School</div>
+      <div class="chip" data-audience="High School">High School</div>
+      <div class="chip" data-audience="Higher Education">Higher Ed</div>
+    </div>
     <div class="filter-bar" id="filterBar">
       <div class="chip active" data-series="all">All Series</div>
     </div>
@@ -381,7 +388,7 @@
 <script>
 document.getElementById('filterBar').addEventListener('click', function(e){
   if(!e.target.classList.contains('chip')) return;
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#filterBar .chip').forEach(c => c.classList.remove('active'));
   e.target.classList.add('active');
   var series = e.target.dataset.series;
   document.querySelectorAll('.lesson-card').forEach(card => {
@@ -398,22 +405,54 @@ function showInfoToast(msg) {
 }
 
 let curriculaCache = [];
+const AUDIENCE_LS_KEY = 'fn_audience_filter';
+let teacherAudiences = null; // null = guest; [] = logged in no prefs; ['Middle School'] = filtered
+
+function getActiveAudiences() {
+  if (Array.isArray(teacherAudiences) && teacherAudiences.length) return teacherAudiences;
+  const saved = localStorage.getItem(AUDIENCE_LS_KEY) || 'Middle School';
+  return saved === 'all' ? [] : [saved];
+}
+
+function initAudienceChips() {
+  const saved = localStorage.getItem(AUDIENCE_LS_KEY) || 'Middle School';
+  document.querySelectorAll('#audienceFilterBar .chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.audience === saved);
+  });
+}
+
+document.getElementById('audienceFilterBar').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('chip')) return;
+  document.querySelectorAll('#audienceFilterBar .chip').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+  const aud = e.target.dataset.audience;
+  if (aud === 'all') localStorage.removeItem(AUDIENCE_LS_KEY);
+  else localStorage.setItem(AUDIENCE_LS_KEY, aud);
+  renderLessonGrid();
+});
 
 function renderLessonGrid() {
   const grid = document.getElementById('lessonGrid');
   const note = document.getElementById('libraryNote');
   const filterBar = document.getElementById('filterBar');
 
-  if (!curriculaCache.length) {
-    grid.innerHTML = '<p style="color:var(--ink-soft); grid-column:1/-1;">No lesson plans are published yet. Check back soon.</p>';
+  const activeAudiences = getActiveAudiences();
+  const filtered = activeAudiences.length
+    ? curriculaCache.filter(c => !c.audiences || !c.audiences.length || c.audiences.some(a => activeAudiences.includes(a)))
+    : curriculaCache;
+
+  if (!filtered.length) {
+    filterBar.innerHTML = '<div class="chip active" data-series="all">All Series</div>';
+    grid.innerHTML = '<p style="color:var(--ink-soft); grid-column:1/-1;">No lesson plans found for this grade level.</p>';
+    if (note) note.textContent = '';
     return;
   }
 
-  const uniqueSeries = [...new Set(curriculaCache.map(c => c.series).filter(Boolean))].sort();
+  const uniqueSeries = [...new Set(filtered.map(c => c.series).filter(Boolean))].sort();
   filterBar.innerHTML = '<div class="chip active" data-series="all">All Series</div>' +
     uniqueSeries.map(s => `<div class="chip" data-series="${s.replace(/"/g, '&quot;')}">${s}</div>`).join('');
 
-  grid.innerHTML = curriculaCache.map((c, i) => {
+  grid.innerHTML = filtered.map((c, i) => {
     const series = c.series || '';
     const desc = c.shortDescription || c.overview || '';
     const url = 'lesson-detail.html?id=' + encodeURIComponent(c.id);
@@ -425,7 +464,7 @@ function renderLessonGrid() {
     </div>`;
   }).join('');
 
-  if (note) note.textContent = `Showing ${curriculaCache.length} lesson${curriculaCache.length !== 1 ? 's' : ''} in the growing library. New lessons added every weekday, Monday through Friday.`;
+  if (note) note.textContent = `Showing ${filtered.length} lesson${filtered.length !== 1 ? 's' : ''} in the growing library. New lessons added every weekday, Monday through Friday.`;
 }
 
 function getFeaturedCurriculum() {
@@ -534,6 +573,29 @@ fetch('/api/curricula', { credentials: 'include' })
   .then(r => r.json())
   .then(data => {
     curriculaCache = data.curricula || [];
+    return fetch('/api/site-auth/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { loggedIn: false })
+      .catch(() => ({ loggedIn: false }))
+      .then(me => {
+        if (!me.loggedIn) {
+          initAudienceChips();
+          return;
+        }
+        return fetch('/api/site-auth/me/audiences', { credentials: 'include' })
+          .then(r => r.json())
+          .then(d => {
+            teacherAudiences = d.audiences || [];
+            if (teacherAudiences.length > 0) {
+              document.getElementById('audienceFilterBar').style.display = 'none';
+            } else {
+              teacherAudiences = null;
+              initAudienceChips();
+            }
+          })
+          .catch(() => { teacherAudiences = null; initAudienceChips(); });
+      });
+  })
+  .then(() => {
     renderLessonGrid();
     renderSpotlightResources();
     renderSpotlightVideo();

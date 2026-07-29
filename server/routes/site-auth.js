@@ -299,6 +299,38 @@ router.put('/my-purchases/:purchaseId/seats/:seatId', requireSiteAuth, async (re
   res.json({ ok: true });
 });
 
+// --- Audience / grade-level preferences (teachers) ---
+
+const VALID_AUDIENCES = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
+
+router.get('/me/audiences', requireSiteAuth, async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT audience FROM site_user_audiences WHERE site_user_id = ?',
+    [req.siteUser.id]
+  );
+  res.json({ audiences: rows.map(r => r.audience) });
+});
+
+router.put('/me/audiences', requireSiteAuth, async (req, res) => {
+  const audiences = Array.isArray(req.body && req.body.audiences) ? req.body.audiences : [];
+  const invalid = audiences.find(a => !VALID_AUDIENCES.includes(a));
+  if (invalid) return res.status(400).json({ error: `Invalid audience value: ${invalid}` });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.query('DELETE FROM site_user_audiences WHERE site_user_id = ?', [req.siteUser.id]);
+    if (audiences.length > 0) {
+      await conn.query(
+        'INSERT INTO site_user_audiences (site_user_id, audience) VALUES ' + audiences.map(() => '(?, ?)').join(', '),
+        audiences.flatMap(a => [req.siteUser.id, a])
+      );
+    }
+  } finally {
+    conn.release();
+  }
+  res.json({ ok: true, audiences });
+});
+
 // --- Admin management of site-user accounts ---
 // Site users aren't browsed as their own list — they're surfaced as a value
 // on the matching CRM contact (see server/routes/newsletter.js), so these

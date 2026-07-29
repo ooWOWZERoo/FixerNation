@@ -167,6 +167,18 @@ document.addEventListener('DOMContentLoaded', function () {
       fnAuthRenderNav(true, result.firstName);
       fnAuthCloseModal();
       document.dispatchEvent(new CustomEvent('fn-auth-changed'));
+      const _pa = sessionStorage.getItem('fn_pending_audiences');
+      if (_pa) {
+        sessionStorage.removeItem('fn_pending_audiences');
+        const _aud = JSON.parse(_pa);
+        if (_aud.length) {
+          fetch('/api/site-auth/me/audiences', {
+            method: 'PUT', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audiences: _aud }),
+          }).catch(() => {});
+        }
+      }
     });
   }
 

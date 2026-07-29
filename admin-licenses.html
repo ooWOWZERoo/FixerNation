@@ -102,6 +102,20 @@
   </div>
 </div>
 
+<div class="a-modal-overlay" id="gradeModalOverlay" style="display:none;">
+  <div class="a-modal" style="max-width:380px;">
+    <div class="a-modal-head">
+      <h3>Edit Grade Levels</h3>
+      <button class="a-modal-close" onclick="closeGradeModal()">✕</button>
+    </div>
+    <div class="a-modal-body" id="gradeModalBody"></div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeGradeModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="saveGradeModal()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="admin-common.js?v=15"></script>
 <script>
 fnRequireAuth();
@@ -279,10 +293,12 @@ function licenseCard(p) {
         <tr>
           <td class="a-cell-title">${s.registeredName}</td>
           <td>${s.invitedEmail}</td>
+          <td>${(s.audiences && s.audiences.length) ? s.audiences.join(', ') : '—'}</td>
           <td>${fnFormatDate(s.registeredAt)}</td>
+          <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openGradeModal(${s.id}, ${JSON.stringify(s.audiences || []).replace(/"/g, '&quot;')})">✏️ Edit</button></td>
         </tr>
       `).join('')
-    : `<tr><td colspan="3" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
+    : `<tr><td colspan="5" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
 
   return `
     <div class="a-card" style="margin-bottom:20px;">
@@ -308,7 +324,7 @@ function licenseCard(p) {
 
       <h3 style="font-size:14px; margin-bottom:10px;">Registered Teachers</h3>
       <table class="a-table">
-        <thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Grade Levels</th><th>Registered</th><th></th></tr></thead>
         <tbody>${rosterRows}</tbody>
       </table>
     </div>
@@ -333,6 +349,43 @@ async function updateAvailable(purchaseId, registeredCount) {
     return;
   }
   fnToast('Available seats updated');
+  searchByDomain();
+}
+
+const GRADE_OPTIONS = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
+let _gradeSeatId = null;
+
+function openGradeModal(seatId, currentAudiences) {
+  _gradeSeatId = seatId;
+  const audiences = Array.isArray(currentAudiences) ? currentAudiences : JSON.parse(currentAudiences || '[]');
+  document.getElementById('gradeModalBody').innerHTML = GRADE_OPTIONS.map(g =>
+    `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;cursor:pointer;">
+       <input type="checkbox" value="${g}" ${audiences.includes(g) ? 'checked' : ''}> ${g}
+     </label>`
+  ).join('');
+  document.getElementById('gradeModalOverlay').style.display = 'flex';
+}
+
+function closeGradeModal() {
+  document.getElementById('gradeModalOverlay').style.display = 'none';
+}
+
+async function saveGradeModal() {
+  const audiences = Array.from(document.querySelectorAll('#gradeModalBody input[type="checkbox"]:checked')).map(cb => cb.value);
+  const r = await fetch(`/api/newsletter/seats/${_gradeSeatId}/audiences`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ audiences }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save grade levels');
+    return;
+  }
+  closeGradeModal();
+  fnToast('Grade levels updated');
   searchByDomain();
 }
 

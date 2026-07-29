@@ -157,18 +157,21 @@ function renderTeachers(teachers) {
     wrap.innerHTML = '<div class="empty-state"><div class="icon">👩‍🏫</div><div>No teachers found.</div></div>';
     return;
   }
-  wrap.innerHTML = '<table class="sa-table"><thead><tr><th></th><th>Name</th><th>Email</th><th>Grade / Dept</th><th>Registered</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+  wrap.innerHTML = '<table class="sa-table"><thead><tr><th></th><th>Name</th><th>Email</th><th>Grade / Dept</th><th>Grade Levels</th><th>Registered</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
     teachers.map(function (t) {
       const init = ((t.first_name || '?')[0]).toUpperCase();
       const name = esc(t.first_name + ' ' + t.last_name);
       const registered = t.registered_at ? new Date(t.registered_at).toLocaleDateString() : '—';
       const grade = [t.grade_level, t.department].filter(Boolean).join(' / ') || '—';
+      const audienceDisplay = (t.audiences && t.audiences.length) ? esc(t.audiences.join(', ')) : '—';
+      const audsJson = esc(JSON.stringify(t.audiences || []));
       const isActive = t.role !== 'inactive_teacher';
       const badge = isActive ? '<span class="sa-badge sa-badge-success">Active</span>' : '<span class="sa-badge sa-badge-warn">Inactive</span>';
-      const actions = isActive
+      const editGrades = '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="openAudienceModal(' + t.site_user_id + ', \'' + audsJson + '\')">Edit Grades</button> ';
+      const actions = editGrades + (isActive
         ? '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivateTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Deactivate</button> <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Remove</button>'
-        : '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivateTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Reactivate</button>';
-      return '<tr><td><div class="av">' + init + '</div></td><td><div class="teacher-name">' + name + '</div></td><td class="teacher-meta">' + esc(t.email) + '</td><td class="teacher-meta">' + esc(grade) + '</td><td class="teacher-meta">' + registered + '</td><td>' + badge + '</td><td>' + actions + '</td></tr>';
+        : '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivateTeacher(' + t.site_user_id + ', \'' + esc(t.email) + '\')">Reactivate</button>');
+      return '<tr><td><div class="av">' + init + '</div></td><td><div class="teacher-name">' + name + '</div></td><td class="teacher-meta">' + esc(t.email) + '</td><td class="teacher-meta">' + esc(grade) + '</td><td class="teacher-meta">' + audienceDisplay + '</td><td class="teacher-meta">' + registered + '</td><td>' + badge + '</td><td>' + actions + '</td></tr>';
     }).join('') +
     '</tbody></table>';
 }
@@ -248,6 +251,53 @@ async function sendInvite() {
 }
 
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+const SA_GRADE_OPTIONS = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
+let _saAudienceUserId = null;
+
+function openAudienceModal(siteUserId, audiencesJson) {
+  _saAudienceUserId = siteUserId;
+  const current = JSON.parse(audiencesJson);
+  document.getElementById('saGradeModalBody').innerHTML = SA_GRADE_OPTIONS.map(g =>
+    '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;cursor:pointer;">' +
+    '<input type="checkbox" value="' + g + '"' + (current.includes(g) ? ' checked' : '') + '> ' + g +
+    '</label>'
+  ).join('');
+  document.getElementById('saGradeModal').style.display = 'flex';
+}
+
+function closeAudienceModal() {
+  document.getElementById('saGradeModal').style.display = 'none';
+}
+
+async function saveAudienceModal() {
+  const audiences = Array.from(document.querySelectorAll('#saGradeModalBody input[type="checkbox"]:checked')).map(cb => cb.value);
+  try {
+    await saFetch('/api/school-admin/teachers/' + _saAudienceUserId + '/audiences?purchaseId=' + window.saActivePurchaseId(), {
+      method: 'PUT',
+      body: JSON.stringify({ audiences }),
+    });
+    closeAudienceModal();
+    saToast('Grade levels updated', 'success');
+    loadTeachers();
+  } catch (e) {
+    saToast(e.message || 'Could not save grade levels', 'error');
+  }
+}
 </script>
+
+<div class="sa-modal-overlay" id="saGradeModal" style="display:none;">
+  <div class="sa-modal" style="max-width:380px;">
+    <div class="sa-modal-head">
+      <h3>Edit Grade Levels</h3>
+      <button class="sa-modal-close" onclick="closeAudienceModal()">✕</button>
+    </div>
+    <div class="sa-modal-body" id="saGradeModalBody"></div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-outline" onclick="closeAudienceModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" onclick="saveAudienceModal()">Save</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

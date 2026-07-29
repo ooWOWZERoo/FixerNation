@@ -736,7 +736,53 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
     [...params, limit, offset]
   );
 
-  res.json({ teachers: rows, total: Number(total), page, limit });
+  const siteUserIds = rows.map(r => r.site_user_id).filter(Boolean);
+  const [audRows] = siteUserIds.length
+    ? await pool.query('SELECT site_user_id, audience FROM site_user_audiences WHERE site_user_id IN (?)', [siteUserIds])
+    : [[]];
+  const audByUser = {};
+  audRows.forEach(r => { (audByUser[r.site_user_id] = audByUser[r.site_user_id] || []).push(r.audience); });
+  const teachers = rows.map(r => ({ ...r, audiences: audByUser[r.site_user_id] || [] }));
+
+  res.json({ teachers, total: Number(total), page, limit });
+});
+
+// PUT /api/school-admin/teachers/:siteUserId/audiences
+const SA_VALID_AUDIENCES = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
+
+router.put('/teachers/:siteUserId/audiences', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+  const siteUserId = Number(req.params.siteUserId);
+  const purchaseId = req.query.purchaseId
+    ? Number(req.query.purchaseId)
+    : req.schoolAdmin.purchaseIds[0];
+
+  if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const [[seat]] = await pool.query(
+    "SELECT id FROM license_seats WHERE purchase_id = ? AND registered_site_user_id = ? AND status IN ('registered','inactive')",
+    [purchaseId, siteUserId]
+  );
+  if (!seat) return res.status(404).json({ error: 'Teacher not found under this school' });
+
+  const audiences = Array.isArray(req.body && req.body.audiences) ? req.body.audiences : [];
+  const invalid = audiences.find(a => !SA_VALID_AUDIENCES.includes(a));
+  if (invalid) return res.status(400).json({ error: `Invalid audience value: ${invalid}` });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.query('DELETE FROM site_user_audiences WHERE site_user_id = ?', [siteUserId]);
+    if (audiences.length > 0) {
+      await conn.query(
+        'INSERT INTO site_user_audiences (site_user_id, audience) VALUES ' + audiences.map(() => '(?, ?)').join(', '),
+        audiences.flatMap(a => [siteUserId, a])
+      );
+    }
+  } finally {
+    conn.release();
+  }
+  res.json({ ok: true, audiences });
 });
 
 // PUT /api/school-admin/teachers/:siteUserId/deactivate
