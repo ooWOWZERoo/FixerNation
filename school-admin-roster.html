@@ -93,6 +93,21 @@
   </div>
 </div>
 
+<!-- Grade levels modal -->
+<div class="sa-modal-overlay" id="saGradeModal" style="display:none;">
+  <div class="sa-modal" style="max-width:360px;">
+    <div class="sa-modal-head">
+      <h2>Edit Grade Levels</h2>
+      <button class="sa-modal-close" onclick="closeAudienceModal()">✕</button>
+    </div>
+    <div class="sa-modal-body" id="saGradeModalBody" style="padding:16px 0;"></div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeAudienceModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" onclick="saveAudienceModal()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Revoke pending-invitation modal -->
 <div class="sa-modal-overlay" id="revokeModal" style="display:none;">
   <div class="sa-modal">
@@ -209,7 +224,7 @@ function renderRoster(seats) {
   };
 
   wrap.innerHTML = '<table class="sa-table"><thead><tr>' +
-    '<th></th><th>Teacher</th><th>Status</th><th>Since</th><th>Notes</th><th>Actions</th>' +
+    '<th></th><th>Teacher</th><th>Status</th><th>Grade Levels</th><th>Since</th><th>Notes</th><th>Actions</th>' +
     '</tr></thead><tbody>' +
     slice.map(function (s) {
       var hasUser = !!(s.first_name || s.email);
@@ -233,13 +248,20 @@ function renderRoster(seats) {
 
       var notes = esc(s.revocation_reason || '—');
 
+      var audienceDisplay = (s.audiences && s.audiences.length) ? esc(s.audiences.join(', ')) : '—';
+      var audsJson = esc(JSON.stringify(s.audiences || []));
+
+      var editGrades = s.site_user_id
+        ? '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="openAudienceModal(' + s.site_user_id + ', \'' + audsJson + '\')">Edit Grades</button> '
+        : '';
+
       var actions = '—';
       if (s.status === 'registered') {
-        actions =
+        actions = editGrades +
           '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivate(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Deactivate</button>' +
           ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Remove</button>';
       } else if (s.status === 'inactive') {
-        actions =
+        actions = editGrades +
           '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivate(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Reactivate</button>' +
           ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Remove</button>';
       } else if (s.status === 'pending') {
@@ -250,6 +272,7 @@ function renderRoster(seats) {
         '<td style="width:46px;">' + avatar + '</td>' +
         '<td>' + nameCell + '</td>' +
         '<td>' + badge + '</td>' +
+        '<td style="font-size:12px;color:var(--sa-text-soft);">' + audienceDisplay + '</td>' +
         '<td style="font-size:13px;white-space:nowrap;">' + since + '</td>' +
         '<td style="font-size:12px;color:var(--sa-text-soft);max-width:180px;">' + notes + '</td>' +
         '<td style="white-space:nowrap;">' + actions + '</td>' +
@@ -377,6 +400,39 @@ function removeTeacher(userId, email) {
 
 function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// --- Grade levels modal ---
+var SA_GRADE_OPTIONS = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
+var _saAudienceUserId = null;
+
+function openAudienceModal(siteUserId, audiencesJson) {
+  _saAudienceUserId = siteUserId;
+  var current = JSON.parse(audiencesJson);
+  document.getElementById('saGradeModalBody').innerHTML = SA_GRADE_OPTIONS.map(function (g) {
+    var checked = current.indexOf(g) !== -1 ? ' checked' : '';
+    return '<label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">' +
+      '<input type="checkbox" value="' + esc(g) + '"' + checked + '> ' + esc(g) + '</label>';
+  }).join('');
+  document.getElementById('saGradeModal').style.display = 'flex';
+}
+function closeAudienceModal() {
+  document.getElementById('saGradeModal').style.display = 'none';
+  _saAudienceUserId = null;
+}
+async function saveAudienceModal() {
+  var audiences = Array.from(document.querySelectorAll('#saGradeModalBody input[type="checkbox"]:checked')).map(function (cb) { return cb.value; });
+  try {
+    await saFetch('/api/school-admin/teachers/' + _saAudienceUserId + '/audiences?purchaseId=' + window.saActivePurchaseId(), {
+      method: 'PUT',
+      body: JSON.stringify({ audiences: audiences }),
+    });
+    closeAudienceModal();
+    saToast('Grade levels updated.', 'success');
+    loadRoster();
+  } catch (e) {
+    saToast(e.message || 'Save failed.', 'error');
+  }
 }
 </script>
 </body>

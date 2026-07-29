@@ -985,6 +985,14 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
     params
   );
 
+  const registeredUserIds = seats.map(s => s.site_user_id).filter(Boolean);
+  const [audRows] = registeredUserIds.length
+    ? await pool.query('SELECT site_user_id, audience FROM site_user_audiences WHERE site_user_id IN (?)', [registeredUserIds])
+    : [[]];
+  const audByUser = {};
+  audRows.forEach(r => { (audByUser[r.site_user_id] = audByUser[r.site_user_id] || []).push(r.audience); });
+  const seatsWithAudiences = seats.map(s => ({ ...s, audiences: s.site_user_id ? (audByUser[s.site_user_id] || []) : [] }));
+
   res.json({
     total,
     active,
@@ -993,7 +1001,7 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
     revoked,
     available,
     paymentStatus: purchase ? purchase.payment_status : null,
-    seats,
+    seats: seatsWithAudiences,
   });
 });
 
