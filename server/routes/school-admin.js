@@ -1085,7 +1085,18 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
       "SELECT COUNT(*) AS total, SUM(status='registered') AS active, SUM(status='pending') AS pending, SUM(status='revoked') AS revoked FROM license_seats WHERE purchase_id = ?",
       [purchaseId]
     );
-    return res.json({ purchase, counts });
+    const registered = Number(counts.active || 0);
+    const pending    = Number(counts.pending || 0);
+    return res.json({
+      utilization: {
+        total:      purchase ? purchase.seat_count : 0,
+        assigned:   registered + pending,
+        registered,
+        pending,
+        revoked:    Number(counts.revoked || 0),
+      },
+      paymentStatus: purchase ? purchase.payment_status : null,
+    });
   }
 
   if (type === 'teachers') {
