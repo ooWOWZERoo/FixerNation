@@ -180,7 +180,7 @@ router.post('/:assignmentId/resend-welcome', requireAuth, async (req, res) => {
     schoolDomain: assignment.school_domain,
     portalUrl: `${siteUrl}/school-admin-dashboard.html`,
     activateUrl,
-    isNewUser: false,
+    isNewUser: true,
   });
 
   res.json({ ok: true });
