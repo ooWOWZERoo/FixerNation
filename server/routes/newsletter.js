@@ -385,7 +385,7 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
     } else if (productType === 'group_license') {
       await connection.query(
         'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(finalSeatCount).fill('(?, NULL, ?)').join(', '),
-        Array.from({ length: finalSeatCount }).flatMap(() => [purchaseId, 'pending'])
+        Array.from({ length: finalSeatCount }).flatMap(() => [purchaseId, 'available'])
       );
     }
     await connection.commit();
