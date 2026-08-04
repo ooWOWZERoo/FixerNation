@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { sendContactFormEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -97,6 +98,48 @@ router.post('/privacy-request', async (req, res) => {
     replyTo: email,
   });
   res.json({ ok: true });
+});
+
+const VALID_STATUSES = ['new', 'contacted', 'converted', 'closed'];
+
+router.get('/quotes', requireAuth, async (req, res) => {
+  const { status, search } = req.query;
+  let sql = 'SELECT * FROM quote_requests WHERE 1=1';
+  const params = [];
+
+  if (status && VALID_STATUSES.includes(status)) {
+    sql += ' AND status = ?';
+    params.push(status);
+  }
+  if (search) {
+    sql += ' AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR school LIKE ?)';
+    const like = `%${search}%`;
+    params.push(like, like, like, like);
+  }
+
+  sql += ' ORDER BY created_at DESC';
+  const [rows] = await pool.query(sql, params);
+  res.json({ quotes: rows });
+});
+
+router.put('/quotes/:id', requireAuth, async (req, res) => {
+  const { status, notes } = req.body || {};
+  if (status !== undefined && !VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+  const [existing] = await pool.query('SELECT id FROM quote_requests WHERE id = ?', [req.params.id]);
+  if (!existing.length) return res.status(404).json({ error: 'Not found' });
+
+  const updates = [];
+  const params = [];
+  if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+  if (notes  !== undefined) { updates.push('notes = ?');  params.push(notes);  }
+  if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
+
+  params.push(req.params.id);
+  await pool.query(`UPDATE quote_requests SET ${updates.join(', ')} WHERE id = ?`, params);
+  const [[row]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
+  res.json({ ok: true, quote: row });
 });
 
 module.exports = router;
