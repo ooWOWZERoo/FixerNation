@@ -258,4 +258,46 @@ async function sendTeacherRegisteredNotificationEmail({ to, adminName, teacherNa
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail };
+async function sendQuoteEmail({ to, firstName, lastName, school, productName, seatCount, amountDollars, replyTo }) {
+  const name = [firstName, lastName].filter(Boolean).join(' ') || 'there';
+  const seats = seatCount ? `${seatCount} seat${seatCount === 1 ? '' : 's'}` : null;
+  const descLine = seats ? `${productName} — ${seats}` : productName;
+  const total = `$${Number(amountDollars).toFixed(2)}`;
+
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    replyTo: replyTo || undefined,
+    subject: `Your Fixer Nation Education License Quote`,
+    text: [
+      `Hi ${name},`,
+      ``,
+      `Thank you for your interest in Fixer Nation Education. Here is the quote for ${school || 'your school'}:`,
+      ``,
+      `  License: ${descLine}`,
+      `  Total:   ${total}`,
+      ``,
+      `This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.`,
+      ``,
+      `Fixer Nation Education`,
+    ].join('\n'),
+    html: `
+      <p>Hi ${name},</p>
+      <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${school || 'your school'}</strong>:</p>
+      <table style="border-collapse:collapse;width:100%;max-width:480px;margin:16px 0;">
+        <tr>
+          <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">License</td>
+          <td style="padding:10px 14px;border:1px solid #e5e7eb;">${descLine}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">Total</td>
+          <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;">${total}</td>
+        </tr>
+      </table>
+      <p style="font-size:13px;color:#6b7280;">This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.</p>
+      <p>Fixer Nation Education</p>
+    `,
+  });
+}
+
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail };

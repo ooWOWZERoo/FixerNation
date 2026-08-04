@@ -15,10 +15,19 @@
   .q-search{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text); width:220px;}
   .q-search:focus{outline:none; border-color:var(--a-accent);}
   .q-msg{font-size:13px; white-space:pre-wrap; color:var(--a-text-soft); border:1px solid var(--a-border); border-radius:8px; padding:10px 12px; background:var(--a-bg);}
-  .q-notes{width:100%; min-height:80px; padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text); resize:vertical;}
+  .q-notes{width:100%; min-height:80px; padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text); resize:vertical; box-sizing:border-box;}
   .q-notes:focus{outline:none; border-color:var(--a-accent);}
+  .q-input{width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text); box-sizing:border-box;}
+  .q-input:focus{outline:none; border-color:var(--a-accent);}
   .q-label{font-size:12px; font-weight:600; color:var(--a-text-soft); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;}
   .q-field{margin-bottom:16px;}
+  .q-section-divider{border:none; border-top:1px solid var(--a-border); margin:20px 0;}
+  .q-section-title{font-size:13px; font-weight:700; color:var(--a-text); margin:0 0 14px;}
+  .q-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .q-amount-wrap{position:relative;}
+  .q-amount-wrap .q-dollar{position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--a-text-soft); font-size:14px; pointer-events:none;}
+  .q-amount-wrap .q-input{padding-left:24px;}
+  .q-sent-badge{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--a-success,#16a34a); background:color-mix(in srgb, var(--a-success,#16a34a) 10%, transparent); padding:4px 10px; border-radius:20px; margin-bottom:14px;}
 </style>
 </head>
 <body>
@@ -46,8 +55,8 @@
           <div class="value" id="statNew">—</div>
         </div>
         <div class="a-stat-card">
-          <div class="label">In Progress</div>
-          <div class="value" id="statInProgress">—</div>
+          <div class="label">Contacted</div>
+          <div class="value" id="statContacted">—</div>
         </div>
         <div class="a-stat-card">
           <div class="label">Converted</div>
@@ -76,7 +85,7 @@
               <th>Name</th>
               <th>School</th>
               <th>Email</th>
-              <th>Phone</th>
+              <th>Quoted</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -95,15 +104,16 @@
 
 <!-- Detail / edit modal -->
 <div class="a-modal-overlay" id="quoteModalOverlay" style="display:none;" onclick="if(event.target===this)closeModal()">
-  <div class="a-modal" style="max-width:520px;">
+  <div class="a-modal" style="max-width:540px;">
     <div class="a-modal-head">
       <h3 id="modalTitle">Quote Request</h3>
       <button class="a-modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="a-modal-body" id="modalBody"></div>
-    <div class="a-modal-foot">
+    <div class="a-modal-foot" id="modalFoot">
       <button class="a-btn a-btn-outline" onclick="closeModal()">Close</button>
-      <button class="a-btn a-btn-primary" onclick="saveModal()">Save Changes</button>
+      <button class="a-btn a-btn-outline" onclick="saveModal()">Save</button>
+      <button class="a-btn a-btn-primary" id="sendQuoteBtn" onclick="sendQuote()">Send Quote</button>
     </div>
   </div>
 </div>
@@ -112,25 +122,30 @@
 <script>
 fnRequireAuth();
 
-let allQuotes = [];
-let editingId = null;
+let allQuotes     = [];
+let licenseProds  = [];
+let editingId     = null;
 
 const STATUS_LABELS  = { new: 'New', contacted: 'Contacted', converted: 'Converted', closed: 'Closed' };
 const STATUS_CLASSES = { new: 'a-pill-neutral', contacted: 'a-pill-info', converted: 'a-pill-success', closed: 'a-pill-danger' };
 
-async function loadQuotes() {
-  const r = await fetch('/api/contact/quotes', { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return;
-  if (!r.ok) { fnToast('Could not load quotes'); return; }
-  allQuotes = (await r.json()).quotes || [];
+async function init() {
+  const [qRes, lpRes] = await Promise.all([
+    fetch('/api/contact/quotes', { credentials: 'include' }),
+    fetch('/api/license-products?all=true', { credentials: 'include' }),
+  ]);
+  if (fnHandleUnauthorized(qRes)) return;
+  if (!qRes.ok) { fnToast('Could not load quotes'); return; }
+  allQuotes    = (await qRes.json()).quotes || [];
+  licenseProds = lpRes.ok ? ((await lpRes.json()).licenseProducts || []) : [];
   updateStats();
   renderTable(allQuotes);
 }
 
 function updateStats() {
-  document.getElementById('statTotal').textContent = allQuotes.length;
-  document.getElementById('statNew').textContent = allQuotes.filter(q => q.status === 'new').length;
-  document.getElementById('statInProgress').textContent = allQuotes.filter(q => q.status === 'contacted').length;
+  document.getElementById('statTotal').textContent     = allQuotes.length;
+  document.getElementById('statNew').textContent       = allQuotes.filter(q => q.status === 'new').length;
+  document.getElementById('statContacted').textContent = allQuotes.filter(q => q.status === 'contacted').length;
   document.getElementById('statConverted').textContent = allQuotes.filter(q => q.status === 'converted').length;
 }
 
@@ -153,14 +168,17 @@ function renderTable(quotes) {
 
   quotes.forEach(q => {
     const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || '—';
-    const pill = `<span class="a-pill ${STATUS_CLASSES[q.status] || 'a-pill-neutral'}">${STATUS_LABELS[q.status] || q.status}</span>`;
+    const pill     = `<span class="a-pill ${STATUS_CLASSES[q.status] || 'a-pill-neutral'}">${STATUS_LABELS[q.status] || q.status}</span>`;
+    const quoted   = q.quoted_amount_cents
+      ? `<span style="font-weight:600;">$${(q.quoted_amount_cents / 100).toFixed(2)}</span>${q.quote_sent_at ? '<br><span style="font-size:11px;color:var(--a-text-soft);">Sent</span>' : ''}`
+      : '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="white-space:nowrap;">${fnFormatDate(q.created_at)}</td>
       <td class="a-cell-title">${fnEscape(fullName)}</td>
       <td>${fnEscape(q.school || '—')}</td>
       <td><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></td>
-      <td>${fnEscape(q.phone || '—')}</td>
+      <td>${quoted}</td>
       <td>${pill}</td>
       <td><button class="a-btn a-btn-outline" onclick="openModal(${q.id})">View</button></td>
     `;
@@ -176,6 +194,17 @@ function openModal(id) {
   const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || 'Quote Request';
   document.getElementById('modalTitle').textContent = fullName;
 
+  const productOptions = licenseProds.map(p =>
+    `<option value="${p.id}" data-price="${p.price}" data-seats="${p.seatCount}" data-variable="${p.variableSeats ? '1' : '0'}" ${q.quoted_product_id == p.id ? 'selected' : ''}>${fnEscape(p.name)}${p.seatCount ? ` — ${p.seatCount} seats` : ''}</option>`
+  ).join('');
+
+  const savedAmount = q.quoted_amount_cents ? (q.quoted_amount_cents / 100).toFixed(2) : '';
+  const savedSeats  = q.quoted_seat_count   || '';
+
+  const sentBadge = q.quote_sent_at
+    ? `<div class="q-sent-badge">✓ Quote emailed on ${fnFormatDate(q.quote_sent_at)}</div>`
+    : '';
+
   document.getElementById('modalBody').innerHTML = `
     <div class="q-field">
       <div class="q-label">Submitted</div>
@@ -189,6 +218,7 @@ function openModal(id) {
     </div>
     ${q.school ? `<div class="q-field"><div class="q-label">School / Organization</div><div>${fnEscape(q.school)}</div></div>` : ''}
     ${q.message ? `<div class="q-field"><div class="q-label">Message</div><div class="q-msg">${fnEscape(q.message)}</div></div>` : ''}
+
     <div class="q-field">
       <label class="q-label" for="modalStatus">Status</label>
       <select id="modalStatus" class="a-filter-select" style="width:100%;">
@@ -202,9 +232,71 @@ function openModal(id) {
       <label class="q-label" for="modalNotes">Internal Notes</label>
       <textarea id="modalNotes" class="q-notes">${fnEscape(q.notes || '')}</textarea>
     </div>
+
+    <hr class="q-section-divider">
+    <p class="q-section-title">Generate Quote</p>
+    ${sentBadge}
+    <div class="q-field">
+      <label class="q-label" for="modalProduct">License Package</label>
+      <select id="modalProduct" class="a-filter-select" style="width:100%;" onchange="onProductChange()">
+        <option value="">— Select a package —</option>
+        ${productOptions}
+      </select>
+    </div>
+    <div class="q-row">
+      <div class="q-field" id="seatCountField" style="display:none;">
+        <label class="q-label" for="modalSeats">Seat Count</label>
+        <input type="number" id="modalSeats" class="q-input" min="1" placeholder="e.g. 25" value="${fnEscape(String(savedSeats))}" oninput="onSeatsChange()">
+      </div>
+      <div class="q-field">
+        <label class="q-label" for="modalAmount">Dollar Amount</label>
+        <div class="q-amount-wrap">
+          <span class="q-dollar">$</span>
+          <input type="number" id="modalAmount" class="q-input" min="0" step="0.01" placeholder="0.00" value="${fnEscape(savedAmount)}">
+        </div>
+      </div>
+    </div>
   `;
 
+  // Trigger seat field visibility based on already-selected product
+  onProductChange();
+
   document.getElementById('quoteModalOverlay').style.display = 'flex';
+}
+
+function onProductChange() {
+  const sel = document.getElementById('modalProduct');
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  const isVariable = opt && opt.dataset.variable === '1';
+  const price      = opt ? parseFloat(opt.dataset.price || 0) : 0;
+  const seats      = opt ? parseInt(opt.dataset.seats || 0)   : 0;
+
+  const seatField   = document.getElementById('seatCountField');
+  const amountField = document.getElementById('modalAmount');
+  const seatsInput  = document.getElementById('modalSeats');
+
+  if (isVariable) {
+    seatField.style.display = 'block';
+    // Update amount when seat count changes; set initial value
+    const currentSeats = parseInt(seatsInput.value) || seats || 1;
+    if (!amountField.value) amountField.value = (price * currentSeats).toFixed(2);
+  } else {
+    seatField.style.display = 'none';
+    if (opt && opt.value && !amountField.value) {
+      amountField.value = price.toFixed(2);
+    }
+  }
+}
+
+function onSeatsChange() {
+  const sel     = document.getElementById('modalProduct');
+  const opt     = sel && sel.options[sel.selectedIndex];
+  const price   = opt ? parseFloat(opt.dataset.price || 0) : 0;
+  const seats   = parseInt(document.getElementById('modalSeats').value) || 0;
+  if (price && seats) {
+    document.getElementById('modalAmount').value = (price * seats).toFixed(2);
+  }
 }
 
 function closeModal() {
@@ -212,15 +304,33 @@ function closeModal() {
   editingId = null;
 }
 
+function getQuotePayload() {
+  const sel         = document.getElementById('modalProduct');
+  const opt         = sel && sel.options[sel.selectedIndex];
+  const productId   = sel && sel.value ? Number(sel.value) : null;
+  const productName = opt && opt.value ? opt.text.split(' — ')[0] : null;
+  const seatCount   = document.getElementById('modalSeats') ? (parseInt(document.getElementById('modalSeats').value) || null) : null;
+  const amountRaw   = parseFloat(document.getElementById('modalAmount').value);
+  const amountCents = isNaN(amountRaw) ? null : Math.round(amountRaw * 100);
+  return { productId, productName, seatCount, amountCents };
+}
+
 async function saveModal() {
   if (!editingId) return;
   const status = document.getElementById('modalStatus').value;
   const notes  = document.getElementById('modalNotes').value;
+  const { productId, productName, seatCount, amountCents } = getQuotePayload();
+
+  const body = { status, notes };
+  if (productId   !== null) body.quotedProductId   = productId;
+  if (productName !== null) body.quotedProductName = productName;
+  if (seatCount   !== null) body.quotedSeatCount   = seatCount;
+  if (amountCents !== null) body.quotedAmountCents = amountCents;
+
   const r = await fetch(`/api/contact/quotes/${editingId}`, {
-    method: 'PUT',
-    credentials: 'include',
+    method: 'PUT', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, notes }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) { fnToast('Could not save changes'); return; }
   const { quote } = await r.json();
@@ -229,14 +339,63 @@ async function saveModal() {
   updateStats();
   applyFilters();
   closeModal();
-  fnToast('Quote updated');
+  fnToast('Saved');
+}
+
+async function sendQuote() {
+  if (!editingId) return;
+  const { productId, productName, seatCount, amountCents } = getQuotePayload();
+  if (!productName) { fnToast('Select a license package first'); return; }
+  if (!amountCents) { fnToast('Enter a dollar amount'); return; }
+
+  const btn = document.getElementById('sendQuoteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const status = document.getElementById('modalStatus').value;
+  const notes  = document.getElementById('modalNotes').value;
+
+  const r = await fetch(`/api/contact/quotes/${editingId}/send`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quotedProductId: productId, quotedProductName: productName, quotedSeatCount: seatCount, quotedAmountCents: amountCents }),
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Send Quote';
+
+  if (!r.ok) {
+    let msg = 'Could not send quote';
+    try { const d = await r.json(); msg = d.error || msg; } catch (_) {}
+    fnToast(msg);
+    return;
+  }
+
+  const { quote } = await r.json();
+  const idx = allQuotes.findIndex(q => q.id === editingId);
+  if (idx !== -1) allQuotes[idx] = quote;
+
+  // Also save status/notes if changed
+  if (status !== quote.status || notes !== (quote.notes || '')) {
+    await fetch(`/api/contact/quotes/${editingId}`, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, notes }),
+    });
+    if (idx !== -1) { allQuotes[idx].status = status; allQuotes[idx].notes = notes; }
+  }
+
+  updateStats();
+  applyFilters();
+  closeModal();
+  fnToast('Quote sent');
 }
 
 function fnEscape(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-loadQuotes();
+init();
 </script>
 
 </body>

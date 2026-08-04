@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db/pool');
-const { sendContactFormEmail } = require('../lib/mailer');
+const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 
@@ -123,7 +123,7 @@ router.get('/quotes', requireAuth, async (req, res) => {
 });
 
 router.put('/quotes/:id', requireAuth, async (req, res) => {
-  const { status, notes } = req.body || {};
+  const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
@@ -132,14 +132,58 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
 
   const updates = [];
   const params = [];
-  if (status !== undefined) { updates.push('status = ?'); params.push(status); }
-  if (notes  !== undefined) { updates.push('notes = ?');  params.push(notes);  }
+  if (status             !== undefined) { updates.push('status = ?');               params.push(status); }
+  if (notes              !== undefined) { updates.push('notes = ?');                params.push(notes); }
+  if (quotedProductId    !== undefined) { updates.push('quoted_product_id = ?');    params.push(quotedProductId || null); }
+  if (quotedProductName  !== undefined) { updates.push('quoted_product_name = ?');  params.push(quotedProductName || null); }
+  if (quotedSeatCount    !== undefined) { updates.push('quoted_seat_count = ?');    params.push(quotedSeatCount || null); }
+  if (quotedAmountCents  !== undefined) { updates.push('quoted_amount_cents = ?');  params.push(quotedAmountCents || null); }
+
+  if (quotedAmountCents !== undefined && !updates.includes('quoted_at = ?')) {
+    updates.push('quoted_at = NOW()');
+  }
+
   if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
 
   params.push(req.params.id);
   await pool.query(`UPDATE quote_requests SET ${updates.join(', ')} WHERE id = ?`, params);
   const [[row]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   res.json({ ok: true, quote: row });
+});
+
+router.post('/quotes/:id/send', requireAuth, async (req, res) => {
+  const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
+  if (!quote) return res.status(404).json({ error: 'Not found' });
+
+  const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents } = req.body || {};
+  if (!quotedAmountCents || !quotedProductName) {
+    return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
+  }
+
+  const replyTo = await getSetting('contact_email_quote');
+
+  await sendQuoteEmail({
+    to: quote.email,
+    firstName: quote.first_name,
+    lastName: quote.last_name,
+    school: quote.school,
+    productName: quotedProductName,
+    seatCount: quotedSeatCount || null,
+    amountDollars: quotedAmountCents / 100,
+    replyTo,
+  });
+
+  await pool.query(
+    `UPDATE quote_requests
+     SET quoted_product_id = ?, quoted_product_name = ?, quoted_seat_count = ?,
+         quoted_amount_cents = ?, quoted_at = NOW(), quote_sent_at = NOW(),
+         status = IF(status = 'new', 'contacted', status)
+     WHERE id = ?`,
+    [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents, quote.id]
+  );
+
+  const [[updated]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quote.id]);
+  res.json({ ok: true, quote: updated });
 });
 
 module.exports = router;
