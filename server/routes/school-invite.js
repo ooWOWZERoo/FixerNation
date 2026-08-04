@@ -192,7 +192,6 @@ router.post('/register', async (req, res) => {
     return res.status(409).json({ error: 'An account already exists for this email address. Please sign in to claim the invitation.' });
   }
 
-  const bcrypt = require('bcrypt');
   const hashedPassword = await bcrypt.hash(password, 12);
 
   const conn = await pool.getConnection();
