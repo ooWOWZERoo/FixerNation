@@ -204,7 +204,13 @@ router.post('/reset-password', async (req, res) => {
   if (!record) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await pool.query('UPDATE site_users SET password_hash = ? WHERE id = ?', [passwordHash, record.user_id]);
+  await pool.query(
+    'UPDATE site_users SET password_hash = ?, email_verified = 1 WHERE id = ?',
+    [passwordHash, record.user_id]
+  );
+
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [record.user_id]);
+  if (rows[0]) setSiteSessionCookie(res, rows[0]);
   res.json({ ok: true });
 });
 
