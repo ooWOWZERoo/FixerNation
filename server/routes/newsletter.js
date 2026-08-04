@@ -597,11 +597,11 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
         const toAdd = newCount - currentTotal;
         await connection.query(
           'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(toAdd).fill('(?, NULL, ?)').join(', '),
-          Array.from({ length: toAdd }).flatMap(() => [purchase.id, 'pending'])
+          Array.from({ length: toAdd }).flatMap(() => [purchase.id, 'available'])
         );
       } else if (newCount < currentTotal) {
         const toRemove = currentTotal - newCount;
-        const removableIds = seatRows.filter(s => s.status === 'pending').slice(0, toRemove).map(s => s.id);
+        const removableIds = seatRows.filter(s => s.status === 'available' || s.status === 'pending').slice(0, toRemove).map(s => s.id);
         if (removableIds.length) {
           await connection.query('DELETE FROM license_seats WHERE id IN (?)', [removableIds]);
         }

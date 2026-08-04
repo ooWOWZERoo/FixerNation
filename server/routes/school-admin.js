@@ -354,7 +354,7 @@ router.post('/invitations', requireSchoolAdmin, requireWritePermission, async (r
       [purchaseId]
     );
     const [[{ used }]] = await conn.query(
-      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked')",
+      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
       [purchaseId]
     );
 
@@ -470,7 +470,7 @@ router.post('/invitations/bulk', requireSchoolAdmin, requireWritePermission, asy
 
     // Seat availability check
     const [[{ used }]] = await pool.query(
-      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked')",
+      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
       [purchaseId]
     );
     if (used >= purchase.seat_count) {
@@ -484,7 +484,7 @@ router.post('/invitations/bulk', requireSchoolAdmin, requireWritePermission, asy
 
       const [[locked]] = await conn.query('SELECT seat_count FROM purchases WHERE id = ? FOR UPDATE', [purchaseId]);
       const [[{ used: usedNow }]] = await conn.query(
-        "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked')",
+        "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
         [purchaseId]
       );
 
