@@ -365,11 +365,14 @@ async function resendWelcome(id, email, btn) {
     let d = {};
     try { d = await r.json(); } catch (_) {}
     if (!r.ok) throw new Error(d.error || 'Server error (' + r.status + ')');
-    if (btn) { btn.textContent = 'Sent ✓'; btn.style.color = 'var(--a-success)'; }
     fnToast('Welcome email sent to ' + email + '.');
-    setTimeout(() => {
-      if (btn) { btn.disabled = false; btn.textContent = 'Resend Welcome'; btn.style.color = ''; }
-    }, 3000);
+    if (btn) {
+      const pill = document.createElement('span');
+      pill.className = 'a-pill a-pill-success';
+      pill.style.cssText = 'font-size:12px;padding:4px 10px;';
+      pill.textContent = '✓ Email sent';
+      btn.replaceWith(pill);
+    }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Resend Welcome'; }
     fnToast('Could not send email: ' + e.message);
