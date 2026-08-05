@@ -123,7 +123,8 @@ router.get('/quotes', requireAuth, async (req, res) => {
 });
 
 router.put('/quotes/:id', requireAuth, async (req, res) => {
-  const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents } = req.body || {};
+  const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
+          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
@@ -132,12 +133,16 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
 
   const updates = [];
   const params = [];
-  if (status             !== undefined) { updates.push('status = ?');               params.push(status); }
-  if (notes              !== undefined) { updates.push('notes = ?');                params.push(notes); }
-  if (quotedProductId    !== undefined) { updates.push('quoted_product_id = ?');    params.push(quotedProductId || null); }
-  if (quotedProductName  !== undefined) { updates.push('quoted_product_name = ?');  params.push(quotedProductName || null); }
-  if (quotedSeatCount    !== undefined) { updates.push('quoted_seat_count = ?');    params.push(quotedSeatCount || null); }
-  if (quotedAmountCents  !== undefined) { updates.push('quoted_amount_cents = ?');  params.push(quotedAmountCents || null); }
+  if (status                !== undefined) { updates.push('status = ?');                  params.push(status); }
+  if (notes                 !== undefined) { updates.push('notes = ?');                   params.push(notes); }
+  if (quotedProductId       !== undefined) { updates.push('quoted_product_id = ?');       params.push(quotedProductId || null); }
+  if (quotedProductName     !== undefined) { updates.push('quoted_product_name = ?');     params.push(quotedProductName || null); }
+  if (quotedSeatCount       !== undefined) { updates.push('quoted_seat_count = ?');       params.push(quotedSeatCount || null); }
+  if (quotedAmountCents     !== undefined) { updates.push('quoted_amount_cents = ?');     params.push(quotedAmountCents || null); }
+  if (quotedTierName        !== undefined) { updates.push('quoted_tier_name = ?');        params.push(quotedTierName || null); }
+  if (quotedAddonSeats      !== undefined) { updates.push('quoted_addon_seats = ?');      params.push(quotedAddonSeats != null ? Number(quotedAddonSeats) : null); }
+  if (quotedProrationFactor !== undefined) { updates.push('quoted_proration_factor = ?'); params.push(quotedProrationFactor != null ? Number(quotedProrationFactor) : null); }
+  if (quotedTermYears       !== undefined) { updates.push('quoted_term_years = ?');       params.push(quotedTermYears != null ? Number(quotedTermYears) : null); }
 
   if (quotedAmountCents !== undefined && !updates.includes('quoted_at = ?')) {
     updates.push('quoted_at = NOW()');
@@ -155,12 +160,16 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!quote) return res.status(404).json({ error: 'Not found' });
 
-  const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents } = req.body || {};
+  const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
+          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedDiscountPct } = req.body || {};
   if (!quotedAmountCents || !quotedProductName) {
     return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
   }
 
-  const replyTo = await getSetting('contact_email_quote');
+  const [replyTo, fromEmail] = await Promise.all([
+    getSetting('contact_email_quote'),
+    getSetting('quote_from_email'),
+  ]);
 
   await sendQuoteEmail({
     to: quote.email,
@@ -171,15 +180,27 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
     seatCount: quotedSeatCount || null,
     amountDollars: quotedAmountCents / 100,
     replyTo,
+    fromEmail: fromEmail || null,
+    addonSeats: quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
+    prorationFactor: quotedProrationFactor != null ? Number(quotedProrationFactor) : null,
+    termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
+    discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
   });
 
   await pool.query(
     `UPDATE quote_requests
      SET quoted_product_id = ?, quoted_product_name = ?, quoted_seat_count = ?,
          quoted_amount_cents = ?, quoted_at = NOW(), quote_sent_at = NOW(),
-         status = IF(status = 'new', 'contacted', status)
+         status = IF(status = 'new', 'contacted', status),
+         quoted_tier_name = ?, quoted_addon_seats = ?,
+         quoted_proration_factor = ?, quoted_term_years = ?
      WHERE id = ?`,
-    [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents, quote.id]
+    [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents,
+     quotedTierName || null,
+     quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
+     quotedProrationFactor != null ? Number(quotedProrationFactor) : null,
+     quotedTermYears != null ? Number(quotedTermYears) : null,
+     quote.id]
   );
 
   const [[updated]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quote.id]);

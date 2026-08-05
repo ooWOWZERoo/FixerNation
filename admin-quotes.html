@@ -28,6 +28,18 @@
   .q-amount-wrap .q-dollar{position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--a-text-soft); font-size:14px; pointer-events:none;}
   .q-amount-wrap .q-input{padding-left:24px;}
   .q-sent-badge{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--a-success,#16a34a); background:color-mix(in srgb, var(--a-success,#16a34a) 10%, transparent); padding:4px 10px; border-radius:20px; margin-bottom:14px;}
+  .q-tab-btn{padding:8px 14px; border-radius:8px 8px 0 0; border:none; background:transparent; color:var(--a-text-soft); font-size:13px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px;}
+  .q-tab-btn:hover{color:var(--a-text);}
+  .q-tab-btn.q-tab-active{color:var(--a-accent); border-bottom-color:var(--a-accent);}
+  .q-chip{padding:5px 13px; border-radius:20px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); font-size:12.5px; font-weight:600; cursor:pointer;}
+  .q-chip:hover{border-color:var(--a-accent); color:var(--a-accent);}
+  .q-chip.q-chip-active{border-color:var(--a-accent); background:color-mix(in srgb, var(--a-accent) 10%, transparent); color:var(--a-accent);}
+  .q-chip-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .q-chip-note{font-weight:400; font-size:11px; margin-left:2px;}
+  .q-breakdown{background:var(--a-bg); border:1px solid var(--a-border); border-radius:10px; padding:12px 16px; margin-bottom:12px; font-size:13px;}
+  .q-breakdown-row{display:flex; justify-content:space-between; padding:3px 0;}
+  .q-breakdown-row.soft{color:var(--a-text-soft);}
+  .q-breakdown-row.total{font-weight:700; font-size:15px; border-top:1px solid var(--a-border); margin-top:6px; padding-top:8px;}
 </style>
 </head>
 <body>
@@ -125,19 +137,25 @@ fnRequireAuth();
 let allQuotes     = [];
 let licenseProds  = [];
 let editingId     = null;
+let quoteSettings = { fromEmail: '', twoYrPct: 5, threeYrPct: 8 };
 
 const STATUS_LABELS  = { new: 'New', contacted: 'Contacted', converted: 'Converted', closed: 'Closed' };
 const STATUS_CLASSES = { new: 'a-pill-neutral', contacted: 'a-pill-info', converted: 'a-pill-success', closed: 'a-pill-danger' };
 
 async function init() {
-  const [qRes, lpRes] = await Promise.all([
+  const [qRes, lpRes, sRes] = await Promise.all([
     fetch('/api/contact/quotes', { credentials: 'include' }),
     fetch('/api/license-products?all=true', { credentials: 'include' }),
+    fetch('/api/settings/quote', { credentials: 'include' }),
   ]);
   if (fnHandleUnauthorized(qRes)) return;
   if (!qRes.ok) { fnToast('Could not load quotes'); return; }
   allQuotes    = (await qRes.json()).quotes || [];
   licenseProds = lpRes.ok ? ((await lpRes.json()).licenseProducts || []) : [];
+  if (sRes.ok) {
+    const sd = await sRes.json();
+    quoteSettings = { fromEmail: sd.fromEmail || '', twoYrPct: Number(sd.twoYrDiscountPct) || 5, threeYrPct: Number(sd.threeYrDiscountPct) || 8 };
+  }
   updateStats();
   renderTable(allQuotes);
 }
@@ -194,16 +212,24 @@ function openModal(id) {
   const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || 'Quote Request';
   document.getElementById('modalTitle').textContent = fullName;
 
-  const productOptions = licenseProds.map(p =>
-    `<option value="${p.id}" data-price="${p.price}" data-seats="${p.seatCount}" data-variable="${p.variableSeats ? '1' : '0'}" ${q.quoted_product_id == p.id ? 'selected' : ''}>${fnEscape(p.name)}${p.seatCount ? ` — ${p.seatCount} seats` : ''}</option>`
-  ).join('');
-
   const savedAmount = q.quoted_amount_cents ? (q.quoted_amount_cents / 100).toFixed(2) : '';
-  const savedSeats  = q.quoted_seat_count   || '';
 
   const sentBadge = q.quote_sent_at
     ? `<div class="q-sent-badge">✓ Quote emailed on ${fnFormatDate(q.quote_sent_at)}</div>`
     : '';
+
+  const annualProds = licenseProds.filter(p => !p.isPilot);
+  const addonProds  = annualProds.filter(p => p.addonRate > 0);
+
+  const annualOptions = annualProds.map(p =>
+    `<option value="${p.id}" data-price="${p.price}" data-seats="${p.seatCount}" data-addon-rate="${p.addonRate || 0}">${fnEscape(p.name)} — ${p.seatCount} seat${p.seatCount !== 1 ? 's' : ''} — $${p.price.toFixed(2)}/yr</option>`
+  ).join('');
+  const addonOptions = addonProds.map(p =>
+    `<option value="${p.id}" data-addon-rate="${p.addonRate}" data-price="${p.price}">${fnEscape(p.name)} ($${p.addonRate.toFixed(2)}/seat)</option>`
+  ).join('');
+
+  const twoYrLabel   = quoteSettings.twoYrPct   > 0 ? ` (${quoteSettings.twoYrPct}% off)`   : '';
+  const threeYrLabel = quoteSettings.threeYrPct > 0 ? ` (${quoteSettings.threeYrPct}% off)` : '';
 
   document.getElementById('modalBody').innerHTML = `
     <div class="q-field">
@@ -236,67 +262,244 @@ function openModal(id) {
     <hr class="q-section-divider">
     <p class="q-section-title">Generate Quote</p>
     ${sentBadge}
-    <div class="q-field">
-      <label class="q-label" for="modalProduct">License Package</label>
-      <select id="modalProduct" class="a-filter-select" style="width:100%;" onchange="onProductChange()">
-        <option value="">— Select a package —</option>
-        ${productOptions}
-      </select>
+
+    <!-- Hidden payload fields -->
+    <input type="hidden" id="qProductId">
+    <input type="hidden" id="qProductName">
+    <input type="hidden" id="qTierName">
+    <input type="hidden" id="qAddonSeats" value="0">
+    <input type="hidden" id="qProrationFactor" value="1">
+    <input type="hidden" id="qTermYears" value="1">
+    <input type="hidden" id="qDiscountPct" value="0">
+
+    <!-- Tab selector -->
+    <div style="display:flex;gap:2px;border-bottom:2px solid var(--a-border);margin-bottom:16px;">
+      <button class="q-tab-btn q-tab-active" id="tabBtnAnnual" onclick="switchQuoteTab('annual')">Annual License</button>
+      <button class="q-tab-btn" id="tabBtnPilot" onclick="switchQuoteTab('pilot')">90-Day Pilot</button>
+      <button class="q-tab-btn" id="tabBtnAddon" onclick="switchQuoteTab('addon')">Add-On Seats</button>
     </div>
-    <div class="q-row">
-      <div class="q-field" id="seatCountField" style="display:none;">
-        <label class="q-label" for="modalSeats">Seat Count</label>
-        <input type="number" id="modalSeats" class="q-input" min="1" placeholder="e.g. 25" value="${fnEscape(String(savedSeats))}" oninput="onSeatsChange()">
+
+    <!-- Annual License tab -->
+    <div id="tabAnnual">
+      <div class="q-field">
+        <label class="q-label">License Tier</label>
+        <select id="qTierSelect" class="a-filter-select" style="width:100%;" onchange="onTierChange()">
+          <option value="">— Select a tier —</option>
+          ${annualOptions}
+        </select>
+      </div>
+      <div class="q-field" id="qAddonField" style="display:none;">
+        <label class="q-label">Additional Seats <span id="qAddonRateHint" style="font-weight:400;color:var(--a-text-soft);font-size:11px;"></span></label>
+        <input type="number" id="qAddonInput" class="q-input" min="0" max="99" value="0" oninput="calcBreakdown()">
       </div>
       <div class="q-field">
-        <label class="q-label" for="modalAmount">Dollar Amount</label>
-        <div class="q-amount-wrap">
-          <span class="q-dollar">$</span>
-          <input type="number" id="modalAmount" class="q-input" min="0" step="0.01" placeholder="0.00" value="${fnEscape(savedAmount)}">
+        <label class="q-label">School Year Window</label>
+        <div class="q-chip-row" id="qWindowChips">
+          <button type="button" class="q-chip" data-factor="1.00" data-label="Jul–Dec (full year)" onclick="selectChip('window',this);calcBreakdown()">Jul–Dec</button>
+          <button type="button" class="q-chip" data-factor="0.75" data-label="Jan–Mar (75%)" onclick="selectChip('window',this);calcBreakdown()">Jan–Mar</button>
+          <button type="button" class="q-chip" data-factor="0.50" data-label="Apr–Jun (50%)" onclick="selectChip('window',this);calcBreakdown()">Apr–Jun</button>
         </div>
+      </div>
+      <div class="q-field">
+        <label class="q-label">License Term</label>
+        <div class="q-chip-row" id="qTermChips">
+          <button type="button" class="q-chip" data-years="1" onclick="selectChip('term',this);calcBreakdown()">1 Year</button>
+          <button type="button" class="q-chip" data-years="2" onclick="selectChip('term',this);calcBreakdown()">2 Years<span class="q-chip-note">${twoYrLabel}</span></button>
+          <button type="button" class="q-chip" data-years="3" onclick="selectChip('term',this);calcBreakdown()">3 Years<span class="q-chip-note">${threeYrLabel}</span></button>
+        </div>
+      </div>
+      <div class="q-breakdown" id="qBreakdown" style="display:none;"></div>
+      <button type="button" class="a-btn a-btn-outline" style="width:100%;margin-bottom:8px;" id="qUseBtn" disabled onclick="useThisAmount()">Use This Amount</button>
+    </div>
+
+    <!-- 90-Day Pilot tab -->
+    <div id="tabPilot" style="display:none;">
+      <div class="q-breakdown">
+        <div class="q-breakdown-row"><span>90-Day Classroom Pilot (1 seat)</span><span>$149.00</span></div>
+        <div class="q-breakdown-row total"><span>Total</span><span>$149.00</span></div>
+        <div style="font-size:11.5px;color:var(--a-text-soft);margin-top:6px;">Includes 10 lessons. $74.50 conversion credit toward annual license within 30 days.</div>
+      </div>
+      <button type="button" class="a-btn a-btn-outline" style="width:100%;margin-bottom:8px;" onclick="usePilotAmount()">Use This Amount — $149.00</button>
+    </div>
+
+    <!-- Add-On Seats tab -->
+    <div id="tabAddon" style="display:none;">
+      <div class="q-field">
+        <label class="q-label">Base Tier</label>
+        <select id="qAddonTierSelect" class="a-filter-select" style="width:100%;" onchange="calcAddon()">
+          <option value="">— Select a tier —</option>
+          ${addonOptions}
+        </select>
+      </div>
+      <div class="q-field">
+        <label class="q-label">Seats to Add <span id="qAddonRateHint2" style="font-weight:400;color:var(--a-text-soft);font-size:11px;"></span></label>
+        <input type="number" id="qAddonSeatsInput" class="q-input" min="1" max="99" value="1" oninput="calcAddon()">
+      </div>
+      <div class="q-breakdown" id="qAddonBreakdown" style="display:none;"></div>
+      <button type="button" class="a-btn a-btn-outline" style="width:100%;margin-bottom:8px;" id="qAddonUseBtn" disabled onclick="useAddonAmount()">Use This Amount</button>
+    </div>
+
+    <div class="q-field" style="margin-top:4px;">
+      <label class="q-label" for="modalAmount">Dollar Amount</label>
+      <div class="q-amount-wrap">
+        <span class="q-dollar">$</span>
+        <input type="number" id="modalAmount" class="q-input" min="0" step="0.01" placeholder="0.00" value="${fnEscape(savedAmount)}">
       </div>
     </div>
   `;
 
-  // Trigger seat field visibility based on already-selected product
-  onProductChange();
+  setTimeout(() => {
+    initQuoteChips();
+  }, 0);
 
   document.getElementById('quoteModalOverlay').style.display = 'flex';
 }
 
-function onProductChange() {
-  const sel = document.getElementById('modalProduct');
-  if (!sel) return;
-  const opt = sel.options[sel.selectedIndex];
-  const isVariable = opt && opt.dataset.variable === '1';
-  const price      = opt ? parseFloat(opt.dataset.price || 0) : 0;
-  const seats      = opt ? parseInt(opt.dataset.seats || 0)   : 0;
-
-  const seatField   = document.getElementById('seatCountField');
-  const amountField = document.getElementById('modalAmount');
-  const seatsInput  = document.getElementById('modalSeats');
-
-  if (isVariable) {
-    seatField.style.display = 'block';
-    // Update amount when seat count changes; set initial value
-    const currentSeats = parseInt(seatsInput.value) || seats || 1;
-    if (!amountField.value) amountField.value = (price * currentSeats).toFixed(2);
-  } else {
-    seatField.style.display = 'none';
-    if (opt && opt.value && !amountField.value) {
-      amountField.value = price.toFixed(2);
-    }
-  }
+function switchQuoteTab(tab) {
+  ['Annual','Pilot','Addon'].forEach(t => {
+    document.getElementById('tabBtn' + t).classList.toggle('q-tab-active', t.toLowerCase() === tab);
+    document.getElementById('tab' + t).style.display = t.toLowerCase() === tab ? '' : 'none';
+  });
 }
 
-function onSeatsChange() {
-  const sel     = document.getElementById('modalProduct');
-  const opt     = sel && sel.options[sel.selectedIndex];
-  const price   = opt ? parseFloat(opt.dataset.price || 0) : 0;
-  const seats   = parseInt(document.getElementById('modalSeats').value) || 0;
-  if (price && seats) {
-    document.getElementById('modalAmount').value = (price * seats).toFixed(2);
+function selectChip(group, btn) {
+  btn.closest('.q-chip-row').querySelectorAll('.q-chip').forEach(c => c.classList.remove('q-chip-active'));
+  btn.classList.add('q-chip-active');
+}
+
+function initQuoteChips() {
+  const month = new Date().getMonth();
+  let factor = month >= 6 ? '1.00' : (month <= 2 ? '0.75' : '0.50');
+  document.querySelectorAll('#qWindowChips .q-chip').forEach(c => {
+    if (c.dataset.factor === factor) c.classList.add('q-chip-active');
+  });
+  document.querySelectorAll('#qTermChips .q-chip').forEach(c => {
+    if (c.dataset.years === '1') c.classList.add('q-chip-active');
+  });
+}
+
+function onTierChange() {
+  const sel      = document.getElementById('qTierSelect');
+  const opt      = sel && sel.options[sel.selectedIndex];
+  const addonRate = opt ? parseFloat(opt.dataset.addonRate || 0) : 0;
+  const addonField = document.getElementById('qAddonField');
+  const hintEl     = document.getElementById('qAddonRateHint');
+  if (addonRate > 0) {
+    addonField.style.display = '';
+    hintEl.textContent = `$${addonRate.toFixed(2)}/seat`;
+  } else {
+    addonField.style.display = 'none';
   }
+  calcBreakdown();
+}
+
+function calcBreakdown() {
+  const sel = document.getElementById('qTierSelect');
+  const opt = sel && sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) {
+    document.getElementById('qBreakdown').style.display = 'none';
+    document.getElementById('qUseBtn').disabled = true;
+    return;
+  }
+  const basePrice  = parseFloat(opt.dataset.price || 0);
+  const seats      = parseInt(opt.dataset.seats || 0);
+  const addonRate  = parseFloat(opt.dataset.addonRate || 0);
+  const tierName   = opt.text.split(' — ')[0];
+  const addonCount = addonRate > 0 ? (parseInt(document.getElementById('qAddonInput').value) || 0) : 0;
+
+  const activeWindow = document.querySelector('#qWindowChips .q-chip-active');
+  const factor       = activeWindow ? parseFloat(activeWindow.dataset.factor) : 1.0;
+  const windowLabel  = activeWindow ? activeWindow.dataset.label : 'Jul–Dec (full year)';
+
+  const activeTerm   = document.querySelector('#qTermChips .q-chip-active');
+  const termYears    = activeTerm ? parseInt(activeTerm.dataset.years) : 1;
+  const discountPct  = termYears === 2 ? quoteSettings.twoYrPct : (termYears === 3 ? quoteSettings.threeYrPct : 0);
+
+  const addonTotal   = addonCount * addonRate;
+  const annualBase   = basePrice + addonTotal;
+  const proratedBase = annualBase * factor;
+  const fullYearsCost = (termYears - 1) * annualBase;
+  const subtotal     = proratedBase + fullYearsCost;
+  const discountAmt  = discountPct > 0 ? subtotal * (discountPct / 100) : 0;
+  const total        = subtotal - discountAmt;
+
+  let rows = `<div class="q-breakdown-row"><span>${tierName} (${seats} seat${seats !== 1 ? 's' : ''})</span><span>$${basePrice.toFixed(2)}/yr</span></div>`;
+  if (addonCount > 0) rows += `<div class="q-breakdown-row soft"><span>+ ${addonCount} added seat${addonCount !== 1 ? 's' : ''} @ $${addonRate.toFixed(2)}</span><span>+$${addonTotal.toFixed(2)}/yr</span></div>`;
+  if (factor < 1)    rows += `<div class="q-breakdown-row soft"><span>${windowLabel}</span><span>× ${Math.round(factor * 100)}%</span></div>`;
+  if (termYears > 1) rows += `<div class="q-breakdown-row soft"><span>${termYears}-year term</span><span>$${subtotal.toFixed(2)} subtotal</span></div>`;
+  if (discountPct > 0) rows += `<div class="q-breakdown-row soft"><span>${termYears}-year discount (${discountPct}%)</span><span>−$${discountAmt.toFixed(2)}</span></div>`;
+  rows += `<div class="q-breakdown-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
+
+  const breakdown = document.getElementById('qBreakdown');
+  breakdown.innerHTML = rows;
+  breakdown.style.display = '';
+  document.getElementById('qUseBtn').disabled = false;
+
+  document.getElementById('qProductId').value          = opt.value || '';
+  document.getElementById('qProductName').value        = tierName;
+  document.getElementById('qTierName').value           = tierName;
+  document.getElementById('qAddonSeats').value         = addonCount;
+  document.getElementById('qProrationFactor').value    = factor;
+  document.getElementById('qTermYears').value          = termYears;
+  document.getElementById('qDiscountPct').value        = discountPct;
+}
+
+function useThisAmount() {
+  const totalEl = document.querySelector('#qBreakdown .q-breakdown-row.total span:last-child');
+  if (totalEl) document.getElementById('modalAmount').value = totalEl.textContent.replace('$', '');
+}
+
+function usePilotAmount() {
+  const pilot = licenseProds.find(p => p.isPilot);
+  document.getElementById('qProductId').value          = pilot ? pilot.id : '';
+  document.getElementById('qProductName').value        = '90-Day Classroom Pilot';
+  document.getElementById('qTierName').value           = '90-Day Classroom Pilot';
+  document.getElementById('qAddonSeats').value         = 0;
+  document.getElementById('qProrationFactor').value    = 1;
+  document.getElementById('qTermYears').value          = 1;
+  document.getElementById('qDiscountPct').value        = 0;
+  document.getElementById('modalAmount').value         = '149.00';
+}
+
+function calcAddon() {
+  const sel      = document.getElementById('qAddonTierSelect');
+  const opt      = sel && sel.options[sel.selectedIndex];
+  const hintEl   = document.getElementById('qAddonRateHint2');
+  const breakdown = document.getElementById('qAddonBreakdown');
+  if (!opt || !opt.value) {
+    breakdown.style.display = 'none';
+    document.getElementById('qAddonUseBtn').disabled = true;
+    hintEl.textContent = '';
+    return;
+  }
+  const addonRate = parseFloat(opt.dataset.addonRate || 0);
+  const count     = parseInt(document.getElementById('qAddonSeatsInput').value) || 0;
+  hintEl.textContent = `$${addonRate.toFixed(2)}/seat`;
+  if (count < 1 || addonRate <= 0) {
+    breakdown.style.display = 'none';
+    document.getElementById('qAddonUseBtn').disabled = true;
+    return;
+  }
+  const total    = count * addonRate;
+  const tierName = opt.text.split(' (')[0];
+  breakdown.innerHTML = `
+    <div class="q-breakdown-row"><span>${count} seat${count !== 1 ? 's' : ''} × $${addonRate.toFixed(2)} (${tierName} rate)</span><span>$${total.toFixed(2)}</span></div>
+    <div class="q-breakdown-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
+  breakdown.style.display = '';
+  document.getElementById('qAddonUseBtn').disabled = false;
+
+  document.getElementById('qProductId').value          = opt.value || '';
+  document.getElementById('qProductName').value        = `${count} Add-On Seat${count !== 1 ? 's' : ''} (${tierName})`;
+  document.getElementById('qTierName').value           = tierName;
+  document.getElementById('qAddonSeats').value         = count;
+  document.getElementById('qProrationFactor').value    = 1;
+  document.getElementById('qTermYears').value          = 1;
+  document.getElementById('qDiscountPct').value        = 0;
+}
+
+function useAddonAmount() {
+  const totalEl = document.querySelector('#qAddonBreakdown .q-breakdown-row.total span:last-child');
+  if (totalEl) document.getElementById('modalAmount').value = totalEl.textContent.replace('$', '');
 }
 
 function closeModal() {
@@ -305,27 +508,36 @@ function closeModal() {
 }
 
 function getQuotePayload() {
-  const sel         = document.getElementById('modalProduct');
-  const opt         = sel && sel.options[sel.selectedIndex];
-  const productId   = sel && sel.value ? Number(sel.value) : null;
-  const productName = opt && opt.value ? opt.text.split(' — ')[0] : null;
-  const seatCount   = document.getElementById('modalSeats') ? (parseInt(document.getElementById('modalSeats').value) || null) : null;
-  const amountRaw   = parseFloat(document.getElementById('modalAmount').value);
-  const amountCents = isNaN(amountRaw) ? null : Math.round(amountRaw * 100);
-  return { productId, productName, seatCount, amountCents };
+  const productId     = document.getElementById('qProductId').value    ? Number(document.getElementById('qProductId').value) : null;
+  const productName   = document.getElementById('qProductName').value  || null;
+  const tierName      = document.getElementById('qTierName').value     || null;
+  const addonSeats    = parseInt(document.getElementById('qAddonSeats').value)         || 0;
+  const prorationFactor = parseFloat(document.getElementById('qProrationFactor').value) || 1;
+  const termYears     = parseInt(document.getElementById('qTermYears').value)           || 1;
+  const discountPct   = parseFloat(document.getElementById('qDiscountPct').value)       || 0;
+  const amountRaw     = parseFloat(document.getElementById('modalAmount').value);
+  const amountCents   = isNaN(amountRaw) ? null : Math.round(amountRaw * 100);
+  const tierSel       = document.getElementById('qTierSelect');
+  const tierOpt       = tierSel && tierSel.options[tierSel.selectedIndex];
+  const seatCount     = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || null) : null;
+  return { productId, productName, tierName, addonSeats, prorationFactor, termYears, discountPct, seatCount, amountCents };
 }
 
 async function saveModal() {
   if (!editingId) return;
   const status = document.getElementById('modalStatus').value;
   const notes  = document.getElementById('modalNotes').value;
-  const { productId, productName, seatCount, amountCents } = getQuotePayload();
+  const { productId, productName, tierName, addonSeats, prorationFactor, termYears, seatCount, amountCents } = getQuotePayload();
 
   const body = { status, notes };
-  if (productId   !== null) body.quotedProductId   = productId;
-  if (productName !== null) body.quotedProductName = productName;
-  if (seatCount   !== null) body.quotedSeatCount   = seatCount;
-  if (amountCents !== null) body.quotedAmountCents = amountCents;
+  if (productId      !== null) body.quotedProductId       = productId;
+  if (productName    !== null) body.quotedProductName     = productName;
+  if (seatCount      !== null) body.quotedSeatCount       = seatCount;
+  if (amountCents    !== null) body.quotedAmountCents     = amountCents;
+  if (tierName       !== null) body.quotedTierName        = tierName;
+  if (addonSeats      >    0)  body.quotedAddonSeats      = addonSeats;
+  if (prorationFactor <    1)  body.quotedProrationFactor = prorationFactor;
+  if (termYears       >    1)  body.quotedTermYears       = termYears;
 
   const r = await fetch(`/api/contact/quotes/${editingId}`, {
     method: 'PUT', credentials: 'include',
@@ -344,7 +556,7 @@ async function saveModal() {
 
 async function sendQuote() {
   if (!editingId) return;
-  const { productId, productName, seatCount, amountCents } = getQuotePayload();
+  const { productId, productName, tierName, addonSeats, prorationFactor, termYears, discountPct, seatCount, amountCents } = getQuotePayload();
   if (!productName) { fnToast('Select a license package first'); return; }
   if (!amountCents) { fnToast('Enter a dollar amount'); return; }
 
@@ -358,7 +570,17 @@ async function sendQuote() {
   const r = await fetch(`/api/contact/quotes/${editingId}/send`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quotedProductId: productId, quotedProductName: productName, quotedSeatCount: seatCount, quotedAmountCents: amountCents }),
+    body: JSON.stringify({
+      quotedProductId: productId,
+      quotedProductName: productName,
+      quotedSeatCount: seatCount,
+      quotedAmountCents: amountCents,
+      quotedTierName: tierName,
+      quotedAddonSeats: addonSeats || null,
+      quotedProrationFactor: prorationFactor < 1 ? prorationFactor : null,
+      quotedTermYears: termYears > 1 ? termYears : null,
+      quotedDiscountPct: discountPct || null,
+    }),
   });
 
   btn.disabled = false;

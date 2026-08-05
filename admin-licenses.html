@@ -79,6 +79,10 @@
       <div class="a-field"><label>Bullet Points (one per line)</label><textarea id="productBulletPoints" rows="4" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Be sure to complete each field on your registration form&#10;You'll receive an onboarding welcome email when submitted"></textarea></div>
       <div class="a-field"><label>Footer Note</label><input type="text" id="productFooterNote" placeholder="e.g. Valid for 12 months"></div>
       <div class="a-field">
+        <label>Add-On Rate ($/seat)</label>
+        <input type="number" id="productAddonRate" min="0" step="0.01" placeholder="Leave blank if add-ons not available for this tier">
+      </div>
+      <div class="a-field">
         <label>Assign Buyers to Group</label>
         <select id="productGroup" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; background:var(--a-surface);">
           <option value="">— None (default: Teachers) —</option>
@@ -202,6 +206,7 @@ function openProductModal(id) {
   document.getElementById('productCallForQuote').checked = p ? p.callForQuote : false;
   document.getElementById('productActive').checked = p ? p.active : true;
   document.getElementById('productGroup').value = p && p.autoAssignGroupId ? p.autoAssignGroupId : '';
+  document.getElementById('productAddonRate').value = p && p.addonRate ? p.addonRate : '';
   onVariableSeatsChange();
   onCallForQuoteChange();
   document.getElementById('productModalOverlay').classList.add('show');
@@ -227,6 +232,7 @@ async function saveProduct() {
     callForQuote,
     active: document.getElementById('productActive').checked,
     autoAssignGroupId: groupVal ? Number(groupVal) : null,
+    addonRateCents: (() => { const v = parseFloat(document.getElementById('productAddonRate').value); return isNaN(v) || v <= 0 ? null : Math.round(v * 100); })(),
   };
   if (!body.name || (!variableSeats && !(body.seatCount > 0)) || (!callForQuote && !(body.price >= 0))) {
     fnToast('Name, seat count, and (unless Call For Quote) price are required');

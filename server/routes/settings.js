@@ -62,6 +62,39 @@ router.put('/invoice-branding', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/quote', requireAuth, async (req, res) => {
+  const [fromEmail, twoYrPct, threeYrPct] = await Promise.all([
+    getSetting('quote_from_email'),
+    getSetting('quote_2yr_discount_pct'),
+    getSetting('quote_3yr_discount_pct'),
+  ]);
+  res.json({
+    fromEmail: fromEmail || '',
+    twoYrDiscountPct: Number(twoYrPct) || 5,
+    threeYrDiscountPct: Number(threeYrPct) || 8,
+  });
+});
+
+router.put('/quote', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const fromEmail    = (b.fromEmail    || '').trim();
+  const twoYrPct    = parseInt(b.twoYrDiscountPct,    10);
+  const threeYrPct  = parseInt(b.threeYrDiscountPct,  10);
+
+  if (fromEmail && !EMAIL_PATTERN.test(fromEmail)) {
+    return res.status(400).json({ error: 'From email must be a valid address' });
+  }
+  if (isNaN(twoYrPct)   || twoYrPct   < 0 || twoYrPct   > 100) return res.status(400).json({ error: '2-year discount must be 0–100' });
+  if (isNaN(threeYrPct) || threeYrPct < 0 || threeYrPct > 100) return res.status(400).json({ error: '3-year discount must be 0–100' });
+
+  await Promise.all([
+    fromEmail ? setSetting('quote_from_email', fromEmail) : Promise.resolve(),
+    setSetting('quote_2yr_discount_pct',   String(twoYrPct)),
+    setSetting('quote_3yr_discount_pct',   String(threeYrPct)),
+  ]);
+  res.json({ ok: true });
+});
+
 router.get('/morning-boost-voice', requireAuth, async (req, res) => {
   const voiceId = await getSetting('morning_boost_voice_id');
   res.json({ voiceId });

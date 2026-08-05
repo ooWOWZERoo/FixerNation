@@ -258,14 +258,54 @@ async function sendTeacherRegisteredNotificationEmail({ to, adminName, teacherNa
   });
 }
 
-async function sendQuoteEmail({ to, firstName, lastName, school, productName, seatCount, amountDollars, replyTo }) {
+async function sendQuoteEmail({ to, firstName, lastName, school, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, prorationFactor, termYears, discountPct }) {
   const name = [firstName, lastName].filter(Boolean).join(' ') || 'there';
-  const seats = seatCount ? `${seatCount} seat${seatCount === 1 ? '' : 's'}` : null;
-  const descLine = seats ? `${productName} — ${seats}` : productName;
   const total = `$${Number(amountDollars).toFixed(2)}`;
+  const fromAddr = fromEmail ? `"Fixer Nation Education" <${fromEmail}>` : systemFromAddress();
+
+  // Build itemized rows when breakdown data is present
+  const hasBreakdown = addonSeats != null && prorationFactor != null && termYears != null;
+
+  let htmlRows = '';
+  let textLines = '';
+
+  if (hasBreakdown) {
+    const basePrice = Number(amountDollars); // recalculate from components if possible
+    const pct = Number(prorationFactor) || 1;
+    const years = Number(termYears) || 1;
+    const disc = Number(discountPct) || 0;
+    const addOn = Number(addonSeats) || 0;
+    const seats = Number(seatCount) || 0;
+
+    const row = (label, val) =>
+      `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;background:#f9fafb;">${label}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${val}</td></tr>`;
+
+    htmlRows += row(`${productName} (${seats} seat${seats !== 1 ? 's' : ''})`, `See total below`);
+    if (addOn > 0) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, `included`);
+    if (pct < 1)   htmlRows += row(`School-year window`, `${Math.round(pct * 100)}% of full year`);
+    if (years > 1) htmlRows += row(`${years}-year term`, `included`);
+    if (disc > 0)  htmlRows += row(`Multi-year discount`, `${disc}% off`);
+    htmlRows += `<tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;border-top:2px solid #d1d5db;">Total</td><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;text-align:right;border-top:2px solid #d1d5db;">${total}</td></tr>`;
+
+    textLines = [
+      `  ${productName} (${seats} seat${seats !== 1 ? 's' : ''})`,
+      addOn > 0 ? `  + ${addOn} added seat${addOn !== 1 ? 's' : ''}` : '',
+      pct < 1   ? `  School-year window: ${Math.round(pct * 100)}% of full year` : '',
+      years > 1 ? `  ${years}-year term` : '',
+      disc > 0  ? `  Multi-year discount: ${disc}% off` : '',
+      `  Total: ${total}`,
+    ].filter(Boolean).join('\n');
+  } else {
+    const seats = seatCount ? `${seatCount} seat${seatCount === 1 ? '' : 's'}` : null;
+    const descLine = seats ? `${productName} — ${seats}` : productName;
+    htmlRows = `
+      <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">License</td><td style="padding:10px 14px;border:1px solid #e5e7eb;">${descLine}</td></tr>
+      <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">Total</td><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;">${total}</td></tr>`;
+    textLines = `  License: ${descLine}\n  Total:   ${total}`;
+  }
 
   await getTransporter().sendMail({
-    from: systemFromAddress(),
+    from: fromAddr,
     to,
     replyTo: replyTo || undefined,
     subject: `Your Fixer Nation Education License Quote`,
@@ -274,9 +314,9 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
       ``,
       `Thank you for your interest in Fixer Nation Education. Here is the quote for ${school || 'your school'}:`,
       ``,
-      `  License: ${descLine}`,
-      `  Total:   ${total}`,
+      textLines,
       ``,
+      `Includes licensed teacher seats, video access, quizzes, and progress reporting.`,
       `This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.`,
       ``,
       `Fixer Nation Education`,
@@ -284,16 +324,8 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
     html: `
       <p>Hi ${name},</p>
       <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${school || 'your school'}</strong>:</p>
-      <table style="border-collapse:collapse;width:100%;max-width:480px;margin:16px 0;">
-        <tr>
-          <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">License</td>
-          <td style="padding:10px 14px;border:1px solid #e5e7eb;">${descLine}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">Total</td>
-          <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;">${total}</td>
-        </tr>
-      </table>
+      <table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;">${htmlRows}</table>
+      <p style="font-size:13px;color:#6b7280;">Includes licensed teacher seats, video access, quizzes, and progress reporting.</p>
       <p style="font-size:13px;color:#6b7280;">This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.</p>
       <p>Fixer Nation Education</p>
     `,

@@ -104,6 +104,29 @@
         </form>
       </div>
 
+      <div class="a-card" style="margin-top:24px; max-width:480px;">
+        <div class="a-card-head">
+          <h2>Quote Settings</h2>
+        </div>
+        <form id="quoteSettingsForm">
+          <div class="a-error" id="quoteSettingsError"></div>
+          <div class="a-field">
+            <label>Quote From Email</label>
+            <input type="email" id="quoteFromEmail" placeholder="sales@fixernationeducation.com">
+            <div class="a-note">The "from" address on quote emails sent to prospects. Leave empty to use the system default.</div>
+          </div>
+          <div class="a-field">
+            <label>2-Year Discount (%)</label>
+            <input type="number" id="quoteTwoYrPct" min="0" max="100" step="1">
+          </div>
+          <div class="a-field">
+            <label>3-Year Discount (%)</label>
+            <input type="number" id="quoteThreeYrPct" min="0" max="100" step="1">
+          </div>
+          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
+        </form>
+      </div>
+
       <div class="a-card" style="margin-top:24px;">
         <div class="a-card-head">
           <h2>Admins</h2>
@@ -303,6 +326,40 @@ document.getElementById('invoiceBrandingForm').addEventListener('submit', async 
   fnToast('Invoice branding updated');
 });
 
+async function loadQuoteSettings() {
+  const r = await fetch('/api/settings/quote', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+  document.getElementById('quoteFromEmail').value   = data.fromEmail          || '';
+  document.getElementById('quoteTwoYrPct').value    = data.twoYrDiscountPct   ?? 5;
+  document.getElementById('quoteThreeYrPct').value  = data.threeYrDiscountPct ?? 8;
+}
+
+document.getElementById('quoteSettingsForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fromEmail    = document.getElementById('quoteFromEmail').value.trim();
+  const twoYrPct    = document.getElementById('quoteTwoYrPct').value;
+  const threeYrPct  = document.getElementById('quoteThreeYrPct').value;
+  const errorBox    = document.getElementById('quoteSettingsError');
+  errorBox.classList.remove('show');
+
+  const r = await fetch('/api/settings/quote', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fromEmail, twoYrDiscountPct: Number(twoYrPct), threeYrDiscountPct: Number(threeYrPct) }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    errorBox.textContent = result.error || 'Could not save changes.';
+    errorBox.classList.add('show');
+    return;
+  }
+  fnToast('Quote settings updated');
+});
+
 let adminsCache = [];
 
 async function loadAdmins() {
@@ -442,6 +499,7 @@ async function sendAdminInvite() {
 
 loadContactEmails();
 loadInvoiceBranding();
+loadQuoteSettings();
 loadAdmins();
 </script>
 
