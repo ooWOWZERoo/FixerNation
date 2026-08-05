@@ -352,9 +352,15 @@ async function doRemove() {
   finally { btn.disabled = false; btn.textContent = 'Remove'; }
 }
 
+function setResendMsg(html) {
+  var el = document.getElementById('toastEl');
+  if (el) el.innerHTML = html;
+}
+
 async function resendWelcome(id, email, btn) {
   if (!confirm('Resend the welcome/setup email to ' + email + '?')) return;
   if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  setResendMsg('');
   try {
     const r = await fetch('/api/admin/school-admins/' + id + '/resend-welcome', {
       method: 'POST', credentials: 'include',
@@ -365,7 +371,7 @@ async function resendWelcome(id, email, btn) {
     let d = {};
     try { d = await r.json(); } catch (_) {}
     if (!r.ok) throw new Error(d.error || 'Server error (' + r.status + ')');
-    fnToast('Welcome email sent to ' + email + '.');
+    setResendMsg('<div style="background:#d1fae5;color:#065f46;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;margin-bottom:12px;">✓ Welcome email sent to ' + esc(email) + '.</div>');
     if (btn) {
       const pill = document.createElement('span');
       pill.className = 'a-pill a-pill-success';
@@ -375,7 +381,7 @@ async function resendWelcome(id, email, btn) {
     }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Resend Welcome'; }
-    fnToast('Could not send email: ' + e.message);
+    setResendMsg('<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;margin-bottom:12px;">Failed to send email: ' + esc(e.message) + '</div>');
   }
 }
 
