@@ -258,7 +258,17 @@ async function sendTeacherRegisteredNotificationEmail({ to, adminName, teacherNa
   });
 }
 
-async function sendQuoteEmail({ to, firstName, lastName, school, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, prorationFactor, termYears, discountPct }) {
+function renderSectionHtml(text) {
+  if (!text) return '';
+  return /<[a-zA-Z][^>]*>/.test(text) ? text : text.replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+}
+
+function renderSectionPlain(text) {
+  if (!text) return '';
+  return text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+}
+
+async function sendQuoteEmail({ to, firstName, lastName, school, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, prorationFactor, termYears, discountPct, contentSections }) {
   const name = [firstName, lastName].filter(Boolean).join(' ') || 'there';
   const total = `$${Number(amountDollars).toFixed(2)}`;
   const fromAddr = fromEmail ? `"Fixer Nation Education" <${fromEmail}>` : systemFromAddress();
@@ -304,6 +314,25 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
     textLines = `  License: ${descLine}\n  Total:   ${total}`;
   }
 
+  const SECTION_DEFS = [
+    { key: 'annualIncludes', label: 'What Every Annual License Includes' },
+    { key: 'lessonPackage',  label: 'A Complete Lesson Package Contains' },
+    { key: 'videoAccess',    label: 'Video Access and Reasonable Use' },
+    { key: 'licenseTerms',   label: 'License, Download, and School-Year Terms' },
+  ];
+
+  let sectionsHtml = '';
+  let sectionsText = '';
+
+  if (contentSections) {
+    SECTION_DEFS.forEach(({ key, label }) => {
+      const raw = (contentSections[key] || '').trim();
+      if (!raw) return;
+      sectionsHtml += `<div style="margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb;"><p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 8px;">${label}</p><div style="font-size:13px;color:#374151;line-height:1.6;">${renderSectionHtml(raw)}</div></div>`;
+      sectionsText += `\n\n${label}\n${renderSectionPlain(raw)}`;
+    });
+  }
+
   await getTransporter().sendMail({
     from: fromAddr,
     to,
@@ -316,8 +345,8 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
       ``,
       textLines,
       ``,
-      `Includes licensed teacher seats, video access, quizzes, and progress reporting.`,
       `This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.`,
+      sectionsText,
       ``,
       `Fixer Nation Education`,
     ].join('\n'),
@@ -325,9 +354,9 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
       <p>Hi ${name},</p>
       <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${school || 'your school'}</strong>:</p>
       <table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;">${htmlRows}</table>
-      <p style="font-size:13px;color:#6b7280;">Includes licensed teacher seats, video access, quizzes, and progress reporting.</p>
       <p style="font-size:13px;color:#6b7280;">This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.</p>
-      <p>Fixer Nation Education</p>
+      ${sectionsHtml}
+      <p style="margin-top:20px;">Fixer Nation Education</p>
     `,
   });
 }

@@ -40,6 +40,8 @@
   .q-breakdown-row{display:flex; justify-content:space-between; padding:3px 0;}
   .q-breakdown-row.soft{color:var(--a-text-soft);}
   .q-breakdown-row.total{font-weight:700; font-size:15px; border-top:1px solid var(--a-border); margin-top:6px; padding-top:8px;}
+  .q-content-ta{width:100%; min-height:120px; padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13px; font-family:inherit; background:var(--a-card); color:var(--a-text); resize:vertical; box-sizing:border-box; line-height:1.5;}
+  .q-content-ta:focus{outline:none; border-color:var(--a-accent);}
 </style>
 </head>
 <body>
@@ -110,6 +112,33 @@
         </div>
       </div>
 
+      <div class="a-card" style="margin-top:24px;">
+        <div class="a-card-head">
+          <h2>Quote Email Content Sections</h2>
+        </div>
+        <p class="a-note" style="margin-bottom:20px;">These sections appear at the bottom of every quote email. Plain text and HTML are both supported. Leave a section blank to omit it from the email.</p>
+        <div class="q-field">
+          <label class="q-label">What Every Annual License Includes</label>
+          <textarea id="qsAnnualIncludes" class="q-content-ta" placeholder="Plain text or HTML…"></textarea>
+        </div>
+        <div class="q-field">
+          <label class="q-label">A Complete Lesson Package Contains</label>
+          <textarea id="qsLessonPackage" class="q-content-ta" placeholder="Plain text or HTML…"></textarea>
+        </div>
+        <div class="q-field">
+          <label class="q-label">Video Access and Reasonable Use</label>
+          <textarea id="qsVideoAccess" class="q-content-ta" placeholder="Plain text or HTML…"></textarea>
+        </div>
+        <div class="q-field">
+          <label class="q-label">License, Download, and School-Year Terms</label>
+          <textarea id="qsLicenseTerms" class="q-content-ta" placeholder="Plain text or HTML…"></textarea>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
+          <button class="a-btn a-btn-primary" onclick="saveContentSections()">Save Content Sections</button>
+          <span id="qsSaveMsg" style="font-size:13px; color:var(--a-success,#16a34a); display:none;">Saved</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -155,6 +184,10 @@ async function init() {
   if (sRes.ok) {
     const sd = await sRes.json();
     quoteSettings = { fromEmail: sd.fromEmail || '', twoYrPct: Number(sd.twoYrDiscountPct) || 5, threeYrPct: Number(sd.threeYrDiscountPct) || 8 };
+    document.getElementById('qsAnnualIncludes').value = sd.sectionAnnualIncludes || '';
+    document.getElementById('qsLessonPackage').value  = sd.sectionLessonPackage  || '';
+    document.getElementById('qsVideoAccess').value    = sd.sectionVideoAccess    || '';
+    document.getElementById('qsLicenseTerms').value   = sd.sectionLicenseTerms   || '';
   }
   updateStats();
   renderTable(allQuotes);
@@ -611,6 +644,23 @@ async function sendQuote() {
   applyFilters();
   closeModal();
   fnToast('Quote sent');
+}
+
+async function saveContentSections() {
+  const r = await fetch('/api/settings/quote', {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sectionAnnualIncludes: document.getElementById('qsAnnualIncludes').value,
+      sectionLessonPackage:  document.getElementById('qsLessonPackage').value,
+      sectionVideoAccess:    document.getElementById('qsVideoAccess').value,
+      sectionLicenseTerms:   document.getElementById('qsLicenseTerms').value,
+    }),
+  });
+  if (!r.ok) { fnToast('Could not save sections'); return; }
+  const msg = document.getElementById('qsSaveMsg');
+  msg.style.display = '';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
 }
 
 function fnEscape(s) {

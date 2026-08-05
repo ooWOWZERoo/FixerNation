@@ -166,9 +166,13 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
   }
 
-  const [replyTo, fromEmail] = await Promise.all([
+  const [replyTo, fromEmail, s1, s2, s3, s4] = await Promise.all([
     getSetting('contact_email_quote'),
     getSetting('quote_from_email'),
+    getSetting('quote_section_annual_includes'),
+    getSetting('quote_section_lesson_package'),
+    getSetting('quote_section_video_access'),
+    getSetting('quote_section_license_terms'),
   ]);
 
   await sendQuoteEmail({
@@ -185,6 +189,12 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
     prorationFactor: quotedProrationFactor != null ? Number(quotedProrationFactor) : null,
     termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
     discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
+    contentSections: {
+      annualIncludes: s1 || '',
+      lessonPackage:  s2 || '',
+      videoAccess:    s3 || '',
+      licenseTerms:   s4 || '',
+    },
   });
 
   await pool.query(
