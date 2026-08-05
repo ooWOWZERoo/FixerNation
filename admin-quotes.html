@@ -288,6 +288,14 @@ function openModal(id) {
           ${annualOptions}
         </select>
       </div>
+      <div class="q-field" style="margin-top:4px;">
+        <label class="q-label" for="modalAmount">Dollar Amount</label>
+        <div class="q-amount-wrap">
+          <span class="q-dollar">$</span>
+          <input type="number" id="modalAmount" class="q-input" min="0" step="0.01" placeholder="0.00" value="${fnEscape(savedAmount)}" oninput="onAmountOverride()">
+        </div>
+        <div class="a-note" style="margin-top:4px;">Auto-fills from the breakdown. Override here to quote a custom amount — the summary updates to match.</div>
+      </div>
       <div class="q-field" id="qAddonField" style="display:none;">
         <label class="q-label">Additional Seats <span id="qAddonRateHint" style="font-weight:400;color:var(--a-text-soft);font-size:11px;"></span></label>
         <input type="number" id="qAddonInput" class="q-input" min="0" max="99" value="0" oninput="calcBreakdown()">
@@ -309,7 +317,6 @@ function openModal(id) {
         </div>
       </div>
       <div class="q-breakdown" id="qBreakdown" style="display:none;"></div>
-      <button type="button" class="a-btn a-btn-outline" style="width:100%;margin-bottom:8px;" id="qUseBtn" disabled onclick="useThisAmount()">Use This Amount</button>
     </div>
 
     <!-- 90-Day Pilot tab -->
@@ -319,7 +326,6 @@ function openModal(id) {
         <div class="q-breakdown-row total"><span>Total</span><span>$149.00</span></div>
         <div style="font-size:11.5px;color:var(--a-text-soft);margin-top:6px;">Includes 10 lessons. $74.50 conversion credit toward annual license within 30 days.</div>
       </div>
-      <button type="button" class="a-btn a-btn-outline" style="width:100%;margin-bottom:8px;" onclick="usePilotAmount()">Use This Amount — $149.00</button>
     </div>
 
     <!-- Add-On Seats tab -->
@@ -336,15 +342,6 @@ function openModal(id) {
         <input type="number" id="qAddonSeatsInput" class="q-input" min="1" max="99" value="1" oninput="calcAddon()">
       </div>
       <div class="q-breakdown" id="qAddonBreakdown" style="display:none;"></div>
-      <button type="button" class="a-btn a-btn-outline" style="width:100%;margin-bottom:8px;" id="qAddonUseBtn" disabled onclick="useAddonAmount()">Use This Amount</button>
-    </div>
-
-    <div class="q-field" style="margin-top:4px;">
-      <label class="q-label" for="modalAmount">Dollar Amount</label>
-      <div class="q-amount-wrap">
-        <span class="q-dollar">$</span>
-        <input type="number" id="modalAmount" class="q-input" min="0" step="0.01" placeholder="0.00" value="${fnEscape(savedAmount)}">
-      </div>
     </div>
   `;
 
@@ -360,6 +357,17 @@ function switchQuoteTab(tab) {
     document.getElementById('tabBtn' + t).classList.toggle('q-tab-active', t.toLowerCase() === tab);
     document.getElementById('tab' + t).style.display = t.toLowerCase() === tab ? '' : 'none';
   });
+  if (tab === 'pilot') {
+    const pilot = licenseProds.find(p => p.isPilot);
+    document.getElementById('qProductId').value          = pilot ? pilot.id : '';
+    document.getElementById('qProductName').value        = '90-Day Classroom Pilot';
+    document.getElementById('qTierName').value           = '90-Day Classroom Pilot';
+    document.getElementById('qAddonSeats').value         = 0;
+    document.getElementById('qProrationFactor').value    = 1;
+    document.getElementById('qTermYears').value          = 1;
+    document.getElementById('qDiscountPct').value        = 0;
+    document.getElementById('modalAmount').value         = '149.00';
+  }
 }
 
 function selectChip(group, btn) {
@@ -398,7 +406,6 @@ function calcBreakdown() {
   const opt = sel && sel.options[sel.selectedIndex];
   if (!opt || !opt.value) {
     document.getElementById('qBreakdown').style.display = 'none';
-    document.getElementById('qUseBtn').disabled = true;
     return;
   }
   const basePrice  = parseFloat(opt.dataset.price || 0);
@@ -433,7 +440,7 @@ function calcBreakdown() {
   const breakdown = document.getElementById('qBreakdown');
   breakdown.innerHTML = rows;
   breakdown.style.display = '';
-  document.getElementById('qUseBtn').disabled = false;
+  document.getElementById('modalAmount').value = total.toFixed(2);
 
   document.getElementById('qProductId').value          = opt.value || '';
   document.getElementById('qProductName').value        = tierName;
@@ -444,21 +451,13 @@ function calcBreakdown() {
   document.getElementById('qDiscountPct').value        = discountPct;
 }
 
-function useThisAmount() {
-  const totalEl = document.querySelector('#qBreakdown .q-breakdown-row.total span:last-child');
-  if (totalEl) document.getElementById('modalAmount').value = totalEl.textContent.replace('$', '');
-}
-
-function usePilotAmount() {
-  const pilot = licenseProds.find(p => p.isPilot);
-  document.getElementById('qProductId').value          = pilot ? pilot.id : '';
-  document.getElementById('qProductName').value        = '90-Day Classroom Pilot';
-  document.getElementById('qTierName').value           = '90-Day Classroom Pilot';
-  document.getElementById('qAddonSeats').value         = 0;
-  document.getElementById('qProrationFactor').value    = 1;
-  document.getElementById('qTermYears').value          = 1;
-  document.getElementById('qDiscountPct').value        = 0;
-  document.getElementById('modalAmount').value         = '149.00';
+function onAmountOverride() {
+  const val = parseFloat(document.getElementById('modalAmount').value);
+  if (isNaN(val)) return;
+  const annualTotal = document.querySelector('#qBreakdown .q-breakdown-row.total span:last-child');
+  if (annualTotal) annualTotal.textContent = `$${val.toFixed(2)}`;
+  const addonTotal = document.querySelector('#qAddonBreakdown .q-breakdown-row.total span:last-child');
+  if (addonTotal) addonTotal.textContent = `$${val.toFixed(2)}`;
 }
 
 function calcAddon() {
@@ -468,7 +467,6 @@ function calcAddon() {
   const breakdown = document.getElementById('qAddonBreakdown');
   if (!opt || !opt.value) {
     breakdown.style.display = 'none';
-    document.getElementById('qAddonUseBtn').disabled = true;
     hintEl.textContent = '';
     return;
   }
@@ -477,7 +475,6 @@ function calcAddon() {
   hintEl.textContent = `$${addonRate.toFixed(2)}/seat`;
   if (count < 1 || addonRate <= 0) {
     breakdown.style.display = 'none';
-    document.getElementById('qAddonUseBtn').disabled = true;
     return;
   }
   const total    = count * addonRate;
@@ -486,7 +483,7 @@ function calcAddon() {
     <div class="q-breakdown-row"><span>${count} seat${count !== 1 ? 's' : ''} × $${addonRate.toFixed(2)} (${tierName} rate)</span><span>$${total.toFixed(2)}</span></div>
     <div class="q-breakdown-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
   breakdown.style.display = '';
-  document.getElementById('qAddonUseBtn').disabled = false;
+  document.getElementById('modalAmount').value = total.toFixed(2);
 
   document.getElementById('qProductId').value          = opt.value || '';
   document.getElementById('qProductName').value        = `${count} Add-On Seat${count !== 1 ? 's' : ''} (${tierName})`;
@@ -495,11 +492,6 @@ function calcAddon() {
   document.getElementById('qProrationFactor').value    = 1;
   document.getElementById('qTermYears').value          = 1;
   document.getElementById('qDiscountPct').value        = 0;
-}
-
-function useAddonAmount() {
-  const totalEl = document.querySelector('#qAddonBreakdown .q-breakdown-row.total span:last-child');
-  if (totalEl) document.getElementById('modalAmount').value = totalEl.textContent.replace('$', '');
 }
 
 function closeModal() {
