@@ -644,7 +644,7 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 -- empty until an admin actually changes something.
 CREATE TABLE IF NOT EXISTS settings (
   setting_key VARCHAR(64) PRIMARY KEY,
-  setting_value VARCHAR(255) NOT NULL,
+  setting_value TEXT NOT NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
