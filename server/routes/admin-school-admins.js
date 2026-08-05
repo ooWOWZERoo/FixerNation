@@ -127,13 +127,14 @@ router.post('/assign', requireAuth, async (req, res) => {
       const portalUrl = `${siteUrl}/school-admin-dashboard.html`;
       const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
 
+      const needsSetup = !user.email_verified;
       await sendSchoolAdminWelcomeEmail({
         to: normalEmail,
         firstName: user.first_name,
         schoolDomain: purchase.school_domain,
         portalUrl,
-        activateUrl: isNewUser ? activateUrl : portalUrl,
-        isNewUser,
+        activateUrl: needsSetup ? activateUrl : portalUrl,
+        isNewUser: needsSetup,
       });
     } catch (e) {
       console.error('sendSchoolAdminWelcomeEmail failed:', e.message);

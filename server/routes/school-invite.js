@@ -265,4 +265,80 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// POST /api/school-invite/accept-and-verify
+// Used when an existing user with email_verified=0 tries to claim an invite via sign-in.
+// Accepting an invite proves email ownership, so we verify the email and claim the seat in one step.
+router.post('/accept-and-verify', async (req, res) => {
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ error: 'token and password are required' });
+
+  const [[inv]] = await pool.query(
+    `SELECT si.*, p.payment_status, p.school_domain
+     FROM school_invitations si
+     JOIN purchases p ON p.id = si.purchase_id
+     WHERE si.token = ?`,
+    [token.trim()]
+  );
+
+  if (!inv) return res.status(404).json({ error: 'Invitation not found' });
+  if (inv.status === 'revoked') return res.status(410).json({ error: 'This invitation has been revoked' });
+  if (inv.status === 'registered') return res.status(409).json({ error: 'This invitation has already been claimed' });
+  if (new Date(inv.expires_at) < new Date()) {
+    await pool.query("UPDATE school_invitations SET status = 'expired' WHERE id = ?", [inv.id]);
+    return res.status(410).json({ error: 'This invitation has expired' });
+  }
+  if (inv.payment_status !== 'paid') {
+    return res.status(422).json({ error: "Your school's group licensing is not yet active." });
+  }
+
+  const email = inv.invited_email.toLowerCase();
+  const [[user]] = await pool.query('SELECT id, first_name, password_hash FROM site_users WHERE email = ?', [email]);
+  if (!user) return res.status(404).json({ error: 'No account found for this email. Please use the "Create Account" form.' });
+
+  const passwordOk = await bcrypt.compare(password, user.password_hash);
+  if (!passwordOk) return res.status(401).json({ error: 'Incorrect password.' });
+
+  // Accepting the invite via this email link proves ownership — mark as verified
+  await pool.query('UPDATE site_users SET email_verified = 1 WHERE id = ?', [user.id]);
+
+  if (inv.seat_id) {
+    await pool.query(
+      "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE id = ? AND status IN ('pending','inactive')",
+      [user.id, inv.seat_id]
+    );
+  }
+
+  await pool.query("UPDATE school_invitations SET status = 'registered' WHERE id = ?", [inv.id]);
+
+  pool.query(
+    `INSERT INTO school_audit_log (actor_type, actor_id, actor_email, action, entity_type, entity_id, purchase_id, school_domain)
+     VALUES ('teacher', ?, ?, 'teacher_registered', 'site_user', ?, ?, ?)`,
+    [user.id, email, user.id, inv.purchase_id, inv.school_domain]
+  ).catch(e => console.error('audit log error:', e.message));
+
+  try {
+    const sessionToken = jwt.sign(
+      { userId: user.id, firstName: user.first_name, role: 'teacher' },
+      process.env.SESSION_SECRET,
+      { expiresIn: '30d' }
+    );
+    res.cookie(SITE_COOKIE_NAME, sessionToken, {
+      httpOnly: true, sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: SITE_COOKIE_MAX_AGE_MS,
+    });
+  } catch (e) {
+    console.error('session cookie failed in accept-and-verify:', e.message);
+  }
+
+  try {
+    const { addTeacherToSocialGroups } = require('../lib/social-groups');
+    await addTeacherToSocialGroups(user.id);
+  } catch (e) {
+    console.error('addTeacherToSocialGroups failed:', e.message);
+  }
+
+  res.json({ ok: true, schoolDomain: inv.school_domain });
+});
+
 module.exports = router;

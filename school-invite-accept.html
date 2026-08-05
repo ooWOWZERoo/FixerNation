@@ -324,7 +324,20 @@ document.getElementById('signInForm').addEventListener('submit', async function(
       body: JSON.stringify({ email: invData.invitedEmail, password: pass }),
     });
     var ld = await lr.json();
-    if (!lr.ok) { err.textContent = ld.error || 'Sign in failed. Check your password and try again.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation'; return; }
+    if (!lr.ok) {
+      // Account exists but email was never verified — the invite proves ownership, so handle inline
+      if (lr.status === 403 && ld.reason === 'unverified') {
+        var ar = await fetch('/api/school-invite/accept-and-verify', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, password: pass }),
+        });
+        var ad = await ar.json();
+        if (!ar.ok) { err.textContent = ad.error || 'Failed to accept invitation.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation'; return; }
+        hide('stateSignIn'); show('stateSuccess'); return;
+      }
+      err.textContent = ld.error || 'Sign in failed. Check your password and try again.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation'; return;
+    }
     var cr = await fetch('/api/school-invite/claim', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

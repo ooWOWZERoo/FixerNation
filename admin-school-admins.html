@@ -201,7 +201,7 @@ function renderTable(rows) {
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Inactive</span>';
       const resendBtn = !r.email_verified
-        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',' + JSON.stringify(r.email) + ',this)">Resend Welcome</button> '
+        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',\'' + esc(r.email) + '\',this)">Resend Welcome</button> '
         : '';
       return '<tr>' +
         '<td style="font-weight:600;">' + esc(name) + '</td>' +
@@ -212,7 +212,7 @@ function renderTable(rows) {
         '<td style="white-space:nowrap;">' +
           resendBtn +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEditModal(' + r.id + ')">Edit</button> ' +
-          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openRemoveModal(' + r.id + ',' + JSON.stringify(r.email) + ')">Remove</button>' +
+          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openRemoveModal(' + r.id + ',\'' + esc(r.email) + '\')">Remove</button>' +
         '</td></tr>';
     }).join('') +
     '</tbody></table>';
