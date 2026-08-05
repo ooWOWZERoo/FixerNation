@@ -174,14 +174,20 @@ router.post('/:assignmentId/resend-welcome', requireAuth, async (req, res) => {
   const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000);
   const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
 
-  await sendSchoolAdminWelcomeEmail({
-    to: user.email,
-    firstName: user.first_name,
-    schoolDomain: assignment.school_domain,
-    portalUrl: `${siteUrl}/school-admin-dashboard.html`,
-    activateUrl,
-    isNewUser: true,
-  });
+  try {
+    await sendSchoolAdminWelcomeEmail({
+      to: user.email,
+      firstName: user.first_name,
+      schoolDomain: assignment.school_domain,
+      portalUrl: `${siteUrl}/school-admin-dashboard.html`,
+      activateUrl,
+      isNewUser: !user.email_verified,
+    });
+    console.log(`[school-admin] Resent welcome email to ${user.email} (assignment ${req.params.assignmentId})`);
+  } catch (e) {
+    console.error(`[school-admin] resend-welcome failed for ${user.email}:`, e.message);
+    return res.status(500).json({ error: `Failed to send email: ${e.message}` });
+  }
 
   res.json({ ok: true });
 });
