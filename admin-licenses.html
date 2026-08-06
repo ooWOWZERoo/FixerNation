@@ -325,6 +325,7 @@ function licenseCard(p) {
           <td>${fnFormatDate(s.registeredAt)}</td>
           <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openGradeModal(${s.id}, ${JSON.stringify(s.audiences || []).replace(/"/g, '&quot;')})">✏️ Edit</button></td>
           <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openLessonPlanModal(${s.registeredSiteUserId || 0}, '${(s.registeredName || '').replace(/'/g, "\\'")}')">📚 Library</button></td>
+          <td>${s.registeredSiteUserId ? `<button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="sendTeacherPasswordReset(${s.registeredSiteUserId}, '${s.invitedEmail.replace(/'/g, "\\'")}')">🔑 Reset Pwd</button>` : ''}</td>
         </tr>
       `).join('')
     : `<tr><td colspan="6" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
@@ -353,7 +354,7 @@ function licenseCard(p) {
 
       <h3 style="font-size:14px; margin-bottom:10px;">Registered Teachers</h3>
       <table class="a-table">
-        <thead><tr><th>Name</th><th>Email</th><th>Grade Levels</th><th>Registered</th><th></th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Grade Levels</th><th>Registered</th><th></th><th></th><th></th></tr></thead>
         <tbody>${rosterRows}</tbody>
       </table>
     </div>
@@ -525,6 +526,18 @@ async function addLessonPlanAdmin() {
   if (!r.ok) { fnToast(data.error || 'Could not add plan'); return; }
   document.getElementById('lessonPlanAddSelect').value = '';
   await refreshLessonPlanModal();
+}
+
+async function sendTeacherPasswordReset(siteUserId, email) {
+  if (!confirm(`Send a password reset email to ${email}?`)) return;
+  const r = await fetch(`/api/site-auth/site-users/${siteUserId}/send-password-reset`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not send reset email'); return; }
+  fnToast('Password reset email sent');
 }
 </script>
 
