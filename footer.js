@@ -57,6 +57,7 @@
             '<li><a href="brain-games.html">Brain Games</a></li>' +
             '<li><a href="social.html">Community</a></li>' +
             '<li><a href="research.html">Research &amp; Alignment</a></li>' +
+            '<li><a href="for-parents.html">For Parents</a></li>' +
           '</ul>' +
         '</div>' +
 
