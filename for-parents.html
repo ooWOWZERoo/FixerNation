@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Parents — Fixer Nation Education</title>
+<meta name="description" content="Stay connected to what your child is learning. The Fixer Nation Education parent portal gives you visibility into lessons, progress, and the skills your kids are building every day.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);}
+a{color:var(--teal-dark);}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#0E3733 0%,#1a6b63 60%,#2a8a7e 100%);color:#fff;padding:90px 24px 80px;text-align:center;}
+.hero-eyebrow{display:inline-block;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:999px;padding:5px 16px;font-size:12.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:22px;color:rgba(255,255,255,0.9);}
+.hero h1{font-family:'Fraunces',serif;font-size:clamp(36px,6vw,58px);font-weight:700;line-height:1.12;max-width:700px;margin:0 auto 20px;}
+.hero h1 em{font-style:italic;color:var(--gold);}
+.hero p{font-size:18px;line-height:1.65;max-width:540px;margin:0 auto 36px;color:rgba(255,255,255,0.86);}
+.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{display:inline-block;padding:14px 28px;background:var(--coral);color:#fff;border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;transition:background .15s;}
+.btn-primary:hover{background:var(--coral-dark);color:#fff;}
+.btn-ghost{display:inline-block;padding:14px 28px;border:2px solid rgba(255,255,255,0.4);color:#fff;border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;transition:all .15s;}
+.btn-ghost:hover{border-color:rgba(255,255,255,0.75);color:#fff;}
+
+/* Benefits */
+.section{padding:80px 24px;}
+.section-inner{max-width:1060px;margin:0 auto;}
+.section-label{font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--coral);margin-bottom:10px;}
+.section-title{font-family:'Fraunces',serif;font-size:clamp(28px,4vw,40px);font-weight:700;color:var(--teal-dark);line-height:1.2;max-width:560px;margin-bottom:16px;}
+.section-sub{font-size:16px;color:var(--ink-soft);line-height:1.7;max-width:540px;margin-bottom:52px;}
+.benefits-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;}
+.benefit-card{background:#fff;border-radius:20px;padding:28px 26px;box-shadow:0 8px 32px -12px rgba(22,79,74,0.18);}
+.benefit-icon{font-size:28px;margin-bottom:14px;}
+.benefit-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--teal-dark);margin-bottom:8px;}
+.benefit-body{font-size:14px;color:var(--ink-soft);line-height:1.65;}
+
+/* How it works */
+.how-section{background:#fff;padding:80px 24px;}
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:32px;margin-top:48px;}
+.step{position:relative;padding-left:52px;}
+.step-num{position:absolute;left:0;top:0;width:36px;height:36px;border-radius:50%;background:var(--teal-dark);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-title{font-weight:700;font-size:15px;color:var(--teal-dark);margin-bottom:6px;}
+.step-body{font-size:13.5px;color:var(--ink-soft);line-height:1.6;}
+
+/* Quote */
+.quote-section{background:var(--teal-dark);color:#fff;padding:72px 24px;text-align:center;}
+.quote-text{font-family:'Fraunces',serif;font-style:italic;font-size:clamp(20px,3vw,28px);line-height:1.5;max-width:680px;margin:0 auto 20px;}
+.quote-attr{font-size:14px;font-weight:600;opacity:0.7;}
+
+/* CTA bottom */
+.cta-section{padding:80px 24px;text-align:center;}
+.cta-section .section-title{margin:0 auto 14px;}
+.cta-section .section-sub{margin:0 auto 36px;}
+.cta-buttons{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn-teal{display:inline-block;padding:14px 28px;background:var(--teal-dark);color:#fff;border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;transition:background .15s;}
+.btn-teal:hover{background:#0a2b28;color:#fff;}
+.btn-outline-teal{display:inline-block;padding:13px 28px;border:2px solid var(--teal-dark);color:var(--teal-dark);border-radius:999px;font-weight:700;font-size:15px;text-decoration:none;transition:all .15s;}
+.btn-outline-teal:hover{background:rgba(22,79,74,0.06);}
+
+@media(max-width:600px){
+  .hero{padding:60px 20px 56px;}
+  .section,.how-section,.cta-section{padding:56px 20px;}
+  .quote-section{padding:52px 20px;}
+}
+</style>
+</head>
+<body>
+<header></header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">For Parents</div>
+  <h1>Stay close to what your child is <em>learning</em></h1>
+  <p>FNE gives parents a window into the classroom — so you know what skills your kids are working on, how they're doing, and how to keep those conversations going at home.</p>
+  <div class="hero-ctas">
+    <a href="parent-login.html" class="btn-primary">Log In to Parent Portal</a>
+    <a href="contact.html" class="btn-ghost">Talk to Us</a>
+  </div>
+</section>
+
+<!-- Benefits -->
+<section class="section">
+  <div class="section-inner">
+    <p class="section-label">Why Parents Love FNE</p>
+    <h2 class="section-title">More than a window into homework</h2>
+    <p class="section-sub">FNE covers the skills school report cards don't — grit, empathy, self-regulation, conflict resolution. Now you can see exactly what your child is working on and pick up where the teacher leaves off.</p>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon">👀</div>
+        <div class="benefit-title">See every lesson your child takes</div>
+        <div class="benefit-body">Your parent portal shows the exact lessons assigned to your child's class — the topic, the skills covered, and when they completed it. No more "nothing" when you ask what happened at school.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">💬</div>
+        <div class="benefit-title">Conversation starters that actually work</div>
+        <div class="benefit-body">Each lesson comes with a take-home discussion guide. Real questions, tied to what your kid just learned, that get more than a shrug at the dinner table.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">📈</div>
+        <div class="benefit-title">Progress you can actually read</div>
+        <div class="benefit-body">Track quiz scores, lesson completion, and skill growth over time. You'll see what's clicking and where your child could use more support — before the semester ends.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🔬</div>
+        <div class="benefit-title">Content built on real research</div>
+        <div class="benefit-body">Every FNE lesson is grounded in published SEL research and reviewed by educators before it reaches a classroom. You don't have to take anyone's word for it — the research is cited right in the lesson materials.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🏠</div>
+        <div class="benefit-title">Tools to reinforce skills at home</div>
+        <div class="benefit-body">Access parent-facing lesson summaries, activity ideas, and printable resources so the SEL work doesn't stop when the school day does.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🔒</div>
+        <div class="benefit-title">Age-appropriate, educator-reviewed</div>
+        <div class="benefit-body">All content is reviewed by licensed educators and school counselors before publishing. Nothing gets through that isn't appropriate for the grade level.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how-section">
+  <div class="section-inner">
+    <p class="section-label">Getting Started</p>
+    <h2 class="section-title">How parents get access</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Your child's teacher or school invites you</div>
+        <div class="step-body">Your school's FNE administrator sends a parent invite to the email address on file. Check with your child's teacher if you haven't received one.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Set up your account in under two minutes</div>
+        <div class="step-body">Click the link in the invite email, set a password, and your portal is ready. No app to download.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Log in anytime from any device</div>
+        <div class="step-body">The parent portal works on phone, tablet, or desktop. Check in whenever you want to see what's going on in class.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">Use the take-home guides at dinner</div>
+        <div class="step-body">Each lesson's discussion guide gives you five conversation starters matched to exactly what your child learned that week.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quote -->
+<section class="quote-section">
+  <p class="quote-text">"I finally know what 'social-emotional learning' actually looks like in my kid's classroom. And having the conversation guide means I don't just get a one-word answer when I ask about their day."</p>
+  <p class="quote-attr">— Parent, grade 4</p>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="section-inner">
+    <p class="section-label">Ready to get involved?</p>
+    <h2 class="section-title" style="max-width:480px;">Already have an account?</h2>
+    <p class="section-sub" style="max-width:480px;">Log in to see your child's lessons, progress, and take-home resources. If your school isn't using FNE yet, reach out — we'd love to help them get started.</p>
+    <div class="cta-buttons">
+      <a href="parent-login.html" class="btn-teal">Log In to Parent Portal</a>
+      <a href="contact.html" class="btn-outline-teal">Contact Us</a>
+    </div>
+  </div>
+</section>
+
+<footer></footer>
+<script src="nav.js?v=9"></script>
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

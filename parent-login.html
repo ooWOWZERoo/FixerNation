@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parent Login — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0E3733 0%,#1a6b63 100%);padding:20px;}
+  .card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.28);}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+  .logo-mark{width:44px;height:44px;background:linear-gradient(135deg,#F26B4D,#EBA657);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 8px 18px -6px rgba(242,107,77,.55);flex-shrink:0;}
+  .logo-mark .init{font-size:13px;font-weight:800;color:#fff;line-height:1.1;}
+  .logo-mark .sub{font-size:7.5px;font-weight:700;color:rgba(255,255,255,.82);letter-spacing:.1em;line-height:1;}
+  .logo-words{line-height:1.2;}
+  .logo-words strong{display:block;font-size:15px;font-weight:700;color:#0E3733;}
+  .logo-words span{font-size:12px;color:#6b7280;}
+  h2{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#0E3733;margin-bottom:6px;}
+  .sub{font-size:13px;color:#6b7280;margin-bottom:24px;}
+  .form-group{margin-bottom:16px;}
+  .form-group label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:#2A2420;}
+  .form-group input{width:100%;padding:10px 13px;border:1.5px solid rgba(22,79,74,.2);border-radius:9px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;}
+  .form-group input:focus{border-color:#164F4A;}
+  .err{color:#ef4444;font-size:13px;margin-bottom:14px;display:none;}
+  .btn-login{width:100%;padding:12px;background:#F26B4D;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;}
+  .btn-login:hover{background:#D9502F;}
+  .btn-login:disabled{opacity:.6;cursor:not-allowed;}
+  .links{margin-top:18px;display:flex;flex-direction:column;gap:8px;text-align:center;font-size:13px;color:#6b7280;}
+  .links a{color:#164F4A;font-weight:600;}
+  .links a:hover{color:#0E3733;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">
+      <span class="init">FNE</span>
+      <span class="sub">SEL</span>
+    </div>
+    <div class="logo-words">
+      <strong>Fixer Nation Education</strong>
+      <span>Parent Portal</span>
+    </div>
+  </div>
+
+  <h2>Log In as a Parent</h2>
+  <p class="sub">See what your child is learning and track their progress.</p>
+
+  <div class="err" id="loginErr"></div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" autocomplete="email" required placeholder="you@email.com">
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn-login" id="loginBtn">Log In</button>
+  </form>
+
+  <div class="links">
+    <div><a href="reset-password.html">Forgot your password?</a></div>
+    <div>Not sure if you have an account? <a href="for-parents.html">Learn about the parent portal</a></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  fetch('/api/site-auth/me', { credentials: 'include' })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) { if (d && d.loggedIn) window.location.href = 'parent-portal.html'; })
+    .catch(function() {});
+
+  document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('loginBtn');
+    var err = document.getElementById('loginErr');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Logging in…';
+
+    try {
+      var r = await fetch('/api/site-auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        }),
+      });
+      var d = await r.json();
+      if (!r.ok) {
+        err.textContent = d.error || 'Login failed. Check your email and password.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Log In';
+        return;
+      }
+      window.location.href = 'parent-portal.html';
+    } catch (ex) {
+      err.textContent = 'Unable to connect. Please try again.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Log In';
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -49,6 +49,7 @@
   var howActive       = page === 'how-it-works';
   var teachersActive  = page === 'for-teachers';
   var schoolsActive   = page === 'for-schools';
+  var parentsActive   = page === 'for-parents';
   var libraryActive        = page === 'education-portal';
   var morningBoostActive   = page === 'morning-boost-blog';
   var researchActive  = page === 'research';
@@ -59,7 +60,7 @@
                        page === 'teacher-classroom-progress' ||
                        page === 'student-login' || page === 'student-home' || page === 'student-lesson' ||
                        page === 'school-admin-login' || page === 'school-admin-dashboard' ||
-                       page === 'teacher-login';
+                       page === 'teacher-login' || page === 'parent-login' || page === 'parent-portal';
 
   function lnk(href, label, isActive) {
     return '<a href="' + href + '"' + (isActive ? ' class="active"' : '') + '>' + label + '</a>';
@@ -78,11 +79,12 @@
           '</div>' +
         '</div>' +
         '<div class="fn-nav-dropdown">' +
-          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive ? ' active' : '') + '">Explore <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive || parentsActive ? ' active' : '') + '">Explore <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu">' +
             '<a href="how-it-works.html"'  + (howActive      ? ' class="active"' : '') + '>How It Works</a>'  +
             '<a href="for-teachers.html"'  + (teachersActive ? ' class="active"' : '') + '>For Teachers</a>'  +
             '<a href="for-schools.html"'   + (schoolsActive  ? ' class="active"' : '') + '>For Schools</a>'   +
+            '<a href="for-parents.html"'   + (parentsActive  ? ' class="active"' : '') + '>For Parents</a>'   +
           '</div>' +
         '</div>' +
         lnk('education-portal.html',    'Lesson Library', libraryActive)       +
@@ -106,6 +108,7 @@
           '<div class="fn-nav-menu fn-nav-menu-right">' +
             '<a href="teacher-login.html"' + (page === 'teacher-classrooms' || page === 'teacher-classroom' || page === 'teacher-classroom-progress' || page === 'teacher-login' ? ' class="active"' : '') + '>Teacher Login</a>' +
             '<a href="student-login.html"' + (page === 'student-login' || page === 'student-home' || page === 'student-lesson' ? ' class="active"' : '') + '>Student Login</a>' +
+            '<a href="parent-login.html"'  + (page === 'parent-login' || page === 'parent-portal' ? ' class="active"' : '') + '>Parent Login</a>'  +
             '<a href="school-admin-login.html"' + (page === 'school-admin-login' || page === 'school-admin-dashboard' ? ' class="active"' : '') + '>School Admin</a>' +
           '</div>' +
         '</div>' +

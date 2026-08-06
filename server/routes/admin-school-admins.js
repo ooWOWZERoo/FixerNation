@@ -127,7 +127,7 @@ router.post('/assign', requireAuth, async (req, res) => {
       const portalUrl = `${siteUrl}/school-admin-dashboard.html`;
       const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
 
-      const needsSetup = !user.email_verified;
+      const needsSetup = true; // always send a reset link so admins can set/confirm their portal password
       await sendSchoolAdminWelcomeEmail({
         to: normalEmail,
         firstName: user.first_name,
