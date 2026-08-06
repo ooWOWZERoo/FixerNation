@@ -41,6 +41,11 @@
   .back-link:hover{text-decoration:underline;}
   .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
+  .avatar-circle{width:86px;height:86px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:28px;font-weight:700;overflow:hidden;border:3px solid #fff;box-shadow:0 4px 14px -4px rgba(22,79,74,0.35);transition:opacity .15s;}
+  .avatar-circle:hover{opacity:.85;}
+  .avatar-circle img{width:100%;height:100%;object-fit:cover;display:block;}
+  .avatar-edit-dot{position:absolute;bottom:2px;right:2px;width:24px;height:24px;border-radius:50%;background:var(--teal-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;border:2px solid #fff;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -56,7 +61,23 @@
   </nav>
 
   <h1>My Profile</h1>
-  <p class="sub">Update your name and password. Your email address cannot be changed here.</p>
+  <p class="sub">Update your name, photo, and password. Your email address cannot be changed here.</p>
+
+  <div class="card" style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+    <div class="avatar-wrap" onclick="document.getElementById('avatarInput').click()" title="Click to change photo">
+      <div class="avatar-circle" id="avatarDisplay"></div>
+      <div class="avatar-edit-dot">✎</div>
+    </div>
+    <div style="flex:1;min-width:160px;">
+      <h2 class="section-heading" style="margin-bottom:6px;">Profile Photo</h2>
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.6;margin-bottom:14px;">JPG, PNG, or WebP &middot; Square crop &middot; Under 1 MB for fastest load</p>
+      <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="avatarSaveBtn" style="display:none;" onclick="uploadAvatar()">Save Photo</button>
+        <span id="avatarStatus" style="font-size:13px;color:var(--ink-soft);"></span>
+      </div>
+    </div>
+  </div>
 
   <div class="card">
     <h2 class="section-heading">Profile Information</h2>
@@ -96,7 +117,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="nav.js?v=10"></script>
+<script src="nav.js?v=11"></script>
 <script src="site-auth.js"></script>
 <script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
@@ -115,6 +136,18 @@ function showMsg(id, text, kind) {
   el.className = 'msg ' + kind;
 }
 
+let _profileInitials = '';
+
+function renderAvatar(url) {
+  const circle = document.getElementById('avatarDisplay');
+  if (!circle) return;
+  if (url) {
+    circle.innerHTML = '<img src="' + url + '" alt="Profile photo">';
+  } else {
+    circle.textContent = _profileInitials;
+  }
+}
+
 async function loadProfile() {
   const r = await fetch('/api/site-auth/profile', { credentials: 'include' });
   if (r.status === 401) { window.location.href = 'index.html'; return; }
@@ -122,6 +155,52 @@ async function loadProfile() {
   document.getElementById('firstName').value = data.firstName || '';
   document.getElementById('lastName').value = data.lastName || '';
   document.getElementById('emailDisplay').value = data.email || '';
+  const first = (data.firstName || '').trim();
+  const last = (data.lastName || '').trim();
+  _profileInitials = (first[0] || '') + (last[0] || '');
+  renderAvatar(data.avatarUrl || null);
+}
+
+document.getElementById('avatarInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    renderAvatar(e.target.result);
+    document.getElementById('avatarSaveBtn').style.display = '';
+    document.getElementById('avatarStatus').textContent = '';
+  };
+  reader.readAsDataURL(file);
+});
+
+async function uploadAvatar() {
+  const input = document.getElementById('avatarInput');
+  const file = input.files[0];
+  if (!file) return;
+  const btn = document.getElementById('avatarSaveBtn');
+  const status = document.getElementById('avatarStatus');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  status.textContent = '';
+  const form = new FormData();
+  form.append('avatar', file);
+  const r = await fetch('/api/site-auth/profile/avatar', {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  const result = await r.json().catch(() => ({}));
+  btn.disabled = false;
+  btn.textContent = 'Save Photo';
+  if (!r.ok) {
+    status.style.color = 'var(--coral-dark)';
+    status.textContent = result.error || 'Upload failed.';
+    return;
+  }
+  btn.style.display = 'none';
+  input.value = '';
+  renderAvatar(result.avatarUrl);
+  toast('Profile photo updated');
 }
 
 document.getElementById('profileForm').addEventListener('submit', async function(e) {

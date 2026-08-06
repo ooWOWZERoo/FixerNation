@@ -136,11 +136,14 @@ function fnFetchCommunityBadge() {
     fetch('/api/social/groups/unread', { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
   ]).then(function(results) {
     const msgData = results[0], groupData = results[1];
-    const hasUnread =
-      (msgData && msgData.conversations || []).some(function(c) { return Number(c.unread_count) > 0; }) ||
-      (groupData && groupData.unread || []).some(function(g) { return Number(g.unread_count) > 0; });
+    let total = 0;
+    (msgData && msgData.conversations || []).forEach(function(c) { total += Number(c.unread_count) || 0; });
+    (groupData && groupData.unread || []).forEach(function(g) { total += Number(g.unread_count) || 0; });
     const badge = document.getElementById('fnCommunityBadge');
-    if (badge) badge.style.display = hasUnread ? '' : 'none';
+    if (badge) {
+      badge.textContent = total > 99 ? '99+' : String(total);
+      badge.style.display = total > 0 ? '' : 'none';
+    }
   });
 }
 

@@ -1,6 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer');
@@ -8,6 +11,23 @@ const { createToken, consumeToken } = require('../lib/site-tokens');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
+
+const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
+fs.mkdirSync(avatarsDir, { recursive: true });
+const avatarUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, avatarsDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      cb(null, 'avatar-' + req.siteUser.id + '-' + Date.now() + ext);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype);
+    cb(ok ? null : new Error('Images only (JPG, PNG, WebP, GIF)'), ok);
+  },
+});
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -218,7 +238,24 @@ router.post('/reset-password', async (req, res) => {
 
 router.get('/profile', requireSiteAuth, async (req, res) => {
   const u = req.siteUser;
-  res.json({ firstName: u.first_name, lastName: u.last_name, email: u.email });
+  const [[sp]] = await pool.query('SELECT avatar_url FROM social_profiles WHERE user_id = ?', [u.id]);
+  res.json({ firstName: u.first_name, lastName: u.last_name, email: u.email, avatarUrl: sp ? sp.avatar_url : null });
+});
+
+router.post('/profile/avatar', requireSiteAuth, function(req, res, next) {
+  avatarUpload.single('avatar')(req, res, function(err) {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    next();
+  });
+}, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+  const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'avatars/';
+  const avatarUrl = prefix + req.file.filename;
+  await pool.query(
+    'INSERT INTO social_profiles (user_id, avatar_url) VALUES (?, ?) ON DUPLICATE KEY UPDATE avatar_url = VALUES(avatar_url)',
+    [req.siteUser.id, avatarUrl]
+  );
+  res.json({ ok: true, avatarUrl });
 });
 
 router.put('/profile', requireSiteAuth, async (req, res) => {
