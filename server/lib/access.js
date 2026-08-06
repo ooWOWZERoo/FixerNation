@@ -9,7 +9,7 @@ async function getSiteUser(req) {
   if (!token) return null;
   try {
     const payload = jwt.verify(token, process.env.SESSION_SECRET);
-    const [rows] = await pool.query('SELECT id, first_name, email FROM site_users WHERE id = ?', [payload.userId]);
+    const [rows] = await pool.query('SELECT id, first_name, email, role FROM site_users WHERE id = ?', [payload.userId]);
     return rows[0] || null;
   } catch {
     return null;
@@ -44,4 +44,30 @@ async function hasActiveMembership(email) {
   return rows.length > 0;
 }
 
-module.exports = { getSiteUser, hasActiveLicense, hasActiveMembership };
+// Returns all classrooms a parent is linked to.
+async function getParentClassrooms(siteUserId) {
+  if (!siteUserId) return [];
+  const [rows] = await pool.query(
+    `SELECT c.id AS classroomId, c.name AS className
+     FROM parent_classroom_links pcl
+     JOIN classrooms c ON c.id = pcl.classroom_id
+     WHERE pcl.site_user_id = ?
+     ORDER BY c.name`,
+    [siteUserId]
+  );
+  return rows;
+}
+
+// True if a parent user is linked to any classroom that has the given curriculum assigned.
+async function hasParentAccessToCurriculum(siteUserId, curriculumId) {
+  if (!siteUserId || !curriculumId) return false;
+  const [rows] = await pool.query(
+    `SELECT 1 FROM parent_classroom_links pcl
+     JOIN classroom_assignments ca ON ca.classroom_id = pcl.classroom_id
+     WHERE pcl.site_user_id = ? AND ca.curriculum_id = ? LIMIT 1`,
+    [siteUserId, curriculumId]
+  );
+  return rows.length > 0;
+}
+
+module.exports = { getSiteUser, hasActiveLicense, hasActiveMembership, getParentClassrooms, hasParentAccessToCurriculum };

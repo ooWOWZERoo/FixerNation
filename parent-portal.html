@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parent Portal — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{
+  --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+  --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+  --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+a{color:inherit; text-decoration:none;}
+img{max-width:100%; display:block;}
+ul{list-style:none;}
+.wrap{max-width:1080px; margin:0 auto; padding:0 32px;}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px; margin-bottom:16px;}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 22px; border-radius:999px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; border:none; transition:transform .18s ease; text-decoration:none;}
+.btn:hover{transform:translateY(-2px);}
+.btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.45);}
+.btn-outline{background:transparent; color:var(--teal-dark); border:2px solid var(--teal-dark);}
+
+/* Hero */
+.hero{background:linear-gradient(135deg, var(--teal-dark) 0%, var(--teal) 100%); padding:56px 0 52px;}
+.hero .wrap{display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
+.hero-icon{width:56px; height:56px; background:rgba(255,255,255,0.12); border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0;}
+.hero h1{font-size:32px; color:#fff; margin-bottom:4px;}
+.hero p{color:rgba(255,255,255,0.75); font-size:15px; font-weight:500;}
+
+/* Main content */
+.main{padding:56px 0 80px; min-height:400px;}
+
+/* State cards (auth + join) */
+.state-card{background:#fff; border-radius:var(--radius-md); padding:48px 52px; box-shadow:var(--shadow); max-width:640px; margin:0 auto; text-align:center;}
+.state-card h2{font-size:28px; margin-bottom:12px;}
+.state-card .desc{color:var(--ink-soft); font-size:15px; margin-bottom:28px; max-width:480px; margin-left:auto; margin-right:auto;}
+.cta-row{display:flex; justify-content:center; gap:14px; flex-wrap:wrap;}
+
+/* Join form */
+.join-row{display:flex; gap:10px; max-width:380px; margin:0 auto 14px; justify-content:center; flex-wrap:wrap;}
+.code-input{padding:13px 16px; border:2px solid rgba(22,79,74,0.18); border-radius:12px; font-family:'Plus Jakarta Sans', monospace; font-size:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; text-align:center; outline:none; transition:border-color .15s; width:180px;}
+.code-input:focus{border-color:var(--teal);}
+.hint{font-size:12.5px; color:var(--ink-soft); margin-top:0;}
+.msg-err{background:#FDECEA; color:#B3261E; border-radius:10px; padding:11px 16px; font-size:13.5px; font-weight:600; margin-bottom:16px;}
+.msg-ok{background:#E4F3EE; color:var(--teal-dark); border-radius:10px; padding:11px 16px; font-size:13.5px; font-weight:600; margin-bottom:16px;}
+code.example{background:var(--cream-soft); border-radius:6px; padding:2px 8px; font-size:14px; letter-spacing:0.08em; font-weight:700; color:var(--teal-dark);}
+
+/* Portal section */
+.classroom-block{margin-bottom:48px;}
+.classroom-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding-bottom:14px; border-bottom:2px solid rgba(22,79,74,0.08);}
+.classroom-head h3{font-size:22px;}
+.lesson-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+.lesson-card{background:#fff; border-radius:16px; padding:22px; box-shadow:0 12px 26px -20px rgba(22,79,74,0.25); cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; display:block; text-decoration:none; color:inherit;}
+.lesson-card:hover{transform:translateY(-4px); box-shadow:0 18px 34px -20px rgba(22,79,74,0.38);}
+.lesson-num{font-size:11px; font-weight:800; color:var(--coral-dark); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;}
+.lesson-card h4{font-size:15.5px; font-family:'Fraunces',serif; color:var(--teal-dark); margin-bottom:6px; line-height:1.3;}
+.lesson-series{font-size:12px; color:var(--ink-soft); margin-bottom:10px; font-weight:600;}
+.lesson-card .desc-short{font-size:13px; color:var(--ink-soft); line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+.lesson-cta{margin-top:14px; font-size:12.5px; font-weight:700; color:var(--coral-dark);}
+
+.no-lessons{background:var(--cream-soft); border-radius:12px; padding:22px 24px; font-size:14px; color:var(--ink-soft);}
+
+/* Add classroom link */
+.add-more{text-align:center; margin-top:16px; font-size:14px; color:var(--ink-soft);}
+.add-more a{color:var(--coral-dark); font-weight:700;}
+
+/* Inline join-more card */
+.join-more-card{background:#fff; border-radius:var(--radius-md); padding:32px; box-shadow:var(--shadow); max-width:540px; margin:32px auto 0;}
+.join-more-card h3{font-size:20px; margin-bottom:20px; text-align:center;}
+
+@media (max-width:860px){
+  .lesson-grid{grid-template-columns:repeat(2,1fr);}
+  .state-card{padding:36px 28px;}
+}
+@media (max-width:540px){
+  .lesson-grid{grid-template-columns:1fr;}
+  .state-card{padding:30px 22px;}
+  .classroom-head{flex-direction:column; align-items:flex-start; gap:8px;}
+  .hero h1{font-size:26px;}
+  .wrap{padding:0 20px;}
+}
+</style>
+</head>
+<body>
+
+<header></header>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-icon">&#127968;</div>
+    <div>
+      <h1>Parent Portal</h1>
+      <p>Access classroom lesson materials for your child.</p>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="wrap" id="mainWrap" style="visibility:hidden">
+
+    <!-- State 1: not logged in -->
+    <div id="authSection" style="display:none;">
+      <div class="state-card">
+        <span class="eyebrow">Get Started</span>
+        <h2>Sign in to view classroom resources</h2>
+        <p class="desc">Your child's teacher has set up a parent code for their classroom. Create an account or sign in, then enter that code to get access to lesson materials.</p>
+        <div class="cta-row">
+          <button onclick="fnAuthOpenModal('login')" class="btn btn-primary">Sign In</button>
+          <button onclick="fnAuthOpenModal('signup')" class="btn btn-outline">Create Free Account</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- State 2: logged in, no classroom linked yet -->
+    <div id="joinSection" style="display:none;">
+      <div class="state-card">
+        <span class="eyebrow">One More Step</span>
+        <h2>Enter your classroom parent code</h2>
+        <p class="desc">Ask your child's teacher for the parent code. It's different from the student join code and looks like <code class="example">ABCD-1234</code>. Teachers can find it on their classroom page.</p>
+        <div id="joinError" class="msg-err" style="display:none;"></div>
+        <div class="join-row">
+          <input type="text" id="parentCodeInput" class="code-input" placeholder="XXXX-XXXX" maxlength="12" spellcheck="false" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+          <button onclick="joinClassroom()" id="joinBtn" class="btn btn-primary">Join Classroom</button>
+        </div>
+        <p class="hint">You can join more than one classroom using separate codes.</p>
+      </div>
+    </div>
+
+    <!-- State 3: linked classrooms -->
+    <div id="portalSection" style="display:none;">
+      <div id="portalContent"></div>
+      <div class="add-more"><a href="#" onclick="toggleJoinMore(); return false;">+ Join another classroom</a></div>
+      <div id="joinMoreWrap" style="display:none;">
+        <div class="join-more-card">
+          <h3>Join another classroom</h3>
+          <div id="joinMoreError" class="msg-err" style="display:none;"></div>
+          <div id="joinMoreOk" class="msg-ok" style="display:none;"></div>
+          <div class="join-row">
+            <input type="text" id="parentCodeInput2" class="code-input" placeholder="XXXX-XXXX" maxlength="12" spellcheck="false" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+            <button onclick="joinMore()" id="joinMoreBtn" class="btn btn-primary">Join</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Auth modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#10005;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="nav.js?v=8"></script>
+<script src="site-auth.js"></script>
+<script>
+var currentUser = null;
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── State management ──────────────────────────────────────────
+
+function showSection(id) {
+  ['authSection','joinSection','portalSection'].forEach(function(s) {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+  document.getElementById('mainWrap').style.visibility = 'visible';
+}
+
+// ── Boot: check session then load state ───────────────────────
+
+document.addEventListener('DOMContentLoaded', async function () {
+  var r = await fetch('/api/site-auth/me', { credentials: 'include' });
+  var data = await r.json().catch(function() { return {}; });
+
+  if (!data.loggedIn) {
+    showSection('authSection');
+    return;
+  }
+
+  currentUser = data;
+  await loadPortal();
+});
+
+// When user signs in via the modal, re-check state
+document.addEventListener('fn-auth-changed', async function () {
+  var r = await fetch('/api/site-auth/me', { credentials: 'include' });
+  var data = await r.json().catch(function() { return {}; });
+  if (!data.loggedIn) return;
+  currentUser = data;
+  await loadPortal();
+});
+
+// ── Load portal state ─────────────────────────────────────────
+
+async function loadPortal() {
+  var r = await fetch('/api/parent/classrooms', { credentials: 'include' });
+  if (r.status === 403 || r.status === 401) {
+    showSection('joinSection');
+    return;
+  }
+  if (!r.ok) {
+    showSection('joinSection');
+    return;
+  }
+  var data = await r.json();
+  var classrooms = data.classrooms || [];
+
+  if (!classrooms.length) {
+    showSection('joinSection');
+    return;
+  }
+
+  renderPortal(classrooms);
+  showSection('portalSection');
+}
+
+// ── Render portal content ─────────────────────────────────────
+
+function renderPortal(classrooms) {
+  var html = classrooms.map(function(c) {
+    var lessonCards = (c.assignments || []).map(function(a) {
+      return '<a class="lesson-card" href="parent-lesson.html?curriculum=' + esc(a.curriculumId) + '">' +
+        '<div class="lesson-num">Lesson</div>' +
+        '<h4>' + esc(a.title) + '</h4>' +
+        (a.series ? '<div class="lesson-series">' + esc(a.series) + '</div>' : '') +
+        (a.shortDescription ? '<p class="desc-short">' + esc(a.shortDescription) + '</p>' : '') +
+        '<div class="lesson-cta">View resources &#8594;</div>' +
+        '</a>';
+    }).join('');
+
+    return '<div class="classroom-block">' +
+      '<div class="classroom-head"><h3>' + esc(c.name) + '</h3></div>' +
+      (lessonCards
+        ? '<div class="lesson-grid">' + lessonCards + '</div>'
+        : '<div class="no-lessons">No lessons have been assigned to this classroom yet.</div>') +
+      '</div>';
+  }).join('');
+
+  document.getElementById('portalContent').innerHTML = html;
+}
+
+// ── Join classroom ────────────────────────────────────────────
+
+async function joinClassroom() {
+  var code = (document.getElementById('parentCodeInput').value || '').trim().toUpperCase();
+  var errBox = document.getElementById('joinError');
+  errBox.style.display = 'none';
+
+  if (!code) {
+    errBox.textContent = 'Enter your parent code.';
+    errBox.style.display = '';
+    return;
+  }
+
+  var btn = document.getElementById('joinBtn');
+  btn.disabled = true;
+  btn.textContent = 'Joining…';
+
+  var r = await fetch('/api/parent/join', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentCode: code }),
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Join Classroom';
+
+  var result = await r.json().catch(function() { return {}; });
+
+  if (!r.ok) {
+    errBox.textContent = result.error || 'That code did not work. Double-check with your child\'s teacher.';
+    errBox.style.display = '';
+    return;
+  }
+
+  await loadPortal();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var inp = document.getElementById('parentCodeInput');
+  if (inp) {
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') joinClassroom();
+    });
+  }
+});
+
+// ── Join more ────────────────────────────────────────────────
+
+function toggleJoinMore() {
+  var wrap = document.getElementById('joinMoreWrap');
+  var visible = wrap.style.display !== 'none';
+  wrap.style.display = visible ? 'none' : '';
+  if (!visible) {
+    document.getElementById('parentCodeInput2').focus();
+    document.getElementById('joinMoreError').style.display = 'none';
+    document.getElementById('joinMoreOk').style.display = 'none';
+  }
+}
+
+async function joinMore() {
+  var code = (document.getElementById('parentCodeInput2').value || '').trim().toUpperCase();
+  var errBox = document.getElementById('joinMoreError');
+  var okBox  = document.getElementById('joinMoreOk');
+  errBox.style.display = 'none';
+  okBox.style.display  = 'none';
+
+  if (!code) {
+    errBox.textContent = 'Enter your parent code.';
+    errBox.style.display = '';
+    return;
+  }
+
+  var btn = document.getElementById('joinMoreBtn');
+  btn.disabled = true;
+  btn.textContent = 'Joining…';
+
+  var r = await fetch('/api/parent/join', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentCode: code }),
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Join';
+
+  var result = await r.json().catch(function() { return {}; });
+
+  if (!r.ok) {
+    errBox.textContent = result.error || 'That code did not work. Double-check with your child\'s teacher.';
+    errBox.style.display = '';
+    return;
+  }
+
+  okBox.textContent = 'Joined ' + (result.classroom ? result.classroom.name : 'classroom') + '!';
+  okBox.style.display = '';
+  document.getElementById('parentCodeInput2').value = '';
+
+  await loadPortal();
+  showSection('portalSection');
+  document.getElementById('joinMoreWrap').style.display = '';
+}
+</script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

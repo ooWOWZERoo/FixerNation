@@ -134,8 +134,8 @@
             <input type="number" id="weeksCount" min="0" placeholder="e.g. 1">
           </div>
           <div class="a-field" style="flex:1;">
-            <label>Max Downloads / Teacher *</label>
-            <input type="number" id="downloadLimit" min="0" value="3" required>
+            <label>Lesson Plan Doc Limit <span class="a-label-hint">(0=unlimited; does not apply to named resources)</span></label>
+            <input type="number" id="downloadLimit" min="0" value="0">
           </div>
           <div class="a-field" style="flex:2;">
             <label>Publish Status</label>
@@ -214,12 +214,22 @@
       <button class="a-modal-close" onclick="closeDownloadModal()">✕</button>
     </div>
     <div class="a-modal-body">
-      <p style="font-size:13.5px; color:var(--a-text-soft); margin-bottom:16px;">Simulate a teacher downloading this curriculum to test the per-teacher limit. Each email is tracked separately.</p>
+      <p style="font-size:13.5px; color:var(--a-text-soft); margin-bottom:16px;">Simulate a download to test per-resource limits. Each email + resource combination is tracked separately.</p>
       <div class="a-field" style="margin-bottom:12px;">
-        <label>Teacher Email</label>
-        <div style="display:flex; gap:10px;">
-          <input type="email" id="simTeacherEmail" placeholder="teacher@school.edu" style="flex:1;">
-          <button class="a-btn a-btn-primary" onclick="simulateDownload()">Simulate Download</button>
+        <label>Email</label>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <input type="email" id="simTeacherEmail" placeholder="user@school.edu" style="flex:2;min-width:180px;">
+          <select id="simUserType" style="flex:1;min-width:100px;padding:7px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);">
+            <option value="teacher">Teacher</option>
+            <option value="parent">Parent</option>
+          </select>
+          <select id="simResourceType" style="flex:2;min-width:160px;padding:7px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);">
+            <option value="Teacher Copy">Teacher Copy</option>
+            <option value="Student Handout">Student Handout</option>
+            <option value="Classroom Poster">Classroom Poster</option>
+            <option value="Quiz + Answer Key">Quiz + Answer Key</option>
+          </select>
+          <button class="a-btn a-btn-primary" onclick="simulateDownload()">Simulate</button>
         </div>
       </div>
       <div id="simResult"></div>
@@ -376,6 +386,7 @@ function renderResourceCheckboxes() {
     const entry = currentResources.find(x => x.resource === r);
     const checked = !!entry;
     const needsFile = r !== 'Quiz + Answer Key';
+    const hasLimit = r !== 'Quiz + Answer Key';
 
     const block = document.createElement('div');
     block.className = 'a-resource-block';
@@ -389,18 +400,32 @@ function renderResourceCheckboxes() {
       fileHtml = `<div class="a-note" style="margin-top:0;">Uses the Quiz Questions section below — no file needed.</div>`;
     }
 
+    let limitHtml = '';
+    if (checked && hasLimit) {
+      limitHtml = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--a-text-soft);">
+        <label style="white-space:nowrap;">Download limit per user:</label>
+        <input type="number" min="0" value="${entry.downloadLimit || 0}" style="width:70px;padding:3px 6px;border:1px solid var(--a-border);border-radius:5px;font-size:12.5px;background:var(--a-surface);color:var(--a-text);" oninput="updateResourceLimit('${r.replace(/'/g, "\\'")}', this.value)">
+        <span style="font-size:11px;">(0 = unlimited)</span>
+      </div>`;
+    }
+
     block.innerHTML = `
       <label class="a-tag-check"><input type="checkbox" value="${r}" ${checked ? 'checked' : ''} onchange="toggleResource('${r.replace(/'/g, "\\'")}', this.checked)"> ${r}</label>
-      ${checked ? `<div class="a-resource-file">${fileHtml}</div>` : ''}
+      ${checked ? `<div class="a-resource-file">${fileHtml}${limitHtml}</div>` : ''}
     `;
     row.appendChild(block);
   });
 }
 
+function updateResourceLimit(resource, value) {
+  const entry = currentResources.find(x => x.resource === resource);
+  if (entry) entry.downloadLimit = parseInt(value, 10) || 0;
+}
+
 function toggleResource(resource, isChecked) {
   if (isChecked) {
     if (!currentResources.find(x => x.resource === resource)) {
-      currentResources.push({ resource, filePath: '', fileName: '' });
+      currentResources.push({ resource, filePath: '', fileName: '', downloadLimit: 0 });
     }
   } else {
     currentResources = currentResources.filter(x => x.resource !== resource);
@@ -913,25 +938,25 @@ async function renderDownloadHistory() {
   const r = await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads`, { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
   const records = (await r.json()).downloads || [];
-  const c = curriculaCache.find(x => x.id === activeDownloadCurriculumId);
-  const limit = c ? (Number(c.downloadLimit) || 0) : 0;
   const el = document.getElementById('downloadHistory');
   if (records.length === 0) {
     el.innerHTML = '<div class="a-note">No downloads recorded yet for this curriculum.</div>';
     return;
   }
   el.innerHTML = records.map(r => {
-    const pct = limit > 0 ? Math.min(100, (r.count / limit) * 100) : 0;
-    const full = limit > 0 && r.count >= limit;
+    const typeLabel = r.userType === 'parent' ? 'Parent' : 'Teacher';
+    const resLabel = r.resourceType === 'any' ? 'All (legacy)' : (r.resourceType || '');
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     return `
       <div class="a-download-row">
         <div style="flex:1;">
-          <div>${r.teacherEmail}</div>
-          <div class="a-limit-bar"><div class="a-limit-bar-fill ${full ? 'full' : ''}" style="width:${pct}%;"></div></div>
+          <div style="font-size:13px;">${esc(r.userEmail)} <span style="font-size:11px;color:var(--a-text-soft);">${typeLabel}</span></div>
+          <div style="font-size:11px;color:var(--a-text-soft);">${esc(resLabel)}</div>
         </div>
         <div style="text-align:right; margin-left:14px;">
-          <div style="font-weight:700;">${r.count}${limit > 0 ? ' / ' + limit : ''}</div>
-          <button class="a-icon-btn" style="margin-top:4px;" title="Reset this teacher" onclick="resetOneDownload('${r.teacherEmail}')">↺</button>
+          <div style="font-weight:700;">${r.count}</div>
+          <button class="a-icon-btn" style="margin-top:4px;" title="Reset this entry"
+            onclick="resetOneDownload('${esc(r.userEmail)}','${esc(r.userType)}','${esc(r.resourceType)}')">↺</button>
         </div>
       </div>
     `;
@@ -940,28 +965,31 @@ async function renderDownloadHistory() {
 
 async function simulateDownload() {
   const email = document.getElementById('simTeacherEmail').value.trim();
-  if (!email) { fnToast('Enter a teacher email'); return; }
+  const userType = document.getElementById('simUserType').value;
+  const resourceType = document.getElementById('simResourceType').value;
+  if (!email) { fnToast('Enter an email'); return; }
   const r = await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teacherEmail: email }),
+    body: JSON.stringify({ userEmail: email, userType, resourceType }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json();
   const resultEl = document.getElementById('simResult');
   if (result.ok) {
-    resultEl.innerHTML = `<div class="a-error show" style="background:var(--a-success-soft); color:var(--a-success);">✓ Download allowed — ${result.count}${result.limit > 0 ? ' of ' + result.limit : ''} used for ${email}.</div>`;
+    resultEl.innerHTML = `<div class="a-error show" style="background:var(--a-success-soft); color:var(--a-success);">✓ Download allowed — ${result.count}${result.limit > 0 ? ' of ' + result.limit : ''} used for ${email} (${resourceType}).</div>`;
   } else if (result.reason === 'limit_reached') {
-    resultEl.innerHTML = `<div class="a-error show">✕ Blocked — ${email} has reached the limit of ${result.limit} download${result.limit===1?'':'s'}.</div>`;
+    resultEl.innerHTML = `<div class="a-error show">✕ Blocked — ${email} has reached the limit of ${result.limit} for ${resourceType}.</div>`;
   } else {
     resultEl.innerHTML = `<div class="a-error show">Something went wrong.</div>`;
   }
   renderDownloadHistory();
 }
 
-async function resetOneDownload(email) {
-  await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads?teacherEmail=${encodeURIComponent(email)}`, {
+async function resetOneDownload(email, userType, resourceType) {
+  const params = new URLSearchParams({ userEmail: email, userType: userType || 'teacher', resourceType: resourceType || 'any' });
+  await fetch(`/api/curricula/${activeDownloadCurriculumId}/downloads?` + params, {
     method: 'DELETE',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

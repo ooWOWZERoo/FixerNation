@@ -32,6 +32,7 @@ const brainGamesRoutes = require('./routes/brain-games');
 const classroomAuthRoutes = require('./routes/classroom-auth');
 const classroomsRoutes = require('./routes/classrooms');
 const studentRoutes = require('./routes/student');
+const parentRoutes = require('./routes/parent');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -76,6 +77,7 @@ app.use('/api/brain-games', brainGamesRoutes);
 app.use('/api/classroom-auth', classroomAuthRoutes.router);
 app.use('/api/classrooms', classroomsRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/parent', parentRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
 // In production LiteSpeed checks public_html/uploads/ first; if the file isn't

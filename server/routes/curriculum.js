@@ -4,7 +4,7 @@ const multer = require('multer');
 const AdmZip = require('adm-zip');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
-const { getSiteUser, hasActiveLicense } = require('../lib/access');
+const { getSiteUser, hasActiveLicense, hasParentAccessToCurriculum } = require('../lib/access');
 
 const quizUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -86,7 +86,7 @@ async function attachChildren(curricula) {
   const [audienceRows] = await pool.query('SELECT curriculum_id, audience FROM curriculum_audiences WHERE curriculum_id IN (?)', [ids]);
   const [objectiveRows] = await pool.query('SELECT curriculum_id, objective FROM curriculum_objectives WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   const [materialRows] = await pool.query('SELECT curriculum_id, material FROM curriculum_materials WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
-  const [resourceRows] = await pool.query('SELECT curriculum_id, resource, file_path, file_name FROM curriculum_resources WHERE curriculum_id IN (?)', [ids]);
+  const [resourceRows] = await pool.query('SELECT curriculum_id, resource, file_path, file_name, download_limit FROM curriculum_resources WHERE curriculum_id IN (?)', [ids]);
   const [videoRows] = await pool.query('SELECT curriculum_id, name, url, size_label FROM curriculum_videos WHERE curriculum_id IN (?) ORDER BY sort_order', [ids]);
   let documentRows = [];
   try {
@@ -113,7 +113,7 @@ async function attachChildren(curricula) {
     audiences: (audiencesByC[c.id] || []).map(r => r.audience),
     objectives: (objectivesByC[c.id] || []).map(r => r.objective),
     materials: (materialsByC[c.id] || []).map(r => r.material),
-    resources: (resourcesByC[c.id] || []).map(r => ({ resource: r.resource, filePath: r.file_path || '', fileName: r.file_name || '' })),
+    resources: (resourcesByC[c.id] || []).map(r => ({ resource: r.resource, filePath: r.file_path || '', fileName: r.file_name || '', downloadLimit: r.download_limit || 0 })),
     videos: (videosByC[c.id] || []).map(r => ({ name: r.name, url: r.url, sizeLabel: r.size_label })),
     documents: (documentsByC[c.id] || []).map(r => ({ filePath: r.file_path, fileName: r.file_name })),
     quiz: (questionsByC[c.id] || []).map(q => ({
@@ -158,58 +158,60 @@ router.get('/', async (req, res) => {
 
 router.get('/downloads', requireAuth, async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit  = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
-    const offset = (page - 1) * limit;
-    const rawQ   = (req.query.q || '').trim();
+    const page     = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit    = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const offset   = (page - 1) * limit;
+    const rawQ     = (req.query.q || '').trim();
+    const userType = req.query.userType || 'teacher';
 
-    let whereSQL    = '';
-    let whereParams = [];
+    let whereSQL    = "WHERE cd.user_type = ?";
+    let whereParams = [userType];
 
     if (rawQ) {
       const pat = toSqlLike(rawQ);
-      whereSQL = `WHERE (
-        cd.teacher_email LIKE ? OR
-        su.first_name    LIKE ? OR
-        su.last_name     LIKE ? OR
+      whereSQL += ` AND (
+        cd.user_email LIKE ? OR
+        su.first_name LIKE ? OR
+        su.last_name  LIKE ? OR
         CONCAT(COALESCE(su.first_name,''), ' ', COALESCE(su.last_name,'')) LIKE ? OR
-        nc.company       LIKE ? OR
-        c.title          LIKE ? OR
-        c.series         LIKE ?
+        nc.company    LIKE ? OR
+        c.title       LIKE ? OR
+        c.series      LIKE ?
       )`;
-      whereParams = Array(7).fill(pat);
+      whereParams.push(...Array(7).fill(pat));
     }
 
     const joinSQL = `
       FROM curriculum_downloads cd
       LEFT JOIN curricula c            ON c.id    = cd.curriculum_id
-      LEFT JOIN site_users su          ON su.email = cd.teacher_email
-      LEFT JOIN newsletter_contacts nc ON nc.email = cd.teacher_email
+      LEFT JOIN site_users su          ON su.email = cd.user_email
+      LEFT JOIN newsletter_contacts nc ON nc.email = cd.user_email
     `;
 
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM (SELECT 1 ${joinSQL} ${whereSQL} GROUP BY cd.curriculum_id, cd.teacher_email) _cnt`,
+      `SELECT COUNT(*) AS total FROM (SELECT 1 ${joinSQL} ${whereSQL} GROUP BY cd.curriculum_id, cd.user_email, cd.user_type, cd.resource_type) _cnt`,
       whereParams
     );
 
     const [rows] = await pool.query(`
       SELECT
         cd.curriculum_id                               AS curriculumId,
-        cd.teacher_email                               AS teacherEmail,
+        cd.user_email                                  AS userEmail,
+        cd.user_type                                   AS userType,
+        cd.resource_type                               AS resourceType,
         cd.count,
         cd.last_download                               AS lastDownload,
         su.first_name                                  AS firstName,
         su.last_name                                   AS lastName,
         c.title                                        AS curriculumTitle,
         c.series,
-        c.download_limit                               AS downloadLimit,
         COALESCE(nc.company, MAX(p.school_domain), '') AS school
       ${joinSQL}
       LEFT JOIN license_seats ls ON ls.registered_site_user_id = su.id
       LEFT JOIN purchases p      ON p.id = ls.purchase_id
       ${whereSQL}
-      GROUP BY cd.curriculum_id, cd.teacher_email, cd.count, cd.last_download,
-               su.first_name, su.last_name, c.title, c.series, c.download_limit, nc.company
+      GROUP BY cd.curriculum_id, cd.user_email, cd.user_type, cd.resource_type, cd.count, cd.last_download,
+               su.first_name, su.last_name, c.title, c.series, nc.company
       ORDER BY cd.last_download DESC
       LIMIT ? OFFSET ?
     `, [...whereParams, limit, offset]);
@@ -290,14 +292,16 @@ router.get('/:id', async (req, res) => {
 });
 
 // File serving access rules:
-//   Student Handout  — anyone can view; download requires a teacher license
-//   Classroom Poster — anyone can view; download requires a teacher license
-//   Teacher Copy     — requires teacher license for view AND download
-//   Quiz + Answer Key — requires teacher license for view AND download
-//   Lesson plan docs (?doc=) — requires teacher license for view AND download
+//   Student Handout  — anyone can view; download requires teacher license or parent access
+//   Classroom Poster — anyone can view; download requires teacher license or parent access
+//   Teacher Copy     — requires teacher license or parent access (view + download)
+//   Quiz + Answer Key — requires teacher license only (no parent access)
+//   Lesson plan docs (?doc=) — requires teacher license only (no parent access)
 // ?resource=<type>  curriculum_resources file
 // ?doc=<index>      curriculum_documents file
-// &download=1       attachment mode — checked and tracked for licensed teachers
+// &download=1       attachment mode — checked and tracked for licensed teachers and parents
+const PARENT_ACCESSIBLE_RESOURCES = ['Teacher Copy', 'Student Handout', 'Classroom Poster'];
+
 router.get('/:id/file', async (req, res) => {
   const id = req.params.id;
   const resourceType = req.query.resource;
@@ -312,10 +316,14 @@ router.get('/:id/file', async (req, res) => {
   const siteUser = isAdmin ? null : await getSiteUser(req);
   const licensed = isAdmin || !!(siteUser && await hasActiveLicense(siteUser.id));
 
+  const isParent = !isAdmin && !!(siteUser && siteUser.role === 'parent');
+  const parentCanView = isParent && resourceType && PARENT_ACCESSIBLE_RESOURCES.includes(resourceType)
+    && await hasParentAccessToCurriculum(siteUser.id, id);
+
   let file_path, file_name;
 
   if (docIndex !== null) {
-    // Lesson plan documents — always require teacher license
+    // Lesson plan documents — teacher license only, no parent access
     if (!licensed) {
       return siteUser
         ? res.status(403).json({ error: 'A teacher license is required to access lesson plan documents' })
@@ -333,56 +341,59 @@ router.get('/:id/file', async (req, res) => {
     file_path = doc.file_path;
     file_name = doc.file_name;
   } else {
-    // Public-viewable resources — anyone can open these in the modal viewer
     const PUBLIC_VIEW_RESOURCES = ['Student Handout', 'Classroom Poster'];
 
-    // Quiz + Answer Key and all non-public resources require teacher license even to view
+    // Quiz + Answer Key and non-public resources require teacher license to view (not parents)
     if (!licensed && (resourceType === 'Quiz + Answer Key' || !PUBLIC_VIEW_RESOURCES.includes(resourceType))) {
-      return siteUser
-        ? res.status(403).json({ error: 'A teacher license is required to access this resource' })
-        : res.status(401).json({ error: 'Sign in to access this resource' });
+      if (!parentCanView) {
+        return siteUser
+          ? res.status(403).json({ error: 'A teacher license is required to access this resource' })
+          : res.status(401).json({ error: 'Sign in to access this resource' });
+      }
     }
 
-    // Student Handout / Classroom Poster: downloading still requires a teacher license
-    if (forceDownload && !licensed) {
+    // Public resources: downloading requires teacher license or parent access
+    if (forceDownload && !licensed && !parentCanView) {
       return siteUser
         ? res.status(403).json({ error: 'A teacher license is required to download files' })
         : res.status(401).json({ error: 'Sign in to download files' });
     }
 
     const [rows] = await pool.query(
-      'SELECT file_path, file_name FROM curriculum_resources WHERE curriculum_id = ? AND resource = ?',
+      'SELECT file_path, file_name, download_limit FROM curriculum_resources WHERE curriculum_id = ? AND resource = ?',
       [id, resourceType]
     );
     if (!rows[0] || !rows[0].file_path) return res.status(404).json({ error: 'File not found' });
     file_path = rows[0].file_path;
     file_name = rows[0].file_name;
-  }
 
-  // Licensed teachers on an explicit download: check limit and record
-  if (forceDownload && licensed && !isAdmin && siteUser) {
-    const [curRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [id]);
-    const limit = curRows[0] ? (curRows[0].download_limit || 0) : 0;
-
-    if (limit > 0) {
-      const [existing] = await pool.query(
-        'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?',
-        [id, siteUser.email]
-      );
-      const currentCount = existing[0] ? existing[0].count : 0;
-      if (currentCount >= limit) {
-        return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit });
+    // Per-resource download limit check (teachers and parents)
+    if (forceDownload && !isAdmin && siteUser && (licensed || parentCanView)) {
+      const resourceLimit = rows[0].download_limit || 0;
+      if (resourceLimit > 0) {
+        const userType = isParent ? 'parent' : 'teacher';
+        const [existing] = await pool.query(
+          'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND user_email = ? AND user_type = ? AND resource_type = ?',
+          [id, siteUser.email, userType, resourceType]
+        );
+        const currentCount = existing[0] ? existing[0].count : 0;
+        if (currentCount >= resourceLimit) {
+          return res.status(429).json({ error: 'Download limit reached', count: currentCount, limit: resourceLimit });
+        }
       }
     }
+  }
 
-    // Record the download — only this step uses try/catch so a write failure
-    // does not silently bypass the limit check above
+  // Record explicit downloads for teachers and parents
+  if (forceDownload && !isAdmin && siteUser && (licensed || parentCanView)) {
+    const userType = isParent ? 'parent' : 'teacher';
+    const resolvedResourceType = resourceType || 'lesson_plan_doc';
     try {
       await pool.query(
-        `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
-         VALUES (?, ?, 1, NOW())
+        `INSERT INTO curriculum_downloads (curriculum_id, user_email, user_type, resource_type, count, last_download)
+         VALUES (?, ?, ?, ?, 1, NOW())
          ON DUPLICATE KEY UPDATE count = count + 1, last_download = NOW()`,
-        [id, siteUser.email]
+        [id, siteUser.email, userType, resolvedResourceType]
       );
     } catch (err) {
       console.error('curriculum_downloads insert error:', err.message);
@@ -448,8 +459,8 @@ async function replaceChildren(connection, id, c) {
   const resources = Array.isArray(c.resources) ? c.resources : [];
   if (resources.length) {
     await connection.query(
-      'INSERT INTO curriculum_resources (curriculum_id, resource, file_path, file_name) VALUES ' + resources.map(() => '(?, ?, ?, ?)').join(', '),
-      resources.flatMap(r => [id, r.resource, r.filePath || null, r.fileName || null])
+      'INSERT INTO curriculum_resources (curriculum_id, resource, file_path, file_name, download_limit) VALUES ' + resources.map(() => '(?, ?, ?, ?, ?)').join(', '),
+      resources.flatMap(r => [id, r.resource, r.filePath || null, r.fileName || null, r.downloadLimit || 0])
     );
   }
 
@@ -564,34 +575,35 @@ router.get('/:id/downloads', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT
-        cd.teacher_email,
+        cd.user_email,
+        cd.user_type,
+        cd.resource_type,
         cd.count,
         cd.last_download,
         su.first_name,
         su.last_name,
         nc.company           AS school_company,
-        MAX(p.school_domain) AS school_domain,
-        c.download_limit
+        MAX(p.school_domain) AS school_domain
       FROM curriculum_downloads cd
-      LEFT JOIN curricula c            ON c.id = cd.curriculum_id
-      LEFT JOIN site_users su          ON su.email = cd.teacher_email
-      LEFT JOIN newsletter_contacts nc ON nc.email = cd.teacher_email
+      LEFT JOIN site_users su          ON su.email = cd.user_email
+      LEFT JOIN newsletter_contacts nc ON nc.email = cd.user_email
       LEFT JOIN license_seats ls       ON ls.registered_site_user_id = su.id
       LEFT JOIN purchases p            ON p.id = ls.purchase_id
       WHERE cd.curriculum_id = ?
-      GROUP BY cd.id, cd.teacher_email, cd.count, cd.last_download,
-               su.first_name, su.last_name, nc.company, c.download_limit
+      GROUP BY cd.id, cd.user_email, cd.user_type, cd.resource_type, cd.count, cd.last_download,
+               su.first_name, su.last_name, nc.company
       ORDER BY cd.last_download DESC
     `, [req.params.id]);
     res.json({
       downloads: rows.map(r => ({
-        teacherEmail:  r.teacher_email,
-        firstName:     r.first_name  || '',
-        lastName:      r.last_name   || '',
-        school:        r.school_company || r.school_domain || '',
-        count:         r.count,
-        lastDownload:  r.last_download,
-        downloadLimit: r.download_limit || 0,
+        userEmail:    r.user_email,
+        userType:     r.user_type,
+        resourceType: r.resource_type,
+        firstName:    r.first_name  || '',
+        lastName:     r.last_name   || '',
+        school:       r.school_company || r.school_domain || '',
+        count:        r.count,
+        lastDownload: r.last_download,
       })),
     });
   } catch (err) {
@@ -601,14 +613,25 @@ router.get('/:id/downloads', requireAuth, async (req, res) => {
 });
 
 router.post('/:id/downloads', requireAuth, async (req, res) => {
-  const teacherEmail = (req.body && req.body.teacherEmail || '').trim().toLowerCase();
-  if (!teacherEmail) return res.status(400).json({ error: 'Teacher email is required' });
+  const userEmail    = ((req.body && req.body.userEmail) || '').trim().toLowerCase();
+  const userType     = (req.body && req.body.userType) || 'teacher';
+  const resourceType = (req.body && req.body.resourceType) || 'any';
+  if (!userEmail) return res.status(400).json({ error: 'userEmail is required' });
 
-  const [curriculumRows] = await pool.query('SELECT download_limit FROM curricula WHERE id = ?', [req.params.id]);
-  if (!curriculumRows[0]) return res.status(404).json({ error: 'Curriculum not found' });
-  const limit = curriculumRows[0].download_limit || 0;
+  // Look up limit for the specific resource (if a named resource)
+  let limit = 0;
+  if (resourceType && resourceType !== 'any' && resourceType !== 'lesson_plan_doc') {
+    const [resRows] = await pool.query(
+      'SELECT download_limit FROM curriculum_resources WHERE curriculum_id = ? AND resource = ?',
+      [req.params.id, resourceType]
+    );
+    limit = resRows[0] ? (resRows[0].download_limit || 0) : 0;
+  }
 
-  const [existingRows] = await pool.query('SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?', [req.params.id, teacherEmail]);
+  const [existingRows] = await pool.query(
+    'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND user_email = ? AND user_type = ? AND resource_type = ?',
+    [req.params.id, userEmail, userType, resourceType]
+  );
   const currentCount = existingRows[0] ? existingRows[0].count : 0;
 
   if (limit > 0 && currentCount >= limit) {
@@ -617,31 +640,47 @@ router.post('/:id/downloads', requireAuth, async (req, res) => {
 
   const newCount = currentCount + 1;
   await pool.query(
-    `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download) VALUES (?, ?, 1, NOW())
+    `INSERT INTO curriculum_downloads (curriculum_id, user_email, user_type, resource_type, count, last_download)
+     VALUES (?, ?, ?, ?, 1, NOW())
      ON DUPLICATE KEY UPDATE count = ?, last_download = NOW()`,
-    [req.params.id, teacherEmail, newCount]
+    [req.params.id, userEmail, userType, resourceType, newCount]
   );
   res.json({ ok: true, count: newCount, limit });
 });
 
 router.put('/:id/downloads', requireAuth, async (req, res) => {
-  const { teacherEmail, count } = req.body || {};
-  if (!teacherEmail) return res.status(400).json({ error: 'teacherEmail required' });
+  const { userEmail, userType, resourceType, count } = req.body || {};
+  if (!userEmail) return res.status(400).json({ error: 'userEmail required' });
   const newCount = parseInt(count, 10);
   if (isNaN(newCount) || newCount < 0) return res.status(400).json({ error: 'count must be a non-negative integer' });
-  const email = teacherEmail.trim().toLowerCase();
+  const email    = userEmail.trim().toLowerCase();
+  const uType    = userType || 'teacher';
+  const rType    = resourceType || 'any';
   await pool.query(
-    `INSERT INTO curriculum_downloads (curriculum_id, teacher_email, count, last_download)
-     VALUES (?, ?, ?, NOW())
+    `INSERT INTO curriculum_downloads (curriculum_id, user_email, user_type, resource_type, count, last_download)
+     VALUES (?, ?, ?, ?, ?, NOW())
      ON DUPLICATE KEY UPDATE count = ?`,
-    [req.params.id, email, newCount, newCount]
+    [req.params.id, email, uType, rType, newCount, newCount]
   );
   res.json({ ok: true, count: newCount });
 });
 
 router.delete('/:id/downloads', requireAuth, async (req, res) => {
-  if (req.query.teacherEmail) {
-    await pool.query('DELETE FROM curriculum_downloads WHERE curriculum_id = ? AND teacher_email = ?', [req.params.id, req.query.teacherEmail.trim().toLowerCase()]);
+  const { userEmail, userType, resourceType } = req.query;
+  if (userEmail) {
+    const uType = userType || 'teacher';
+    const rType = resourceType || null;
+    if (rType) {
+      await pool.query(
+        'DELETE FROM curriculum_downloads WHERE curriculum_id = ? AND user_email = ? AND user_type = ? AND resource_type = ?',
+        [req.params.id, userEmail.trim().toLowerCase(), uType, rType]
+      );
+    } else {
+      await pool.query(
+        'DELETE FROM curriculum_downloads WHERE curriculum_id = ? AND user_email = ? AND user_type = ?',
+        [req.params.id, userEmail.trim().toLowerCase(), uType]
+      );
+    }
   } else {
     await pool.query('DELETE FROM curriculum_downloads WHERE curriculum_id = ?', [req.params.id]);
   }

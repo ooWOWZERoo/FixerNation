@@ -28,9 +28,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px;}
 .btn-xs{padding:4px 10px;font-size:12px;border-radius:6px;}
 /* Code chip */
-.join-code-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:20px;}
+.join-code-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px;}
 .join-code-box .label{font-size:12px;color:var(--ink-soft);font-weight:600;}
 .join-code-box code{font-size:18px;font-weight:800;letter-spacing:.1em;color:var(--teal-dark);}
+.parent-code-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:20px;}
+.parent-code-box .label{font-size:12px;color:var(--ink-soft);font-weight:600;}
+.parent-code-box code{font-size:18px;font-weight:800;letter-spacing:.12em;color:#7c3aed;}
 /* Tabs */
 .tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border);}
 .tab-btn{padding:10px 18px;border:none;background:transparent;font-family:inherit;font-weight:600;font-size:14px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
@@ -110,14 +113,21 @@ table.data-table tr:hover td{background:#fafaf9;}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-outline btn-sm" onclick="regenCode()">Regenerate Join Code</button>
+      <button class="btn btn-outline btn-sm" onclick="regenParentCode()">Regenerate Parent Code</button>
       <button class="btn btn-outline btn-sm" onclick="openEditClassroom()">Edit Details</button>
     </div>
   </div>
 
   <div class="join-code-box">
-    <span class="label">JOIN CODE</span>
+    <span class="label">STUDENT JOIN CODE</span>
     <code id="joinCodeDisplay">—</code>
     <button class="btn btn-outline btn-xs" onclick="copyCode()">Copy</button>
+  </div>
+  <div class="parent-code-box">
+    <span class="label">PARENT CODE</span>
+    <code id="parentCodeDisplay">—</code>
+    <button class="btn btn-outline btn-xs" onclick="copyParentCode()">Copy</button>
+    <span style="font-size:12px;color:var(--ink-soft);margin-left:4px;">Share with parents to give them access at home</span>
   </div>
 
   <div class="tabs">
@@ -314,6 +324,7 @@ function renderHeader() {
   var meta = [classroom.grade_level, classroom.subject, classroom.academic_year].filter(Boolean).join(' · ');
   document.getElementById('classroomMeta').textContent = meta || '';
   document.getElementById('joinCodeDisplay').textContent = classroom.join_code;
+  document.getElementById('parentCodeDisplay').textContent = classroom.parent_code || '—';
 }
 
 // ---------------------------------------------------------------------------
@@ -626,12 +637,19 @@ function renderProgress() {
 }
 
 // ---------------------------------------------------------------------------
-// Join code
+// Join code + parent code
 // ---------------------------------------------------------------------------
 function copyCode() {
   if (navigator.clipboard && classroom) {
     navigator.clipboard.writeText(classroom.join_code);
     toast('Join code copied!');
+  }
+}
+
+function copyParentCode() {
+  if (navigator.clipboard && classroom && classroom.parent_code) {
+    navigator.clipboard.writeText(classroom.parent_code);
+    toast('Parent code copied!');
   }
 }
 
@@ -647,6 +665,20 @@ async function regenCode() {
   classroom.join_code = data.joinCode;
   document.getElementById('joinCodeDisplay').textContent = data.joinCode;
   toast('New join code: ' + data.joinCode);
+}
+
+async function regenParentCode() {
+  if (!confirm('Generate a new parent code? Parents using the old code will keep their access, but the code will no longer work for new parents.')) return;
+  var r = await fetch('/api/classrooms/' + classroomId + '/regen-parent-code', {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  var data = await r.json();
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  classroom.parent_code = data.parentCode;
+  document.getElementById('parentCodeDisplay').textContent = data.parentCode;
+  toast('New parent code: ' + data.parentCode);
 }
 
 // ---------------------------------------------------------------------------

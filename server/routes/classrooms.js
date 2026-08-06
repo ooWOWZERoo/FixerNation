@@ -6,21 +6,41 @@ const { hasActiveLicense } = require('../lib/access');
 
 const router = express.Router();
 
-function generateJoinCode() {
+function generateCode8() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
 }
 
+function generateParentCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    if (i === 4) code += '-';
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 async function uniqueJoinCode(conn) {
   let code, tries = 0;
   do {
-    code = generateJoinCode();
+    code = generateCode8();
     const [r] = await conn.query('SELECT id FROM classrooms WHERE join_code = ?', [code]);
     if (!r.length) return code;
   } while (++tries < 10);
   throw new Error('Failed to generate unique join code');
+}
+
+async function uniqueParentCode(conn) {
+  let code, tries = 0;
+  do {
+    code = generateParentCode();
+    const [r] = await conn.query('SELECT id FROM classrooms WHERE parent_code = ?', [code]);
+    if (!r.length) return code;
+  } while (++tries < 20);
+  throw new Error('Failed to generate unique parent code');
 }
 
 // Verify teacher owns classroom
@@ -57,9 +77,10 @@ router.post('/', requireSiteAuth, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const code = await uniqueJoinCode(conn);
+    const pCode = await uniqueParentCode(conn);
     const [r] = await conn.query(
-      'INSERT INTO classrooms (name, teacher_site_user_id, join_code, grade_level, subject, academic_year) VALUES (?, ?, ?, ?, ?, ?)',
-      [name.trim(), req.siteUser.id, code, gradeLevel || null, subject || null, academicYear || null]
+      'INSERT INTO classrooms (name, teacher_site_user_id, join_code, parent_code, grade_level, subject, academic_year) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), req.siteUser.id, code, pCode, gradeLevel || null, subject || null, academicYear || null]
     );
     const [[classroom]] = await conn.query('SELECT * FROM classrooms WHERE id = ?', [r.insertId]);
     res.status(201).json(classroom);
@@ -139,6 +160,21 @@ router.put('/:id/regen-code', requireSiteAuth, async (req, res) => {
     const code = await uniqueJoinCode(conn);
     await conn.query('UPDATE classrooms SET join_code = ? WHERE id = ?', [code, classroom.id]);
     res.json({ joinCode: code });
+  } finally {
+    conn.release();
+  }
+});
+
+// PUT /:id/regen-parent-code — regenerate parent code
+router.put('/:id/regen-parent-code', requireSiteAuth, async (req, res) => {
+  const classroom = await ownedClassroom(req, res);
+  if (!classroom) return;
+
+  const conn = await pool.getConnection();
+  try {
+    const code = await uniqueParentCode(conn);
+    await conn.query('UPDATE classrooms SET parent_code = ? WHERE id = ?', [code, classroom.id]);
+    res.json({ parentCode: code });
   } finally {
     conn.release();
   }

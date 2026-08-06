@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{
+  --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+  --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+  --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+a{color:inherit; text-decoration:none;}
+img{max-width:100%; display:block;}
+.wrap{max-width:960px; margin:0 auto; padding:0 32px;}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 20px; border-radius:999px; font-family:inherit; font-weight:700; font-size:13.5px; cursor:pointer; border:none; transition:transform .15s ease, background .15s ease;}
+.btn:hover{transform:translateY(-2px);}
+.btn-primary{background:var(--coral); color:#fff; box-shadow:0 12px 24px -10px rgba(242,107,77,0.45);}
+.btn-primary:hover{background:var(--coral-dark);}
+.btn-outline{background:transparent; color:var(--teal-dark); border:1.5px solid rgba(22,79,74,0.25);}
+.btn-outline:hover{border-color:var(--teal-dark); background:rgba(22,79,74,0.04);}
+.btn-sm{padding:8px 16px; font-size:13px;}
+
+/* Breadcrumb */
+.breadcrumb{padding:18px 0 4px; font-size:13px; color:var(--ink-soft);}
+.breadcrumb a{color:var(--coral-dark); font-weight:600;}
+
+/* Hero */
+.lesson-hero{padding:28px 0 36px;}
+.lesson-series{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--coral-dark); margin-bottom:10px;}
+.lesson-hero h1{font-size:34px; margin-bottom:14px;}
+.lesson-overview{font-size:15.5px; color:var(--ink); max-width:760px; line-height:1.7;}
+
+/* Resources */
+.section{padding:36px 0;}
+.section-label{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft); margin-bottom:18px;}
+.resource-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.resource-card{background:#fff; border-radius:16px; padding:22px 20px; box-shadow:0 10px 24px -18px rgba(22,79,74,0.28);}
+.resource-icon{font-size:26px; margin-bottom:10px;}
+.resource-name{font-family:'Fraunces', serif; font-size:16px; font-weight:600; color:var(--teal-dark); margin-bottom:4px;}
+.resource-tag{display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:3px 8px; border-radius:6px; margin-bottom:14px;}
+.resource-actions{display:flex; gap:8px; flex-wrap:wrap;}
+.resource-empty{background:var(--cream-soft); border-radius:12px; padding:20px; font-size:13.5px; color:var(--ink-soft);}
+
+/* Videos */
+.videos-list{display:flex; flex-direction:column; gap:20px;}
+.video-block{background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 10px 24px -18px rgba(22,79,74,0.28);}
+.video-block-head{padding:16px 20px 0;}
+.video-block-name{font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:var(--teal-dark); margin-bottom:12px;}
+.fn-video-embed{position:relative; width:100%; aspect-ratio:16/9; overflow:hidden; background:#000;}
+.fn-video-embed iframe, .fn-video-embed video{width:100%; height:100%; border:none; display:block;}
+.video-fallback-link{text-align:center; padding:10px 16px; font-size:13px; color:var(--ink-soft);}
+.video-fallback-link a{color:var(--coral-dark); font-weight:700;}
+
+/* States */
+.state-wrap{padding:80px 0; text-align:center;}
+.state-wrap h2{font-size:26px; margin-bottom:10px;}
+.state-wrap p{color:var(--ink-soft); font-size:15px; margin-bottom:28px;}
+
+/* Toast */
+.info-toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:12px 22px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s; z-index:2000; max-width:calc(100vw - 40px); text-align:center;}
+.info-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+@media (max-width:720px){
+  .resource-grid{grid-template-columns:1fr 1fr;}
+  .lesson-hero h1{font-size:26px;}
+  .wrap{padding:0 20px;}
+}
+@media (max-width:460px){
+  .resource-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header></header>
+
+<div id="loadingState" style="padding:80px 0; text-align:center; color:var(--ink-soft); font-size:15px;">Loading lesson…</div>
+
+<div id="accessDeniedState" class="wrap" style="display:none;">
+  <div class="state-wrap">
+    <h2>Access not available</h2>
+    <p>You're not linked to the classroom that uses this lesson. Check your parent portal for the classrooms you have access to.</p>
+    <a href="parent-portal.html" class="btn btn-primary">Go to Parent Portal</a>
+  </div>
+</div>
+
+<div id="notFoundState" class="wrap" style="display:none;">
+  <div class="state-wrap">
+    <h2>Lesson not found</h2>
+    <p>This lesson may have been removed or the link may be incorrect.</p>
+    <a href="parent-portal.html" class="btn btn-primary">Go to Parent Portal</a>
+  </div>
+</div>
+
+<div id="lessonWrap" style="display:none;">
+  <div class="wrap">
+    <div class="breadcrumb">
+      <a href="parent-portal.html">&#8592; Parent Portal</a>
+    </div>
+
+    <div class="lesson-hero">
+      <div class="lesson-series" id="lessonSeries"></div>
+      <h1 id="lessonTitle"></h1>
+      <p class="lesson-overview" id="lessonOverview"></p>
+    </div>
+
+    <div class="section" id="resourcesSection">
+      <div class="section-label">Lesson Resources</div>
+      <div id="resourceGrid" class="resource-grid"></div>
+    </div>
+
+    <div class="section" id="videosSection" style="display:none;">
+      <div class="section-label">Videos</div>
+      <div id="videosList" class="videos-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="info-toast" id="infoToast"></div>
+
+<!-- Auth modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#10005;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="nav.js?v=8"></script>
+<script src="site-auth.js"></script>
+<script src="admin-common.js?v=15"></script>
+<script src="pdf-modal.js?v=1"></script>
+<script>
+var RESOURCE_LABELS = {
+  'Teacher Copy':    'Teacher Reference',
+  'Student Handout': 'Student Handout',
+  'Classroom Poster':'Classroom Poster',
+};
+
+var RESOURCE_ICONS = {
+  'Teacher Copy':    '&#128218;',
+  'Student Handout': '&#128203;',
+  'Classroom Poster':'&#128444;',
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showInfoToast(msg) {
+  var toast = document.getElementById('infoToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 3600);
+}
+
+async function fetchAndDownload(url, fallbackName) {
+  try {
+    var r = await fetch(url, { credentials: 'include' });
+    if (r.status === 429) {
+      var data = await r.json().catch(function() { return {}; });
+      showInfoToast('You\'ve reached the download limit for this resource (' + data.count + ' of ' + data.limit + ' used). Contact your child\'s teacher for help.');
+      return;
+    }
+    if (!r.ok) {
+      showInfoToast('This file could not be downloaded. Try again in a moment.');
+      return;
+    }
+    var cd = r.headers.get('Content-Disposition');
+    var match = cd && cd.match(/filename="(.+)"/);
+    var blob = await r.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = match ? match[1] : fallbackName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    showInfoToast('Download failed — please check your connection.');
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+
+function renderResources(curriculumId, resources) {
+  var grid = document.getElementById('resourceGrid');
+  var cards = resources.filter(function(r) { return r.filePath; }).map(function(r) {
+    var label = RESOURCE_LABELS[r.resource] || r.resource;
+    var icon  = RESOURCE_ICONS[r.resource]  || '&#128196;';
+    var rSafe = r.resource.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    var limitNote = r.downloadLimit > 0
+      ? '<span style="font-size:11.5px;color:var(--ink-soft);display:block;margin-bottom:12px;">' + r.downloadLimit + ' download' + (r.downloadLimit === 1 ? '' : 's') + ' per person</span>'
+      : '';
+    return '<div class="resource-card">' +
+      '<div class="resource-icon">' + icon + '</div>' +
+      '<div class="resource-name">' + esc(label) + '</div>' +
+      (r.resource === 'Teacher Copy' ? '<span class="resource-tag">Teacher Reference</span>' : '<br>') +
+      limitNote +
+      '<div class="resource-actions">' +
+        '<button class="btn btn-outline btn-sm" onclick="openPdfModal(\'/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(r.resource) + '\', \'' + esc(label) + '\')">View</button>' +
+        '<button class="btn btn-primary btn-sm" onclick="fetchAndDownload(\'/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(r.resource) + '&download=1\', \'' + rSafe + '.pdf\')">Download</button>' +
+      '</div>' +
+      '</div>';
+  });
+
+  if (!cards.length) {
+    grid.innerHTML = '<div class="resource-empty">No downloadable resources have been attached to this lesson yet. Check back after your child\'s teacher finishes setting up the classroom materials.</div>';
+  } else {
+    grid.innerHTML = cards.join('');
+  }
+}
+
+function renderVideos(videos) {
+  var section = document.getElementById('videosSection');
+  var list    = document.getElementById('videosList');
+  var withUrl = (videos || []).filter(function(v) { return v.url; });
+  if (!withUrl.length) { section.style.display = 'none'; return; }
+
+  section.style.display = '';
+  list.innerHTML = withUrl.map(function(v) {
+    var embedHtml = fnVideoEmbedHtml(v.url);
+    var ytMatch   = v.url.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+    var vimMatch  = v.url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    var watchUrl  = ytMatch   ? 'https://www.youtube.com/watch?v=' + ytMatch[1]
+                  : vimMatch  ? 'https://vimeo.com/' + vimMatch[1]
+                  : '';
+    var fallback  = watchUrl
+      ? '<div class="video-fallback-link">Can\'t see the video? <a href="' + esc(watchUrl) + '" target="_blank" rel="noopener">Watch it directly &#8594;</a></div>'
+      : '';
+    return '<div class="video-block">' +
+      (v.name ? '<div class="video-block-head"><div class="video-block-name">' + esc(v.name) + '</div></div>' : '') +
+      embedHtml +
+      fallback +
+      '</div>';
+  }).join('');
+}
+
+// ── Load ──────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async function () {
+  var params = new URLSearchParams(window.location.search);
+  var curriculumId = params.get('curriculum');
+
+  if (!curriculumId) {
+    window.location.href = 'parent-portal.html';
+    return;
+  }
+
+  var r = await fetch('/api/parent/lesson/' + encodeURIComponent(curriculumId), { credentials: 'include' });
+
+  document.getElementById('loadingState').style.display = 'none';
+
+  if (r.status === 401) {
+    window.location.href = 'parent-portal.html';
+    return;
+  }
+  if (r.status === 403) {
+    document.getElementById('accessDeniedState').style.display = '';
+    return;
+  }
+  if (!r.ok) {
+    document.getElementById('notFoundState').style.display = '';
+    return;
+  }
+
+  var data = await r.json().catch(function() { return {}; });
+  var c = data.curriculum;
+  if (!c) {
+    document.getElementById('notFoundState').style.display = '';
+    return;
+  }
+
+  document.title = c.title + ' — Fixer Nation Education';
+  document.getElementById('lessonSeries').textContent = c.series || 'Fixer Nation';
+  document.getElementById('lessonTitle').textContent  = c.title;
+  document.getElementById('lessonOverview').textContent = c.overview || c.shortDescription || '';
+
+  renderResources(c.id, c.resources || []);
+  renderVideos(c.videos || []);
+
+  document.getElementById('lessonWrap').style.display = '';
+});
+</script>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

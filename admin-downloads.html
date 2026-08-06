@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teacher Downloads — Fixer Nation Admin</title>
+<title>Downloads — Fixer Nation Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -11,6 +11,10 @@
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=16">
 <style>
+  .dl-tabs{display:flex;gap:0;border-bottom:2px solid var(--a-border);margin-bottom:20px;}
+  .dl-tab{padding:10px 20px;border:none;background:transparent;font-family:inherit;font-weight:600;font-size:14px;color:var(--a-text-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+  .dl-tab.active{color:var(--a-accent);border-bottom-color:var(--a-accent);}
+  .dl-tab:hover:not(.active){color:var(--a-text);}
   .dl-search-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .dl-search-input{flex:1;min-width:200px;padding:7px 12px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);outline:none;}
   .dl-search-input:focus{border-color:var(--a-accent);}
@@ -28,6 +32,7 @@
   .dl-count-input{width:60px;padding:3px 6px;border:1px solid var(--a-accent);border-radius:5px;font-size:13px;background:var(--a-surface);color:var(--a-text);}
   .a-table td.teacher-name{font-weight:600;}
   .a-table td.no-data{color:var(--a-text-soft);font-style:italic;}
+  .dl-students-note{padding:32px 0;text-align:center;color:var(--a-text-soft);font-size:14px;}
 </style>
 </head>
 <body>
@@ -38,7 +43,7 @@
 
   <div class="a-main">
     <div class="a-topbar">
-      <h1>Teacher Downloads</h1>
+      <h1>Downloads</h1>
       <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
       <div class="a-user"><div class="avatar">A</div> admin</div>
     </div>
@@ -48,36 +53,49 @@
         <div class="a-card-head">
           <h2>All Downloads</h2>
           <div class="dl-search-wrap">
-            <input type="text" id="searchInput" class="dl-search-input" placeholder="Search teacher, email, school, curriculum…">
+            <input type="text" id="searchInput" class="dl-search-input" placeholder="Search name, email, school, curriculum…">
             <button class="a-btn a-btn-outline" id="clearBtn" onclick="clearSearch()" style="display:none;font-size:13px;">Clear</button>
             <div class="dl-search-hint" style="flex-basis:100%;padding:4px 0 0;">Use * as wildcard — e.g. <code>smith*</code> or <code>*algebra*</code></div>
           </div>
         </div>
 
-        <table class="a-table" id="dlTable" style="display:none;">
-          <thead>
-            <tr>
-              <th>Teacher</th>
-              <th>Email</th>
-              <th>School</th>
-              <th>Curriculum</th>
-              <th>Downloads</th>
-              <th>Last Download</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="dlTbody"></tbody>
-        </table>
-
-        <div class="a-empty" id="dlEmpty" style="display:none;">
-          <div class="big">&#128229;</div>
-          No downloads found.
+        <div class="dl-tabs">
+          <button class="dl-tab active" id="tab-teachers" onclick="switchTab('teacher')">Teachers</button>
+          <button class="dl-tab" id="tab-parents" onclick="switchTab('parent')">Parents</button>
+          <button class="dl-tab" id="tab-students" onclick="switchTab('students')">Students</button>
         </div>
 
-        <div class="dl-pagination" id="dlPagination" style="display:none;">
-          <span class="dl-pagination-info" id="dlPageInfo"></span>
-          <button class="dl-reset-btn" id="prevBtn" onclick="goPage(currentPage - 1)">&#8592; Prev</button>
-          <button class="dl-reset-btn" id="nextBtn" onclick="goPage(currentPage + 1)">Next &#8594;</button>
+        <div id="dlTableWrap">
+          <table class="a-table" id="dlTable" style="display:none;">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>School</th>
+                <th>Curriculum</th>
+                <th>Resource</th>
+                <th>Downloads</th>
+                <th>Last Download</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="dlTbody"></tbody>
+          </table>
+
+          <div class="a-empty" id="dlEmpty" style="display:none;">
+            <div class="big">&#128229;</div>
+            No downloads found.
+          </div>
+
+          <div class="dl-students-note" id="dlStudentsNote" style="display:none;">
+            Student downloads are not tracked.
+          </div>
+
+          <div class="dl-pagination" id="dlPagination" style="display:none;">
+            <span class="dl-pagination-info" id="dlPageInfo"></span>
+            <button class="dl-reset-btn" id="prevBtn" onclick="goPage(currentPage - 1)">&#8592; Prev</button>
+            <button class="dl-reset-btn" id="nextBtn" onclick="goPage(currentPage + 1)">Next &#8594;</button>
+          </div>
         </div>
       </div>
     </div>
@@ -93,8 +111,29 @@ var currentPage    = 1;
 var totalPages     = 1;
 var totalRecords   = 0;
 var currentQuery   = '';
+var currentTab     = 'teacher';
 var searchTimer    = null;
 var PAGE_SIZE      = 25;
+
+// ── Tabs ──────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.dl-tab').forEach(function(btn) { btn.classList.remove('active'); });
+  var tabId = tab === 'students' ? 'tab-students' : (tab === 'parent' ? 'tab-parents' : 'tab-teachers');
+  document.getElementById(tabId).classList.add('active');
+
+  var isStudents = tab === 'students';
+  document.getElementById('dlStudentsNote').style.display = isStudents ? '' : 'none';
+  document.getElementById('dlTable').style.display       = 'none';
+  document.getElementById('dlEmpty').style.display       = 'none';
+  document.getElementById('dlPagination').style.display  = 'none';
+  document.getElementById('searchInput').disabled        = isStudents;
+
+  if (!isStudents) {
+    loadDownloads(currentQuery, 1);
+  }
+}
 
 // ── Fetch ─────────────────────────────────────────────────────
 
@@ -104,7 +143,7 @@ async function loadDownloads(q, page) {
   currentQuery = q;
   currentPage  = page;
 
-  var params = new URLSearchParams({ page: page, limit: PAGE_SIZE });
+  var params = new URLSearchParams({ page: page, limit: PAGE_SIZE, userType: currentTab });
   if (q) params.set('q', q);
 
   var r = await fetch('/api/curricula/downloads?' + params, { credentials: 'include' });
@@ -140,25 +179,17 @@ function renderTable() {
     var name = (d.firstName || d.lastName)
       ? fnEsc((d.firstName || '') + ' ' + (d.lastName || '')).trim()
       : '';
-    var limitText = d.downloadLimit > 0
-      ? d.count + ' / ' + d.downloadLimit
-      : '' + d.count;
-    var barPct = d.downloadLimit > 0
-      ? Math.min(100, Math.round(d.count / d.downloadLimit * 100))
-      : 0;
-    var full    = d.downloadLimit > 0 && d.count >= d.downloadLimit;
-    var barHtml = d.downloadLimit > 0
-      ? '<div class="dl-count-bar"><div class="dl-bar-track"><div class="dl-bar-fill' + (full ? ' full' : '') + '" style="width:' + barPct + '%"></div></div></div>'
-      : '';
+    var resourceLabel = d.resourceType === 'any'
+      ? '<span style="color:var(--a-text-soft);font-style:italic;">All (legacy)</span>'
+      : fnEsc(d.resourceType || '');
     return '<tr>' +
       '<td class="' + (name ? 'teacher-name' : 'no-data') + '">' + (name || '(unregistered)') + '</td>' +
-      '<td>' + fnEsc(d.teacherEmail) + '</td>' +
+      '<td>' + fnEsc(d.userEmail) + '</td>' +
       '<td class="' + (d.school ? '' : 'no-data') + '">' + (d.school ? fnEsc(d.school) : '&mdash;') + '</td>' +
       '<td>' + fnEsc(d.curriculumTitle || '') + '</td>' +
+      '<td>' + resourceLabel + '</td>' +
       '<td id="dlcount_' + i + '">' +
-        '<span style="font-variant-numeric:tabular-nums;">' + fnEsc(limitText) + '</span>' +
-        barHtml +
-        '<div class="dl-count-text">' + (full ? 'Limit reached' : '') + '</div>' +
+        '<span style="font-variant-numeric:tabular-nums;">' + d.count + '</span>' +
       '</td>' +
       '<td>' + (d.lastDownload ? fnFormatDate(d.lastDownload) : '&mdash;') + '</td>' +
       '<td><button class="dl-reset-btn" onclick="editCount(' + i + ')">Edit</button></td>' +
@@ -233,7 +264,7 @@ async function saveCount(idx) {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teacherEmail: d.teacherEmail, count: newCount }),
+    body: JSON.stringify({ userEmail: d.userEmail, userType: d.userType, resourceType: d.resourceType, count: newCount }),
   });
   if (!r.ok) { fnToast('Could not update count'); return; }
   fnToast('Count updated');
@@ -247,7 +278,7 @@ function fnEsc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-loadDownloads('', 1);
+switchTab('teacher');
 </script>
 </body>
 </html>

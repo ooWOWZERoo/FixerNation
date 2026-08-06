@@ -78,6 +78,7 @@
             '<li><a href="teacher-classrooms.html">Teacher Login</a></li>' +
             '<li><a href="student-login.html">Student Login</a></li>' +
             '<li><a href="school-admin-login.html">School Admin</a></li>' +
+            '<li><a href="parent-portal.html">Parent Portal</a></li>' +
             '<li><a href="privacy-choices.html">Privacy Choices</a></li>' +
             '<li><a href="student-data-privacy.html">Student Data Privacy</a></li>' +
             '<li><a href="contact.html">Contact</a></li>' +
