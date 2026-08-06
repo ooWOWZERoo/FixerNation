@@ -83,8 +83,19 @@ async function main() {
     console.log('Added column: curriculum_downloads.resource_type');
   }
 
-  // Drop old unique key if present
+  // Drop any FK that references uniq_curriculum_teacher, then drop the index
   if (await indexExists(conn, 'curriculum_downloads', 'uniq_curriculum_teacher')) {
+    const [fkRows] = await conn.query(
+      `SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'curriculum_downloads'
+         AND REFERENCED_TABLE_NAME IS NOT NULL
+         AND CONSTRAINT_NAME != 'PRIMARY'`,
+      [process.env.DB_NAME]
+    );
+    for (const fk of fkRows) {
+      await conn.query(`ALTER TABLE curriculum_downloads DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
+      console.log(`Dropped foreign key: ${fk.CONSTRAINT_NAME}`);
+    }
     await conn.query('ALTER TABLE curriculum_downloads DROP INDEX uniq_curriculum_teacher');
     console.log('Dropped index: uniq_curriculum_teacher');
   } else {
