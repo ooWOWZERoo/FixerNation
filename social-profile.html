@@ -34,7 +34,8 @@
   .profile-card{background:#fff;border-radius:22px;box-shadow:var(--shadow);overflow:hidden;}
   .profile-banner{height:120px;background:linear-gradient(135deg,var(--teal),var(--gold));}
   .profile-body{padding:0 32px 32px;}
-  .profile-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;border:4px solid #fff;margin-top:-40px;margin-bottom:12px;}
+  .profile-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;border:4px solid #fff;margin-top:-40px;margin-bottom:12px;overflow:hidden;}
+  .profile-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
   .profile-name{font-size:24px;margin-bottom:4px;}
   .profile-meta{font-size:14px;color:var(--ink-soft);margin-bottom:18px;}
   .profile-bio{font-size:15px;line-height:1.65;color:var(--ink);background:var(--cream-soft);border-radius:12px;padding:16px 18px;margin-bottom:20px;}
@@ -173,15 +174,25 @@ async function init(){
   }
 }
 
-function renderOwnProfile(profile, page){
+function avatarHtml(profile) {
   const av = initials(profile.first_name, profile.last_name).toUpperCase();
+  return profile.avatar_url
+    ? `<img src="${esc(profile.avatar_url)}" alt="Profile photo">`
+    : av;
+}
+
+function renderOwnProfile(profile, page){
   const badgesHtml = renderFeaturedBadges(profile.featuredBadges || [], true);
   page.innerHTML = `
     <div style="margin-bottom:16px;"><a href="social.html" style="font-size:14px;font-weight:700;color:var(--teal-dark);">← Back to Community</a></div>
     <div class="profile-card">
       <div class="profile-banner"></div>
       <div class="profile-body">
-        <div class="profile-avatar">${av}</div>
+        <div style="position:relative;display:inline-block;margin-top:-40px;margin-bottom:12px;">
+          <div class="profile-avatar" id="socialAvatarDisplay" style="margin:0;cursor:pointer;" onclick="document.getElementById('socialAvatarInput').click()" title="Click to change photo">${avatarHtml(profile)}</div>
+          <div style="position:absolute;bottom:2px;right:2px;width:22px;height:22px;border-radius:50%;background:var(--teal-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #fff;pointer-events:none;">✎</div>
+        </div>
+        <input type="file" id="socialAvatarInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="uploadSocialAvatar(this)">
         <h2 class="profile-name">${esc(profile.first_name)} ${esc(profile.last_name)}</h2>
         <div class="profile-meta">
           ${esc(profile.email)}
@@ -236,7 +247,6 @@ function renderFeaturedBadges(badges, isOwn) {
 }
 
 function renderOtherProfile(profile, page, me){
-  const av = initials(profile.first_name, profile.last_name).toUpperCase();
   const bioSection = profile.bio_consent && profile.bio
     ? `<div class="profile-bio">${esc(profile.bio)}</div>`
     : `<p class="profile-no-bio">This member hasn't shared a bio yet.</p>`;
@@ -249,7 +259,7 @@ function renderOtherProfile(profile, page, me){
     <div class="profile-card">
       <div class="profile-banner"></div>
       <div class="profile-body">
-        <div class="profile-avatar">${av}</div>
+        <div class="profile-avatar">${avatarHtml(profile)}</div>
         <h2 class="profile-name">${esc(profile.first_name)} ${esc(profile.last_name)}</h2>
         <div class="profile-meta">${emailLine}${schoolLine}</div>
         ${badgesHtml}
@@ -277,6 +287,27 @@ async function saveProfile(){
   } else {
     alert('Failed to save. Please try again.');
   }
+}
+
+async function uploadSocialAvatar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const display = document.getElementById('socialAvatarDisplay');
+    if (display) display.innerHTML = `<img src="${e.target.result}" alt="Profile photo">`;
+  };
+  reader.readAsDataURL(file);
+  const form = new FormData();
+  form.append('avatar', file);
+  const r = await fetch('/api/site-auth/profile/avatar', {
+    method: 'POST', credentials: 'include', body: form,
+  });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    alert(d.error || 'Upload failed. Please try again.');
+  }
+  input.value = '';
 }
 
 init();
