@@ -174,7 +174,7 @@ router.get('/me', async (req, res) => {
     const payload = jwt.verify(token, process.env.SESSION_SECRET);
     const [rows] = await pool.query('SELECT email FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return res.json({ loggedIn: false });
-    res.json({ loggedIn: true, firstName: payload.firstName, email: rows[0].email });
+    res.json({ loggedIn: true, firstName: payload.firstName, role: payload.role || 'teacher', email: rows[0].email });
   } catch {
     res.json({ loggedIn: false });
   }

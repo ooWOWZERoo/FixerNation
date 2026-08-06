@@ -5,9 +5,9 @@
   'use strict';
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
-  if (!document.getElementById('fn-nav-css-v8')) {
+  if (!document.getElementById('fn-nav-css-v10')) {
     var s = document.createElement('style');
-    s.id = 'fn-nav-css-v8';
+    s.id = 'fn-nav-css-v10';
     s.textContent =
       'a{text-decoration:none!important;}' +
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
@@ -91,7 +91,7 @@
         lnk('morning-boost-blog.html', 'Morning Boost',  morningBoostActive)  +
         lnk('school-licensing.html',   'Pricing',        pricingActive)       +
         lnk('brain-games.html',      'Brain Games',    brainActive)    +
-        lnk('social.html',           'Community',      communityActive)+
+        '<a href="social.html"' + (communityActive ? ' class="active"' : '') + ' style="position:relative;">Community<span id="fnCommunityBadge" style="display:none;position:absolute;top:-3px;right:-10px;width:7px;height:7px;border-radius:50%;background:var(--coral,#F26B4D);border:1.5px solid #fff;"></span></a>' +
       '</nav>' +
       '<div class="nav-cta">' +
         '<a href="cart.html" class="fn-cart-btn" title="Cart">' +

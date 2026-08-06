@@ -69,27 +69,33 @@ function fnAuthCloseModal() {
 // still verifies with the server on every page load and self-corrects
 // the hint (and the nav) if it's ever stale.
 const FN_AUTH_HINT_KEY = 'fnUserFirstName';
+const FN_AUTH_ROLE_KEY = 'fnUserRole';
 
-function fnAuthRenderNav(loggedIn, firstName) {
+function fnAuthRenderNav(loggedIn, firstName, role) {
   const nav = document.getElementById('fnAuthNav');
   if (loggedIn) {
     localStorage.setItem(FN_AUTH_HINT_KEY, firstName);
+    localStorage.setItem(FN_AUTH_ROLE_KEY, role || 'teacher');
   } else {
     localStorage.removeItem(FN_AUTH_HINT_KEY);
+    localStorage.removeItem(FN_AUTH_ROLE_KEY);
   }
   document.body.classList.toggle('fn-user-authed', !!loggedIn);
   if (!nav) return;
   if (loggedIn) {
+    const isTeacher = !role || role === 'teacher';
+    const li = (href, label) => `<a href="${href}" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">${label}</a>`;
     nav.innerHTML = `
       <div style="position:relative;">
         <a href="#" onclick="fnAuthToggleUserMenu(event); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
         <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:175px; z-index:300;">
-          <a href="my-profile.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Profile</a>
-          <a href="my-memberships.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Memberships</a>
-          <a href="my-license.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Licenses</a>
-          <a href="teacher-classrooms.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">My Classrooms</a>
-          <a href="parent-portal.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">Parent Portal</a>
-          <a href="my-purchases.html" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">Purchase History</a>
+          ${li('my-profile.html', 'My Profile')}
+          ${li('my-memberships.html', 'My Memberships')}
+          ${isTeacher ? li('my-license.html', 'My Licenses') : ''}
+          ${isTeacher ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
+          ${isTeacher ? li('teacher-classrooms.html', 'My Classrooms') : ''}
+          ${!isTeacher ? li('parent-portal.html', 'Parent Portal') : ''}
+          ${li('my-purchases.html', 'Purchase History')}
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>
           <a href="#" onclick="fnAuthLogout(); return false;" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#D9502F; border-radius:6px;">Log Out</a>
         </div>
@@ -105,7 +111,8 @@ function fnAuthRenderNav(loggedIn, firstName) {
 // fnAuthCheckSession() still runs right after to confirm/correct it.
 function fnAuthRenderNavOptimistic() {
   const hint = localStorage.getItem(FN_AUTH_HINT_KEY);
-  fnAuthRenderNav(!!hint, hint || null);
+  const role = localStorage.getItem(FN_AUTH_ROLE_KEY) || 'teacher';
+  fnAuthRenderNav(!!hint, hint || null, role);
 }
 fnAuthRenderNavOptimistic();
 
@@ -123,11 +130,28 @@ function fnAuthToggleUserMenu(e) {
   }
 }
 
+function fnFetchCommunityBadge() {
+  Promise.all([
+    fetch('/api/social/messages/conversations', { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/social/groups/unread', { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]).then(function(results) {
+    const msgData = results[0], groupData = results[1];
+    const hasUnread =
+      (msgData && msgData.conversations || []).some(function(c) { return Number(c.unread_count) > 0; }) ||
+      (groupData && groupData.unread || []).some(function(g) { return Number(g.unread_count) > 0; });
+    const badge = document.getElementById('fnCommunityBadge');
+    if (badge) badge.style.display = hasUnread ? '' : 'none';
+  });
+}
+
 function fnAuthCheckSession() {
   fetch('/api/site-auth/me', { credentials: 'include' })
     .then(r => r.json())
-    .then(data => fnAuthRenderNav(data.loggedIn, data.firstName))
-    .catch(() => fnAuthRenderNav(false));
+    .then(function(data) {
+      fnAuthRenderNav(data.loggedIn, data.firstName, data.role);
+      if (data.loggedIn) fnFetchCommunityBadge();
+    })
+    .catch(function() { fnAuthRenderNav(false); });
 }
 
 async function fnAuthLogout() {
