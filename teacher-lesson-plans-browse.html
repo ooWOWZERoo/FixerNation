@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Lesson Plans — Fixer Nation Education</title>
+<title>Add Lesson Plans — Fixer Nation Education</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -21,32 +21,42 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 .account-nav a.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
 .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.back-link{font-size:13px;font-weight:600;color:var(--teal-dark);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:16px;}
+.back-link:hover{color:var(--ink);}
 .counter{font-size:14px;font-weight:700;color:var(--ink-soft);padding:7px 14px;border-radius:999px;background:#fff;box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);}
 .counter.full{color:var(--coral-dark);background:#fff3f0;}
-.btn-add-more{display:inline-block;padding:9px 18px;border-radius:999px;background:var(--teal-dark);color:#fff;font-weight:700;font-size:13px;text-decoration:none;transition:background .15s;}
-.btn-add-more:hover{background:#0a2b28;color:#fff;}
 .search-row{display:flex;gap:10px;margin-bottom:20px;}
 .search-row input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s;}
 .search-row input:focus{border-color:var(--teal);}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
-.card{background:#fff;border-radius:16px;box-shadow:0 8px 24px -12px rgba(22,79,74,0.2);padding:20px 22px;display:flex;flex-direction:column;gap:10px;border:2px solid var(--teal);}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 24px -12px rgba(22,79,74,0.2);padding:20px 22px;display:flex;flex-direction:column;gap:10px;position:relative;}
+.card.added{border:2px solid var(--teal);}
+.badge-added{position:absolute;top:14px;right:14px;background:var(--teal);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em;}
 .card-series{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);}
 .card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:var(--teal-dark);line-height:1.3;}
 .card-desc{font-size:13px;color:var(--ink-soft);line-height:1.55;flex:1;}
 .card-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:4px;}
-.btn-view{font-size:13px;font-weight:700;color:var(--teal-dark);text-decoration:none;padding:6px 14px;border-radius:999px;border:1.5px solid var(--teal-dark);transition:all .15s;}
-.btn-view:hover{background:rgba(22,79,74,0.06);}
-.empty-search{text-align:center;color:var(--ink-soft);font-size:14px;padding:60px 20px;}
+.btn-add{padding:7px 14px;border-radius:999px;background:var(--teal-dark);color:#fff;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:background .15s;}
+.btn-add:hover:not(:disabled){background:#0a2b28;}
+.btn-add:disabled{background:var(--ink-soft);cursor:not-allowed;opacity:.6;}
+.btn-outline{padding:7px 14px;border-radius:999px;background:transparent;color:var(--ink-soft);font-size:13px;font-weight:700;cursor:not-allowed;border:1.5px solid var(--border);font-family:inherit;}
+.empty{text-align:center;color:var(--ink-soft);font-size:14px;padding:60px 20px;}
 .filter-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;}
 .chip{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink-soft);box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);border:1.5px solid transparent;transition:all .15s;white-space:nowrap;user-select:none;}
 .chip:hover{color:var(--teal-dark);}
 .chip.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
-/* Empty library state */
-.empty-library{text-align:center;padding:64px 20px 40px;}
-.empty-library h2{font-family:'Fraunces',serif;font-size:22px;color:var(--teal-dark);margin-bottom:10px;}
-.empty-library p{font-size:14px;color:var(--ink-soft);margin-bottom:28px;line-height:1.6;max-width:400px;margin-left:auto;margin-right:auto;}
-.btn-browse{display:inline-block;padding:13px 26px;border-radius:999px;background:var(--teal-dark);color:#fff;font-weight:700;font-size:14px;text-decoration:none;transition:background .15s;}
-.btn-browse:hover{background:#0a2b28;color:#fff;}
+/* Confirm modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.modal{background:#fff;border-radius:20px;padding:30px 28px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.3);}
+.modal h3{font-family:'Fraunces',serif;font-size:18px;color:var(--teal-dark);margin-bottom:10px;}
+.modal p{font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:8px;}
+.modal-warn{font-size:12.5px;color:var(--coral-dark);background:#fff3f0;border-radius:8px;padding:10px 12px;margin-bottom:20px;line-height:1.5;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+.btn-cancel{padding:9px 18px;border-radius:999px;border:1.5px solid var(--border);background:transparent;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
+.btn-cancel:hover{border-color:var(--ink-soft);}
+.btn-confirm{padding:9px 18px;border-radius:999px;background:var(--teal-dark);color:#fff;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:background .15s;}
+.btn-confirm:hover{background:#0a2b28;}
+.btn-confirm:disabled{opacity:.6;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -61,43 +71,45 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
     <a href="my-purchases.html">Purchase History</a>
   </nav>
 
+  <a href="teacher-lesson-plans.html" class="back-link">← My Lesson Plans</a>
+
   <div class="topbar">
     <div>
-      <h1>My Lesson Plans</h1>
-      <p class="sub" style="margin-bottom:0;">Your personal lesson plan library for this license period.</p>
+      <h1>Add Lesson Plans</h1>
+      <p class="sub" style="margin-bottom:0;">Browse the full catalogue and pick plans for your library. Selections are permanent.</p>
     </div>
     <div class="topbar-right">
       <div class="counter" id="counterBadge">0 of 40 added</div>
-      <a href="teacher-lesson-plans-browse.html" class="btn-add-more" id="addMoreBtn">Add Plans →</a>
     </div>
   </div>
 
-  <!-- Empty library state -->
-  <div id="emptyLibrary" style="display:none;">
-    <div class="empty-library">
-      <h2>Your library is empty</h2>
-      <p>You haven't added any lesson plans yet. Browse the full catalogue and pick the plans you want to teach this year.</p>
-      <a href="teacher-lesson-plans-browse.html" class="btn-browse">Browse the Catalogue →</a>
-    </div>
+  <div class="filter-bar" id="audienceFilterBar">
+    <div class="chip active" data-audience="all">All Levels</div>
+    <div class="chip" data-audience="Elementary School">Elementary</div>
+    <div class="chip" data-audience="Middle School">Middle School</div>
+    <div class="chip" data-audience="High School">High School</div>
+    <div class="chip" data-audience="Higher Education">Higher Ed</div>
+  </div>
+  <div class="filter-bar" id="seriesFilterBar"></div>
+
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search lesson plans…" oninput="applyFilters()">
   </div>
 
-  <!-- Filters + grid (visible once ≥1 plan is selected) -->
-  <div id="filtersAndGrid" style="display:none;">
-    <div class="filter-bar" id="audienceFilterBar">
-      <div class="chip active" data-audience="all">All Levels</div>
-      <div class="chip" data-audience="Elementary School">Elementary</div>
-      <div class="chip" data-audience="Middle School">Middle School</div>
-      <div class="chip" data-audience="High School">High School</div>
-      <div class="chip" data-audience="Higher Education">Higher Ed</div>
-    </div>
-    <div class="filter-bar" id="seriesFilterBar"></div>
+  <div class="grid" id="cardGrid"></div>
+  <div class="empty" id="emptyMsg" style="display:none;">No lesson plans match your search.</div>
+</div>
 
-    <div class="search-row">
-      <input type="text" id="searchInput" placeholder="Search your library…" oninput="applyFilters()">
+<!-- Confirm-add modal -->
+<div class="modal-bg" id="confirmModal" style="display:none;" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3 id="modalTitle">Add this lesson plan?</h3>
+    <p id="modalDesc"></p>
+    <div class="modal-warn">Once added, this lesson plan is a permanent part of your library and cannot be removed.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-confirm" id="confirmBtn" onclick="confirmAdd()">Add to My Library</button>
     </div>
-
-    <div class="grid" id="cardGrid"></div>
-    <div class="empty-search" id="emptyMsg" style="display:none;">No lesson plans match your search.</div>
   </div>
 </div>
 
@@ -106,38 +118,46 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 <script src="admin-common.js?v=15"></script>
 <script>fnTrackPageview();</script>
 <script>
-let allCurricula = []; // only selected curricula
-let totalCount = 0;
+let allCurricula = [];
+let selectedIds = new Set();
 let limit = 40;
+let pendingCurriculumId = null;
 let activeAudience = 'all';
 let activeSeries = 'all';
 
 function updateCounter() {
   const badge = document.getElementById('counterBadge');
-  badge.textContent = `${totalCount} of ${limit} added`;
-  badge.className = totalCount >= limit ? 'counter full' : 'counter';
-  if (totalCount >= limit) document.getElementById('addMoreBtn').style.display = 'none';
+  badge.textContent = `${selectedIds.size} of ${limit} added`;
+  badge.className = selectedIds.size >= limit ? 'counter full' : 'counter';
 }
 
 function renderCards(curricula) {
   const grid = document.getElementById('cardGrid');
   const empty = document.getElementById('emptyMsg');
+  const atLimit = selectedIds.size >= limit;
   if (!curricula.length) {
     grid.innerHTML = '';
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
-  grid.innerHTML = curricula.map(c => `
-    <div class="card">
-      ${c.series ? `<div class="card-series">${c.series}</div>` : ''}
-      <div class="card-title">${c.title}</div>
-      ${c.overview ? `<div class="card-desc">${c.overview}</div>` : (c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : '')}
-      <div class="card-foot">
-        <a class="btn-view" href="lesson-detail.html?id=${c.id}">View Lesson →</a>
+  grid.innerHTML = curricula.map(c => {
+    const added = selectedIds.has(c.id);
+    return `
+      <div class="card${added ? ' added' : ''}">
+        ${added ? '<div class="badge-added">Added</div>' : ''}
+        ${c.series ? `<div class="card-series">${c.series}</div>` : ''}
+        <div class="card-title">${c.title}</div>
+        ${c.overview ? `<div class="card-desc">${c.overview}</div>` : (c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : '')}
+        <div class="card-foot">
+          ${added
+            ? '<span class="btn-outline">In Your Library</span>'
+            : `<button class="btn-add" ${atLimit ? 'disabled title="Library is full"' : ''} onclick="openConfirm(${c.id}, ${JSON.stringify(c.title)})">Add to Library</button>`
+          }
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function rebuildSeriesBar(curricula) {
@@ -168,6 +188,52 @@ function applyFilters() {
   renderCards(filtered);
 }
 
+function filterCards() { applyFilters(); }
+
+function openConfirm(id, title) {
+  pendingCurriculumId = id;
+  document.getElementById('modalTitle').textContent = `Add "${title}"?`;
+  document.getElementById('modalDesc').textContent = `This will add "${title}" to your lesson plan library.`;
+  document.getElementById('confirmBtn').disabled = false;
+  document.getElementById('confirmBtn').textContent = 'Add to My Library';
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function closeConfirm() {
+  pendingCurriculumId = null;
+  document.getElementById('confirmModal').style.display = 'none';
+}
+
+async function confirmAdd() {
+  if (!pendingCurriculumId) return;
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+  try {
+    const r = await fetch('/api/teacher/lesson-plans', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ curriculumId: pendingCurriculumId }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      fnToast(d.error || 'Could not add lesson plan');
+      closeConfirm();
+      return;
+    }
+    selectedIds.add(pendingCurriculumId);
+    limit = d.limit || limit;
+    updateCounter();
+    closeConfirm();
+    applyFilters();
+    fnToast('Added to your library');
+  } catch (e) {
+    fnToast('Could not add lesson plan');
+    closeConfirm();
+  }
+}
+
 async function loadPage() {
   const r = await fetch('/api/teacher/lesson-plans/browse', { credentials: 'include' });
   if (r.status === 401 || r.status === 403) {
@@ -175,20 +241,11 @@ async function loadPage() {
     return;
   }
   const data = await r.json().catch(() => ({}));
-  allCurricula = (data.curricula || []).filter(c => c.selected);
-  totalCount = allCurricula.length;
+  allCurricula = data.curricula || [];
+  selectedIds = new Set(allCurricula.filter(c => c.selected).map(c => c.id));
   limit = data.limit || 40;
   updateCounter();
-
-  if (totalCount === 0) {
-    document.getElementById('emptyLibrary').style.display = 'block';
-    document.getElementById('filtersAndGrid').style.display = 'none';
-  } else {
-    document.getElementById('emptyLibrary').style.display = 'none';
-    document.getElementById('filtersAndGrid').style.display = 'block';
-    applyFilters();
-  }
-
+  applyFilters();
   document.getElementById('mainWrap').style.visibility = 'visible';
 }
 
@@ -207,6 +264,10 @@ document.getElementById('seriesFilterBar').addEventListener('click', function(e)
   activeSeries = chip.dataset.series;
   document.querySelectorAll('#seriesFilterBar .chip').forEach(c => c.classList.toggle('active', c === chip));
   applyFilters();
+});
+
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirm();
 });
 
 loadPage();
