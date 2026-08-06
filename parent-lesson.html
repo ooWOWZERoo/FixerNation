@@ -109,7 +109,11 @@ img{max-width:100%; display:block;}
     <div class="lesson-hero">
       <div class="lesson-series" id="lessonSeries"></div>
       <h1 id="lessonTitle"></h1>
-      <p class="lesson-overview" id="lessonOverview"></p>
+    </div>
+
+    <div class="section" id="overviewSection" style="display:none; padding-bottom:0;">
+      <div class="section-label">Lesson Objective</div>
+      <p id="lessonOverview" style="font-size:15.5px; line-height:1.75; color:var(--ink); max-width:760px;"></p>
     </div>
 
     <div class="section" id="resourcesSection">
@@ -319,7 +323,11 @@ document.addEventListener('DOMContentLoaded', async function () {
   document.title = c.title + ' — Fixer Nation Education';
   document.getElementById('lessonSeries').textContent = c.series || 'Fixer Nation';
   document.getElementById('lessonTitle').textContent  = c.title;
-  document.getElementById('lessonOverview').textContent = c.overview || c.shortDescription || '';
+  var overviewText = c.overview || c.shortDescription || '';
+  if (overviewText) {
+    document.getElementById('lessonOverview').textContent = overviewText;
+    document.getElementById('overviewSection').style.display = '';
+  }
 
   renderResources(c.id, c.resources || []);
   renderVideos(c.videos || []);
