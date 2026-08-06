@@ -55,6 +55,8 @@
   .story-block ul{padding-left:0;}
   .story-block li{position:relative; padding-left:24px; margin-bottom:10px; font-size:14.5px;}
   .story-block li::before{content:"✓"; position:absolute; left:0; color:var(--coral); font-weight:800;}
+  .story-block li.spacer{padding-left:0; margin-bottom:6px;}
+  .story-block li.spacer::before{display:none;}
 
   .audience-badge{display:inline-flex; padding:5px 12px; border-radius:999px; font-size:11.5px; font-weight:700; background:rgba(22,79,74,0.08); color:var(--teal-dark); margin:0 6px 6px 0;}
 
@@ -381,13 +383,13 @@ async function renderLessonDetail() {
     : '<p>No overview written yet.</p>';
 
   const objectivesEl = document.getElementById('lessonObjectives');
-  objectivesEl.innerHTML = (c.objectives || []).length
-    ? c.objectives.map(o => `<li>${o}</li>`).join('')
+  objectivesEl.innerHTML = (c.objectives || []).some(o => o)
+    ? c.objectives.map(o => o ? `<li>${o}</li>` : '<li class="spacer"></li>').join('')
     : '<li>No learning objectives added yet.</li>';
 
   const materialsEl = document.getElementById('lessonMaterials');
-  materialsEl.innerHTML = (c.materials || []).length
-    ? c.materials.map(m => `<li>${m}</li>`).join('')
+  materialsEl.innerHTML = (c.materials || []).some(m => m)
+    ? c.materials.map(m => m ? `<li>${m}</li>` : '<li class="spacer"></li>').join('')
     : '<li>No materials listed yet.</li>';
 
   document.getElementById('lessonContent').style.display = 'block';

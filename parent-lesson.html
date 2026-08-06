@@ -49,6 +49,13 @@ img{max-width:100%; display:block;}
 .resource-actions{display:flex; gap:8px; flex-wrap:wrap;}
 .resource-empty{background:var(--cream-soft); border-radius:12px; padding:20px; font-size:13.5px; color:var(--ink-soft);}
 
+/* Objectives / Materials lists */
+.fn-list{list-style:none; padding:0; margin:0; max-width:760px;}
+.fn-list li{position:relative; padding-left:24px; margin-bottom:10px; font-size:15px; line-height:1.7; color:var(--ink);}
+.fn-list li::before{content:"✓"; position:absolute; left:0; color:var(--coral); font-weight:800;}
+.fn-list li.spacer{padding-left:0; margin-bottom:6px;}
+.fn-list li.spacer::before{display:none;}
+
 /* Videos */
 .videos-list{display:flex; flex-direction:column; gap:20px;}
 .video-block{background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 10px 24px -18px rgba(22,79,74,0.28);}
@@ -114,7 +121,12 @@ img{max-width:100%; display:block;}
 
     <div class="section" id="overviewSection" style="display:none; padding-bottom:0;">
       <div class="section-label">Learning Objectives</div>
-      <ul id="lessonObjectives" style="margin:0; padding-left:0; list-style:none; font-size:15px; line-height:1.8; color:var(--ink); max-width:760px;"></ul>
+      <ul id="lessonObjectives" class="fn-list"></ul>
+    </div>
+
+    <div class="section" id="materialsSection" style="display:none; padding-bottom:0;">
+      <div class="section-label">Materials Needed</div>
+      <ul id="lessonMaterials" class="fn-list"></ul>
     </div>
 
     <div class="section" id="resourcesSection">
@@ -327,16 +339,26 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   var overviewEl = document.getElementById('lessonOverview');
   if (c.overview) {
-    overviewEl.textContent = c.overview;
+    overviewEl.innerHTML = c.overview.split(/\n\s*\n/).map(function(p) {
+      return '<p style="margin-bottom:14px;">' + p.trim().replace(/\n/g, '<br>') + '</p>';
+    }).join('');
     overviewEl.style.display = '';
   }
 
   var objectives = c.objectives || [];
-  if (objectives.length) {
+  if (objectives.some(function(o) { return o; })) {
     document.getElementById('lessonObjectives').innerHTML = objectives.map(function(o) {
-      return '<li>' + esc(o) + '</li>';
+      return o ? '<li>' + esc(o) + '</li>' : '<li class="spacer"></li>';
     }).join('');
     document.getElementById('overviewSection').style.display = '';
+  }
+
+  var materials = c.materials || [];
+  if (materials.some(function(m) { return m; })) {
+    document.getElementById('lessonMaterials').innerHTML = materials.map(function(m) {
+      return m ? '<li>' + esc(m) + '</li>' : '<li class="spacer"></li>';
+    }).join('');
+    document.getElementById('materialsSection').style.display = '';
   }
 
   renderResources(c.id, c.resources || []);

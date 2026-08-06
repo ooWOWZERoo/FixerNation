@@ -102,11 +102,16 @@ router.get('/lesson/:curriculumId', requireSiteAuth, async (req, res) => {
     'SELECT objective FROM curriculum_objectives WHERE curriculum_id = ? ORDER BY sort_order',
     [curriculumId]
   );
+  const [materialRows] = await pool.query(
+    'SELECT material FROM curriculum_materials WHERE curriculum_id = ? ORDER BY sort_order',
+    [curriculumId]
+  );
 
   res.json({
     curriculum: {
       ...curRows[0],
       objectives: objectiveRows.map(r => r.objective),
+      materials: materialRows.map(r => r.material),
       resources: resourceRows.map(r => ({
         resource:      r.resource,
         filePath:      r.file_path || '',
