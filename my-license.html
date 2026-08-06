@@ -44,12 +44,21 @@
     <a href="my-profile.html">My Profile</a>
     <a href="my-memberships.html">My Memberships</a>
     <a href="my-license.html" class="active">My Licenses</a>
+    <a href="teacher-lesson-plans.html">My Lesson Plans</a>
     <a href="teacher-classrooms.html">My Classrooms</a>
     <a href="my-purchases.html">Purchase History</a>
   </nav>
 
   <h1>My Licenses</h1>
   <p class="sub">Your active teacher and school licenses.</p>
+
+  <div id="lessonPlansBanner" style="display:none;background:var(--teal);color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:3px;">You have an active license — build your lesson plan library.</div>
+      <div style="font-size:13.5px;opacity:0.88;">Pick up to 40 plans now. You can add more any time, but every selection is permanent for this license period.</div>
+    </div>
+    <a href="teacher-lesson-plans.html" style="white-space:nowrap;padding:9px 20px;border-radius:999px;background:#fff;color:var(--teal-dark);font-weight:700;font-size:13.5px;flex-shrink:0;text-decoration:none;">Browse Lesson Plans →</a>
+  </div>
 
   <div id="accountWrap"></div>
   <div class="empty" id="emptyState" style="display:none;">
@@ -109,7 +118,20 @@ function render(purchases) {
   }).join('');
 }
 
+async function checkLessonPlanBanner() {
+  try {
+    const r = await fetch('/api/teacher/lesson-plans', { credentials: 'include' });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.count === 0) {
+      const banner = document.getElementById('lessonPlansBanner');
+      banner.style.display = 'flex';
+    }
+  } catch (_) {}
+}
+
 loadData();
+checkLessonPlanBanner();
 </script>
 
 <footer></footer>

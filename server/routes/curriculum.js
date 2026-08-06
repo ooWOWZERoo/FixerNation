@@ -148,10 +148,31 @@ function serialize(row) {
 }
 
 router.get('/', async (req, res) => {
-  const wantsAll = req.query.all === 'true' && !!getAuthUser(req);
-  const [rows] = wantsAll
-    ? await pool.query('SELECT * FROM curricula ORDER BY sort_order ASC, created_at DESC')
-    : await pool.query('SELECT * FROM curricula WHERE published = 1 ORDER BY sort_order ASC, created_at DESC');
+  const isAdmin = !!getAuthUser(req);
+  const wantsAll = req.query.all === 'true' && isAdmin;
+  let rows;
+  if (wantsAll) {
+    [rows] = await pool.query('SELECT * FROM curricula ORDER BY sort_order ASC, created_at DESC');
+  } else {
+    const siteUser = await getSiteUser(req);
+    // Licensed non-admin teachers with ≥1 plan selection see only their library
+    if (siteUser && siteUser.role !== 'parent' && await hasActiveLicense(siteUser.id)) {
+      const [selRows] = await pool.query(
+        'SELECT curriculum_id FROM teacher_lesson_plans WHERE site_user_id = ?',
+        [siteUser.id]
+      );
+      if (selRows.length > 0) {
+        const ids = selRows.map(r => r.curriculum_id);
+        [rows] = await pool.query(
+          `SELECT * FROM curricula WHERE published = 1 AND id IN (${ids.map(() => '?').join(',')}) ORDER BY sort_order ASC, created_at DESC`,
+          ids
+        );
+      }
+    }
+    if (!rows) {
+      [rows] = await pool.query('SELECT * FROM curricula WHERE published = 1 ORDER BY sort_order ASC, created_at DESC');
+    }
+  }
   const curricula = (await attachChildren(rows)).map(serialize);
   res.json({ curricula: await gateAccess(curricula, req) });
 });

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Lesson Plans — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:0;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 60px;}
+h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bottom:4px;}
+.sub{font-size:14px;color:var(--ink-soft);margin-bottom:28px;}
+.account-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.account-nav a{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;color:var(--ink-soft);background:#fff;box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);transition:all .15s;}
+.account-nav a:hover{color:var(--teal-dark);}
+.account-nav a.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+.counter{font-size:14px;font-weight:700;color:var(--ink-soft);padding:7px 14px;border-radius:999px;background:#fff;box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);}
+.counter.full{color:var(--coral-dark);background:#fff3f0;}
+.search-row{display:flex;gap:10px;margin-bottom:20px;}
+.search-row input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;outline:none;transition:border-color .15s;}
+.search-row input:focus{border-color:var(--teal);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 24px -12px rgba(22,79,74,0.2);padding:20px 22px;display:flex;flex-direction:column;gap:10px;position:relative;}
+.card.selected{border:2px solid var(--teal);box-shadow:0 8px 24px -12px rgba(22,79,74,0.3);}
+.card-series{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);}
+.card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:var(--teal-dark);line-height:1.3;}
+.card-desc{font-size:13px;color:var(--ink-soft);line-height:1.55;flex:1;}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;}
+.badge-added{font-size:12px;font-weight:700;color:var(--teal-dark);background:rgba(22,79,74,0.1);padding:4px 10px;border-radius:999px;}
+.btn{padding:8px 16px;border-radius:999px;border:none;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:all .15s;}
+.btn-add{background:var(--teal);color:#fff;}
+.btn-add:hover{background:var(--teal-dark);}
+.btn-add:disabled{background:#ccc;cursor:not-allowed;}
+.empty{text-align:center;color:var(--ink-soft);font-size:14px;padding:60px 20px;}
+/* Confirm modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:20px;padding:30px;width:100%;max-width:440px;box-shadow:0 40px 80px -20px rgba(0,0,0,0.3);}
+.modal h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:19px;margin-bottom:10px;}
+.modal-warn{background:#fff8f6;border:1px solid rgba(242,107,77,0.3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink);margin:14px 0;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal-dark);}
+.btn-outline:hover{background:rgba(22,79,74,0.06);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal-dark);color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:2000;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<header></header>
+<div class="wrap" id="mainWrap" style="visibility:hidden">
+  <nav class="account-nav">
+    <a href="my-profile.html">My Profile</a>
+    <a href="my-memberships.html">My Memberships</a>
+    <a href="my-license.html">My Licenses</a>
+    <a href="teacher-lesson-plans.html" class="active">My Lesson Plans</a>
+    <a href="teacher-classrooms.html">My Classrooms</a>
+    <a href="my-purchases.html">Purchase History</a>
+  </nav>
+
+  <div class="topbar">
+    <div>
+      <h1>My Lesson Plans</h1>
+      <p class="sub" style="margin-bottom:0;">Add plans to your personal library. Each selection is permanent for this license period.</p>
+    </div>
+    <div class="counter" id="counterBadge">0 of 40 added</div>
+  </div>
+
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search by title or series…" oninput="filterCards()">
+  </div>
+
+  <div class="grid" id="cardGrid"></div>
+  <div class="empty" id="emptyMsg" style="display:none;">No lesson plans match your search.</div>
+</div>
+
+<!-- Confirm-add modal -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal">
+    <h2>Add to your library?</h2>
+    <div id="confirmTitle" style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:2px;"></div>
+    <div id="confirmSeries" style="font-size:13px;color:var(--ink-soft);"></div>
+    <div class="modal-warn">Once added, this lesson plan is a permanent part of your library for this license period and cannot be removed.</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-add" id="confirmBtn" onclick="confirmAdd()">Add to Library</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="nav.js?v=8"></script>
+<script src="site-auth.js"></script>
+<script src="admin-common.js?v=15"></script>
+<script>fnTrackPageview();</script>
+<script>
+let allCurricula = [];
+let selectedIds = new Set();
+let limit = 40;
+let pendingCurriculumId = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function updateCounter() {
+  const badge = document.getElementById('counterBadge');
+  badge.textContent = `${selectedIds.size} of ${limit} added`;
+  badge.className = selectedIds.size >= limit ? 'counter full' : 'counter';
+}
+
+function renderCards(curricula) {
+  const grid = document.getElementById('cardGrid');
+  const empty = document.getElementById('emptyMsg');
+  if (!curricula.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  const atLimit = selectedIds.size >= limit;
+  grid.innerHTML = curricula.map(c => {
+    const isSelected = selectedIds.has(c.id);
+    return `<div class="card${isSelected ? ' selected' : ''}">
+      ${c.series ? `<div class="card-series">${c.series}</div>` : ''}
+      <div class="card-title">${c.title}</div>
+      ${c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : ''}
+      <div class="card-foot">
+        ${isSelected
+          ? '<span class="badge-added">✓ In library</span>'
+          : `<button class="btn btn-add" ${atLimit ? 'disabled title="Library full"' : ''} onclick="openConfirm(${c.id})">+ Add</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCards() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = q
+    ? allCurricula.filter(c => c.title.toLowerCase().includes(q) || (c.series || '').toLowerCase().includes(q))
+    : allCurricula;
+  renderCards(filtered);
+}
+
+function openConfirm(curriculumId) {
+  const c = allCurricula.find(x => x.id === curriculumId);
+  if (!c) return;
+  pendingCurriculumId = curriculumId;
+  document.getElementById('confirmTitle').textContent = c.title;
+  document.getElementById('confirmSeries').textContent = c.series || '';
+  document.getElementById('confirmModal').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('open');
+  pendingCurriculumId = null;
+}
+
+async function confirmAdd() {
+  if (!pendingCurriculumId) return;
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+
+  const r = await fetch('/api/teacher/lesson-plans', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ curriculumId: pendingCurriculumId }),
+  });
+  const data = await r.json().catch(() => ({}));
+
+  btn.disabled = false;
+  btn.textContent = 'Add to Library';
+  closeConfirm();
+
+  if (r.status === 409) { showToast('Already in your library'); return; }
+  if (r.status === 400) { showToast(data.error || 'Library is full'); return; }
+  if (!r.ok) { showToast(data.error || 'Could not add plan'); return; }
+
+  selectedIds.add(pendingCurriculumId);
+  updateCounter();
+  filterCards();
+  showToast('Added to your library');
+}
+
+async function loadPage() {
+  const r = await fetch('/api/teacher/lesson-plans/browse', { credentials: 'include' });
+  if (r.status === 401 || r.status === 403) {
+    window.location.href = 'my-license.html';
+    return;
+  }
+  const data = await r.json().catch(() => ({}));
+  allCurricula = data.curricula || [];
+  selectedIds = new Set(allCurricula.filter(c => c.selected).map(c => c.id));
+  limit = data.limit || 40;
+  updateCounter();
+  filterCards();
+  document.getElementById('mainWrap').style.visibility = 'visible';
+}
+
+loadPage();
+</script>
+
+<footer></footer>
+<script src="footer.js?v=1"></script>
+</body>
+</html>

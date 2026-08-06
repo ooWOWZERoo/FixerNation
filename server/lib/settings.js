@@ -11,6 +11,7 @@ const DEFAULTS = {
   invoice_business_name: 'Fixer Nation Education',
   invoice_tagline: 'fixernationeducation.com',
   invoice_logo_url: '',
+  teacher_lesson_plan_limit: '40',
 };
 
 async function getSetting(key) {

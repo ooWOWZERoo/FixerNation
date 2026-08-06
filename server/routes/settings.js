@@ -147,4 +147,17 @@ router.put('/morning-boost-audio-limit', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/teacher-lesson-plan-limit', requireAuth, async (req, res) => {
+  const raw = await getSetting('teacher_lesson_plan_limit');
+  const limit = Math.max(1, parseInt(raw || '40', 10));
+  res.json({ limit });
+});
+
+router.put('/teacher-lesson-plan-limit', requireAuth, async (req, res) => {
+  const limit = parseInt(req.body && req.body.limit, 10);
+  if (!limit || limit < 1) return res.status(400).json({ error: 'Limit must be at least 1' });
+  await setSetting('teacher_lesson_plan_limit', String(limit));
+  res.json({ ok: true });
+});
+
 module.exports = router;

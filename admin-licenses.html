@@ -120,6 +120,28 @@
   </div>
 </div>
 
+<!-- Lesson Plan Library modal -->
+<div class="a-modal-overlay" id="lessonPlanModalOverlay" style="display:none;">
+  <div class="a-modal" style="max-width:560px;">
+    <div class="a-modal-head">
+      <h3 id="lessonPlanModalTitle">Lesson Plan Library</h3>
+      <button class="a-modal-close" onclick="closeLessonPlanModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div id="lessonPlanModalStatus" style="font-size:13px;color:var(--a-text-soft);margin-bottom:12px;"></div>
+      <div id="lessonPlanModalList"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="lessonPlanAddSelect" style="flex:1;min-width:200px;padding:8px 10px;border:1.5px solid var(--a-border);border-radius:8px;font-family:inherit;font-size:13px;"></select>
+        <button class="a-btn a-btn-primary" style="font-size:13px;" onclick="addLessonPlanAdmin()">+ Add Plan</button>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-danger" onclick="resetLessonPlansAdmin()">Reset All</button>
+      <button class="a-btn a-btn-outline" onclick="closeLessonPlanModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="admin-common.js?v=15"></script>
 <script>
 fnRequireAuth();
@@ -302,9 +324,10 @@ function licenseCard(p) {
           <td>${(s.audiences && s.audiences.length) ? s.audiences.join(', ') : '—'}</td>
           <td>${fnFormatDate(s.registeredAt)}</td>
           <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openGradeModal(${s.id}, ${JSON.stringify(s.audiences || []).replace(/"/g, '&quot;')})">✏️ Edit</button></td>
+          <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openLessonPlanModal(${s.registeredSiteUserId || 0}, '${(s.registeredName || '').replace(/'/g, "\\'")}')">📚 Library</button></td>
         </tr>
       `).join('')
-    : `<tr><td colspan="5" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
+    : `<tr><td colspan="6" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
 
   return `
     <div class="a-card" style="margin-bottom:20px;">
@@ -330,7 +353,7 @@ function licenseCard(p) {
 
       <h3 style="font-size:14px; margin-bottom:10px;">Registered Teachers</h3>
       <table class="a-table">
-        <thead><tr><th>Name</th><th>Email</th><th>Grade Levels</th><th>Registered</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Grade Levels</th><th>Registered</th><th></th><th></th></tr></thead>
         <tbody>${rosterRows}</tbody>
       </table>
     </div>
@@ -414,6 +437,94 @@ async function deleteSchool(schoolDomain, registeredCount) {
   fnToast(`Deleted the license for ${schoolDomain}`);
   document.getElementById('resultsWrap').innerHTML = '';
   document.getElementById('domainSearchInput').value = '';
+}
+
+// --- Lesson Plan Library modal ---
+let _lpSiteUserId = null;
+let _allCurricula = [];
+
+async function openLessonPlanModal(siteUserId, teacherName) {
+  if (!siteUserId) { fnToast('No site user linked to this teacher seat'); return; }
+  _lpSiteUserId = siteUserId;
+  document.getElementById('lessonPlanModalTitle').textContent = `Lesson Plan Library — ${teacherName}`;
+  document.getElementById('lessonPlanModalList').innerHTML = '<div style="color:var(--a-text-soft);font-size:13px;">Loading…</div>';
+  document.getElementById('lessonPlanModalStatus').textContent = '';
+  document.getElementById('lessonPlanModalOverlay').style.display = 'flex';
+  await refreshLessonPlanModal();
+  if (!_allCurricula.length) {
+    const cr = await fetch('/api/curricula?all=true', { credentials: 'include' });
+    const cd = await cr.json().catch(() => ({}));
+    _allCurricula = (cd.curricula || []).filter(c => c.published);
+  }
+  renderLessonPlanAddSelect();
+}
+
+function closeLessonPlanModal() {
+  document.getElementById('lessonPlanModalOverlay').style.display = 'none';
+  _lpSiteUserId = null;
+}
+
+async function refreshLessonPlanModal() {
+  const r = await fetch(`/api/admin/teacher-lesson-plans/${_lpSiteUserId}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json().catch(() => ({}));
+  const { selections = [], count = 0, limit = 40 } = data;
+  document.getElementById('lessonPlanModalStatus').textContent = `${count} of ${limit} plans selected`;
+  const list = document.getElementById('lessonPlanModalList');
+  if (!selections.length) {
+    list.innerHTML = '<div style="color:var(--a-text-soft);font-size:13px;">No plans in library yet.</div>';
+    return;
+  }
+  list.innerHTML = `<table class="a-table" style="font-size:13px;">
+    <thead><tr><th>Title</th><th>Series</th><th>Added</th><th></th></tr></thead>
+    <tbody>${selections.map(s => `
+      <tr>
+        <td>${s.title}</td>
+        <td style="color:var(--a-text-soft);">${s.series || '—'}</td>
+        <td style="color:var(--a-text-soft);">${fnFormatDate(s.selectedAt)}</td>
+        <td><button class="a-btn a-btn-danger" style="padding:3px 9px;font-size:12px;" onclick="removeLessonPlan(${s.curriculumId})">Remove</button></td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderLessonPlanAddSelect() {
+  const sel = document.getElementById('lessonPlanAddSelect');
+  sel.innerHTML = '<option value="">— Select a plan to add —</option>' +
+    _allCurricula.map(c => `<option value="${c.id}">${c.title}${c.series ? ' (' + c.series + ')' : ''}</option>`).join('');
+}
+
+async function removeLessonPlan(curriculumId) {
+  const r = await fetch(`/api/admin/teacher-lesson-plans/${_lpSiteUserId}/${curriculumId}`, {
+    method: 'DELETE', credentials: 'include',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  await refreshLessonPlanModal();
+}
+
+async function resetLessonPlansAdmin() {
+  if (!confirm('Remove all lesson plan selections for this teacher? This cannot be undone.')) return;
+  const r = await fetch(`/api/admin/teacher-lesson-plans/${_lpSiteUserId}`, {
+    method: 'DELETE', credentials: 'include',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  fnToast('Lesson plan library reset');
+  await refreshLessonPlanModal();
+}
+
+async function addLessonPlanAdmin() {
+  const curriculumId = parseInt(document.getElementById('lessonPlanAddSelect').value, 10);
+  if (!curriculumId) return;
+  const r = await fetch(`/api/admin/teacher-lesson-plans/${_lpSiteUserId}`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ curriculumId }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(data.error || 'Could not add plan'); return; }
+  document.getElementById('lessonPlanAddSelect').value = '';
+  await refreshLessonPlanModal();
 }
 </script>
 

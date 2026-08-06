@@ -322,6 +322,7 @@ async function attachPurchaseDetails(purchases) {
       id: s.id,
       invitedEmail: s.invited_email,
       status: s.status,
+      registeredSiteUserId: s.registered_site_user_id || null,
       registeredName: s.registered_site_user_id ? `${s.first_name} ${s.last_name}` : null,
       registeredAt: s.registered_at,
       audiences: s.registered_site_user_id ? (audiencesByUser[s.registered_site_user_id] || []) : [],
