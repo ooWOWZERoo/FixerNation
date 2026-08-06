@@ -133,7 +133,7 @@ function renderCards(curricula) {
     return `<div class="card${isSelected ? ' selected' : ''}">
       ${c.series ? `<div class="card-series">${c.series}</div>` : ''}
       <div class="card-title">${c.title}</div>
-      ${c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : ''}
+      ${c.overview ? `<div class="card-desc">${c.overview}</div>` : (c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : '')}
       <div class="card-foot">
         ${isSelected
           ? '<span class="badge-added">✓ In library</span>'

@@ -37,7 +37,7 @@ router.get('/browse', requireSiteAuth, async (req, res) => {
     return res.status(403).json({ error: 'Active license required' });
   }
   const [curricula] = await pool.query(
-    'SELECT id, title, series, short_description FROM curricula WHERE published = 1 ORDER BY sort_order ASC, created_at DESC'
+    'SELECT id, title, series, short_description, overview FROM curricula WHERE published = 1 ORDER BY sort_order ASC, created_at DESC'
   );
   const [selected] = await pool.query(
     'SELECT curriculum_id FROM teacher_lesson_plans WHERE site_user_id = ?',
@@ -51,6 +51,7 @@ router.get('/browse', requireSiteAuth, async (req, res) => {
       title: c.title,
       series: c.series,
       shortDescription: c.short_description,
+      overview: c.overview,
       selected: selectedSet.has(c.id),
     })),
     count: selectedSet.size,
