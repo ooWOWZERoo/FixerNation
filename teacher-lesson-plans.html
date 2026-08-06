@@ -38,6 +38,10 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 .btn-add:hover{background:var(--teal-dark);}
 .btn-add:disabled{background:#ccc;cursor:not-allowed;}
 .empty{text-align:center;color:var(--ink-soft);font-size:14px;padding:60px 20px;}
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;}
+.chip{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink-soft);box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);border:1.5px solid transparent;transition:all .15s;white-space:nowrap;user-select:none;}
+.chip:hover{color:var(--teal-dark);}
+.chip.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
 /* Confirm modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
 .modal-bg.open{display:flex;}
@@ -71,8 +75,17 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
     <div class="counter" id="counterBadge">0 of 40 added</div>
   </div>
 
+  <div class="filter-bar" id="audienceFilterBar">
+    <div class="chip active" data-audience="all">All Levels</div>
+    <div class="chip" data-audience="Elementary School">Elementary</div>
+    <div class="chip" data-audience="Middle School">Middle School</div>
+    <div class="chip" data-audience="High School">High School</div>
+    <div class="chip" data-audience="Higher Education">Higher Ed</div>
+  </div>
+  <div class="filter-bar" id="seriesFilterBar"></div>
+
   <div class="search-row">
-    <input type="text" id="searchInput" placeholder="Search by title or series…" oninput="filterCards()">
+    <input type="text" id="searchInput" placeholder="Search by title or series…" oninput="applyFilters()">
   </div>
 
   <div class="grid" id="cardGrid"></div>
@@ -104,6 +117,8 @@ let allCurricula = [];
 let selectedIds = new Set();
 let limit = 40;
 let pendingCurriculumId = null;
+let activeAudience = 'all';
+let activeSeries = 'all';
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -143,13 +158,39 @@ function renderCards(curricula) {
   }).join('');
 }
 
-function filterCards() {
+function rebuildSeriesBar(curricula) {
+  const uniqueSeries = [...new Set(curricula.map(c => c.series).filter(Boolean))].sort();
+  document.getElementById('seriesFilterBar').innerHTML =
+    `<div class="chip${activeSeries === 'all' ? ' active' : ''}" data-series="all">All Series</div>` +
+    uniqueSeries.map(s => `<div class="chip${activeSeries === s ? ' active' : ''}" data-series="${s.replace(/"/g,'&quot;')}">${s}</div>`).join('');
+}
+
+function applyFilters() {
+  // Step 1: filter by audience
+  const byAudience = activeAudience === 'all'
+    ? allCurricula
+    : allCurricula.filter(c => !c.audiences || !c.audiences.length || c.audiences.includes(activeAudience));
+
+  // Step 2: rebuild series bar from the audience-filtered set, reset series if it no longer exists
+  const seriesInView = new Set(byAudience.map(c => c.series).filter(Boolean));
+  if (activeSeries !== 'all' && !seriesInView.has(activeSeries)) activeSeries = 'all';
+  rebuildSeriesBar(byAudience);
+
+  // Step 3: filter by series
+  const bySeries = activeSeries === 'all'
+    ? byAudience
+    : byAudience.filter(c => c.series === activeSeries);
+
+  // Step 4: filter by search text
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   const filtered = q
-    ? allCurricula.filter(c => c.title.toLowerCase().includes(q) || (c.series || '').toLowerCase().includes(q))
-    : allCurricula;
+    ? bySeries.filter(c => c.title.toLowerCase().includes(q) || (c.series || '').toLowerCase().includes(q))
+    : bySeries;
+
   renderCards(filtered);
 }
+
+function filterCards() { applyFilters(); }
 
 function openConfirm(curriculumId) {
   const c = allCurricula.find(x => x.id === curriculumId);
@@ -204,9 +245,26 @@ async function loadPage() {
   selectedIds = new Set(allCurricula.filter(c => c.selected).map(c => c.id));
   limit = data.limit || 40;
   updateCounter();
-  filterCards();
+  applyFilters();
   document.getElementById('mainWrap').style.visibility = 'visible';
 }
+
+document.getElementById('audienceFilterBar').addEventListener('click', function(e) {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  activeAudience = chip.dataset.audience;
+  document.querySelectorAll('#audienceFilterBar .chip').forEach(c => c.classList.toggle('active', c === chip));
+  activeSeries = 'all';
+  applyFilters();
+});
+
+document.getElementById('seriesFilterBar').addEventListener('click', function(e) {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  activeSeries = chip.dataset.series;
+  document.querySelectorAll('#seriesFilterBar .chip').forEach(c => c.classList.toggle('active', c === chip));
+  applyFilters();
+});
 
 loadPage();
 </script>

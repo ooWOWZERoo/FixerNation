@@ -45,6 +45,16 @@ router.get('/browse', requireSiteAuth, async (req, res) => {
   );
   const selectedSet = new Set(selected.map(r => r.curriculum_id));
   const limit = await getLimit();
+
+  const ids = curricula.map(c => c.id);
+  const [audienceRows] = ids.length
+    ? await pool.query('SELECT curriculum_id, audience FROM curriculum_audiences WHERE curriculum_id IN (?)', [ids])
+    : [[]];
+  const audiencesByC = audienceRows.reduce((acc, r) => {
+    (acc[r.curriculum_id] = acc[r.curriculum_id] || []).push(r.audience);
+    return acc;
+  }, {});
+
   res.json({
     curricula: curricula.map(c => ({
       id: c.id,
@@ -52,6 +62,7 @@ router.get('/browse', requireSiteAuth, async (req, res) => {
       series: c.series,
       shortDescription: c.short_description,
       overview: c.overview,
+      audiences: audiencesByC[c.id] || [],
       selected: selectedSet.has(c.id),
     })),
     count: selectedSet.size,
