@@ -56,6 +56,10 @@
           </div>
         </div>
 
+        <div style="margin-bottom:12px;">
+          <input type="text" id="curriculumSearch" placeholder="Search title or series… use * as wildcard" oninput="filterCurricula()" style="width:100%;max-width:440px;padding:8px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit;outline:none;">
+        </div>
+
         <div id="bulkBar" class="a-bulk-bar" style="display:none;">
           <span id="bulkCount" class="a-bulk-count"></span>
           <button class="a-btn a-btn-sm a-btn-outline" onclick="bulkPublish(true)">✅ Publish</button>
@@ -495,12 +499,18 @@ async function renderCurricula() {
     const audienceBadges = (c.audiences || []).map(a => `<span class="a-audience-badge">${a}</span>`).join('');
     const vCount = (c.videos || []).length, qCount = (c.quiz || []).length, rCount = (c.resources || []).length;
     const contents = `${vCount} video${vCount===1?'':'s'} · ${qCount} quiz Q${qCount===1?'':'s'} · ${rCount}/${FN_CURRICULUM_RESOURCES.length} resources`;
+    const RES_LABELS = [['Teacher Copy','TC'],['Student Handout','SH'],['Classroom Poster','CP']];
+    const resLimits = RES_LABELS.map(([name, abbr]) => {
+      const r = (c.resources || []).find(x => x.resource === name);
+      if (!r) return `${abbr}: <span style="color:#B8AFA6">—</span>`;
+      return `${abbr}: ${r.downloadLimit > 0 ? r.downloadLimit : '∞'}`;
+    }).join(' &middot; ');
     tr.innerHTML = `
       <td class="drag-handle" title="Drag to reorder">⠿</td>
       <td style="padding-left:14px;"><input type="checkbox" class="row-check" value="${c.id}" onchange="updateBulkBar()"></td>
       <td><div class="a-cell-title">${c.title}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
       <td>${audienceBadges || '<span class="a-cell-sub">Not set</span>'}</td>
-      <td>${contents}</td>
+      <td><div>${contents}</div><div class="a-cell-sub" style="margin-top:3px;">${resLimits}</div></td>
 
       <td><span class="a-pill ${c.published ? 'a-pill-success' : 'a-pill-neutral'}">${c.published ? 'Published' : 'Draft'}</span></td>
       <td>
@@ -514,6 +524,19 @@ async function renderCurricula() {
     tbody.appendChild(tr);
   });
   initCurriculumDnD();
+  filterCurricula();
+}
+
+function filterCurricula() {
+  const raw = (document.getElementById('curriculumSearch').value || '').trim();
+  const rows = document.querySelectorAll('#curriculumTable tbody tr');
+  if (!raw) { rows.forEach(r => r.style.display = ''); return; }
+  const pattern = raw.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  const re = new RegExp(pattern, 'i');
+  rows.forEach(tr => {
+    const c = (curriculaCache || []).find(x => x.id === Number(tr.dataset.id));
+    tr.style.display = c && (re.test(c.title) || re.test(c.series || '')) ? '' : 'none';
+  });
 }
 
 function initCurriculumDnD() {
