@@ -83,7 +83,7 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
   document.body.classList.toggle('fn-user-authed', !!loggedIn);
   if (!nav) return;
   if (loggedIn) {
-    const isTeacher = !role || role === 'teacher';
+    const isParent = role === 'parent';
     const li = (href, label) => `<a href="${href}" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">${label}</a>`;
     nav.innerHTML = `
       <div style="position:relative;">
@@ -91,10 +91,10 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
         <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:175px; z-index:300;">
           ${li('my-profile.html', 'My Profile')}
           ${li('my-memberships.html', 'My Memberships')}
-          ${isTeacher ? li('my-license.html', 'My Licenses') : ''}
-          ${isTeacher ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
-          ${isTeacher ? li('teacher-classrooms.html', 'My Classrooms') : ''}
-          ${!isTeacher ? li('parent-portal.html', 'Parent Portal') : ''}
+          ${!isParent ? li('my-license.html', 'My Licenses') : ''}
+          ${!isParent ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
+          ${!isParent ? li('teacher-classrooms.html', 'My Classrooms') : ''}
+          ${isParent ? li('parent-portal.html', 'Parent Portal') : ''}
           ${li('my-purchases.html', 'Purchase History')}
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>
           <a href="#" onclick="fnAuthLogout(); return false;" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#D9502F; border-radius:6px;">Log Out</a>
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return;
       }
-      fnAuthRenderNav(true, result.firstName);
+      fnAuthRenderNav(true, result.firstName, result.role);
       fnAuthCloseModal();
       document.dispatchEvent(new CustomEvent('fn-auth-changed'));
       const _pa = sessionStorage.getItem('fn_pending_audiences');
