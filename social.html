@@ -58,7 +58,8 @@
   .composer-hint{font-size:12px;color:var(--ink-soft);}
   .post-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 6px 18px -12px rgba(22,79,74,0.18);margin-bottom:12px;}
   .post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-  .post-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;}
+  .post-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;overflow:hidden;}
+  .post-avatar img,.comment-avatar img,.member-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}
   .post-author{font-weight:700;font-size:14px;}
   .post-time{font-size:12px;color:var(--ink-soft);}
   .post-content{font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:12px;}
@@ -68,7 +69,7 @@
   .post-action-btn.liked{color:var(--coral);}
   .comments-section{margin-top:12px;padding-top:12px;border-top:1px solid rgba(22,79,74,0.06);}
   .comment{display:flex;gap:8px;margin-bottom:10px;}
-  .comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--cream-soft);color:var(--teal-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+  .comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--cream-soft);color:var(--teal-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;overflow:hidden;}
   .comment-body{background:var(--cream-soft);border-radius:10px;padding:8px 12px;flex:1;}
   .comment-author{font-size:12px;font-weight:700;margin-bottom:2px;}
   .comment-text{font-size:13.5px;line-height:1.5;}
@@ -93,7 +94,7 @@
   /* Member list */
   .member-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(22,79,74,0.06);cursor:pointer;}
   .member-item:last-child{border-bottom:none;}
-  .member-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+  .member-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;overflow:hidden;}
   .member-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .member-school{font-size:11px;color:var(--ink-soft);}
 
@@ -314,6 +315,7 @@ let unreadCounts = {}; // groupId → unread post count
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function initials(fn,ln){ return ((fn||'')[0]||'') + ((ln||'')[0]||''); }
+function avatarInner(p){ return p && p.avatar_url ? '<img src="'+esc(p.avatar_url)+'" alt="">' : initials(p&&p.first_name,p&&p.last_name).toUpperCase(); }
 function relTime(s){
   if(!s) return '';
   const d = new Date(s), now = new Date();
@@ -342,7 +344,7 @@ async function init(){
   }
   const data = await res.json();
   me = data.profile;
-  document.getElementById('myAvatar').textContent = initials(me.first_name, me.last_name).toUpperCase();
+  document.getElementById('myAvatar').innerHTML = avatarInner(me);
   document.getElementById('communityLayout').style.display='';
   await Promise.all([loadGroups(), loadBrowseGroups(), loadDmConversations(), loadMembers()]);
   await loadUnreadCounts();
@@ -625,7 +627,6 @@ function searchHashtag(tag){
 // ── Post rendering ───────────────────────────────────────────────────────────
 
 function renderPost(p){
-  const av = initials(p.first_name, p.last_name).toUpperCase();
   const liked = p.my_reaction ? ' liked' : '';
   let attachments = null;
   try { attachments = p.attachments ? (typeof p.attachments === 'string' ? JSON.parse(p.attachments) : p.attachments) : null; } catch(e){}
@@ -633,7 +634,7 @@ function renderPost(p){
   return `
   <div class="post-card" id="post-${p.id}">
     <div class="post-header">
-      <div class="post-avatar" style="cursor:pointer;" onclick="viewProfile(${p.author_id})">${av}</div>
+      <div class="post-avatar" style="cursor:pointer;" onclick="viewProfile(${p.author_id})">${avatarInner(p)}</div>
       <div>
         <div class="post-author"><a href="social-profile.html?id=${p.author_id}" style="color:inherit;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
         <div class="post-time">${relTime(p.created_at)}</div>
@@ -683,19 +684,17 @@ async function loadComments(postId){
   if(!res.ok) return;
   const data = await res.json();
   const commentsHtml = data.comments.map(c => {
-    const av = initials(c.first_name, c.last_name).toUpperCase();
     return `<div class="comment">
-      <div class="comment-avatar">${av}</div>
+      <div class="comment-avatar">${avatarInner(c)}</div>
       <div class="comment-body">
         <div class="comment-author">${esc(c.first_name)} ${esc(c.last_name)}</div>
         <div class="comment-text">${esc(c.content)}</div>
       </div>
     </div>`;
   }).join('');
-  const myAv = initials(me.first_name, me.last_name).toUpperCase();
   section.innerHTML = commentsHtml + `
     <div class="comment-composer">
-      <div class="comment-avatar" style="margin-top:2px;">${myAv}</div>
+      <div class="comment-avatar" style="margin-top:2px;">${avatarInner(me)}</div>
       <input type="text" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')addComment(${postId},this)">
       <button class="comment-send-btn" onclick="addComment(${postId},this.previousElementSibling)">Send</button>
     </div>`;
@@ -755,7 +754,7 @@ async function loadDmConversations(){
   }
   el.innerHTML = data.conversations.map(c =>
     `<div class="dm-item ${c.partner_id===dmPartnerId?'active':''}" onclick="openDm(${c.partner_id})">
-       <div class="member-avatar" style="width:28px;height:28px;font-size:11px;">${initials(c.first_name,c.last_name).toUpperCase()}</div>
+       <div class="member-avatar" style="width:28px;height:28px;font-size:11px;">${avatarInner(c)}</div>
        <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.first_name)} ${esc(c.last_name)}</span>
        ${c.unread_count>0?`<span class="dm-badge">${c.unread_count}</span>`:''}
      </div>`
@@ -781,7 +780,7 @@ async function openDm(partnerId){
   dmPanel.innerHTML = `
     <div class="dm-thread">
       <div class="dm-header">
-        <div class="member-avatar">${initials(partner.first_name,partner.last_name).toUpperCase()}</div>
+        <div class="member-avatar">${avatarInner(partner)}</div>
         <div>
           <h3>${esc(partner.first_name)} ${esc(partner.last_name)}</h3>
           ${partner.school_domain?`<div style="font-size:12px;color:var(--ink-soft);">${esc(partner.school_domain)}</div>`:''}
@@ -883,7 +882,7 @@ function renderMembers(members){
   if(!members.length){ el.innerHTML='<div style="font-size:13px;color:var(--ink-soft);">No members found.</div>'; return; }
   el.innerHTML = members.slice(0,30).map(m =>
     `<div class="member-item" onclick="openDm(${m.id})">
-       <div class="member-avatar">${initials(m.first_name,m.last_name).toUpperCase()}</div>
+       <div class="member-avatar">${avatarInner(m)}</div>
        <div style="overflow:hidden;">
          <div class="member-name">${esc(m.first_name)} ${esc(m.last_name)}</div>
          ${m.school_domain?`<div class="member-school">${esc(m.school_domain)}</div>`:''}
