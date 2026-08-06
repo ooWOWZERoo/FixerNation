@@ -69,7 +69,7 @@
           <thead><tr>
             <th style="width:28px;" title="Drag to reorder"></th>
             <th style="width:36px;padding-left:14px;"><input type="checkbox" id="selectAll" title="Select all" onchange="toggleSelectAll(this)"></th>
-            <th>Title</th><th>Audience</th><th>Contents</th><th>Downloads</th><th>Status</th><th></th>
+            <th>Title</th><th>Audience</th><th>Contents</th><th>Status</th><th></th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -132,10 +132,6 @@
           <div class="a-field" style="flex:1;">
             <label>Weeks</label>
             <input type="number" id="weeksCount" min="0" placeholder="e.g. 1">
-          </div>
-          <div class="a-field" style="flex:1;">
-            <label>Lesson Plan Doc Limit <span class="a-label-hint">(0=unlimited; does not apply to named resources)</span></label>
-            <input type="number" id="downloadLimit" min="0" value="0">
           </div>
           <div class="a-field" style="flex:2;">
             <label>Publish Status</label>
@@ -505,7 +501,7 @@ async function renderCurricula() {
       <td><div class="a-cell-title">${c.title}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
       <td>${audienceBadges || '<span class="a-cell-sub">Not set</span>'}</td>
       <td>${contents}</td>
-      <td>${c.downloadLimit > 0 ? c.downloadLimit + ' / teacher' : 'Unlimited'}</td>
+
       <td><span class="a-pill ${c.published ? 'a-pill-success' : 'a-pill-neutral'}">${c.published ? 'Published' : 'Draft'}</span></td>
       <td>
         <div class="a-row-actions">
@@ -708,7 +704,6 @@ function openCurriculumModal() {
   currentLessonDocs = [];
   document.getElementById('curriculumModalTitle').textContent = 'Build New Curriculum';
   document.getElementById('curriculumForm').reset();
-  document.getElementById('downloadLimit').value = 3;
   renderAudienceCheckboxes([]);
   renderResourceCheckboxes();
   renderVideoList();
@@ -740,7 +735,6 @@ function editCurriculum(id) {
   document.getElementById('objectives').value = (c.objectives || []).join('\n');
   document.getElementById('lessonsCount').value = c.lessonsCount ?? '';
   document.getElementById('weeksCount').value = c.weeksCount ?? '';
-  document.getElementById('downloadLimit').value = c.downloadLimit ?? 3;
   document.getElementById('materials').value = (c.materials || []).join('\n');
 
   renderAudienceCheckboxes(c.audiences || []);
@@ -819,7 +813,7 @@ function cacheToBody(c, overrides) {
     lessonsCount: c.lessonsCount || null, weeksCount: c.weeksCount || null,
     materials: c.materials || [], resources: c.resources || [],
     documents: c.documents || [], videos: c.videos || [],
-    quiz: c.quiz || [], downloadLimit: c.downloadLimit || 0,
+    quiz: c.quiz || [],
     published: c.published,
   }, overrides);
 }
@@ -896,7 +890,7 @@ async function saveCurriculum() {
     documents: currentLessonDocs.map(d => ({ filePath: d.url, fileName: d.name })),
     videos: currentVideos,
     quiz: currentQuiz,
-    downloadLimit: parseInt(document.getElementById('downloadLimit').value, 10) || 0,
+    downloadLimit: 0,
     published: document.getElementById('publishedToggle').classList.contains('on'),
   };
 
