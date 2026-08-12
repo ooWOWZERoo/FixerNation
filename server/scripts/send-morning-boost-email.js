@@ -1,7 +1,7 @@
-// Run via cPanel Cron Jobs every 5 minutes:
-//   source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
-//   cd /home/fixernat/repositories/fixernation/server && \
-//   node scripts/send-morning-boost-email.js
+// Run via cPanel Cron Jobs every 15 minutes on weekdays (*/15 * * * 1-5).
+// The script reads the configured send time from morning_boost_email_config
+// and skips unless it's within the send window — so the cron schedule only
+// controls granularity, not the actual send time (set in admin-morning-boost-email.html).
 //
 // The script checks whether the configured send time has been reached for
 // today and whether a send hasn't happened yet. Runs once per day at most.
