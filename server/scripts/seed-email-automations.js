@@ -57,6 +57,20 @@ const AUTOMATIONS = [
     body: "Hi there,\n\nYou've been invited to activate a Fixer Nation Education license under {{licenseProductName}}{{schoolLabel}}. Sign up with this email address to automatically claim your seat.\n\nWarmly,\nThe Fixer Nation Team",
     reminderDaysBefore: null,
   },
+  {
+    eventKey: 'school_license_expiring_soon',
+    label: 'School License — Expiring Soon (30-Day Notice)',
+    subject: 'Your {{planName}} license expires on {{expirationDate}}',
+    body: "Hi {{firstName}},\n\nYour {{planName}} school license for {{schoolDomain}} is set to expire on {{expirationDate}}. Renew soon to keep your teachers' access without interruption.\n\nTo renew, visit fixernationeducation.com or reply to this email and we'll get you sorted.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: 30,
+  },
+  {
+    eventKey: 'school_license_expired',
+    label: 'School License — Expired',
+    subject: 'Your {{planName}} license has expired',
+    body: "Hi {{firstName}},\n\nYour {{planName}} school license for {{schoolDomain}} expired on {{expirationDate}}. Teacher access has been suspended.\n\nTo restore access, renew your license at fixernationeducation.com or reply to this email.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
 ];
 
 async function main() {
