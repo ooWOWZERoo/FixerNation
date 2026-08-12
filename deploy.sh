@@ -1,9 +1,32 @@
 #!/bin/bash
 # ============================================================
-# deploy.sh  —  Run this in cPanel Terminal
+# deploy.sh  —  Run this in cPanel Terminal for fixernation.education
 # Usage:  ./deploy.sh
 # ============================================================
 set -e
+
+PROJECT="fixernation.education"
+EXPECTED_REMOTE="FixerNation"
+WRONG_REMOTE="fixernationorg"
+
+# Confirm we're in the right repo
+REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+if [[ "$REMOTE_URL" == *"$WRONG_REMOTE"* ]] || [[ "$REMOTE_URL" != *"$EXPECTED_REMOTE"* ]]; then
+  echo ""
+  echo "ERROR: Wrong project directory."
+  echo "  Expected a repo containing '$EXPECTED_REMOTE' (not '$WRONG_REMOTE')"
+  echo "  Got: $REMOTE_URL"
+  exit 1
+fi
+
+echo ""
+echo "========================================="
+echo "  PROJECT: $PROJECT"
+echo "  DIR:     $(pwd)"
+echo "========================================="
+echo ""
+read -p "Deploy this project on this server? (y/N) " confirm
+[[ "$confirm" == "y" || "$confirm" == "Y" ]] || { echo "Aborted."; exit 0; }
 
 REPO=~/repositories/fixernation
 SERVER_DIR="$REPO/server"

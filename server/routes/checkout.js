@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { createPurchase, assignContactToGroups } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
+const { getSiteUser } = require('../lib/access');
 const { createToken } = require('../lib/site-tokens');
 const { addMemberToSocialGroups } = require('../lib/social-groups');
 
@@ -96,12 +97,17 @@ router.post('/create-session', async (req, res) => {
     if (!(seatCount > 0)) return res.status(400).json({ error: 'seatCount must be a positive number' });
 
     const [rows] = await pool.query(
-      'SELECT id, name, price_cents, variable_seats, active FROM license_products WHERE id = ?',
+      'SELECT id, name, price_cents, variable_seats, is_trial, trial_days, trial_lesson_limit, active FROM license_products WHERE id = ?',
       [productId]
     );
     const lp = rows[0];
-    if (!lp || !lp.active || !lp.variable_seats) {
+    if (!lp || !lp.active || (!lp.variable_seats && !lp.is_trial)) {
       return res.status(400).json({ error: 'License product not found or not available' });
+    }
+
+    const resolvedSeatCount = lp.is_trial ? 1 : Number(b.seatCount);
+    if (!lp.is_trial && !(resolvedSeatCount > 0)) {
+      return res.status(400).json({ error: 'seatCount must be a positive number' });
     }
 
     const session = await getStripe().checkout.sessions.create({
@@ -114,9 +120,9 @@ router.post('/create-session', async (req, res) => {
           product_data: { name: lp.name },
           unit_amount: lp.price_cents,
         },
-        quantity: seatCount,
+        quantity: resolvedSeatCount,
       }],
-      metadata: { productId: String(productId), seatCount: String(seatCount), email },
+      metadata: { productId: String(productId), seatCount: String(resolvedSeatCount), email },
       success_url: `${siteUrl}/licenses.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/licenses.html?checkout=cancelled`,
     });
@@ -535,6 +541,111 @@ async function handleMembershipSubscriptionDeleted(subscription) {
   await pool.query("UPDATE contact_memberships SET status = 'cancelled', ends_at = NOW() WHERE stripe_subscription_id = ?", [subscription.id]);
 }
 
+async function handleTrialConversionCompleted(session, metadata) {
+  const trialPurchaseId = Number(metadata.trialPurchaseId);
+  const targetProductId = Number(metadata.targetProductId);
+  const seatCount = Number(metadata.seatCount) || 1;
+
+  const [trialRows] = await pool.query(
+    `SELECT p.*, nc.email, nc.name AS contact_name
+     FROM purchases p
+     LEFT JOIN newsletter_contacts nc ON nc.id = p.contact_id
+     WHERE p.id = ?`,
+    [trialPurchaseId]
+  );
+  const trial = trialRows[0];
+  if (!trial) return;
+
+  const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_session_id = ? LIMIT 1', [session.id]);
+  if (existing.length) return;
+
+  const newPurchaseId = await createPurchase(trial.contact_id, {
+    productType: 'group_license',
+    licenseProductId: targetProductId,
+    seatCount,
+    source: 'Stripe',
+    stripeSessionId: session.id,
+    paymentMethod: 'stripe',
+    paymentStatus: 'paid',
+    amountCents: session.amount_total,
+  });
+
+  await pool.query(
+    "UPDATE purchases SET license_status = 'converted', conversion_credit_redeemed_at = NOW(), converted_to_purchase_id = ? WHERE id = ?",
+    [newPurchaseId, trialPurchaseId]
+  );
+  await pool.query(
+    "UPDATE license_seats SET status = 'inactive' WHERE purchase_id = ? AND status IN ('registered', 'pending', 'available')",
+    [trialPurchaseId]
+  );
+
+  const firstName = (trial.contact_name || '').split(' ')[0] || 'there';
+  await fireAutomation('trial_converted', {
+    to: trial.email,
+    mergeFields: { firstName },
+  });
+}
+
+router.post('/convert-trial', async (req, res) => {
+  const siteUser = await getSiteUser(req);
+  if (!siteUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const b = req.body || {};
+  const targetProductId = Number(b.targetProductId);
+  const seatCount = Math.max(1, Number(b.seatCount) || 1);
+  if (!targetProductId) return res.status(400).json({ error: 'targetProductId is required' });
+
+  const [contactRows] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [siteUser.email]);
+  if (!contactRows[0]) return res.status(404).json({ error: 'No account found' });
+  const contactId = contactRows[0].id;
+
+  const [trialRows] = await pool.query(
+    `SELECT p.* FROM purchases p
+     WHERE p.contact_id = ?
+       AND p.license_status = 'active'
+       AND p.trial_expiration_date IS NOT NULL
+       AND p.trial_expiration_date > NOW()
+       AND p.conversion_credit_redeemed_at IS NULL
+     ORDER BY p.created_at DESC LIMIT 1`,
+    [contactId]
+  );
+  const trial = trialRows[0];
+  if (!trial) return res.status(404).json({ error: 'No active trial found' });
+
+  const [lpRows] = await pool.query('SELECT id, name, price_cents FROM license_products WHERE id = ? AND active = 1', [targetProductId]);
+  const lp = lpRows[0];
+  if (!lp) return res.status(404).json({ error: 'Target product not found' });
+
+  const conversionCredit = trial.conversion_credit_cents || 0;
+  const totalCents = Math.max(0, (lp.price_cents * seatCount) - conversionCredit);
+
+  const siteUrl = process.env.SITE_URL || '';
+  const session = await getStripe().checkout.sessions.create({
+    mode: 'payment',
+    payment_method_types: ['card'],
+    customer_email: siteUser.email,
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: { name: lp.name },
+        unit_amount: totalCents,
+      },
+      quantity: 1,
+    }],
+    metadata: {
+      type: 'trial_conversion',
+      trialPurchaseId: String(trial.id),
+      targetProductId: String(targetProductId),
+      seatCount: String(seatCount),
+      email: siteUser.email,
+    },
+    success_url: `${siteUrl}/my-license.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrl}/my-license.html?checkout=cancelled`,
+  });
+
+  res.json({ url: session.url });
+});
+
 // Registered in server/app.js with express.raw() ahead of the global JSON
 // body parser — Stripe's signature check needs the exact raw request body,
 // which a JSON-parsed-and-reserialized body would not reproduce byte-for-byte.
@@ -557,6 +668,11 @@ async function webhookHandler(req, res) {
       return res.json({ received: true });
     }
 
+    if (metadata.type === 'trial_conversion') {
+      await handleTrialConversionCompleted(session, metadata);
+      return res.json({ received: true });
+    }
+
     // Stripe retries webhook delivery — guard against creating purchases twice.
     // (stripe_session_id is intentionally not a DB-unique constraint since a
     // single cart session now produces multiple purchase rows.)
@@ -573,17 +689,46 @@ async function webhookHandler(req, res) {
           paymentStatus: 'paid',
         });
       } else if (metadata.productId) {
-        // New variable-seat flow from licenses.html — price/name from license_products.
-        await createPurchase(contactId, {
-          productType: 'group_license',
-          licenseProductId: Number(metadata.productId),
-          seatCount: Number(metadata.seatCount),
-          source: 'Stripe',
-          stripeSessionId: session.id,
-          paymentMethod: 'stripe',
-          paymentStatus: 'paid',
-          amountCents: session.amount_total,
-        });
+        // Variable-seat or trial flow from licenses.html — look up the product
+        // to decide whether this is a trial (single seat) or group license.
+        const [lpRows] = await pool.query(
+          'SELECT id, name, price_cents, is_trial, trial_days, trial_lesson_limit FROM license_products WHERE id = ?',
+          [Number(metadata.productId)]
+        );
+        const lp = lpRows[0];
+        if (lp && lp.is_trial) {
+          await createPurchase(contactId, {
+            productType: 'single_license',
+            licenseProductId: lp.id,
+            seatCount: 1,
+            source: 'Stripe',
+            stripeSessionId: session.id,
+            paymentMethod: 'stripe',
+            paymentStatus: 'paid',
+            amountCents: session.amount_total,
+            trialExpirationDate: daysFromNow(lp.trial_days || 30),
+            trialLessonLimit: lp.trial_lesson_limit || 4,
+            conversionCreditCents: lp.price_cents,
+          });
+          const firstName = (metadata.email || '').split('@')[0].split('.')[0] || 'there';
+          let setPasswordUrl = '';
+          try { setPasswordUrl = await createSetPasswordUrl(metadata.email, firstName, ''); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+          await fireAutomation('trial_purchase_thank_you', {
+            to: metadata.email,
+            mergeFields: { firstName, setPasswordUrl, trialDays: String(lp.trial_days || 30), lessonLimit: String(lp.trial_lesson_limit || 4) },
+          });
+        } else {
+          await createPurchase(contactId, {
+            productType: 'group_license',
+            licenseProductId: Number(metadata.productId),
+            seatCount: Number(metadata.seatCount),
+            source: 'Stripe',
+            stripeSessionId: session.id,
+            paymentMethod: 'stripe',
+            paymentStatus: 'paid',
+            amountCents: session.amount_total,
+          });
+        }
       } else if (metadata.productType) {
         // Legacy single-item flow from licenses.html.
         await createPurchase(contactId, {

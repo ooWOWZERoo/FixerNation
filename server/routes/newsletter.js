@@ -353,6 +353,12 @@ async function attachPurchaseDetails(purchases) {
     licenseStatus: p.license_status || 'active',
     effectiveDate: p.effective_date ? new Date(p.effective_date).toISOString().slice(0, 10) : null,
     expirationDate: p.expiration_date ? new Date(p.expiration_date).toISOString().slice(0, 10) : null,
+    isTrial: !!(p.trial_lesson_limit),
+    trialExpirationDate: p.trial_expiration_date ? new Date(p.trial_expiration_date).toISOString() : null,
+    trialLessonLimit: p.trial_lesson_limit || null,
+    conversionCreditCents: p.conversion_credit_cents || null,
+    conversionCreditRedeemedAt: p.conversion_credit_redeemed_at ? new Date(p.conversion_credit_redeemed_at).toISOString() : null,
+    convertedToPurchaseId: p.converted_to_purchase_id || null,
     seats: seatsByPurchase[p.id] || [],
   }));
 }
@@ -360,22 +366,24 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, membership_plan_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, membership_plan_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        contactId, productType, productType === 'book' ? bookId : null, productType === 'group_license' ? licenseProductId || null : null,
+        contactId, productType, productType === 'book' ? bookId : null,
+        (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null,
         productType === 'membership' ? membershipPlanId || null : null,
         finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null, stripeInvoiceId || null,
         productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null,
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
         invoiceId || null, amountCents === undefined ? null : amountCents,
+        trialExpirationDate || null, trialLessonLimit || null, conversionCreditCents || null,
       ]
     );
     const purchaseId = result.insertId;

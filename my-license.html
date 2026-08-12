@@ -35,6 +35,10 @@
   .account-nav a.active{background:var(--teal-dark); color:#fff; box-shadow:none;}
   .back-link{display:inline-block; margin-top:6px; font-size:13.5px; font-weight:600; color:var(--teal-dark); text-decoration:none;}
   .back-link:hover{text-decoration:underline;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 22px; border-radius:999px; font-weight:700; font-size:14px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-primary:disabled{opacity:0.55; cursor:not-allowed; transform:none;}
 </style>
 </head>
 <body>
@@ -92,6 +96,37 @@ async function loadData() {
   render(data.purchases || []);
 }
 
+function renderTrialCard(p) {
+  const now = Date.now();
+  const expiry = p.trialExpirationDate ? new Date(p.trialExpirationDate) : null;
+  const isConverted = !!p.conversionCreditRedeemedAt;
+  const isExpired = !isConverted && expiry && expiry < now;
+  const daysLeft = expiry && !isConverted && !isExpired ? Math.ceil((expiry - now) / 86400000) : 0;
+
+  let statusBadge, ctaHtml;
+  if (isConverted) {
+    statusBadge = '<span style="background:#d1fae5;color:#065f46;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:8px;">Converted</span>';
+    ctaHtml = '';
+  } else if (isExpired) {
+    statusBadge = '<span style="background:#fee2e2;color:#991b1b;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:8px;">Expired</span>';
+    ctaHtml = `<button class="btn btn-primary" style="margin-top:14px;" onclick="openConvertModal(${p.id}, ${(p.conversionCreditCents || 0) / 100})">Convert to Annual Access</button>`;
+  } else {
+    statusBadge = `<span style="background:#fef9c3;color:#713f12;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:8px;">${daysLeft} day${daysLeft !== 1 ? 's' : ''} left</span>`;
+    ctaHtml = `<button class="btn btn-primary" style="margin-top:14px;" onclick="openConvertModal(${p.id}, ${(p.conversionCreditCents || 0) / 100})">Convert to Annual Access</button>`;
+  }
+
+  const lessonBadge = p.trialLessonLimit
+    ? `<span style="background:#e0f2fe;color:#075985;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:6px;">Up to ${p.trialLessonLimit} lessons</span>`
+    : '';
+
+  return `<div class="card" style="border:2px solid var(--coral);">
+    <div class="card-title">🎒 30-Day Trial${statusBadge}${lessonBadge}</div>
+    <div class="card-sub">Started ${formatDate(p.purchasedAt)}${expiry ? ' · Expires ' + formatDate(p.trialExpirationDate) : ''}</div>
+    ${!isConverted && p.conversionCreditCents ? '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:6px;">$' + (p.conversionCreditCents / 100).toFixed(2) + ' conversion credit available toward an annual license.</div>' : ''}
+    ${ctaHtml}
+  </div>`;
+}
+
 function render(purchases) {
   const wrap = document.getElementById('accountWrap');
   const licenses = purchases.filter(p => p.productType === 'single_license' || p.productType === 'group_license');
@@ -102,6 +137,7 @@ function render(purchases) {
   wrap.innerHTML = licenses.map(p => {
     const dateLabel = formatDate(p.purchasedAt);
     if (p.productType === 'single_license') {
+      if (p.isTrial) return renderTrialCard(p);
       const seat = p.seats && p.seats[0];
       const status = seat && seat.status === 'registered' ? 'Active' : 'Pending activation';
       return `<div class="card">
@@ -116,6 +152,63 @@ function render(purchases) {
       <a href="school-admin-dashboard.html" style="display:inline-block;margin-top:12px;padding:9px 20px;border-radius:999px;background:var(--teal-dark);color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">Manage Seats →</a>
     </div>`;
   }).join('');
+}
+
+let _trialPurchaseId = null;
+
+async function openConvertModal(purchaseId, creditAmt) {
+  _trialPurchaseId = purchaseId;
+  document.getElementById('convertCredit').dataset.credit = creditAmt || 74.50;
+  const modal = document.getElementById('convertModal');
+  const productSelect = document.getElementById('convertProductSelect');
+  const seatRow = document.getElementById('convertSeatRow');
+  const totalEl = document.getElementById('convertTotal');
+  productSelect.innerHTML = '<option value="">Loading…</option>';
+  modal.style.display = 'flex';
+
+  const r = await fetch('/api/license-products');
+  const data = r.ok ? await r.json() : {};
+  const products = (data.licenseProducts || []).filter(p => p.active && p.variableSeats && !p.isTrial && !p.callForQuote);
+  productSelect.innerHTML = products.map(p => `<option value="${p.id}" data-price="${p.price}" data-variable="${p.variableSeats}">${p.name} — $${p.price.toFixed(2)}/seat</option>`).join('');
+  updateConvertTotal();
+}
+
+function updateConvertTotal() {
+  const productSelect = document.getElementById('convertProductSelect');
+  const seatInput = document.getElementById('convertSeats');
+  const totalEl = document.getElementById('convertTotal');
+  const creditEl = document.getElementById('convertCredit');
+  const selected = productSelect.options[productSelect.selectedIndex];
+  if (!selected || !selected.value) { totalEl.textContent = ''; return; }
+  const pricePerSeat = parseFloat(selected.dataset.price) || 0;
+  const seats = Math.max(1, Number(seatInput.value) || 1);
+  const credit = parseFloat(creditEl.dataset.credit) || 0;
+  const total = Math.max(0, pricePerSeat * seats - credit);
+  totalEl.textContent = `Total after $${credit.toFixed(2)} credit: $${total.toFixed(2)}`;
+}
+
+async function submitConversion() {
+  const productSelect = document.getElementById('convertProductSelect');
+  const seatInput = document.getElementById('convertSeats');
+  const btn = document.getElementById('convertBtn');
+  const targetProductId = Number(productSelect.value);
+  if (!targetProductId) { alert('Select a license plan first.'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Redirecting…';
+  const r = await fetch('/api/checkout/convert-trial', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ targetProductId, seatCount: Math.max(1, Number(seatInput.value) || 1) }),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    btn.disabled = false;
+    btn.textContent = 'Proceed to Checkout';
+    alert(result.error || 'Could not start checkout');
+    return;
+  }
+  window.location.href = result.url;
 }
 
 async function checkLessonPlanBanner() {
@@ -133,6 +226,28 @@ async function checkLessonPlanBanner() {
 loadData();
 checkLessonPlanBanner();
 </script>
+
+<!-- Convert Trial Modal -->
+<div id="convertModal" style="display:none;position:fixed;inset:0;background:rgba(14,55,51,0.55);align-items:center;justify-content:center;z-index:400;padding:24px;">
+  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:32px;box-shadow:0 40px 80px -20px rgba(0,0,0,0.4);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);">Convert to Annual Access</h2>
+      <button onclick="document.getElementById('convertModal').style.display='none'" style="border:none;background:#F3EBDD;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;">✕</button>
+    </div>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:20px;">Your $74.50 trial payment applies as a credit toward the plan you choose.</p>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:var(--ink-soft);">License Plan</label>
+      <select id="convertProductSelect" onchange="updateConvertTotal()" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-size:14px;"></select>
+    </div>
+    <div id="convertSeatRow" style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:var(--ink-soft);">Number of Seats</label>
+      <input type="number" id="convertSeats" min="1" value="1" oninput="updateConvertTotal()" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-size:14px;">
+    </div>
+    <div id="convertTotal" style="font-size:13.5px;font-weight:700;color:var(--teal-dark);margin-bottom:18px;min-height:20px;"></div>
+    <span id="convertCredit" data-credit="74.50" style="display:none;"></span>
+    <button id="convertBtn" onclick="submitConversion()" class="btn btn-primary" style="width:100%;">Proceed to Checkout</button>
+  </div>
+</div>
 
 <footer></footer>
 <script src="footer.js?v=1"></script>

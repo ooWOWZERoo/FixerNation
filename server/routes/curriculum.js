@@ -67,15 +67,100 @@ function toSqlLike(q) {
 // curriculum unless the requester is an admin or a site_user with an active
 // license seat. Everything else (theme, series, overview, objectives,
 // materials list, resource labels, video) stays visible as a public preview.
-async function gateAccess(curricula, req) {
+async function gateAccess(curricula, req, opts = {}) {
   const isAdmin = !!getAuthUser(req);
   const siteUser = isAdmin ? null : await getSiteUser(req);
-  const licensed = isAdmin || await hasActiveLicense(siteUser && siteUser.id);
+
+  if (isAdmin) {
+    return curricula.map(c => ({ ...c, access: { licensed: true, loggedIn: true } }));
+  }
+
+  const siteUserId = siteUser && siteUser.id;
+  const licensed = await hasActiveLicense(siteUserId);
+
+  if (licensed) {
+    // Check whether the active license is a trial
+    const [trialRows] = siteUserId ? await pool.query(
+      `SELECT p.id, p.trial_lesson_limit
+       FROM license_seats ls
+       JOIN purchases p ON p.id = ls.purchase_id
+       WHERE ls.registered_site_user_id = ?
+         AND ls.status = 'registered'
+         AND p.trial_lesson_limit IS NOT NULL
+         AND p.license_status = 'active'
+       LIMIT 1`,
+      [siteUserId]
+    ) : [[]];
+
+    const trial = trialRows[0] || null;
+
+    if (!trial) {
+      return curricula.map(c => ({ ...c, access: { licensed: true, loggedIn: true } }));
+    }
+
+    // Trial license — gate access per curriculum
+    const [accessedRows] = await pool.query(
+      'SELECT curriculum_id FROM trial_curriculum_accesses WHERE purchase_id = ?',
+      [trial.id]
+    );
+    const accessedIds = new Set(accessedRows.map(r => r.curriculum_id));
+    const limit = trial.trial_lesson_limit;
+
+    const results = [];
+    for (const c of curricula) {
+      const alreadyAccessed = accessedIds.has(c.id);
+      const usedCount = accessedIds.size;
+
+      if (alreadyAccessed) {
+        results.push({ ...c, access: { licensed: true, loggedIn: true, isTrial: true, trialUsed: usedCount, trialLimit: limit } });
+      } else if (opts.recordAccess && usedCount < limit) {
+        try {
+          await pool.query(
+            'INSERT IGNORE INTO trial_curriculum_accesses (purchase_id, curriculum_id) VALUES (?, ?)',
+            [trial.id, c.id]
+          );
+          accessedIds.add(c.id);
+        } catch (e) { console.error('trial_curriculum_accesses insert:', e.message); }
+        results.push({ ...c, access: { licensed: true, loggedIn: true, isTrial: true, trialUsed: usedCount + 1, trialLimit: limit } });
+      } else {
+        results.push({
+          ...c,
+          documents: [],
+          quiz: [],
+          access: {
+            licensed: false,
+            loggedIn: true,
+            isTrial: true,
+            trialUsed: usedCount,
+            trialLimit: limit,
+            reason: usedCount >= limit ? 'trial_limit' : 'trial_preview',
+          },
+        });
+      }
+    }
+    return results;
+  }
+
+  // Not licensed — check for an expired/converted trial to surface a specific reason
+  let reason;
+  if (siteUserId) {
+    const [expiredRows] = await pool.query(
+      `SELECT 1 FROM license_seats ls
+       JOIN purchases p ON p.id = ls.purchase_id
+       WHERE ls.registered_site_user_id = ?
+         AND p.trial_lesson_limit IS NOT NULL
+         AND p.license_status IN ('expired', 'converted')
+       LIMIT 1`,
+      [siteUserId]
+    );
+    if (expiredRows.length) reason = 'trial_expired';
+  }
+
   return curricula.map(c => ({
     ...c,
-    documents: licensed ? c.documents : [],
-    quiz: licensed ? c.quiz : [],
-    access: { licensed, loggedIn: isAdmin || !!siteUser },
+    documents: [],
+    quiz: [],
+    access: { licensed: false, loggedIn: !!siteUser, ...(reason ? { reason } : {}) },
   }));
 }
 
@@ -308,7 +393,7 @@ router.get('/:id', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM curricula WHERE id = ?', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Curriculum not found' });
   const [curriculum] = await attachChildren(rows);
-  const [gated] = await gateAccess([serialize(curriculum)], req);
+  const [gated] = await gateAccess([serialize(curriculum)], req, { recordAccess: true });
   res.json({ curriculum: gated });
 });
 

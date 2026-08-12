@@ -145,19 +145,53 @@ async function buy(productId, pricePerSeat, btn) {
   window.location.href = result.url;
 }
 
+async function buyTrial(productId, btn) {
+  const email = document.getElementById('buyerEmail').value.trim();
+  if (!email) { toast('Enter your email first'); return; }
+  btn.disabled = true;
+  const r = await fetch('/api/checkout/create-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId, seatCount: 1, email }),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    btn.disabled = false;
+    toast(result.error || 'Could not start checkout');
+    return;
+  }
+  window.location.href = result.url;
+}
+
 async function loadPlans() {
   const container = document.getElementById('plansContainer');
   try {
     const r = await fetch('/api/license-products');
     const data = r.ok ? await r.json() : {};
-    const products = (data.licenseProducts || []).filter(p => p.variableSeats && p.active);
+    const allActive = (data.licenseProducts || []).filter(p => p.active);
+    const products = allActive.filter(p => p.variableSeats && !p.isTrial);
+    const trialProducts = allActive.filter(p => p.isTrial);
 
-    if (!products.length) {
+    if (!products.length && !trialProducts.length) {
       container.innerHTML = '<div class="plan-card" style="text-align:center;color:var(--ink-soft);">No license plans available at this time. Please check back soon.</div>';
       return;
     }
 
-    container.innerHTML = products.map(p => {
+    const trialHtml = trialProducts.map(p => {
+      const desc = p.description ? '<p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">' + p.description + '</p>' : '';
+      const footer = p.footerNote ? '<p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">' + p.footerNote + '</p>' : '';
+      return `
+        <div class="plan-card" style="border:2px solid var(--coral);position:relative;">
+          <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--coral);color:#fff;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;letter-spacing:0.06em;white-space:nowrap;">TRY BEFORE YOU BUY</div>
+          <h3>${p.name}</h3>
+          <div class="price">$${p.price.toFixed(2)}</div>
+          ${desc}
+          <button class="btn btn-primary" style="width:100%;" onclick="buyTrial(${p.id}, this)">Try It Now</button>
+          ${footer}
+        </div>`;
+    }).join('');
+
+    const regularHtml = products.map(p => {
       const bullets = p.bulletPoints && p.bulletPoints.length
         ? '<ul>' + p.bulletPoints.map(b => '<li>' + b + '</li>').join('') + '</ul>'
         : '';
@@ -179,6 +213,8 @@ async function loadPlans() {
           ${footer}
         </div>`;
     }).join('');
+
+    container.innerHTML = trialHtml + regularHtml;
   } catch (e) {
     container.innerHTML = '<div class="plan-card" style="text-align:center;color:var(--ink-soft);">Could not load license plans. Please refresh and try again.</div>';
   }

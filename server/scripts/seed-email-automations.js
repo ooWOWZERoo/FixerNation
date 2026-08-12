@@ -71,6 +71,27 @@ const AUTOMATIONS = [
     body: "Hi {{firstName}},\n\nYour {{planName}} school license for {{schoolDomain}} expired on {{expirationDate}}. Teacher access has been suspended.\n\nTo restore access, renew your license at fixernationeducation.com or reply to this email.\n\nWarmly,\nThe Fixer Nation Education Team",
     reminderDaysBefore: null,
   },
+  {
+    eventKey: 'trial_purchase_thank_you',
+    label: 'Trial — Purchase Thank You',
+    subject: "Your 30-day FNE trial is ready",
+    body: "Hi {{firstName}},\n\nYou're all set — your 30-day FNE trial starts today. You can explore up to {{lessonLimit}} full lessons before your trial ends.\n\nCreate your account password to get started:\n{{setPasswordUrl}}\n\nIf you decide to convert to an annual license within 30 days, your $74.50 trial payment applies as a credit toward your first year.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
+    eventKey: 'trial_expired',
+    label: 'Trial — Expired',
+    subject: 'Your FNE trial has ended',
+    body: "Hi {{firstName}},\n\nYour 30-day FNE trial has ended and your lesson access has been paused.\n\nIf you're ready to bring FNE to your classroom, your $74.50 trial payment applies as a credit toward an annual license — just log in to your account and choose \"Convert to Annual Access\" before the credit expires.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
+    eventKey: 'trial_converted',
+    label: 'Trial — Converted to Annual',
+    subject: "You're all set — your annual FNE license is active",
+    body: "Hi {{firstName}},\n\nWelcome to full FNE access. Your annual license is active and your $74.50 trial credit has been applied.\n\nLog in any time to explore the full curriculum library.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
 ];
 
 async function main() {

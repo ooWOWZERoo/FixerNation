@@ -21,6 +21,9 @@ function serialize(row) {
     createdAt: row.created_at,
     addonRate: row.addon_rate_cents ? Number(row.addon_rate_cents) / 100 : null,
     isPilot: row.name === '90-Day Classroom Pilot',
+    isTrial: !!row.is_trial,
+    trialDays: row.trial_days || null,
+    trialLessonLimit: row.trial_lesson_limit || null,
   };
 }
 
