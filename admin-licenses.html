@@ -311,10 +311,29 @@ async function searchByDomain() {
   wrap.innerHTML = purchases.map(licenseCard).join('');
 }
 
+const LICENSE_STATUS_LABELS = {
+  active: 'Active', pending: 'Pending PO', scheduled: 'Scheduled',
+  expiring_soon: 'Expiring Soon', expired: 'Expired', suspended: 'Suspended', cancelled: 'Cancelled',
+};
+const LICENSE_STATUS_PILL = {
+  active: 'a-pill-success', pending: 'a-pill-neutral', scheduled: 'a-pill-neutral',
+  expiring_soon: 'a-pill-warning', expired: 'a-pill-danger', suspended: 'a-pill-danger', cancelled: 'a-pill-danger',
+};
+
 function licenseCard(p) {
   const registered = p.seats.filter(s => s.status === 'registered');
   const available = p.seatCount - registered.length;
   const buyerLine = p.buyer ? `${p.buyer.name || p.buyer.email} (${p.buyer.email})` : 'Unknown buyer';
+  const status = p.licenseStatus || 'active';
+  const statusPill = LICENSE_STATUS_PILL[status] || 'a-pill-neutral';
+  const statusLabel = LICENSE_STATUS_LABELS[status] || status;
+  const expiryBadge = p.expirationDate
+    ? `<span style="font-size:12px; color:var(--a-text-soft); font-weight:500;">Expires ${p.expirationDate}</span>`
+    : '';
+
+  const statusOptions = Object.entries(LICENSE_STATUS_LABELS)
+    .map(([v, l]) => `<option value="${v}" ${status === v ? 'selected' : ''}>${l}</option>`)
+    .join('');
 
   const rosterRows = registered.length
     ? registered.map(s => `
@@ -328,12 +347,16 @@ function licenseCard(p) {
           <td>${s.registeredSiteUserId ? `<button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="sendTeacherPasswordReset(${s.registeredSiteUserId}, '${s.invitedEmail.replace(/'/g, "\\'")}')">🔑 Reset Pwd</button>` : ''}</td>
         </tr>
       `).join('')
-    : `<tr><td colspan="6" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
+    : `<tr><td colspan="7" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
 
   return `
     <div class="a-card" style="margin-bottom:20px;">
       <div class="a-card-head">
-        <h2>🏫 ${p.schoolDomain}</h2>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h2 style="margin:0;">🏫 ${p.schoolDomain}</h2>
+          <span class="a-pill ${statusPill}">${statusLabel}</span>
+          ${expiryBadge}
+        </div>
         <button type="button" class="a-btn a-btn-danger" onclick="deleteSchool('${p.schoolDomain}', ${registered.length})">🗑️ Delete School</button>
       </div>
       <div class="a-note" style="margin-bottom:16px;">Purchased by ${buyerLine} · ${fnFormatDate(p.purchasedAt)}${p.notes ? ' · ' + p.notes : ''}</div>
@@ -344,12 +367,31 @@ function licenseCard(p) {
         <div class="a-stat-card"><div class="label">Available</div><div class="value">${available}</div></div>
       </div>
 
-      <div style="display:flex; align-items:flex-end; gap:10px; margin-bottom:20px;">
+      <div style="display:flex; align-items:flex-end; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
         <div class="a-field" style="margin-bottom:0;">
           <label>Set Available Seats</label>
           <input type="number" id="availableInput_${p.id}" min="0" value="${available}" style="width:120px;">
         </div>
         <button type="button" class="a-btn a-btn-primary" onclick="updateAvailable(${p.id}, ${registered.length})">Save</button>
+      </div>
+
+      <div style="border-top:1px solid var(--a-border); padding-top:16px; margin-bottom:20px;">
+        <h3 style="font-size:13px; font-weight:700; color:var(--a-text-soft); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;">License Settings</h3>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="a-field" style="margin-bottom:0; min-width:140px;">
+            <label>Status</label>
+            <select id="licenseStatusSel_${p.id}" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; background:var(--a-surface); font-family:inherit;">${statusOptions}</select>
+          </div>
+          <div class="a-field" style="margin-bottom:0;">
+            <label>Effective Date</label>
+            <input type="date" id="effectiveDateInput_${p.id}" value="${p.effectiveDate || ''}" style="padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px;">
+          </div>
+          <div class="a-field" style="margin-bottom:0;">
+            <label>Expiration Date</label>
+            <input type="date" id="expirationDateInput_${p.id}" value="${p.expirationDate || ''}" style="padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px;">
+          </div>
+          <button type="button" class="a-btn a-btn-primary" onclick="saveLicenseDates(${p.id})">Save</button>
+        </div>
       </div>
 
       <h3 style="font-size:14px; margin-bottom:10px;">Registered Teachers</h3>
@@ -359,6 +401,30 @@ function licenseCard(p) {
       </table>
     </div>
   `;
+}
+
+async function saveLicenseDates(purchaseId) {
+  const licenseStatus = document.getElementById(`licenseStatusSel_${purchaseId}`).value;
+  const effectiveDate = document.getElementById(`effectiveDateInput_${purchaseId}`).value || null;
+  const expirationDate = document.getElementById(`expirationDateInput_${purchaseId}`).value || null;
+
+  const r = await fetch(`/api/newsletter/purchases/${purchaseId}/license-dates`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ licenseStatus, effectiveDate, expirationDate }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(data.error || 'Could not save license settings'); return; }
+
+  const saved = data.licenseStatus || licenseStatus;
+  if (saved !== licenseStatus) {
+    fnToast(`Saved — status set to "${LICENSE_STATUS_LABELS[saved] || saved}" (effective date is in the future)`);
+  } else {
+    fnToast('License settings saved');
+  }
+  searchByDomain();
 }
 
 async function updateAvailable(purchaseId, registeredCount) {

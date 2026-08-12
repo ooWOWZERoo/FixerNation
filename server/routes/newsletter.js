@@ -350,6 +350,9 @@ async function attachPurchaseDetails(purchases) {
     poNumber: p.po_number,
     invoiceId: p.invoice_id,
     amount: p.amount_cents === null ? null : Number(p.amount_cents) / 100,
+    licenseStatus: p.license_status || 'active',
+    effectiveDate: p.effective_date ? new Date(p.effective_date).toISOString().slice(0, 10) : null,
+    expirationDate: p.expiration_date ? new Date(p.expiration_date).toISOString().slice(0, 10) : null,
     seats: seatsByPurchase[p.id] || [],
   }));
 }
@@ -624,6 +627,42 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
   const [updatedRows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchase.id]);
   const [purchase2] = await attachPurchaseDetails(updatedRows);
   res.json({ purchase: purchase2 });
+});
+
+// Updates license lifecycle dates and status for a school license purchase.
+// Auto-promotes to 'scheduled' when an admin sets an active status but the
+// effective_date hasn't arrived yet — avoids access being granted too early.
+router.put('/purchases/:id/license-dates', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT id, product_type FROM purchases WHERE id = ?', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Purchase not found' });
+
+  const b = req.body || {};
+  const effectiveDate = b.effectiveDate || null;
+  const expirationDate = b.expirationDate || null;
+  let licenseStatus = b.licenseStatus || null;
+
+  if (effectiveDate && expirationDate && effectiveDate >= expirationDate) {
+    return res.status(400).json({ error: 'Effective date must be before expiration date' });
+  }
+
+  // If admin marks it active but effective_date is still in the future, schedule it instead
+  const today = new Date().toISOString().slice(0, 10);
+  if (licenseStatus === 'active' && effectiveDate && effectiveDate > today) {
+    licenseStatus = 'scheduled';
+  }
+
+  await pool.query(
+    'UPDATE purchases SET effective_date = ?, expiration_date = ?, license_status = ? WHERE id = ?',
+    [effectiveDate || null, expirationDate || null, licenseStatus, rows[0].id]
+  );
+
+  pool.query(
+    `INSERT INTO school_audit_log (actor_type, actor_id, action, entity_type, entity_id)
+     VALUES ('admin', ?, 'license_dates_updated', 'purchase', ?)`,
+    [req.session && req.session.userId ? req.session.userId : null, rows[0].id]
+  ).catch(e => console.error('audit log error:', e.message));
+
+  res.json({ ok: true, licenseStatus });
 });
 
 router.delete('/purchases/:id', requireAuth, async (req, res) => {
