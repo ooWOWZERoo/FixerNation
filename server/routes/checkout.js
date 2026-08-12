@@ -35,7 +35,7 @@ async function createSetPasswordUrl(email, firstName, lastName) {
       [firstName || '', lastName || '', email, placeholderHash]
     );
     userId = result.insertId;
-    // Auto-claim any pending license seat invited to this email — only for paid
+    // Auto-claim any pending license seat invited to this email — only for active
     // purchases; domain must match for group licenses (NULL school_domain = no constraint).
     await pool.query(
       `UPDATE license_seats ls
@@ -43,7 +43,8 @@ async function createSetPasswordUrl(email, firstName, lastName) {
        SET ls.status = 'registered', ls.registered_site_user_id = ?, ls.registered_at = NOW()
        WHERE ls.invited_email = ?
          AND ls.status = 'pending'
-         AND p.payment_status = 'paid'
+         AND p.license_status NOT IN ('pending', 'expired', 'cancelled', 'suspended')
+         AND (p.expiration_date IS NULL OR p.expiration_date >= CURDATE())
          AND (p.school_domain IS NULL OR LOWER(SUBSTRING_INDEX(?, '@', -1)) = LOWER(p.school_domain))`,
       [userId, email, email]
     );
@@ -319,6 +320,13 @@ router.post('/create-po-order', async (req, res) => {
     poNumber,
     invoiceId,
   });
+
+  // PO orders do not grant immediate access — license activates only after
+  // an admin marks the hard-copy PO received (POST /api/invoices/:id/po-received).
+  await pool.query(
+    "UPDATE purchases SET license_status = 'pending' WHERE invoice_id = ?",
+    [invoiceId]
+  );
 
   res.status(201).json({ ok: true, invoiceId, invoiceNumber });
 });

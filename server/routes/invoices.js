@@ -14,6 +14,8 @@ function serialize(row, contact) {
     contactId: row.contact_id,
     buyer: contact ? { name: contact.name, email: contact.email, company: contact.company } : null,
     poNumber: row.po_number,
+    paymentMethod: row.payment_method || null,
+    poReceivedDate: row.po_received_date || null,
     total: Number(row.total_cents) / 100,
     status: row.status,
     createdAt: row.created_at,
@@ -161,6 +163,56 @@ router.put('/:id', requireAuth, async (req, res) => {
       console.error('Invoice-paid automation failed:', err.message);
     }
   }
+
+  res.json({ ok: true });
+});
+
+// Mark hard-copy PO as received — activates the associated school license.
+// Separate from "Mark as Paid": PO receipt triggers access; payment tracks
+// the financial obligation independently.
+router.post('/:id/po-received', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT id, po_received_date, payment_method, status FROM invoices WHERE id = ?',
+    [req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Invoice not found' });
+  const inv = rows[0];
+  if (inv.payment_method && inv.payment_method !== 'po') {
+    return res.status(400).json({ error: 'This invoice is not a Purchase Order invoice' });
+  }
+  if (inv.po_received_date) {
+    return res.status(400).json({ error: 'PO already marked as received' });
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      'UPDATE invoices SET po_received_date = NOW() WHERE id = ?',
+      [req.params.id]
+    );
+    // Activate all purchases linked to this invoice and set effective_date if not already set
+    await connection.query(
+      `UPDATE purchases
+       SET license_status = 'active',
+           effective_date = COALESCE(effective_date, CURDATE())
+       WHERE invoice_id = ?`,
+      [req.params.id]
+    );
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+
+  // Audit log — best-effort, don't fail the request on a log error
+  pool.query(
+    `INSERT INTO school_audit_log (actor_type, actor_id, action, entity_type, entity_id)
+     VALUES ('admin', ?, 'po_received', 'invoice', ?)`,
+    [req.session && req.session.userId ? req.session.userId : null, req.params.id]
+  ).catch(e => console.error('audit log error:', e.message));
 
   res.json({ ok: true });
 });

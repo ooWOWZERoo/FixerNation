@@ -70,12 +70,16 @@
         var domain = school.schoolDomain ? esc(school.schoolDomain) : '';
         var plan = school.planName ? esc(school.planName) : '';
         var seats = school.seatCount ? school.seatCount + ' seats' : '';
-        if (domain || plan) {
-          infoEl.innerHTML =
-            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.35);margin-bottom:4px;">Your School</div>' +
-            (domain ? '<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:2px;">' + domain + '</div>' : '') +
-            ((plan || seats) ? '<div style="font-size:11.5px;color:rgba(255,255,255,.4);">' + [plan, seats].filter(Boolean).join(' · ') + '</div>' : '');
-        }
+        var adminEmail = data.email ? esc(data.email) : '';
+        var adminName = [data.firstName, data.lastName].filter(Boolean).map(esc).join(' ');
+        infoEl.innerHTML =
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.35);margin-bottom:4px;">Your School</div>' +
+          (domain ? '<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:2px;">' + domain + '</div>' : '') +
+          ((plan || seats) ? '<div style="font-size:11.5px;color:rgba(255,255,255,.4);margin-bottom:6px;">' + [plan, seats].filter(Boolean).join(' · ') + '</div>' : '') +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.35);margin-bottom:2px;margin-top:6px;">Administrator</div>' +
+          (adminName ? '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.65);margin-bottom:1px;">' + adminName + '</div>' : '') +
+          (adminEmail ? '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;word-break:break-all;">' + adminEmail + '</div>' : '') +
+          '<div style="font-size:10px;color:rgba(255,255,255,.3);font-style:italic;">School License Administrator</div>';
       }
 
       // Expose globally for page-level JS

@@ -190,7 +190,7 @@ function renderStatusBanner() {
   const status = params.get('checkout');
   const banner = document.getElementById('statusBanner');
   if (status === 'success') {
-    banner.innerHTML = `<div class="status-banner success">✅ Payment received! Sign up (or log in) on the site with the same email you just paid with, and your license will activate automatically.</div>`;
+    banner.innerHTML = `<div class="status-banner success">✅ Payment received! Create an account or log in with the email you checked out with to activate your license.<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap;"><button onclick="fnAuthOpenModal('signup')" style="padding:10px 22px;border-radius:999px;border:none;background:var(--coral);color:#fff;font-weight:700;font-size:13.5px;cursor:pointer;">Create Your Account</button><button onclick="fnAuthOpenModal('login')" style="padding:10px 22px;border-radius:999px;border:1.5px solid var(--teal);background:transparent;color:var(--teal-dark);font-weight:700;font-size:13.5px;cursor:pointer;width:auto;">Log In</button></div></div>`;
   } else if (status === 'cancelled') {
     banner.innerHTML = `<div class="status-banner cancelled">Checkout was cancelled — no charge was made.</div>`;
   }

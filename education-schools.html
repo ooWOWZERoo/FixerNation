@@ -335,6 +335,9 @@ document.getElementById('regCheckBtn').addEventListener('click', async function 
         const soloBtn = document.getElementById('regBuySoloBtn');
         soloBtn.textContent = 'Contact Us';
         soloBtn.onclick = function () { window.location.href = 'contact.html'; };
+      } else if (data.reason === 'license_pending') {
+        failMsg.textContent = 'Your school has a license order in progress. Your admin will let you know when teacher access is ready.';
+        document.getElementById('regNotifyAdminBtn').style.display = 'none';
       } else if (data.reason === 'no_plan') {
         failMsg.textContent = 'Your school\'s license exists but isn\'t active yet. Payment may be pending.';
       } else if (data.reason === 'no_seats') {

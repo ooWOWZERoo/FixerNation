@@ -104,7 +104,7 @@ function renderStatusBanner() {
   const status = params.get('checkout');
   const banner = document.getElementById('statusBanner');
   if (status === 'success') {
-    banner.innerHTML = `<div class="status-banner success">✅ Payment received! Sign up (or log in) on the site with the same email you checked out with, and any licenses will activate automatically.</div>`;
+    banner.innerHTML = `<div class="status-banner success">✅ Payment received! Create an account or log in with the email you checked out with to access your license.<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap;"><button onclick="fnAuthOpenModal('signup')" style="padding:10px 22px;border-radius:999px;border:none;background:var(--coral);color:#fff;font-weight:700;font-size:13.5px;cursor:pointer;">Create Your Account</button><button onclick="fnAuthOpenModal('login')" style="padding:10px 22px;border-radius:999px;border:1.5px solid var(--teal);background:transparent;color:var(--teal-dark);font-weight:700;font-size:13.5px;cursor:pointer;width:auto;">Log In</button></div></div>`;
     cartClear();
   } else if (status === 'cancelled') {
     banner.innerHTML = `<div class="status-banner cancelled">Checkout was cancelled — your cart is still here, no charge was made.</div>`;
@@ -177,14 +177,14 @@ function renderCart() {
       ${emailFieldHtml}
 
       <div class="checkout-options">
-        <button class="btn btn-primary" ${canCheckout ? '' : 'disabled'} onclick="checkoutWithStripe()">Pay by Card</button>
-        <button class="btn btn-outline" ${canCheckout ? '' : 'disabled'} onclick="togglePoForm()">Pay by Purchase Order</button>
+        <button class="btn btn-primary" ${canCheckout ? '' : 'disabled'} onclick="togglePoForm()">Pay by Purchase Order</button>
+        <button class="btn btn-outline" ${canCheckout ? '' : 'disabled'} onclick="checkoutWithStripe()">Pay by Card</button>
       </div>
 
       <div class="po-form" id="poForm">
         <div class="a-field"><label>Purchase Order Number</label><input type="text" id="poNumber" placeholder="PO-12345"></div>
         <button class="btn btn-primary" onclick="checkoutWithPo()">Submit Purchase Order</button>
-        <div class="note" style="font-size:12.5px; color:var(--ink-soft); margin-top:8px;">Your licenses activate immediately — payment can follow through your school's normal PO process. We'll follow up on invoicing.</div>
+        <div class="note" style="font-size:12.5px; color:var(--ink-soft); margin-top:8px;">Submit your order now. Licenses activate once we receive your hard-copy PO from your purchasing department.</div>
       </div>
     </div>
   `;
@@ -243,7 +243,7 @@ async function checkoutWithPo() {
   if (!r.ok) { toast(result.error || 'Could not submit Purchase Order'); return; }
 
   cartClear();
-  document.getElementById('statusBanner').innerHTML = `<div class="status-banner success">✅ Purchase Order received! Your licenses are active now — sign up (or log in) with the same email to manage them. We'll follow up about invoicing.</div>`;
+  document.getElementById('statusBanner').innerHTML = `<div class="status-banner success">Purchase Order submitted. Your licenses will activate once we receive your hard-copy PO. We'll reach out with next steps.<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;"><button onclick="fnAuthOpenModal('login')" style="padding:10px 22px;border-radius:999px;border:none;background:var(--coral);color:#fff;font-weight:700;font-size:13.5px;cursor:pointer;">Log In to Track Your Order</button></div></div>`;
   renderCart();
 }
 

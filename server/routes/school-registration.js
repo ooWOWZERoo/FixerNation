@@ -20,12 +20,22 @@ router.post('/check', async (req, res) => {
   const domain = domainFromEmail(email);
   if (!domain) return res.status(400).json({ error: 'Invalid email address' });
 
-  // Find the most recent group_license purchase for this domain
+  // Find the most relevant group_license purchase for this domain —
+  // prefer active licenses first, then expiring-soon, then scheduled,
+  // then any other status (pending/expired). Most recent within each tier.
   const [[schoolPurchase]] = await pool.query(
-    `SELECT id, seat_count, payment_status, contact_id
+    `SELECT id, seat_count, payment_status, license_status, contact_id
      FROM purchases
      WHERE product_type = 'group_license' AND school_domain = ?
-     ORDER BY purchased_at DESC
+     ORDER BY
+       CASE license_status
+         WHEN 'active'        THEN 0
+         WHEN 'expiring_soon' THEN 1
+         WHEN 'scheduled'     THEN 2
+         WHEN 'pending'       THEN 3
+         ELSE 4
+       END,
+       purchased_at DESC
      LIMIT 1`,
     [domain]
   );
@@ -34,7 +44,17 @@ router.post('/check', async (req, res) => {
     return res.json({ eligible: false, reason: 'no_school' });
   }
 
-  if (schoolPurchase.payment_status !== 'paid') {
+  // PO submitted but hard-copy not yet received by FNE — license inactive
+  if (schoolPurchase.license_status === 'pending') {
+    return res.json({
+      eligible: false,
+      reason: 'license_pending',
+      purchaseId: schoolPurchase.id,
+      adminContactId: schoolPurchase.contact_id,
+    });
+  }
+
+  if (!['active', 'expiring_soon'].includes(schoolPurchase.license_status)) {
     return res.json({
       eligible: false,
       reason: 'no_plan',
