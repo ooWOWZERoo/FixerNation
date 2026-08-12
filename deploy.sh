@@ -25,7 +25,7 @@ echo "  PROJECT: $PROJECT"
 echo "  DIR:     $(pwd)"
 echo "========================================="
 echo ""
-read -p "Deploy this project on this server? (y/N) " confirm
+read -p "Deploy this project on this server? (y/N) " confirm < /dev/tty
 [[ "$confirm" == "y" || "$confirm" == "Y" ]] || { echo "Aborted."; exit 0; }
 
 REPO=~/repositories/fixernation
