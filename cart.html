@@ -127,7 +127,7 @@ function renderCart() {
   const wrap = document.getElementById('cartWrap');
 
   if (!items.length) {
-    wrap.innerHTML = `<div class="empty-state">Your cart is empty. Browse <a href="books.html" style="color:var(--coral-dark); font-weight:700;">books</a> or <a href="education-portal.html" style="color:var(--coral-dark); font-weight:700;">school license plans</a> to get started.</div>`;
+    wrap.innerHTML = `<div class="empty-state">Your cart is empty. Browse <a href="education-portal.html" style="color:var(--coral-dark); font-weight:700;">school license plans</a> to get started.</div>`;
     return;
   }
 
@@ -167,7 +167,7 @@ function renderCart() {
     ? `<div class="a-field"><label>Your Email (School Buyer)</label><input type="email" id="checkoutEmail" placeholder="you@school.org"></div>`
     : (siteAuthState.loggedIn
       ? `<div class="a-field"><label>Your Email</label><div style="padding:11px 14px; border-radius:10px; border:1px solid var(--border); font-size:14px; background:var(--cream-soft); color:var(--ink-soft);">${siteAuthState.email} (from your account)</div></div>`
-      : `<div class="status-banner cancelled">Please <a href="#" onclick="fnAuthOpenModal('login'); return false;" style="color:var(--coral-dark); font-weight:700;">log in</a> or <a href="#" onclick="fnAuthOpenModal('signup'); return false;" style="color:var(--coral-dark); font-weight:700;">sign up</a> to check out — book purchases use your account email.</div>`);
+      : `<div class="status-banner cancelled">Please <a href="#" onclick="fnAuthOpenModal('login'); return false;" style="color:var(--coral-dark); font-weight:700;">log in</a> or <a href="#" onclick="fnAuthOpenModal('signup'); return false;" style="color:var(--coral-dark); font-weight:700;">sign up</a> to check out.</div>`);
 
   wrap.innerHTML = `
     ${itemsHtml}
