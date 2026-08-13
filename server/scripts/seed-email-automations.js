@@ -92,6 +92,13 @@ const AUTOMATIONS = [
     body: "Hi {{firstName}},\n\nWelcome to full FNE access. Your annual license is active and your $74.50 trial credit has been applied.\n\nLog in any time to explore the full curriculum library.\n\nWarmly,\nThe Fixer Nation Education Team",
     reminderDaysBefore: null,
   },
+  {
+    eventKey: 'quote_accepted',
+    label: 'Quote Accepted — School Onboarding',
+    subject: "Welcome to Fixer Nation Education — let's get your school set up",
+    body: "Hi {{firstName}},\n\nYour Fixer Nation Education license for {{school}} is confirmed. Here's what happens next:\n\n1. Set up your School License Administrator account at the link below.\n2. Once you're in, you can invite your teachers directly from the School Admin portal.\n3. Teachers accept their invitation and get immediate access to the lesson library.\n\nGet started here: {{setupUrl}}\n\nIf you'd rather have someone else manage the account, just forward this email and have them use the same link.\n\nWe're glad to have {{school}} on board.\n\nFixer Nation Education",
+    reminderDaysBefore: null,
+  },
 ];
 
 async function main() {

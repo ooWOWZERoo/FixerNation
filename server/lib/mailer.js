@@ -268,20 +268,31 @@ function renderSectionPlain(text) {
   return text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
 }
 
-async function sendQuoteEmail({ to, firstName, lastName, school, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, prorationFactor, termYears, discountPct, contentSections }) {
+async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, termYears, discountPct, quoteValidUntil, acceptUrl, contentSections }) {
   const name = [firstName, lastName].filter(Boolean).join(' ') || 'there';
   const total = `$${Number(amountDollars).toFixed(2)}`;
   const fromAddr = fromEmail ? `"Fixer Nation Education" <${fromEmail}>` : systemFromAddress();
+  const subject = quoteNumber
+    ? `Your Fixer Nation Education License Quote #${quoteNumber}`
+    : `Your Fixer Nation Education License Quote`;
+
+  // Format valid-until text
+  let validUntilText = 'This quote is valid for 30 days.';
+  let validUntilHtml = 'This quote is valid for 30 days.';
+  if (quoteValidUntil) {
+    const d = new Date(String(quoteValidUntil) + 'T00:00');
+    const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    validUntilText = `This quote is valid until ${formatted}.`;
+    validUntilHtml = `This quote is valid until ${formatted}.`;
+  }
 
   // Build itemized rows when breakdown data is present
-  const hasBreakdown = addonSeats != null && prorationFactor != null && termYears != null;
+  const hasBreakdown = addonSeats != null && termYears != null;
 
   let htmlRows = '';
   let textLines = '';
 
   if (hasBreakdown) {
-    const basePrice = Number(amountDollars); // recalculate from components if possible
-    const pct = Number(prorationFactor) || 1;
     const years = Number(termYears) || 1;
     const disc = Number(discountPct) || 0;
     const addOn = Number(addonSeats) || 0;
@@ -292,7 +303,6 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
 
     htmlRows += row(`${productName} (${seats} seat${seats !== 1 ? 's' : ''})`, `See total below`);
     if (addOn > 0) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, `included`);
-    if (pct < 1)   htmlRows += row(`School-year window`, `${Math.round(pct * 100)}% of full year`);
     if (years > 1) htmlRows += row(`${years}-year term`, `included`);
     if (disc > 0)  htmlRows += row(`Multi-year discount`, `${disc}% off`);
     htmlRows += `<tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;border-top:2px solid #d1d5db;">Total</td><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;text-align:right;border-top:2px solid #d1d5db;">${total}</td></tr>`;
@@ -300,7 +310,6 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
     textLines = [
       `  ${productName} (${seats} seat${seats !== 1 ? 's' : ''})`,
       addOn > 0 ? `  + ${addOn} added seat${addOn !== 1 ? 's' : ''}` : '',
-      pct < 1   ? `  School-year window: ${Math.round(pct * 100)}% of full year` : '',
       years > 1 ? `  ${years}-year term` : '',
       disc > 0  ? `  Multi-year discount: ${disc}% off` : '',
       `  Total: ${total}`,
@@ -333,29 +342,39 @@ async function sendQuoteEmail({ to, firstName, lastName, school, productName, se
     });
   }
 
+  const acceptCtaHtml = acceptUrl ? `
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${acceptUrl}" style="display:inline-block;background:#F26B4D;color:#fff;font-weight:700;padding:14px 32px;border-radius:999px;text-decoration:none;font-size:15px;">Accept Quote</a>
+    </div>
+    <p style="font-size:12px;color:#9ca3af;text-align:center;">${validUntilHtml} Clicking Accept Quote takes you to our secure payment page.</p>` : `<p style="font-size:13px;color:#6b7280;">${validUntilHtml} To move forward or ask any questions, just reply to this email.</p>`;
+
+  const acceptCtaText = acceptUrl
+    ? `Accept this quote: ${acceptUrl}\n\n${validUntilText}`
+    : validUntilText;
+
   await getTransporter().sendMail({
     from: fromAddr,
     to,
     replyTo: replyTo || undefined,
-    subject: `Your Fixer Nation Education License Quote`,
+    subject,
     text: [
       `Hi ${name},`,
       ``,
       `Thank you for your interest in Fixer Nation Education. Here is the quote for ${school || 'your school'}:`,
+      sectionsText,
       ``,
       textLines,
       ``,
-      `This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.`,
-      sectionsText,
+      acceptCtaText,
       ``,
       `Fixer Nation Education`,
     ].join('\n'),
     html: `
       <p>Hi ${name},</p>
       <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${school || 'your school'}</strong>:</p>
-      <table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;">${htmlRows}</table>
-      <p style="font-size:13px;color:#6b7280;">This quote is valid for 30 days. To move forward or ask any questions, just reply to this email.</p>
       ${sectionsHtml}
+      <table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;">${htmlRows}</table>
+      ${acceptCtaHtml}
       <p style="margin-top:20px;">Fixer Nation Education</p>
     `,
   });

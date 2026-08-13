@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const pool = require('../db/pool');
 const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
@@ -41,14 +42,29 @@ router.post('/ask-the-fixer', async (req, res) => {
   res.json({ ok: true });
 });
 
+function generateQuoteNumber() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 router.post('/quote', async (req, res) => {
   const { firstName, lastName, email, school, phone, message } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
-  await pool.query(
-    'INSERT INTO quote_requests (first_name, last_name, email, school, phone, message) VALUES (?, ?, ?, ?, ?, ?)',
-    [firstName || '', lastName || '', email, school || '', phone || '', message || '']
-  );
+  let inserted = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await pool.query(
+        'INSERT INTO quote_requests (quote_number, first_name, last_name, email, school, phone, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [generateQuoteNumber(), firstName || '', lastName || '', email, school || '', phone || '', message || '']
+      );
+      inserted = true;
+      break;
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY' && attempt < 4) continue;
+      throw err;
+    }
+  }
+  if (!inserted) throw new Error('Could not generate unique quote number');
 
   await pool.query(
     `INSERT INTO newsletter_contacts (name, email, company, source, status)
@@ -124,7 +140,7 @@ router.get('/quotes', requireAuth, async (req, res) => {
 
 router.put('/quotes/:id', requireAuth, async (req, res) => {
   const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
-          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears } = req.body || {};
+          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedValidUntil } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
@@ -144,6 +160,8 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   if (quotedProrationFactor !== undefined) { updates.push('quoted_proration_factor = ?'); params.push(quotedProrationFactor != null ? Number(quotedProrationFactor) : null); }
   if (quotedTermYears       !== undefined) { updates.push('quoted_term_years = ?');       params.push(quotedTermYears != null ? Number(quotedTermYears) : null); }
 
+  if (quotedValidUntil !== undefined) { updates.push('quote_valid_until = ?'); params.push(quotedValidUntil || null); }
+
   if (quotedAmountCents !== undefined && !updates.includes('quoted_at = ?')) {
     updates.push('quoted_at = NOW()');
   }
@@ -161,10 +179,20 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   if (!quote) return res.status(404).json({ error: 'Not found' });
 
   const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
-          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedDiscountPct } = req.body || {};
+          quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil } = req.body || {};
   if (!quotedAmountCents || !quotedProductName) {
     return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
   }
+
+  // Reuse existing token on re-send so existing links stay valid
+  let acceptToken = quote.accept_token;
+  if (!acceptToken) {
+    acceptToken = crypto.randomBytes(32).toString('hex');
+    await pool.query('UPDATE quote_requests SET accept_token = ? WHERE id = ?', [acceptToken, quote.id]);
+  }
+
+  const siteUrl = process.env.SITE_URL || '';
+  const acceptUrl = `${siteUrl}/accept-quote.html?token=${acceptToken}`;
 
   const [replyTo, fromEmail, s1, s2, s3, s4] = await Promise.all([
     getSetting('contact_email_quote'),
@@ -175,20 +203,24 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
     getSetting('quote_section_license_terms'),
   ]);
 
+  const validUntil = quotedValidUntil || (quote.quote_valid_until ? String(quote.quote_valid_until).slice(0, 10) : null);
+
   await sendQuoteEmail({
     to: quote.email,
     firstName: quote.first_name,
     lastName: quote.last_name,
     school: quote.school,
+    quoteNumber: quote.quote_number || null,
     productName: quotedProductName,
     seatCount: quotedSeatCount || null,
     amountDollars: quotedAmountCents / 100,
     replyTo,
     fromEmail: fromEmail || null,
     addonSeats: quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
-    prorationFactor: quotedProrationFactor != null ? Number(quotedProrationFactor) : null,
     termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
     discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
+    quoteValidUntil: validUntil,
+    acceptUrl,
     contentSections: {
       annualIncludes: s1 || '',
       lessonPackage:  s2 || '',
@@ -203,13 +235,14 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
          quoted_amount_cents = ?, quoted_at = NOW(), quote_sent_at = NOW(),
          status = IF(status = 'new', 'contacted', status),
          quoted_tier_name = ?, quoted_addon_seats = ?,
-         quoted_proration_factor = ?, quoted_term_years = ?
+         quoted_term_years = ?,
+         quote_valid_until = COALESCE(?, quote_valid_until)
      WHERE id = ?`,
     [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents,
      quotedTierName || null,
      quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
-     quotedProrationFactor != null ? Number(quotedProrationFactor) : null,
      quotedTermYears != null ? Number(quotedTermYears) : null,
+     validUntil || null,
      quote.id]
   );
 

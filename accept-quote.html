@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accept Your Quote — Fixer Nation Education</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:stretch;padding:0;}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
+  h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:26px;margin-bottom:8px;}
+  a{color:var(--teal-dark);}
+  .card{background:#fff;border-radius:22px;box-shadow:0 20px 45px -18px rgba(22,79,74,0.28);padding:38px;max-width:500px;width:100%;}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+  .brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+  .brand-word{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--teal-dark);}
+  p.sub{font-size:14px;color:var(--ink-soft);margin-bottom:20px;}
+  .quote-num{display:inline-block;font-family:monospace;font-size:13px;background:#f3f4f6;padding:3px 9px;border-radius:6px;color:var(--ink-soft);margin-bottom:12px;}
+  .summary-row{display:flex;justify-content:space-between;font-size:14px;padding:8px 0;border-bottom:1px solid #f0ede8;}
+  .summary-row:last-child{border-bottom:none;}
+  .summary-row .label{color:var(--ink-soft);}
+  .summary-row .val{font-weight:600;}
+  .summary-total{display:flex;justify-content:space-between;font-size:17px;font-weight:700;padding:12px 0 0;}
+  .tab-row{display:flex;gap:2px;border-bottom:2px solid #e5e7eb;margin:24px 0 20px;}
+  .tab-btn{background:none;border:none;padding:9px 18px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;}
+  .tab-btn.active{color:var(--teal-dark);border-bottom-color:var(--teal-dark);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  label.field-label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.03em;}
+  input.text-input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(22,79,74,0.15);font-size:14px;margin-bottom:16px;font-family:inherit;}
+  .btn-primary{width:100%;padding:13px;border-radius:999px;border:none;background:var(--coral);color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit;}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn-primary:disabled{opacity:0.55;cursor:not-allowed;}
+  .error-msg{font-size:13px;color:#dc2626;margin-bottom:12px;display:none;}
+  .spinner{text-align:center;padding:40px 0;color:var(--ink-soft);font-size:14px;}
+  .success-icon{width:56px;height:56px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px;}
+  .invite-option{border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;cursor:pointer;margin-bottom:10px;transition:border-color 0.15s;}
+  .invite-option.selected{border-color:var(--teal);background:#f0faf9;}
+  .invite-option h3{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .invite-option p{font-size:13px;color:var(--ink-soft);}
+  .valid-until{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+</style>
+</head>
+<body>
+<main>
+<div class="card" id="card">
+  <a href="index.html" style="text-decoration:none;" class="brand">
+    <div class="brand-mark">FN</div>
+    <div class="brand-word">Fixer Nation Education</div>
+  </a>
+  <div id="stateLoading" class="spinner">Loading your quote...</div>
+  <div id="stateError" style="display:none;">
+    <h1>Quote unavailable</h1>
+    <p class="sub">This quote has expired or isn't available anymore. Contact us at <a href="mailto:admin@fixernationeducation.com">admin@fixernationeducation.com</a> if you need help.</p>
+  </div>
+  <div id="stateAccepted" style="display:none;">
+    <div class="success-icon">&#10003;</div>
+    <h1 style="text-align:center;">Your quote is confirmed.</h1>
+    <p class="sub" style="text-align:center;">This quote has already been accepted. Check your email for setup instructions, or contact us if you need a hand.</p>
+  </div>
+  <div id="stateActive" style="display:none;">
+    <h1>Accept your quote</h1>
+    <p class="sub" id="quoteSubtitle"></p>
+    <div id="quoteNumBadge" class="quote-num" style="display:none;"></div>
+    <div id="quoteSummary"></div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabCard" onclick="switchTab('card')">Pay by credit card</button>
+      <button class="tab-btn" id="tabPO" onclick="switchTab('po')">Submit a purchase order</button>
+    </div>
+
+    <div id="panelCard" class="tab-panel active">
+      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:20px;">You'll be taken to a secure Stripe checkout page to complete payment.</p>
+      <div class="error-msg" id="cardError"></div>
+      <button class="btn-primary" id="cardPayBtn" onclick="payByCard()">Pay now</button>
+    </div>
+
+    <div id="panelPO" class="tab-panel">
+      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:16px;">Enter your PO number below. We'll mark the order as pending and send setup instructions right away.</p>
+      <label class="field-label">Purchase Order number</label>
+      <input type="text" id="poNumber" class="text-input" placeholder="PO-12345">
+      <div class="error-msg" id="poError"></div>
+      <button class="btn-primary" id="poSubmitBtn" onclick="submitPO()">Submit PO</button>
+    </div>
+  </div>
+
+  <div id="stateSetup" style="display:none;">
+    <div class="success-icon">&#10003;</div>
+    <h1 style="text-align:center;">Your order is confirmed.</h1>
+    <p class="sub" style="text-align:center;margin-bottom:24px;">You'll get a confirmation email shortly. Now you need to set up the School License Administrator account.</p>
+    <div class="invite-option selected" id="optSelf" onclick="selectOption('self')">
+      <h3>I'm the School License Administrator</h3>
+      <p>Set up your account directly with the link we just sent to your email.</p>
+    </div>
+    <div class="invite-option" id="optInvite" onclick="selectOption('invite')">
+      <h3>Invite someone else to manage the account</h3>
+      <p>Send the setup link to a colleague instead.</p>
+    </div>
+    <div id="inviteForm" style="display:none;margin-top:16px;">
+      <label class="field-label">Their email address</label>
+      <input type="email" id="inviteEmail" class="text-input" placeholder="colleague@yourschool.edu">
+      <div class="error-msg" id="inviteError"></div>
+      <button class="btn-primary" id="inviteBtn" onclick="sendInvite()">Send invite</button>
+    </div>
+    <div id="inviteSent" style="display:none;font-size:14px;color:#16a34a;margin-top:12px;text-align:center;">Invite sent.</div>
+  </div>
+</div>
+</main>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const TOKEN  = params.get('token') || '';
+const CHECKOUT_SUCCESS = params.get('checkout') === 'success';
+let quoteData = null;
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+function fmtCurrency(n) {
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function show(id) {
+  ['stateLoading','stateError','stateAccepted','stateActive','stateSetup'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+}
+
+async function init() {
+  if (!TOKEN) { show('stateError'); return; }
+
+  if (CHECKOUT_SUCCESS) {
+    show('stateSetup');
+    return;
+  }
+
+  const r = await fetch(`/api/quotes/accept?token=${encodeURIComponent(TOKEN)}`);
+  const data = await r.json();
+
+  if (!r.ok) {
+    if (data.error === 'already_accepted') { show('stateAccepted'); return; }
+    show('stateError'); return;
+  }
+
+  quoteData = data;
+
+  const subtitle = document.getElementById('quoteSubtitle');
+  subtitle.textContent = data.school ? `${data.school}` : `${data.firstName} ${data.lastName}`.trim();
+
+  if (data.quoteNumber) {
+    const badge = document.getElementById('quoteNumBadge');
+    badge.textContent = `Quote #${data.quoteNumber}`;
+    badge.style.display = '';
+  }
+
+  const summary = document.getElementById('quoteSummary');
+  let rows = '';
+  if (data.productName) rows += `<div class="summary-row"><span class="label">License</span><span class="val">${esc(data.productName)}</span></div>`;
+  if (data.seatCount)   rows += `<div class="summary-row"><span class="label">Seats</span><span class="val">${data.seatCount}</span></div>`;
+  if (data.quoteValidUntil) rows += `<div class="summary-row"><span class="label">Valid until</span><span class="val">${fmtDate(data.quoteValidUntil)}</span></div>`;
+  if (data.amountDollars != null) rows += `<div class="summary-total"><span>Total</span><span>${fmtCurrency(data.amountDollars)}</span></div>`;
+  summary.innerHTML = rows;
+
+  show('stateActive');
+}
+
+function switchTab(tab) {
+  document.getElementById('tabCard').classList.toggle('active', tab === 'card');
+  document.getElementById('tabPO').classList.toggle('active', tab === 'po');
+  document.getElementById('panelCard').classList.toggle('active', tab === 'card');
+  document.getElementById('panelPO').classList.toggle('active', tab === 'po');
+}
+
+async function payByCard() {
+  const btn = document.getElementById('cardPayBtn');
+  const err = document.getElementById('cardError');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Redirecting...';
+
+  const r = await fetch('/api/quotes/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: TOKEN, paymentMethod: 'card' }),
+  });
+  const data = await r.json();
+  if (!r.ok) {
+    err.textContent = data.error || 'Something went wrong. Please try again.';
+    err.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Pay now';
+    return;
+  }
+  window.location.href = data.stripeUrl;
+}
+
+async function submitPO() {
+  const btn = document.getElementById('poSubmitBtn');
+  const err = document.getElementById('poError');
+  const poNumber = document.getElementById('poNumber').value.trim();
+  err.style.display = 'none';
+  if (!poNumber) { err.textContent = 'Please enter a PO number.'; err.style.display = ''; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const r = await fetch('/api/quotes/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: TOKEN, paymentMethod: 'po', poNumber }),
+  });
+  const data = await r.json();
+  if (!r.ok) {
+    err.textContent = data.error || 'Something went wrong. Please try again.';
+    err.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Submit PO';
+    return;
+  }
+  show('stateSetup');
+}
+
+function selectOption(opt) {
+  document.getElementById('optSelf').classList.toggle('selected', opt === 'self');
+  document.getElementById('optInvite').classList.toggle('selected', opt === 'invite');
+  document.getElementById('inviteForm').style.display = opt === 'invite' ? '' : 'none';
+  document.getElementById('inviteSent').style.display = 'none';
+}
+
+async function sendInvite() {
+  const btn   = document.getElementById('inviteBtn');
+  const err   = document.getElementById('inviteError');
+  const email = document.getElementById('inviteEmail').value.trim();
+  err.style.display = 'none';
+  if (!email || !email.includes('@')) { err.textContent = 'Please enter a valid email address.'; err.style.display = ''; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  const r = await fetch('/api/quotes/accept/invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: TOKEN, inviteEmail: email }),
+  });
+  const data = await r.json();
+  if (!r.ok) {
+    err.textContent = data.error || 'Could not send invite. Please try again.';
+    err.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Send invite';
+    return;
+  }
+  document.getElementById('inviteForm').style.display = 'none';
+  document.getElementById('inviteSent').style.display = '';
+}
+
+init();
+</script>
+</body>
+</html>

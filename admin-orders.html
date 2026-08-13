@@ -51,7 +51,7 @@
           </div>
         </div>
         <table class="a-table" id="ordersTable">
-          <thead><tr><th>Date</th><th>Buyer</th><th>Item</th><th>Amount</th><th>Payment</th><th>Status</th><th>Invoice</th></tr></thead>
+          <thead><tr><th>Date</th><th>Quote #</th><th>Buyer</th><th>Item</th><th>Amount</th><th>Payment</th><th>Status</th><th>Invoice</th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="ordersEmpty" style="display:none;">
@@ -139,6 +139,7 @@ function renderOrders(purchases) {
     const paid = p.paymentStatus === 'paid';
     tr.innerHTML = `
       <td>${fnFormatDate(p.purchasedAt)}</td>
+      <td style="font-family:monospace;font-size:12px;">${p.quoteNumber ? '#' + p.quoteNumber : '—'}</td>
       <td class="a-cell-title">${(p.buyer && (p.buyer.company || p.buyer.name)) || '—'}<div class="a-note">${(p.buyer && p.buyer.email) || ''}</div></td>
       <td>${describeItem(p)}</td>
       <td>${p.amount !== null ? fnFormatCurrency(p.amount) : '—'}</td>

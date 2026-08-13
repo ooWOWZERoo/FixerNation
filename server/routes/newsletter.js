@@ -359,6 +359,8 @@ async function attachPurchaseDetails(purchases) {
     conversionCreditCents: p.conversion_credit_cents || null,
     conversionCreditRedeemedAt: p.conversion_credit_redeemed_at ? new Date(p.conversion_credit_redeemed_at).toISOString() : null,
     convertedToPurchaseId: p.converted_to_purchase_id || null,
+    quoteId: p.quote_id || null,
+    quoteNumber: p.quote_number || null,
     seats: seatsByPurchase[p.id] || [],
   }));
 }
@@ -366,15 +368,15 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents, quoteId }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, membership_plan_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, membership_plan_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents, quote_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         contactId, productType, productType === 'book' ? bookId : null,
         (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null,
@@ -384,6 +386,7 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
         invoiceId || null, amountCents === undefined ? null : amountCents,
         trialExpirationDate || null, trialLessonLimit || null, conversionCreditCents || null,
+        quoteId || null,
       ]
     );
     const purchaseId = result.insertId;
@@ -461,13 +464,13 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 // a date range (both must be valid dates or the filter is ignored entirely).
 router.get('/purchases', requireAuth, async (req, res) => {
   const { start, end } = req.query;
-  let sql = 'SELECT * FROM purchases';
+  let sql = 'SELECT p.*, qr.quote_number FROM purchases p LEFT JOIN quote_requests qr ON qr.id = p.quote_id';
   const params = [];
   if (DATE_PATTERN.test(start) && DATE_PATTERN.test(end)) {
-    sql += ' WHERE DATE(purchased_at) BETWEEN ? AND ?';
+    sql += ' WHERE DATE(p.purchased_at) BETWEEN ? AND ?';
     params.push(start, end);
   }
-  sql += ' ORDER BY purchased_at DESC';
+  sql += ' ORDER BY p.purchased_at DESC';
 
   const [rows] = await pool.query(sql, params);
   const purchases = await attachPurchaseDetails(rows);

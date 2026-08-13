@@ -104,6 +104,7 @@
         <table class="a-table" id="quotesTable">
           <thead>
             <tr>
+              <th>Quote #</th>
               <th>Date</th>
               <th>Name</th>
               <th>School</th>
@@ -238,7 +239,7 @@ function applyFilters() {
   const status = document.getElementById('statusFilter').value;
   const filtered = allQuotes.filter(q => {
     const matchStatus = !status || q.status === status;
-    const matchSearch = !search || [q.first_name, q.last_name, q.email, q.school].join(' ').toLowerCase().includes(search);
+    const matchSearch = !search || [q.first_name, q.last_name, q.email, q.school, q.quote_number || ''].join(' ').toLowerCase().includes(search);
     return matchStatus && matchSearch;
   });
   renderTable(filtered);
@@ -258,6 +259,7 @@ function renderTable(quotes) {
       : '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="white-space:nowrap;font-family:monospace;font-size:12px;">${q.quote_number ? '#' + fnEscape(q.quote_number) : '—'}</td>
       <td style="white-space:nowrap;">${fnFormatDate(q.created_at)}</td>
       <td class="a-cell-title">${fnEscape(fullName)}</td>
       <td>${fnEscape(q.school || '—')}</td>
@@ -276,7 +278,8 @@ function openModal(id) {
   editingId = id;
 
   const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || 'Quote Request';
-  document.getElementById('modalTitle').textContent = fullName;
+  const titleSuffix = q.quote_number ? ` — #${q.quote_number}` : '';
+  document.getElementById('modalTitle').textContent = fullName + titleSuffix;
 
   const savedAmount = q.quoted_amount_cents ? (q.quoted_amount_cents / 100).toFixed(2) : '';
 
@@ -334,7 +337,6 @@ function openModal(id) {
     <input type="hidden" id="qProductName">
     <input type="hidden" id="qTierName">
     <input type="hidden" id="qAddonSeats" value="0">
-    <input type="hidden" id="qProrationFactor" value="1">
     <input type="hidden" id="qTermYears" value="1">
     <input type="hidden" id="qDiscountPct" value="0">
     <input type="hidden" id="qFinalTotal">
@@ -368,12 +370,8 @@ function openModal(id) {
         <input type="number" id="qAddonInput" class="q-input" min="0" max="99" value="0" oninput="calcBreakdown()">
       </div>
       <div class="q-field">
-        <label class="q-label">School Year Window</label>
-        <div class="q-chip-row" id="qWindowChips">
-          <button type="button" class="q-chip" data-factor="1.00" data-label="Jul–Dec (full year)" onclick="selectChip('window',this);calcBreakdown()">Jul–Dec</button>
-          <button type="button" class="q-chip" data-factor="0.75" data-label="Jan–Mar (75%)" onclick="selectChip('window',this);calcBreakdown()">Jan–Mar</button>
-          <button type="button" class="q-chip" data-factor="0.50" data-label="Apr–Jun (50%)" onclick="selectChip('window',this);calcBreakdown()">Apr–Jun</button>
-        </div>
+        <label class="q-label">Quote Valid Until</label>
+        <input type="date" id="qValidUntil" class="q-input" style="width:180px;">
       </div>
       <div class="q-field">
         <label class="q-label">License Term</label>
@@ -413,7 +411,45 @@ function openModal(id) {
   `;
 
   setTimeout(() => {
-    initQuoteChips();
+    // Pre-populate hidden fields and UI from saved quote data
+    if (q.quoted_product_id) {
+      document.getElementById('qProductId').value   = q.quoted_product_id;
+      document.getElementById('qProductName').value = q.quoted_product_name || '';
+      document.getElementById('qTierName').value    = q.quoted_tier_name || '';
+      const tierSel = document.getElementById('qTierSelect');
+      if (tierSel) {
+        for (let i = 0; i < tierSel.options.length; i++) {
+          if (String(tierSel.options[i].value) === String(q.quoted_product_id)) {
+            tierSel.selectedIndex = i;
+            onTierChange();
+            break;
+          }
+        }
+      }
+    }
+    if (q.quoted_addon_seats != null) document.getElementById('qAddonSeats').value = q.quoted_addon_seats;
+    if (q.quoted_term_years != null) {
+      document.getElementById('qTermYears').value = q.quoted_term_years;
+      document.querySelectorAll('#qTermChips .q-chip').forEach(c => {
+        c.classList.toggle('q-chip-active', String(c.dataset.years) === String(q.quoted_term_years));
+      });
+    } else {
+      document.querySelectorAll('#qTermChips .q-chip').forEach(c => {
+        c.classList.toggle('q-chip-active', c.dataset.years === '1');
+      });
+    }
+
+    // Default valid-until to saved value, or today + 30 days
+    const validUntilEl = document.getElementById('qValidUntil');
+    if (validUntilEl) {
+      if (q.quote_valid_until) {
+        validUntilEl.value = String(q.quote_valid_until).slice(0, 10);
+      } else {
+        const d = new Date(); d.setDate(d.getDate() + 30);
+        validUntilEl.value = d.toISOString().slice(0, 10);
+      }
+    }
+    calcBreakdown();
   }, 0);
 
   document.getElementById('quoteModalOverlay').style.display = 'flex';
@@ -430,7 +466,6 @@ function switchQuoteTab(tab) {
     document.getElementById('qProductName').value        = '90-Day Classroom Pilot';
     document.getElementById('qTierName').value           = '90-Day Classroom Pilot';
     document.getElementById('qAddonSeats').value         = 0;
-    document.getElementById('qProrationFactor').value    = 1;
     document.getElementById('qTermYears').value          = 1;
     document.getElementById('qDiscountPct').value        = 0;
     document.getElementById('modalAmount').value         = '149.00';
@@ -444,11 +479,6 @@ function selectChip(group, btn) {
 }
 
 function initQuoteChips() {
-  const month = new Date().getMonth();
-  let factor = month >= 6 ? '1.00' : (month <= 2 ? '0.75' : '0.50');
-  document.querySelectorAll('#qWindowChips .q-chip').forEach(c => {
-    if (c.dataset.factor === factor) c.classList.add('q-chip-active');
-  });
   document.querySelectorAll('#qTermChips .q-chip').forEach(c => {
     if (c.dataset.years === '1') c.classList.add('q-chip-active');
   });
@@ -489,28 +519,21 @@ function calcBreakdown() {
   const tierName   = opt.text.split(' — ')[0];
   const addonCount = addonRate > 0 ? (parseInt(document.getElementById('qAddonInput').value) || 0) : 0;
 
-  const activeWindow = document.querySelector('#qWindowChips .q-chip-active');
-  const factor       = activeWindow ? parseFloat(activeWindow.dataset.factor) : 1.0;
-  const windowLabel  = activeWindow ? activeWindow.dataset.label : 'Jul–Dec (full year)';
-
   const activeTerm   = document.querySelector('#qTermChips .q-chip-active');
   const termYears    = activeTerm ? parseInt(activeTerm.dataset.years) : 1;
   const discountPct  = termYears === 2 ? quoteSettings.twoYrPct : (termYears === 3 ? quoteSettings.threeYrPct : 0);
 
-  const addonTotal    = addonCount * addonRate;
-  const annualBase    = effectiveBase + addonTotal;
-  const proratedBase  = annualBase * factor;
-  const fullYearsCost = (termYears - 1) * annualBase;
-  const subtotal      = proratedBase + fullYearsCost;
-  const discountAmt   = discountPct > 0 ? subtotal * (discountPct / 100) : 0;
-  const total         = subtotal - discountAmt;
+  const addonTotal  = addonCount * addonRate;
+  const annualBase  = effectiveBase + addonTotal;
+  const subtotal    = annualBase * termYears;
+  const discountAmt = discountPct > 0 ? subtotal * (discountPct / 100) : 0;
+  const total       = subtotal - discountAmt;
 
-  const isCustom   = Math.abs(effectiveBase - catalogPrice) > 0.005;
-  const tierLabel  = `${tierName} (${seats} seat${seats !== 1 ? 's' : ''})${isCustom ? ' — custom rate' : ''}`;
+  const isCustom  = Math.abs(effectiveBase - catalogPrice) > 0.005;
+  const tierLabel = `${tierName} (${seats} seat${seats !== 1 ? 's' : ''})${isCustom ? ' — custom rate' : ''}`;
 
   let rows = `<div class="q-breakdown-row"><span>${tierLabel}</span><span>$${effectiveBase.toFixed(2)}/yr</span></div>`;
   if (addonCount > 0) rows += `<div class="q-breakdown-row soft"><span>+ ${addonCount} added seat${addonCount !== 1 ? 's' : ''} @ $${addonRate.toFixed(2)}</span><span>+$${addonTotal.toFixed(2)}/yr</span></div>`;
-  if (factor < 1)     rows += `<div class="q-breakdown-row soft"><span>${windowLabel}</span><span>× ${Math.round(factor * 100)}%</span></div>`;
   if (termYears > 1)  rows += `<div class="q-breakdown-row soft"><span>${termYears}-year term</span><span>$${subtotal.toFixed(2)} subtotal</span></div>`;
   if (discountPct > 0) rows += `<div class="q-breakdown-row soft"><span>${termYears}-year discount (${discountPct}%)</span><span>−$${discountAmt.toFixed(2)}</span></div>`;
   rows += `<div class="q-breakdown-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
@@ -520,13 +543,12 @@ function calcBreakdown() {
   breakdown.style.display = '';
   document.getElementById('qFinalTotal').value = total.toFixed(2);
 
-  document.getElementById('qProductId').value          = opt.value || '';
-  document.getElementById('qProductName').value        = tierName;
-  document.getElementById('qTierName').value           = tierName;
-  document.getElementById('qAddonSeats').value         = addonCount;
-  document.getElementById('qProrationFactor').value    = factor;
-  document.getElementById('qTermYears').value          = termYears;
-  document.getElementById('qDiscountPct').value        = discountPct;
+  document.getElementById('qProductId').value   = opt.value || '';
+  document.getElementById('qProductName').value = tierName;
+  document.getElementById('qTierName').value    = tierName;
+  document.getElementById('qAddonSeats').value  = addonCount;
+  document.getElementById('qTermYears').value   = termYears;
+  document.getElementById('qDiscountPct').value = discountPct;
 }
 
 function onAmountOverride() {
@@ -562,9 +584,8 @@ function calcAddon() {
   document.getElementById('qProductName').value        = `${count} Add-On Seat${count !== 1 ? 's' : ''} (${tierName})`;
   document.getElementById('qTierName').value           = tierName;
   document.getElementById('qAddonSeats').value         = count;
-  document.getElementById('qProrationFactor').value    = 1;
-  document.getElementById('qTermYears').value          = 1;
-  document.getElementById('qDiscountPct').value        = 0;
+  document.getElementById('qTermYears').value   = 1;
+  document.getElementById('qDiscountPct').value = 0;
 }
 
 function closeModal() {
@@ -576,34 +597,35 @@ function getQuotePayload() {
   const productId     = document.getElementById('qProductId').value    ? Number(document.getElementById('qProductId').value) : null;
   const productName   = document.getElementById('qProductName').value  || null;
   const tierName      = document.getElementById('qTierName').value     || null;
-  const addonSeats    = parseInt(document.getElementById('qAddonSeats').value)         || 0;
-  const prorationFactor = parseFloat(document.getElementById('qProrationFactor').value) || 1;
-  const termYears     = parseInt(document.getElementById('qTermYears').value)           || 1;
-  const discountPct   = parseFloat(document.getElementById('qDiscountPct').value)       || 0;
-  const finalTotalEl  = document.getElementById('qFinalTotal');
-  const finalRaw      = finalTotalEl && finalTotalEl.value ? parseFloat(finalTotalEl.value) : parseFloat(document.getElementById('modalAmount').value);
-  const amountCents   = isNaN(finalRaw) ? null : Math.round(finalRaw * 100);
-  const tierSel       = document.getElementById('qTierSelect');
-  const tierOpt       = tierSel && tierSel.options[tierSel.selectedIndex];
-  const seatCount     = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || null) : null;
-  return { productId, productName, tierName, addonSeats, prorationFactor, termYears, discountPct, seatCount, amountCents };
+  const addonSeats  = parseInt(document.getElementById('qAddonSeats').value)   || 0;
+  const termYears   = parseInt(document.getElementById('qTermYears').value)    || 1;
+  const discountPct = parseFloat(document.getElementById('qDiscountPct').value) || 0;
+  const finalTotalEl = document.getElementById('qFinalTotal');
+  const finalRaw    = finalTotalEl && finalTotalEl.value ? parseFloat(finalTotalEl.value) : parseFloat(document.getElementById('modalAmount').value);
+  const amountCents = isNaN(finalRaw) ? null : Math.round(finalRaw * 100);
+  const tierSel     = document.getElementById('qTierSelect');
+  const tierOpt     = tierSel && tierSel.options[tierSel.selectedIndex];
+  const seatCount   = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || null) : null;
+  const validUntilEl = document.getElementById('qValidUntil');
+  const quotedValidUntil = validUntilEl && validUntilEl.value ? validUntilEl.value : null;
+  return { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil };
 }
 
 async function saveModal() {
   if (!editingId) return;
   const status = document.getElementById('modalStatus').value;
   const notes  = document.getElementById('modalNotes').value;
-  const { productId, productName, tierName, addonSeats, prorationFactor, termYears, seatCount, amountCents } = getQuotePayload();
+  const { productId, productName, tierName, addonSeats, termYears, seatCount, amountCents, quotedValidUntil } = getQuotePayload();
 
   const body = { status, notes };
-  if (productId      !== null) body.quotedProductId       = productId;
-  if (productName    !== null) body.quotedProductName     = productName;
-  if (seatCount      !== null) body.quotedSeatCount       = seatCount;
-  if (amountCents    !== null) body.quotedAmountCents     = amountCents;
-  if (tierName       !== null) body.quotedTierName        = tierName;
-  if (addonSeats      >    0)  body.quotedAddonSeats      = addonSeats;
-  if (prorationFactor <    1)  body.quotedProrationFactor = prorationFactor;
-  if (termYears       >    1)  body.quotedTermYears       = termYears;
+  if (productId   !== null) body.quotedProductId   = productId;
+  if (productName !== null) body.quotedProductName = productName;
+  if (seatCount   !== null) body.quotedSeatCount   = seatCount;
+  if (amountCents !== null) body.quotedAmountCents = amountCents;
+  if (tierName    !== null) body.quotedTierName    = tierName;
+  if (addonSeats   >    0)  body.quotedAddonSeats  = addonSeats;
+  if (termYears    >    1)  body.quotedTermYears   = termYears;
+  if (quotedValidUntil)     body.quotedValidUntil  = quotedValidUntil;
 
   const r = await fetch(`/api/contact/quotes/${editingId}`, {
     method: 'PUT', credentials: 'include',
@@ -622,7 +644,7 @@ async function saveModal() {
 
 async function sendQuote() {
   if (!editingId) return;
-  const { productId, productName, tierName, addonSeats, prorationFactor, termYears, discountPct, seatCount, amountCents } = getQuotePayload();
+  const { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil } = getQuotePayload();
   if (!productName) { fnToast('Select a license package first'); return; }
   if (!amountCents) { fnToast('Enter a dollar amount'); return; }
 
@@ -643,9 +665,9 @@ async function sendQuote() {
       quotedAmountCents: amountCents,
       quotedTierName: tierName,
       quotedAddonSeats: addonSeats || null,
-      quotedProrationFactor: prorationFactor < 1 ? prorationFactor : null,
       quotedTermYears: termYears > 1 ? termYears : null,
       quotedDiscountPct: discountPct || null,
+      quotedValidUntil: quotedValidUntil || null,
     }),
   });
 

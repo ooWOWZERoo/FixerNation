@@ -673,6 +673,34 @@ async function webhookHandler(req, res) {
       return res.json({ received: true });
     }
 
+    if (metadata.type === 'quote_acceptance') {
+      const [[qt]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [metadata.quoteToken]);
+      if (qt && !qt.accepted_at) {
+        await pool.query(
+          "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'card', status = 'converted' WHERE id = ?",
+          [qt.id]
+        );
+        if (metadata.purchaseId) {
+          await pool.query("UPDATE purchases SET payment_status = 'paid' WHERE id = ?", [Number(metadata.purchaseId)]);
+        }
+        const siteUrl = process.env.SITE_URL || '';
+        let setupUrl = '';
+        try { setupUrl = await createSetPasswordUrl(qt.email, qt.first_name, qt.last_name); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+        try {
+          await fireAutomation('quote_accepted', {
+            to: qt.email,
+            mergeFields: {
+              firstName: qt.first_name || 'there',
+              school: qt.school || '',
+              productName: qt.quoted_product_name || '',
+              setupUrl,
+            },
+          });
+        } catch (e) { console.error('quote_accepted automation failed:', e.message); }
+      }
+      return res.json({ received: true });
+    }
+
     // Stripe retries webhook delivery — guard against creating purchases twice.
     // (stripe_session_id is intentionally not a DB-unique constraint since a
     // single cart session now produces multiple purchase rows.)
@@ -754,4 +782,4 @@ async function webhookHandler(req, res) {
   res.json({ received: true });
 }
 
-module.exports = { router, webhookHandler };
+module.exports = { router, webhookHandler, createSetPasswordUrl };

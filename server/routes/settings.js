@@ -160,4 +160,16 @@ router.put('/teacher-lesson-plan-limit', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/auto-refresh', requireAuth, async (req, res) => {
+  const raw = await getSetting('admin_auto_refresh_sec');
+  res.json({ intervalSec: Math.max(0, parseInt(raw || '0', 10)) });
+});
+
+router.put('/auto-refresh', requireAuth, async (req, res) => {
+  const sec = parseInt(req.body && req.body.intervalSec, 10);
+  if (isNaN(sec) || sec < 0) return res.status(400).json({ error: 'Interval must be 0 or a positive number of seconds' });
+  await setSetting('admin_auto_refresh_sec', String(sec));
+  res.json({ ok: true });
+});
+
 module.exports = router;

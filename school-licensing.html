@@ -421,8 +421,9 @@
               <input type="email" id="fEmail" placeholder="you@yourschool.edu" required>
             </div>
             <div class="field">
-              <label>Phone (optional)</label>
-              <input type="tel" id="fPhone" placeholder="(555) 000-0000">
+              <label>Phone</label>
+              <input type="tel" id="fPhone" placeholder="(555) 000-0000" required
+                oninput="(function(el){var d=el.value.replace(/\D/g,'').slice(0,10);el.value=d.length>=7?'('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6):d.length>=4?'('+d.slice(0,3)+') '+d.slice(3):d.length?'('+d:'';})(this)">
             </div>
           </div>
           <div class="field">
@@ -665,13 +666,18 @@ async function submitInquiry() {
   msgEl.classList.remove('error');
   msgEl.style.display = 'none';
 
-  if (!firstName || !lastName || !school || !email) {
-    msgEl.textContent = 'Please fill in your name, school, and email address.';
+  if (!firstName || !lastName || !school || !email || !phone) {
+    msgEl.textContent = 'Please fill in your name, school, email, and phone number.';
     msgEl.classList.add('error');
     return;
   }
   if (!email.includes('@') || !email.includes('.')) {
     msgEl.textContent = 'Please enter a valid email address.';
+    msgEl.classList.add('error');
+    return;
+  }
+  if (!/^\(\d{3}\) \d{3}-\d{4}$/.test(phone)) {
+    msgEl.textContent = 'Please enter a complete phone number, e.g. (555) 867-5309.';
     msgEl.classList.add('error');
     return;
   }

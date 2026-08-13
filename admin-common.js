@@ -358,3 +358,18 @@ function fnTrackEvent(eventType, label) {
 function fnTrackPageview() {
   fnTrackEvent('pageview', document.title);
 }
+
+(function fnInitAutoRefresh() {
+  fetch('/api/settings/auto-refresh', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data || !data.intervalSec || data.intervalSec < 30) return;
+      setInterval(() => {
+        const modalOpen = document.querySelector('[data-modal-open]');
+        const focused = document.activeElement;
+        const inputFocused = focused && focused.matches('input, textarea, select');
+        if (!modalOpen && !inputFocused) location.reload();
+      }, data.intervalSec * 1000);
+    })
+    .catch(() => {});
+})();
