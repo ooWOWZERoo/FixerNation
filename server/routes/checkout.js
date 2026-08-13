@@ -647,6 +647,41 @@ router.post('/convert-trial', async (req, res) => {
   res.json({ url: session.url });
 });
 
+// Fires the onboarding email and wires up the school_license_admins record for a
+// group license purchase that came in via Stripe (cart or licenses.html). Mirrors
+// the same steps the quote acceptance path runs.
+async function setupSchoolAdmin(email, purchaseIds) {
+  const firstName = email.split('@')[0].split('.')[0] || 'there';
+  let setupUrl = '';
+  try { setupUrl = await createSetPasswordUrl(email, firstName, '', '/school-admin-roster.html'); }
+  catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+  let siteUserId = null;
+  try {
+    const [[u]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email.toLowerCase()]);
+    siteUserId = u ? u.id : null;
+  } catch (e) { console.error('setupSchoolAdmin user lookup failed:', e.message); }
+  for (const purchaseId of purchaseIds) {
+    try {
+      if (siteUserId) {
+        await pool.query(
+          "UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')",
+          [siteUserId]
+        );
+        await pool.query(
+          "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
+          [siteUserId, purchaseId]
+        );
+      }
+    } catch (e) { console.error('school_license_admins insert failed:', e.message); }
+  }
+  try {
+    await fireAutomation('quote_accepted', {
+      to: email,
+      mergeFields: { firstName, school: '', productName: 'Fixer Nation Education License', setupUrl },
+    });
+  } catch (e) { console.error('group license onboarding automation failed:', e.message); }
+}
+
 // Registered in server/app.js with express.raw() ahead of the global JSON
 // body parser — Stripe's signature check needs the exact raw request body,
 // which a JSON-parsed-and-reserialized body would not reproduce byte-for-byte.
@@ -730,6 +765,14 @@ async function webhookHandler(req, res) {
           paymentMethod: 'stripe',
           paymentStatus: 'paid',
         });
+        const licenseItems = resolved.filter(r => r.type === 'license_product');
+        if (licenseItems.length) {
+          const [newPurchases] = await pool.query(
+            "SELECT id FROM purchases WHERE stripe_session_id = ? AND product_type = 'group_license'",
+            [session.id]
+          );
+          await setupSchoolAdmin(metadata.email, newPurchases.map(p => p.id));
+        }
       } else if (metadata.productId) {
         // Variable-seat or trial flow from licenses.html — look up the product
         // to decide whether this is a trial (single seat) or group license.
@@ -760,7 +803,7 @@ async function webhookHandler(req, res) {
             mergeFields: { firstName, setPasswordUrl, trialDays: String(lp.trial_days || 30), lessonLimit: String(lp.trial_lesson_limit || 4) },
           });
         } else {
-          await createPurchase(contactId, {
+          const purchaseId = await createPurchase(contactId, {
             productType: 'group_license',
             licenseProductId: Number(metadata.productId),
             seatCount: Number(metadata.seatCount),
@@ -770,6 +813,7 @@ async function webhookHandler(req, res) {
             paymentStatus: 'paid',
             amountCents: session.amount_total,
           });
+          await setupSchoolAdmin(metadata.email, [purchaseId]);
         }
       } else if (metadata.productType) {
         // Legacy single-item flow from licenses.html.
