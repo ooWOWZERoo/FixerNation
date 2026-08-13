@@ -686,6 +686,19 @@ async function webhookHandler(req, res) {
         const siteUrl = process.env.SITE_URL || '';
         let setupUrl = '';
         try { setupUrl = await createSetPasswordUrl(qt.email, qt.first_name, qt.last_name); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+
+        // Register buyer as school license admin
+        try {
+          const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [qt.email.toLowerCase()]);
+          if (siteUser && metadata.purchaseId) {
+            await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
+            await pool.query(
+              "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
+              [siteUser.id, Number(metadata.purchaseId)]
+            );
+          }
+        } catch (e) { console.error('school_license_admins webhook insert failed:', e.message); }
+
         try {
           await fireAutomation('quote_accepted', {
             to: qt.email,

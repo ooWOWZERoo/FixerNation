@@ -346,7 +346,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
     <div style="text-align:center;margin:24px 0;">
       <a href="${acceptUrl}" style="display:inline-block;background:#F26B4D;color:#fff;font-weight:700;padding:14px 32px;border-radius:999px;text-decoration:none;font-size:15px;">Accept Quote</a>
     </div>
-    <p style="font-size:12px;color:#9ca3af;text-align:center;">${validUntilHtml} Clicking Accept Quote takes you to our secure payment page.</p>` : `<p style="font-size:13px;color:#6b7280;">${validUntilHtml} To move forward or ask any questions, just reply to this email.</p>`;
+    <p style="font-size:12px;color:#9ca3af;text-align:center;">${validUntilHtml} Clicking Accept Quote takes you to our secure order processing page.</p>` : `<p style="font-size:13px;color:#6b7280;">${validUntilHtml} To move forward or ask any questions, just reply to this email.</p>`;
 
   const acceptCtaText = acceptUrl
     ? `Accept this quote: ${acceptUrl}\n\n${validUntilText}`

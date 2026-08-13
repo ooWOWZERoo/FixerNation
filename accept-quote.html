@@ -73,22 +73,22 @@
     <div id="quoteSummary"></div>
 
     <div class="tab-row">
-      <button class="tab-btn active" id="tabCard" onclick="switchTab('card')">Pay by credit card</button>
-      <button class="tab-btn" id="tabPO" onclick="switchTab('po')">Submit a purchase order</button>
+      <button class="tab-btn active" id="tabPO" onclick="switchTab('po')">Submit a purchase order</button>
+      <button class="tab-btn" id="tabCard" onclick="switchTab('card')">Pay by credit card</button>
     </div>
 
-    <div id="panelCard" class="tab-panel active">
-      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:20px;">You'll be taken to a secure Stripe checkout page to complete payment.</p>
-      <div class="error-msg" id="cardError"></div>
-      <button class="btn-primary" id="cardPayBtn" onclick="payByCard()">Pay now</button>
-    </div>
-
-    <div id="panelPO" class="tab-panel">
-      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:16px;">Enter your PO number below. We'll mark the order as pending and send setup instructions right away.</p>
+    <div id="panelPO" class="tab-panel active">
+      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:16px;">Enter your PO number below. We will process your order and send setup instructions right away.</p>
       <label class="field-label">Purchase Order number</label>
       <input type="text" id="poNumber" class="text-input" placeholder="PO-12345">
       <div class="error-msg" id="poError"></div>
-      <button class="btn-primary" id="poSubmitBtn" onclick="submitPO()">Submit PO</button>
+      <button class="btn-primary" id="poSubmitBtn" onclick="submitPO()">Submit your purchase order</button>
+    </div>
+
+    <div id="panelCard" class="tab-panel">
+      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:20px;">You'll be taken to a secure Stripe checkout page to complete payment.</p>
+      <div class="error-msg" id="cardError"></div>
+      <button class="btn-primary" id="cardPayBtn" onclick="payByCard()">Pay now</button>
     </div>
   </div>
 
@@ -178,10 +178,10 @@ async function init() {
 }
 
 function switchTab(tab) {
-  document.getElementById('tabCard').classList.toggle('active', tab === 'card');
   document.getElementById('tabPO').classList.toggle('active', tab === 'po');
-  document.getElementById('panelCard').classList.toggle('active', tab === 'card');
+  document.getElementById('tabCard').classList.toggle('active', tab === 'card');
   document.getElementById('panelPO').classList.toggle('active', tab === 'po');
+  document.getElementById('panelCard').classList.toggle('active', tab === 'card');
 }
 
 async function payByCard() {

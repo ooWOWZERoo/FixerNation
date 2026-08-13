@@ -96,7 +96,7 @@ const AUTOMATIONS = [
     eventKey: 'quote_accepted',
     label: 'Quote Accepted — School Onboarding',
     subject: "Welcome to Fixer Nation Education — let's get your school set up",
-    body: "Hi {{firstName}},\n\nYour Fixer Nation Education license for {{school}} is confirmed. Here's what happens next:\n\n1. Set up your School License Administrator account at the link below.\n2. Once you're in, you can invite your teachers directly from the School Admin portal.\n3. Teachers accept their invitation and get immediate access to the lesson library.\n\nGet started here: {{setupUrl}}\n\nIf you'd rather have someone else manage the account, just forward this email and have them use the same link.\n\nWe're glad to have {{school}} on board.\n\nFixer Nation Education",
+    body: "Hi {{firstName}},\n\nYour Fixer Nation Education license for {{school}} is confirmed. Here's what happens next:\n\n1. Set up your School License Administrator account at the link below.\n2. Once you're in, you can invite your teachers directly from the School Admin portal.\n3. Teachers accept their invitation and get immediate access to the lesson library.\n4. If you prefer support through the onboarding process, contact us at admin@fixernationeducation.com.\n\nGet started here: {{setupUrl}}\n\nIf you'd rather have someone else manage the account, just forward this email and have them use the same link.\n\nWe're glad to have {{school}} on board.\n\nFixer Nation Education",
     reminderDaysBefore: null,
   },
 ];
@@ -126,6 +126,14 @@ async function main() {
     console.log(`Created: ${a.eventKey}`);
     created++;
   }
+
+  // Patch existing quote_accepted body to add step 4 (support contact line)
+  const newQuoteAcceptedBody = AUTOMATIONS.find(a => a.eventKey === 'quote_accepted').body;
+  const [patchResult] = await connection.query(
+    "UPDATE email_automations SET body = ? WHERE event_key = 'quote_accepted' AND body NOT LIKE '%admin@fixernationeducation.com%'",
+    [newQuoteAcceptedBody]
+  );
+  if (patchResult.affectedRows) console.log('Patched body: quote_accepted');
 
   console.log(`\nDone. Created ${created}, skipped ${skipped}.`);
   await connection.end();

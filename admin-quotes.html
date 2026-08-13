@@ -278,8 +278,9 @@ function openModal(id) {
   editingId = id;
 
   const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || 'Quote Request';
+  const titleLabel = q.school || fullName;
   const titleSuffix = q.quote_number ? ` — #${q.quote_number}` : '';
-  document.getElementById('modalTitle').textContent = fullName + titleSuffix;
+  document.getElementById('modalTitle').textContent = titleLabel + titleSuffix;
 
   const savedAmount = q.quoted_amount_cents ? (q.quoted_amount_cents / 100).toFixed(2) : '';
 
@@ -422,6 +423,10 @@ function openModal(id) {
           if (String(tierSel.options[i].value) === String(q.quoted_product_id)) {
             tierSel.selectedIndex = i;
             onTierChange();
+            // onTierChange() resets modalAmount to catalog price; restore saved amount
+            if (q.quoted_amount_cents) {
+              document.getElementById('modalAmount').value = (q.quoted_amount_cents / 100).toFixed(2);
+            }
             break;
           }
         }

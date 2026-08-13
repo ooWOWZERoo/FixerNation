@@ -89,6 +89,19 @@ router.post('/accept', async (req, res) => {
     const siteUrl = process.env.SITE_URL || '';
     let setupUrl = '';
     try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+
+    // Register the buyer as a school license admin for this purchase
+    try {
+      const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [quote.email.toLowerCase()]);
+      if (siteUser) {
+        await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
+        await pool.query(
+          "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
+          [siteUser.id, purchaseId]
+        );
+      }
+    } catch (e) { console.error('school_license_admins insert failed:', e.message); }
+
     try {
       await fireAutomation('quote_accepted', {
         to: quote.email,
@@ -141,6 +154,21 @@ router.post('/accept/invite', async (req, res) => {
 
   let setupUrl = '';
   try { setupUrl = await createSetPasswordUrl(inviteEmail, '', ''); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+
+  // Register the invitee as a school license admin for this purchase
+  try {
+    const [[latestPurchase]] = await pool.query('SELECT id FROM purchases WHERE quote_id = ? ORDER BY id DESC LIMIT 1', [quote.id]);
+    if (latestPurchase) {
+      const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [inviteEmail.toLowerCase()]);
+      if (siteUser) {
+        await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
+        await pool.query(
+          "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
+          [siteUser.id, latestPurchase.id]
+        );
+      }
+    }
+  } catch (e) { console.error('school_license_admins invite insert failed:', e.message); }
 
   try {
     await sendAutomationEmail({
