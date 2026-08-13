@@ -74,6 +74,7 @@ router.post('/accept', async (req, res) => {
     paymentMethod,
     paymentStatus: 'pending',
     source: 'quote',
+    schoolDomain: quote.school || null,
     quoteId: quote.id,
   });
 

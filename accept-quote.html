@@ -98,7 +98,10 @@
     <p class="sub" style="text-align:center;margin-bottom:24px;">You'll get a confirmation email shortly. Now you need to set up the School License Administrator account.</p>
     <div class="invite-option selected" id="optSelf" onclick="selectOption('self')">
       <h3>I'm the School License Administrator</h3>
-      <p>Set up your account directly with the link we just sent to your email.</p>
+      <p id="selfSetupDesc">Set up your account with the link sent to your email.</p>
+      <div id="selfSetupLink" style="display:none;margin-top:10px;">
+        <a id="selfSetupAnchor" href="#" style="font-weight:700;color:var(--teal-dark);font-size:14px;">Set your password now &rarr;</a>
+      </div>
     </div>
     <div class="invite-option" id="optInvite" onclick="selectOption('invite')">
       <h3>Invite someone else to manage the account</h3>
@@ -231,6 +234,12 @@ async function submitPO() {
     return;
   }
   show('stateSetup');
+  if (data.setupUrl) {
+    document.getElementById('selfSetupDesc').textContent = 'Your account is ready. Set your password now or use the link in your confirmation email.';
+    const anchor = document.getElementById('selfSetupAnchor');
+    anchor.href = data.setupUrl;
+    document.getElementById('selfSetupLink').style.display = '';
+  }
 }
 
 function selectOption(opt) {

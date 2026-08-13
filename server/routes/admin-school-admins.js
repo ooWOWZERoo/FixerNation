@@ -9,19 +9,19 @@ const { sendSchoolAdminWelcomeEmail } = require('../lib/mailer');
 
 const router = express.Router();
 
-// GET /api/admin/school-admins?domain=&page=&limit=
-// Lists all school license admin assignments
+// GET /api/admin/school-admins?q=&page=&limit=
+// Lists all school license admin assignments (q searches school domain and admin email)
 router.get('/', requireAuth, async (req, res) => {
-  const domain = (req.query.domain || '').trim();
+  const q = (req.query.q || req.query.domain || '').trim();
   const page = Math.max(1, Number(req.query.page || 1));
   const limit = Math.min(100, Math.max(10, Number(req.query.limit || 25)));
   const offset = (page - 1) * limit;
 
   let where = 'WHERE sla.is_active = 1';
   const params = [];
-  if (domain) {
-    where += ' AND p.school_domain LIKE ?';
-    params.push(`%${domain}%`);
+  if (q) {
+    where += ' AND (p.school_domain LIKE ? OR su.email LIKE ?)';
+    params.push(`%${q}%`, `%${q}%`);
   }
 
   const [[{ total }]] = await pool.query(
@@ -55,7 +55,7 @@ router.get('/', requireAuth, async (req, res) => {
 // Assigns the school_license_admin role to a user for a given purchase.
 // Creates a site_user account if one doesn't exist for that email.
 router.post('/assign', requireAuth, async (req, res) => {
-  const { email, purchaseId, permissionLevel = 'primary', notes } = req.body || {};
+  const { email, purchaseId, permissionLevel = 'primary', notes, firstName: bodyFirstName, lastName: bodyLastName } = req.body || {};
 
   if (!email || !purchaseId) {
     return res.status(400).json({ error: 'email and purchaseId are required' });
@@ -86,8 +86,8 @@ router.post('/assign', requireAuth, async (req, res) => {
       // Create account with random unusable password; welcome email will prompt password setup
       const randomHash = await bcrypt.hash(Math.random().toString(36), 12);
       const nameParts = normalEmail.split('@')[0].split('.');
-      const firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Administrator';
-      const lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : '';
+      const firstName = (bodyFirstName || '').trim() || (nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Administrator');
+      const lastName  = (bodyLastName  || '').trim() || (nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : '');
 
       const [result] = await conn.query(
         "INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role) VALUES (?, ?, ?, ?, 0, 'school_license_admin')",

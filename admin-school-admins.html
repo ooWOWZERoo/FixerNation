@@ -163,7 +163,7 @@ function debounceLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeou
 
 async function loadAssignments() {
   const q = document.getElementById('searchInput').value.trim();
-  const url = '/api/admin/school-admins' + (q ? '?domain=' + encodeURIComponent(q) : '');
+  const url = '/api/admin/school-admins' + (q ? '?q=' + encodeURIComponent(q) : '');
   const wrap = document.getElementById('tableWrap');
   try {
     const r = await fetch(url, { credentials: 'include' });
@@ -244,7 +244,7 @@ function openAssignModal() {
   document.getElementById('assignErr').style.display = 'none';
   document.getElementById('assignSuccess').style.display = 'none';
   ['assignEmail','assignFirst','assignLast','assignNotes'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('assignPermission').value = 'full_access';
+  document.getElementById('assignPermission').value = 'primary';
   document.getElementById('assignPurchase').selectedIndex = 0;
   document.getElementById('assignModal').classList.add('show');
 }
@@ -289,7 +289,7 @@ function openEditModal(id) {
   const r = allAssignments.find(function (a) { return a.id === id; });
   if (!r) return;
   document.getElementById('editId').value = id;
-  document.getElementById('editPermission').value = r.permission_level || 'full_access';
+  document.getElementById('editPermission').value = r.permission_level || 'primary';
   document.getElementById('editActive').value = r.is_active ? '1' : '0';
   document.getElementById('editNotes').value = r.notes || '';
   document.getElementById('editErr').style.display = 'none';
