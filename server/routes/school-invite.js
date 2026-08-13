@@ -47,9 +47,12 @@ router.get('/validate', async (req, res) => {
 
   if (!inv) return res.status(404).json({ error: 'Invitation not found or has already been used' });
 
-  // Mark expired
+  // Mark expired and free the reserved seat
   if (inv.status === 'pending' && new Date(inv.expires_at) < new Date()) {
     await pool.query("UPDATE school_invitations SET status = 'expired' WHERE id = ?", [inv.id]);
+    if (inv.seat_id) {
+      await pool.query("UPDATE license_seats SET status = 'revoked', revoked_at = NOW() WHERE id = ? AND status = 'pending'", [inv.seat_id]);
+    }
     inv.status = 'expired';
   }
 

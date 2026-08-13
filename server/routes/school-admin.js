@@ -294,9 +294,16 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
     [...params, limit, offset]
   );
 
-  // Auto-mark expired invitations
+  // Auto-mark expired invitations and free their reserved seats
   await pool.query(
     "UPDATE school_invitations SET status = 'expired' WHERE purchase_id = ? AND status = 'pending' AND expires_at < NOW()",
+    [purchaseId]
+  );
+  await pool.query(
+    `UPDATE license_seats ls
+     JOIN school_invitations si ON si.seat_id = ls.id
+     SET ls.status = 'revoked', ls.revoked_at = NOW()
+     WHERE si.purchase_id = ? AND si.status = 'expired' AND ls.status = 'pending'`,
     [purchaseId]
   );
 

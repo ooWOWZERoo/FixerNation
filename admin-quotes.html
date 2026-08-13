@@ -536,9 +536,14 @@ function openModal(id) {
           if (String(tierSel.options[i].value) === String(q.quoted_product_id)) {
             tierSel.selectedIndex = i;
             onTierChange();
-            // onTierChange() resets modalAmount to catalog price; restore saved amount
+            // onTierChange() resets modalAmount to catalog price; restore saved amount as annual base
             if (q.quoted_amount_cents) {
-              document.getElementById('modalAmount').value = (q.quoted_amount_cents / 100).toFixed(2);
+              const savedTermYears = q.quoted_term_years || 1;
+              const savedDiscPct = savedTermYears === 2 ? (quoteSettings.twoYrPct || 0) : (savedTermYears === 3 ? (quoteSettings.threeYrPct || 0) : 0);
+              const annualBase = savedDiscPct > 0
+                ? (q.quoted_amount_cents / 100) / savedTermYears / (1 - savedDiscPct / 100)
+                : (q.quoted_amount_cents / 100) / savedTermYears;
+              document.getElementById('modalAmount').value = annualBase.toFixed(2);
             }
             break;
           }
