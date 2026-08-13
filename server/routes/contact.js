@@ -250,4 +250,44 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   res.json({ ok: true, quote: updated });
 });
 
+// POST /api/contact/quotes/:id/copy — duplicate a quote as a fresh draft
+router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
+  const [[src]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
+  if (!src) return res.status(404).json({ error: 'Not found' });
+
+  let newId = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const [result] = await pool.query(
+        `INSERT INTO quote_requests
+           (quote_number, first_name, last_name, email, school, phone, message,
+            quoted_product_id, quoted_product_name, quoted_tier_name,
+            quoted_seat_count, quoted_amount_cents, quoted_addon_seats,
+            quoted_term_years, quoted_discount_pct, quote_valid_until,
+            status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+        [
+          generateQuoteNumber(),
+          src.first_name, src.last_name, src.email,
+          src.school || null, src.phone || null, src.message || null,
+          src.quoted_product_id || null, src.quoted_product_name || null,
+          src.quoted_tier_name || null, src.quoted_seat_count || null,
+          src.quoted_amount_cents || null, src.quoted_addon_seats || null,
+          src.quoted_term_years || null, src.quoted_discount_pct || null,
+          src.quote_valid_until || null,
+        ]
+      );
+      newId = result.insertId;
+      break;
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY' && attempt < 4) continue;
+      throw err;
+    }
+  }
+  if (!newId) throw new Error('Could not generate unique quote number');
+
+  const [[created]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [newId]);
+  res.status(201).json({ ok: true, quote: created });
+});
+
 module.exports = router;

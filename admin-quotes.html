@@ -51,6 +51,11 @@
   .q-editor-wrap .ql-toolbar.ql-snow .ql-picker{color:var(--a-text-soft);}
   .q-editor-wrap .ql-toolbar.ql-snow button:hover .ql-stroke,.q-editor-wrap .ql-toolbar.ql-snow button.ql-active .ql-stroke{stroke:var(--a-accent);}
   .q-editor-wrap .ql-toolbar.ql-snow button:hover .ql-fill,.q-editor-wrap .ql-toolbar.ql-snow button.ql-active .ql-fill{fill:var(--a-accent);}
+  .q-th-sort{cursor:pointer; user-select:none; white-space:nowrap;}
+  .q-th-sort:hover{color:var(--a-accent);}
+  .q-sort-arrow{font-size:10px; margin-left:3px; color:var(--a-accent);}
+  .q-school-cell{cursor:pointer;}
+  .q-school-cell:hover{color:var(--a-accent); text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -104,13 +109,13 @@
         <table class="a-table" id="quotesTable">
           <thead>
             <tr>
-              <th>Quote #</th>
-              <th>Date</th>
-              <th>Name</th>
-              <th>School</th>
+              <th class="q-th-sort" id="th-quote_number" onclick="setSort('quote_number')">Quote #<span class="q-sort-arrow" id="arr-quote_number"></span></th>
+              <th class="q-th-sort" id="th-created_at"   onclick="setSort('created_at')">Date<span class="q-sort-arrow" id="arr-created_at">▼</span></th>
+              <th class="q-th-sort" id="th-name"         onclick="setSort('name')">Name<span class="q-sort-arrow" id="arr-name"></span></th>
+              <th class="q-th-sort" id="th-school"       onclick="setSort('school')">School<span class="q-sort-arrow" id="arr-school"></span></th>
               <th>Email</th>
-              <th>Quoted</th>
-              <th>Status</th>
+              <th class="q-th-sort" id="th-amount"       onclick="setSort('amount')">Quoted<span class="q-sort-arrow" id="arr-amount"></span></th>
+              <th class="q-th-sort" id="th-status"       onclick="setSort('status')">Status<span class="q-sort-arrow" id="arr-status"></span></th>
               <th></th>
             </tr>
           </thead>
@@ -163,6 +168,7 @@
     <div class="a-modal-body" id="modalBody"></div>
     <div class="a-modal-foot" id="modalFoot">
       <button class="a-btn a-btn-outline" onclick="closeModal()">Close</button>
+      <button class="a-btn a-btn-outline" onclick="copyQuote()">Copy Quote</button>
       <button class="a-btn a-btn-outline" onclick="saveModal()">Save</button>
       <button class="a-btn a-btn-primary" id="sendQuoteBtn" onclick="sendQuote()">Send Quote</button>
     </div>
@@ -177,6 +183,8 @@ fnRequireAuth();
 let allQuotes     = [];
 let licenseProds  = [];
 let editingId     = null;
+let sortCol       = 'created_at';
+let sortDir       = 'desc';
 let quoteSettings = { fromEmail: '', twoYrPct: 5, threeYrPct: 8 };
 let richEditors   = {};
 
@@ -242,6 +250,34 @@ function applyFilters() {
     const matchSearch = !search || [q.first_name, q.last_name, q.email, q.school, q.quote_number || ''].join(' ').toLowerCase().includes(search);
     return matchStatus && matchSearch;
   });
+
+  const dir = sortDir === 'asc' ? 1 : -1;
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'name') {
+      av = [a.first_name, a.last_name].join(' ').toLowerCase();
+      bv = [b.first_name, b.last_name].join(' ').toLowerCase();
+    } else if (sortCol === 'amount') {
+      av = a.quoted_amount_cents || 0;
+      bv = b.quoted_amount_cents || 0;
+    } else if (sortCol === 'status') {
+      av = a.status || '';
+      bv = b.status || '';
+    } else if (sortCol === 'school') {
+      av = (a.school || '').toLowerCase();
+      bv = (b.school || '').toLowerCase();
+    } else if (sortCol === 'quote_number') {
+      av = a.quote_number || '';
+      bv = b.quote_number || '';
+    } else {
+      av = a.created_at || '';
+      bv = b.created_at || '';
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return  1 * dir;
+    return 0;
+  });
+
   renderTable(filtered);
 }
 
@@ -262,12 +298,15 @@ function renderTable(quotes) {
       <td style="white-space:nowrap;font-family:monospace;font-size:12px;">${q.quote_number ? '#' + fnEscape(q.quote_number) : '—'}</td>
       <td style="white-space:nowrap;">${fnFormatDate(q.created_at)}</td>
       <td class="a-cell-title">${fnEscape(fullName)}</td>
-      <td>${fnEscape(q.school || '—')}</td>
+      <td class="q-school-cell">${fnEscape(q.school || '—')}</td>
       <td><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></td>
       <td>${quoted}</td>
       <td>${pill}</td>
       <td><button class="a-btn a-btn-outline" onclick="openModal(${q.id})">View</button></td>
     `;
+    if (q.school) {
+      tr.querySelector('.q-school-cell').addEventListener('click', () => filterBySchool(q.school));
+    }
     tbody.appendChild(tr);
   });
 }
@@ -725,6 +764,62 @@ async function saveContentSections() {
 
 function fnEscape(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setSort(col) {
+  if (sortCol === col) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortCol = col;
+    sortDir = col === 'created_at' ? 'desc' : 'asc';
+  }
+  updateSortHeaders();
+  applyFilters();
+}
+
+function updateSortHeaders() {
+  const cols = ['quote_number', 'created_at', 'name', 'school', 'amount', 'status'];
+  cols.forEach(c => {
+    const arr = document.getElementById('arr-' + c);
+    if (!arr) return;
+    if (c === sortCol) {
+      arr.textContent = sortDir === 'asc' ? '▲' : '▼';
+    } else {
+      arr.textContent = '';
+    }
+  });
+}
+
+function filterBySchool(school) {
+  if (!school) return;
+  const searchInput = document.getElementById('searchInput');
+  searchInput.value = school;
+  applyFilters();
+  searchInput.focus();
+}
+
+async function copyQuote() {
+  if (!editingId) return;
+  const btn = document.querySelector('[onclick="copyQuote()"]');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Copying...';
+  try {
+    const res = await fetch(`/api/contact/quotes/${editingId}/copy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Copy failed');
+    closeModal();
+    await init();
+    openModal(data.quote.id);
+  } catch (err) {
+    alert('Could not copy quote: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
 }
 
 initRichEditors();
