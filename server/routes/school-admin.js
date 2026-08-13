@@ -744,7 +744,8 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
   audRows.forEach(r => { (audByUser[r.site_user_id] = audByUser[r.site_user_id] || []).push(r.audience); });
   const teachers = rows.map(r => ({ ...r, audiences: audByUser[r.site_user_id] || [] }));
 
-  res.json({ teachers, total: Number(total), page, limit });
+  const [[purchaseRow]] = await pool.query('SELECT payment_status FROM purchases WHERE id = ?', [purchaseId]);
+  res.json({ teachers, total: Number(total), page, limit, paymentStatus: purchaseRow ? purchaseRow.payment_status : null });
 });
 
 // PUT /api/school-admin/teachers/:siteUserId/audiences

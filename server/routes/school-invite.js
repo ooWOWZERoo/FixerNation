@@ -77,6 +77,10 @@ router.get('/validate', async (req, res) => {
   const emailMatches = loggedIn ? loggedInUser.email.toLowerCase() === inv.invited_email.toLowerCase() : null;
   const adminName = [inv.admin_first, inv.admin_last].filter(Boolean).join(' ') || null;
 
+  // Check if the invited email already has an account (so the frontend can skip the register form)
+  const [[existingUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [inv.invited_email.toLowerCase()]);
+  const emailHasAccount = !!existingUser;
+
   res.json({
     valid: true,
     invitationId: inv.id,
@@ -90,6 +94,7 @@ router.get('/validate', async (req, res) => {
     adminName,
     loggedIn,
     emailMatches,
+    emailHasAccount,
     userEmail: loggedIn ? loggedInUser.email : null,
   });
 });
@@ -149,6 +154,28 @@ router.post('/claim', async (req, res) => {
   } catch (e) {
     console.error('addTeacherToSocialGroups failed:', e.message);
   }
+
+  // Notify school admin(s) that a teacher joined (fire-and-forget)
+  pool.query(
+    `SELECT su.email, su.first_name, su.last_name, p.school_domain
+     FROM school_license_admins sla
+     JOIN site_users su ON su.id = sla.site_user_id
+     JOIN purchases p ON p.id = sla.purchase_id
+     WHERE sla.purchase_id = ? AND sla.is_active = 1`,
+    [inv.purchase_id]
+  ).then(([admins]) => {
+    const { sendTeacherRegisteredNotificationEmail } = require('../lib/mailer');
+    const teacherName = [loggedInUser.first_name, loggedInUser.last_name].filter(Boolean).join(' ');
+    for (const admin of admins) {
+      sendTeacherRegisteredNotificationEmail({
+        to: admin.email,
+        adminName: [admin.first_name, admin.last_name].filter(Boolean).join(' '),
+        teacherName,
+        teacherEmail: loggedInUser.email,
+        schoolDomain: admin.school_domain,
+      }).catch(e => console.error('teacher-registered notification failed:', e.message));
+    }
+  }).catch(() => {});
 
   res.json({ ok: true, schoolDomain: inv.school_domain });
 });
@@ -217,8 +244,8 @@ router.post('/register', async (req, res) => {
 
     // Optionally add to newsletter (non-blocking, best-effort)
     conn.query(
-      `INSERT IGNORE INTO newsletter_contacts (email, first_name, last_name, created_at) VALUES (?, ?, ?, NOW())`,
-      [email, firstName.trim(), lastName.trim()]
+      `INSERT IGNORE INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, 'School Invite', 'Subscribed')`,
+      [`${firstName.trim()} ${lastName.trim()}`.trim(), email]
     ).catch(() => {});
 
     await conn.commit();
@@ -252,6 +279,28 @@ router.post('/register', async (req, res) => {
     } catch (e) {
       console.error('addTeacherToSocialGroups failed:', e.message);
     }
+
+    // Notify school admin(s) that a new teacher joined (fire-and-forget)
+    pool.query(
+      `SELECT su.email, su.first_name, su.last_name, p.school_domain
+       FROM school_license_admins sla
+       JOIN site_users su ON su.id = sla.site_user_id
+       JOIN purchases p ON p.id = sla.purchase_id
+       WHERE sla.purchase_id = ? AND sla.is_active = 1`,
+      [inv.purchase_id]
+    ).then(([admins]) => {
+      const { sendTeacherRegisteredNotificationEmail } = require('../lib/mailer');
+      const teacherName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      for (const admin of admins) {
+        sendTeacherRegisteredNotificationEmail({
+          to: admin.email,
+          adminName: [admin.first_name, admin.last_name].filter(Boolean).join(' '),
+          teacherName,
+          teacherEmail: email,
+          schoolDomain: admin.school_domain,
+        }).catch(e => console.error('teacher-registered notification failed:', e.message));
+      }
+    }).catch(() => {});
 
     res.json({ ok: true, schoolDomain: inv.school_domain });
   } catch (e) {
@@ -292,7 +341,7 @@ router.post('/accept-and-verify', async (req, res) => {
   }
 
   const email = inv.invited_email.toLowerCase();
-  const [[user]] = await pool.query('SELECT id, first_name, password_hash FROM site_users WHERE email = ?', [email]);
+  const [[user]] = await pool.query('SELECT id, first_name, last_name, password_hash FROM site_users WHERE email = ?', [email]);
   if (!user) return res.status(404).json({ error: 'No account found for this email. Please use the "Create Account" form.' });
 
   const passwordOk = await bcrypt.compare(password, user.password_hash);
@@ -337,6 +386,28 @@ router.post('/accept-and-verify', async (req, res) => {
   } catch (e) {
     console.error('addTeacherToSocialGroups failed:', e.message);
   }
+
+  // Notify school admin(s) that a teacher joined (fire-and-forget)
+  pool.query(
+    `SELECT su.email, su.first_name, su.last_name, p.school_domain
+     FROM school_license_admins sla
+     JOIN site_users su ON su.id = sla.site_user_id
+     JOIN purchases p ON p.id = sla.purchase_id
+     WHERE sla.purchase_id = ? AND sla.is_active = 1`,
+    [inv.purchase_id]
+  ).then(([admins]) => {
+    const { sendTeacherRegisteredNotificationEmail } = require('../lib/mailer');
+    const teacherName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+    for (const admin of admins) {
+      sendTeacherRegisteredNotificationEmail({
+        to: admin.email,
+        adminName: [admin.first_name, admin.last_name].filter(Boolean).join(' '),
+        teacherName,
+        teacherEmail: email,
+        schoolDomain: admin.school_domain,
+      }).catch(e => console.error('teacher-registered notification failed:', e.message));
+    }
+  }).catch(() => {});
 
   res.json({ ok: true, schoolDomain: inv.school_domain });
 });

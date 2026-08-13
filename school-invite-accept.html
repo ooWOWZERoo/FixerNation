@@ -211,8 +211,11 @@ function setupAcceptState(d) {
     document.getElementById('claimPill').textContent = '🏫 ' + school;
     document.getElementById('claimExpires').textContent = expires;
     show('stateClaim');
+  } else if (d.emailHasAccount) {
+    // Has an existing account but isn't logged in — skip registration, go straight to sign-in
+    showSignIn();
   } else {
-    // Not signed in — need to create account or sign in
+    // Not signed in, no account — show the create account form
     document.getElementById('newSub').textContent = 'You\'ve been invited by ' + (d.adminName || 'your school administrator') + ' to access the ' + school + ' group license.';
     document.getElementById('newEmail').value = d.invitedEmail || '';
     document.getElementById('schoolPill').textContent = '🏫 ' + school;
