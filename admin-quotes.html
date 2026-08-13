@@ -56,6 +56,22 @@
   .q-sort-arrow{font-size:10px; margin-left:3px; color:var(--a-accent);}
   .q-school-cell{cursor:pointer;}
   .q-school-cell:hover{color:var(--a-accent); text-decoration:underline;}
+  .copy-panel{border-top:1px solid var(--a-border);padding:16px 20px 12px;background:var(--a-surface-raised);}
+  .copy-panel-head{font-weight:600;font-size:13px;margin-bottom:10px;color:var(--a-text);}
+  .copy-tab-row{display:flex;gap:4px;margin-bottom:12px;}
+  .copy-tab{padding:5px 12px;border-radius:6px;border:1px solid var(--a-border);background:transparent;color:var(--a-text-soft);cursor:pointer;font-size:13px;}
+  .copy-tab.copy-tab-active{background:var(--a-accent);color:#fff;border-color:var(--a-accent);}
+  .copy-search-wrap{position:relative;}
+  .copy-search-results{position:absolute;top:100%;left:0;right:0;background:var(--a-surface);border:1px solid var(--a-border);border-radius:8px;z-index:20;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.14);margin-top:2px;}
+  .copy-result-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--a-border);}
+  .copy-result-item:last-child{border-bottom:none;}
+  .copy-result-item:hover{background:var(--a-surface-raised);}
+  .copy-result-name{font-weight:600;font-size:13px;}
+  .copy-result-email{color:var(--a-text-soft);font-size:12px;}
+  .copy-selected{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(242,107,77,.08);border-radius:6px;font-size:13px;margin-top:4px;}
+  .copy-clear{background:none;border:none;cursor:pointer;color:var(--a-text-soft);font-size:15px;line-height:1;padding:0;}
+  .copy-two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .copy-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
 </style>
 </head>
 <body>
@@ -172,6 +188,59 @@
       <button class="a-btn a-btn-outline" onclick="saveModal()">Save</button>
       <button class="a-btn a-btn-primary" id="sendQuoteBtn" onclick="sendQuote()">Send Quote</button>
     </div>
+
+    <!-- Copy Quote panel — shown instead of modalFoot when copying -->
+    <div id="copyPanel" class="copy-panel" style="display:none;">
+      <div class="copy-panel-head">Copy quote to…</div>
+      <div class="copy-tab-row">
+        <button class="copy-tab copy-tab-active" id="copyTabSearch" onclick="setCopyTab('search')">Search CRM</button>
+        <button class="copy-tab" id="copyTabNew" onclick="setCopyTab('new')">New contact</button>
+      </div>
+
+      <div id="copySearchPane">
+        <div class="q-field copy-search-wrap">
+          <label class="q-label">Search by name or email</label>
+          <input type="text" class="q-input" id="copyContactSearch" placeholder="Type to search…" oninput="debounceCrmSearch()" autocomplete="off">
+          <div id="copySearchResults" class="copy-search-results" style="display:none;"></div>
+        </div>
+        <div id="copySelectedContact" class="copy-selected" style="display:none;">
+          <span id="copySelectedLabel" style="flex:1;"></span>
+          <button class="copy-clear" onclick="clearCrmSelection()">✕</button>
+        </div>
+      </div>
+
+      <div id="copyNewPane" style="display:none;">
+        <div class="copy-two-col">
+          <div class="q-field">
+            <label class="q-label">First name</label>
+            <input type="text" class="q-input" id="copyFirstName" placeholder="First name">
+          </div>
+          <div class="q-field">
+            <label class="q-label">Last name</label>
+            <input type="text" class="q-input" id="copyLastName" placeholder="Last name">
+          </div>
+        </div>
+        <div class="q-field">
+          <label class="q-label">Email</label>
+          <input type="email" class="q-input" id="copyEmail" placeholder="email@school.org">
+        </div>
+        <div class="q-field">
+          <label class="q-label">Phone</label>
+          <input type="tel" class="q-input" id="copyPhone" placeholder="(xxx) xxx-xxxx">
+        </div>
+      </div>
+
+      <div class="q-field" style="margin-top:10px;">
+        <label class="q-label">School / Organization</label>
+        <input type="text" class="q-input" id="copySchool" placeholder="School name">
+      </div>
+
+      <div class="copy-actions">
+        <button class="a-btn a-btn-outline" onclick="cancelCopyPanel()">Cancel</button>
+        <button class="a-btn a-btn-primary" id="confirmCopyBtn" onclick="confirmCopy()">Confirm Copy</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -180,11 +249,15 @@
 <script>
 fnRequireAuth();
 
-let allQuotes     = [];
-let licenseProds  = [];
-let editingId     = null;
-let sortCol       = 'created_at';
-let sortDir       = 'desc';
+let allQuotes        = [];
+let licenseProds     = [];
+let editingId        = null;
+let sortCol          = 'created_at';
+let sortDir          = 'desc';
+let copySelectedCrm  = null;
+let crmSearchResults = [];
+let crmSearchTimer   = null;
+let copyMode         = 'search';
 let quoteSettings = { fromEmail: '', twoYrPct: 5, threeYrPct: 8 };
 let richEditors   = {};
 
@@ -233,6 +306,7 @@ async function init() {
   }
   updateStats();
   renderTable(allQuotes);
+  window.scrollTo(0, 0);
 }
 
 function updateStats() {
@@ -798,16 +872,122 @@ function filterBySchool(school) {
   searchInput.focus();
 }
 
-async function copyQuote() {
+function copyQuote() {
   if (!editingId) return;
-  const btn = document.querySelector('[onclick="copyQuote()"]');
-  const orig = btn.textContent;
+  const src = allQuotes.find(x => x.id === editingId);
+  if (!src) return;
+
+  // Pre-fill new-contact pane from source quote
+  document.getElementById('copyFirstName').value = src.first_name || '';
+  document.getElementById('copyLastName').value  = src.last_name  || '';
+  document.getElementById('copyEmail').value     = src.email      || '';
+  document.getElementById('copyPhone').value     = src.phone      || '';
+  document.getElementById('copySchool').value    = src.school     || '';
+
+  // Reset search state
+  copySelectedCrm  = null;
+  crmSearchResults = [];
+  document.getElementById('copyContactSearch').value = '';
+  document.getElementById('copySearchResults').style.display = 'none';
+  document.getElementById('copySelectedContact').style.display = 'none';
+
+  setCopyTab('search');
+  document.getElementById('modalFoot').style.display = 'none';
+  document.getElementById('copyPanel').style.display = 'block';
+}
+
+function setCopyTab(tab) {
+  copyMode = tab;
+  document.getElementById('copyTabSearch').classList.toggle('copy-tab-active', tab === 'search');
+  document.getElementById('copyTabNew').classList.toggle('copy-tab-active', tab === 'new');
+  document.getElementById('copySearchPane').style.display = tab === 'search' ? '' : 'none';
+  document.getElementById('copyNewPane').style.display    = tab === 'new'    ? '' : 'none';
+}
+
+function debounceCrmSearch() {
+  clearTimeout(crmSearchTimer);
+  crmSearchTimer = setTimeout(searchCrmContacts, 280);
+}
+
+async function searchCrmContacts() {
+  const q = document.getElementById('copyContactSearch').value.trim();
+  const resultsEl = document.getElementById('copySearchResults');
+  if (q.length < 2) { resultsEl.style.display = 'none'; return; }
+  try {
+    const res = await fetch(`/api/newsletter/contacts/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+    if (!res.ok) return;
+    const { contacts } = await res.json();
+    crmSearchResults = contacts;
+    if (!contacts.length) {
+      resultsEl.innerHTML = '<div style="padding:10px 12px;color:var(--a-text-soft);font-size:13px;">No contacts found</div>';
+    } else {
+      resultsEl.innerHTML = contacts.map((c, i) => `
+        <div class="copy-result-item" data-idx="${i}">
+          <div class="copy-result-name">${fnEscape(c.name || c.email)}</div>
+          <div class="copy-result-email">${fnEscape(c.email)}</div>
+        </div>
+      `).join('');
+      resultsEl.querySelectorAll('.copy-result-item').forEach(el => {
+        el.addEventListener('click', () => selectCrmContact(crmSearchResults[Number(el.dataset.idx)]));
+      });
+    }
+    resultsEl.style.display = 'block';
+  } catch (e) { /* silently ignore */ }
+}
+
+function selectCrmContact(c) {
+  copySelectedCrm = c;
+  document.getElementById('copyContactSearch').value = '';
+  document.getElementById('copySearchResults').style.display = 'none';
+  document.getElementById('copySelectedLabel').textContent = [c.name, c.email].filter(Boolean).join(' — ');
+  document.getElementById('copySelectedContact').style.display = 'flex';
+  // Also fill school from contact's company if school field is empty
+  const schoolEl = document.getElementById('copySchool');
+  if (!schoolEl.value && c.company) schoolEl.value = c.company;
+}
+
+function clearCrmSelection() {
+  copySelectedCrm = null;
+  document.getElementById('copySelectedContact').style.display = 'none';
+  document.getElementById('copyContactSearch').value = '';
+}
+
+function cancelCopyPanel() {
+  document.getElementById('copyPanel').style.display = 'none';
+  document.getElementById('modalFoot').style.display = '';
+}
+
+async function confirmCopy() {
+  if (!editingId) return;
+
+  let firstName, lastName, email, phone;
+
+  if (copyMode === 'search') {
+    if (!copySelectedCrm) { fnToast('Select a contact from results first, or switch to New contact.'); return; }
+    const parts = (copySelectedCrm.name || '').trim().split(/\s+/);
+    firstName = parts[0] || '';
+    lastName  = parts.slice(1).join(' ') || '';
+    email     = copySelectedCrm.email  || '';
+    phone     = copySelectedCrm.phone  || '';
+  } else {
+    firstName = document.getElementById('copyFirstName').value.trim();
+    lastName  = document.getElementById('copyLastName').value.trim();
+    email     = document.getElementById('copyEmail').value.trim();
+    phone     = document.getElementById('copyPhone').value.trim();
+    if (!email) { fnToast('Email is required.'); return; }
+  }
+
+  const school = document.getElementById('copySchool').value.trim();
+
+  const btn = document.getElementById('confirmCopyBtn');
   btn.disabled = true;
-  btn.textContent = 'Copying...';
+  btn.textContent = 'Copying…';
   try {
     const res = await fetch(`/api/contact/quotes/${editingId}/copy`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, phone, school }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Copy failed');
@@ -815,10 +995,10 @@ async function copyQuote() {
     await init();
     openModal(data.quote.id);
   } catch (err) {
-    alert('Could not copy quote: ' + err.message);
+    fnToast('Could not copy quote: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = orig;
+    btn.textContent = 'Confirm Copy';
   }
 }
 

@@ -99,6 +99,18 @@ router.get('/contacts', requireAuth, async (req, res) => {
   res.json({ contacts });
 });
 
+// Lightweight typeahead search — returns id/name/email/phone/company only
+router.get('/contacts/search', requireAuth, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json({ contacts: [] });
+  const like = `%${q}%`;
+  const [rows] = await pool.query(
+    'SELECT id, name, email, phone, company FROM newsletter_contacts WHERE name LIKE ? OR email LIKE ? ORDER BY name LIMIT 20',
+    [like, like]
+  );
+  res.json({ contacts: rows });
+});
+
 // Full contact edit — name/email/address/source/status/group membership.
 // Only fields present in the body are changed.
 router.put('/contacts/:id', requireAuth, async (req, res) => {

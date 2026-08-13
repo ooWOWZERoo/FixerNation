@@ -251,9 +251,19 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
 });
 
 // POST /api/contact/quotes/:id/copy — duplicate a quote as a fresh draft
+// Body may include { firstName, lastName, email, phone, school } to override the contact
 router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
   const [[src]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!src) return res.status(404).json({ error: 'Not found' });
+
+  const b = req.body || {};
+  const firstName = b.firstName !== undefined ? (b.firstName || '').trim() : src.first_name;
+  const lastName  = b.lastName  !== undefined ? (b.lastName  || '').trim() : src.last_name;
+  const email     = b.email     !== undefined ? (b.email     || '').trim() : src.email;
+  const phone     = b.phone     !== undefined ? (b.phone     || null)      : (src.phone || null);
+  const school    = b.school    !== undefined ? (b.school    || null)      : (src.school || null);
+
+  if (!email) return res.status(400).json({ error: 'Email is required' });
 
   let newId = null;
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -267,8 +277,8 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
         [
           generateQuoteNumber(),
-          src.first_name, src.last_name, src.email,
-          src.school || null, src.phone || null, src.message || null,
+          firstName, lastName, email, school, phone,
+          src.message || null,
           src.quoted_product_id || null, src.quoted_product_name || null,
           src.quoted_tier_name || null, src.quoted_seat_count || null,
           src.quoted_amount_cents || null, src.quoted_addon_seats || null,
