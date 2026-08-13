@@ -263,9 +263,8 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
            (quote_number, first_name, last_name, email, school, phone, message,
             quoted_product_id, quoted_product_name, quoted_tier_name,
             quoted_seat_count, quoted_amount_cents, quoted_addon_seats,
-            quoted_term_years, quoted_discount_pct, quote_valid_until,
-            status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+            quoted_term_years, quote_valid_until, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
         [
           generateQuoteNumber(),
           src.first_name, src.last_name, src.email,
@@ -273,8 +272,7 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
           src.quoted_product_id || null, src.quoted_product_name || null,
           src.quoted_tier_name || null, src.quoted_seat_count || null,
           src.quoted_amount_cents || null, src.quoted_addon_seats || null,
-          src.quoted_term_years || null, src.quoted_discount_pct || null,
-          src.quote_valid_until || null,
+          src.quoted_term_years || null, src.quote_valid_until || null,
         ]
       );
       newId = result.insertId;
