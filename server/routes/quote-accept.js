@@ -89,7 +89,7 @@ router.post('/accept', async (req, res) => {
 
     const siteUrl = process.env.SITE_URL || '';
     let setupUrl = '';
-    try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+    try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name, '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
 
     // Register the buyer as a school license admin for this purchase
     try {
@@ -154,7 +154,7 @@ router.post('/accept/invite', async (req, res) => {
   if (!quote || !quote.accepted_at) return res.status(400).json({ error: 'Quote not found or not yet accepted' });
 
   let setupUrl = '';
-  try { setupUrl = await createSetPasswordUrl(inviteEmail, '', ''); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+  try { setupUrl = await createSetPasswordUrl(inviteEmail, '', '', '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
 
   // Register the invitee as a school license admin for this purchase
   try {

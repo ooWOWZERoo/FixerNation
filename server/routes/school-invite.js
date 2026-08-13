@@ -30,7 +30,7 @@ router.get('/validate', async (req, res) => {
   if (!token) return res.status(400).json({ error: 'Token is required' });
 
   const [[inv]] = await pool.query(
-    `SELECT si.id, si.status, si.invited_email, si.first_name, si.last_name,
+    `SELECT si.id, si.status, si.seat_id, si.invited_email, si.first_name, si.last_name,
             si.expires_at, si.personal_message, si.grade_level, si.department,
             p.school_domain, p.payment_status,
             lp.name AS plan_name,

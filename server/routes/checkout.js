@@ -22,7 +22,7 @@ function getStripe() {
 // account already exists it just issues a new token (equivalent to a password
 // reset, which is harmless). Errors are caught by the caller so a failure
 // here never blocks the thank-you email from going out.
-async function createSetPasswordUrl(email, firstName, lastName) {
+async function createSetPasswordUrl(email, firstName, lastName, next = '') {
   const siteUrl = process.env.SITE_URL || '';
   const [existing] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email]);
   let userId;
@@ -51,7 +51,8 @@ async function createSetPasswordUrl(email, firstName, lastName) {
     );
   }
   const token = await createToken(userId, 'reset', 7 * 24 * 60 * 60 * 1000);
-  return `${siteUrl}/reset-password.html?token=${token}`;
+  const nextSuffix = next ? `&next=${encodeURIComponent(next)}` : '';
+  return `${siteUrl}/reset-password.html?token=${token}${nextSuffix}`;
 }
 
 function daysFromNow(days) {
@@ -685,7 +686,7 @@ async function webhookHandler(req, res) {
         }
         const siteUrl = process.env.SITE_URL || '';
         let setupUrl = '';
-        try { setupUrl = await createSetPasswordUrl(qt.email, qt.first_name, qt.last_name); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+        try { setupUrl = await createSetPasswordUrl(qt.email, qt.first_name, qt.last_name, '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
 
         // Register buyer as school license admin
         try {
