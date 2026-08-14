@@ -210,11 +210,38 @@ router.get('/:id/activity', requireAuth, async (req, res) => {
     'SELECT email, status, error_message, opened_at, clicked_at, unsubscribed_at FROM campaign_sends WHERE campaign_id = ? ORDER BY email',
     [req.params.id]
   );
+
+  // Per-link breakdown: aggregate click_count by destination_url across all
+  // sends for this campaign, tracking which recipient emails clicked each URL.
+  const [linkRows] = await pool.query(
+    `SELECT clt.destination_url, clt.click_count, cs.email
+     FROM campaign_link_targets clt
+     JOIN campaign_sends cs ON cs.id = clt.send_id
+     WHERE cs.campaign_id = ?
+     ORDER BY clt.destination_url, cs.email`,
+    [req.params.id]
+  );
+  const linkMap = new Map();
+  for (const row of linkRows) {
+    if (!linkMap.has(row.destination_url)) {
+      linkMap.set(row.destination_url, { url: row.destination_url, totalClicks: 0, clickers: new Set() });
+    }
+    const entry = linkMap.get(row.destination_url);
+    entry.totalClicks += row.click_count;
+    if (row.click_count > 0) entry.clickers.add(row.email);
+  }
+  const links = [...linkMap.values()]
+    .filter(l => l.totalClicks > 0)
+    .map(l => ({ url: l.url, totalClicks: l.totalClicks, clickers: [...l.clickers] }))
+    .sort((a, b) => b.totalClicks - a.totalClicks);
+
   res.json({
     opened: rows.filter(r => r.opened_at).map(r => ({ email: r.email, at: r.opened_at, clicked: !!r.clicked_at })),
+    clicked: rows.filter(r => r.clicked_at).map(r => ({ email: r.email, at: r.clicked_at })),
     unsubscribed: rows.filter(r => r.unsubscribed_at).map(r => ({ email: r.email, at: r.unsubscribed_at })),
     bounced: rows.filter(r => r.status === 'bounced').map(r => ({ email: r.email, reason: r.error_message })),
     undelivered: rows.filter(r => r.status === 'undelivered').map(r => ({ email: r.email, reason: r.error_message })),
+    links,
   });
 });
 

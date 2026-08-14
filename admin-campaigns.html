@@ -434,6 +434,13 @@ async function deleteCampaign(id) {
   fnToast('Campaign deleted');
 }
 
+function truncateUrl(url, max = 65) {
+  try {
+    const clean = url.replace(/^https?:\/\//, '');
+    return clean.length > max ? clean.slice(0, max) + '…' : clean;
+  } catch (e) { return url; }
+}
+
 function activitySection(label, icon, entries, renderEntry) {
   if (!entries || entries.length === 0) {
     return `<div style="padding:8px 0; font-size:13px; color:var(--a-text-soft);">${icon} ${label}: 0</div>`;
@@ -464,7 +471,7 @@ async function viewCampaign(id) {
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '') +
-    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'} · Bounced: ${stats.bounced} · Undelivered: ${stats.undelivered}` : '');
+    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'}${c.bodyFormat === 'html' ? ` · Clicked: ${stats.clicked}` : ''} · Bounced: ${stats.bounced} · Undelivered: ${stats.undelivered}` : '');
 
   const activityEl = document.getElementById('viewActivity');
   activityEl.innerHTML = '';
@@ -472,12 +479,28 @@ async function viewCampaign(id) {
     activityEl.innerHTML = '<div class="a-note">Loading activity…</div>';
     const activity = await fetchCampaignActivity(id);
     if (activity) {
+      const linkPerfHtml = (activity.links && activity.links.length > 0) ? `
+        <div style="padding:8px 0; border-top:1px solid var(--a-border); margin-top:4px;">
+          <div style="font-size:13px; font-weight:600; padding:8px 0 6px;">🔗 Link Performance</div>
+          ${activity.links.map(l => `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:6px 0; border-bottom:1px solid var(--a-border);">
+              <div style="min-width:0; flex:1;">
+                <a href="${l.url}" target="_blank" rel="noopener" style="font-size:12.5px; color:var(--a-accent); word-break:break-all;">${truncateUrl(l.url)}</a>
+                ${l.clickers.length ? `<div style="font-size:11.5px; color:var(--a-text-soft); margin-top:2px;">${l.clickers.join(', ')}</div>` : ''}
+              </div>
+              <span style="white-space:nowrap; font-size:12px; font-weight:700;">${l.totalClicks} click${l.totalClicks !== 1 ? 's' : ''}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
       activityEl.innerHTML = `
         <div style="border:1px solid var(--a-border); border-radius:10px; padding:4px 14px;">
-          ${activitySection('Opened', '📬', activity.opened, e => `<div>${e.email} — ${fnFormatDate(e.at)}${e.clicked ? ' (clicked a link)' : ''}</div>`)}
+          ${activitySection('Opened', '📬', activity.opened, e => `<div>${e.email} — ${fnFormatDate(e.at)}${e.clicked ? ' · clicked' : ''}</div>`)}
+          ${activitySection('Clicked', '🖱️', activity.clicked, e => `<div>${e.email} — ${fnFormatDate(e.at)}</div>`)}
           ${activitySection('Unsubscribed', '🔕', activity.unsubscribed, e => `<div>${e.email} — ${fnFormatDate(e.at)}</div>`)}
           ${activitySection('Bounced', '⛔', activity.bounced, e => `<div>${e.email}${e.reason ? ' — ' + e.reason : ''}</div>`)}
           ${activitySection('Undelivered', '⚠️', activity.undelivered, e => `<div>${e.email}${e.reason ? ' — ' + e.reason : ''}</div>`)}
+          ${linkPerfHtml}
         </div>
       `;
     } else {
