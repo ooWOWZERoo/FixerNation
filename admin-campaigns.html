@@ -455,6 +455,21 @@ function activitySection(label, icon, entries, renderEntry) {
   `;
 }
 
+async function followUpCampaign(campaignId, type) {
+  const r = await fetch(`/api/campaigns/${campaignId}/follow-up`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) { fnToast(result.error || 'Could not create follow-up campaign'); return; }
+  fnToast(`Draft created for ${result.recipientCount} recipient${result.recipientCount !== 1 ? 's' : ''} — edit it in the Drafts list`);
+  closeViewModal();
+  await loadCampaigns();
+}
+
 async function fetchCampaignActivity(id) {
   const r = await fetch(`/api/campaigns/${id}/activity`, { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return null;
@@ -479,6 +494,12 @@ async function viewCampaign(id) {
     activityEl.innerHTML = '<div class="a-note">Loading activity…</div>';
     const activity = await fetchCampaignActivity(id);
     if (activity) {
+      const followUpHtml = (activity.nonOpenerCount > 0 || activity.clicked.length > 0) ? `
+        <div style="display:flex; gap:8px; flex-wrap:wrap; padding:8px 0 4px; border-bottom:1px solid var(--a-border); margin-bottom:4px;">
+          ${activity.nonOpenerCount > 0 ? `<button class="a-btn a-btn-outline" style="font-size:12px;" onclick="followUpCampaign(${id}, 'non-openers')">📩 Resend to non-openers (${activity.nonOpenerCount})</button>` : ''}
+          ${activity.clicked.length > 0 ? `<button class="a-btn a-btn-outline" style="font-size:12px;" onclick="followUpCampaign(${id}, 'clickers')">🎯 Follow up with clickers (${activity.clicked.length})</button>` : ''}
+        </div>
+      ` : '';
       const linkPerfHtml = (activity.links && activity.links.length > 0) ? `
         <div style="padding:8px 0; border-top:1px solid var(--a-border); margin-top:4px;">
           <div style="font-size:13px; font-weight:600; padding:8px 0 6px;">🔗 Link Performance</div>
@@ -495,6 +516,7 @@ async function viewCampaign(id) {
       ` : '';
       activityEl.innerHTML = `
         <div style="border:1px solid var(--a-border); border-radius:10px; padding:4px 14px;">
+          ${followUpHtml}
           ${activitySection('Opened', '📬', activity.opened, e => `<div>${e.email} — ${fnFormatDate(e.at)}${e.clicked ? ' · clicked' : ''}</div>`)}
           ${activitySection('Clicked', '🖱️', activity.clicked, e => `<div>${e.email} — ${fnFormatDate(e.at)}</div>`)}
           ${activitySection('Unsubscribed', '🔕', activity.unsubscribed, e => `<div>${e.email} — ${fnFormatDate(e.at)}</div>`)}

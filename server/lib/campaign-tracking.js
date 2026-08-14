@@ -3,14 +3,39 @@ const pool = require('../db/pool');
 
 const HREF_PATTERN = /href="([^"]+)"/gi;
 
+function toCampaignSlug(subject, id) {
+  const slug = (subject || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50);
+  return slug || `campaign-${id}`;
+}
+
+// Appends UTM params to a URL without overwriting any the author already set.
+function appendUtmParams(url, campaignSlug) {
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', 'email');
+    if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'campaign');
+    if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', campaignSlug);
+    return u.toString();
+  } catch (e) {
+    return url;
+  }
+}
+
 // Rewrites every http(s) link in an HTML campaign body to route through the
 // click-tracking redirect, storing each real destination server-side keyed
 // by a random link_id — the public click endpoint never trusts a redirect
 // target from the request itself, so it can't be abused as an open redirect.
 // mailto:/anchor/relative links are left untouched (nothing meaningful to
 // track, and no destination_url to safely redirect to).
-async function rewriteLinksForTracking(html, sendId) {
+// If campaign is provided ({ id, subject }), UTM params are appended to the
+// stored destination_url so site analytics can attribute traffic to the send.
+async function rewriteLinksForTracking(html, sendId, campaign) {
   const base = process.env.SITE_URL || '';
+  const slug = campaign ? toCampaignSlug(campaign.subject, campaign.id) : null;
   const seen = new Map(); // avoid inserting duplicate rows if the same URL appears twice
   let result = html;
   const matches = [...html.matchAll(HREF_PATTERN)];
@@ -22,9 +47,10 @@ async function rewriteLinksForTracking(html, sendId) {
     let trackedUrl = seen.get(originalUrl);
     if (!trackedUrl) {
       const linkId = crypto.randomBytes(12).toString('hex');
+      const destinationUrl = slug ? appendUtmParams(originalUrl, slug) : originalUrl;
       await pool.query(
         'INSERT INTO campaign_link_targets (send_id, link_id, destination_url) VALUES (?, ?, ?)',
-        [sendId, linkId, originalUrl]
+        [sendId, linkId, destinationUrl]
       );
       trackedUrl = `${base}/api/campaigns/click?l=${linkId}`;
       seen.set(originalUrl, trackedUrl);

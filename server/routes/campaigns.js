@@ -145,7 +145,7 @@ router.post('/:id/send', requireAuth, async (req, res) => {
 
     try {
       const body = campaign.body_format === 'html'
-        ? await rewriteLinksForTracking(campaign.body, sendId)
+        ? await rewriteLinksForTracking(campaign.body, sendId, campaign)
         : campaign.body;
       await sendCampaignEmail({
         to: contact.email,
@@ -241,8 +241,58 @@ router.get('/:id/activity', requireAuth, async (req, res) => {
     unsubscribed: rows.filter(r => r.unsubscribed_at).map(r => ({ email: r.email, at: r.unsubscribed_at })),
     bounced: rows.filter(r => r.status === 'bounced').map(r => ({ email: r.email, reason: r.error_message })),
     undelivered: rows.filter(r => r.status === 'undelivered').map(r => ({ email: r.email, reason: r.error_message })),
+    nonOpenerCount: rows.filter(r => r.status === 'sent' && !r.opened_at).length,
     links,
   });
+});
+
+// Creates a draft follow-up campaign targeting a behavioral segment of a
+// sent campaign. A new contact group is auto-created for the segment so
+// the draft's audience filter points to a real, editable group.
+router.post('/:id/follow-up', requireAuth, async (req, res) => {
+  const { type } = req.body || {};
+  if (!['non-openers', 'clickers'].includes(type)) {
+    return res.status(400).json({ error: 'type must be non-openers or clickers' });
+  }
+
+  const [[campaign]] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+  if (campaign.status !== 'Sent') return res.status(400).json({ error: 'Campaign has not been sent' });
+
+  const [contactRows] = type === 'non-openers'
+    ? await pool.query(
+        "SELECT DISTINCT contact_id FROM campaign_sends WHERE campaign_id = ? AND status = 'sent' AND opened_at IS NULL AND contact_id IS NOT NULL",
+        [req.params.id]
+      )
+    : await pool.query(
+        'SELECT DISTINCT contact_id FROM campaign_sends WHERE campaign_id = ? AND clicked_at IS NOT NULL AND contact_id IS NOT NULL',
+        [req.params.id]
+      );
+
+  if (!contactRows.length) {
+    const label = type === 'non-openers' ? 'non-openers' : 'clickers';
+    return res.status(400).json({ error: `No ${label} found for this campaign` });
+  }
+
+  const groupLabel = type === 'non-openers' ? 'Non-openers' : 'Clickers';
+  const [groupResult] = await pool.query(
+    'INSERT INTO contact_groups (name) VALUES (?)',
+    [`${groupLabel} · Campaign #${campaign.id}`]
+  );
+  const groupId = groupResult.insertId;
+
+  const placeholders = contactRows.map(() => '(?, ?)').join(', ');
+  const values = contactRows.flatMap(r => [r.contact_id, groupId]);
+  await pool.query(`INSERT IGNORE INTO contact_group_members (contact_id, group_id) VALUES ${placeholders}`, values);
+
+  const newSubject = type === 'clickers' ? `Re: ${campaign.subject}` : campaign.subject;
+  const [newRow] = await pool.query(
+    `INSERT INTO campaigns (subject, from_name, from_email, body_format, body, audience_group_id, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'Draft')`,
+    [newSubject, campaign.from_name, campaign.from_email, campaign.body_format, campaign.body, groupId]
+  );
+
+  res.json({ ok: true, campaignId: newRow.insertId, groupId, recipientCount: contactRows.length });
 });
 
 module.exports = router;
