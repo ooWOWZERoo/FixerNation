@@ -145,6 +145,14 @@ router.post('/accept', async (req, res) => {
   res.json({ ok: true, stripeUrl: session.url });
 });
 
+// Deliberately unauthenticated — the buyer isn't logged in yet at this point
+// in the flow (PO/Stripe acceptance never issues a session cookie). Two
+// safeguards stand in for that: single-use (an accept_token is emailed to
+// the buyer and can leak via a forwarded email, shared inbox, or browser
+// history — without this it could mint unlimited co-admins indefinitely)
+// and a 7-day window matching the setup link's own stated expiry.
+const INVITE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 router.post('/accept/invite', async (req, res) => {
   const { token, inviteEmail } = req.body || {};
   if (!token) return res.status(400).json({ error: 'Token is required' });
@@ -152,6 +160,12 @@ router.post('/accept/invite', async (req, res) => {
 
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
   if (!quote || !quote.accepted_at) return res.status(400).json({ error: 'Quote not found or not yet accepted' });
+  if (quote.admin_invited_at) {
+    return res.status(409).json({ error: 'An administrator invite has already been sent for this quote.' });
+  }
+  if (Date.now() - new Date(quote.accepted_at).getTime() > INVITE_WINDOW_MS) {
+    return res.status(410).json({ error: 'This quote was accepted more than 7 days ago — the invite window has expired.' });
+  }
 
   let setupUrl = '';
   try { setupUrl = await createSetPasswordUrl(inviteEmail, '', '', '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
@@ -182,6 +196,7 @@ router.post('/accept/invite', async (req, res) => {
     return res.status(500).json({ error: 'Failed to send invite email' });
   }
 
+  await pool.query('UPDATE quote_requests SET admin_invited_at = NOW() WHERE id = ?', [quote.id]);
   res.json({ ok: true });
 });
 

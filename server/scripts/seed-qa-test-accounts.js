@@ -242,6 +242,43 @@ async function main() {
     out.inviteEmail = inviteEmail;
   }
 
+  // --- Accepted quote, fixed token — for quote-accept.spec.ts's regression
+  // test of the /api/quotes/accept/invite security fix (single-use + 7-day
+  // window). Re-seedable: resets accepted_at to "just now" and clears
+  // admin_invited_at every run so the single-use check always starts fresh.
+  {
+    const quoteAcceptToken = 'qa-fixed-quote-accept-token-00000000000000000000000000000000000000000000';
+    const quoteEmail = 'qa-quote-accept@example.com';
+    const quoteContactId = await findOrCreateContact(conn, { email: quoteEmail, name: 'QA QuoteAccept' });
+
+    const [[existingQuote]] = await conn.query('SELECT id FROM quote_requests WHERE accept_token = ?', [quoteAcceptToken]);
+    let quoteId;
+    if (existingQuote) {
+      quoteId = existingQuote.id;
+      await conn.query(
+        "UPDATE quote_requests SET accepted_at = NOW(), admin_invited_at = NULL, status = 'converted' WHERE id = ?",
+        [quoteId]
+      );
+    } else {
+      const [r] = await conn.query(
+        `INSERT INTO quote_requests (first_name, last_name, email, school, accept_token, accepted_at, accepted_payment_method, status)
+         VALUES ('QA', 'QuoteAccept', ?, 'QA Quote School', ?, NOW(), 'po', 'converted')`,
+        [quoteEmail, quoteAcceptToken]
+      );
+      quoteId = r.insertId;
+    }
+
+    const [[existingQuotePurchase]] = await conn.query('SELECT id FROM purchases WHERE quote_id = ?', [quoteId]);
+    if (!existingQuotePurchase) {
+      await conn.query(
+        `INSERT INTO purchases (contact_id, product_type, payment_method, payment_status, quote_id)
+         VALUES (?, 'group_license', 'po', 'pending', ?)`,
+        [quoteContactId, quoteId]
+      );
+    }
+    out.quoteAcceptToken = quoteAcceptToken;
+  }
+
   // --- Teacher with a classroom -------------------------------------------
   const teacherEmail = 'qa-teacher@example.com';
   const teacherUserId = await findOrCreateSiteUser(conn, {
@@ -329,6 +366,7 @@ async function main() {
   if (out.removableTeacher) console.log(`TEST_REMOVABLE_TEACHER_EMAIL=${out.removableTeacher}`);
   if (out.inviteToken) console.log(`TEST_TEACHER_INVITE_TOKEN=${out.inviteToken}`);
   if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);
+  if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);
 }
 
