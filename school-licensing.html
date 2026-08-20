@@ -663,8 +663,11 @@ async function submitInquiry() {
   const grades    = [...document.querySelectorAll('input[name="grade"]:checked')].map(c => c.value).join(', ');
   const note      = document.getElementById('fMessage').value.trim();
 
+  // Clear any leftover inline override from a previous run — an inline style
+  // beats the .form-msg.error CSS rule, so a stale display:none here would
+  // silently keep every future error message invisible.
   msgEl.classList.remove('error');
-  msgEl.style.display = 'none';
+  msgEl.style.display = '';
 
   if (!firstName || !lastName || !school || !email || !phone) {
     msgEl.textContent = 'Please fill in your name, school, email, and phone number.';
