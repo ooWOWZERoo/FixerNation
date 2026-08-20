@@ -71,17 +71,21 @@ export async function signInAsMember(page: Page) {
 // Login page: /school-admin-login.html — fields: #email, #password
 // ---------------------------------------------------------------------------
 
+export async function signInAsSchoolAdminAccount(page: Page, email: string, password: string) {
+  await page.goto("/school-admin-login.html");
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(password);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page).toHaveURL(/school-admin-dashboard\.html/, { timeout: 15000 });
+}
+
 export async function signInAsSchoolAdmin(page: Page) {
   const email = process.env.TEST_SCHOOL_ADMIN_EMAIL;
   const password = process.env.TEST_SCHOOL_ADMIN_PASSWORD;
   if (!email || !password) {
     throw new Error("TEST_SCHOOL_ADMIN_EMAIL / TEST_SCHOOL_ADMIN_PASSWORD not set — see tests/.env.test.example");
   }
-  await page.goto("/school-admin-login.html");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page).toHaveURL(/school-admin-dashboard\.html/, { timeout: 15000 });
+  await signInAsSchoolAdminAccount(page, email, password);
 }
 
 // ---------------------------------------------------------------------------

@@ -282,6 +282,57 @@ async function main() {
     out.quoteAcceptToken = quoteAcceptToken;
   }
 
+  // --- Cross-purchase permission-leak fixture -----------------------------
+  // One admin, two purchases: 'read_only' on the OLDER purchase, 'primary' on
+  // a NEWER one. requireSchoolAdmin's assignment list is ORDER BY
+  // purchased_at DESC, so a fixed bug used assignments[0] (the newer,
+  // primary one) as this admin's permission level everywhere, regardless of
+  // which purchase a request actually targeted — letting a write against the
+  // read_only-on-paper older purchase silently succeed. Re-seedable: resets
+  // both permission levels every run in case a previous test run (or a
+  // regression) changed them.
+  if (licenseProduct) {
+    const permLeakEmail = 'qa-permleak-admin@example.com';
+    const permLeakContactId = await findOrCreateContact(conn, { email: permLeakEmail, name: 'QA PermLeak' });
+    const permLeakUserId = await findOrCreateSiteUser(conn, {
+      email: permLeakEmail, firstName: 'QA', lastName: 'PermLeak', role: 'school_license_admin',
+    });
+
+    async function findOrCreatePurchase(schoolDomain, purchasedAtSql) {
+      const [[existing]] = await conn.query(
+        "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license' AND school_domain = ?",
+        [permLeakContactId, schoolDomain]
+      );
+      if (existing) return existing.id;
+      const [r] = await conn.query(
+        `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, school_domain, purchased_at)
+         VALUES (?, 'group_license', ?, 10, 'QA Seed', 'manual', 'paid', ?, ${purchasedAtSql})`,
+        [permLeakContactId, licenseProduct.id, schoolDomain]
+      );
+      return r.insertId;
+    }
+
+    const olderPurchaseId = await findOrCreatePurchase('qa-permleak-older.example.com', 'NOW() - INTERVAL 30 DAY');
+    const newerPurchaseId = await findOrCreatePurchase('qa-permleak-newer.example.com', 'NOW()');
+
+    await conn.query(
+      `INSERT INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active)
+       VALUES (?, ?, 'read_only', 1)
+       ON DUPLICATE KEY UPDATE permission_level = 'read_only', is_active = 1`,
+      [permLeakUserId, olderPurchaseId]
+    );
+    await conn.query(
+      `INSERT INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active)
+       VALUES (?, ?, 'primary', 1)
+       ON DUPLICATE KEY UPDATE permission_level = 'primary', is_active = 1`,
+      [permLeakUserId, newerPurchaseId]
+    );
+
+    out.permLeakEmail = permLeakEmail;
+    out.permLeakOlderPurchaseId = olderPurchaseId;
+    out.permLeakNewerPurchaseId = newerPurchaseId;
+  }
+
   // --- Teacher with a classroom -------------------------------------------
   const teacherEmail = 'qa-teacher@example.com';
   const teacherUserId = await findOrCreateSiteUser(conn, {
@@ -370,6 +421,11 @@ async function main() {
   if (out.inviteToken) console.log(`TEST_TEACHER_INVITE_TOKEN=${out.inviteToken}`);
   if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);
   if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
+  if (out.permLeakEmail) {
+    console.log(`TEST_PERMLEAK_ADMIN_EMAIL=${out.permLeakEmail}`);
+    console.log(`TEST_PERMLEAK_OLDER_PURCHASE_ID=${out.permLeakOlderPurchaseId}`);
+    console.log(`TEST_PERMLEAK_NEWER_PURCHASE_ID=${out.permLeakNewerPurchaseId}`);
+  }
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);
 }
 

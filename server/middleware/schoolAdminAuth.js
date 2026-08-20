@@ -63,12 +63,25 @@ async function requireSchoolAdminRead(req, res, next) {
   return requireSchoolAdmin(req, res, next);
 }
 
-// Rejects write actions for read_only admins
-function requireWritePermission(req, res, next) {
-  if (req.schoolAdmin && req.schoolAdmin.permissionLevel === 'read_only') {
-    return res.status(403).json({ error: 'Your administrator role is read-only' });
+// Rejects a write action for a read_only admin — evaluated for the SPECIFIC
+// purchase the action targets, not just req.schoolAdmin.permissionLevel
+// (which is only ever the first assignment once sorted by purchase date, per
+// requireSchoolAdmin above). A multi-school admin can hold different
+// permission levels on different purchases; a blanket check using only the
+// most-recently-purchased assignment's level let a read_only assignment on
+// an older purchase silently inherit a primary/secondary assignment's write
+// access from a newer one, regardless of which purchase a request actually
+// targeted. Call this once the target purchaseId is known — immediately for
+// routes that receive it directly in the query/body, or after a row lookup
+// for routes that resolve it from a nested resource (an invitation, seat, or
+// teacher id) first. Returns true (and has already sent the 403) if blocked.
+function blockIfReadOnly(req, res, purchaseId) {
+  const assignment = req.schoolAdmin.purchases.find(p => p.purchase_id === purchaseId);
+  if (assignment && assignment.permission_level === 'read_only') {
+    res.status(403).json({ error: 'Your administrator role is read-only' });
+    return true;
   }
-  next();
+  return false;
 }
 
-module.exports = { requireSchoolAdmin, requireSchoolAdminRead, requireWritePermission };
+module.exports = { requireSchoolAdmin, requireSchoolAdminRead, blockIfReadOnly };

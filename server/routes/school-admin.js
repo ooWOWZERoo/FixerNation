@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db/pool');
-const { requireSchoolAdmin, requireWritePermission } = require('../middleware/schoolAdminAuth');
+const { requireSchoolAdmin, blockIfReadOnly } = require('../middleware/schoolAdminAuth');
 const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
@@ -311,13 +311,14 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
 });
 
 // POST /api/school-admin/invitations — send a single invitation
-router.post('/invitations', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.post('/invitations', requireSchoolAdmin, async (req, res) => {
   const { purchaseId: rawPurchaseId, email, firstName, lastName, gradeLevel, roleName, department, subjectArea, personalMessage } = req.body || {};
   const purchaseId = rawPurchaseId ? Number(rawPurchaseId) : req.schoolAdmin.purchaseIds[0];
 
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'A valid email is required' });
   }
@@ -430,13 +431,14 @@ router.post('/invitations', requireSchoolAdmin, requireWritePermission, async (r
 });
 
 // POST /api/school-admin/invitations/bulk — send multiple invitations
-router.post('/invitations/bulk', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
   const { purchaseId: rawPurchaseId, invitations } = req.body || {};
   const purchaseId = rawPurchaseId ? Number(rawPurchaseId) : req.schoolAdmin.purchaseIds[0];
 
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
   if (!Array.isArray(invitations) || !invitations.length) {
     return res.status(400).json({ error: 'invitations array is required' });
   }
@@ -549,12 +551,13 @@ router.get('/invitations/csv-template', requireSchoolAdmin, (req, res) => {
 });
 
 // PUT /api/school-admin/invitations/:id/resend
-router.put('/invitations/:id/resend', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/invitations/:id/resend', requireSchoolAdmin, async (req, res) => {
   const [[inv]] = await pool.query(
     'SELECT * FROM school_invitations WHERE id = ? AND purchase_id IN (?)',
     [req.params.id, req.schoolAdmin.purchaseIds]
   );
   if (!inv) return res.status(404).json({ error: 'Invitation not found' });
+  if (blockIfReadOnly(req, res, inv.purchase_id)) return;
   if (['revoked', 'registered'].includes(inv.status)) {
     return res.status(409).json({ error: `Cannot resend a ${inv.status} invitation` });
   }
@@ -593,13 +596,14 @@ router.put('/invitations/:id/resend', requireSchoolAdmin, requireWritePermission
 });
 
 // PUT /api/school-admin/invitations/:id/revoke
-router.put('/invitations/:id/revoke', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/invitations/:id/revoke', requireSchoolAdmin, async (req, res) => {
   const { reason } = req.body || {};
   const [[inv]] = await pool.query(
     'SELECT * FROM school_invitations WHERE id = ? AND purchase_id IN (?)',
     [req.params.id, req.schoolAdmin.purchaseIds]
   );
   if (!inv) return res.status(404).json({ error: 'Invitation not found' });
+  if (blockIfReadOnly(req, res, inv.purchase_id)) return;
   if (['revoked', 'registered'].includes(inv.status)) {
     return res.status(409).json({ error: `Cannot revoke a ${inv.status} invitation` });
   }
@@ -640,12 +644,13 @@ router.put('/invitations/:id/revoke', requireSchoolAdmin, requireWritePermission
 });
 
 // PUT /api/school-admin/invitations/:id/extend
-router.put('/invitations/:id/extend', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/invitations/:id/extend', requireSchoolAdmin, async (req, res) => {
   const [[inv]] = await pool.query(
     'SELECT * FROM school_invitations WHERE id = ? AND purchase_id IN (?)',
     [req.params.id, req.schoolAdmin.purchaseIds]
   );
   if (!inv) return res.status(404).json({ error: 'Invitation not found' });
+  if (blockIfReadOnly(req, res, inv.purchase_id)) return;
   if (['revoked', 'registered'].includes(inv.status)) {
     return res.status(409).json({ error: `Cannot extend a ${inv.status} invitation` });
   }
@@ -661,12 +666,13 @@ router.put('/invitations/:id/extend', requireSchoolAdmin, requireWritePermission
 
 // DELETE /api/school-admin/invitations/:id — remove a revoked or expired invitation
 // and release its reserved seat so capacity is freed.
-router.delete('/invitations/:id', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.delete('/invitations/:id', requireSchoolAdmin, async (req, res) => {
   const [[inv]] = await pool.query(
     'SELECT * FROM school_invitations WHERE id = ? AND purchase_id IN (?)',
     [req.params.id, req.schoolAdmin.purchaseIds]
   );
   if (!inv) return res.status(404).json({ error: 'Invitation not found' });
+  if (blockIfReadOnly(req, res, inv.purchase_id)) return;
   if (!['revoked', 'expired'].includes(inv.status)) {
     return res.status(409).json({ error: `Only revoked or expired invitations can be deleted (this one is ${inv.status})` });
   }
@@ -758,7 +764,7 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
 // PUT /api/school-admin/teachers/:siteUserId/audiences
 const SA_VALID_AUDIENCES = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];
 
-router.put('/teachers/:siteUserId/audiences', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/teachers/:siteUserId/audiences', requireSchoolAdmin, async (req, res) => {
   const siteUserId = Number(req.params.siteUserId);
   const purchaseId = req.query.purchaseId
     ? Number(req.query.purchaseId)
@@ -767,6 +773,7 @@ router.put('/teachers/:siteUserId/audiences', requireSchoolAdmin, requireWritePe
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
 
   const [[seat]] = await pool.query(
     "SELECT id FROM license_seats WHERE purchase_id = ? AND registered_site_user_id = ? AND status IN ('registered','inactive')",
@@ -794,7 +801,7 @@ router.put('/teachers/:siteUserId/audiences', requireSchoolAdmin, requireWritePe
 });
 
 // PUT /api/school-admin/teachers/:siteUserId/deactivate
-router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, async (req, res) => {
   const siteUserId = Number(req.params.siteUserId);
   const purchaseId = req.query.purchaseId
     ? Number(req.query.purchaseId)
@@ -803,6 +810,7 @@ router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, requireWriteP
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
 
   // Verify teacher belongs to this school
   const [[seat]] = await pool.query(
@@ -835,7 +843,7 @@ router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, requireWriteP
 });
 
 // PUT /api/school-admin/teachers/:siteUserId/reactivate
-router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, async (req, res) => {
   const siteUserId = Number(req.params.siteUserId);
   const purchaseId = req.query.purchaseId
     ? Number(req.query.purchaseId)
@@ -844,6 +852,7 @@ router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, requireWriteP
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
 
   const [[seat]] = await pool.query(
     "SELECT id FROM license_seats WHERE purchase_id = ? AND registered_site_user_id = ? AND status = 'inactive'",
@@ -874,7 +883,7 @@ router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, requireWriteP
 });
 
 // DELETE /api/school-admin/teachers/:siteUserId — remove from school (keeps site_user account)
-router.delete('/teachers/:siteUserId', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.delete('/teachers/:siteUserId', requireSchoolAdmin, async (req, res) => {
   const siteUserId = Number(req.params.siteUserId);
   const bodyPurchaseId = req.body && req.body.purchaseId ? Number(req.body.purchaseId) : null;
   const purchaseId = bodyPurchaseId || (req.query.purchaseId ? Number(req.query.purchaseId) : req.schoolAdmin.purchaseIds[0]);
@@ -882,6 +891,7 @@ router.delete('/teachers/:siteUserId', requireSchoolAdmin, requireWritePermissio
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
 
   try {
     const [[seat]] = await pool.query(
@@ -1014,7 +1024,7 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
 });
 
 // PUT /api/school-admin/seats/:seatId/revoke
-router.put('/seats/:seatId/revoke', requireSchoolAdmin, requireWritePermission, async (req, res) => {
+router.put('/seats/:seatId/revoke', requireSchoolAdmin, async (req, res) => {
   const { reason } = req.body || {};
   if (!reason) return res.status(400).json({ error: 'A revocation reason is required' });
 
@@ -1027,6 +1037,7 @@ router.put('/seats/:seatId/revoke', requireSchoolAdmin, requireWritePermission, 
     [req.params.seatId, req.schoolAdmin.purchaseIds]
   );
   if (!seat) return res.status(404).json({ error: 'Seat not found' });
+  if (blockIfReadOnly(req, res, seat.purchase_id)) return;
   if (seat.status === 'revoked') return res.status(409).json({ error: 'Seat is already revoked' });
 
   const conn = await pool.getConnection();
