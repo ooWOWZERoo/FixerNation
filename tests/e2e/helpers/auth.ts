@@ -30,9 +30,13 @@ async function signInAsSiteUserWithCredentials(page: Page, email: string, passwo
   await page.locator("#fnAuthLoginEmail").fill(email);
   await page.locator("#fnAuthLoginPassword").fill(password);
   await page.locator("#fnAuthLoginEmail").press("Tab"); // blur to trigger validation
-  await page.getByRole("button", { name: /^sign in$/i }).click();
-  // Modal closes after successful login; wait for the cookie to be set
-  await page.waitForFunction(() => document.cookie.includes("fn_user_session"), { timeout: 10000 });
+  await page.locator("#fnAuthLoginForm").getByRole("button", { name: /^log in$/i }).click();
+  // fn_user_session is httpOnly — not readable via document.cookie from page-side
+  // JS, so poll the browser context's cookie jar via the Playwright API instead.
+  await expect(async () => {
+    const cookies = await page.context().cookies();
+    expect(cookies.some((c) => c.name === "fn_user_session")).toBe(true);
+  }).toPass({ timeout: 10000 });
 }
 
 export async function signInAsLicensedSiteUser(page: Page) {

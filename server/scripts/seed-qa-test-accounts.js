@@ -182,6 +182,22 @@ async function main() {
   out.classroomJoinCode = classroom.join_code;
   out.classroomParentCode = classroom.parent_code;
 
+  // Assign a published curriculum to the classroom so teacher/parent/student
+  // lesson-card flows have something real to render, not just an empty
+  // "No lessons" state.
+  const [[curriculum]] = await conn.query(
+    "SELECT id FROM curricula WHERE published = 1 ORDER BY id LIMIT 1"
+  );
+  if (curriculum) {
+    await conn.query(
+      `INSERT IGNORE INTO classroom_assignments (classroom_id, curriculum_id, assigned_by_id)
+       VALUES (?, ?, ?)`,
+      [classroom.id, curriculum.id, teacherUserId]
+    );
+  } else {
+    console.warn('No published curriculum found — classroom has no lesson assigned. Publish one via admin-curriculum.html, then re-run this script.');
+  }
+
   // --- Student in that classroom ------------------------------------------
   const studentUsername = 'qa-student-1';
   const [[existingStudent]] = await conn.query(

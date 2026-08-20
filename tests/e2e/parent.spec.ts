@@ -51,13 +51,24 @@ test.describe("Parent portal", () => {
     //
     // We accept either as a valid authenticated page state.
 
-    const classroomBlock = page.locator(".classroom-block").first();
-    const lessonCard = page.locator(".lesson-card").first();
-    const joinPrompt = page.locator(".state-card, .join-row, .code-input").first();
-
-    await expect(classroomBlock.or(lessonCard).or(joinPrompt)).toBeVisible({
-      timeout: 15000,
-    });
+    // The page can render a hidden "sign in" state-card alongside a visible
+    // classroom-block at the same time (JS shows/hides sections after auth
+    // resolves) — chaining .or() across ambiguous locators trips strict mode,
+    // so check visibility of each candidate individually instead.
+    await page.waitForTimeout(1000); // let post-auth render settle
+    const candidates = [
+      page.locator(".classroom-block").first(),
+      page.locator(".lesson-card").first(),
+      page.locator(".state-card, .join-row, .code-input").first(),
+    ];
+    let anyVisible = false;
+    for (const c of candidates) {
+      if ((await c.count()) > 0 && (await c.isVisible())) {
+        anyVisible = true;
+        break;
+      }
+    }
+    expect(anyVisible).toBe(true);
   });
 
   test("lesson card or classroom link is present when classrooms are enrolled", async ({

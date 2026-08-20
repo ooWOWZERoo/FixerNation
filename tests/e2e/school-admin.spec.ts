@@ -52,13 +52,13 @@ test.describe("School Admin portal", () => {
     await expect(h1).toHaveText(/roster/i, { timeout: 10000 });
   });
 
-  test("teachers page loads with title", async ({ page }) => {
+  test("teachers page redirects to the roster page (merged view)", async ({ page }) => {
+    // school-admin-teachers.html is a <meta refresh> alias kept for old
+    // bookmarks/links — it always redirects to school-admin-roster.html.
     await signInAsSchoolAdmin(page);
     await page.goto("/school-admin-teachers.html");
 
-    await expect(page).toHaveTitle(/teachers/i, { timeout: 10000 });
-
-    const h1 = page.locator(".sa-topbar h1");
-    await expect(h1).toHaveText(/teachers/i, { timeout: 10000 });
+    await expect(page).toHaveURL(/school-admin-roster\.html/, { timeout: 10000 });
+    await expect(page).toHaveTitle(/roster/i, { timeout: 10000 });
   });
 });

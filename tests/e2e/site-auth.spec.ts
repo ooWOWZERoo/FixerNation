@@ -21,34 +21,15 @@ test.describe("Site auth modal", () => {
     await page.goto("/education-portal.html");
     await page.evaluate(() => (window as any).fnAuthOpenModal("signup"));
 
-    // The modal / dialog should be visible
-    const modal = page
-      .locator("[role='dialog'], .fn-auth-modal, #fnAuthModal, .modal")
-      .first();
-    await expect(modal).toBeVisible({ timeout: 8000 });
-
-    // Fill signup fields — IDs may vary; fall back to input[type] selectors scoped to the modal
-    const emailField = modal
-      .locator("#fnAuthSignupEmail, #fnAuthRegisterEmail, input[type='email']")
-      .first();
-    const passwordField = modal
-      .locator(
-        "#fnAuthSignupPassword, #fnAuthRegisterPassword, input[type='password']"
-      )
-      .first();
-    const nameField = modal
-      .locator(
-        "#fnAuthSignupName, #fnAuthRegisterName, input[placeholder*='name' i], input[name='name']"
-      )
-      .first();
-
-    if (await nameField.count() > 0 && await nameField.isVisible()) {
-      await nameField.fill(`QA Signup ${STAMP}`);
-    }
-    await emailField.fill(`qa-signup-${STAMP}@example.com`);
-    await passwordField.fill("TestPass123!");
+    // Confirmed field IDs from site-auth.js's signup form/tab.
+    await expect(page.locator("#fnAuthSignupEmail")).toBeVisible({ timeout: 8000 });
+    await page.locator("#fnAuthSignupFirstName").fill("QA");
+    await page.locator("#fnAuthSignupLastName").fill(`Signup${STAMP}`);
+    await page.locator("#fnAuthSignupEmail").fill(`qa-signup-${STAMP}@example.com`);
+    await page.locator("#fnAuthSignupPassword").fill("TestPass123!");
 
     await page
+      .locator("#fnAuthSignupForm")
       .getByRole("button", { name: /sign up|register|create account/i })
       .first()
       .click();
@@ -73,7 +54,7 @@ test.describe("Site auth modal", () => {
 
     await page.locator("#fnAuthLoginEmail").fill("nobody@example.com");
     await page.locator("#fnAuthLoginPassword").fill(`badpassword-${STAMP}`);
-    await page.getByRole("button", { name: /^sign in$/i }).click();
+    await page.locator("#fnAuthLoginForm").getByRole("button", { name: /^log in$/i }).click();
 
     // An error must appear somewhere visible on the page (inline or toast)
     await expect(
@@ -103,28 +84,16 @@ test.describe("Site auth modal", () => {
       await page.goto("/education-portal.html");
       await page.evaluate(() => (window as any).fnAuthOpenModal("signin"));
 
-      // Look for a "Forgot password?" link or tab inside the modal
-      const forgotTrigger = page
-        .getByRole("button", { name: /forgot/i })
-        .or(page.getByText(/forgot.*password/i))
-        .or(page.locator("a[href*='forgot'], [data-tab='forgot'], [data-action='forgot']"))
-        .first();
+      // The "Forgot password?" trigger is an <a onclick="fnAuthShowForgotPassword()">,
+      // not a button — call the switcher directly, same pattern as fnAuthOpenModal above.
+      await page.evaluate(() => (window as any).fnAuthShowForgotPassword());
 
-      if (await forgotTrigger.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await forgotTrigger.click();
-      } else {
-        // Fall back to a standalone forgot-password page if the modal has no tab
-        await page.goto("/forgot-password.html");
-      }
-
-      // Fill the email
-      const emailField = page
-        .locator("#fnAuthForgotEmail, #forgotEmail, input[type='email']")
-        .first();
+      const emailField = page.locator("#fnAuthForgotEmail");
       await expect(emailField).toBeVisible({ timeout: 5000 });
       await emailField.fill(email);
 
       await page
+        .locator("#fnAuthForgotForm")
         .getByRole("button", { name: /send|reset|submit/i })
         .first()
         .click();
@@ -147,8 +116,10 @@ test.describe("Site auth modal", () => {
     await signInAsLicensedSiteUser(page);
     await page.goto("/my-license.html");
 
-    // Page must load — should not redirect to a login screen
-    await page.waitForLoadState("networkidle");
+    // Page must load — should not redirect to a login screen. Some FNE pages
+    // poll in the background (analytics, auto-refresh), so "networkidle"
+    // never resolves — "load" is the reliable signal here.
+    await page.waitForLoadState("load");
     expect(page.url()).not.toMatch(/login/i);
 
     // At least one heading or visible landmark should be present
