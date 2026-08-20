@@ -23,8 +23,14 @@ import { signInAsAdmin, signInAsSchoolAdmin } from "./helpers/auth";
 //
 // Cleanup for the teacher-side test deletes the newly created site_user via
 // the admin API (found through the CRM contact search, since register()
-// also creates a newsletter_contacts row) so the fixed email stays reusable
-// without needing to re-run the seed script before every suite run.
+// also creates a newsletter_contacts row), which frees the license seat
+// back to 'pending'. It can NOT reset the school_invitations row itself —
+// revoke and delete both explicitly reject a 'registered' status server
+// side, correctly, since a real app should never let a completed
+// registration be undone through a normal admin action. So this test only
+// runs once per seed; on a second run within the same seed it detects the
+// already-used invitation via /validate and skips cleanly rather than
+// failing. Re-run server/scripts/seed-qa-test-accounts.js to reset it.
 // ---------------------------------------------------------------------------
 
 test.describe.configure({ mode: "serial" });
@@ -64,6 +70,18 @@ test.describe("School invite flow", () => {
     const inviteToken = process.env.TEST_TEACHER_INVITE_TOKEN;
     const inviteEmail = process.env.TEST_TEACHER_INVITE_EMAIL;
     test.skip(!inviteToken || !inviteEmail, "TEST_TEACHER_INVITE_TOKEN / TEST_TEACHER_INVITE_EMAIL not set — see tests/.env.test.example");
+
+    // Once used, a 'registered' invitation can never legitimately go back to
+    // 'pending' through any admin API (revoke and delete both explicitly
+    // reject that status server-side — correct behavior for a real app, not
+    // a gap) — only re-running seed-qa-test-accounts.js resets it. Detect
+    // that state and skip cleanly instead of failing confusingly.
+    const validateRes = await page.request.get(`/api/school-invite/validate?token=${inviteToken}`);
+    const validateBody = await validateRes.json().catch(() => ({}));
+    test.skip(
+      !validateRes.ok() || validateBody.alreadyRegistered,
+      "Invitation already used by a prior run — re-run seed-qa-test-accounts.js to reset it"
+    );
 
     await page.goto(`/school-invite-accept.html?token=${inviteToken}`);
 
