@@ -134,12 +134,13 @@ async function main() {
   const schoolAdminUserId = await findOrCreateSiteUser(conn, {
     email: schoolAdminEmail, firstName: 'QA', lastName: 'SchoolAdmin', role: 'school_license_admin',
   });
+  let saPurchaseId;
   if (licenseProduct) {
     let [[saPurchase]] = await conn.query(
       "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license' AND license_product_id = ?",
       [schoolAdminContactId, licenseProduct.id]
     );
-    let saPurchaseId = saPurchase && saPurchase.id;
+    saPurchaseId = saPurchase && saPurchase.id;
     if (!saPurchaseId) {
       const [result] = await conn.query(
         `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, school_domain)
