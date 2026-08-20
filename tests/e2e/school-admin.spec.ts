@@ -61,4 +61,35 @@ test.describe("School Admin portal", () => {
     await expect(page).toHaveURL(/school-admin-roster\.html/, { timeout: 10000 });
     await expect(page).toHaveTitle(/roster/i, { timeout: 10000 });
   });
+
+  // -------------------------------------------------------------------------
+  // Remove Teacher — uses a dedicated seat-registered account
+  // (qa-removable-teacher@example.com, seeded under the school admin's own
+  // purchase by seed-qa-test-accounts.js) so this never touches the shared
+  // qa-teacher fixture other specs depend on. DELETE /api/school-admin/
+  // teachers/:id only revokes the license_seats row and invalidates the
+  // session — it does not delete the site_user — so re-running the seed
+  // script flips the seat back to 'registered' and the test stays repeatable.
+  // -------------------------------------------------------------------------
+  test("remove teacher revokes their seat and removes them from the roster", async ({ page }) => {
+    const removableEmail = process.env.TEST_REMOVABLE_TEACHER_EMAIL;
+    test.skip(!removableEmail, "TEST_REMOVABLE_TEACHER_EMAIL not set — see tests/.env.test.example");
+
+    await signInAsSchoolAdmin(page);
+    const rosterResponse = page.waitForResponse((r) => r.url().includes("/api/school-admin/licenses"));
+    await page.goto("/school-admin-roster.html");
+    await rosterResponse;
+
+    const row = page.locator("tr, .sa-row").filter({ hasText: removableEmail! });
+    await expect(row).toBeVisible({ timeout: 10000 });
+    await row.getByRole("button", { name: /^remove$/i }).click();
+
+    // openConfirm() requires a non-empty reason for this action
+    await expect(page.locator("#confirmModal")).toBeVisible({ timeout: 5000 });
+    await page.locator("#confirmReason").fill("QA e2e test removal");
+    await page.locator("#confirmBtn").click();
+
+    await expect(page.locator("#confirmModal")).toBeHidden({ timeout: 10000 });
+    await expect(page.locator("tr, .sa-row").filter({ hasText: removableEmail! })).toHaveCount(0, { timeout: 10000 });
+  });
 });

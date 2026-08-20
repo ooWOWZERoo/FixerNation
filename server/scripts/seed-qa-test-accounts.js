@@ -158,6 +158,35 @@ async function main() {
   }
   out.schoolAdmin = schoolAdminEmail;
 
+  // --- Removable teacher, registered under the school admin's own purchase
+  // (qa-teacher above has its own unrelated classroom, not this purchase) —
+  // used only by the "remove teacher" e2e test. Re-seedable: if a prior test
+  // run already revoked this seat, flip it back to registered so the test
+  // stays repeatable without needing a fresh account each time.
+  if (licenseProduct && typeof saPurchaseId !== 'undefined') {
+    const removableEmail = 'qa-removable-teacher@example.com';
+    const removableUserId = await findOrCreateSiteUser(conn, {
+      email: removableEmail, firstName: 'QA', lastName: 'RemovableTeacher', role: 'teacher',
+    });
+    const [[removableSeat]] = await conn.query(
+      'SELECT id FROM license_seats WHERE purchase_id = ? AND registered_site_user_id = ?',
+      [saPurchaseId, removableUserId]
+    );
+    if (removableSeat) {
+      await conn.query(
+        "UPDATE license_seats SET status = 'registered', revoked_at = NULL, revoked_by = NULL, revocation_reason = NULL WHERE id = ?",
+        [removableSeat.id]
+      );
+    } else {
+      await conn.query(
+        `INSERT INTO license_seats (purchase_id, invited_email, status, registered_site_user_id, registered_at)
+         VALUES (?, ?, 'registered', ?, NOW())`,
+        [saPurchaseId, removableEmail, removableUserId]
+      );
+    }
+    out.removableTeacher = removableEmail;
+  }
+
   // --- Teacher with a classroom -------------------------------------------
   const teacherEmail = 'qa-teacher@example.com';
   const teacherUserId = await findOrCreateSiteUser(conn, {
@@ -242,6 +271,7 @@ async function main() {
   console.log(`TEST_STUDENT_PIN=${out.pin}`);
   console.log(`TEST_PARENT_EMAIL=${out.parent}`);
   console.log(`TEST_PARENT_PASSWORD=${out.password}`);
+  if (out.removableTeacher) console.log(`TEST_REMOVABLE_TEACHER_EMAIL=${out.removableTeacher}`);
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);
 }
 
