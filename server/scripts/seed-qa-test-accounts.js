@@ -247,7 +247,10 @@ async function main() {
   // window). Re-seedable: resets accepted_at to "just now" and clears
   // admin_invited_at every run so the single-use check always starts fresh.
   {
-    const quoteAcceptToken = 'qa-fixed-quote-accept-token-00000000000000000000000000000000000000000000';
+    // quote_requests.accept_token is VARCHAR(64) — a longer literal here gets
+    // silently truncated on insert (non-strict SQL mode), causing every
+    // lookup by the full string to find nothing. Keep this at exactly 64 chars.
+    const quoteAcceptToken = 'qa-fixed-quote-accept-token-0000000000000000000000000000000000';
     const quoteEmail = 'qa-quote-accept@example.com';
     const quoteContactId = await findOrCreateContact(conn, { email: quoteEmail, name: 'QA QuoteAccept' });
 
