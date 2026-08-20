@@ -92,11 +92,10 @@ test.describe("Admin orders (read-only)", () => {
     await expect(orderCount).toBeVisible();
     await expect(orderTotal).toBeVisible();
 
-    // Values should not remain at the initial placeholder "—"
-    const countText = await orderCount.innerText();
-    const totalText = await orderTotal.innerText();
-    expect(countText.trim()).not.toBe("—");
-    expect(totalText.trim()).not.toBe("—");
+    // Visible doesn't mean populated yet — the tiles start on a "—"
+    // placeholder until the async load finishes; poll instead of reading once.
+    await expect(orderCount).not.toHaveText("—", { timeout: 10000 });
+    await expect(orderTotal).not.toHaveText("—", { timeout: 10000 });
   });
 
   // ── 5. Unpaid orders (conditional, read-only) ──────────────────────────────

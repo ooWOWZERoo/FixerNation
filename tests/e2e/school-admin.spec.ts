@@ -69,7 +69,11 @@ test.describe("School Admin portal", () => {
   // qa-teacher fixture other specs depend on. DELETE /api/school-admin/
   // teachers/:id only revokes the license_seats row and invalidates the
   // session — it does not delete the site_user — so re-running the seed
-  // script flips the seat back to 'registered' and the test stays repeatable.
+  // script flips the seat back to 'registered' and the test stays
+  // repeatable ACROSS seed runs. Within the same seed, running this test
+  // twice consumes the fixture (the roster's default filter only shows
+  // "Active teachers", so an already-revoked seat won't appear) — detect
+  // that and skip cleanly instead of failing confusingly.
   // -------------------------------------------------------------------------
   test("remove teacher revokes their seat and removes them from the roster", async ({ page }) => {
     const removableEmail = process.env.TEST_REMOVABLE_TEACHER_EMAIL;
@@ -81,6 +85,9 @@ test.describe("School Admin portal", () => {
     await rosterResponse;
 
     const row = page.locator("tr, .sa-row").filter({ hasText: removableEmail! });
+    const alreadyConsumed = (await row.count()) === 0;
+    test.skip(alreadyConsumed, "Seat already revoked by a prior run — re-run seed-qa-test-accounts.js to reset it");
+
     await expect(row).toBeVisible({ timeout: 10000 });
     await row.getByRole("button", { name: /^remove$/i }).click();
 
