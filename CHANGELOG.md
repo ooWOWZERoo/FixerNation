@@ -4,6 +4,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 > **Maintenance convention:** add a new release section at the top of this file every time a feature or fix is completed and deployed — see `CLAUDE.md` for the exact rule. Keep entries short and user/business-facing (what changed and why it matters), not a line-by-line diff.
 
+## Release 26 — 2026-08-20 — E2E test suite + inquiry form validation fix
+
+- **Fixed the school inquiry form (`school-licensing.html`) showing no error message on invalid input.** Missing fields, a bad email, an incomplete phone number, or a network failure all set the right message text but rendered it into a `display:none` element that a CSS class could never override — visitors got no feedback at all when something needed fixing, the form just silently didn't submit. Found by the new automated test suite below.
+- **New automated Playwright test suite** (`tests/`) covers every admin page, the public site, and all four portals (school admin, teacher, student, parent) — 27 spec files, ~101 tests, run against production. `server/scripts/seed-qa-test-accounts.js` provisions the dedicated test accounts it needs and is safe to re-run. Not yet wired into a CI pipeline — run manually before/after a risky deploy.
+
 ## Release 25 — 2026-08-05 — School admin + invite flow bug fixes
 
 - **Fixed Resend Welcome and Remove buttons doing nothing on admin-school-admins.html** — root cause was `JSON.stringify(email)` embedding double-quote characters inside a `"`-delimited HTML `onclick` attribute, truncating the attribute at the first inner `"` and producing a JS SyntaxError on click. Fixed by switching to single-quoted string embedding with `esc()` escaping throughout the row-generation template.
@@ -57,7 +62,6 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded and pushed but **not live** — blocked on the admin obtaining real Stripe API keys (`STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`). Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
-- No automated test suite exists yet.
 - The `-v2` alternate design pages across the site are frozen/static by original project decision — not a bug, not scheduled for further work.
 
 ---
