@@ -44,14 +44,20 @@ test.describe("Admin books CRUD", () => {
     await gotoBooks(page);
   });
 
-  test.afterAll(async ({ page }) => {
-    // Safety net: remove any QA books left over by a failed test
+  test.afterAll(async ({ browser }) => {
+    // Safety net: remove any QA books left over by a failed test. page/context
+    // are per-test fixtures and unavailable here — open one manually.
+    const context = await browser.newContext();
+    const page = await context.newPage();
     try {
+      await signInAsAdmin(page);
       await gotoBooks(page);
       await tryDeleteByTitle(page, TITLE_EDITED);
       await tryDeleteByTitle(page, TITLE);
     } catch {
       // Best-effort — do not mask original test failure
+    } finally {
+      await context.close();
     }
   });
 

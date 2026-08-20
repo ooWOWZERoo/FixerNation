@@ -46,12 +46,18 @@ test.describe("Admin blog posts", () => {
     await gotoBlogPosts(page);
   });
 
-  test.afterAll(async ({ page }) => {
+  test.afterAll(async ({ browser }) => {
+    // page/context are per-test fixtures and unavailable here — open one manually.
+    const context = await browser.newContext();
+    const page = await context.newPage();
     try {
+      await signInAsAdmin(page);
       await gotoBlogPosts(page);
       await tryDeleteByTitle(page, TITLE);
     } catch {
       // Best-effort — do not mask original test failure
+    } finally {
+      await context.close();
     }
   });
 
