@@ -22,7 +22,12 @@ test.describe("Admin Campaigns", () => {
 
   test.beforeEach(async ({ page }) => {
     await signInAsAdmin(page);
+    // page.goto() only waits for the load event, not the page's own async
+    // fetch — wait for the campaigns list response too, or a freshly-created
+    // row can intermittently not be in the DOM yet when the next assertion runs.
+    const listResponse = page.waitForResponse((r) => /\/api\/campaigns($|\?)/.test(r.url()));
     await page.goto("/admin-campaigns.html");
+    await listResponse;
   });
 
   // -------------------------------------------------------------------------
