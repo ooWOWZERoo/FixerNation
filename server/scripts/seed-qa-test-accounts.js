@@ -188,6 +188,60 @@ async function main() {
     out.removableTeacher = removableEmail;
   }
 
+  // --- Teacher invite acceptance flow, fixed token -------------------------
+  // school-invite.spec.ts can't read a real inbox to get the emailed
+  // acceptance link, so this pre-seeds a 'pending' invitation with a known,
+  // stable token (same reasoning as TEST_QUOTE_VALID_TOKEN below) — the test
+  // still drives the real school-invite-accept.html registration UI end to
+  // end, only the email-delivery step itself is bridged. Re-seedable: if the
+  // account from a prior run wasn't cleaned up (e.g. a failed test), tear it
+  // down and reset the seat/invitation back to 'pending' first.
+  if (licenseProduct && typeof saPurchaseId !== 'undefined') {
+    const inviteEmail = 'qa-invite-teacher@example.com';
+    const inviteToken = 'qa-fixed-invite-test-token-0000000000000000000000000000000000000000000000';
+
+    const [[existingInviteUser]] = await conn.query('SELECT id FROM site_users WHERE email = ?', [inviteEmail]);
+    if (existingInviteUser) {
+      await conn.query('DELETE FROM site_users WHERE id = ?', [existingInviteUser.id]);
+    }
+
+    let [[inviteSeat]] = await conn.query(
+      'SELECT id FROM license_seats WHERE purchase_id = ? AND invited_email = ?',
+      [saPurchaseId, inviteEmail]
+    );
+    let inviteSeatId;
+    if (inviteSeat) {
+      inviteSeatId = inviteSeat.id;
+      await conn.query(
+        "UPDATE license_seats SET status = 'pending', registered_site_user_id = NULL, registered_at = NULL WHERE id = ?",
+        [inviteSeatId]
+      );
+    } else {
+      const [r] = await conn.query(
+        "INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, 'pending')",
+        [saPurchaseId, inviteEmail]
+      );
+      inviteSeatId = r.insertId;
+    }
+
+    const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const [[existingInv]] = await conn.query('SELECT id FROM school_invitations WHERE token = ?', [inviteToken]);
+    if (existingInv) {
+      await conn.query(
+        "UPDATE school_invitations SET status = 'pending', seat_id = ?, expires_at = ? WHERE id = ?",
+        [inviteSeatId, expiresAt, existingInv.id]
+      );
+    } else {
+      await conn.query(
+        `INSERT INTO school_invitations (purchase_id, seat_id, invited_email, first_name, last_name, token, status, expires_at)
+         VALUES (?, ?, ?, 'QA', 'InviteTest', ?, 'pending', ?)`,
+        [saPurchaseId, inviteSeatId, inviteEmail, inviteToken, expiresAt]
+      );
+    }
+    out.inviteToken = inviteToken;
+    out.inviteEmail = inviteEmail;
+  }
+
   // --- Teacher with a classroom -------------------------------------------
   const teacherEmail = 'qa-teacher@example.com';
   const teacherUserId = await findOrCreateSiteUser(conn, {
@@ -273,6 +327,8 @@ async function main() {
   console.log(`TEST_PARENT_EMAIL=${out.parent}`);
   console.log(`TEST_PARENT_PASSWORD=${out.password}`);
   if (out.removableTeacher) console.log(`TEST_REMOVABLE_TEACHER_EMAIL=${out.removableTeacher}`);
+  if (out.inviteToken) console.log(`TEST_TEACHER_INVITE_TOKEN=${out.inviteToken}`);
+  if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);
 }
 
