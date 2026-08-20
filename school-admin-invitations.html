@@ -216,15 +216,20 @@ function renderInvitations(invs) {
       const badge = statusBadge[inv.status] || '<span class="sa-badge">' + esc(inv.status) + '</span>';
       const resends = inv.resend_count || 0;
       let actions = '';
+      // JSON.stringify() wraps the email in double quotes, which prematurely
+      // terminates the onclick="..." attribute (also double-quoted) right
+      // after it — the same bug already fixed once in admin-school-admins.html.
+      // esc() doesn't escape single quotes, which is safe since email
+      // addresses can never contain one.
       if (inv.status === 'pending' || inv.status === 'opened' || inv.status === 'expired') {
-        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="resend(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Resend</button> ';
-        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="extend(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Extend</button> ';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="resend(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Resend</button> ';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="extend(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Extend</button> ';
       }
       if (inv.status !== 'revoked' && inv.status !== 'registered') {
-        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Revoke</button>';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Revoke</button>';
       }
       if (inv.status === 'revoked' || inv.status === 'expired') {
-        actions += ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="deleteInvitation(' + inv.id + ',' + JSON.stringify(inv.invited_email) + ')">Delete</button>';
+        actions += ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="deleteInvitation(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Delete</button>';
       }
       var roleLine = [inv.role_title, inv.subject_area].filter(Boolean).join(' · ');
       var inviterLine = (inv.inviter_first || inv.inviter_last) ? 'Invited by ' + esc([inv.inviter_first, inv.inviter_last].filter(Boolean).join(' ')) : '';

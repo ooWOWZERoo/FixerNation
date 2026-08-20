@@ -178,7 +178,12 @@ function renderSeats(seats) {
       const badge = statusBadge[status] || '<span class="sa-badge">' + status + '</span>';
       const notes = esc(s.revocation_reason || '—');
       const canRevoke = s.status === 'registered' || s.status === 'pending';
-      const actions = canRevoke ? '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + s.id + ',' + JSON.stringify(email) + ')">Revoke</button>' : '—';
+      // JSON.stringify() wraps the email in double quotes, which prematurely
+      // terminates the onclick="..." attribute (also double-quoted) right
+      // after it — same bug already fixed in admin-school-admins.html and
+      // school-admin-invitations.html. esc() doesn't escape single quotes,
+      // safe since email addresses can never contain one.
+      const actions = canRevoke ? '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + s.id + ',\'' + esc(email) + '\')">Revoke</button>' : '—';
       return '<tr><td style="font-weight:600;font-size:13px;">' + esc(name) + '</td><td style="font-size:13px;color:var(--sa-text-soft);">' + esc(email) + '</td><td style="font-size:13px;">' + registered + '</td><td>' + badge + '</td><td style="font-size:12px;color:var(--sa-text-soft);max-width:180px;">' + notes + '</td><td>' + actions + '</td></tr>';
     }).join('') +
     '</tbody></table>';

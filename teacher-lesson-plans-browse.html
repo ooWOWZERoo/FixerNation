@@ -152,7 +152,7 @@ function renderCards(curricula) {
         <div class="card-foot">
           ${added
             ? '<span class="btn-outline">In Your Library</span>'
-            : `<button class="btn-add" ${atLimit ? 'disabled title="Library is full"' : ''} onclick="openConfirm(${c.id}, ${JSON.stringify(c.title)})">Add to Library</button>`
+            : `<button class="btn-add" ${atLimit ? 'disabled title="Library is full"' : ''} onclick="openConfirm(${c.id}, ${JSON.stringify(c.title).replace(/"/g, '&quot;')})">Add to Library</button>`
           }
         </div>
       </div>
