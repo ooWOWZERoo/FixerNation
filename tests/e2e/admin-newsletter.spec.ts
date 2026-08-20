@@ -4,6 +4,10 @@ import { signInAsAdmin, expectToast } from "./helpers/auth";
 // ---------------------------------------------------------------------------
 // Admin Newsletter — contacts & groups CRUD
 // Page: /admin-newsletter.html
+// #contactModalOverlay / #groupsModalOverlay both contain a generic .a-modal
+// div, so locators scope to the specific overlay id. Search is live
+// (input-event bound, no Enter/submit needed). deleteContact() uses a
+// native confirm() dialog, not an in-page button.
 // ---------------------------------------------------------------------------
 
 test.describe.configure({ mode: "serial" });
@@ -26,19 +30,16 @@ test.describe("Admin Newsletter", () => {
   test("create contact appears in search results", async ({ page }) => {
     await page.getByRole("button", { name: /\+ Add Contact/i }).click();
 
-    const modal = page.locator(".a-modal");
+    const modal = page.locator("#contactModalOverlay .a-modal");
     await expect(modal).toBeVisible();
 
     await modal.locator("#contactName").fill(CONTACT_NAME);
     await modal.locator("#contactEmail").fill(CONTACT_EMAIL);
     await modal.locator("#contactSaveBtn").click();
 
-    await expectToast(page, /added|saved|success/i);
+    await expectToast(page, "Contact added");
 
-    // Search for the new contact
     await page.locator("#searchInput").fill(CONTACT_EMAIL);
-    await page.keyboard.press("Enter");
-
     await expect(page.getByText(CONTACT_EMAIL)).toBeVisible({ timeout: 8000 });
   });
 
@@ -46,92 +47,70 @@ test.describe("Admin Newsletter", () => {
   // 2. Edit the contact
   // -------------------------------------------------------------------------
   test("edit contact name persists", async ({ page }) => {
-    // Search first so the row is visible
     await page.locator("#searchInput").fill(CONTACT_EMAIL);
-    await page.keyboard.press("Enter");
+    const row = page.locator("tr").filter({ hasText: CONTACT_EMAIL });
+    await expect(row).toBeVisible({ timeout: 8000 });
 
-    const row = page.getByText(CONTACT_EMAIL).locator("..");
-    await row.click();
+    // Icon-only button (title="Edit">✏️</button>) — the emoji text content
+    // is the accessible name, so select by the title attribute directly.
+    await row.locator('button[title="Edit"]').click();
 
-    const modal = page.locator(".a-modal");
+    const modal = page.locator("#contactModalOverlay .a-modal");
     await expect(modal).toBeVisible();
+    await expect(modal.locator("#contactSaveBtn")).toHaveText("Save Changes");
 
     const nameField = modal.locator("#contactName");
-    await nameField.clear();
     await nameField.fill(CONTACT_NAME_EDITED);
     await modal.locator("#contactSaveBtn").click();
 
-    await expectToast(page, /saved|updated|success/i);
+    await expectToast(page, "Contact updated");
 
-    // Re-search and confirm the updated name
     await page.locator("#searchInput").fill(CONTACT_EMAIL);
-    await page.keyboard.press("Enter");
-
     await expect(page.getByText(CONTACT_NAME_EDITED)).toBeVisible({ timeout: 8000 });
   });
 
   // -------------------------------------------------------------------------
-  // 3. Create a group
+  // 3. Create a group (via the Manage Groups modal)
   // -------------------------------------------------------------------------
   test("create group appears in groups list", async ({ page }) => {
-    const groupInput = page.locator("#newGroupName");
-    await expect(groupInput).toBeVisible();
+    await page.getByRole("button", { name: /manage groups/i }).click();
 
-    await groupInput.fill(GROUP_NAME);
-    await page.getByRole("button", { name: /^\+ Add$/i }).click();
+    const modal = page.locator("#groupsModalOverlay .a-modal");
+    await expect(modal).toBeVisible();
 
-    await expectToast(page, /group|added|success/i);
+    await modal.locator("#newGroupName").fill(GROUP_NAME);
+    await modal.getByRole("button", { name: /^\+ Add$/i }).click();
 
-    await expect(page.getByText(GROUP_NAME)).toBeVisible({ timeout: 8000 });
+    await expectToast(page, "Group created");
+    await expect(modal.getByText(GROUP_NAME)).toBeVisible({ timeout: 8000 });
   });
 
   // -------------------------------------------------------------------------
-  // 4. Delete the contact
+  // 4. Delete the contact and the group (cleanup)
   // -------------------------------------------------------------------------
   test("delete contact removes it from search results", async ({ page }) => {
+    page.on("dialog", (dialog) => dialog.accept());
+
     await page.locator("#searchInput").fill(CONTACT_EMAIL);
-    await page.keyboard.press("Enter");
+    const row = page.locator("tr").filter({ hasText: CONTACT_EMAIL });
+    await expect(row).toBeVisible({ timeout: 8000 });
 
-    const row = page.getByText(CONTACT_EMAIL).locator("..");
-    await row.click();
+    await row.locator('button[title="Delete"]').click();
+    await expectToast(page, "Contact removed");
 
-    const modal = page.locator(".a-modal");
-    await expect(modal).toBeVisible();
-
-    // Look for a Delete button inside the modal
-    const deleteBtn = modal.getByRole("button", { name: /delete/i });
-    await expect(deleteBtn).toBeVisible();
-    await deleteBtn.click();
-
-    // Confirm dialog if one appears
-    const confirmBtn = page.getByRole("button", { name: /confirm|yes|delete/i }).last();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-
-    await expectToast(page, /deleted|removed|success/i);
-
-    // Contact should no longer appear
     await page.locator("#searchInput").fill(CONTACT_EMAIL);
-    await page.keyboard.press("Enter");
+    await expect(page.locator("tr").filter({ hasText: CONTACT_EMAIL })).toHaveCount(0, { timeout: 8000 });
 
-    await expect(page.getByText(CONTACT_EMAIL)).not.toBeVisible({ timeout: 8000 });
-
-    // NOTE: Group cleanup — if a delete affordance exists next to the group row,
-    // the test below will remove it. If not, "QA Group <STAMP>" requires manual
-    // deletion from the Groups section of /admin-newsletter.html.
-    try {
-      const groupRow = page.getByText(GROUP_NAME).locator("..");
-      const groupDeleteBtn = groupRow.getByRole("button", { name: /delete|remove/i });
-      if (await groupDeleteBtn.isVisible({ timeout: 2000 })) {
-        await groupDeleteBtn.click();
-        const confirmGroupBtn = page.getByRole("button", { name: /confirm|yes|delete/i }).last();
-        if (await confirmGroupBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await confirmGroupBtn.click();
-        }
-      }
-    } catch {
-      // No delete affordance found — manual cleanup required for group
-    }
+    // Group cleanup
+    await page.getByRole("button", { name: /manage groups/i }).click();
+    const groupsModal = page.locator("#groupsModalOverlay .a-modal");
+    await expect(groupsModal).toBeVisible();
+    // Each group renders as <div class="a-repeat-row"><div class="info">
+    // <div class="name">...</div></div><button title="Delete group">✕</button>
+    // </div> — filtering generic "div" would also match the nested .name
+    // div (text-only, no button descendant); scope to the row class.
+    const groupRow = groupsModal.locator(".a-repeat-row").filter({ hasText: GROUP_NAME });
+    await groupRow.locator('button[title="Delete group"]').click();
+    await expectToast(page, "Group deleted");
   });
 });

@@ -4,8 +4,12 @@ import { signInAsAdmin, expectToast } from "./helpers/auth";
 // ---------------------------------------------------------------------------
 // Admin Campaigns — CRUD + duplicate action
 // Page: /admin-campaigns.html
-// NOTE: Tests never click Send. Only Draft-state CRUD and the Duplicate action
-//       are exercised to avoid sending real emails.
+// NOTE: Tests never click "Send Now". Only Draft-state CRUD and the
+//       Duplicate action are exercised to avoid sending real emails.
+// #campaignModalOverlay and #viewModalOverlay both contain a generic
+// .a-modal div, so locators scope to the specific overlay id.
+// deleteCampaign() uses a native confirm() dialog — Playwright auto-dismisses
+// dialogs unless a page.on('dialog') handler is registered first.
 // ---------------------------------------------------------------------------
 
 test.describe.configure({ mode: "serial" });
@@ -14,9 +18,7 @@ test.describe("Admin Campaigns", () => {
   const STAMP = Date.now();
   const CAMPAIGN_SUBJECT = `QA Campaign ${STAMP}`;
   const CAMPAIGN_BODY = "Test body.";
-
-  // Store row locator key across tests
-  let campaignRowText: string;
+  const COPY_SUBJECT = `${CAMPAIGN_SUBJECT} (Copy)`;
 
   test.beforeEach(async ({ page }) => {
     await signInAsAdmin(page);
@@ -27,129 +29,54 @@ test.describe("Admin Campaigns", () => {
   // 1. Create draft campaign
   // -------------------------------------------------------------------------
   test("create draft campaign appears in list with status Draft", async ({ page }) => {
-    // Look for a "New Campaign" or "+ New" button
-    const newBtn = page
-      .getByRole("button", { name: /new campaign|\+ new/i })
-      .or(page.getByRole("link", { name: /new campaign|\+ new/i }))
-      .first();
-    await expect(newBtn).toBeVisible();
-    await newBtn.click();
+    await page.getByRole("button", { name: /\+ new campaign/i }).click();
 
-    const modal = page.locator(".a-modal");
+    const modal = page.locator("#campaignModalOverlay .a-modal");
     await expect(modal).toBeVisible();
 
-    // Fill subject
-    const subjectField = modal
-      .locator("input[name='subject'], #subject, #campaignSubject")
-      .first();
-    await subjectField.fill(CAMPAIGN_SUBJECT);
+    await modal.locator("#subject").fill(CAMPAIGN_SUBJECT);
+    await modal.locator("#body").fill(CAMPAIGN_BODY);
 
-    // Fill body — try textarea first, then contenteditable
-    const bodyTextarea = modal.locator("textarea").first();
-    if (await bodyTextarea.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await bodyTextarea.fill(CAMPAIGN_BODY);
-    } else {
-      const bodyEditable = modal.locator("[contenteditable='true']").first();
-      await bodyEditable.fill(CAMPAIGN_BODY);
-    }
+    await modal.getByRole("button", { name: /^save draft$/i }).click();
+    await expectToast(page, "Draft saved");
 
-    // Save / Create — look for a Save or Create button (not Send)
-    const saveBtn = modal
-      .getByRole("button", { name: /save|create|add/i })
-      .first();
-    await saveBtn.click();
-
-    await expectToast(page, /saved|created|success/i);
-
-    campaignRowText = CAMPAIGN_SUBJECT;
-
-    // Campaign must appear in the list
-    await expect(page.getByText(CAMPAIGN_SUBJECT)).toBeVisible({ timeout: 8000 });
-
-    // Status column should contain "Draft" (case-insensitive)
-    const row = page.getByText(CAMPAIGN_SUBJECT).locator("..").locator("..");
-    await expect(row.getByText(/draft/i)).toBeVisible({ timeout: 5000 });
+    const row = page.locator("tr").filter({ hasText: CAMPAIGN_SUBJECT });
+    await expect(row).toBeVisible({ timeout: 8000 });
+    await expect(row.getByText(/draft/i)).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
   // 2. Duplicate the campaign
   // -------------------------------------------------------------------------
   test("duplicate campaign creates a copy in the list", async ({ page }) => {
-    // Find the row containing our campaign subject
-    const row = page
-      .locator("tr, .campaign-row, [data-campaign]")
-      .filter({ hasText: CAMPAIGN_SUBJECT })
-      .first();
+    const row = page.locator("tr").filter({ hasText: CAMPAIGN_SUBJECT }).first();
     await expect(row).toBeVisible();
 
-    // Click Duplicate / Copy button on that row
-    const dupeBtn = row
-      .getByRole("button", { name: /duplicate|copy/i })
-      .or(row.locator(".a-btn").filter({ hasText: /duplicate|copy/i }))
-      .first();
-    await expect(dupeBtn).toBeVisible();
-    await dupeBtn.click();
+    // Icon buttons are emoji-only (e.g. title="Duplicate">📄</button>) — the
+    // emoji text content IS the accessible name, so getByRole name matching
+    // on the title never hits. Select by the title attribute directly.
+    await row.locator('button[title="Duplicate"]').click();
+    await expectToast(page, "Campaign duplicated as a new draft");
 
-    await expectToast(page, /duplicate|copy|success/i);
-
-    // A second row containing the original subject (or "Copy") should be visible
-    const allRows = page
-      .locator("tr, .campaign-row, [data-campaign]")
-      .filter({ hasText: new RegExp(CAMPAIGN_SUBJECT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "|copy", "i") });
-    await expect(allRows).toHaveCount(2, { timeout: 8000 });
+    await expect(page.locator("tr").filter({ hasText: COPY_SUBJECT })).toBeVisible({ timeout: 8000 });
   });
 
   // -------------------------------------------------------------------------
-  // 3. Delete the original campaign (cleanup)
+  // 3. Delete both the original and the duplicate (cleanup)
   // -------------------------------------------------------------------------
-  test("delete original campaign removes it from list", async ({ page }) => {
-    // Identify the first row that matches the subject (the original, not the copy)
-    const row = page
-      .locator("tr, .campaign-row, [data-campaign]")
-      .filter({ hasText: CAMPAIGN_SUBJECT })
-      .first();
-    await expect(row).toBeVisible();
+  test("delete campaign removes it from list", async ({ page }) => {
+    page.on("dialog", (dialog) => dialog.accept());
 
-    const deleteBtn = row
-      .getByRole("button", { name: /delete/i })
-      .or(row.locator(".a-btn").filter({ hasText: /delete/i }))
-      .first();
-    await expect(deleteBtn).toBeVisible();
-    await deleteBtn.click();
+    const copyRow = page.locator("tr").filter({ hasText: COPY_SUBJECT });
+    await expect(copyRow).toBeVisible();
+    await copyRow.locator('button[title="Delete"]').click();
+    await expectToast(page, "Campaign deleted");
+    await expect(page.locator("tr").filter({ hasText: COPY_SUBJECT })).toHaveCount(0, { timeout: 8000 });
 
-    // Confirm if dialog appears
-    const confirmBtn = page.getByRole("button", { name: /confirm|yes|delete/i }).last();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-
-    await expectToast(page, /deleted|removed|success/i);
-
-    // At most one row with this subject should remain (the duplicate/copy)
-    const remaining = page
-      .locator("tr, .campaign-row, [data-campaign]")
-      .filter({ hasText: CAMPAIGN_SUBJECT });
-    await expect(remaining).toHaveCount(1, { timeout: 8000 });
-
-    // Best-effort: also delete the duplicate so we leave no test debris
-    try {
-      const dupeRow = page
-        .locator("tr, .campaign-row, [data-campaign]")
-        .filter({ hasText: CAMPAIGN_SUBJECT })
-        .first();
-      const dupeDeleteBtn = dupeRow
-        .getByRole("button", { name: /delete/i })
-        .or(dupeRow.locator(".a-btn").filter({ hasText: /delete/i }))
-        .first();
-      if (await dupeDeleteBtn.isVisible({ timeout: 2000 })) {
-        await dupeDeleteBtn.click();
-        const conf = page.getByRole("button", { name: /confirm|yes|delete/i }).last();
-        if (await conf.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await conf.click();
-        }
-      }
-    } catch {
-      // Duplicate cleanup is best-effort
-    }
+    const originalRow = page.locator("tr").filter({ hasText: CAMPAIGN_SUBJECT });
+    await expect(originalRow).toBeVisible();
+    await originalRow.locator('button[title="Delete"]').click();
+    await expectToast(page, "Campaign deleted");
+    await expect(page.locator("tr").filter({ hasText: CAMPAIGN_SUBJECT })).toHaveCount(0, { timeout: 8000 });
   });
 });

@@ -54,29 +54,13 @@ test.describe("Admin Quotes", () => {
   // 3. Search with a non-matching string shows no rows or an empty-state message
   // -------------------------------------------------------------------------
   test("searching non-matching string shows empty state or no rows", async ({ page }) => {
-    const NON_MATCHING = "ZZZNOTFOUND";
+    // #searchInput filters live via oninput="applyFilters()" — no Enter/submit
+    // needed, and there's no <form> here to submit anyway.
+    await page.locator("#searchInput").fill("ZZZNOTFOUND");
 
-    // Find the search input — common patterns
-    const searchInput = page
-      .locator("input[type='search'], input[placeholder*='search' i], #searchInput, #quoteSearch")
-      .first();
-    await expect(searchInput).toBeVisible({ timeout: 8000 });
-
-    await searchInput.fill(NON_MATCHING);
-    await page.keyboard.press("Enter");
-
-    // Allow a brief moment for the table to filter / re-render
-    await page.waitForTimeout(500);
-
-    // Either: the tbody has no data rows, OR an empty-state element is visible
     const tbody = page.locator("table tbody").first();
-    const dataRows = tbody.locator("tr").filter({ hasText: /\S/ });
-    const emptyState = page.locator(
-      ".empty-state, .no-results, [data-empty], td[colspan]"
-    );
-
-    const rowCount = await dataRows.count();
-    const emptyVisible = await emptyState.isVisible({ timeout: 3000 }).catch(() => false);
+    const rowCount = await tbody.locator("tr").count();
+    const emptyVisible = await page.locator("#quotesEmpty").isVisible();
 
     expect(rowCount === 0 || emptyVisible).toBeTruthy();
   });
@@ -97,24 +81,15 @@ test.describe("Admin Quotes", () => {
     }
 
     // Click the View button on the first row
-    const viewBtn = firstRow
-      .getByRole("button", { name: /view/i })
-      .or(firstRow.locator(".a-btn").filter({ hasText: /view/i }))
-      .first();
-    await expect(viewBtn).toBeVisible();
-    await viewBtn.click();
+    await firstRow.getByRole("button", { name: /^view$/i }).click();
 
-    const modal = page.locator(".a-modal");
+    const modal = page.locator("#quoteModalOverlay .a-modal");
     await expect(modal).toBeVisible({ timeout: 8000 });
 
-    // Modal should show the quote number prominently
-    const quoteNumberBadge = modal.locator(
-      "[class*='badge'], [class*='quote-number'], #quoteNumber, .quote-number"
-    ).first();
-    await expect(quoteNumberBadge).toBeVisible({ timeout: 5000 });
+    // Modal title is "Quote Request — #123456" when the quote has a number
+    await expect(modal.locator("#modalTitle")).toBeVisible({ timeout: 5000 });
 
     // "Quote Valid Until" date field should be present
-    const validUntilLabel = modal.getByText(/quote valid until/i);
-    await expect(validUntilLabel).toBeVisible({ timeout: 5000 });
+    await expect(modal.getByText(/quote valid until/i)).toBeVisible({ timeout: 5000 });
   });
 });
