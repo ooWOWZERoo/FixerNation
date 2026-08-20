@@ -83,4 +83,23 @@ test.describe("Admin license products", () => {
     const editBtn = firstRow.locator('.a-icon-btn[title="Edit"]');
     await expect(editBtn).toBeVisible();
   });
+
+  // loadGroups() fires unconditionally on page load to populate the
+  // "Auto-assign Group" dropdown in the add/edit product form. Regression
+  // guard for a real bug: it previously called a URL that never existed
+  // (/api/contacts/groups instead of /api/newsletter/groups), silently
+  // swallowed as `if (!r.ok) return`, leaving the dropdown permanently
+  // stuck on the default option with no visible error.
+  test("Auto-assign Group dropdown loads real contact groups", async ({ page }) => {
+    // #productGroup lives inside #productModalOverlay, hidden until the
+    // add/edit form is opened — loadGroups() itself fires unconditionally
+    // on page load regardless, so the dropdown should already be populated
+    // by the time the modal opens.
+    await page.getByRole("button", { name: /\+ add product/i }).click();
+    const select = page.locator("#productGroup");
+    await expect(select).toBeVisible();
+    await expect(async () => {
+      expect(await select.locator("option").count()).toBeGreaterThan(1);
+    }).toPass({ timeout: 10000 });
+  });
 });

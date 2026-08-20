@@ -159,7 +159,7 @@ loadGroups();
 let groupsCache = [];
 
 async function loadGroups() {
-  const r = await fetch('/api/contacts/groups', { credentials: 'include' });
+  const r = await fetch('/api/newsletter/groups', { credentials: 'include' });
   if (!r.ok) return;
   groupsCache = (await r.json()).groups || [];
   const sel = document.getElementById('productGroup');
