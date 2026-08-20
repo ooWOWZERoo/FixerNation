@@ -43,7 +43,9 @@ test.describe("Parent portal", () => {
   });
 
   test("portal shows classroom lesson links or a join/link prompt", async ({ page }) => {
+    const classroomsResponse = page.waitForResponse((r) => r.url().includes("/api/parent/classrooms"));
     await signInAsParent(page);
+    await classroomsResponse;
 
     // The portal renders one of two states after auth:
     // 1. Classroom blocks with lesson cards (parent has joined classrooms)
@@ -55,7 +57,6 @@ test.describe("Parent portal", () => {
     // classroom-block at the same time (JS shows/hides sections after auth
     // resolves) — chaining .or() across ambiguous locators trips strict mode,
     // so check visibility of each candidate individually instead.
-    await page.waitForTimeout(1000); // let post-auth render settle
     const candidates = [
       page.locator(".classroom-block").first(),
       page.locator(".lesson-card").first(),
@@ -74,7 +75,9 @@ test.describe("Parent portal", () => {
   test("lesson card or classroom link is present when classrooms are enrolled", async ({
     page,
   }) => {
+    const classroomsResponse = page.waitForResponse((r) => r.url().includes("/api/parent/classrooms"));
     await signInAsParent(page);
+    await classroomsResponse;
 
     // If classroom blocks are present, each should have at least a heading
     const classroomHeading = page.locator(".classroom-head h3");

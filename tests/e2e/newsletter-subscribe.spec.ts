@@ -5,6 +5,12 @@ import { signInAsAdmin } from "./helpers/auth";
 // Newsletter subscribe — public subscribe form on index.html
 // Fields: #newsletterName (optional), #newsletterEmail (required)
 // Success message: "You're subscribed! Thanks for joining Fixer Nation."
+// The backend (POST /api/newsletter/contacts) returns 200 with
+// { ok: false, reason: 'duplicate' } on a repeat email (unique constraint on
+// newsletter_contacts.email) — the frontend shows a distinct "already on our
+// list" message in that case, not the same success text. That's a deliberate
+// design choice, not a bug: re-subscribing is a no-op on the backend (no new
+// row), and the UI is explicit about it rather than pretending it worked.
 // Also verifies the subscriber appears exactly once in the admin view.
 // ---------------------------------------------------------------------------
 
@@ -52,13 +58,13 @@ test.describe("Newsletter subscribe", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. Re-subscribe same email → API is idempotent, still shows success
+  // 2. Re-subscribe same email → duplicate message, no new contact created
   // -------------------------------------------------------------------------
-  test("re-subscribing same email still shows success (idempotent)", async ({ page }) => {
+  test("re-subscribing same email shows the duplicate message", async ({ page }) => {
     await fillAndSubmitNewsletterForm(page, EMAIL);
 
     await expect(
-      page.getByText("You're subscribed! Thanks for joining Fixer Nation.", { exact: false })
+      page.getByText("That email is already on our list.", { exact: false })
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -69,8 +75,8 @@ test.describe("Newsletter subscribe", () => {
     await signInAsAdmin(page);
     await page.goto("/admin-newsletter.html");
 
+    // #searchInput filters live via an input-event listener — no Enter needed.
     await page.locator("#searchInput").fill(EMAIL);
-    await page.keyboard.press("Enter");
 
     // First result must be visible, and there must be exactly one match
     const matches = page.getByText(EMAIL);
