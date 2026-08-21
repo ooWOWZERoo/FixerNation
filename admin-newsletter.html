@@ -814,7 +814,7 @@ async function confirmImport() {
   const result = await r.json();
   closeImportModal();
   fetchAndRenderContacts();
-  fnToast(`Imported ${result.imported} · skipped ${result.skippedDuplicate} duplicate(s), ${result.skippedInvalid} invalid`);
+  fnToast(`Imported ${result.imported} new · updated ${result.updated} existing · skipped ${result.skippedInvalid} invalid`);
 }
 
 /* ---- Purchases & Licenses ---- */

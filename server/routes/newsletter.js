@@ -800,28 +800,49 @@ router.put('/seats/:seatId/audiences', requireAuth, async (req, res) => {
   res.json({ ok: true, audiences });
 });
 
-// Bulk import — rows already parsed client-side from CSV.
+// Bulk import — rows already parsed client-side from CSV. Upserts by email
+// (matching the same convention as the one-off server/scripts/import-contacts-csv.js):
+// an existing contact's blank fields get filled in from the CSV, but a
+// value it already has is never overwritten, and status/source/signup_date
+// are never touched — a contact may have unsubscribed through our own
+// site, and a bulk import shouldn't silently resubscribe or relabel them.
 router.post('/contacts/import', requireAuth, async (req, res) => {
   const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
   const defaultSource = (req.body && req.body.defaultSource) || 'Bulk Import';
 
-  const [existingRows] = await pool.query('SELECT email FROM newsletter_contacts');
-  const existingEmails = new Set(existingRows.map(r => r.email.toLowerCase()));
+  const [existingRows] = await pool.query('SELECT id, email FROM newsletter_contacts');
+  const existingIdByEmail = new Map(existingRows.map(r => [r.email.toLowerCase(), r.id]));
 
-  let imported = 0, skippedInvalid = 0, skippedDuplicate = 0;
+  let imported = 0, updated = 0, skippedInvalid = 0;
   for (const row of rows) {
     const email = (row.email || '').trim();
     if (!email || !EMAIL_PATTERN.test(email)) { skippedInvalid++; continue; }
-    if (existingEmails.has(email.toLowerCase())) { skippedDuplicate++; continue; }
-    await pool.query(
+
+    const existingId = existingIdByEmail.get(email.toLowerCase());
+    if (existingId) {
+      await pool.query(
+        `UPDATE newsletter_contacts SET
+           name = COALESCE(NULLIF(name, ''), ?),
+           street = COALESCE(NULLIF(street, ''), ?),
+           city = COALESCE(NULLIF(city, ''), ?),
+           state = COALESCE(NULLIF(state, ''), ?),
+           zip = COALESCE(NULLIF(zip, ''), ?)
+         WHERE id = ?`,
+        [row.name || '', row.street || '', row.city || '', row.state || '', row.zip || '', existingId]
+      );
+      updated++;
+      continue;
+    }
+
+    const [result] = await pool.query(
       'INSERT INTO newsletter_contacts (name, email, street, city, state, zip, source, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [row.name || '', email, row.street || '', row.city || '', row.state || '', row.zip || '', row.source || defaultSource, 'Subscribed']
     );
-    existingEmails.add(email.toLowerCase());
+    existingIdByEmail.set(email.toLowerCase(), result.insertId);
     imported++;
   }
 
-  res.json({ imported, skippedInvalid, skippedDuplicate });
+  res.json({ imported, updated, skippedInvalid });
 });
 
 module.exports = { router, attachPurchaseDetails, createPurchase, assignContactToGroups };
