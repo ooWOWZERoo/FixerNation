@@ -269,6 +269,15 @@ let sortDir = 'desc';
 let currentPage = 1;
 const PAGE_SIZE = 50;
 let contactsCache = [];
+// The filtered+sorted (but not yet paginated) result of the most recent
+// applyFiltersAndRender() — exportCsv() reads from this instead of the raw
+// contactsCache so the export matches what's actually on screen (search,
+// group/status/source filters, sort order) instead of always dumping every
+// contact regardless of the active view. Pagination itself is left alone —
+// export intentionally still includes every matching row across all pages,
+// not just the current page, since narrowing an export to one arbitrary
+// page of results isn't a real use case.
+let filteredContactsCache = [];
 let groupsCache = [];
 let editingContactId = null;
 
@@ -417,6 +426,8 @@ function applyFiltersAndRender() {
     if (av > bv) return sortDir === 'asc' ? 1 : -1;
     return 0;
   });
+
+  filteredContactsCache = contacts;
 
   CONTACT_COLUMNS.filter(c => c.sortable && visibleColumns.has(c.key)).forEach(c => {
     document.getElementById(`arrow-${c.key}`).textContent = sortField === c.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
@@ -670,7 +681,7 @@ async function saveContact() {
 }
 
 function exportCsv() {
-  const contacts = contactsCache;
+  const contacts = filteredContactsCache;
   if (contacts.length === 0) { fnToast('No contacts to export'); return; }
   const rows = [['Name','Email','Phone','Company','Street','City','State','Zip','Signup Date','Source','Status','Groups','Notes']];
   contacts.forEach(c => rows.push([
@@ -690,7 +701,7 @@ function exportCsv() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  fnToast('CSV downloaded');
+  fnToast(`Exported ${contacts.length} contact${contacts.length !== 1 ? 's' : ''} matching the current filters`);
 }
 
 /* ---- Import ---- */
