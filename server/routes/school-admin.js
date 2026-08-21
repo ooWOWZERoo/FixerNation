@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db/pool');
-const { requireSchoolAdmin, blockIfReadOnly } = require('../middleware/schoolAdminAuth');
+const { requireSchoolAdmin, blockIfReadOnly, blockIfCannotRevoke } = require('../middleware/schoolAdminAuth');
 const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
@@ -603,7 +603,7 @@ router.put('/invitations/:id/revoke', requireSchoolAdmin, async (req, res) => {
     [req.params.id, req.schoolAdmin.purchaseIds]
   );
   if (!inv) return res.status(404).json({ error: 'Invitation not found' });
-  if (blockIfReadOnly(req, res, inv.purchase_id)) return;
+  if (blockIfCannotRevoke(req, res, inv.purchase_id)) return;
   if (['revoked', 'registered'].includes(inv.status)) {
     return res.status(409).json({ error: `Cannot revoke a ${inv.status} invitation` });
   }
@@ -891,7 +891,7 @@ router.delete('/teachers/:siteUserId', requireSchoolAdmin, async (req, res) => {
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
-  if (blockIfReadOnly(req, res, purchaseId)) return;
+  if (blockIfCannotRevoke(req, res, purchaseId)) return;
 
   try {
     const [[seat]] = await pool.query(
@@ -1037,7 +1037,7 @@ router.put('/seats/:seatId/revoke', requireSchoolAdmin, async (req, res) => {
     [req.params.seatId, req.schoolAdmin.purchaseIds]
   );
   if (!seat) return res.status(404).json({ error: 'Seat not found' });
-  if (blockIfReadOnly(req, res, seat.purchase_id)) return;
+  if (blockIfCannotRevoke(req, res, seat.purchase_id)) return;
   if (seat.status === 'revoked') return res.status(409).json({ error: 'Seat is already revoked' });
 
   const conn = await pool.getConnection();

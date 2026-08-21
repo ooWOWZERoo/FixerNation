@@ -84,4 +84,18 @@ function blockIfReadOnly(req, res, purchaseId) {
   return false;
 }
 
-module.exports = { requireSchoolAdmin, requireSchoolAdminRead, blockIfReadOnly };
+// Stricter than blockIfReadOnly: also blocks 'secondary' admins, for the
+// three actions that actually revoke a seat (invitation revoke, teacher
+// removal, direct seat revoke). admin-school-admins.html's own permission-
+// level copy has always claimed secondaries "can invite teachers but cannot
+// revoke seats" — the backend never enforced that distinction until now.
+function blockIfCannotRevoke(req, res, purchaseId) {
+  const assignment = req.schoolAdmin.purchases.find(p => p.purchase_id === purchaseId);
+  if (assignment && assignment.permission_level !== 'primary') {
+    res.status(403).json({ error: 'Only a primary administrator can revoke a seat' });
+    return true;
+  }
+  return false;
+}
+
+module.exports = { requireSchoolAdmin, requireSchoolAdminRead, blockIfReadOnly, blockIfCannotRevoke };

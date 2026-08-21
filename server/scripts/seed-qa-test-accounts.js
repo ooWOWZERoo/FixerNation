@@ -333,6 +333,92 @@ async function main() {
     out.permLeakNewerPurchaseId = newerPurchaseId;
   }
 
+  // --- Secondary-permission-level fixture (blockIfCannotRevoke regression) -
+  // A 'secondary' admin, per admin-school-admins.html's own UI copy, should
+  // be able to invite teachers but NOT revoke a seat/invitation. Provides
+  // one fixed pending invitation to attempt revoking (should 403) and lets
+  // the test send a fresh invite of its own (should succeed). Any
+  // invitation/seat a prior test run created on this purchase besides the
+  // fixed revoke-target row is wiped on every re-seed, so this stays clean
+  // without needing in-test cleanup (a 'secondary' admin can't revoke its
+  // own test debris, and no other fixture has write access to this purchase).
+  if (licenseProduct) {
+    const secondaryEmail = 'qa-secondary-admin@example.com';
+    const secondaryContactId = await findOrCreateContact(conn, { email: secondaryEmail, name: 'QA Secondary' });
+    const secondaryUserId = await findOrCreateSiteUser(conn, {
+      email: secondaryEmail, firstName: 'QA', lastName: 'Secondary', role: 'school_license_admin',
+    });
+
+    const [[secExisting]] = await conn.query(
+      "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license' AND school_domain = ?",
+      [secondaryContactId, 'qa-secondary.example.com']
+    );
+    let secPurchaseId;
+    if (secExisting) {
+      secPurchaseId = secExisting.id;
+    } else {
+      const [r] = await conn.query(
+        `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, school_domain)
+         VALUES (?, 'group_license', ?, 10, 'QA Seed', 'manual', 'paid', 'qa-secondary.example.com')`,
+        [secondaryContactId, licenseProduct.id]
+      );
+      secPurchaseId = r.insertId;
+    }
+
+    await conn.query(
+      `INSERT INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active)
+       VALUES (?, ?, 'secondary', 1)
+       ON DUPLICATE KEY UPDATE permission_level = 'secondary', is_active = 1`,
+      [secondaryUserId, secPurchaseId]
+    );
+
+    const revokeTargetEmail = 'qa-secondary-revoke-target@example.com';
+    // Wipe test debris from any prior "secondary can still invite" runs.
+    await conn.query('DELETE FROM school_invitations WHERE purchase_id = ? AND invited_email != ?', [secPurchaseId, revokeTargetEmail]);
+    await conn.query("DELETE FROM license_seats WHERE purchase_id = ? AND invited_email != ? AND status != 'registered'", [secPurchaseId, revokeTargetEmail]);
+
+    const [[revokeSeat]] = await conn.query(
+      'SELECT id FROM license_seats WHERE purchase_id = ? AND invited_email = ?',
+      [secPurchaseId, revokeTargetEmail]
+    );
+    let revokeSeatId;
+    if (revokeSeat) {
+      revokeSeatId = revokeSeat.id;
+      await conn.query("UPDATE license_seats SET status = 'pending' WHERE id = ?", [revokeSeatId]);
+    } else {
+      const [r] = await conn.query(
+        "INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, 'pending')",
+        [secPurchaseId, revokeTargetEmail]
+      );
+      revokeSeatId = r.insertId;
+    }
+
+    const revokeExpiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const [[revokeInv]] = await conn.query(
+      'SELECT id FROM school_invitations WHERE purchase_id = ? AND invited_email = ?',
+      [secPurchaseId, revokeTargetEmail]
+    );
+    let revokeInvitationId;
+    if (revokeInv) {
+      revokeInvitationId = revokeInv.id;
+      await conn.query(
+        "UPDATE school_invitations SET status = 'pending', seat_id = ?, expires_at = ? WHERE id = ?",
+        [revokeSeatId, revokeExpiresAt, revokeInvitationId]
+      );
+    } else {
+      const [r] = await conn.query(
+        `INSERT INTO school_invitations (purchase_id, seat_id, invited_email, first_name, last_name, token, status, expires_at)
+         VALUES (?, ?, ?, 'QA', 'SecondaryRevokeTarget', ?, 'pending', ?)`,
+        [secPurchaseId, revokeSeatId, revokeTargetEmail, crypto.randomBytes(32).toString('hex'), revokeExpiresAt]
+      );
+      revokeInvitationId = r.insertId;
+    }
+
+    out.secondaryAdminEmail = secondaryEmail;
+    out.secondaryPurchaseId = secPurchaseId;
+    out.secondaryRevokeInvitationId = revokeInvitationId;
+  }
+
   // --- Teacher with a classroom -------------------------------------------
   const teacherEmail = 'qa-teacher@example.com';
   const teacherUserId = await findOrCreateSiteUser(conn, {
@@ -425,6 +511,10 @@ async function main() {
     console.log(`TEST_PERMLEAK_ADMIN_EMAIL=${out.permLeakEmail}`);
     console.log(`TEST_PERMLEAK_OLDER_PURCHASE_ID=${out.permLeakOlderPurchaseId}`);
     console.log(`TEST_PERMLEAK_NEWER_PURCHASE_ID=${out.permLeakNewerPurchaseId}`);
+  }
+  if (out.secondaryAdminEmail) {
+    console.log(`TEST_SECONDARY_ADMIN_EMAIL=${out.secondaryAdminEmail}`);
+    console.log(`TEST_SECONDARY_REVOKE_INVITATION_ID=${out.secondaryRevokeInvitationId}`);
   }
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);
 }
