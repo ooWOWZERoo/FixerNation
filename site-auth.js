@@ -166,6 +166,11 @@ async function fnAuthLogout() {
   });
   if (typeof cartClear === 'function') cartClear();
   fnAuthRenderNav(false);
+  // Logging out used to just re-render the nav in place, leaving whatever
+  // was already on screen (e.g. a classroom roster with student names and
+  // PINs) fully visible indefinitely on a shared/classroom computer. A hard
+  // navigation destroys that DOM state outright, not just the cookie.
+  window.location.href = 'index.html';
 }
 
 document.addEventListener('DOMContentLoaded', function () {
