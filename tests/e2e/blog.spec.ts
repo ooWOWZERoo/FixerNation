@@ -42,7 +42,9 @@ test.describe("Blog", () => {
 
     const overlay = page.locator("#postReadOverlay");
     await expect(overlay).toHaveClass(/show/);
-    await expect(overlay.getByText(/licensed educators/i)).toBeVisible({ timeout: 5000 });
+    // Copy fixed to match the real gate (an active membership), not school
+    // licensing — was "for licensed educators... Register your school".
+    await expect(overlay.getByText(/fixer nation members/i)).toBeVisible({ timeout: 5000 });
 
     // The excerpt-plus-gate-note is all that renders — no full paragraph body.
     const bodyParagraphCount = await overlay.locator("#postReadBody p").count();
@@ -67,7 +69,7 @@ test.describe("Blog", () => {
 
     const overlay = page.locator("#postReadOverlay");
     await expect(overlay).toHaveClass(/show/);
-    await expect(overlay.getByText(/licensed educators/i)).not.toBeVisible();
+    await expect(overlay.getByText(/fixer nation members/i)).not.toBeVisible();
     await expect(overlay.locator("#postReadBody p").first()).toBeVisible({ timeout: 5000 });
   });
 });
