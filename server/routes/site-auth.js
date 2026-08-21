@@ -224,8 +224,13 @@ router.post('/reset-password', async (req, res) => {
   if (!record) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
+  // Invalidate any other browser's session for this account — a stolen
+  // cookie shouldn't keep working just because someone else reset the
+  // password. The fresh cookie issued below (for THIS browser) is signed
+  // after this UPDATE commits, so its iat lands at-or-after
+  // session_invalidated_at and survives requireSiteAuth's revocation check.
   await pool.query(
-    'UPDATE site_users SET password_hash = ?, email_verified = 1 WHERE id = ?',
+    'UPDATE site_users SET password_hash = ?, email_verified = 1, session_invalidated_at = NOW() WHERE id = ?',
     [passwordHash, record.user_id]
   );
 
@@ -284,7 +289,13 @@ router.put('/change-password', requireSiteAuth, async (req, res) => {
     return res.status(401).json({ error: 'Current password is incorrect' });
   }
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await pool.query('UPDATE site_users SET password_hash = ? WHERE id = ?', [passwordHash, req.siteUser.id]);
+  // Invalidate any other browser's session for this account, same as
+  // reset-password. Reissue a fresh cookie for THIS browser right after —
+  // otherwise this very request's own session would revoke itself, since
+  // its cookie's iat predates the session_invalidated_at we just set.
+  await pool.query('UPDATE site_users SET password_hash = ?, session_invalidated_at = NOW() WHERE id = ?', [passwordHash, req.siteUser.id]);
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [req.siteUser.id]);
+  if (rows[0]) setSiteSessionCookie(res, rows[0]);
   res.json({ ok: true });
 });
 

@@ -347,6 +347,41 @@ async function main() {
     out.quotePoGateToken = poGateToken;
   }
 
+  // --- Session-revocation fixture ------------------------------------------
+  // A school_license_admin account dedicated to session-invalidation tests
+  // (change-password / reset-password bumping session_invalidated_at, and
+  // requireSchoolAdmin now enforcing it too) — never shared with other specs
+  // since the test itself changes this account's password. Re-seedable:
+  // password_hash and session_invalidated_at are reset every run so the
+  // fixture always starts from a known-good, non-revoked state.
+  if (licenseProduct) {
+    const revokeEmail = 'qa-session-revoke-admin@example.com';
+    const revokeContactId = await findOrCreateContact(conn, { email: revokeEmail, name: 'QA SessionRevoke' });
+    const revokeUserId = await findOrCreateSiteUser(conn, {
+      email: revokeEmail, firstName: 'QA', lastName: 'SessionRevoke', role: 'school_license_admin',
+    });
+    const revokePasswordHash = await bcrypt.hash(QA_PASSWORD, 10);
+    await conn.query('UPDATE site_users SET password_hash = ?, session_invalidated_at = NULL WHERE id = ?', [revokePasswordHash, revokeUserId]);
+
+    const [[existingRevokePurchase]] = await conn.query(
+      "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license'",
+      [revokeContactId]
+    );
+    const revokePurchaseId = existingRevokePurchase ? existingRevokePurchase.id : (await conn.query(
+      `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, school_domain)
+       VALUES (?, 'group_license', ?, 5, 'QA Seed', 'manual', 'paid', 'qa-session-revoke.example.com')`,
+      [revokeContactId, licenseProduct.id]
+    ))[0].insertId;
+
+    await conn.query(
+      `INSERT INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active)
+       VALUES (?, ?, 'primary', 1)
+       ON DUPLICATE KEY UPDATE is_active = 1, permission_level = 'primary'`,
+      [revokeUserId, revokePurchaseId]
+    );
+    out.sessionRevokeEmail = revokeEmail;
+  }
+
   // --- Cross-purchase permission-leak fixture -----------------------------
   // One admin, two purchases: 'read_only' on the OLDER purchase, 'primary' on
   // a NEWER one. requireSchoolAdmin's assignment list is ORDER BY
@@ -574,6 +609,10 @@ async function main() {
   if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
   if (out.quotePoGateToken) console.log(`TEST_QUOTE_PO_GATE_TOKEN=${out.quotePoGateToken}`);
   if (out.quoteBuilderId) console.log(`TEST_QUOTE_BUILDER_ID=${out.quoteBuilderId}`);
+  if (out.sessionRevokeEmail) {
+    console.log(`TEST_SESSION_REVOKE_EMAIL=${out.sessionRevokeEmail}`);
+    console.log(`TEST_SESSION_REVOKE_PASSWORD=${out.password}`);
+  }
   if (out.permLeakEmail) {
     console.log(`TEST_PERMLEAK_ADMIN_EMAIL=${out.permLeakEmail}`);
     console.log(`TEST_PERMLEAK_OLDER_PURCHASE_ID=${out.permLeakOlderPurchaseId}`);

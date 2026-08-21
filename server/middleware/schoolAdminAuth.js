@@ -19,12 +19,18 @@ async function requireSchoolAdmin(req, res, next) {
 
   // Always verify role against DB — role could have been revoked since token was issued
   const [userRows] = await pool.query(
-    'SELECT id, first_name, last_name, email, role FROM site_users WHERE id = ?',
+    'SELECT id, first_name, last_name, email, role, session_invalidated_at FROM site_users WHERE id = ?',
     [payload.userId]
   );
   const user = userRows[0];
   if (!user || user.role !== 'school_license_admin') {
     return res.status(403).json({ error: 'School License Administrator access required' });
+  }
+  // Same revocation check requireSiteAuth already enforces — this middleware
+  // has its own DB lookup instead of reusing requireSiteAuth, so it needs its
+  // own copy of the check or a revoked session survives here regardless.
+  if (user.session_invalidated_at && payload.iat * 1000 < new Date(user.session_invalidated_at).getTime()) {
+    return res.status(401).json({ error: 'Not logged in', reason: 'revoked' });
   }
 
   // Load their purchase scope
