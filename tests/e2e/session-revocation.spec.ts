@@ -1,4 +1,4 @@
-import { test, expect, request as apiRequest, APIResponse } from "@playwright/test";
+import { test, expect, request as apiRequest } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Session-revocation hardening: changing a password now invalidates every
@@ -59,11 +59,15 @@ async function login(email: string, password: string): Promise<string> {
 }
 
 // GETs a path using ONLY the given raw token (fresh context, no jar).
-async function getWithToken(path: string, token: string): Promise<APIResponse> {
+// Reads the body BEFORE disposing — an APIResponse's body is unreadable
+// once its owning context is disposed.
+async function getWithToken(path: string, token: string): Promise<{ status: number; body: any }> {
   const ctx = await apiRequest.newContext({ baseURL: BASE_URL });
   const res = await ctx.get(path, { headers: { Cookie: `fn_user_session=${token}` } });
+  const status = res.status();
+  const body = await res.json().catch(() => null);
   await ctx.dispose();
-  return res;
+  return { status, body };
 }
 
 test.describe("Session revocation on password change", () => {
@@ -76,8 +80,8 @@ test.describe("Session revocation on password change", () => {
 
     const token = await login(email!, password!);
 
-    expect((await getWithToken("/api/site-auth/profile", token)).status()).toBe(200);
-    expect((await getWithToken("/api/school-admin/me", token)).status()).toBe(200);
+    expect((await getWithToken("/api/site-auth/profile", token)).status).toBe(200);
+    expect((await getWithToken("/api/school-admin/me", token)).status).toBe(200);
   });
 
   test("changing the password revokes the old session but not the new one", async () => {
@@ -98,15 +102,15 @@ test.describe("Session revocation on password change", () => {
 
     // Old token: now revoked on BOTH requireSiteAuth and requireSchoolAdmin routes.
     const oldProfileRes = await getWithToken("/api/site-auth/profile", oldToken);
-    expect(oldProfileRes.status()).toBe(401);
-    expect((await oldProfileRes.json()).reason).toBe("revoked");
+    expect(oldProfileRes.status).toBe(401);
+    expect(oldProfileRes.body.reason).toBe("revoked");
 
     const oldSchoolAdminRes = await getWithToken("/api/school-admin/me", oldToken);
-    expect(oldSchoolAdminRes.status()).toBe(401);
-    expect((await oldSchoolAdminRes.json()).reason).toBe("revoked");
+    expect(oldSchoolAdminRes.status).toBe(401);
+    expect(oldSchoolAdminRes.body.reason).toBe("revoked");
 
     // New token issued by change-password itself: still works on both.
-    expect((await getWithToken("/api/site-auth/profile", newToken as string)).status()).toBe(200);
-    expect((await getWithToken("/api/school-admin/me", newToken as string)).status()).toBe(200);
+    expect((await getWithToken("/api/site-auth/profile", newToken as string)).status).toBe(200);
+    expect((await getWithToken("/api/school-admin/me", newToken as string)).status).toBe(200);
   });
 });
