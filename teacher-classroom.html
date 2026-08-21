@@ -115,6 +115,7 @@ table.data-table tr:hover td{background:#fafaf9;}
       <button class="btn btn-outline btn-sm" onclick="regenCode()">Regenerate Join Code</button>
       <button class="btn btn-outline btn-sm" onclick="regenParentCode()">Regenerate Parent Code</button>
       <button class="btn btn-outline btn-sm" onclick="openEditClassroom()">Edit Details</button>
+      <button class="btn btn-outline btn-sm" id="archiveBtn" onclick="toggleArchive()">Archive Classroom</button>
     </div>
   </div>
 
@@ -320,11 +321,30 @@ async function load() {
 
 function renderHeader() {
   document.title = classroom.name + ' — Fixer Nation Education';
-  document.getElementById('classroomName').textContent = classroom.name;
+  document.getElementById('classroomName').textContent = classroom.name + (classroom.archived_at ? ' (Archived)' : '');
   var meta = [classroom.grade_level, classroom.subject, classroom.academic_year].filter(Boolean).join(' · ');
   document.getElementById('classroomMeta').textContent = meta || '';
   document.getElementById('joinCodeDisplay').textContent = classroom.join_code;
   document.getElementById('parentCodeDisplay').textContent = classroom.parent_code || '—';
+  document.getElementById('archiveBtn').textContent = classroom.archived_at ? 'Unarchive Classroom' : 'Archive Classroom';
+}
+
+async function toggleArchive() {
+  var archiving = !classroom.archived_at;
+  var msg = archiving
+    ? 'Archive this classroom? Students will no longer be able to sign in or see any lessons here. You can unarchive it later to restore their access.'
+    : 'Unarchive this classroom? Students will be able to sign in and see their lessons again.';
+  if (!confirm(msg)) return;
+  var r = await fetch('/api/classrooms/' + classroomId, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ archived: archiving }),
+  });
+  var data = await r.json();
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  Object.assign(classroom, data);
+  renderHeader();
+  toast(archiving ? 'Classroom archived — students no longer have access.' : 'Classroom unarchived — students have access again.');
 }
 
 // ---------------------------------------------------------------------------

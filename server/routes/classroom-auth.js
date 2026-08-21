@@ -108,11 +108,14 @@ router.post('/login', async (req, res) => {
   if (!username || !pin) return res.status(400).json({ error: 'Username and PIN required' });
 
   const [rows] = await pool.query(
-    'SELECT cs.*, c.name AS classroom_name FROM classroom_students cs JOIN classrooms c ON c.id = cs.classroom_id WHERE cs.username = ? AND cs.is_active = 1',
+    'SELECT cs.*, c.name AS classroom_name, c.archived_at FROM classroom_students cs JOIN classrooms c ON c.id = cs.classroom_id WHERE cs.username = ? AND cs.is_active = 1',
     [String(username).toLowerCase().trim()]
   );
   const student = rows[0];
   if (!student) return res.status(401).json({ error: 'Invalid username or PIN' });
+  if (student.archived_at) {
+    return res.status(401).json({ error: 'This classroom has been archived. Ask your teacher for help.' });
+  }
 
   const ok = await bcrypt.compare(String(pin), student.password_hash);
   if (!ok) return res.status(401).json({ error: 'Invalid username or PIN' });
