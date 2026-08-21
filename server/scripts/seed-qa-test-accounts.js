@@ -282,6 +282,34 @@ async function main() {
     out.quoteAcceptToken = quoteAcceptToken;
   }
 
+  // --- Fresh, never-quoted quote request — for quote-builder-seat-count
+  // .spec.ts's regression test that getQuotePayload() reads seat count from
+  // whichever tab (Annual/Pilot/Addon) actually built the quote. Re-seedable:
+  // resets any previously-saved quote fields to NULL every run so the
+  // builder modal always opens in its pristine, never-quoted state.
+  {
+    const builderEmail = 'qa-quote-builder@example.com';
+    const [[existingBuilderQuote]] = await conn.query('SELECT id FROM quote_requests WHERE email = ?', [builderEmail]);
+    let builderQuoteId;
+    if (existingBuilderQuote) {
+      builderQuoteId = existingBuilderQuote.id;
+      await conn.query(
+        `UPDATE quote_requests SET status = 'new', quoted_product_id = NULL, quoted_product_name = NULL,
+         quoted_tier_name = NULL, quoted_seat_count = NULL, quoted_amount_cents = NULL, quoted_addon_seats = NULL,
+         quoted_term_years = NULL, accepted_at = NULL WHERE id = ?`,
+        [builderQuoteId]
+      );
+    } else {
+      const [r] = await conn.query(
+        `INSERT INTO quote_requests (first_name, last_name, email, school, status)
+         VALUES ('QA', 'QuoteBuilder', ?, 'QA Builder School', 'new')`,
+        [builderEmail]
+      );
+      builderQuoteId = r.insertId;
+    }
+    out.quoteBuilderId = builderQuoteId;
+  }
+
   // --- Unaccepted quote, fixed token — for quote-accept-po-payment-gate
   // .spec.ts's regression test that quote-accepted POs get a real invoice
   // and a pending license, matching the cart PO flow. Re-seedable: wipes any
@@ -545,6 +573,7 @@ async function main() {
   if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);
   if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
   if (out.quotePoGateToken) console.log(`TEST_QUOTE_PO_GATE_TOKEN=${out.quotePoGateToken}`);
+  if (out.quoteBuilderId) console.log(`TEST_QUOTE_BUILDER_ID=${out.quoteBuilderId}`);
   if (out.permLeakEmail) {
     console.log(`TEST_PERMLEAK_ADMIN_EMAIL=${out.permLeakEmail}`);
     console.log(`TEST_PERMLEAK_OLDER_PURCHASE_ID=${out.permLeakOlderPurchaseId}`);

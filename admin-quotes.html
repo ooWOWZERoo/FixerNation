@@ -726,9 +726,21 @@ function getQuotePayload() {
   const finalTotalEl = document.getElementById('qFinalTotal');
   const finalRaw    = finalTotalEl && finalTotalEl.value ? parseFloat(finalTotalEl.value) : parseFloat(document.getElementById('modalAmount').value);
   const amountCents = isNaN(finalRaw) ? null : Math.round(finalRaw * 100);
-  const tierSel     = document.getElementById('qTierSelect');
-  const tierOpt     = tierSel && tierSel.options[tierSel.selectedIndex];
-  const seatCount   = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || null) : null;
+  // Seat count must come from whichever tab actually built this quote — it's
+  // not always the Annual tab's <select>, which stays untouched (or stale
+  // from an earlier tier pick) when the quote was built from Pilot or Addon.
+  const addonTabActive = document.getElementById('tabAddon').style.display !== 'none';
+  const pilotTabActive = document.getElementById('tabPilot').style.display !== 'none';
+  let seatCount;
+  if (addonTabActive) {
+    seatCount = parseInt(document.getElementById('qAddonSeatsInput').value) || null;
+  } else if (pilotTabActive) {
+    seatCount = 1;
+  } else {
+    const tierSel = document.getElementById('qTierSelect');
+    const tierOpt = tierSel && tierSel.options[tierSel.selectedIndex];
+    seatCount = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || null) : null;
+  }
   const validUntilEl = document.getElementById('qValidUntil');
   const quotedValidUntil = validUntilEl && validUntilEl.value ? validUntilEl.value : null;
   return { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil };

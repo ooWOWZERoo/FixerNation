@@ -418,7 +418,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
     try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
     await fireAutomation('membership_purchase_thank_you', {
       to: metadata.email,
-      mergeFields: { firstName, planName: plan.name, setPasswordUrl },
+      mergeFields: { firstName, planName: plan.name, setPasswordUrl, amount: '$' + (session.amount_total / 100).toFixed(2) },
     });
   } else if (session.mode === 'subscription' && session.subscription) {
     const [existing] = await pool.query('SELECT id FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [session.subscription]);
@@ -444,7 +444,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
     } else {
       await fireAutomation('membership_purchase_thank_you', {
         to: metadata.email,
-        mergeFields: { firstName, planName: plan.name, setPasswordUrl },
+        mergeFields: { firstName, planName: plan.name, setPasswordUrl, amount: '$' + (session.amount_total / 100).toFixed(2) },
       });
     }
   }
@@ -496,6 +496,7 @@ async function handleMembershipInvoicePaid(invoice) {
       mergeFields: {
         firstName: (membership.contact_name || '').split(' ')[0] || 'there',
         planName: membership.plan_name,
+        amount: '$' + (invoice.amount_paid / 100).toFixed(2),
       },
     });
   }
@@ -648,6 +649,11 @@ async function setupSchoolAdmin(email, purchaseIds) {
   let setupUrl = '';
   try { setupUrl = await createSetPasswordUrl(email, firstName, '', '/school-admin-roster.html'); }
   catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+  let school = 'your school';
+  try {
+    const [[p]] = await pool.query('SELECT school_domain FROM purchases WHERE id IN (?) AND school_domain IS NOT NULL LIMIT 1', [purchaseIds]);
+    if (p) school = p.school_domain;
+  } catch (e) { console.error('setupSchoolAdmin school_domain lookup failed:', e.message); }
   let siteUserId = null;
   try {
     const [[u]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email.toLowerCase()]);
@@ -670,7 +676,7 @@ async function setupSchoolAdmin(email, purchaseIds) {
   try {
     await fireAutomation('quote_accepted', {
       to: email,
-      mergeFields: { firstName, school: '', productName: 'Fixer Nation Education License', setupUrl },
+      mergeFields: { firstName, school, productName: 'Fixer Nation Education License', setupUrl },
     });
   } catch (e) { console.error('group license onboarding automation failed:', e.message); }
 }

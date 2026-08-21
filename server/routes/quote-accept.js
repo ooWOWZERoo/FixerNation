@@ -69,6 +69,22 @@ router.post('/accept', async (req, res) => {
     contactId = r.insertId;
   }
 
+  // A quoted product (e.g. the 90-Day Classroom Pilot) can itself be a trial
+  // tier — carry that over so an accepted trial quote actually expires like
+  // any other trial purchase, instead of silently becoming a permanent license.
+  let trialFields = {};
+  if (quote.quoted_product_id) {
+    const [[lp]] = await pool.query(
+      'SELECT is_trial, trial_days, trial_lesson_limit FROM license_products WHERE id = ?',
+      [quote.quoted_product_id]
+    );
+    if (lp && lp.is_trial) {
+      const trialExpirationDate = new Date();
+      trialExpirationDate.setDate(trialExpirationDate.getDate() + (lp.trial_days || 90));
+      trialFields = { trialExpirationDate, trialLessonLimit: lp.trial_lesson_limit || null };
+    }
+  }
+
   const purchaseId = await createPurchase(contactId, {
     productType: 'group_license',
     licenseProductId: quote.quoted_product_id || null,
@@ -79,6 +95,7 @@ router.post('/accept', async (req, res) => {
     source: 'quote',
     schoolDomain: quote.school || null,
     quoteId: quote.id,
+    ...trialFields,
   });
 
   if (paymentMethod === 'po') {
