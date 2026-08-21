@@ -282,6 +282,43 @@ async function main() {
     out.quoteAcceptToken = quoteAcceptToken;
   }
 
+  // --- Unaccepted quote, fixed token — for quote-accept-po-payment-gate
+  // .spec.ts's regression test that quote-accepted POs get a real invoice
+  // and a pending license, matching the cart PO flow. Re-seedable: wipes any
+  // purchase/invoice created by a previous test run and resets the quote
+  // back to a fresh 'valid'/unaccepted state every run, since the test
+  // itself calls POST /api/quotes/accept.
+  if (licenseProduct) {
+    const poGateToken = 'qa-fixed-quote-po-gate-token-00000000000000000000000000000000';
+    const poGateEmail = 'qa-quote-po-gate@example.com';
+
+    const [[existingPoGateQuote]] = await conn.query('SELECT id FROM quote_requests WHERE accept_token = ?', [poGateToken]);
+    let poGateQuoteId;
+    if (existingPoGateQuote) {
+      poGateQuoteId = existingPoGateQuote.id;
+      const [oldPurchases] = await conn.query('SELECT id, invoice_id FROM purchases WHERE quote_id = ?', [poGateQuoteId]);
+      const oldInvoiceIds = oldPurchases.map(p => p.invoice_id).filter(Boolean);
+      await conn.query('DELETE FROM purchases WHERE quote_id = ?', [poGateQuoteId]);
+      if (oldInvoiceIds.length) {
+        await conn.query('DELETE FROM invoices WHERE id IN (?)', [oldInvoiceIds]);
+      }
+      await conn.query(
+        `UPDATE quote_requests SET accepted_at = NULL, accepted_payment_method = NULL, admin_invited_at = NULL,
+         status = 'sent', quote_valid_until = NULL, quoted_product_id = ?, quoted_product_name = 'QA Gate Product',
+         quoted_seat_count = 10, quoted_amount_cents = 5000 WHERE id = ?`,
+        [licenseProduct.id, poGateQuoteId]
+      );
+    } else {
+      const [r] = await conn.query(
+        `INSERT INTO quote_requests (first_name, last_name, email, school, accept_token, status, quoted_product_id, quoted_product_name, quoted_seat_count, quoted_amount_cents)
+         VALUES ('QA', 'PoGate', ?, 'QA Gate School', ?, 'sent', ?, 'QA Gate Product', 10, 5000)`,
+        [poGateEmail, poGateToken, licenseProduct.id]
+      );
+      poGateQuoteId = r.insertId;
+    }
+    out.quotePoGateToken = poGateToken;
+  }
+
   // --- Cross-purchase permission-leak fixture -----------------------------
   // One admin, two purchases: 'read_only' on the OLDER purchase, 'primary' on
   // a NEWER one. requireSchoolAdmin's assignment list is ORDER BY
@@ -507,6 +544,7 @@ async function main() {
   if (out.inviteToken) console.log(`TEST_TEACHER_INVITE_TOKEN=${out.inviteToken}`);
   if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);
   if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
+  if (out.quotePoGateToken) console.log(`TEST_QUOTE_PO_GATE_TOKEN=${out.quotePoGateToken}`);
   if (out.permLeakEmail) {
     console.log(`TEST_PERMLEAK_ADMIN_EMAIL=${out.permLeakEmail}`);
     console.log(`TEST_PERMLEAK_OLDER_PURCHASE_ID=${out.permLeakOlderPurchaseId}`);

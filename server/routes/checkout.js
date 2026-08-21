@@ -8,6 +8,7 @@ const { fireAutomation } = require('../lib/automations');
 const { getSiteUser } = require('../lib/access');
 const { createToken } = require('../lib/site-tokens');
 const { addMemberToSocialGroups } = require('../lib/social-groups');
+const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -222,14 +223,6 @@ async function fulfillResolvedItems(contactId, resolved, fulfillmentFields) {
       ...fulfillmentFields,
     });
   }
-}
-
-// "INV-00001" style, generated after the row exists so it can incorporate the
-// real auto-increment id — simplest scheme that's guaranteed unique.
-async function generateInvoiceNumber(connection, invoiceId) {
-  const invoiceNumber = `INV-${String(invoiceId).padStart(5, '0')}`;
-  await connection.query('UPDATE invoices SET invoice_number = ? WHERE id = ?', [invoiceNumber, invoiceId]);
-  return invoiceNumber;
 }
 
 // Cart checkout — multiple books and/or license products in one Stripe

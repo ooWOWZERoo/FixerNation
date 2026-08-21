@@ -5,6 +5,7 @@ const { createPurchase } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { createSetPasswordUrl } = require('./checkout');
 const { sendAutomationEmail } = require('../lib/mailer');
+const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 
 const router = express.Router();
 
@@ -45,9 +46,11 @@ router.get('/accept', async (req, res) => {
 });
 
 router.post('/accept', async (req, res) => {
-  const { token, paymentMethod, poNumber } = req.body || {};
+  const { token, paymentMethod } = req.body || {};
+  const poNumber = (req.body?.poNumber || '').trim();
   if (!token) return res.status(400).json({ error: 'Token is required' });
   if (!['card', 'po'].includes(paymentMethod)) return res.status(400).json({ error: 'paymentMethod must be card or po' });
+  if (paymentMethod === 'po' && !poNumber) return res.status(400).json({ error: 'A Purchase Order number is required' });
 
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
   const status = quoteStatus(quote);
@@ -83,9 +86,32 @@ router.post('/accept', async (req, res) => {
       "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ?",
       [quote.id]
     );
-    if (poNumber) {
-      await pool.query('UPDATE purchases SET po_number = ? WHERE id = ?', [poNumber, purchaseId]);
+
+    const connection = await pool.getConnection();
+    let invoiceId;
+    try {
+      await connection.beginTransaction();
+      const [result] = await connection.query(
+        'INSERT INTO invoices (contact_id, po_number, total_cents, status) VALUES (?, ?, ?, ?)',
+        [contactId, poNumber, quote.quoted_amount_cents || 0, 'unpaid']
+      );
+      invoiceId = result.insertId;
+      await generateInvoiceNumber(connection, invoiceId);
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
     }
+
+    // Quote-accepted PO purchases go through the same gate as the cart PO
+    // flow: license stays pending until an admin marks the PO received
+    // (POST /api/invoices/:id/po-received).
+    await pool.query(
+      "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
+      [invoiceId, poNumber, purchaseId]
+    );
 
     const siteUrl = process.env.SITE_URL || '';
     let setupUrl = '';
@@ -115,7 +141,7 @@ router.post('/accept', async (req, res) => {
       });
     } catch (e) { console.error('quote_accepted automation failed:', e.message); }
 
-    return res.json({ ok: true, purchaseId, setupUrl });
+    return res.json({ ok: true, purchaseId, invoiceId, setupUrl });
   }
 
   // Card: create Stripe Checkout session
