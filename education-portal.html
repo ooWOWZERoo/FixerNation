@@ -77,7 +77,7 @@
   .chip{padding:9px 16px; border-radius:999px; font-size:12.5px; font-weight:700; background:#fff; color:var(--ink-soft); box-shadow:0 6px 14px -10px rgba(22,79,74,0.3); cursor:pointer;}
   .chip.active{background:var(--teal-dark); color:#fff;}
   .lesson-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
-  .lesson-card{background:#fff; border-radius:16px; padding:22px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.25);}
+  .lesson-card{background:#fff; border-radius:16px; padding:22px; box-shadow:0 14px 30px -22px rgba(22,79,74,0.25); position:relative;}
   .lesson-card.linked{cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;}
   .lesson-card.linked:hover{transform:translateY(-4px); box-shadow:0 18px 34px -20px rgba(22,79,74,0.4);}
   .lesson-card.linked .lesson-num::after{content:" · View lesson →"; color:var(--coral-dark); font-weight:800; text-transform:none; letter-spacing:normal;}
@@ -85,6 +85,19 @@
   .lesson-card h4{font-size:16px; margin:8px 0 6px;}
   .lesson-series{font-size:12px; color:var(--ink-soft); margin-bottom:10px; font-weight:600;}
   .lesson-card p{font-size:13px; color:var(--ink);}
+
+  /* Locked lesson cards: no longer navigate anywhere. A lock badge in the
+     corner reveals an explanation on hover (desktop) or tap (touch, via the
+     .show class toggled in JS) instead of taking the visitor to the lesson
+     page at all. */
+  .lesson-card.locked{cursor:help;}
+  .lesson-card.locked .lock-badge{position:absolute; top:14px; right:14px; font-size:15px; line-height:1;}
+  .lesson-card.locked .lock-popover{display:none; position:absolute; top:calc(100% + 8px); left:14px; right:14px; z-index:5;
+    background:var(--cream-soft); border:1px dashed rgba(22,79,74,0.3); border-radius:12px; padding:12px 14px;
+    font-size:12.5px; line-height:1.45; color:var(--ink); box-shadow:0 14px 30px -18px rgba(22,79,74,0.35);}
+  .lesson-card.locked .lock-popover a{color:var(--coral-dark); font-weight:700;}
+  @media (hover:hover){ .lesson-card.locked:hover .lock-popover{display:block;} }
+  .lesson-card.locked.show .lock-popover{display:block;}
   .library-note{text-align:center; color:var(--ink-soft); font-size:13.5px; margin-top:28px;}
 
   .cta-links{display:flex; justify-content:center; gap:16px; margin-top:40px; flex-wrap:wrap;}
@@ -461,6 +474,23 @@ function renderLessonGrid() {
   grid.innerHTML = filtered.map((c, i) => {
     const series = c.series || '';
     const desc = c.shortDescription || c.overview || '';
+    const locked = c.access && !c.access.licensed;
+
+    if (locked) {
+      const loginLink = c.access.loggedIn
+        ? ''
+        : ` Already have a license? <a href="#" onclick="event.stopPropagation(); fnAuthOpenModal('login'); return false;">Log in</a>.`;
+      return `<div class="lesson-card locked" data-series="${series.replace(/"/g, '&quot;')}" onclick="this.classList.toggle('show')">
+        <span class="lock-badge">🔒</span>
+        <div class="lesson-num">Lesson #${i + 1}</div>
+        <h4>${c.title}</h4>
+        ${series ? `<div class="lesson-series">${series}</div>` : ''}
+        ${desc ? `<p>${desc}</p>` : ''}
+        <div class="lock-popover">🔒 This lesson requires an active teacher license to view.
+          <a href="licenses.html" onclick="event.stopPropagation();">Get a license →</a>${loginLink}</div>
+      </div>`;
+    }
+
     const url = 'lesson-detail.html?id=' + encodeURIComponent(c.id);
     return `<div class="lesson-card linked" data-series="${series.replace(/"/g, '&quot;')}" onclick="window.location.href='${url}'">
       <div class="lesson-num">Lesson #${i + 1}</div>
@@ -472,6 +502,16 @@ function renderLessonGrid() {
 
   if (note) note.textContent = `Showing ${filtered.length} lesson${filtered.length !== 1 ? 's' : ''} in the growing library. New lessons added every weekday, Monday through Friday.`;
 }
+
+// Tapping a locked card toggles its explanation open; tapping anywhere else
+// closes any that are open. Attached once at page load — event delegation
+// on document means it keeps working after renderLessonGrid() re-renders
+// the grid's innerHTML (on filter changes, etc.).
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.lesson-card.locked.show').forEach(card => {
+    if (!card.contains(e.target)) card.classList.remove('show');
+  });
+});
 
 function getFeaturedCurriculum() {
   // This spotlight (and the matching card in the library grid below) represents the
