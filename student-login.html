@@ -77,6 +77,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(160de
       <div class="error" id="err-register"></div>
       <div class="field"><label>Your Name</label><input id="displayName" placeholder="e.g. Alex" autocomplete="off"></div>
       <div class="field"><label>Choose a PIN (4–6 digits)</label><input id="regPin" class="pin" type="text" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="new-password"></div>
+      <div class="sub" style="margin-top:-6px;margin-bottom:14px;">Joined this classroom before under this name? Enter your existing PIN here instead of a new one.</div>
       <button class="btn btn-primary" id="regBtn" onclick="register()">Join Classroom →</button>
       <div style="text-align:center;margin-top:14px;"><button class="link-btn" onclick="goStep('step-code')">← Back</button></div>
     </div>
@@ -93,6 +94,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(160de
         </div>
         <div class="creds-warn">Write these down!</div>
       </div>
+      <div class="error" id="err-creds"></div>
       <button class="btn btn-primary" onclick="goHome()">Go to My Classroom →</button>
     </div>
 
@@ -176,9 +178,22 @@ async function register() {
   document.getElementById('regBtn').disabled = false;
   if (!r.ok) { showError('err-register', data.error || 'Something went wrong. Try again.'); return; }
 
+  // A returning student who entered their existing PIN is logged straight
+  // into their original account — no new credentials to show, all their
+  // prior progress is already there.
+  if (data.reauthenticated) {
+    goHome();
+    return;
+  }
+
   document.getElementById('credsUsername').textContent = data.username;
   document.getElementById('credsPin').textContent = data.pin;
   newCredsPin = data.pin;
+  if (data.nameCollision) {
+    showError('err-creds', 'Note: someone already joined this classroom under that name. If that was you, use "Sign In with Username & PIN" with your original PIN next time instead — we\'ve created a separate new account for now.');
+  } else {
+    hideError('err-creds');
+  }
   goStep('step-creds');
 }
 

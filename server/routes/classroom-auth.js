@@ -48,8 +48,16 @@ async function generateUsername(conn, firstName) {
 }
 
 // POST /api/classroom-auth/join
-// Body: { joinCode, displayName, pin? }
-// If returning: also pass { username, pin } to re-authenticate existing student
+// Body: { joinCode, displayName, pin }
+//
+// If a classroom_students row with this exact display name already exists
+// in this classroom, this is treated as a possible returning student rather
+// than blindly creating a duplicate: the submitted pin is checked against
+// that existing account first. A match logs them into the existing account
+// (all prior progress/history intact) instead of registering anything new.
+// If it doesn't match (or the name is new), falls through to the original
+// create-a-new-account behavior — this was the one documented-but-never-
+// implemented behavior this route claimed to have.
 router.post('/join', async (req, res) => {
   const { joinCode, displayName, pin } = req.body;
   if (!joinCode) return res.status(400).json({ error: 'Join code required' });
@@ -62,6 +70,28 @@ router.post('/join', async (req, res) => {
   const classroom = classrooms[0];
 
   if (!displayName) return res.status(400).json({ error: 'Display name required', classroomName: classroom.name });
+
+  let nameCollision = false;
+  if (pin) {
+    const [existingByName] = await pool.query(
+      'SELECT * FROM classroom_students WHERE classroom_id = ? AND display_name = ? AND is_active = 1',
+      [classroom.id, displayName.trim()]
+    );
+    if (existingByName[0]) {
+      const matches = await bcrypt.compare(String(pin), existingByName[0].password_hash);
+      if (matches) {
+        setStudentCookie(res, existingByName[0]);
+        return res.json({
+          classroomName: classroom.name,
+          displayName: existingByName[0].display_name,
+          username: existingByName[0].username,
+          isNew: false,
+          reauthenticated: true,
+        });
+      }
+      nameCollision = true;
+    }
+  }
 
   const conn = await pool.getConnection();
   try {
@@ -89,6 +119,7 @@ router.post('/join', async (req, res) => {
       username: student.username,
       pin: rawPin,
       isNew: true,
+      nameCollision,
     });
   } catch (err) {
     await conn.rollback();

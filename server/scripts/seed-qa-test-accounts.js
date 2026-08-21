@@ -516,6 +516,7 @@ async function main() {
     console.log(`TEST_SECONDARY_ADMIN_EMAIL=${out.secondaryAdminEmail}`);
     console.log(`TEST_SECONDARY_REVOKE_INVITATION_ID=${out.secondaryRevokeInvitationId}`);
   }
+  console.log(`TEST_CLASSROOM_JOIN_CODE=${out.classroomJoinCode}`);
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);
 }
 
