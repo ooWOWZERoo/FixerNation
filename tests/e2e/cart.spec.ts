@@ -1,26 +1,27 @@
 import { test, expect } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
-// Cart flow — school-licensing.html → cart.html
+// Cart flow — a license_product added to the cart → cart.html
 //
 // Previously exercised via books.html (added a book to cart, checked the
 // badge in place). Books were removed from FNE entirely, so this now uses
-// a real license_product instead — the "Buy Directly" button on
-// school-licensing.html's plan grid, which calls cartAdd() then navigates
-// straight to cart.html (unlike the old books.html flow, this one doesn't
-// stay in place to show a badge increment first).
+// a real license_product instead.
 //
-// Key elements:
-//   school-licensing.html:
-//     - "Buy Directly" button per non-call-for-quote plan: onclick="addPlanToCart(id)"
-//     - Navigates to cart.html immediately after adding
+// This calls cartAdd() directly via page.evaluate() rather than clicking a
+// "Buy Directly" button on school-licensing.html — that page only renders
+// a direct-buy button for a tier with callForQuote=false, and the live
+// catalog can (and currently does) have every group tier set to
+// call-for-quote-only, with no such button on the page at all. Driving
+// cartAdd() directly tests the actual cart mechanism (add → cart.html →
+// PO checkout) without depending on which specific tiers are self-serve
+// right now.
 //
-//   cart.html:
-//     - Cart items in #cartWrap
-//     - "Pay by Purchase Order" button: text "Pay by Purchase Order"
-//     - PO form toggle: #poForm (class .po-form, adds .show on toggle)
-//     - PO number input: #poNumber
-//     - Submit PO button: text "Submit Purchase Order"
+// Key elements on cart.html:
+//   - Cart items in #cartWrap
+//   - "Pay by Purchase Order" button: text "Pay by Purchase Order"
+//   - PO form toggle: #poForm (class .po-form, adds .show on toggle)
+//   - PO number input: #poNumber
+//   - Submit PO button: text "Submit Purchase Order"
 //
 // NOTE: We do NOT submit a real PO or trigger Stripe.
 // ---------------------------------------------------------------------------
@@ -29,17 +30,29 @@ test.describe.configure({ mode: "serial" });
 
 const STAMP = Date.now();
 
-async function buyDirectlyIntoCart(page: import("@playwright/test").Page) {
+// cart.js needs to already be loaded on the page cartAdd() is called from.
+// Leaves the browser on school-licensing.html — cart.html has its own,
+// separate header with no #fnCartBadge at all, so the badge can only be
+// checked on a page that actually uses nav.js's shared header.
+async function addLicenseOnSourcePage(page: import("@playwright/test").Page) {
+  const { licenseProducts } = await (await page.request.get("/api/license-products")).json();
+  const product = licenseProducts.find((p: any) => p.active) || licenseProducts[0];
+  expect(product).toBeTruthy();
+
   await page.goto("/school-licensing.html");
-  const buyBtn = page.getByRole("button", { name: /buy directly/i }).first();
-  await expect(buyBtn).toBeVisible({ timeout: 15000 });
-  await buyBtn.click();
-  await expect(page).toHaveURL(/cart\.html/, { timeout: 10000 });
+  await page.evaluate((p: any) => {
+    (window as any).cartAdd({ type: "license_product", id: p.id, name: p.name, price: p.price, quantity: 1, schoolDomain: "qa-cart-test.example.com" });
+  }, product);
+}
+
+async function addLicenseToCart(page: import("@playwright/test").Page) {
+  await addLicenseOnSourcePage(page);
+  await page.goto("/cart.html");
 }
 
 test.describe("Cart flow", () => {
-  test("Buy Directly adds a license and lands on cart.html with the badge showing it", async ({ page }) => {
-    await buyDirectlyIntoCart(page);
+  test("adding a license updates the cart badge on the source page", async ({ page }) => {
+    await addLicenseOnSourcePage(page);
 
     const badge = page.locator("#fnCartBadge");
     await expect(badge).toBeVisible({ timeout: 5000 });
@@ -48,7 +61,7 @@ test.describe("Cart flow", () => {
   });
 
   test("cart.html shows the added item", async ({ page }) => {
-    await buyDirectlyIntoCart(page);
+    await addLicenseToCart(page);
 
     const cartWrap = page.locator("#cartWrap");
     await expect(cartWrap).toBeVisible({ timeout: 10000 });
@@ -64,7 +77,7 @@ test.describe("Cart flow", () => {
   });
 
   test("PO tab / form is accessible and contains a submit button", async ({ page }) => {
-    await buyDirectlyIntoCart(page);
+    await addLicenseToCart(page);
 
     // The "Pay by Purchase Order" button toggles the PO form open
     const poToggleBtn = page.getByRole("button", { name: /pay by purchase order/i });

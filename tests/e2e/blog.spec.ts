@@ -33,8 +33,12 @@ test.describe("Morning Boost blog", () => {
 
   test("anonymous user sees paywall gate on a locked post", async ({ page }) => {
     const { posts } = await (await page.request.get("/api/blog/posts")).json();
-    const gated = posts.find((p: any) => p.locked);
-    test.skip(!gated, "No locked Morning Boost post currently exists to test against");
+    // The featured post renders in a separate .featured-post hero block, not
+    // as a .blog-card — skip it so the card locator below can actually find
+    // whichever gated post we pick.
+    const featuredId = (posts.find((p: any) => p.featured) || posts[0] || {}).id;
+    const gated = posts.find((p: any) => p.locked && p.id !== featuredId);
+    test.skip(!gated, "No locked, non-featured Morning Boost post currently exists to test against");
     gatedPostTitle = gated.title;
 
     await page.goto("/morning-boost-blog.html");
