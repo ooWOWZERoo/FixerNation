@@ -51,7 +51,17 @@
       '.fn-mm-divider{height:1px!important;background:rgba(22,79,74,.1)!important;margin:10px 20px!important;}' +
       '@media(max-width:899px){' +
         '.fn-nav-toggle{display:flex!important;}' +
-        '.fn-mobile-menu.open{display:block!important;position:absolute!important;top:100%!important;left:0!important;right:0!important;background:#fff!important;box-shadow:0 16px 32px -12px rgba(22,79,74,.3)!important;max-height:calc(100vh - 68px)!important;overflow-y:auto!important;padding:8px 0 16px!important;z-index:1500!important;}' +
+        // -webkit-overflow-scrolling + touch-action are load-bearing on real
+        // phones, not just nice-to-have: a non-body overflow:auto box can
+        // render a working scrollbar yet still not respond to an actual
+        // finger swipe on mobile Safari without them — confirmed working via
+        // el.scrollTop in headless Chromium, which does NOT catch this. The
+        // 100dvh line is a progressive enhancement after the 100vh fallback
+        // (invalid units get skipped, not overwritten) — 100vh includes the
+        // address bar's reserved space on mobile Safari even when it's
+        // hidden, so max-height can end up taller than what's actually
+        // touchable on screen; 100dvh tracks the real visible viewport.
+        '.fn-mobile-menu.open{display:block!important;position:absolute!important;top:100%!important;left:0!important;right:0!important;background:#fff!important;box-shadow:0 16px 32px -12px rgba(22,79,74,.3)!important;max-height:calc(100vh - 68px)!important;max-height:calc(100dvh - 68px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding:8px 0 16px!important;z-index:1500!important;}' +
         // The 4 login links now live in the mobile menu too (below), so the
         // separate "Log In ▾" dropdown button would just be a second,
         // redundant way to reach them — and one more ~110px item the
