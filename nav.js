@@ -5,9 +5,9 @@
   'use strict';
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
-  if (!document.getElementById('fn-nav-css-v11')) {
+  if (!document.getElementById('fn-nav-css-v12')) {
     var s = document.createElement('style');
-    s.id = 'fn-nav-css-v11';
+    s.id = 'fn-nav-css-v12';
     s.textContent =
       'a{text-decoration:none!important;}' +
       'header{background:#fff!important;box-shadow:0 1px 0 rgba(22,79,74,.09)!important;position:sticky!important;top:0!important;z-index:999!important;}' +
@@ -38,7 +38,28 @@
       '.fn-nav-login{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:9px 18px!important;border-radius:999px!important;font-weight:700!important;font-size:14px!important;font-family:\'Plus Jakarta Sans\',sans-serif!important;background:rgba(14,55,51,0.08)!important;color:var(--teal-dark,#0E3733)!important;border:none!important;cursor:pointer!important;white-space:nowrap!important;transition:background .15s!important;}' +
       '.fn-nav-login:hover,.fn-nav-login.active{background:rgba(14,55,51,0.14)!important;color:var(--teal-dark,#0E3733)!important;}' +
       '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}}' +
-      '.fn-user-authed .fn-login-dd{display:none!important;}';
+      '.fn-user-authed .fn-login-dd{display:none!important;}' +
+      '.fn-user-authed .fn-mm-login-group{display:none!important;}' +
+      '.fn-nav-toggle{display:none!important;align-items:center!important;justify-content:center!important;width:38px!important;height:38px!important;border-radius:10px!important;border:none!important;background:none!important;padding:0!important;cursor:pointer!important;color:var(--teal-dark,#0E3733)!important;flex-shrink:0!important;}' +
+      '.fn-nav-toggle:hover{background:rgba(22,79,74,.08)!important;}' +
+      '.fn-nav-toggle svg{display:block!important;}' +
+      '.fn-mobile-menu{display:none!important;}' +
+      '.fn-mobile-menu .fn-mm-label{padding:14px 20px 6px!important;font-size:11px!important;font-weight:800!important;letter-spacing:.06em!important;text-transform:uppercase!important;color:var(--ink-soft,#6B5F55)!important;opacity:.65!important;}' +
+      '.fn-mobile-menu a{display:block!important;padding:11px 20px!important;font-size:15.5px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;text-decoration:none!important;}' +
+      '.fn-mobile-menu a.active{color:var(--coral-dark,#D9502F)!important;}' +
+      '.fn-mobile-menu a:active{background:rgba(22,79,74,.06)!important;}' +
+      '.fn-mm-divider{height:1px!important;background:rgba(22,79,74,.1)!important;margin:10px 20px!important;}' +
+      '@media(max-width:899px){' +
+        '.fn-nav-toggle{display:flex!important;}' +
+        '.fn-mobile-menu.open{display:block!important;position:absolute!important;top:100%!important;left:0!important;right:0!important;background:#fff!important;box-shadow:0 16px 32px -12px rgba(22,79,74,.3)!important;max-height:calc(100vh - 68px)!important;overflow-y:auto!important;padding:8px 0 16px!important;z-index:1500!important;}' +
+        // The 4 login links now live in the mobile menu too (below), so the
+        // separate "Log In ▾" dropdown button would just be a second,
+        // redundant way to reach them — and one more ~110px item the
+        // already-tight mobile top bar (brand + cart + this + hamburger)
+        // doesn't have room for. #fnAuthNav's account menu stays, since
+        // that's the one top-bar action a logged-in user needs at a glance.
+        '.fn-login-dd{display:none!important;}' +
+      '}';
     (document.head || document.documentElement).appendChild(s);
   }
 
@@ -68,6 +89,11 @@
   function lnk(href, label, isActive) {
     return '<a href="' + href + '"' + (isActive ? ' class="active"' : '') + '>' + label + '</a>';
   }
+
+  var ICON_MENU  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+  var ICON_CLOSE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>';
+
+  function mmLabel(text) { return '<div class="fn-mm-label">' + text + '</div>'; }
 
   // ── Nav HTML ─────────────────────────────────────────────────────────────────
   var inner =
@@ -118,8 +144,36 @@
             '<a href="school-admin-login.html"' + (page === 'school-admin-login' || page === 'school-admin-dashboard' ? ' class="active"' : '') + '>School Admin</a>' +
           '</div>' +
         '</div>' +
+        '<button type="button" class="fn-nav-toggle" id="fnNavToggle" aria-label="Menu" aria-expanded="false" aria-controls="fnMobileMenu">' + ICON_MENU + '</button>' +
       '</div>' +
-    '</div>';
+    '</div>' +
+    '<nav class="fn-mobile-menu" id="fnMobileMenu">' +
+      mmLabel('Why FNE') +
+      lnk('why-fixer-nation.html', 'Why FNE', whyActive) +
+      lnk('research.html',         'Research', researchActive) +
+      lnk('about.html',            'About', aboutActive) +
+      mmLabel('Explore') +
+      lnk('how-it-works.html',  'How It Works', howActive) +
+      lnk('programs.html',      'Programs', programsActive) +
+      lnk('for-teachers.html',  'For Teachers', teachersActive) +
+      lnk('for-schools.html',   'For Schools', schoolsActive) +
+      lnk('for-parents.html',   'For Parents', parentsActive) +
+      lnk('for-students.html',  'For Students', studentsActive) +
+      '<div class="fn-mm-divider"></div>' +
+      lnk('education-portal.html',   'Lesson Library', libraryActive) +
+      lnk('morning-boost-blog.html', 'Morning Boost', morningBoostActive) +
+      lnk('school-licensing.html',   'Pricing', pricingActive) +
+      lnk('brain-games.html',        'Brain Games', brainActive) +
+      lnk('social.html',             'Community', communityActive) +
+      '<div class="fn-mm-login-group">' +
+        '<div class="fn-mm-divider"></div>' +
+        mmLabel('Log In') +
+        '<a href="teacher-login.html"' + (page === 'teacher-classrooms' || page === 'teacher-classroom' || page === 'teacher-classroom-progress' || page === 'teacher-login' ? ' class="active"' : '') + '>Teacher Login</a>' +
+        '<a href="student-login.html"' + (page === 'student-login' || page === 'student-home' || page === 'student-lesson' ? ' class="active"' : '') + '>Student Login</a>' +
+        '<a href="parent-login.html"'  + (page === 'parent-login' || page === 'parent-portal' ? ' class="active"' : '') + '>Parent Login</a>'  +
+        '<a href="school-admin-login.html"' + (page === 'school-admin-login' || page === 'school-admin-dashboard' ? ' class="active"' : '') + '>School Admin</a>' +
+      '</div>' +
+    '</nav>';
 
   // ── Inject ───────────────────────────────────────────────────────────────────
   function inject() {
@@ -159,6 +213,34 @@
     document.addEventListener('click', function (e) {
       dropdowns.forEach(function (d) { if (!d.contains(e.target)) d.classList.remove('open'); });
     });
+
+    // Mobile menu: hamburger toggle + close on outside click, Escape, or
+    // resizing back up to desktop width (where .nav-links is visible again
+    // and the mobile panel would otherwise be left stuck open underneath).
+    var navToggle = h.querySelector('.fn-nav-toggle');
+    var mobileMenu = h.querySelector('.fn-mobile-menu');
+    if (navToggle && mobileMenu) {
+      function setMobileMenuOpen(open) {
+        mobileMenu.classList.toggle('open', open);
+        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        navToggle.innerHTML = open ? ICON_CLOSE : ICON_MENU;
+      }
+      navToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setMobileMenuOpen(!mobileMenu.classList.contains('open'));
+      });
+      document.addEventListener('click', function (e) {
+        if (mobileMenu.classList.contains('open') && !mobileMenu.contains(e.target) && !navToggle.contains(e.target)) {
+          setMobileMenuOpen(false);
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && mobileMenu.classList.contains('open')) setMobileMenuOpen(false);
+      });
+      window.addEventListener('resize', function () {
+        if (window.innerWidth >= 900 && mobileMenu.classList.contains('open')) setMobileMenuOpen(false);
+      });
+    }
 
     // Sync cart badge in case cart.js ran before nav.js injected the DOM
     if (typeof cartRenderBadge === 'function') cartRenderBadge();
