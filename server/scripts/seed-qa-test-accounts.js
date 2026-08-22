@@ -66,6 +66,34 @@ async function main() {
   const [[licenseProduct]] = await conn.query(
     "SELECT id FROM license_products WHERE active = 1 ORDER BY id LIMIT 1"
   );
+
+  // --- Dedicated QA test license product ----------------------------------
+  // A stable, purpose-built product for checkout/PO/quote e2e tests, instead
+  // of "whatever's currently active" — the real catalog's call_for_quote
+  // flags change over time (every group tier is quote-only as of this
+  // writing), which broke cart.spec.ts once already. active=0 hides it from
+  // the public catalog (GET /api/license-products for anonymous filters on
+  // active=1) but doesn't block checkout — resolveCartItems() in
+  // checkout.js never filters by active, only the public listing does.
+  const QA_LICENSE_PRODUCT_NAME = '[QA] Test License';
+  const [[existingQaProduct]] = await conn.query('SELECT id FROM license_products WHERE name = ?', [QA_LICENSE_PRODUCT_NAME]);
+  let qaLicenseProductId;
+  if (existingQaProduct) {
+    qaLicenseProductId = existingQaProduct.id;
+    await conn.query(
+      "UPDATE license_products SET seat_count = 5, price_cents = 10000, call_for_quote = 0, variable_seats = 0, active = 0 WHERE id = ?",
+      [qaLicenseProductId]
+    );
+  } else {
+    const [r] = await conn.query(
+      `INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, active, sort_order)
+       VALUES (?, 'Internal QA fixture — not a real product. Do not display or sell.', 5, 10000, 0, 0, 0, 999)`,
+      [QA_LICENSE_PRODUCT_NAME]
+    );
+    qaLicenseProductId = r.insertId;
+  }
+  out.qaLicenseProductId = qaLicenseProductId;
+
   if (!licenseProduct) {
     console.warn('No active license_products row found — skipping license seat setup. Run scripts/seed-license-products.js first.');
   } else {
@@ -609,6 +637,7 @@ async function main() {
   if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
   if (out.quotePoGateToken) console.log(`TEST_QUOTE_PO_GATE_TOKEN=${out.quotePoGateToken}`);
   if (out.quoteBuilderId) console.log(`TEST_QUOTE_BUILDER_ID=${out.quoteBuilderId}`);
+  if (out.qaLicenseProductId) console.log(`TEST_LICENSE_PRODUCT_ID=${out.qaLicenseProductId}`);
   if (out.sessionRevokeEmail) {
     console.log(`TEST_SESSION_REVOKE_EMAIL=${out.sessionRevokeEmail}`);
     console.log(`TEST_SESSION_REVOKE_PASSWORD=${out.password}`);
