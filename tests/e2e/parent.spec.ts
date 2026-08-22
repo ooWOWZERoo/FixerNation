@@ -48,28 +48,23 @@ test.describe("Parent portal", () => {
   });
 
   test("portal shows per-child cards or the no-children state", async ({ page }) => {
-    const childrenResponse = page.waitForResponse((r) => r.url().includes("/api/parent/children"));
     await signInAsParent(page);
-    await childrenResponse;
 
-    const candidates = [
-      page.locator(".classroom-block").first(),
-      page.locator("#noChildrenSection .state-card").first(),
-    ];
-    let anyVisible = false;
-    for (const c of candidates) {
-      if ((await c.count()) > 0 && (await c.isVisible())) {
-        anyVisible = true;
-        break;
-      }
-    }
-    expect(anyVisible).toBe(true);
+    // The /api/parent/children response alone isn't the finish line — the
+    // page still awaits one more progress fetch per child (renderPortal)
+    // before showSection() runs, so check with a locator that polls rather
+    // than a one-shot look right after /children resolves.
+    const portalReady = page.locator(".classroom-block:visible, #noChildrenSection .state-card:visible").first();
+    await expect(portalReady).toBeVisible({ timeout: 10000 });
   });
 
   test("each linked child shows their own name, classroom, and progress status", async ({ page }) => {
-    const childrenResponse = page.waitForResponse((r) => r.url().includes("/api/parent/children"));
     await signInAsParent(page);
-    await childrenResponse;
+
+    // Same two-step render as above — wait for the portal to actually
+    // settle (child cards or the empty state) before deciding which branch
+    // this test is in, rather than counting immediately after sign-in.
+    await expect(page.locator(".classroom-block:visible, #noChildrenSection .state-card:visible").first()).toBeVisible({ timeout: 10000 });
 
     const childBlocks = page.locator(".classroom-block");
     const count = await childBlocks.count();
