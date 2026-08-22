@@ -20,6 +20,14 @@ async function columnExists(conn, table, column) {
   return rows.length > 0;
 }
 
+async function indexExists(conn, table, indexName) {
+  const [rows] = await conn.query(
+    'SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?',
+    [process.env.DB_NAME, table, indexName]
+  );
+  return rows.length > 0;
+}
+
 async function tableExists(conn, table) {
   const [rows] = await conn.query(
     'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
@@ -37,17 +45,35 @@ async function main() {
         'ADD FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE SET NULL'
       );
       console.log('Added column: parent_classroom_links.student_id');
-
-      // The old unique key (site_user_id, classroom_id) allowed only one
-      // link per parent per classroom at all — which would make a second
-      // child in the same classroom silently overwrite the first child's
-      // link instead of adding a new one. Widening it to include
-      // student_id lets one parent hold a separate row per sibling.
-      await conn.query('ALTER TABLE parent_classroom_links DROP INDEX uniq_parent_classroom');
-      await conn.query('ALTER TABLE parent_classroom_links ADD UNIQUE KEY uniq_parent_classroom_student (site_user_id, classroom_id, student_id)');
-      console.log('Widened unique key: parent_classroom_links.uniq_parent_classroom -> (site_user_id, classroom_id, student_id)');
     } else {
       console.log('Skipped (already exists): parent_classroom_links.student_id');
+    }
+
+    // The old unique key (site_user_id, classroom_id) allowed only one link
+    // per parent per classroom at all — which would make a second child in
+    // the same classroom silently overwrite the first child's link instead
+    // of adding a new one. Widening it to include student_id lets one
+    // parent hold a separate row per sibling.
+    //
+    // The old index can't just be dropped and replaced in one step: MySQL
+    // uses uniq_parent_classroom as the supporting index for the existing
+    // FK on site_user_id (since there's no other index starting with that
+    // column), so dropping it first fails with ER_DROP_INDEX_FK. The new
+    // composite key also starts with site_user_id, so adding it FIRST gives
+    // the FK a replacement index to fall back on, and only then can the old
+    // one be dropped safely.
+    if (!(await indexExists(conn, 'parent_classroom_links', 'uniq_parent_classroom_student'))) {
+      await conn.query('ALTER TABLE parent_classroom_links ADD UNIQUE KEY uniq_parent_classroom_student (site_user_id, classroom_id, student_id)');
+      console.log('Added unique key: parent_classroom_links.uniq_parent_classroom_student (site_user_id, classroom_id, student_id)');
+    } else {
+      console.log('Skipped (already exists): parent_classroom_links.uniq_parent_classroom_student');
+    }
+
+    if (await indexExists(conn, 'parent_classroom_links', 'uniq_parent_classroom')) {
+      await conn.query('ALTER TABLE parent_classroom_links DROP INDEX uniq_parent_classroom');
+      console.log('Dropped old unique key: parent_classroom_links.uniq_parent_classroom');
+    } else {
+      console.log('Skipped (already dropped): parent_classroom_links.uniq_parent_classroom');
     }
 
     if (!(await tableExists(conn, 'parent_student_invitations'))) {
