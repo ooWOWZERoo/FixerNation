@@ -20,7 +20,11 @@ router.get('/children', requireSiteAuth, async (req, res) => {
     return res.status(403).json({ error: 'Parent access required' });
   }
 
-  const linked = await getParentClassrooms(req.siteUser.id);
+  // Filter out classroom-level links predating per-child invites (student_id
+  // NULL, from the removed parent_code self-join flow) — there's no student
+  // to name or show progress for, so surfacing them as a "child" card just
+  // sends the frontend a null studentId it can't do anything useful with.
+  const linked = (await getParentClassrooms(req.siteUser.id)).filter(c => c.studentId != null);
   if (!linked.length) return res.json({ children: [] });
 
   const classroomIds = [...new Set(linked.map(c => c.classroomId))];
@@ -64,6 +68,7 @@ router.get('/students/:studentId/progress', requireSiteAuth, async (req, res) =>
   }
 
   const studentId = Number(req.params.studentId);
+  if (!Number.isInteger(studentId)) return res.status(400).json({ error: 'Invalid student id' });
   const [[link]] = await pool.query(
     'SELECT classroom_id FROM parent_classroom_links WHERE site_user_id = ? AND student_id = ?',
     [req.siteUser.id, studentId]
