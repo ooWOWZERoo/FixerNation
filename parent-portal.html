@@ -43,37 +43,29 @@ ul{list-style:none;}
 .state-card .desc{color:var(--ink-soft); font-size:15px; margin-bottom:28px; max-width:480px; margin-left:auto; margin-right:auto;}
 .cta-row{display:flex; justify-content:center; gap:14px; flex-wrap:wrap;}
 
-/* Join form */
-.join-row{display:flex; gap:10px; max-width:380px; margin:0 auto 14px; justify-content:center; flex-wrap:wrap;}
-.code-input{padding:13px 16px; border:2px solid rgba(22,79,74,0.18); border-radius:12px; font-family:'Plus Jakarta Sans', monospace; font-size:18px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; text-align:center; outline:none; transition:border-color .15s; width:180px;}
-.code-input:focus{border-color:var(--teal);}
 .hint{font-size:12.5px; color:var(--ink-soft); margin-top:0;}
 .msg-err{background:#FDECEA; color:#B3261E; border-radius:10px; padding:11px 16px; font-size:13.5px; font-weight:600; margin-bottom:16px;}
 .msg-ok{background:#E4F3EE; color:var(--teal-dark); border-radius:10px; padding:11px 16px; font-size:13.5px; font-weight:600; margin-bottom:16px;}
-code.example{background:var(--cream-soft); border-radius:6px; padding:2px 8px; font-size:14px; letter-spacing:0.08em; font-weight:700; color:var(--teal-dark);}
 
 /* Portal section */
 .classroom-block{margin-bottom:48px;}
 .classroom-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding-bottom:14px; border-bottom:2px solid rgba(22,79,74,0.08);}
 .classroom-head h3{font-size:22px;}
+.classroom-head .sub{font-size:13px; color:var(--ink-soft); font-weight:600; margin-top:2px;}
 .lesson-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
-.lesson-card{background:#fff; border-radius:16px; padding:22px; box-shadow:0 12px 26px -20px rgba(22,79,74,0.25); cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; display:block; text-decoration:none; color:inherit;}
+.lesson-card{background:#fff; border-radius:16px; padding:22px; box-shadow:0 12px 26px -20px rgba(22,79,74,0.25); cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; display:block; text-decoration:none; color:inherit; position:relative;}
 .lesson-card:hover{transform:translateY(-4px); box-shadow:0 18px 34px -20px rgba(22,79,74,0.38);}
 .lesson-num{font-size:11px; font-weight:800; color:var(--coral-dark); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;}
 .lesson-card h4{font-size:15.5px; font-family:'Fraunces',serif; color:var(--teal-dark); margin-bottom:6px; line-height:1.3;}
 .lesson-series{font-size:12px; color:var(--ink-soft); margin-bottom:10px; font-weight:600;}
 .lesson-card .desc-short{font-size:13px; color:var(--ink-soft); line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
 .lesson-cta{margin-top:14px; font-size:12.5px; font-weight:700; color:var(--coral-dark);}
+.status-pill{display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; margin-top:10px;}
+.status-pill.done{background:#d1fae5; color:#065f46;}
+.status-pill.started{background:#fef3c7; color:#92400e;}
+.status-pill.notstarted{background:#f3f4f6; color:#6b7280;}
 
 .no-lessons{background:var(--cream-soft); border-radius:12px; padding:22px 24px; font-size:14px; color:var(--ink-soft);}
-
-/* Add classroom link */
-.add-more{text-align:center; margin-top:16px; font-size:14px; color:var(--ink-soft);}
-.add-more a{color:var(--coral-dark); font-weight:700;}
-
-/* Inline join-more card */
-.join-more-card{background:#fff; border-radius:var(--radius-md); padding:32px; box-shadow:var(--shadow); max-width:540px; margin:32px auto 0;}
-.join-more-card h3{font-size:20px; margin-bottom:20px; text-align:center;}
 
 @media (max-width:860px){
   .lesson-grid{grid-template-columns:repeat(2,1fr);}
@@ -97,7 +89,7 @@ code.example{background:var(--cream-soft); border-radius:6px; padding:2px 8px; f
     <div class="hero-icon">&#127968;</div>
     <div>
       <h1>Parent Portal</h1>
-      <p>Access classroom lesson materials for your child.</p>
+      <p>Follow your child's lesson progress and access classroom materials.</p>
     </div>
   </div>
 </div>
@@ -109,45 +101,26 @@ code.example{background:var(--cream-soft); border-radius:6px; padding:2px 8px; f
     <div id="authSection" style="display:none;">
       <div class="state-card">
         <span class="eyebrow">Get Started</span>
-        <h2>Sign in to view classroom resources</h2>
-        <p class="desc">Your child's teacher has set up a parent code for their classroom. Create an account or sign in, then enter that code to get access to lesson materials.</p>
+        <h2>Sign in to view your child's progress</h2>
+        <p class="desc">If your child's teacher has sent you a parent invitation by email, open that email and click the link there to create your account — that's what links you to your child. If you already have an account, sign in below.</p>
         <div class="cta-row">
           <button onclick="fnAuthOpenModal('login')" class="btn btn-primary">Sign In</button>
-          <button onclick="fnAuthOpenModal('signup')" class="btn btn-outline">Create Free Account</button>
         </div>
       </div>
     </div>
 
-    <!-- State 2: logged in, no classroom linked yet -->
-    <div id="joinSection" style="display:none;">
+    <!-- State 2: logged in, no child linked yet -->
+    <div id="noChildrenSection" style="display:none;">
       <div class="state-card">
-        <span class="eyebrow">One More Step</span>
-        <h2>Enter your classroom parent code</h2>
-        <p class="desc">Ask your child's teacher for the parent code. It's different from the student join code and looks like <code class="example">ABCD-1234</code>. Teachers can find it on their classroom page.</p>
-        <div id="joinError" class="msg-err" style="display:none;"></div>
-        <div class="join-row">
-          <input type="text" id="parentCodeInput" class="code-input" placeholder="XXXX-XXXX" maxlength="12" spellcheck="false" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
-          <button onclick="joinClassroom()" id="joinBtn" class="btn btn-primary">Join Classroom</button>
-        </div>
-        <p class="hint">You can join more than one classroom using separate codes.</p>
+        <span class="eyebrow">Almost There</span>
+        <h2>No children linked yet</h2>
+        <p class="desc">Your child's teacher sends a personal invitation by email to link a parent to a specific child. If you're expecting access, check your email for an invitation, or ask your child's teacher to send one.</p>
       </div>
     </div>
 
-    <!-- State 3: linked classrooms -->
+    <!-- State 3: linked children -->
     <div id="portalSection" style="display:none;">
       <div id="portalContent"></div>
-      <div class="add-more"><a href="#" onclick="toggleJoinMore(); return false;">+ Join another classroom</a></div>
-      <div id="joinMoreWrap" style="display:none;">
-        <div class="join-more-card">
-          <h3>Join another classroom</h3>
-          <div id="joinMoreError" class="msg-err" style="display:none;"></div>
-          <div id="joinMoreOk" class="msg-ok" style="display:none;"></div>
-          <div class="join-row">
-            <input type="text" id="parentCodeInput2" class="code-input" placeholder="XXXX-XXXX" maxlength="12" spellcheck="false" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
-            <button onclick="joinMore()" id="joinMoreBtn" class="btn btn-primary">Join</button>
-          </div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -207,7 +180,7 @@ function esc(s) {
 // ── State management ──────────────────────────────────────────
 
 function showSection(id) {
-  ['authSection','joinSection','portalSection'].forEach(function(s) {
+  ['authSection','noChildrenSection','portalSection'].forEach(function(s) {
     document.getElementById(s).style.display = s === id ? '' : 'none';
   });
   document.getElementById('mainWrap').style.visibility = 'visible';
@@ -240,154 +213,51 @@ document.addEventListener('fn-auth-changed', async function () {
 // ── Load portal state ─────────────────────────────────────────
 
 async function loadPortal() {
-  var r = await fetch('/api/parent/classrooms', { credentials: 'include' });
-  if (r.status === 403 || r.status === 401) {
-    showSection('joinSection');
-    return;
-  }
+  var r = await fetch('/api/parent/children', { credentials: 'include' });
   if (!r.ok) {
-    showSection('joinSection');
+    showSection('noChildrenSection');
     return;
   }
   var data = await r.json();
-  var classrooms = data.classrooms || [];
+  var children = data.children || [];
 
-  if (!classrooms.length) {
-    showSection('joinSection');
+  if (!children.length) {
+    showSection('noChildrenSection');
     return;
   }
 
-  renderPortal(classrooms);
+  await renderPortal(children);
   showSection('portalSection');
 }
 
 // ── Render portal content ─────────────────────────────────────
 
-function renderPortal(classrooms) {
-  var html = classrooms.map(function(c) {
-    var lessonCards = (c.assignments || []).map(function(a) {
-      return '<a class="lesson-card" href="parent-lesson.html?curriculum=' + esc(a.curriculumId) + '">' +
+async function renderPortal(children) {
+  var blocks = await Promise.all(children.map(async function(child) {
+    var pr = await fetch('/api/parent/students/' + child.studentId + '/progress', { credentials: 'include' });
+    var progress = pr.ok ? (await pr.json()).progress || [] : [];
+
+    var lessonCards = progress.map(function(p) {
+      var statusClass = p.completedAt ? 'done' : (p.startedAt ? 'started' : 'notstarted');
+      var statusLabel = p.completedAt ? 'Completed' : (p.startedAt ? 'In progress' : 'Not started');
+      return '<a class="lesson-card" href="parent-lesson.html?curriculum=' + esc(p.curriculumId) + '">' +
         '<div class="lesson-num">Lesson</div>' +
-        '<h4>' + esc(a.title) + '</h4>' +
-        (a.series ? '<div class="lesson-series">' + esc(a.series) + '</div>' : '') +
-        (a.shortDescription ? '<p class="desc-short">' + esc(a.shortDescription) + '</p>' : '') +
+        '<h4>' + esc(p.title) + '</h4>' +
+        (p.dueDate ? '<div class="lesson-series">Due ' + esc(p.dueDate) + '</div>' : '') +
+        '<span class="status-pill ' + statusClass + '">' + statusLabel + '</span>' +
         '<div class="lesson-cta">View resources &#8594;</div>' +
         '</a>';
     }).join('');
 
     return '<div class="classroom-block">' +
-      '<div class="classroom-head"><h3>' + esc(c.name) + '</h3></div>' +
+      '<div class="classroom-head"><div><h3>' + esc(child.studentName) + '</h3><div class="sub">' + esc(child.className) + '</div></div></div>' +
       (lessonCards
         ? '<div class="lesson-grid">' + lessonCards + '</div>'
         : '<div class="no-lessons">No lessons have been assigned to this classroom yet.</div>') +
       '</div>';
-  }).join('');
+  }));
 
-  document.getElementById('portalContent').innerHTML = html;
-}
-
-// ── Join classroom ────────────────────────────────────────────
-
-async function joinClassroom() {
-  var code = (document.getElementById('parentCodeInput').value || '').trim().toUpperCase();
-  var errBox = document.getElementById('joinError');
-  errBox.style.display = 'none';
-
-  if (!code) {
-    errBox.textContent = 'Enter your parent code.';
-    errBox.style.display = '';
-    return;
-  }
-
-  var btn = document.getElementById('joinBtn');
-  btn.disabled = true;
-  btn.textContent = 'Joining…';
-
-  var r = await fetch('/api/parent/join', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parentCode: code }),
-  });
-
-  btn.disabled = false;
-  btn.textContent = 'Join Classroom';
-
-  var result = await r.json().catch(function() { return {}; });
-
-  if (!r.ok) {
-    errBox.textContent = result.error || 'That code did not work. Double-check with your child\'s teacher.';
-    errBox.style.display = '';
-    return;
-  }
-
-  await loadPortal();
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-  var inp = document.getElementById('parentCodeInput');
-  if (inp) {
-    inp.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') joinClassroom();
-    });
-  }
-});
-
-// ── Join more ────────────────────────────────────────────────
-
-function toggleJoinMore() {
-  var wrap = document.getElementById('joinMoreWrap');
-  var visible = wrap.style.display !== 'none';
-  wrap.style.display = visible ? 'none' : '';
-  if (!visible) {
-    document.getElementById('parentCodeInput2').focus();
-    document.getElementById('joinMoreError').style.display = 'none';
-    document.getElementById('joinMoreOk').style.display = 'none';
-  }
-}
-
-async function joinMore() {
-  var code = (document.getElementById('parentCodeInput2').value || '').trim().toUpperCase();
-  var errBox = document.getElementById('joinMoreError');
-  var okBox  = document.getElementById('joinMoreOk');
-  errBox.style.display = 'none';
-  okBox.style.display  = 'none';
-
-  if (!code) {
-    errBox.textContent = 'Enter your parent code.';
-    errBox.style.display = '';
-    return;
-  }
-
-  var btn = document.getElementById('joinMoreBtn');
-  btn.disabled = true;
-  btn.textContent = 'Joining…';
-
-  var r = await fetch('/api/parent/join', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parentCode: code }),
-  });
-
-  btn.disabled = false;
-  btn.textContent = 'Join';
-
-  var result = await r.json().catch(function() { return {}; });
-
-  if (!r.ok) {
-    errBox.textContent = result.error || 'That code did not work. Double-check with your child\'s teacher.';
-    errBox.style.display = '';
-    return;
-  }
-
-  okBox.textContent = 'Joined ' + (result.classroom ? result.classroom.name : 'classroom') + '!';
-  okBox.style.display = '';
-  document.getElementById('parentCodeInput2').value = '';
-
-  await loadPortal();
-  showSection('portalSection');
-  document.getElementById('joinMoreWrap').style.display = '';
+  document.getElementById('portalContent').innerHTML = blocks.join('');
 }
 </script>
 <script src="footer.js?v=1"></script>

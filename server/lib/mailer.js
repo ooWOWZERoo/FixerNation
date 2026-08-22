@@ -193,6 +193,25 @@ async function sendTeacherInvitationEmail({ to, firstName, inviteUrl, schoolDoma
   });
 }
 
+// Invites a parent to link to their specific child's classroom record —
+// mirrors sendTeacherInvitationEmail's pattern exactly, just addressed to a
+// parent/guardian instead of a teacher.
+async function sendParentInvitationEmail({ to, studentName, inviteUrl, className, teacherName, personalMessage, expiresAt }) {
+  const expiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '14 days';
+  const personal = personalMessage ? `<p style="font-style:italic;color:#555;">"${personalMessage}"</p>` : '';
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `You're invited to follow ${studentName}'s progress on Fixer Nation Education`,
+    text: `Hi,\n\n${teacherName || 'Your child\'s teacher'} has invited you to link to ${studentName}'s classroom (${className}) on Fixer Nation Education, so you can see their lesson progress.\n\n${personalMessage ? `"${personalMessage}"\n\n` : ''}Click the link below to accept:\n${inviteUrl}\n\nThis invitation expires on ${expiry}.`,
+    html: `<p>Hi,</p>
+      <p><strong>${teacherName || "Your child's teacher"}</strong> has invited you to link to <strong>${studentName}</strong>'s classroom (${className}) on Fixer Nation Education, so you can see their lesson progress.</p>
+      ${personal}
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
+      <p style="font-size:13px;color:#888;">This invitation expires on ${expiry}. If you didn't expect this email, you can safely ignore it.</p>`,
+  });
+}
+
 // Reminder for a previously sent but unaccepted invitation
 async function sendInvitationReminderEmail({ to, firstName, inviteUrl, schoolDomain, expiresAt }) {
   const expiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'soon';
@@ -380,4 +399,4 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail };
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail };

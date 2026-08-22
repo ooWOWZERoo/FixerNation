@@ -1,8 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
 const { hasActiveLicense } = require('../lib/access');
+const { sendParentInvitationEmail } = require('../lib/mailer');
+
+const PARENT_INVITE_EXPIRY_DAYS = 14;
 
 const router = express.Router();
 
@@ -165,21 +169,6 @@ router.put('/:id/regen-code', requireSiteAuth, async (req, res) => {
   }
 });
 
-// PUT /:id/regen-parent-code — regenerate parent code
-router.put('/:id/regen-parent-code', requireSiteAuth, async (req, res) => {
-  const classroom = await ownedClassroom(req, res);
-  if (!classroom) return;
-
-  const conn = await pool.getConnection();
-  try {
-    const code = await uniqueParentCode(conn);
-    await conn.query('UPDATE classrooms SET parent_code = ? WHERE id = ?', [code, classroom.id]);
-    res.json({ parentCode: code });
-  } finally {
-    conn.release();
-  }
-});
-
 // ---------------------------------------------------------------------------
 // Students
 // ---------------------------------------------------------------------------
@@ -305,6 +294,84 @@ router.delete('/:id/students/:sid', requireSiteAuth, async (req, res) => {
     'UPDATE classroom_students SET is_active = 0 WHERE id = ? AND classroom_id = ?',
     [req.params.sid, classroom.id]
   );
+  res.json({ ok: true });
+});
+
+// POST /:id/students/:sid/invite-parent — the only way a parent gets linked
+// to a specific child now; the old classroom-level parent_code self-join
+// (no child selection at all) has been removed.
+router.post('/:id/students/:sid/invite-parent', requireSiteAuth, async (req, res) => {
+  const classroom = await ownedClassroom(req, res);
+  if (!classroom) return;
+
+  const { email, personalMessage } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'A valid email is required' });
+  }
+  const normalEmail = email.trim().toLowerCase();
+
+  const [[student]] = await pool.query(
+    'SELECT id, display_name FROM classroom_students WHERE id = ? AND classroom_id = ?',
+    [req.params.sid, classroom.id]
+  );
+  if (!student) return res.status(404).json({ error: 'Student not found' });
+
+  const [[existing]] = await pool.query(
+    "SELECT id FROM parent_student_invitations WHERE student_id = ? AND invited_email = ? AND status = 'pending'",
+    [student.id, normalEmail]
+  );
+  if (existing) return res.status(409).json({ error: 'An active invitation already exists for this email and student.' });
+
+  const token = crypto.randomBytes(48).toString('hex');
+  const expiresAt = new Date(Date.now() + PARENT_INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const [result] = await pool.query(
+    `INSERT INTO parent_student_invitations
+       (classroom_id, student_id, invited_email, token, status, invited_by_site_user_id, personal_message, expires_at)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
+    [classroom.id, student.id, normalEmail, token, req.siteUser.id, personalMessage || null, expiresAt]
+  );
+
+  const siteUrl = process.env.SITE_URL || '';
+  const inviteUrl = `${siteUrl}/parent-invite-accept.html?token=${token}`;
+  sendParentInvitationEmail({
+    to: normalEmail,
+    studentName: student.display_name,
+    inviteUrl,
+    className: classroom.name,
+    teacherName: `${req.siteUser.first_name || ''} ${req.siteUser.last_name || ''}`.trim(),
+    personalMessage: personalMessage || null,
+    expiresAt,
+  }).catch(e => console.error('sendParentInvitationEmail failed:', e.message));
+
+  res.status(201).json({ ok: true, invitationId: result.insertId });
+});
+
+// GET /:id/parent-invitations — list all parent invitations for this classroom
+router.get('/:id/parent-invitations', requireSiteAuth, async (req, res) => {
+  const classroom = await ownedClassroom(req, res);
+  if (!classroom) return;
+  const [rows] = await pool.query(
+    `SELECT psi.id, psi.student_id, cs.display_name AS student_name, psi.invited_email,
+            psi.status, psi.expires_at, psi.created_at
+     FROM parent_student_invitations psi
+     JOIN classroom_students cs ON cs.id = psi.student_id
+     WHERE psi.classroom_id = ?
+     ORDER BY psi.created_at DESC`,
+    [classroom.id]
+  );
+  res.json(rows);
+});
+
+// PUT /:id/parent-invitations/:invId/revoke — only meaningful for a still-pending
+// invite; parent-invite.js's /validate already rejects a revoked token.
+router.put('/:id/parent-invitations/:invId/revoke', requireSiteAuth, async (req, res) => {
+  const classroom = await ownedClassroom(req, res);
+  if (!classroom) return;
+  const [result] = await pool.query(
+    "UPDATE parent_student_invitations SET status = 'revoked', revoked_at = NOW() WHERE id = ? AND classroom_id = ? AND status = 'pending'",
+    [req.params.invId, classroom.id]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'Invitation not found or not pending' });
   res.json({ ok: true });
 });
 

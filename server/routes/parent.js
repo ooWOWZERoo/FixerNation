@@ -5,43 +5,25 @@ const { getParentClassrooms, hasParentAccessToCurriculum } = require('../lib/acc
 
 const router = express.Router();
 
-// POST /api/parent/join
-// Authenticated site_user joins a classroom via parent code.
-// Sets role='parent' on their account and creates a parent_classroom_links row.
-router.post('/join', requireSiteAuth, async (req, res) => {
-  const parentCode = ((req.body && req.body.parentCode) || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
-  if (!parentCode) return res.status(400).json({ error: 'parentCode is required' });
-
-  const [classRows] = await pool.query('SELECT id, name FROM classrooms WHERE parent_code = ?', [parentCode]);
-  if (!classRows[0]) return res.status(404).json({ error: 'No classroom found with that parent code' });
-
-  const classroom = classRows[0];
-
-  // Set role to 'parent' if not already
-  if (req.siteUser.role !== 'parent') {
-    await pool.query("UPDATE site_users SET role = 'parent' WHERE id = ?", [req.siteUser.id]);
-  }
-
-  // Link parent to classroom (ignore duplicate)
-  await pool.query(
-    'INSERT IGNORE INTO parent_classroom_links (site_user_id, classroom_id) VALUES (?, ?)',
-    [req.siteUser.id, classroom.id]
-  );
-
-  res.json({ ok: true, classroom: { id: classroom.id, name: classroom.name } });
-});
-
-// GET /api/parent/classrooms
-// Returns all classrooms the parent is linked to, with their curriculum assignments.
-router.get('/classrooms', requireSiteAuth, async (req, res) => {
+// GET /api/parent/children
+// Returns each child the parent is linked to (one entry per student, not
+// per classroom — a parent with two children in the same classroom gets
+// two entries), with that classroom's curriculum assignments. Replaces the
+// old GET /api/parent/classrooms, which returned classroom-level data
+// identically for every parent linked to that classroom regardless of
+// which (or how many) children they had there — the old parent_code
+// self-join flow that produced that shape has been removed; the only way
+// to get linked now is a teacher-sent per-student invite
+// (POST /api/classrooms/:id/students/:sid/invite-parent).
+router.get('/children', requireSiteAuth, async (req, res) => {
   if (req.siteUser.role !== 'parent') {
     return res.status(403).json({ error: 'Parent access required' });
   }
 
   const linked = await getParentClassrooms(req.siteUser.id);
-  if (!linked.length) return res.json({ classrooms: [] });
+  if (!linked.length) return res.json({ children: [] });
 
-  const classroomIds = linked.map(c => c.classroomId);
+  const classroomIds = [...new Set(linked.map(c => c.classroomId))];
   const [assignments] = await pool.query(
     `SELECT ca.classroom_id, ca.curriculum_id, cur.title, cur.short_description AS shortDescription, cur.series
      FROM classroom_assignments ca
@@ -62,10 +44,50 @@ router.get('/classrooms', requireSiteAuth, async (req, res) => {
   }, {});
 
   res.json({
-    classrooms: linked.map(c => ({
-      id:          c.classroomId,
-      name:        c.className,
+    children: linked.map(c => ({
+      studentId:   c.studentId,
+      studentName: c.studentName,
+      classroomId: c.classroomId,
+      className:   c.className,
       assignments: assignmentsByClassroom[c.classroomId] || [],
+    })),
+  });
+});
+
+// GET /api/parent/students/:studentId/progress
+// Lesson completion progress for one specific linked child — per the
+// product decision, this shows completion status only (no quiz answers,
+// no reflections; those stay teacher-only for now).
+router.get('/students/:studentId/progress', requireSiteAuth, async (req, res) => {
+  if (req.siteUser.role !== 'parent') {
+    return res.status(403).json({ error: 'Parent access required' });
+  }
+
+  const studentId = Number(req.params.studentId);
+  const [[link]] = await pool.query(
+    'SELECT classroom_id FROM parent_classroom_links WHERE site_user_id = ? AND student_id = ?',
+    [req.siteUser.id, studentId]
+  );
+  if (!link) return res.status(403).json({ error: 'You are not linked to this student' });
+
+  const [rows] = await pool.query(
+    `SELECT ca.curriculum_id, cur.title, ca.due_date,
+            slp.started_at, slp.completed_at
+     FROM classroom_assignments ca
+     JOIN curricula cur ON cur.id = ca.curriculum_id AND cur.published = 1
+     LEFT JOIN student_lesson_progress slp ON slp.student_id = ? AND slp.curriculum_id = ca.curriculum_id
+     WHERE ca.classroom_id = ?
+     ORDER BY ca.sort_order, ca.assigned_at`,
+    [studentId, link.classroom_id]
+  );
+
+  res.json({
+    progress: rows.map(r => ({
+      curriculumId: r.curriculum_id,
+      title: r.title,
+      dueDate: r.due_date,
+      startedAt: r.started_at,
+      completedAt: r.completed_at,
     })),
   });
 });

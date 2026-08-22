@@ -52,15 +52,21 @@ async function hasActiveMembership(email) {
   return rows.length > 0;
 }
 
-// Returns all classrooms a parent is linked to.
+// Returns all classroom+child links a parent has — one row per linked
+// student, not per classroom, so a parent with two children in the same
+// classroom gets two distinct rows. student_id is only NULL for a link
+// created before per-child invites existed (the old parent_code self-join
+// flow, now removed); nothing back-fills those automatically.
 async function getParentClassrooms(siteUserId) {
   if (!siteUserId) return [];
   const [rows] = await pool.query(
-    `SELECT c.id AS classroomId, c.name AS className
+    `SELECT c.id AS classroomId, c.name AS className,
+            cs.id AS studentId, cs.display_name AS studentName
      FROM parent_classroom_links pcl
      JOIN classrooms c ON c.id = pcl.classroom_id
+     LEFT JOIN classroom_students cs ON cs.id = pcl.student_id
      WHERE pcl.site_user_id = ?
-     ORDER BY c.name`,
+     ORDER BY c.name, cs.display_name`,
     [siteUserId]
   );
   return rows;

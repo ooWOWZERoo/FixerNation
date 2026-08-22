@@ -31,9 +31,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 .join-code-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px;}
 .join-code-box .label{font-size:12px;color:var(--ink-soft);font-weight:600;}
 .join-code-box code{font-size:18px;font-weight:800;letter-spacing:.1em;color:var(--teal-dark);}
-.parent-code-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:20px;}
-.parent-code-box .label{font-size:12px;color:var(--ink-soft);font-weight:600;}
-.parent-code-box code{font-size:18px;font-weight:800;letter-spacing:.12em;color:#7c3aed;}
 /* Tabs */
 .tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border);}
 .tab-btn{padding:10px 18px;border:none;background:transparent;font-family:inherit;font-weight:600;font-size:14px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
@@ -113,7 +110,6 @@ table.data-table tr:hover td{background:#fafaf9;}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-outline btn-sm" onclick="regenCode()">Regenerate Join Code</button>
-      <button class="btn btn-outline btn-sm" onclick="regenParentCode()">Regenerate Parent Code</button>
       <button class="btn btn-outline btn-sm" onclick="openEditClassroom()">Edit Details</button>
       <button class="btn btn-outline btn-sm" id="archiveBtn" onclick="toggleArchive()">Archive Classroom</button>
     </div>
@@ -124,13 +120,6 @@ table.data-table tr:hover td{background:#fafaf9;}
     <code id="joinCodeDisplay">—</code>
     <button class="btn btn-outline btn-xs" onclick="copyCode()">Copy</button>
   </div>
-  <div class="parent-code-box">
-    <span class="label">PARENT CODE</span>
-    <code id="parentCodeDisplay">—</code>
-    <button class="btn btn-outline btn-xs" onclick="copyParentCode()">Copy</button>
-    <span style="font-size:12px;color:var(--ink-soft);margin-left:4px;">Share with parents to give them access at home</span>
-  </div>
-
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('students', this)">Students</button>
     <button class="tab-btn" onclick="switchTab('assignments', this)">Assignments</button>
@@ -147,6 +136,11 @@ table.data-table tr:hover td{background:#fafaf9;}
       </div>
     </div>
     <div id="studentTable"></div>
+
+    <div class="section-toolbar" style="margin-top:24px;">
+      <h2>Pending Parent Invitations</h2>
+    </div>
+    <div id="parentInviteTable"></div>
   </div>
 
   <!-- ASSIGNMENTS TAB -->
@@ -205,6 +199,20 @@ table.data-table tr:hover td{background:#fafaf9;}
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('pinModal')">Cancel</button>
       <button class="btn btn-primary" id="pinBtn" onclick="savePin()">Save PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite Parent modal -->
+<div class="modal-bg" id="inviteParentModal">
+  <div class="modal">
+    <h2>Invite Parent</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Send a link so a parent can follow <strong id="ipStudentName"></strong>'s lesson progress.</p>
+    <div class="field"><label>Parent Email *</label><input id="ipEmail" type="email" placeholder="parent@example.com"></div>
+    <div class="field"><label>Personal Message (optional)</label><textarea id="ipMessage" placeholder="Add a note for the parent…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('inviteParentModal')">Cancel</button>
+      <button class="btn btn-primary" id="inviteParentBtn" onclick="sendParentInvite()">Send Invite</button>
     </div>
   </div>
 </div>
@@ -317,6 +325,7 @@ async function load() {
   renderStudents();
   renderAssignments();
   renderProgress();
+  loadParentInvites();
 }
 
 function renderHeader() {
@@ -325,7 +334,6 @@ function renderHeader() {
   var meta = [classroom.grade_level, classroom.subject, classroom.academic_year].filter(Boolean).join(' · ');
   document.getElementById('classroomMeta').textContent = meta || '';
   document.getElementById('joinCodeDisplay').textContent = classroom.join_code;
-  document.getElementById('parentCodeDisplay').textContent = classroom.parent_code || '—';
   document.getElementById('archiveBtn').textContent = classroom.archived_at ? 'Unarchive Classroom' : 'Archive Classroom';
 }
 
@@ -368,6 +376,7 @@ function renderStudents() {
       '<td>' + (s.is_active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + '</td>' +
       '<td style="white-space:nowrap;">' +
         '<button class="btn btn-outline btn-xs" style="margin-right:6px;" onclick="openPinReset(' + s.id + ',\'' + esc(s.display_name) + '\')">Reset PIN</button>' +
+        '<button class="btn btn-outline btn-xs" style="margin-right:6px;" onclick="openInviteParent(' + s.id + ',\'' + esc(s.display_name) + '\')">Invite Parent</button>' +
         (s.is_active ? '<button class="btn btn-danger btn-xs" onclick="deactivateStudent(' + s.id + ')">Deactivate</button>' : '') +
       '</td>' +
     '</tr>';
@@ -457,6 +466,75 @@ async function deactivateStudent(id) {
   });
   classroom.students = classroom.students.map(function(s){ return s.id === id ? Object.assign({}, s, { is_active: 0 }) : s; });
   renderStudents();
+}
+
+// ---------------------------------------------------------------------------
+// Parent invitations
+// ---------------------------------------------------------------------------
+var inviteTargetId = null;
+
+function openInviteParent(id, name) {
+  inviteTargetId = id;
+  document.getElementById('ipStudentName').textContent = name;
+  document.getElementById('ipEmail').value = '';
+  document.getElementById('ipMessage').value = '';
+  document.getElementById('inviteParentModal').classList.add('open');
+  document.getElementById('ipEmail').focus();
+}
+
+async function sendParentInvite() {
+  var email = document.getElementById('ipEmail').value.trim();
+  if (!email) { toast('Parent email is required'); return; }
+  document.getElementById('inviteParentBtn').disabled = true;
+  var r = await fetch('/api/classrooms/' + classroomId + '/students/' + inviteTargetId + '/invite-parent', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, personalMessage: document.getElementById('ipMessage').value.trim() || undefined }),
+  });
+  var data = await r.json();
+  document.getElementById('inviteParentBtn').disabled = false;
+  if (!r.ok) { toast(data.error || 'Error'); return; }
+  closeModal('inviteParentModal');
+  toast('Invitation sent to ' + email);
+  loadParentInvites();
+}
+
+async function loadParentInvites() {
+  var r = await fetch('/api/classrooms/' + classroomId + '/parent-invitations', { credentials: 'include' });
+  var invites = r.ok ? await r.json() : [];
+  renderParentInvites(invites.filter(function(i){ return i.status === 'pending'; }));
+}
+
+function renderParentInvites(invites) {
+  var el = document.getElementById('parentInviteTable');
+  if (!invites.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--ink-soft);padding:24px;background:#fff;border-radius:14px;">No pending invitations.</div>';
+    return;
+  }
+  var html = '<table class="data-table"><thead><tr><th>Student</th><th>Parent Email</th><th>Sent</th><th>Expires</th><th></th></tr></thead><tbody>';
+  invites.forEach(function(i) {
+    html += '<tr>' +
+      '<td>' + esc(i.student_name) + '</td>' +
+      '<td>' + esc(i.invited_email) + '</td>' +
+      '<td>' + esc((i.created_at || '').slice(0, 10)) + '</td>' +
+      '<td>' + esc((i.expires_at || '').slice(0, 10)) + '</td>' +
+      '<td><button class="btn btn-danger btn-xs" onclick="revokeParentInvite(' + i.id + ')">Revoke</button></td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function revokeParentInvite(id) {
+  if (!confirm('Revoke this invitation? The link in the parent\'s email will stop working.')) return;
+  var r = await fetch('/api/classrooms/' + classroomId + '/parent-invitations/' + id + '/revoke', {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!r.ok) { toast('Error revoking invitation'); return; }
+  toast('Invitation revoked');
+  loadParentInvites();
 }
 
 // ---------------------------------------------------------------------------
@@ -657,19 +735,12 @@ function renderProgress() {
 }
 
 // ---------------------------------------------------------------------------
-// Join code + parent code
+// Join code
 // ---------------------------------------------------------------------------
 function copyCode() {
   if (navigator.clipboard && classroom) {
     navigator.clipboard.writeText(classroom.join_code);
     toast('Join code copied!');
-  }
-}
-
-function copyParentCode() {
-  if (navigator.clipboard && classroom && classroom.parent_code) {
-    navigator.clipboard.writeText(classroom.parent_code);
-    toast('Parent code copied!');
   }
 }
 
@@ -685,20 +756,6 @@ async function regenCode() {
   classroom.join_code = data.joinCode;
   document.getElementById('joinCodeDisplay').textContent = data.joinCode;
   toast('New join code: ' + data.joinCode);
-}
-
-async function regenParentCode() {
-  if (!confirm('Generate a new parent code? Parents using the old code will keep their access, but the code will no longer work for new parents.')) return;
-  var r = await fetch('/api/classrooms/' + classroomId + '/regen-parent-code', {
-    method: 'PUT', credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  });
-  var data = await r.json();
-  if (!r.ok) { toast(data.error || 'Error'); return; }
-  classroom.parent_code = data.parentCode;
-  document.getElementById('parentCodeDisplay').textContent = data.parentCode;
-  toast('New parent code: ' + data.parentCode);
 }
 
 // ---------------------------------------------------------------------------

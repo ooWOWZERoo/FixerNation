@@ -589,30 +589,85 @@ async function main() {
 
   // --- Student in that classroom ------------------------------------------
   const studentUsername = 'qa-student-1';
-  const [[existingStudent]] = await conn.query(
+  let [[student]] = await conn.query(
     'SELECT id FROM classroom_students WHERE username = ?',
     [studentUsername]
   );
-  if (!existingStudent) {
+  if (!student) {
     const pinHash = await bcrypt.hash(QA_PIN, 10);
-    await conn.query(
+    const [result] = await conn.query(
       `INSERT INTO classroom_students (classroom_id, display_name, username, password_hash, is_active)
        VALUES (?, 'QA Student', ?, ?, 1)`,
       [classroom.id, studentUsername, pinHash]
     );
+    student = { id: result.insertId };
   }
   out.studentUsername = studentUsername;
+  out.studentId = student.id;
 
-  // --- Parent linked to that classroom ------------------------------------
+  // A second child in the same classroom, used to test sibling
+  // differentiation (two children, two separate progress views) and to
+  // exercise the parent-invite-accept flow via a seeded pending token.
+  const siblingUsername = 'qa-student-2';
+  let [[sibling]] = await conn.query(
+    'SELECT id FROM classroom_students WHERE username = ?',
+    [siblingUsername]
+  );
+  if (!sibling) {
+    const pinHash = await bcrypt.hash(QA_PIN, 10);
+    const [result] = await conn.query(
+      `INSERT INTO classroom_students (classroom_id, display_name, username, password_hash, is_active)
+       VALUES (?, 'QA Sibling', ?, ?, 1)`,
+      [classroom.id, siblingUsername, pinHash]
+    );
+    sibling = { id: result.insertId };
+  }
+  out.siblingUsername = siblingUsername;
+  out.siblingId = sibling.id;
+
+  // Give the first child real lesson-completion progress so the parent
+  // progress view has a non-empty case to render, not just "not started".
+  if (curriculum) {
+    await conn.query(
+      `INSERT INTO student_lesson_progress (student_id, curriculum_id, started_at, completed_at)
+       VALUES (?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE completed_at = NOW()`,
+      [student.id, curriculum.id]
+    );
+  }
+
+  // --- Parent linked to that specific child --------------------------------
   const parentEmail = 'qa-parent@example.com';
   const parentUserId = await findOrCreateSiteUser(conn, {
     email: parentEmail, firstName: 'QA', lastName: 'Parent', role: 'parent',
   });
   await conn.query(
-    'INSERT IGNORE INTO parent_classroom_links (site_user_id, classroom_id) VALUES (?, ?)',
-    [parentUserId, classroom.id]
+    `INSERT INTO parent_classroom_links (site_user_id, classroom_id, student_id)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE student_id = VALUES(student_id)`,
+    [parentUserId, classroom.id, student.id]
   );
   out.parent = parentEmail;
+
+  // Pending parent-invite token for the sibling, addressed to the same
+  // parent email — accepting it (already-logged-in claim flow) should add
+  // the sibling as a second child without disturbing the first link.
+  const siblingInviteToken = crypto.randomBytes(48).toString('hex');
+  const [[existingSiblingInvite]] = await conn.query(
+    "SELECT id, token FROM parent_student_invitations WHERE student_id = ? AND invited_email = ? AND status = 'pending'",
+    [sibling.id, parentEmail]
+  );
+  if (existingSiblingInvite) {
+    out.parentInviteToken = existingSiblingInvite.token;
+  } else {
+    await conn.query(
+      `INSERT INTO parent_student_invitations
+         (classroom_id, student_id, invited_email, token, status, invited_by_site_user_id, expires_at)
+       VALUES (?, ?, ?, ?, 'pending', ?, DATE_ADD(NOW(), INTERVAL 14 DAY))`,
+      [classroom.id, sibling.id, parentEmail, siblingInviteToken, teacherUserId]
+    );
+    out.parentInviteToken = siblingInviteToken;
+  }
 
   await conn.end();
 
@@ -631,6 +686,10 @@ async function main() {
   console.log(`TEST_STUDENT_PIN=${out.pin}`);
   console.log(`TEST_PARENT_EMAIL=${out.parent}`);
   console.log(`TEST_PARENT_PASSWORD=${out.password}`);
+  console.log(`TEST_STUDENT_ID=${out.studentId}`);
+  console.log(`TEST_SIBLING_STUDENT_USERNAME=${out.siblingUsername}`);
+  console.log(`TEST_SIBLING_STUDENT_ID=${out.siblingId}`);
+  console.log(`TEST_PARENT_INVITE_TOKEN=${out.parentInviteToken}`);
   if (out.removableTeacher) console.log(`TEST_REMOVABLE_TEACHER_EMAIL=${out.removableTeacher}`);
   if (out.inviteToken) console.log(`TEST_TEACHER_INVITE_TOKEN=${out.inviteToken}`);
   if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);

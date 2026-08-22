@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Accept Parent Invitation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #1a2332 0%, #2d3f55 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; color: #111827; }
+  .card { background: #fff; border-radius: 20px; padding: 44px 40px; max-width: 480px; width: 100%; box-shadow: 0 28px 70px rgba(0,0,0,.28); }
+  .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+  .logo .mark { width: 44px; height: 44px; background: #E06D2C; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; flex-shrink: 0; }
+  .logo .words strong { display: block; font-size: 15px; font-weight: 700; }
+  .logo .words span { font-size: 12px; color: #6b7280; }
+  h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .sub { font-size: 14px; color: #6b7280; margin-bottom: 24px; line-height: 1.6; }
+  .child-pill { display: inline-flex; align-items: center; gap: 6px; background: #fef3ea; color: #b45309; border-radius: 20px; padding: 5px 14px; font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+  .alert { border-radius: 10px; padding: 14px 16px; font-size: 13.5px; line-height: 1.5; margin-bottom: 20px; display: none; }
+  .alert-danger { background: #fef2f2; border: 1.5px solid #fca5a5; color: #b91c1c; }
+  .alert-warn { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; }
+  .form-group input { width: 100%; padding: 10px 13px; border: 1.5px solid #e0e3eb; border-radius: 9px; font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s; }
+  .form-group input:focus { border-color: #E06D2C; }
+  .form-group input:disabled { background: #f9fafb; color: #6b7280; }
+  .btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background .15s; }
+  .btn-primary { background: #E06D2C; color: #fff; }
+  .btn-primary:hover { background: #C45A1A; }
+  .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+  .btn-secondary { background: #f3f4f6; color: #374151; margin-top: 10px; }
+  .btn-secondary:hover { background: #e5e7eb; }
+  .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: #9ca3af; font-size: 12.5px; }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background:#e5e7eb; }
+  .loading-state { text-align: center; padding: 40px 0; color: #6b7280; }
+  .spinner { width: 32px; height: 32px; border: 3px solid #e0e3eb; border-top-color: #E06D2C; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .success-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+  .expires { font-size: 12px; color: #9ca3af; text-align: center; margin-top: 12px; }
+  a { color: #E06D2C; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="mark">FN</div>
+    <div class="words">
+      <strong>Fixer Nation Education</strong>
+      <span>Parent Portal Invitation</span>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="stateLoading" class="loading-state">
+    <div class="spinner"></div>
+    Verifying your invitation…
+  </div>
+
+  <!-- Error state (invalid/revoked/expired) -->
+  <div id="stateError" style="display:none;">
+    <div class="alert alert-danger" id="errorMsg" style="display:block;"></div>
+    <p style="font-size:13px;color:#6b7280;margin-top:12px;">If you believe this is an error, please contact your child's teacher or <a href="mailto:support@fixernationeducation.com">Fixer Nation Education</a>.</p>
+  </div>
+
+  <!-- Wrong account state -->
+  <div id="stateWrongAccount" style="display:none;">
+    <div class="alert alert-warn" id="wrongAccountMsg" style="display:block;"></div>
+    <button class="btn btn-primary" id="signOutBtn" onclick="signOutAndContinue()">Sign Out &amp; Accept Invitation</button>
+    <p style="font-size:13px;color:#6b7280;margin-top:14px;">If you believe this is an error, please contact your child's teacher or <a href="mailto:support@fixernationeducation.com">Fixer Nation Education</a>.</p>
+  </div>
+
+  <!-- Already accepted -->
+  <div id="stateAccepted" style="display:none;">
+    <div class="success-icon">🎉</div>
+    <h1>You're already linked!</h1>
+    <p class="sub">This invitation has already been accepted. <a href="parent-portal.html">Go to the Parent Portal</a> to see your child's progress.</p>
+  </div>
+
+  <!-- Main accept state — new user: fill in details + set password -->
+  <div id="stateNew" style="display:none;">
+    <h1>Welcome to Fixer Nation Education!</h1>
+    <p class="sub" id="newSub">You've been invited to follow your child's progress. Complete your profile to get started.</p>
+    <div class="child-pill" id="newPill">🧒 —</div>
+
+    <div id="newErr" class="alert alert-danger"></div>
+
+    <form id="newForm" autocomplete="off">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="newEmail" disabled>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>First Name <span style="color:#ef4444">*</span></label>
+          <input type="text" id="newFirst" placeholder="Jane" required>
+        </div>
+        <div class="form-group">
+          <label>Last Name <span style="color:#ef4444">*</span></label>
+          <input type="text" id="newLast" placeholder="Smith" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Create Password <span style="color:#ef4444">*</span></label>
+        <input type="password" id="newPass" placeholder="At least 8 characters" required autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password <span style="color:#ef4444">*</span></label>
+        <input type="password" id="newPass2" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="newBtn">Create Account &amp; Accept Invitation</button>
+    </form>
+    <p class="expires" id="newExpires"></p>
+  </div>
+
+  <!-- Existing user: logged in, just claim -->
+  <div id="stateClaim" style="display:none;">
+    <h1>Accept Your Invitation</h1>
+    <p class="sub" id="claimSub"></p>
+    <div class="child-pill" id="claimPill">🧒 —</div>
+    <div id="claimErr" class="alert alert-danger"></div>
+    <button class="btn btn-primary" id="claimBtn" onclick="claimInvite()">Accept Invitation</button>
+    <div class="divider">or</div>
+    <button class="btn btn-secondary" onclick="signOutAndContinue()">Sign in with a different account</button>
+    <p class="expires" id="claimExpires"></p>
+  </div>
+
+  <!-- Existing account: sign in inline to claim -->
+  <div id="stateSignIn" style="display:none;">
+    <h1>Sign In to Accept</h1>
+    <p class="sub" id="signInSub">You already have an account with this email. Sign in to link your child.</p>
+    <div class="child-pill" id="signInPill">🧒 —</div>
+    <div id="signInErr" class="alert alert-danger"></div>
+    <form id="signInForm" autocomplete="off">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="signInEmail" disabled>
+      </div>
+      <div class="form-group">
+        <label>Password <span style="color:#ef4444">*</span></label>
+        <input type="password" id="signInPass" placeholder="Your password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="signInBtn">Sign In &amp; Accept Invitation</button>
+    </form>
+    <p class="expires" id="signInExpires"></p>
+  </div>
+
+  <!-- Success after claim/register -->
+  <div id="stateSuccess" style="display:none;">
+    <div class="success-icon">🎉</div>
+    <h1>You're in!</h1>
+    <p class="sub">You're now linked to your child's classroom. You can see their lesson progress any time.</p>
+    <a href="parent-portal.html" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">Go to the Parent Portal →</a>
+  </div>
+</div>
+
+<script>
+var token = null, invData = null;
+
+(function init() {
+  var params = new URLSearchParams(window.location.search);
+  token = params.get('token');
+
+  if (!token) {
+    showError('No invitation token found. Please use the link from your invitation email.');
+    return;
+  }
+
+  fetch('/api/parent-invite/validate?token=' + encodeURIComponent(token), { credentials: 'include' })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+    .then(function (res) {
+      hide('stateLoading');
+      if (!res.ok) {
+        if (res.data.alreadyAccepted) { show('stateAccepted'); return; }
+        showError(res.data.error || 'Invalid or expired invitation.');
+        return;
+      }
+      invData = res.data;
+      setupAcceptState(invData);
+    })
+    .catch(function () {
+      hide('stateLoading');
+      showError('Unable to verify invitation. Please try again or contact your child\'s teacher.');
+    });
+})();
+
+function childPillText(d) {
+  return '🧒 ' + (d.studentName || 'your child') + ' — ' + (d.className || 'a classroom');
+}
+
+function setupAcceptState(d) {
+  var expires = d.expiresAt ? 'Invitation expires ' + new Date(d.expiresAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+
+  if (d.loggedIn && d.emailMatches === false) {
+    document.getElementById('wrongAccountMsg').textContent =
+      'You\'re currently signed in as ' + d.userEmail + '. This invitation is for ' + (d.invitedEmail || 'a different email address') + '. Sign out below to accept it with the correct account.';
+    show('stateWrongAccount');
+  } else if (d.loggedIn) {
+    document.getElementById('claimSub').textContent = 'You\'re signed in as ' + d.userEmail + '. Accept to link to ' + (d.studentName || 'your child') + '\'s classroom.';
+    document.getElementById('claimPill').textContent = childPillText(d);
+    document.getElementById('claimExpires').textContent = expires;
+    show('stateClaim');
+  } else if (d.emailHasAccount) {
+    showSignIn();
+  } else {
+    document.getElementById('newSub').textContent = 'You\'ve been invited by ' + (d.teacherName || 'your child\'s teacher') + ' to follow ' + (d.studentName || 'your child') + '\'s progress.';
+    document.getElementById('newEmail').value = d.invitedEmail || '';
+    document.getElementById('newPill').textContent = childPillText(d);
+    document.getElementById('newExpires').textContent = expires;
+    show('stateNew');
+  }
+}
+
+async function claimInvite() {
+  var btn = document.getElementById('claimBtn');
+  var err = document.getElementById('claimErr');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Accepting…';
+  try {
+    var r = await fetch('/api/parent-invite/claim', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token }),
+    });
+    var d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Failed to accept invitation.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Accept Invitation'; return; }
+    hide('stateClaim');
+    show('stateSuccess');
+  } catch (e) {
+    err.textContent = 'Network error. Please try again.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Accept Invitation';
+  }
+}
+
+document.getElementById('newForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var btn = document.getElementById('newBtn');
+  var err = document.getElementById('newErr');
+  err.style.display = 'none';
+
+  var first = document.getElementById('newFirst').value.trim();
+  var last = document.getElementById('newLast').value.trim();
+  var pass = document.getElementById('newPass').value;
+  var pass2 = document.getElementById('newPass2').value;
+
+  if (!first || !last) { err.textContent = 'First and last name are required.'; err.style.display = 'block'; return; }
+  if (pass.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.style.display = 'block'; return; }
+  if (pass !== pass2) { err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  try {
+    var r = await fetch('/api/parent-invite/register', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, firstName: first, lastName: last, password: pass }),
+    });
+    var d = await r.json();
+    if (!r.ok) {
+      if (r.status === 409) { showSignIn(); return; }
+      err.textContent = d.error || 'Registration failed.';
+      err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Create Account & Accept Invitation'; return;
+    }
+    hide('stateNew');
+    show('stateSuccess');
+  } catch (e) {
+    err.textContent = 'Network error. Please try again.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Create Account & Accept Invitation';
+  }
+});
+
+function showSignIn() {
+  hide('stateNew'); hide('stateWrongAccount');
+  document.getElementById('signInEmail').value = invData ? (invData.invitedEmail || '') : '';
+  document.getElementById('signInPill').textContent = invData ? childPillText(invData) : '🧒 —';
+  document.getElementById('signInExpires').textContent = invData && invData.expiresAt ? 'Invitation expires ' + new Date(invData.expiresAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  show('stateSignIn');
+}
+
+async function signOutAndContinue() {
+  try { await fetch('/api/site-auth/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
+  window.location.reload();
+}
+
+document.getElementById('signInForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('signInBtn');
+  var err = document.getElementById('signInErr');
+  err.style.display = 'none';
+  var pass = document.getElementById('signInPass').value;
+  if (!pass) { err.textContent = 'Password is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    var lr = await fetch('/api/site-auth/login', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: invData.invitedEmail, password: pass }),
+    });
+    var ld = await lr.json();
+    if (!lr.ok) {
+      if (lr.status === 403 && ld.reason === 'unverified') {
+        var ar = await fetch('/api/parent-invite/accept-and-verify', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, password: pass }),
+        });
+        var ad = await ar.json();
+        if (!ar.ok) { err.textContent = ad.error || 'Failed to accept invitation.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation'; return; }
+        hide('stateSignIn'); show('stateSuccess'); return;
+      }
+      err.textContent = ld.error || 'Sign in failed. Check your password and try again.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation'; return;
+    }
+    var cr = await fetch('/api/parent-invite/claim', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token }),
+    });
+    var cd = await cr.json();
+    if (!cr.ok) { err.textContent = cd.error || 'Failed to claim invitation.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation'; return; }
+    hide('stateSignIn');
+    show('stateSuccess');
+  } catch (ex) {
+    err.textContent = 'Network error. Please try again.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation';
+  }
+});
+
+function showError(msg) {
+  hide('stateLoading'); hide('stateNew'); hide('stateClaim'); hide('stateWrongAccount'); hide('stateSignIn');
+  document.getElementById('errorMsg').textContent = msg;
+  show('stateError');
+}
+function show(id) { document.getElementById(id).style.display = ''; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+</script>
+</body>
+</html>
