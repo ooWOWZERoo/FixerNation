@@ -329,6 +329,47 @@ router.get('/downloads', requireAuth, async (req, res) => {
   }
 });
 
+// Bulk reset across curricula, scoped to the exact same filter as GET /downloads
+// above (same WHERE-clause shape, deliberately kept in sync) — admin-downloads.html's
+// cross-curriculum "Reset All" needs this since the existing DELETE /:id/downloads
+// below only ever resets one curriculum at a time.
+router.delete('/downloads', requireAuth, async (req, res) => {
+  try {
+    const rawQ     = (req.query.q || '').trim();
+    const userType = req.query.userType || 'teacher';
+
+    let whereSQL    = "WHERE cd.user_type = ?";
+    let whereParams = [userType];
+
+    if (rawQ) {
+      const pat = toSqlLike(rawQ);
+      whereSQL += ` AND (
+        cd.user_email LIKE ? OR
+        su.first_name LIKE ? OR
+        su.last_name  LIKE ? OR
+        CONCAT(COALESCE(su.first_name,''), ' ', COALESCE(su.last_name,'')) LIKE ? OR
+        nc.company    LIKE ? OR
+        c.title       LIKE ? OR
+        c.series      LIKE ?
+      )`;
+      whereParams.push(...Array(7).fill(pat));
+    }
+
+    const [result] = await pool.query(`
+      DELETE cd FROM curriculum_downloads cd
+      LEFT JOIN curricula c            ON c.id    = cd.curriculum_id
+      LEFT JOIN site_users su          ON su.email = cd.user_email
+      LEFT JOIN newsletter_contacts nc ON nc.email = cd.user_email
+      ${whereSQL}
+    `, whereParams);
+
+    res.json({ ok: true, deleted: result.affectedRows });
+  } catch (err) {
+    console.error('DELETE /downloads error:', err.message);
+    res.status(500).json({ error: 'Could not reset downloads.' });
+  }
+});
+
 router.post('/import-quiz', requireAuth, quizUpload.single('quiz'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
   if (!req.file.originalname.toLowerCase().endsWith('.docx')) {

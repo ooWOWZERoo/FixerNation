@@ -57,6 +57,7 @@
             <button class="a-btn a-btn-outline" id="clearBtn" onclick="clearSearch()" style="display:none;font-size:13px;">Clear</button>
             <div class="dl-search-hint" style="flex-basis:100%;padding:4px 0 0;">Use * as wildcard — e.g. <code>smith*</code> or <code>*algebra*</code></div>
           </div>
+          <button class="a-btn a-btn-outline" id="resetAllBtn" onclick="resetAllVisible()">Reset All</button>
         </div>
 
         <div class="dl-tabs">
@@ -129,6 +130,7 @@ function switchTab(tab) {
   document.getElementById('dlEmpty').style.display       = 'none';
   document.getElementById('dlPagination').style.display  = 'none';
   document.getElementById('searchInput').disabled        = isStudents;
+  document.getElementById('resetAllBtn').disabled         = isStudents;
 
   if (!isStudents) {
     loadDownloads(currentQuery, 1);
@@ -192,7 +194,10 @@ function renderTable() {
         '<span style="font-variant-numeric:tabular-nums;">' + d.count + '</span>' +
       '</td>' +
       '<td>' + (d.lastDownload ? fnFormatDate(d.lastDownload) : '&mdash;') + '</td>' +
-      '<td><button class="dl-reset-btn" onclick="editCount(' + i + ')">Edit</button></td>' +
+      '<td>' +
+        '<button class="dl-reset-btn" onclick="editCount(' + i + ')">Edit</button> ' +
+        '<button class="dl-reset-btn" onclick="resetOne(' + i + ')">Reset</button>' +
+      '</td>' +
       '</tr>';
   }).join('');
 }
@@ -270,6 +275,44 @@ async function saveCount(idx) {
   fnToast('Count updated');
   activeDownloads[idx].count = newCount;
   renderTable();
+}
+
+// ── Reset (per-row + bulk) ──────────────────────────────────────
+
+async function resetOne(idx) {
+  var d = activeDownloads[idx];
+  if (!d) return;
+  var params = new URLSearchParams({ userEmail: d.userEmail, userType: d.userType, resourceType: d.resourceType || 'any' });
+  await fetch('/api/curricula/' + d.curriculumId + '/downloads?' + params, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  fnToast('Reset for ' + d.userEmail);
+  loadDownloads(currentQuery, currentPage);
+}
+
+async function resetAllVisible() {
+  var scope = currentQuery
+    ? 'every ' + currentTab + ' download matching "' + currentQuery + '"'
+    : 'every ' + currentTab + ' download';
+  if (!confirm('Reset ' + scope + '? This cannot be undone.')) return;
+
+  var params = new URLSearchParams({ userType: currentTab });
+  if (currentQuery) params.set('q', currentQuery);
+
+  var r = await fetch('/api/curricula/downloads?' + params, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not reset downloads'); return; }
+  var data = await r.json();
+  fnToast('Reset ' + data.deleted + ' download record' + (data.deleted === 1 ? '' : 's'));
+  loadDownloads(currentQuery, 1);
 }
 
 // ── Helpers ───────────────────────────────────────────────────
