@@ -14,6 +14,11 @@ const PUBLIC_PAGES: { path: string; label: string }[] = [
   { path: "/join.html",             label: "join" },
   { path: "/school-licensing.html", label: "school-licensing" },
   { path: "/contact.html",          label: "contact" },
+  // Restored nav links — real FNE content that had lost its nav entry, not
+  // fixernation.org leftovers (see nav.js's "Why FNE"/"Explore" dropdowns).
+  { path: "/about.html",            label: "about" },
+  { path: "/for-students.html",     label: "for-students" },
+  { path: "/programs.html",         label: "programs" },
 ];
 
 test.describe("Smoke — public pages", () => {

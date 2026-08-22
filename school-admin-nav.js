@@ -24,6 +24,7 @@
     '</div>' +
     '<nav class="sa-nav">' +
       link('school-admin-dashboard.html',   '📊', 'Dashboard') +
+      link('school-admin-org.html',         '🏫', 'Organization') +
       link('school-admin-roster.html',      '🪑', 'Roster') +
       link('school-admin-invitations.html', '✉️',  'Invitations') +
       link('school-admin-reports.html',     '📈', 'Reports') +

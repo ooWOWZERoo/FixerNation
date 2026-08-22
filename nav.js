@@ -46,10 +46,13 @@
   var page = (location.pathname.split('/').pop() || '').replace(/\.html$/, '') || 'index';
 
   var whyActive       = page === 'why-fixer-nation';
+  var aboutActive     = page === 'about';
   var howActive       = page === 'how-it-works';
   var teachersActive  = page === 'for-teachers';
   var schoolsActive   = page === 'for-schools';
   var parentsActive   = page === 'for-parents';
+  var studentsActive  = page === 'for-students';
+  var programsActive  = page === 'programs';
   var libraryActive        = page === 'education-portal';
   var morningBoostActive   = page === 'morning-boost-blog';
   var researchActive  = page === 'research';
@@ -72,19 +75,22 @@
       '<a href="index.html" class="brand"><div class="brand-mark"><span class="bm-init">FNE</span><span class="bm-sub">SEL</span></div> Fixer Nation Education</a>' +
       '<nav class="nav-links">' +
         '<div class="fn-nav-dropdown">' +
-          '<button class="fn-nav-parent' + (whyActive || researchActive ? ' active' : '') + '">Why FNE <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<button class="fn-nav-parent' + (whyActive || researchActive || aboutActive ? ' active' : '') + '">Why FNE <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu">' +
             '<a href="why-fixer-nation.html"' + (whyActive      ? ' class="active"' : '') + '>Why FNE</a>'    +
             '<a href="research.html"'          + (researchActive ? ' class="active"' : '') + '>Research</a>'   +
+            '<a href="about.html"'             + (aboutActive    ? ' class="active"' : '') + '>About</a>'       +
           '</div>' +
         '</div>' +
         '<div class="fn-nav-dropdown">' +
-          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive || parentsActive ? ' active' : '') + '">Explore <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<button class="fn-nav-parent' + (howActive || teachersActive || schoolsActive || parentsActive || studentsActive || programsActive ? ' active' : '') + '">Explore <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu">' +
             '<a href="how-it-works.html"'  + (howActive      ? ' class="active"' : '') + '>How It Works</a>'  +
+            '<a href="programs.html"'      + (programsActive ? ' class="active"' : '') + '>Programs</a>'      +
             '<a href="for-teachers.html"'  + (teachersActive ? ' class="active"' : '') + '>For Teachers</a>'  +
             '<a href="for-schools.html"'   + (schoolsActive  ? ' class="active"' : '') + '>For Schools</a>'   +
             '<a href="for-parents.html"'   + (parentsActive  ? ' class="active"' : '') + '>For Parents</a>'   +
+            '<a href="for-students.html"'  + (studentsActive ? ' class="active"' : '') + '>For Students</a>'  +
           '</div>' +
         '</div>' +
         lnk('education-portal.html',    'Lesson Library', libraryActive)       +

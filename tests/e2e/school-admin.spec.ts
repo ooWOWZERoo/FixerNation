@@ -62,6 +62,24 @@ test.describe("School Admin portal", () => {
     await expect(page).toHaveTitle(/roster/i, { timeout: 10000 });
   });
 
+  test("organization page loads (no longer redirects) and is in the sidebar", async ({ page }) => {
+    // school-admin-org.html used to have a <meta refresh> that redirected to
+    // the dashboard before anyone could see it, with no sidebar link either
+    // — an accidental disconnection, not an intentional retirement (its
+    // backend endpoint, /api/school-admin/org, was still live). Restored
+    // both the sidebar link and removed the redirect.
+    await signInAsSchoolAdmin(page);
+    await page.goto("/school-admin-org.html");
+
+    await expect(page).toHaveURL(/school-admin-org\.html/, { timeout: 10000 });
+    const h1 = page.locator(".sa-topbar h1");
+    await expect(h1).toHaveText(/organization/i, { timeout: 10000 });
+    await expect(page.getByText("License Details")).toBeVisible({ timeout: 10000 });
+
+    const sidebarLink = page.locator(".sa-sidebar a[href='school-admin-org.html']");
+    await expect(sidebarLink).toBeVisible();
+  });
+
   // -------------------------------------------------------------------------
   // Remove Teacher — uses a dedicated seat-registered account
   // (qa-removable-teacher@example.com, seeded under the school admin's own
