@@ -17,6 +17,11 @@ import { QA_LICENSE_PRODUCT_ID, QA_LICENSE_PRODUCT_NAME } from "./helpers/cart";
 //
 // Fixture: TEST_QUOTE_BUILDER_ID (seed-qa-test-accounts.js) — a never-quoted
 // quote_requests row, reset to 'new'/unaccepted every reseed.
+//
+// One-run-per-seed limitation (same as quote-accept-po-payment-gate.spec.ts
+// and school-invite.spec.ts): re-running this file without reseeding first
+// fails the second test with a 400 ("already_accepted"), since the first
+// test's own successful run already accepted the quote.
 // ---------------------------------------------------------------------------
 
 test.describe.configure({ mode: "serial" });

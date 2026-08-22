@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { signInAsAdmin } from "./helpers/auth";
-import { addQaLicenseToCart, clearCart, QA_LICENSE_PRODUCT_ID, QA_LICENSE_PRODUCT_NAME } from "./helpers/cart";
+import { QA_LICENSE_PRODUCT_ID, QA_LICENSE_PRODUCT_NAME } from "./helpers/cart";
 
 // ---------------------------------------------------------------------------
 // Real Stripe Checkout, end to end, using Stripe's own published test card
@@ -31,16 +31,19 @@ test.describe("Stripe checkout (test mode)", () => {
   test("completing Stripe Checkout with a test card creates a paid, active license", async ({ page }) => {
     test.skip(!QA_LICENSE_PRODUCT_ID, "TEST_LICENSE_PRODUCT_ID not set — see tests/.env.test.example");
 
-    await page.goto("/school-licensing.html");
-    await clearCart(page);
-    await addQaLicenseToCart(page);
-    await page.goto("/cart.html");
-    await page.locator("#checkoutEmail").fill(email);
-
-    const [createSessionRes] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/api/checkout/create-cart-session") && r.request().method() === "POST"),
-      page.getByRole("button", { name: /pay by card/i }).click(),
-    ]);
+    // Calls the real endpoint directly rather than clicking "Pay by Card" —
+    // that button's own handler does fetch() then an immediate
+    // window.location.href redirect in the same tick, which races
+    // Playwright's response-body read (confirmed live: "Protocol error —
+    // No resource with given identifier found" the moment the page
+    // navigates away). Calling the API directly lets the safety gate below
+    // run BEFORE any navigation happens at all, with no race possible.
+    const createSessionRes = await page.request.post("/api/checkout/create-cart-session", {
+      data: {
+        email,
+        items: [{ type: "license_product", id: QA_LICENSE_PRODUCT_ID, quantity: 1, schoolDomain: "qa-cart-test.example.com" }],
+      },
+    });
     expect(createSessionRes.status()).toBe(200);
     const { url: checkoutUrl } = await createSessionRes.json();
     expect(checkoutUrl).toBeTruthy();
@@ -49,32 +52,34 @@ test.describe("Stripe checkout (test mode)", () => {
     expect(checkoutUrl).toMatch(/cs_test_/);
     expect(checkoutUrl).not.toMatch(/cs_live_/);
 
-    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 20000 });
-    // Belt-and-suspenders re-check against the actual browser URL, not just
-    // the API response, in case of an unexpected redirect chain.
+    await page.goto(checkoutUrl);
+    // Belt-and-suspenders re-check against the actual browser URL too.
     expect(page.url()).toMatch(/cs_test_/);
     expect(page.url()).not.toMatch(/cs_live_/);
 
-    // Stripe's hosted Checkout page — card fields live inside an iframe.
-    // Email is often pre-filled/read-only from customer_email; only fill it
-    // if Stripe actually presents an editable field.
-    const emailInput = page.locator('input[name="email"]');
-    if (await emailInput.count().then((c) => c > 0).catch(() => false)) {
-      const isEditable = await emailInput.isEditable().catch(() => false);
-      if (isEditable) await emailInput.fill(email);
+    // Stripe's hosted Checkout page — confirmed live (via a debug dump of
+    // every frame's inputs) that the card fields are plain top-level
+    // inputs, NOT inside a nested iframe at all. Email is pre-filled
+    // read-only from customer_email, so nothing to fill there.
+    await page.locator("#cardNumber").fill("4242424242424242");
+    await page.locator("#cardExpiry").fill("12/34");
+    await page.locator("#cardCvc").fill("123");
+    await page.locator("#billingName").fill("QA Test");
+    await page.locator("#billingPostalCode").fill("10001");
+
+    // Stripe Link's "Save my information for faster checkout" is checked by
+    // default once the card fields are filled, which then requires a phone
+    // number — confirmed live via a screenshot after the submit click
+    // appeared to hang: it wasn't hanging, the click was silently blocked
+    // by this field's validation error, so the page never navigated.
+    // Unchecking it avoids Link entirely (appropriate for a guest checkout
+    // test anyway).
+    const saveInfoCheckbox = page.locator('input[type="checkbox"]').first();
+    if (await saveInfoCheckbox.isChecked().catch(() => false)) {
+      await saveInfoCheckbox.uncheck({ force: true });
     }
 
-    const cardFrame = page.frameLocator('iframe[title*="payment input" i], iframe[name*="privateStripeFrame" i]').first();
-    await cardFrame.locator('[name="cardnumber" i], [placeholder*="card number" i]').first().fill("4242424242424242");
-    await cardFrame.locator('[name="exp-date" i], [placeholder*="MM / YY" i]').first().fill("12/34");
-    await cardFrame.locator('[name="cvc" i], [placeholder*="CVC" i]').first().fill("123");
-
-    const nameInput = page.locator('input[name="billingName" i], input[autocomplete="cc-name" i]').first();
-    if (await nameInput.count().then((c) => c > 0).catch(() => false)) {
-      await nameInput.fill("QA Test");
-    }
-
-    await page.getByTestId("hosted-payment-submit-button").or(page.getByRole("button", { name: /pay/i })).first().click();
+    await page.getByTestId("hosted-payment-submit-button").click();
 
     await page.waitForURL(/cart\.html\?checkout=success/, { timeout: 30000 });
 
