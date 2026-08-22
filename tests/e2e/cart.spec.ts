@@ -1,12 +1,19 @@
 import { test, expect } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
-// Cart flow — books.html → cart.html
+// Cart flow — school-licensing.html → cart.html
+//
+// Previously exercised via books.html (added a book to cart, checked the
+// badge in place). Books were removed from FNE entirely, so this now uses
+// a real license_product instead — the "Buy Directly" button on
+// school-licensing.html's plan grid, which calls cartAdd() then navigates
+// straight to cart.html (unlike the old books.html flow, this one doesn't
+// stay in place to show a badge increment first).
 //
 // Key elements:
-//   books.html:
-//     - "Add to Cart" buttons rendered via JS: class .btn.btn-outline, text "Add to Cart"
-//     - Cart badge: #fnCartBadge (rendered by cart.js updateCartBadge())
+//   school-licensing.html:
+//     - "Buy Directly" button per non-call-for-quote plan: onclick="addPlanToCart(id)"
+//     - Navigates to cart.html immediately after adding
 //
 //   cart.html:
 //     - Cart items in #cartWrap
@@ -22,39 +29,26 @@ test.describe.configure({ mode: "serial" });
 
 const STAMP = Date.now();
 
+async function buyDirectlyIntoCart(page: import("@playwright/test").Page) {
+  await page.goto("/school-licensing.html");
+  const buyBtn = page.getByRole("button", { name: /buy directly/i }).first();
+  await expect(buyBtn).toBeVisible({ timeout: 15000 });
+  await buyBtn.click();
+  await expect(page).toHaveURL(/cart\.html/, { timeout: 10000 });
+}
+
 test.describe("Cart flow", () => {
-  test("Add to Cart increments the cart badge", async ({ page }) => {
-    await page.goto("/books.html");
+  test("Buy Directly adds a license and lands on cart.html with the badge showing it", async ({ page }) => {
+    await buyDirectlyIntoCart(page);
 
-    // Wait for book cards to render (they are fetched dynamically)
-    const addToCartBtn = page.getByRole("button", { name: /add to cart/i }).first();
-    await expect(addToCartBtn).toBeVisible({ timeout: 15000 });
-
-    // Record badge count before adding
     const badge = page.locator("#fnCartBadge");
-    const beforeText = await badge.textContent().catch(() => "0");
-    const beforeCount = parseInt(beforeText ?? "0", 10) || 0;
-
-    await addToCartBtn.click();
-
-    // After click the badge should show at least 1 (or increment by 1)
     await expect(badge).toBeVisible({ timeout: 5000 });
-    const afterText = await badge.textContent();
-    const afterCount = parseInt(afterText ?? "0", 10);
-
-    expect(afterCount).toBeGreaterThan(beforeCount);
-    expect(afterCount).toBeGreaterThanOrEqual(1);
+    const count = parseInt((await badge.textContent()) ?? "0", 10);
+    expect(count).toBeGreaterThanOrEqual(1);
   });
 
   test("cart.html shows the added item", async ({ page }) => {
-    // First add a book (cart state is in localStorage, persists within the session)
-    await page.goto("/books.html");
-    const addToCartBtn = page.getByRole("button", { name: /add to cart/i }).first();
-    await expect(addToCartBtn).toBeVisible({ timeout: 15000 });
-    await addToCartBtn.click();
-
-    // Navigate to cart
-    await page.goto("/cart.html");
+    await buyDirectlyIntoCart(page);
 
     const cartWrap = page.locator("#cartWrap");
     await expect(cartWrap).toBeVisible({ timeout: 10000 });
@@ -70,13 +64,7 @@ test.describe("Cart flow", () => {
   });
 
   test("PO tab / form is accessible and contains a submit button", async ({ page }) => {
-    // Ensure there is something in the cart
-    await page.goto("/books.html");
-    const addToCartBtn = page.getByRole("button", { name: /add to cart/i }).first();
-    await expect(addToCartBtn).toBeVisible({ timeout: 15000 });
-    await addToCartBtn.click();
-
-    await page.goto("/cart.html");
+    await buyDirectlyIntoCart(page);
 
     // The "Pay by Purchase Order" button toggles the PO form open
     const poToggleBtn = page.getByRole("button", { name: /pay by purchase order/i });

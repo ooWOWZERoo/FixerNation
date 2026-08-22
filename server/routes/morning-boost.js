@@ -654,7 +654,7 @@ async function runMorningBoostSend({ targetDate, initiatedBy = null, isResend = 
       errors.push('The associated Morning Boost blog post is not yet published.');
     }
     blogPostId = calEntry.blog_post_id;
-    ctaUrl = ctaUrl || `${siteUrl}/blog.html?post=${calEntry.slug}`;
+    ctaUrl = ctaUrl || `${siteUrl}/morning-boost-blog.html?post=${calEntry.slug}`;
     vars = {
       date: new Date(targetDate + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
       title: calEntry.title || '',

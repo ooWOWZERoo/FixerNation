@@ -90,7 +90,6 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
         <a href="#" onclick="fnAuthToggleUserMenu(event); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
         <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:175px; z-index:300;">
           ${li('my-profile.html', 'My Profile')}
-          ${li('my-memberships.html', 'My Memberships')}
           ${!isParent ? li('my-license.html', 'My Licenses') : ''}
           ${!isParent ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
           ${!isParent ? li('teacher-classrooms.html', 'My Classrooms') : ''}

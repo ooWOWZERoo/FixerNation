@@ -7,13 +7,11 @@ import { signInAsAdmin } from "./helpers/auth";
 // ---------------------------------------------------------------------------
 
 const PUBLIC_PAGES: { path: string; label: string }[] = [
-  { path: "/index.html",            label: "index" },
-  { path: "/books.html",            label: "books" },
-  { path: "/blog.html",             label: "blog" },
-  { path: "/education-portal.html", label: "education-portal" },
-  { path: "/join.html",             label: "join" },
-  { path: "/school-licensing.html", label: "school-licensing" },
-  { path: "/contact.html",          label: "contact" },
+  { path: "/index.html",              label: "index" },
+  { path: "/morning-boost-blog.html", label: "morning-boost-blog" },
+  { path: "/education-portal.html",   label: "education-portal" },
+  { path: "/school-licensing.html",   label: "school-licensing" },
+  { path: "/contact.html",            label: "contact" },
   // Restored nav links — real FNE content that had lost its nav entry, not
   // fixernation.org leftovers (see nav.js's "Why FNE"/"Explore" dropdowns).
   { path: "/about.html",            label: "about" },

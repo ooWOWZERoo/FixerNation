@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
-const { getSiteUser, hasActiveMembership } = require('../lib/access');
+const { getSiteUser, hasActiveLicense } = require('../lib/access');
 
 const router = express.Router();
 
@@ -76,7 +76,7 @@ router.get('/posts', async (req, res) => {
   let unlocked = true;
   if (anyGated) {
     const siteUser = await getSiteUser(req);
-    unlocked = siteUser ? await hasActiveMembership(siteUser.email) : false;
+    unlocked = siteUser ? await hasActiveLicense(siteUser.id) : false;
   }
   res.json({ posts: posts.map(p => (p.requiresMembership && !unlocked ? lockPost(p) : { ...p, locked: false })) });
 });

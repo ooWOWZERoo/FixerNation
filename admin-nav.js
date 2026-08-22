@@ -23,7 +23,6 @@
     '<nav class="a-nav">' +
       link('admin-automations.html',        '🤖', 'Automations') +
       link('admin-blogs.html',              '📝', 'Blogs') +
-      link('admin-books.html',              '📚', 'Books') +
       link('admin-campaigns.html',          '📣', 'Campaigns') +
       link('admin-newsletter.html',         '✉️', 'CRM') +
       link('admin-curriculum.html',         '🎓', 'Curriculums') +
