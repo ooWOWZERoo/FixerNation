@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Districts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=17">
+<style>
+  .a-hint { font-size: 12px; color: var(--a-text-soft); margin-top: 4px; }
+  .err-inline { color: var(--a-danger); font-size: 13px; margin-bottom: 12px; display: none; }
+  .school-pick-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--a-border); font-size: 13.5px; }
+  .school-pick-row:last-child { border-bottom: none; }
+
+  .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--a-accent); text-decoration: none; margin-bottom: 14px; cursor: pointer; }
+  .logo-box { width: 200px; height: 100px; border: 1.5px dashed var(--a-border); border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--a-bg); overflow: hidden; flex-shrink: 0; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .color-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--a-border); }
+  .color-row:last-child { border-bottom: none; }
+  .color-row .color-label { flex: 1; }
+  .color-row .color-label .name { font-weight: 700; font-size: 13.5px; }
+  .color-row .color-label .desc { font-size: 12px; color: var(--a-text-soft); margin-top: 2px; }
+  .color-swatch { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--a-border); padding: 0; cursor: pointer; background: none; }
+  .color-hex { width: 100px; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--a-border); font-size: 13px; font-family: monospace; text-transform: uppercase; background: var(--a-card); color: var(--a-text); }
+
+  .dist-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--a-border); margin-bottom: 16px; }
+  .dist-tab { background: none; border: none; padding: 8px 0; font-size: 13.5px; font-weight: 600; color: var(--a-text-soft); cursor: pointer; border-bottom: 2px solid transparent; font-family: inherit; }
+  .dist-tab.active { color: var(--a-accent); border-bottom-color: var(--a-accent); }
+
+  .preview-panel { border: 1.5px solid var(--a-border); border-radius: 12px; overflow: hidden; max-width: 420px; }
+  .pv-admin-header { background: #1a2332; color: rgba(255,255,255,.85); padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .pv-admin-header img { height: 26px; width: auto; display: block; background: #fff; border-radius: 6px; padding: 3px 5px; }
+  .pv-admin-body { padding: 16px; background: #f5f6fa; }
+  .pv-admin-btn { display: inline-block; padding: 8px 16px; border-radius: 8px; background: var(--sa-accent, #E06D2C); color: #fff; font-size: 12.5px; font-weight: 700; }
+  .pv-marketing-header { background: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+  .pv-marketing-header img { height: 30px; width: auto; display: block; }
+  .pv-marketing-body { padding: 16px; background: var(--cream, #FBF5EC); }
+  .pv-marketing-title { font-family: 'Fraunces', serif; color: var(--teal-dark, #0E3733); font-size: 16px; margin-bottom: 8px; }
+  .pv-marketing-btn { display: inline-block; padding: 8px 16px; border-radius: 999px; background: var(--coral, #F26B4D); color: #fff; font-size: 12.5px; font-weight: 700; margin-right: 8px; }
+  .pv-marketing-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--gold, #EBA657); color: var(--teal-dark, #0E3733); font-size: 11px; font-weight: 700; }
+  .pv-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--a-text-soft); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+  <script src="school-branding.js?v=1"></script>
+  <script src="logo-crop.js?v=1"></script>
+  <script src="admin-nav.js?v=17"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Districts</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <!-- List view -->
+      <div id="listView">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <button class="a-btn a-btn-primary" onclick="openAddModal()">+ Add District</button>
+        </div>
+        <div id="toastEl"></div>
+        <div class="a-card">
+          <div id="tableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Branding editor view (one district at a time) -->
+      <div id="brandingView" style="display:none;">
+        <a class="back-link" onclick="showListView()">← All Districts</a>
+
+        <div class="a-card" style="margin-bottom:20px;">
+          <div class="a-card-head"><h2>District Logo</h2></div>
+          <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div class="logo-box" id="logoPreviewBox"><span>No logo uploaded</span></div>
+            <div>
+              <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none;" onchange="handleLogoFile(this)">
+              <button class="a-btn a-btn-secondary a-btn-sm" onclick="document.getElementById('logoFile').click()">Upload Logo</button>
+              <p class="a-hint">PNG, JPG, WebP, or SVG. Max 2 MB. Recommended 600 × 200px or larger. You'll be able to crop and reposition it before saving.</p>
+              <div id="logoError" style="display:none;color:var(--a-danger);font-size:12.5px;margin-top:6px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="a-card" style="margin-bottom:20px;">
+          <div class="a-card-head"><h2>District Colors</h2></div>
+          <div class="color-row">
+            <div class="color-label"><div class="name">Primary</div><div class="desc">Buttons, active states, classroom accents</div></div>
+            <input type="color" class="color-swatch" id="primarySwatch" value="#F26B4D" oninput="onSwatchChange('primary')">
+            <input type="text" class="color-hex" id="primaryHex" value="#F26B4D" oninput="onHexChange('primary')">
+          </div>
+          <div class="color-row">
+            <div class="color-label"><div class="name">Secondary</div><div class="desc">Headers, navigation, structural accents</div></div>
+            <input type="color" class="color-swatch" id="secondarySwatch" value="#0E3733" oninput="onSwatchChange('secondary')">
+            <input type="text" class="color-hex" id="secondaryHex" value="#0E3733" oninput="onHexChange('secondary')">
+          </div>
+          <div class="color-row">
+            <div class="color-label"><div class="name">Accent <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></div><div class="desc">Badges and minor highlights</div></div>
+            <input type="color" class="color-swatch" id="accentSwatch" value="#EBA657" oninput="onSwatchChange('accent')">
+            <input type="text" class="color-hex" id="accentHex" value="#EBA657" oninput="onHexChange('accent')">
+          </div>
+          <button class="a-btn a-btn-outline a-btn-sm" style="margin-top:12px;" onclick="restoreDefaultColors()">Restore FNE Colors</button>
+        </div>
+
+        <div class="a-card" style="margin-bottom:20px;">
+          <div class="a-card-head"><h2>Preview — schools without their own branding will look like this</h2></div>
+          <div class="dist-tabs" id="previewTabs">
+            <button class="dist-tab active" data-tab="admin">Administrator</button>
+            <button class="dist-tab" data-tab="teacher">Teacher</button>
+            <button class="dist-tab" data-tab="classroom">Classroom</button>
+            <button class="dist-tab" data-tab="student">Student</button>
+            <button class="dist-tab" data-tab="parent">Parent</button>
+          </div>
+          <div id="pv-admin" class="preview-tab">
+            <div class="pv-label">School License Administrator Dashboard</div>
+            <div class="preview-panel" id="panelAdmin">
+              <div class="pv-admin-header"><img class="brand-logo" src="logo-fne.png" alt=""><span>School Admin</span></div>
+              <div class="pv-admin-body"><div class="pv-admin-btn">Invite a Teacher</div></div>
+            </div>
+          </div>
+          <div id="pv-teacher" class="preview-tab" style="display:none;">
+            <div class="pv-label">Teacher Dashboard</div>
+            <div class="preview-panel" id="panelTeacher">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">My Classrooms</div><span class="pv-marketing-btn">Create Classroom</span></div>
+            </div>
+          </div>
+          <div id="pv-classroom" class="preview-tab" style="display:none;">
+            <div class="pv-label">Digital Classroom</div>
+            <div class="preview-panel" id="panelClassroom">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">Mrs. Smith's Classroom</div><span class="pv-marketing-badge">Lesson 3 of 12</span></div>
+            </div>
+          </div>
+          <div id="pv-student" class="preview-tab" style="display:none;">
+            <div class="pv-label">Student Experience</div>
+            <div class="preview-panel" id="panelStudent">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">Today's Morning Boost</div><span class="pv-marketing-btn">Start Lesson</span></div>
+            </div>
+          </div>
+          <div id="pv-parent" class="preview-tab" style="display:none;">
+            <div class="pv-label">Parent Experience</div>
+            <div class="preview-panel" id="panelParent">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">John's Classroom</div><span class="pv-marketing-badge">2 lessons in progress</span></div>
+            </div>
+          </div>
+          <p class="a-hint" style="margin-top:12px;">A school with its own published branding always overrides this — district branding only fills in for schools that haven't set their own.</p>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+          <button class="a-btn a-btn-outline" onclick="resetToDefault()">Reset to FNE Default</button>
+          <button class="a-btn a-btn-secondary" onclick="saveDraft()">Save Draft</button>
+          <button class="a-btn a-btn-primary" onclick="confirmPublish()">Publish Branding</button>
+        </div>
+        <div id="unpublishedNote" style="display:none;margin-top:10px;text-align:right;font-size:12.5px;color:var(--a-warning);">You have unpublished changes.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add district modal -->
+<div class="a-modal-overlay" id="addModal">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head"><h3>Add District</h3><button class="a-modal-close" onclick="closeAddModal()">✕</button></div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="addErr"></div>
+      <div class="a-field"><label>District Name *</label><input type="text" id="addName" placeholder="Springfield School District"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeAddModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="addBtn" onclick="doAdd()">Add District</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename modal -->
+<div class="a-modal-overlay" id="renameModal">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head"><h3>Rename District</h3><button class="a-modal-close" onclick="closeRenameModal()">✕</button></div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="renameErr"></div>
+      <input type="hidden" id="renameId">
+      <div class="a-field"><label>District Name *</label><input type="text" id="renameName"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeRenameModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="renameBtn" onclick="doRename()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage schools modal -->
+<div class="a-modal-overlay" id="schoolsModal">
+  <div class="a-modal" style="max-width:520px;">
+    <div class="a-modal-head"><h3>Manage Schools</h3><button class="a-modal-close" onclick="closeSchoolsModal()">✕</button></div>
+    <div class="a-modal-body">
+      <p class="a-hint" style="margin-bottom:10px;">Check every school that belongs to this district. Unchecking a school returns it to no district (not deleted).</p>
+      <input type="hidden" id="schoolsDistrictId">
+      <div id="schoolsList"><div class="a-empty">Loading…</div></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeSchoolsModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="schoolsBtn" onclick="doSaveSchools()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="a-modal-overlay" id="deleteModal">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head"><h3>Delete District</h3><button class="a-modal-close" onclick="closeDeleteModal()">✕</button></div>
+    <div class="a-modal-body"><p id="deleteMsg" style="font-size:14px;"></p></div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeDeleteModal()">Cancel</button>
+      <button class="a-btn a-btn-danger" id="deleteBtn" onclick="doDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+fnRequireAuth();
+
+var allDistricts = [], deleteId = null, currentDistrictId = null, currentLogoDisplayUrl = null;
+
+document.addEventListener('DOMContentLoaded', loadDistricts);
+
+async function loadDistricts() {
+  var wrap = document.getElementById('tableWrap');
+  try {
+    var r = await fetch('/api/admin/districts', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    allDistricts = d.districts || [];
+    renderTable(allDistricts);
+  } catch (e) {
+    wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderTable(rows) {
+  var wrap = document.getElementById('tableWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="a-empty"><div class="big">🏛️</div>No districts yet. Districts are optional — most schools won\'t need one.</div>';
+    return;
+  }
+  wrap.innerHTML =
+    '<table class="a-table"><thead><tr><th>District</th><th>Schools</th><th>Branding</th><th>Actions</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      var brandingPill = r.branding_status === 'PUBLISHED'
+        ? '<span class="a-pill a-pill-success">Published</span>'
+        : r.branding_status === 'DRAFT'
+          ? '<span class="a-pill a-pill-warning">Draft only</span>'
+          : '<span class="a-pill a-pill-neutral">FNE Default</span>';
+      return '<tr>' +
+        '<td style="font-weight:600;">' + esc(r.name) + '</td>' +
+        '<td>' + r.school_count + '</td>' +
+        '<td>' + brandingPill + '</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openSchoolsModal(' + r.id + ')">Manage Schools</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openBrandingView(' + r.id + ',\'' + esc(r.name) + '\')">Edit Branding</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openRenameModal(' + r.id + ',\'' + esc(r.name) + '\')">Rename</button> ' +
+          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openDeleteModal(' + r.id + ',\'' + esc(r.name) + '\')">Delete</button>' +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+// Add
+function openAddModal() {
+  document.getElementById('addErr').style.display = 'none';
+  document.getElementById('addName').value = '';
+  document.getElementById('addModal').classList.add('show');
+}
+function closeAddModal() { document.getElementById('addModal').classList.remove('show'); }
+async function doAdd() {
+  var btn = document.getElementById('addBtn'), err = document.getElementById('addErr');
+  var name = document.getElementById('addName').value.trim();
+  if (!name) { err.textContent = 'District name is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    var r = await fetch('/api/admin/districts', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeAddModal();
+    fnToast('District added.');
+    loadDistricts();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Add District'; }
+}
+
+// Rename
+function openRenameModal(id, name) {
+  document.getElementById('renameId').value = id;
+  document.getElementById('renameName').value = name;
+  document.getElementById('renameErr').style.display = 'none';
+  document.getElementById('renameModal').classList.add('show');
+}
+function closeRenameModal() { document.getElementById('renameModal').classList.remove('show'); }
+async function doRename() {
+  var btn = document.getElementById('renameBtn'), err = document.getElementById('renameErr');
+  var id = document.getElementById('renameId').value;
+  var name = document.getElementById('renameName').value.trim();
+  if (!name) { err.textContent = 'District name is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    var r = await fetch('/api/admin/districts/' + id, {
+      method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeRenameModal();
+    fnToast('District renamed.');
+    loadDistricts();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+// Manage schools
+async function openSchoolsModal(id) {
+  document.getElementById('schoolsDistrictId').value = id;
+  document.getElementById('schoolsList').innerHTML = '<div class="a-empty">Loading…</div>';
+  document.getElementById('schoolsModal').classList.add('show');
+  try {
+    var r = await fetch('/api/admin/districts/' + id + '/schools', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    var schools = d.schools || [];
+    document.getElementById('schoolsList').innerHTML = schools.length
+      ? schools.map(function (s) {
+          var label = s.display_name || s.domain;
+          var otherDistrict = s.district_id && !s.is_assigned ? ' <span class="a-hint">(currently in another district)</span>' : '';
+          return '<label class="school-pick-row"><input type="checkbox" value="' + s.id + '"' + (s.is_assigned ? ' checked' : '') + '> ' + esc(label) + otherDistrict + '</label>';
+        }).join('')
+      : '<div class="a-empty">No schools exist yet.</div>';
+  } catch (e) {
+    document.getElementById('schoolsList').innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+function closeSchoolsModal() { document.getElementById('schoolsModal').classList.remove('show'); }
+async function doSaveSchools() {
+  var btn = document.getElementById('schoolsBtn');
+  var id = document.getElementById('schoolsDistrictId').value;
+  var checked = Array.from(document.querySelectorAll('#schoolsList input[type=checkbox]:checked')).map(function (c) { return Number(c.value); });
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    var r = await fetch('/api/admin/districts/' + id + '/schools', {
+      method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolIds: checked }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeSchoolsModal();
+    fnToast(checked.length + ' school(s) assigned.');
+    loadDistricts();
+  } catch (e) {
+    fnToast('Failed to save: ' + e.message, 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+// Delete
+function openDeleteModal(id, name) {
+  deleteId = id;
+  document.getElementById('deleteMsg').textContent = 'Delete "' + name + '"? Its schools will simply become unassigned, not deleted.';
+  document.getElementById('deleteModal').classList.add('show');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('show'); deleteId = null; }
+async function doDelete() {
+  var btn = document.getElementById('deleteBtn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    var r = await fetch('/api/admin/districts/' + deleteId, {
+      method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeDeleteModal();
+    fnToast('District deleted.');
+    loadDistricts();
+  } catch (e) {
+    fnToast('Failed to delete: ' + e.message, 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Delete'; }
+}
+
+// ---------------------------------------------------------------------------
+// Branding editor view
+// ---------------------------------------------------------------------------
+
+function showListView() {
+  document.getElementById('brandingView').style.display = 'none';
+  document.getElementById('listView').style.display = 'block';
+  document.getElementById('pageTitle').textContent = 'Districts';
+  currentDistrictId = null;
+}
+
+async function openBrandingView(id, name) {
+  currentDistrictId = id;
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('brandingView').style.display = 'block';
+  document.getElementById('pageTitle').textContent = 'Branding — ' + name;
+  await loadBranding();
+}
+
+document.getElementById('previewTabs').addEventListener('click', function (e) {
+  var btn = e.target.closest('.dist-tab');
+  if (!btn) return;
+  document.querySelectorAll('.dist-tab').forEach(function (t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.preview-tab').forEach(function (p) { p.style.display = 'none'; });
+  document.getElementById('pv-' + btn.dataset.tab).style.display = '';
+});
+
+async function loadBranding() {
+  try {
+    var r = await fetch('/api/admin/districts/' + currentDistrictId + '/branding', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+
+    currentLogoDisplayUrl = null;
+    document.getElementById('logoPreviewBox').innerHTML = '<span>No logo uploaded</span>';
+    restoreDefaultColors();
+
+    if (d.draft.primary_color) setColor('primary', d.draft.primary_color);
+    if (d.draft.secondary_color) setColor('secondary', d.draft.secondary_color);
+    if (d.draft.accent_color) setColor('accent', d.draft.accent_color);
+    if (d.draft.logo_display_url) setLogoPreview(d.draft.logo_display_url);
+
+    document.getElementById('unpublishedNote').style.display = d.hasUnpublishedChanges ? '' : 'none';
+    updateLivePreview();
+  } catch (e) {
+    fnToast('Failed to load branding: ' + e.message, 'error');
+  }
+}
+
+function setColor(key, hex) {
+  document.getElementById(key + 'Swatch').value = hex;
+  document.getElementById(key + 'Hex').value = hex.toUpperCase();
+}
+function setLogoPreview(url) {
+  currentLogoDisplayUrl = url;
+  document.getElementById('logoPreviewBox').innerHTML = '<img src="' + url + '" alt="Current logo">';
+}
+function onSwatchChange(key) {
+  document.getElementById(key + 'Hex').value = document.getElementById(key + 'Swatch').value.toUpperCase();
+  updateLivePreview();
+}
+function onHexChange(key) {
+  var v = document.getElementById(key + 'Hex').value;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById(key + 'Swatch').value = v;
+  updateLivePreview();
+}
+function restoreDefaultColors() {
+  setColor('primary', '#F26B4D');
+  setColor('secondary', '#0E3733');
+  setColor('accent', '#EBA657');
+  updateLivePreview();
+}
+function currentDraftBranding() {
+  return {
+    logoDisplayUrl: currentLogoDisplayUrl,
+    primaryColor: document.getElementById('primaryHex').value,
+    secondaryColor: document.getElementById('secondaryHex').value,
+    accentColor: document.getElementById('accentHex').value,
+  };
+}
+function updateLivePreview() {
+  var b = currentDraftBranding();
+  fnApplyBranding(b, document.getElementById('panelAdmin'), window.FN_SCHOOL_ADMIN_VARMAP);
+  ['panelTeacher', 'panelClassroom', 'panelStudent', 'panelParent'].forEach(function (id) {
+    fnApplyBranding(b, document.getElementById(id), window.FN_MARKETING_VARMAP);
+  });
+}
+
+function handleLogoFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  fnOpenLogoCropper(file, function (croppedBlob) { uploadLogoBlob(croppedBlob); });
+  input.value = '';
+}
+
+async function uploadLogoBlob(blob) {
+  var errEl = document.getElementById('logoError');
+  errEl.style.display = 'none';
+  var fd = new FormData();
+  fd.append('file', blob, 'logo.png');
+  try {
+    var r = await fetch('/api/admin/districts/' + currentDistrictId + '/branding/logo', {
+      method: 'POST', credentials: 'include', body: fd,
+    });
+    var data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Upload failed'; errEl.style.display = ''; return; }
+    setLogoPreview(data.logoDisplayUrl);
+    updateLivePreview();
+    fnToast('Logo uploaded. Publish to make it live.');
+  } catch (e) {
+    errEl.textContent = 'Upload failed. Please try again.';
+    errEl.style.display = '';
+  }
+}
+
+async function saveDraft() {
+  try {
+    var r = await fetch('/api/admin/districts/' + currentDistrictId + '/branding', {
+      method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        primaryColor: document.getElementById('primaryHex').value,
+        secondaryColor: document.getElementById('secondaryHex').value,
+        accentColor: document.getElementById('accentHex').value,
+      }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Draft saved.');
+    loadBranding();
+  } catch (e) { fnToast('Failed to save draft: ' + e.message, 'error'); }
+}
+
+function confirmPublish() {
+  if (!confirm('Publish this district\'s branding? Every school in it that hasn\'t published its own branding will pick this up immediately.')) return;
+  publishBranding();
+}
+async function publishBranding() {
+  try {
+    await saveDraft();
+    var r = await fetch('/api/admin/districts/' + currentDistrictId + '/branding/publish', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('District branding published.');
+    loadBranding();
+  } catch (e) { fnToast('Failed to publish: ' + e.message, 'error'); }
+}
+
+async function resetToDefault() {
+  if (!confirm('Reset this district\'s branding to the FNE default look?')) return;
+  try {
+    var r = await fetch('/api/admin/districts/' + currentDistrictId + '/branding/reset', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('District branding reset.');
+    loadBranding();
+  } catch (e) { fnToast('Failed to reset: ' + e.message, 'error'); }
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

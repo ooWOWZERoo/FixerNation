@@ -12,7 +12,17 @@
 // Every resolver below is read-only and must never throw past this module —
 // a broken/missing link in the school chain should fall back to "no
 // branding," not block the user from loading their page.
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const sharp = require('sharp');
 const pool = require('../db/pool');
+
+const LOGO_MIN_WIDTH = 200;
+const LOGO_MIN_HEIGHT = 100;
+const LOGO_MAX_DIMENSION = 6000;
+const LOGO_DISPLAY_MAX = 800;
+const LOGO_SVG_TARGET_LONG_EDGE = 1600; // rasterize SVGs generously so the display copy downsamples cleanly
 
 function hexToRgb(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
@@ -164,41 +174,150 @@ async function resolveSchoolIdForStudent(studentId) {
 // Branding lookup
 // ---------------------------------------------------------------------------
 
-// Returns null if there's no school, no branding row, or branding isn't
-// published — every caller treats null the same way: show FNE defaults.
-async function getPublishedBranding(schoolId) {
-  if (!schoolId) return null;
+// Shared shape-builder for both school_branding and district_branding rows —
+// same five published_* columns, same derived-color logic either way.
+function brandingRowToResult(row, displayName) {
+  if (!row) return null;
+  const primary = deriveColorSet(row.published_primary_color);
+  const secondary = deriveColorSet(row.published_secondary_color);
+  const accent = deriveColorSet(row.published_accent_color);
+  return {
+    schoolDisplayName: displayName,
+    logoDisplayUrl: row.published_logo_display_url || null,
+    primaryColor: primary && primary.color,
+    primaryColorDark: primary && primary.dark,
+    primaryColorLight: primary && primary.light,
+    primaryTextColor: primary && primary.textColor,
+    secondaryColor: secondary && secondary.color,
+    secondaryColorDark: secondary && secondary.dark,
+    secondaryColorLight: secondary && secondary.light,
+    secondaryTextColor: secondary && secondary.textColor,
+    accentColor: accent && accent.color,
+    accentTextColor: accent && accent.textColor,
+  };
+}
+
+// District branding, standalone — used both as a school's fallback below and
+// directly by the district branding editor's own "resolved" endpoint.
+async function getPublishedDistrictBranding(districtId) {
+  if (!districtId) return null;
   try {
     const [[row]] = await pool.query(
-      `SELECT sb.*, s.display_name, s.domain
-       FROM school_branding sb
-       JOIN schools s ON s.id = sb.school_id
-       WHERE sb.school_id = ? AND sb.branding_status = 'PUBLISHED'`,
-      [schoolId]
+      `SELECT db.*, d.name
+       FROM district_branding db
+       JOIN districts d ON d.id = db.district_id
+       WHERE db.district_id = ? AND db.branding_status = 'PUBLISHED'`,
+      [districtId]
     );
-    if (!row) return null;
-
-    const primary = deriveColorSet(row.published_primary_color);
-    const secondary = deriveColorSet(row.published_secondary_color);
-    const accent = deriveColorSet(row.published_accent_color);
-
-    return {
-      schoolDisplayName: row.display_name || row.domain,
-      logoDisplayUrl: row.published_logo_display_url || null,
-      primaryColor: primary && primary.color,
-      primaryColorDark: primary && primary.dark,
-      primaryColorLight: primary && primary.light,
-      primaryTextColor: primary && primary.textColor,
-      secondaryColor: secondary && secondary.color,
-      secondaryColorDark: secondary && secondary.dark,
-      secondaryColorLight: secondary && secondary.light,
-      secondaryTextColor: secondary && secondary.textColor,
-      accentColor: accent && accent.color,
-      accentTextColor: accent && accent.textColor,
-    };
+    return brandingRowToResult(row, row ? row.name : null);
   } catch {
     return null;
   }
+}
+
+// Resolution priority: a school's own published branding wins; if it has
+// none, fall back to its district's published branding (if it belongs to
+// one); otherwise null (FNE default). The school's own display name is
+// always used regardless of which branding source wins — only the visual
+// assets (logo/colors) come from the district, never the identity text.
+async function getPublishedBranding(schoolId) {
+  if (!schoolId) return null;
+  try {
+    const [[school]] = await pool.query(
+      'SELECT display_name, domain, district_id FROM schools WHERE id = ?',
+      [schoolId]
+    );
+    if (!school) return null;
+    const displayName = school.display_name || school.domain;
+
+    const [[schoolRow]] = await pool.query(
+      "SELECT * FROM school_branding WHERE school_id = ? AND branding_status = 'PUBLISHED'",
+      [schoolId]
+    );
+    if (schoolRow) return brandingRowToResult(schoolRow, displayName);
+
+    if (school.district_id) {
+      const districtBranding = await getPublishedDistrictBranding(school.district_id);
+      if (districtBranding) return { ...districtBranding, schoolDisplayName: displayName };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Logo upload processing — shared by the school-admin and FNE-admin
+// (district) branding editors so the validation/resize/SVG-rasterization
+// logic exists in exactly one place.
+// ---------------------------------------------------------------------------
+
+class LogoValidationError extends Error {}
+
+// SVG is rasterized immediately, server-side, regardless of what already
+// happened client-side — raw SVG markup is never stored or served, since
+// this repo has no SVG-sanitization library and unsanitized SVG is an XSS
+// vector (inline <script>, event handler attributes, external references).
+async function rasterizeSvgIfNeeded(buffer, metadata) {
+  if (metadata.format !== 'svg') return { buffer, metadata };
+  const naturalLongEdge = Math.max(metadata.width || 1, metadata.height || 1);
+  const density = Math.min(2400, Math.max(72, Math.round(72 * (LOGO_SVG_TARGET_LONG_EDGE / naturalLongEdge))));
+  const rasterized = await sharp(buffer, { density }).png().toBuffer();
+  const rasterizedMetadata = await sharp(rasterized).metadata();
+  return { buffer: rasterized, metadata: rasterizedMetadata };
+}
+
+// `uploadsDir` must already exist (callers create it once at startup).
+// Returns { logoOriginalUrl, logoDisplayUrl } or throws LogoValidationError
+// with a user-facing message — callers should catch that specific class and
+// respond 400, letting any other error type propagate as a real 500.
+async function processLogoUpload(buffer, uploadsDir, filenamePrefix) {
+  let metadata;
+  try {
+    metadata = await sharp(buffer).metadata();
+  } catch {
+    throw new LogoValidationError('This file could not be read as a valid image. Please try a different file.');
+  }
+  if (!metadata.width || !metadata.height) {
+    throw new LogoValidationError('This file could not be read as a valid image. Please try a different file.');
+  }
+
+  ({ buffer, metadata } = await rasterizeSvgIfNeeded(buffer, metadata));
+
+  const { width, height } = metadata;
+  if (width < LOGO_MIN_WIDTH || height < LOGO_MIN_HEIGHT) {
+    throw new LogoValidationError(
+      `This image is ${width} × ${height} pixels. School logos must be at least ${LOGO_MIN_WIDTH} × ${LOGO_MIN_HEIGHT} pixels. Please upload a larger image.`
+    );
+  }
+  if (width > LOGO_MAX_DIMENSION || height > LOGO_MAX_DIMENSION) {
+    throw new LogoValidationError(
+      `This image is too large (${width} × ${height} pixels). Please upload an image no larger than ${LOGO_MAX_DIMENSION} × ${LOGO_MAX_DIMENSION} pixels.`
+    );
+  }
+
+  const ext = metadata.format === 'jpeg' ? 'jpg' : metadata.format;
+  const base = `${filenamePrefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+  const originalFilename = `${base}-original.${ext}`;
+  const displayFilename = `${base}-display.png`;
+
+  try {
+    fs.writeFileSync(path.join(uploadsDir, originalFilename), buffer);
+    await sharp(buffer)
+      .resize({ width: LOGO_DISPLAY_MAX, height: LOGO_DISPLAY_MAX / 2, fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toFile(path.join(uploadsDir, displayFilename));
+  } catch {
+    throw new Error('Could not process this image. Please try again.');
+  }
+
+  const urlPrefix = process.env.UPLOADS_URL_PREFIX || '/uploads/';
+  const subdir = path.basename(uploadsDir);
+  return {
+    logoOriginalUrl: `${urlPrefix}${subdir}/${originalFilename}`,
+    logoDisplayUrl: `${urlPrefix}${subdir}/${displayFilename}`,
+  };
 }
 
 module.exports = {
@@ -207,6 +326,12 @@ module.exports = {
   resolveSchoolIdForClassroom,
   resolveSchoolIdForStudent,
   getPublishedBranding,
+  getPublishedDistrictBranding,
   pickAccessibleTextColor,
   shiftLightness,
+  processLogoUpload,
+  LogoValidationError,
+  LOGO_MIN_WIDTH,
+  LOGO_MIN_HEIGHT,
+  LOGO_MAX_DIMENSION,
 };

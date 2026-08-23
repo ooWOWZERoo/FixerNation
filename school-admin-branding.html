@@ -41,7 +41,8 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=16"></script>
+  <script src="logo-crop.js?v=1"></script>
+  <script src="school-admin-nav.js?v=17"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -70,9 +71,9 @@
           <div class="logo-row">
             <div class="logo-box" id="logoPreviewBox"><span>No logo uploaded</span></div>
             <div>
-              <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoFile(this)">
+              <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none;" onchange="handleLogoFile(this)">
               <button class="sa-btn sa-btn-secondary sa-btn-sm" onclick="document.getElementById('logoFile').click()">Upload Logo</button>
-              <p class="brand-help">PNG, JPG, or WebP. Max 2 MB. Recommended 600 × 200px or larger (minimum 200 × 100px). Transparent PNG preferred.</p>
+              <p class="brand-help">PNG, JPG, WebP, or SVG. Max 2 MB. Recommended 600 × 200px or larger (minimum 200 × 100px). Transparent PNG preferred. You'll be able to crop and reposition it before saving.</p>
               <div id="logoError" style="display:none;color:var(--sa-danger);font-size:12.5px;margin-top:6px;"></div>
             </div>
           </div>
@@ -146,6 +147,7 @@
           <p class="brand-help" style="margin-top:12px;">Every preview includes "Powered by Fixer Nation Education," which always stays visible.</p>
         </div>
 
+        <div id="districtFallbackNote" style="display:none;margin-bottom:10px;text-align:right;font-size:12.5px;color:var(--sa-text-soft);"></div>
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button class="sa-btn sa-btn-ghost" onclick="resetToDefault()">Reset to FNE Default</button>
           <button class="sa-btn sa-btn-secondary" onclick="saveDraft()">Save Draft</button>
@@ -199,6 +201,14 @@ async function loadBranding() {
     if (d.draft.logo_display_url) setLogoPreview(d.draft.logo_display_url);
 
     document.getElementById('unpublishedNote').style.display = d.hasUnpublishedChanges ? '' : 'none';
+
+    var fallbackNote = document.getElementById('districtFallbackNote');
+    if (d.districtName && d.districtHasPublishedBranding && d.status !== 'PUBLISHED') {
+      fallbackNote.textContent = 'Your school belongs to ' + d.districtName + ', which has its own published branding — resetting or leaving this unpublished will use ' + d.districtName + '’s look instead of the plain FNE default.';
+      fallbackNote.style.display = '';
+    } else {
+      fallbackNote.style.display = 'none';
+    }
 
     updateLivePreview();
     document.getElementById('pageLoading').style.display = 'none';
@@ -256,15 +266,22 @@ function updateLivePreview() {
   });
 }
 
-async function handleLogoFile(input) {
+function handleLogoFile(input) {
   var file = input.files[0];
   if (!file) return;
+  fnOpenLogoCropper(file, function (croppedBlob) {
+    uploadLogoBlob(croppedBlob);
+  });
+  input.value = ''; // allow re-selecting the same file next time
+}
+
+async function uploadLogoBlob(blob) {
   var purchaseId = window.saActivePurchaseId();
   var errEl = document.getElementById('logoError');
   errEl.style.display = 'none';
 
   var fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', blob, 'logo.png');
   try {
     var r = await fetch('/api/school-admin/branding/logo?purchaseId=' + purchaseId, {
       method: 'POST', credentials: 'include', body: fd,
@@ -278,7 +295,6 @@ async function handleLogoFile(input) {
     errEl.textContent = 'Upload failed. Please try again.';
     errEl.style.display = '';
   }
-  input.value = '';
 }
 
 async function saveDraft() {
