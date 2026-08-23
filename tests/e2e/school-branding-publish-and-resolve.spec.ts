@@ -1,5 +1,7 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, request as apiRequest } from "@playwright/test";
 import { signInAsSchoolAdminAccount } from "./helpers/auth";
+
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "https://fixernationeducation.com";
 
 // ---------------------------------------------------------------------------
 // Regression coverage for the School-Level Branding feature: a school admin
@@ -26,7 +28,7 @@ const teacherEmail = process.env.TEST_REMOVABLE_TEACHER_EMAIL;
 const teacherPassword = process.env.TEST_SITE_USER_PASSWORD; // shared QA_PASSWORD across all seeded fixtures
 
 test.describe("School branding publish/reset resolves correctly for a teacher in that school", () => {
-  test("publishing branding as the school admin makes it visible to a teacher under that school", async ({ page, request }) => {
+  test("publishing branding as the school admin makes it visible to a teacher under that school", async ({ page }) => {
     test.skip(
       !schoolAdminEmail || !schoolAdminPassword || !teacherEmail || !teacherPassword,
       "TEST_SCHOOL_ADMIN_EMAIL/PASSWORD or TEST_REMOVABLE_TEACHER_EMAIL/TEST_SITE_USER_PASSWORD not set — see tests/.env.test.example"
@@ -55,7 +57,7 @@ test.describe("School branding publish/reset resolves correctly for a teacher in
 
     // A fresh, unrelated context (not the admin's cookie jar) logs in as the
     // teacher and reads the resolved branding a teacher-facing page would.
-    const teacherCtx = await request.newContext();
+    const teacherCtx = await apiRequest.newContext({ baseURL: BASE_URL });
     const loginRes = await teacherCtx.post("/api/site-auth/login", {
       headers: { "Content-Type": "application/json" },
       data: { email: teacherEmail, password: teacherPassword },
@@ -74,7 +76,7 @@ test.describe("School branding publish/reset resolves correctly for a teacher in
     await teacherCtx.dispose();
   });
 
-  test("resetting to FNE default falls back to null branding for the same teacher", async ({ page, request }) => {
+  test("resetting to FNE default falls back to null branding for the same teacher", async ({ page }) => {
     test.skip(
       !schoolAdminEmail || !schoolAdminPassword || !teacherEmail || !teacherPassword,
       "TEST_SCHOOL_ADMIN_EMAIL/PASSWORD or TEST_REMOVABLE_TEACHER_EMAIL/TEST_SITE_USER_PASSWORD not set — see tests/.env.test.example"
@@ -91,7 +93,7 @@ test.describe("School branding publish/reset resolves correctly for a teacher in
     });
     expect(resetRes.ok()).toBe(true);
 
-    const teacherCtx = await request.newContext();
+    const teacherCtx = await apiRequest.newContext({ baseURL: BASE_URL });
     await teacherCtx.post("/api/site-auth/login", {
       headers: { "Content-Type": "application/json" },
       data: { email: teacherEmail, password: teacherPassword },
