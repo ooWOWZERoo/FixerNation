@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Districts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=17">
+<style>
+  .a-hint { font-size: 12px; color: var(--a-text-soft); margin-top: 4px; }
+  .err-inline { color: var(--a-danger); font-size: 13px; margin-bottom: 12px; display: none; }
+  .success-inline { color: var(--a-success, #16a34a); font-size: 13px; margin-bottom: 12px; display: none; }
+  .manage-section { margin-top: 18px; }
+  .manage-section h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--a-text-soft); margin-bottom: 10px; }
+  .manage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--a-border); font-size: 13.5px; }
+  .manage-row:last-child { border-bottom: none; }
+  .manage-add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .manage-add-row select, .manage-add-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--a-border); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--a-card); color: var(--a-text); }
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+  <script src="admin-nav.js?v=16"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Districts</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+        <input type="search" id="searchInput" placeholder="Filter by district name…"
+          oninput="debounceLoad()"
+          style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);flex:1;max-width:320px;">
+        <button class="a-btn a-btn-primary" onclick="openCreateModal()">+ New District</button>
+      </div>
+
+      <p class="a-hint" style="margin:-10px 0 16px;">A district can set default branding (logo and colors) that its schools inherit automatically — an individual school's own branding, if it sets one, always overrides its district's.</p>
+
+      <div class="a-card">
+        <div id="tableWrap">
+          <div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create modal -->
+<div class="a-modal-overlay" id="createModal">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>New District</h3>
+      <button class="a-modal-close" onclick="closeCreateModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="createErr"></div>
+      <div class="a-field"><label>District Name *</label><input type="text" id="createName" placeholder="e.g. Lincoln County Schools"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeCreateModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="createBtn" onclick="doCreate()">Create District</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename modal -->
+<div class="a-modal-overlay" id="renameModal">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>Rename District</h3>
+      <button class="a-modal-close" onclick="closeRenameModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="renameErr"></div>
+      <input type="hidden" id="renameId">
+      <div class="a-field"><label>District Name *</label><input type="text" id="renameName"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeRenameModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="renameBtn" onclick="doRename()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="a-modal-overlay" id="deleteModal">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>Delete District</h3>
+      <button class="a-modal-close" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <p id="deleteMsg" style="font-size:14px;margin-bottom:8px;"></p>
+      <div class="err-inline" id="deleteErr"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeDeleteModal()">Cancel</button>
+      <button class="a-btn a-btn-danger" id="deleteBtn" onclick="doDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage modal: schools + district admins -->
+<div class="a-modal-overlay" id="manageModal">
+  <div class="a-modal" style="max-width:640px;">
+    <div class="a-modal-head">
+      <h3 id="manageTitle">Manage District</h3>
+      <button class="a-modal-close" onclick="closeManageModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="manage-section">
+        <h4>Schools in this District</h4>
+        <div class="err-inline" id="schoolsErr"></div>
+        <div id="schoolsList"><div class="a-hint">Loading…</div></div>
+        <div class="manage-add-row">
+          <select id="addSchoolSelect"><option value="">Select a school to add…</option></select>
+          <button class="a-btn a-btn-outline a-btn-sm" onclick="doAddSchool()">Add</button>
+        </div>
+      </div>
+
+      <div class="manage-section">
+        <h4>District Administrators</h4>
+        <div class="err-inline" id="adminsErr"></div>
+        <div class="success-inline" id="adminsSuccess"></div>
+        <div id="adminsList"><div class="a-hint">Loading…</div></div>
+        <div class="manage-add-row">
+          <input type="email" id="addAdminEmail" placeholder="admin@district.edu">
+          <button class="a-btn a-btn-outline a-btn-sm" onclick="doAssignAdmin()">Invite</button>
+        </div>
+        <p class="a-hint">If this email doesn't have an account, one will be created and a setup link emailed to them.</p>
+      </div>
+
+      <div class="manage-section">
+        <h4>Branding</h4>
+        <p class="a-hint" style="margin-top:0;">This district's admins set the default logo and colors from their own <a href="district-admin-login.html" target="_blank" rel="noopener">District Admin Portal</a>.</p>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeManageModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+fnRequireAuth();
+
+var allDistricts = [], debounceTimer = null, deleteId = null, manageDistrictId = null;
+
+document.addEventListener('DOMContentLoaded', loadDistricts);
+
+function debounceLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(loadDistricts, 300); }
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function loadDistricts() {
+  const q = document.getElementById('searchInput').value.trim();
+  const url = '/api/admin/districts' + (q ? '?q=' + encodeURIComponent(q) : '');
+  const wrap = document.getElementById('tableWrap');
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    allDistricts = d.districts || [];
+    renderTable(allDistricts);
+  } catch (e) {
+    wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderTable(rows) {
+  const wrap = document.getElementById('tableWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="a-empty"><div class="big">🗺️</div>No districts yet.</div>';
+    return;
+  }
+  wrap.innerHTML =
+    '<table class="a-table"><thead><tr><th>District</th><th>Schools</th><th>Admins</th><th>Branding</th><th>Actions</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      const brandingPill = r.branding_status === 'PUBLISHED'
+        ? '<span class="a-pill a-pill-success">Published</span>'
+        : r.branding_status === 'DRAFT'
+          ? '<span class="a-pill a-pill-warn">Draft</span>'
+          : '<span class="a-pill a-pill-neutral">Default</span>';
+      return '<tr>' +
+        '<td style="font-weight:600;">' + esc(r.name) + '</td>' +
+        '<td>' + r.school_count + '</td>' +
+        '<td>' + r.admin_count + '</td>' +
+        '<td>' + brandingPill + '</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openManageModal(' + r.id + ',\'' + esc(r.name) + '\')">Manage</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openRenameModal(' + r.id + ',\'' + esc(r.name) + '\')">Rename</button> ' +
+          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openDeleteModal(' + r.id + ',\'' + esc(r.name) + '\',' + r.school_count + ')">Delete</button>' +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+// Create
+function openCreateModal() {
+  document.getElementById('createErr').style.display = 'none';
+  document.getElementById('createName').value = '';
+  document.getElementById('createModal').classList.add('show');
+}
+function closeCreateModal() { document.getElementById('createModal').classList.remove('show'); }
+
+async function doCreate() {
+  const btn = document.getElementById('createBtn');
+  const err = document.getElementById('createErr');
+  err.style.display = 'none';
+  const name = document.getElementById('createName').value.trim();
+  if (!name) { err.textContent = 'District name is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const r = await fetch('/api/admin/districts', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeCreateModal();
+    fnToast('District created.');
+    loadDistricts();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Create District'; }
+}
+
+// Rename
+function openRenameModal(id, name) {
+  document.getElementById('renameErr').style.display = 'none';
+  document.getElementById('renameId').value = id;
+  document.getElementById('renameName').value = name;
+  document.getElementById('renameModal').classList.add('show');
+}
+function closeRenameModal() { document.getElementById('renameModal').classList.remove('show'); }
+
+async function doRename() {
+  const btn = document.getElementById('renameBtn');
+  const err = document.getElementById('renameErr');
+  err.style.display = 'none';
+  const id = document.getElementById('renameId').value;
+  const name = document.getElementById('renameName').value.trim();
+  if (!name) { err.textContent = 'District name is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/admin/districts/' + id, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeRenameModal();
+    fnToast('District renamed.');
+    loadDistricts();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+// Delete
+function openDeleteModal(id, name, schoolCount) {
+  deleteId = id;
+  document.getElementById('deleteMsg').textContent = schoolCount > 0
+    ? 'Delete "' + name + '"? Its ' + schoolCount + ' assigned school(s) will keep their own branding but no longer inherit a district default.'
+    : 'Delete "' + name + '"? This cannot be undone.';
+  document.getElementById('deleteErr').style.display = 'none';
+  document.getElementById('deleteModal').classList.add('show');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('show'); deleteId = null; }
+
+async function doDelete() {
+  const btn = document.getElementById('deleteBtn');
+  const err = document.getElementById('deleteErr');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const r = await fetch('/api/admin/districts/' + deleteId, {
+      method: 'DELETE', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeDeleteModal();
+    fnToast('District deleted.');
+    loadDistricts();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Delete'; }
+}
+
+// Manage (schools + admins)
+function openManageModal(id, name) {
+  manageDistrictId = id;
+  document.getElementById('manageTitle').textContent = 'Manage ' + name;
+  document.getElementById('schoolsErr').style.display = 'none';
+  document.getElementById('adminsErr').style.display = 'none';
+  document.getElementById('adminsSuccess').style.display = 'none';
+  document.getElementById('addAdminEmail').value = '';
+  document.getElementById('manageModal').classList.add('show');
+  loadManageSchools();
+  loadManageAdmins();
+}
+function closeManageModal() { document.getElementById('manageModal').classList.remove('show'); manageDistrictId = null; }
+
+async function loadDistrictDetail() {
+  const r = await fetch('/api/admin/districts/' + manageDistrictId, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return null;
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Failed to load district');
+  return d;
+}
+
+async function loadManageSchools() {
+  const listEl = document.getElementById('schoolsList');
+  const selEl = document.getElementById('addSchoolSelect');
+  try {
+    const detail = await loadDistrictDetail();
+    if (!detail) return;
+    listEl.innerHTML = detail.schools.length
+      ? detail.schools.map(function (s) {
+          return '<div class="manage-row"><span>' + esc(s.display_name || s.domain) + '</span>' +
+            '<button class="a-btn a-btn-outline a-btn-sm" onclick="doRemoveSchool(' + s.id + ')">Remove</button></div>';
+        }).join('')
+      : '<div class="a-hint">No schools assigned yet.</div>';
+
+    const avail = await fetch('/api/admin/districts/' + manageDistrictId + '/available-schools', { credentials: 'include' });
+    const availData = await avail.json();
+    const currentIds = new Set(detail.schools.map(function (s) { return s.id; }));
+    const candidates = (availData.schools || []).filter(function (s) { return !currentIds.has(s.id); });
+    selEl.innerHTML = '<option value="">Select a school to add…</option>' + candidates.map(function (s) {
+      return '<option value="' + s.id + '">' + esc(s.display_name || s.domain) + '</option>';
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = '';
+    document.getElementById('schoolsErr').textContent = e.message;
+    document.getElementById('schoolsErr').style.display = 'block';
+  }
+}
+
+async function doAddSchool() {
+  const schoolId = document.getElementById('addSchoolSelect').value;
+  if (!schoolId) return;
+  try {
+    const r = await fetch('/api/admin/districts/' + manageDistrictId + '/schools', {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId: Number(schoolId), assign: true }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    loadManageSchools();
+    loadDistricts();
+  } catch (e) {
+    document.getElementById('schoolsErr').textContent = e.message;
+    document.getElementById('schoolsErr').style.display = 'block';
+  }
+}
+
+async function doRemoveSchool(schoolId) {
+  try {
+    const r = await fetch('/api/admin/districts/' + manageDistrictId + '/schools', {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId: Number(schoolId), assign: false }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    loadManageSchools();
+    loadDistricts();
+  } catch (e) {
+    document.getElementById('schoolsErr').textContent = e.message;
+    document.getElementById('schoolsErr').style.display = 'block';
+  }
+}
+
+async function loadManageAdmins() {
+  const listEl = document.getElementById('adminsList');
+  try {
+    const detail = await loadDistrictDetail();
+    if (!detail) return;
+    listEl.innerHTML = detail.admins.length
+      ? detail.admins.map(function (a) {
+          const name = [a.first_name, a.last_name].filter(Boolean).join(' ') || '(new user)';
+          const verifiedPill = a.email_verified ? '' : ' <span class="a-pill a-pill-warn">Unverified</span>';
+          const resendBtn = !a.email_verified
+            ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="doResendAdmin(' + a.id + ')">Resend</button> '
+            : '';
+          return '<div class="manage-row"><span>' + esc(name) + ' — ' + esc(a.email) + verifiedPill + '</span>' +
+            '<span>' + resendBtn + '<button class="a-btn a-btn-danger a-btn-sm" onclick="doRemoveAdmin(' + a.id + ')">Remove</button></span></div>';
+        }).join('')
+      : '<div class="a-hint">No district administrators yet.</div>';
+  } catch (e) {
+    listEl.innerHTML = '';
+    document.getElementById('adminsErr').textContent = e.message;
+    document.getElementById('adminsErr').style.display = 'block';
+  }
+}
+
+async function doAssignAdmin() {
+  const err = document.getElementById('adminsErr');
+  const success = document.getElementById('adminsSuccess');
+  err.style.display = 'none'; success.style.display = 'none';
+  const email = document.getElementById('addAdminEmail').value.trim();
+  if (!email) { err.textContent = 'Email is required.'; err.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/admin/districts/' + manageDistrictId + '/admins/assign', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    success.textContent = (d.isNewUser ? 'New user created — setup email sent. ' : '') + email + ' assigned as district admin.';
+    success.style.display = 'block';
+    document.getElementById('addAdminEmail').value = '';
+    loadManageAdmins();
+    loadDistricts();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function doResendAdmin(assignmentId) {
+  try {
+    const r = await fetch('/api/admin/districts/admins/' + assignmentId + '/resend-welcome', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Welcome email resent.');
+  } catch (e) {
+    document.getElementById('adminsErr').textContent = e.message;
+    document.getElementById('adminsErr').style.display = 'block';
+  }
+}
+
+async function doRemoveAdmin(assignmentId) {
+  if (!confirm('Remove this district administrator? If they have no other assignments, their role reverts to "teacher".')) return;
+  try {
+    const r = await fetch('/api/admin/districts/admins/' + assignmentId, {
+      method: 'DELETE', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    loadManageAdmins();
+    loadDistricts();
+  } catch (e) {
+    document.getElementById('adminsErr').textContent = e.message;
+    document.getElementById('adminsErr').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>

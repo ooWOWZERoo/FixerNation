@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - District Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="district-admin-nav.js?v=1"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Dashboard</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+        <div class="sa-card" style="max-width:560px;">
+          <div class="sa-card-head"><h2 id="welcomeDistrictName">Your District</h2></div>
+          <p style="font-size:13.5px;color:var(--sa-text-soft);margin-bottom:16px;">
+            As a District Administrator, you can set default branding — a logo and colors — that every school in your
+            district inherits automatically, unless that school has published its own branding.
+          </p>
+          <a class="sa-btn sa-btn-primary" href="district-admin-branding.html">Manage District Branding</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('daReady', function (e) {
+  var data = e.detail;
+  var name = (data.districts && data.districts[0] && data.districts[0].districtName) || 'Your District';
+  document.getElementById('welcomeDistrictName').textContent = name;
+  document.getElementById('pageLoading').style.display = 'none';
+  document.getElementById('pageContent').style.display = 'block';
+});
+</script>
+</body>
+</html>

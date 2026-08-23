@@ -160,12 +160,73 @@ async function resolveSchoolIdForStudent(studentId) {
   }
 }
 
+// A school optionally belongs to a district (schools.district_id, added by
+// alter-create-districts.js) — used by getPublishedBranding's school →
+// district → FNE-default fallback chain below.
+async function resolveDistrictIdForSchool(schoolId) {
+  if (!schoolId) return null;
+  try {
+    const [[row]] = await pool.query('SELECT district_id FROM schools WHERE id = ?', [schoolId]);
+    return row ? row.district_id : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Branding lookup
 // ---------------------------------------------------------------------------
 
-// Returns null if there's no school, no branding row, or branding isn't
-// published — every caller treats null the same way: show FNE defaults.
+// Shared row->branding shape for both the school_branding and
+// district_branding tables — same published_* columns, same derived
+// shades/contrast colors, differing only in which display name column the
+// caller's join provides.
+function rowToBranding(row, displayName) {
+  const primary = deriveColorSet(row.published_primary_color);
+  const secondary = deriveColorSet(row.published_secondary_color);
+  const accent = deriveColorSet(row.published_accent_color);
+
+  return {
+    schoolDisplayName: displayName,
+    logoDisplayUrl: row.published_logo_display_url || null,
+    primaryColor: primary && primary.color,
+    primaryColorDark: primary && primary.dark,
+    primaryColorLight: primary && primary.light,
+    primaryTextColor: primary && primary.textColor,
+    secondaryColor: secondary && secondary.color,
+    secondaryColorDark: secondary && secondary.dark,
+    secondaryColorLight: secondary && secondary.light,
+    secondaryTextColor: secondary && secondary.textColor,
+    accentColor: accent && accent.color,
+    accentTextColor: accent && accent.textColor,
+  };
+}
+
+// Returns null if there's no district, no branding row, or branding isn't
+// published — mirrors getPublishedBranding's null-is-a-no-op contract below.
+async function getPublishedDistrictBranding(districtId) {
+  if (!districtId) return null;
+  try {
+    const [[row]] = await pool.query(
+      `SELECT db.*, d.name
+       FROM district_branding db
+       JOIN districts d ON d.id = db.district_id
+       WHERE db.district_id = ? AND db.branding_status = 'PUBLISHED'`,
+      [districtId]
+    );
+    if (!row) return null;
+    return rowToBranding(row, row.name);
+  } catch {
+    return null;
+  }
+}
+
+// Returns null if there's no school, no branding anywhere in the chain, or
+// nothing published — every caller treats null the same way: show FNE
+// defaults. Resolution order: the school's own published branding first;
+// if it has none, fall back to its district's published branding (if the
+// school belongs to one); otherwise null. A school's own branding always
+// wins over its district's — the district sets a default, not a mandate.
 async function getPublishedBranding(schoolId) {
   if (!schoolId) return null;
   try {
@@ -176,29 +237,13 @@ async function getPublishedBranding(schoolId) {
        WHERE sb.school_id = ? AND sb.branding_status = 'PUBLISHED'`,
       [schoolId]
     );
-    if (!row) return null;
-
-    const primary = deriveColorSet(row.published_primary_color);
-    const secondary = deriveColorSet(row.published_secondary_color);
-    const accent = deriveColorSet(row.published_accent_color);
-
-    return {
-      schoolDisplayName: row.display_name || row.domain,
-      logoDisplayUrl: row.published_logo_display_url || null,
-      primaryColor: primary && primary.color,
-      primaryColorDark: primary && primary.dark,
-      primaryColorLight: primary && primary.light,
-      primaryTextColor: primary && primary.textColor,
-      secondaryColor: secondary && secondary.color,
-      secondaryColorDark: secondary && secondary.dark,
-      secondaryColorLight: secondary && secondary.light,
-      secondaryTextColor: secondary && secondary.textColor,
-      accentColor: accent && accent.color,
-      accentTextColor: accent && accent.textColor,
-    };
+    if (row) return rowToBranding(row, row.display_name || row.domain);
   } catch {
     return null;
   }
+
+  const districtId = await resolveDistrictIdForSchool(schoolId);
+  return getPublishedDistrictBranding(districtId);
 }
 
 module.exports = {
@@ -206,7 +251,9 @@ module.exports = {
   resolveSchoolIdForTeacher,
   resolveSchoolIdForClassroom,
   resolveSchoolIdForStudent,
+  resolveDistrictIdForSchool,
   getPublishedBranding,
+  getPublishedDistrictBranding,
   pickAccessibleTextColor,
   shiftLightness,
 };

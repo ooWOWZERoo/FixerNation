@@ -4,6 +4,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 > **Maintenance convention:** add a new release section at the top of this file every time a feature or fix is completed and deployed — see `CLAUDE.md` for the exact rule. Keep entries short and user/business-facing (what changed and why it matters), not a line-by-line diff.
 
+## Unreleased / Known pending work
+
+- **School-Level Branding follow-ups, coded and pushed but not yet deployed:**
+  - A real crop/reposition tool for school and district logos — drag/resize a crop box over the original upload, non-destructively (the original file is never touched; re-opening the tool always starts from it, and "Reset" returns to the full image).
+  - SVG logo uploads, sanitized server-side (DOMPurify + a same-origin-only href/xlink:href filter) then rasterized to the same PNG "display" copy every other format already produces — no consuming page needed any changes.
+  - A district-level branding hierarchy: districts can group schools and set a default logo/colors that a school inherits automatically unless it has published its own. Adds a new `district_admin` role (a third role on the existing site-user login, not a new session system — logs in through the same `/api/site-auth/login` school/teacher accounts already use) with its own two-page self-service portal (`district-admin-*.html`), plus a new FNE-admin `admin-districts.html` for creating districts, assigning schools, and inviting district admins.
+  - Needs `npm install` (new `dompurify`/`jsdom` dependencies), two new alter scripts (`alter-add-logo-crop-fields.js`, `alter-create-districts.js`), and a Node app restart before going live.
+
 ## Release 29 — 2026-08-23 — Proactive/outbound quoting + Quote Content Profiles
 
 - **Admins can now start a quote for a prospect who never asked for one.** A "+ New Quote" button on `admin-quotes.html` opens the exact same modal used to view/edit any quote — full pricing tabs, license tier, term, add-on seats, school domain, status, notes, content profile — just with the contact fields (name, email, school, phone) blank instead of pre-filled from an inbound request. Those contact fields are now editable on every quote, not just new ones, and saving/sending a not-yet-created quote transparently creates the underlying record first — no separate create-then-reopen step. Outbound quotes are tagged "Outbound" in the list so sales can tell them apart from inbound requests.
