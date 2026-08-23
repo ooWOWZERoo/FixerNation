@@ -131,7 +131,6 @@ Four of these (`trial_expired`, `school_license_expiring_soon`, `school_license_
 
 ## Known limitations
 
-- **Proactive/outbound quoting and Quote Content Profiles are coded but not yet deployed** — needs `server/scripts/alter-add-quote-content-profiles.js` run + `./deploy.sh`. See `CHANGELOG.md`'s Unreleased section.
 - **Stripe checkout isn't live** — every card-based path (cart, `licenses.html`, quote-accept card branch, membership subscriptions) throws at call time without real `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` configured (no graceful fallback, unlike `membership-plans.js`'s admin sync which does guard). Confirmed working end-to-end against Stripe **test-mode** keys via the e2e suite. PO checkout is the only guaranteed-live path with zero external config.
 - **ElevenLabs voice-over generation isn't live** — needs `ELEVENLABS_API_KEY` + a saved voice ID. Image generation and video assembly for Morning Boost are fully manual by design, not started.
 - **The consumer/service-provider/brand-ambassador membership system has zero live public checkout** — its three signup pages were removed from the site entirely on 2026-08-22 as out-of-scope leftovers from a different project (fixernation.org); the only surviving path onto a membership is an admin manual grant. `join.html`/`service-providers.html`/`brand-ambassador.html`/`books.html`/`my-memberships.html` and all consumer-book content were removed in the same cleanup — FNE today is teacher/school/curriculum-licensing focused, not a consumer bookstore or membership site.
