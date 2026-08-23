@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db/pool');
 const { requireSchoolAdmin, blockIfReadOnly, blockIfCannotRevoke } = require('../middleware/schoolAdminAuth');
+const { syncRoleToAssignments } = require('../lib/school-admin-roles');
 const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
@@ -719,8 +720,16 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
   const params = [purchaseId, 'registered'];
 
   if (statusFilter === 'inactive') {
-    where = 'WHERE ls.purchase_id = ? AND su.role = ?';
-    params.splice(0, params.length, purchaseId, 'inactive_teacher');
+    // license_seats.status is per-purchase — a teacher deactivated here can
+    // simultaneously hold a perfectly active seat at a different school.
+    // The old site_users.role = 'inactive_teacher' check this used to use
+    // was a GLOBAL column, so a teacher deactivated at School A would
+    // wrongly show as inactive here too, and reactivating them anywhere
+    // would wrongly make them disappear from a genuinely-inactive listing
+    // elsewhere. See the /deactivate and /reactivate routes below, which no
+    // longer touch that column at all for the same reason.
+    where = 'WHERE ls.purchase_id = ? AND ls.status = ?';
+    params.splice(0, params.length, purchaseId, 'inactive');
   }
   if (q) {
     where += ' AND (su.email LIKE ? OR su.first_name LIKE ? OR su.last_name LIKE ?)';
@@ -819,18 +828,14 @@ router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, async (req, r
   );
   if (!seat) return res.status(404).json({ error: 'Teacher not found under this school' });
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query("UPDATE license_seats SET status = 'inactive' WHERE id = ?", [seat.id]);
-    await conn.query("UPDATE site_users SET role = 'inactive_teacher' WHERE id = ?", [siteUserId]);
-    await conn.commit();
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  // license_seats.status is per-purchase, which is already the right scope
+  // for this action — deliberately NOT touching site_users.role (a global
+  // column) here anymore. It used to be set to 'inactive_teacher', which
+  // conflated a single school's deactivation with the person's entire
+  // account: a teacher deactivated at School A showed as deactivated at
+  // every other school they teach at too, since role has no per-purchase
+  // concept at all.
+  await pool.query("UPDATE license_seats SET status = 'inactive' WHERE id = ?", [seat.id]);
 
   await audit(pool, {
     actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
@@ -860,18 +865,9 @@ router.put('/teachers/:siteUserId/reactivate', requireSchoolAdmin, async (req, r
   );
   if (!seat) return res.status(404).json({ error: 'Inactive teacher not found under this school' });
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query("UPDATE license_seats SET status = 'registered' WHERE id = ?", [seat.id]);
-    await conn.query("UPDATE site_users SET role = 'teacher' WHERE id = ?", [siteUserId]);
-    await conn.commit();
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  // Same reasoning as /deactivate above — this only ever touches the
+  // per-purchase seat status, never the global site_users.role.
+  await pool.query("UPDATE license_seats SET status = 'registered' WHERE id = ?", [seat.id]);
 
   await audit(pool, {
     actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
@@ -921,10 +917,32 @@ router.delete('/teachers/:siteUserId', requireSchoolAdmin, async (req, res) => {
       conn.release();
     }
 
-    await pool.query(
-      'DELETE FROM school_license_admins WHERE site_user_id = ? AND purchase_id = ?',
+    // A "teacher" being removed here can ALSO independently hold a
+    // school_license_admins co-admin assignment on this same purchase
+    // (nothing stops one person holding both roles) — this used to hard-
+    // delete that assignment as a silent side effect, with none of the
+    // safeguards a real admin-rights removal gets elsewhere in this app: no
+    // remaining-assignment count check, no site_users.role revert, no audit
+    // entry for the rights loss specifically, and a hard delete instead of
+    // the soft is_active=0 pattern used everywhere else (unrecoverable via
+    // the existing reactivate tooling without recreating the row). A
+    // *primary* school admin could effectively strip a peer co-admin's
+    // rights this way — an action otherwise reserved for FNE super-admins
+    // (admin-school-admins.js). Now mirrors that same soft-delete + role-
+    // sync + explicit-audit pattern instead.
+    const [[coAdminAssignment]] = await pool.query(
+      'SELECT id FROM school_license_admins WHERE site_user_id = ? AND purchase_id = ? AND is_active = 1',
       [siteUserId, purchaseId]
     );
+    if (coAdminAssignment) {
+      await pool.query('UPDATE school_license_admins SET is_active = 0 WHERE id = ?', [coAdminAssignment.id]);
+      await syncRoleToAssignments(siteUserId);
+      await audit(pool, {
+        actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
+        actorEmail: req.schoolAdmin.email, action: 'co_admin_removed_via_teacher_removal',
+        entityType: 'school_license_admins', entityId: coAdminAssignment.id, purchaseId, reason, ipAddress: req.ip,
+      });
+    }
 
     await audit(pool, {
       actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,

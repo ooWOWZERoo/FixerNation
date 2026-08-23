@@ -6,6 +6,7 @@ const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { createToken } = require('../lib/site-tokens');
 const { sendSchoolAdminWelcomeEmail } = require('../lib/mailer');
+const { syncRoleToAssignments } = require('../lib/school-admin-roles');
 
 const router = express.Router();
 
@@ -203,15 +204,7 @@ router.delete('/:assignmentId', requireAuth, async (req, res) => {
   if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
 
   await pool.query('UPDATE school_license_admins SET is_active = 0 WHERE id = ?', [assignment.id]);
-
-  // If no remaining active assignments, revert user role to 'teacher'
-  const [[{ remaining }]] = await pool.query(
-    'SELECT COUNT(*) AS remaining FROM school_license_admins WHERE site_user_id = ? AND is_active = 1',
-    [assignment.site_user_id]
-  );
-  if (Number(remaining) === 0) {
-    await pool.query("UPDATE site_users SET role = 'teacher' WHERE id = ? AND role = 'school_license_admin'", [assignment.site_user_id]);
-  }
+  await syncRoleToAssignments(assignment.site_user_id);
 
   res.json({ ok: true });
 });
@@ -223,6 +216,9 @@ router.put('/:assignmentId', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Invalid permission level' });
   }
 
+  const [[existing]] = await pool.query('SELECT site_user_id FROM school_license_admins WHERE id = ?', [req.params.assignmentId]);
+  if (!existing) return res.status(404).json({ error: 'Assignment not found' });
+
   const updates = [];
   const params = [];
   if (permissionLevel) { updates.push('permission_level = ?'); params.push(permissionLevel); }
@@ -233,6 +229,8 @@ router.put('/:assignmentId', requireAuth, async (req, res) => {
   params.push(req.params.assignmentId);
   const [result] = await pool.query(`UPDATE school_license_admins SET ${updates.join(', ')} WHERE id = ?`, params);
   if (!result.affectedRows) return res.status(404).json({ error: 'Assignment not found' });
+
+  if (isActive !== undefined) await syncRoleToAssignments(existing.site_user_id);
 
   res.json({ ok: true });
 });
