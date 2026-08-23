@@ -9,3 +9,6 @@ server/.env
 # Sensitive one-off import data (real contact PII) — uploaded directly to the
 # server via cPanel File Manager, never committed to this (public) repo.
 server/scripts/data/
+
+# Playwright output when run from the repo root instead of tests/
+/test-results/
