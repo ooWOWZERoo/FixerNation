@@ -429,6 +429,12 @@ function openModal(id) {
     ${q.message ? `<div class="q-field"><div class="q-label">Message</div><div class="q-msg">${fnEscape(q.message)}</div></div>` : ''}
 
     <div class="q-field">
+      <label class="q-label" for="qSchoolDomain">School Email Domain</label>
+      <input type="text" id="qSchoolDomain" class="q-input" placeholder="e.g. lincolnhigh.edu" value="${fnEscape(q.quoted_school_domain || '')}">
+      <div class="a-note" style="margin-top:4px;">Verify this with the buyer. It's what lets teachers at this school self-register once the license is active. "${fnEscape(q.school || 'the school name above')}" is only a display name and can't be used for that.</div>
+    </div>
+
+    <div class="q-field">
       <label class="q-label" for="modalStatus">Status</label>
       <select id="modalStatus" class="a-filter-select" style="width:100%;">
         <option value="new"       ${q.status==='new'       ?'selected':''}>New</option>
@@ -743,14 +749,16 @@ function getQuotePayload() {
   }
   const validUntilEl = document.getElementById('qValidUntil');
   const quotedValidUntil = validUntilEl && validUntilEl.value ? validUntilEl.value : null;
-  return { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil };
+  const domainEl = document.getElementById('qSchoolDomain');
+  const quotedSchoolDomain = domainEl && domainEl.value.trim() ? domainEl.value.trim() : null;
+  return { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain };
 }
 
 async function saveModal() {
   if (!editingId) return;
   const status = document.getElementById('modalStatus').value;
   const notes  = document.getElementById('modalNotes').value;
-  const { productId, productName, tierName, addonSeats, termYears, seatCount, amountCents, quotedValidUntil } = getQuotePayload();
+  const { productId, productName, tierName, addonSeats, termYears, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain } = getQuotePayload();
 
   const body = { status, notes };
   if (productId   !== null) body.quotedProductId   = productId;
@@ -761,6 +769,7 @@ async function saveModal() {
   if (addonSeats   >    0)  body.quotedAddonSeats  = addonSeats;
   if (termYears    >    1)  body.quotedTermYears   = termYears;
   if (quotedValidUntil)     body.quotedValidUntil  = quotedValidUntil;
+  body.quotedSchoolDomain = quotedSchoolDomain;
 
   const r = await fetch(`/api/contact/quotes/${editingId}`, {
     method: 'PUT', credentials: 'include',
@@ -779,7 +788,7 @@ async function saveModal() {
 
 async function sendQuote() {
   if (!editingId) return;
-  const { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil } = getQuotePayload();
+  const { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain } = getQuotePayload();
   if (!productName) { fnToast('Select a license package first'); return; }
   if (!amountCents) { fnToast('Enter a dollar amount'); return; }
 
@@ -803,6 +812,7 @@ async function sendQuote() {
       quotedTermYears: termYears > 1 ? termYears : null,
       quotedDiscountPct: discountPct || null,
       quotedValidUntil: quotedValidUntil || null,
+      quotedSchoolDomain: quotedSchoolDomain,
     }),
   });
 

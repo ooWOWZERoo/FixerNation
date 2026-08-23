@@ -140,7 +140,8 @@ router.get('/quotes', requireAuth, async (req, res) => {
 
 router.put('/quotes/:id', requireAuth, async (req, res) => {
   const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
-          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedValidUntil } = req.body || {};
+          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedValidUntil,
+          quotedSchoolDomain } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
@@ -159,6 +160,7 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   if (quotedAddonSeats      !== undefined) { updates.push('quoted_addon_seats = ?');      params.push(quotedAddonSeats != null ? Number(quotedAddonSeats) : null); }
   if (quotedProrationFactor !== undefined) { updates.push('quoted_proration_factor = ?'); params.push(quotedProrationFactor != null ? Number(quotedProrationFactor) : null); }
   if (quotedTermYears       !== undefined) { updates.push('quoted_term_years = ?');       params.push(quotedTermYears != null ? Number(quotedTermYears) : null); }
+  if (quotedSchoolDomain    !== undefined) { updates.push('quoted_school_domain = ?');    params.push(quotedSchoolDomain ? quotedSchoolDomain.trim().replace(/^@/, '').toLowerCase() : null); }
 
   if (quotedValidUntil !== undefined) { updates.push('quote_valid_until = ?'); params.push(quotedValidUntil || null); }
 
@@ -179,10 +181,14 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   if (!quote) return res.status(404).json({ error: 'Not found' });
 
   const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
-          quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil } = req.body || {};
+          quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil,
+          quotedSchoolDomain } = req.body || {};
   if (!quotedAmountCents || !quotedProductName) {
     return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
   }
+  const schoolDomain = quotedSchoolDomain !== undefined
+    ? (quotedSchoolDomain ? quotedSchoolDomain.trim().replace(/^@/, '').toLowerCase() : null)
+    : (quote.quoted_school_domain || null);
 
   // Reuse existing token on re-send so existing links stay valid
   let acceptToken = quote.accept_token;
@@ -235,13 +241,14 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
          quoted_amount_cents = ?, quoted_at = NOW(), quote_sent_at = NOW(),
          status = IF(status = 'new', 'contacted', status),
          quoted_tier_name = ?, quoted_addon_seats = ?,
-         quoted_term_years = ?,
+         quoted_term_years = ?, quoted_school_domain = ?,
          quote_valid_until = COALESCE(?, quote_valid_until)
      WHERE id = ?`,
     [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents,
      quotedTierName || null,
      quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
      quotedTermYears != null ? Number(quotedTermYears) : null,
+     schoolDomain,
      validUntil || null,
      quote.id]
   );
@@ -273,8 +280,8 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
            (quote_number, first_name, last_name, email, school, phone, message,
             quoted_product_id, quoted_product_name, quoted_tier_name,
             quoted_seat_count, quoted_amount_cents, quoted_addon_seats,
-            quoted_term_years, quote_valid_until, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+            quoted_term_years, quoted_school_domain, quote_valid_until, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
         [
           generateQuoteNumber(),
           firstName, lastName, email, school, phone,
@@ -282,7 +289,7 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
           src.quoted_product_id || null, src.quoted_product_name || null,
           src.quoted_tier_name || null, src.quoted_seat_count || null,
           src.quoted_amount_cents || null, src.quoted_addon_seats || null,
-          src.quoted_term_years || null, src.quote_valid_until || null,
+          src.quoted_term_years || null, src.quoted_school_domain || null, src.quote_valid_until || null,
         ]
       );
       newId = result.insertId;

@@ -56,6 +56,24 @@ router.post('/accept', async (req, res) => {
   const status = quoteStatus(quote);
   if (status !== 'valid') return res.status(400).json({ error: status });
 
+  // Claim the quote atomically BEFORE creating anything, for the PO path —
+  // the read-then-write above has no lock between them, so two near-
+  // simultaneous requests (a double-click, a client retry after a slow
+  // response) could both pass the check above and each go on to create
+  // their own purchase, invoice, and quote_accepted email. The card path
+  // doesn't need this: it only ever creates a 'pending' purchase and a
+  // Stripe Checkout session here, and the webhook that actually grants
+  // access already re-checks `!qt.accepted_at` before doing anything
+  // (server/routes/checkout.js) — a duplicate request here just creates an
+  // extra abandoned session, not a duplicate real invoice.
+  if (paymentMethod === 'po') {
+    const [claimResult] = await pool.query(
+      "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
+      [quote.id]
+    );
+    if (claimResult.affectedRows === 0) return res.status(400).json({ error: 'already_accepted' });
+  }
+
   // Find or create the contact
   const [existingContact] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [quote.email]);
   let contactId;
@@ -72,38 +90,58 @@ router.post('/accept', async (req, res) => {
   // A quoted product (e.g. the 90-Day Classroom Pilot) can itself be a trial
   // tier — carry that over so an accepted trial quote actually expires like
   // any other trial purchase, instead of silently becoming a permanent license.
+  // Every real trial product is single-seat by design (mark-pilot-product-
+  // as-trial.js: "Pilot purchases are meant to be full ... access" for the
+  // buyer themselves) — checkout.js's self-service trial signup already
+  // forces productType:'single_license', seatCount:1 for exactly this reason:
+  // a group_license purchase only ever creates unassigned 'available' seats
+  // (no invited_email), and the account-registration auto-claim in
+  // createSetPasswordUrl only matches a 'pending' seat with a specific
+  // invited_email — an 'available' seat can never be claimed that way, so a
+  // trial quoted and accepted as a group_license left the buyer with an
+  // active purchase and zero actual content access. Also carries over
+  // conversionCreditCents (checkout.js's trial signup sets this to the
+  // trial product's own price so a later paid conversion isn't charged full
+  // price on top of what was already paid) — quote-accept never set this.
   let trialFields = {};
+  let isTrial = false;
   if (quote.quoted_product_id) {
     const [[lp]] = await pool.query(
-      'SELECT is_trial, trial_days, trial_lesson_limit FROM license_products WHERE id = ?',
+      'SELECT is_trial, trial_days, trial_lesson_limit, price_cents FROM license_products WHERE id = ?',
       [quote.quoted_product_id]
     );
     if (lp && lp.is_trial) {
+      isTrial = true;
       const trialExpirationDate = new Date();
       trialExpirationDate.setDate(trialExpirationDate.getDate() + (lp.trial_days || 90));
-      trialFields = { trialExpirationDate, trialLessonLimit: lp.trial_lesson_limit || null };
+      trialFields = {
+        trialExpirationDate,
+        trialLessonLimit: lp.trial_lesson_limit || null,
+        conversionCreditCents: lp.price_cents || null,
+      };
     }
   }
 
   const purchaseId = await createPurchase(contactId, {
-    productType: 'group_license',
+    productType: isTrial ? 'single_license' : 'group_license',
     licenseProductId: quote.quoted_product_id || null,
-    seatCount: quote.quoted_seat_count || 1,
+    seatCount: isTrial ? 1 : (quote.quoted_seat_count || 1),
     amountCents: quote.quoted_amount_cents || null,
     paymentMethod,
     paymentStatus: 'pending',
     source: 'quote',
-    schoolDomain: quote.school || null,
+    // quote.school is a free-text display name ("Lincoln Elementary"), not a
+    // real domain — using it here used to break self-service teacher
+    // registration outright (school-registration.js does an exact match on
+    // the registering teacher's real email domain). quoted_school_domain is
+    // the real domain the admin verifies with the buyer on the quote builder.
+    schoolDomain: quote.quoted_school_domain || null,
     quoteId: quote.id,
     ...trialFields,
   });
 
   if (paymentMethod === 'po') {
-    await pool.query(
-      "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ?",
-      [quote.id]
-    );
-
+    // accepted_at was already claimed above, before any of this ran.
     const connection = await pool.getConnection();
     let invoiceId;
     try {
