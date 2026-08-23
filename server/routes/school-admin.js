@@ -3,10 +3,11 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const sharp = require('sharp');
 const pool = require('../db/pool');
 const { requireSchoolAdmin, blockIfReadOnly, blockIfCannotRevoke } = require('../middleware/schoolAdminAuth');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
-const { resolveSchoolIdForPurchase, getPublishedBranding, processLogoUpload, LogoValidationError } = require('../lib/branding');
+const { resolveSchoolIdForPurchase, getPublishedBranding } = require('../lib/branding');
 const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
@@ -14,6 +15,9 @@ const {
 
 const router = express.Router();
 
+const LOGO_MIN_WIDTH = 200;
+const LOGO_MIN_HEIGHT = 100;
+const LOGO_MAX_DIMENSION = 6000;
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const logoUploadsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'school-logos');
 fs.mkdirSync(logoUploadsDir, { recursive: true });
@@ -22,12 +26,8 @@ const logoUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: LOGO_MAX_BYTES },
   fileFilter: (req, file, cb) => {
-    // The crop tool always uploads a rasterized PNG regardless of source
-    // format, but SVG is still accepted here defensively (in case that
-    // client-side step is ever bypassed) — processLogoUpload() rasterizes
-    // any SVG server-side too, so raw SVG markup is never stored/served.
-    if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.mimetype)) {
-      return cb(new Error('Logos must be a PNG, JPG, WebP, or SVG image.'));
+    if (!/^image\/(png|jpeg|webp)$/.test(file.mimetype)) {
+      return cb(new Error('Logos must be a PNG, JPG, or WebP image.'));
     }
     cb(null, true);
   },
@@ -1412,7 +1412,7 @@ router.get('/branding', requireSchoolAdmin, async (req, res) => {
   const schoolId = await resolveSchoolIdForPurchase(purchaseId);
   if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
 
-  const [[school]] = await pool.query('SELECT display_name, domain, district_id FROM schools WHERE id = ?', [schoolId]);
+  const [[school]] = await pool.query('SELECT display_name, domain FROM schools WHERE id = ?', [schoolId]);
   const [[row]] = await pool.query('SELECT * FROM school_branding WHERE school_id = ?', [schoolId]);
 
   const published = pickBranding(row, 'published');
@@ -1425,22 +1425,6 @@ router.get('/branding', requireSchoolAdmin, async (req, res) => {
     ? [...BRANDING_LOGO_FIELDS, ...BRANDING_COLOR_FIELDS].some(f => row[`draft_${f}`] != null && row[`draft_${f}`] !== row[`published_${f}`])
     : false;
 
-  // If this school has no published branding of its own, its district's
-  // published branding (if any) is what actually shows — surfaced here so
-  // the editor can tell the admin "resetting falls back to your district,
-  // not FNE default" instead of implying FNE default unconditionally.
-  let districtName = null;
-  let districtHasPublishedBranding = false;
-  if (school.district_id) {
-    const [[district]] = await pool.query('SELECT name FROM districts WHERE id = ?', [school.district_id]);
-    districtName = district ? district.name : null;
-    const [[districtBranding]] = await pool.query(
-      "SELECT 1 AS x FROM district_branding WHERE district_id = ? AND branding_status = 'PUBLISHED'",
-      [school.district_id]
-    );
-    districtHasPublishedBranding = !!districtBranding;
-  }
-
   res.json({
     schoolId,
     schoolDisplayName: school.display_name || school.domain,
@@ -1448,8 +1432,6 @@ router.get('/branding', requireSchoolAdmin, async (req, res) => {
     published,
     draft: draftForEditing,
     hasUnpublishedChanges,
-    districtName,
-    districtHasPublishedBranding,
   });
 });
 
@@ -1499,13 +1481,44 @@ router.post('/branding/logo', requireSchoolAdmin, (req, res, next) => {
   const schoolId = await resolveSchoolIdForPurchase(purchaseId);
   if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
 
-  let originalUrl, displayUrl;
+  let metadata;
   try {
-    ({ logoOriginalUrl: originalUrl, logoDisplayUrl: displayUrl } = await processLogoUpload(req.file.buffer, logoUploadsDir, `school-${schoolId}`));
+    metadata = await sharp(req.file.buffer).metadata();
+  } catch {
+    return res.status(400).json({ error: 'This file could not be read as a valid image. Please try a different file.' });
+  }
+
+  const { width, height } = metadata;
+  if (!width || !height) {
+    return res.status(400).json({ error: 'This file could not be read as a valid image. Please try a different file.' });
+  }
+  if (width < LOGO_MIN_WIDTH || height < LOGO_MIN_HEIGHT) {
+    return res.status(400).json({
+      error: `This image is ${width} × ${height} pixels. School logos must be at least ${LOGO_MIN_WIDTH} × ${LOGO_MIN_HEIGHT} pixels. Please upload a larger image.`,
+    });
+  }
+  if (width > LOGO_MAX_DIMENSION || height > LOGO_MAX_DIMENSION) {
+    return res.status(400).json({ error: `This image is too large (${width} × ${height} pixels). Please upload an image no larger than ${LOGO_MAX_DIMENSION} × ${LOGO_MAX_DIMENSION} pixels.` });
+  }
+
+  const ext = metadata.format === 'jpeg' ? 'jpg' : metadata.format;
+  const base = `${schoolId}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+  const originalFilename = `${base}-original.${ext}`;
+  const displayFilename = `${base}-display.png`;
+
+  try {
+    fs.writeFileSync(path.join(logoUploadsDir, originalFilename), req.file.buffer);
+    await sharp(req.file.buffer)
+      .resize({ width: 800, height: 400, fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toFile(path.join(logoUploadsDir, displayFilename));
   } catch (e) {
-    if (e instanceof LogoValidationError) return res.status(400).json({ error: e.message });
     return res.status(500).json({ error: 'Could not process this image. Please try again.' });
   }
+
+  const urlPrefix = process.env.UPLOADS_URL_PREFIX || '/uploads/';
+  const originalUrl = `${urlPrefix}school-logos/${originalFilename}`;
+  const displayUrl = `${urlPrefix}school-logos/${displayFilename}`;
 
   await pool.query(
     `INSERT INTO school_branding (school_id, draft_logo_original_url, draft_logo_display_url, branding_status, updated_by)
