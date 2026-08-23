@@ -72,6 +72,12 @@
   .copy-clear{background:none;border:none;cursor:pointer;color:var(--a-text-soft);font-size:15px;line-height:1;padding:0;}
   .copy-two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .copy-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
+  .pf-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--a-border);}
+  .pf-row:last-child{border-bottom:none;}
+  .pf-name{font-weight:600; font-size:14px; flex:1;}
+  .pf-actions{display:flex; gap:6px;}
+  .pf-actions button{font-size:12px; padding:5px 10px;}
+  .pf-empty{padding:16px 4px; color:var(--a-text-soft); font-size:13px;}
 </style>
 </head>
 <body>
@@ -112,6 +118,7 @@
         <div class="a-card-head">
           <h2>Quote Requests</h2>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button class="a-btn a-btn-primary" onclick="openNewQuoteModal()">+ New Quote</button>
             <input type="search" id="searchInput" class="q-search" placeholder="Search name, email, school…" oninput="applyFilters()">
             <select id="statusFilter" class="a-filter-select" onchange="applyFilters()">
               <option value="">All Statuses</option>
@@ -145,29 +152,11 @@
 
       <div class="a-card" style="margin-top:24px;">
         <div class="a-card-head">
-          <h2>Quote Email Content Sections</h2>
+          <h2>Quote Content Profiles</h2>
+          <button class="a-btn a-btn-outline" onclick="openProfileModal(null)">+ New Profile</button>
         </div>
-        <p class="a-note" style="margin-bottom:20px;">These sections appear at the bottom of every quote email. Use the toolbar to format text. Leave a section blank to omit it from the email.</p>
-        <div class="q-field">
-          <label class="q-label">What Every Annual License Includes</label>
-          <div class="q-editor-wrap"><div id="qsAnnualIncludes"></div></div>
-        </div>
-        <div class="q-field">
-          <label class="q-label">A Complete Lesson Package Contains</label>
-          <div class="q-editor-wrap"><div id="qsLessonPackage"></div></div>
-        </div>
-        <div class="q-field">
-          <label class="q-label">Video Access and Reasonable Use</label>
-          <div class="q-editor-wrap"><div id="qsVideoAccess"></div></div>
-        </div>
-        <div class="q-field">
-          <label class="q-label">License, Download, and School-Year Terms</label>
-          <div class="q-editor-wrap"><div id="qsLicenseTerms"></div></div>
-        </div>
-        <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
-          <button class="a-btn a-btn-primary" onclick="saveContentSections()">Save Content Sections</button>
-          <span id="qsSaveMsg" style="font-size:13px; color:var(--a-success,#16a34a); display:none;">Saved</span>
-        </div>
+        <p class="a-note" style="margin-bottom:16px;">Each profile is a named, reusable set of the 4 boilerplate sections appended to the bottom of a quote email (e.g. "Standard" vs. "30 Days Free Trial"). Every quote picks one when it's built — editing a profile here updates every quote using it, including on resend.</p>
+        <div id="profilesList"></div>
       </div>
 
     </div>
@@ -244,6 +233,86 @@
   </div>
 </div>
 
+<!-- New Quote modal — admin-initiated outreach, no inbound request needed -->
+<div class="a-modal-overlay" id="newQuoteModalOverlay" style="display:none;" onclick="if(event.target===this)closeNewQuoteModal()">
+  <div class="a-modal" style="max-width:480px;">
+    <div class="a-modal-head">
+      <h3>New Quote</h3>
+      <button class="a-modal-close" onclick="closeNewQuoteModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <p class="a-note" style="margin-bottom:16px;">Start a quote for a prospect who hasn't asked for one — enter their info, then continue into the same builder used for every other quote.</p>
+      <div class="q-row">
+        <div class="q-field">
+          <label class="q-label">First name</label>
+          <input type="text" class="q-input" id="nqFirstName" placeholder="First name">
+        </div>
+        <div class="q-field">
+          <label class="q-label">Last name</label>
+          <input type="text" class="q-input" id="nqLastName" placeholder="Last name">
+        </div>
+      </div>
+      <div class="q-field">
+        <label class="q-label">Email</label>
+        <input type="email" class="q-input" id="nqEmail" placeholder="email@school.org">
+      </div>
+      <div class="q-field">
+        <label class="q-label">School / Organization</label>
+        <input type="text" class="q-input" id="nqSchool" placeholder="School name">
+      </div>
+      <div class="q-field">
+        <label class="q-label">Phone</label>
+        <input type="tel" class="q-input" id="nqPhone" placeholder="(xxx) xxx-xxxx">
+      </div>
+      <div class="q-field">
+        <label class="q-label">Content Profile</label>
+        <select id="nqContentProfile" class="a-filter-select" style="width:100%;"></select>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeNewQuoteModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="createQuoteBtn" onclick="submitNewQuote()">Create Quote</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quote Content Profile modal — create/edit a named set of the 4 email sections -->
+<div class="a-modal-overlay" id="profileModalOverlay" style="display:none;" onclick="if(event.target===this)closeProfileModal()">
+  <div class="a-modal" style="max-width:620px;">
+    <div class="a-modal-head">
+      <h3 id="profileModalTitle">New Content Profile</h3>
+      <button class="a-modal-close" onclick="closeProfileModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="q-field">
+        <label class="q-label">Profile Name</label>
+        <input type="text" class="q-input" id="pfName" placeholder="e.g. 30 Days Free Trial">
+      </div>
+      <div class="q-field">
+        <label class="q-label">What Every Annual License Includes</label>
+        <div class="q-editor-wrap"><div id="qsAnnualIncludes"></div></div>
+      </div>
+      <div class="q-field">
+        <label class="q-label">A Complete Lesson Package Contains</label>
+        <div class="q-editor-wrap"><div id="qsLessonPackage"></div></div>
+      </div>
+      <div class="q-field">
+        <label class="q-label">Video Access and Reasonable Use</label>
+        <div class="q-editor-wrap"><div id="qsVideoAccess"></div></div>
+      </div>
+      <div class="q-field">
+        <label class="q-label">License, Download, and School-Year Terms</label>
+        <div class="q-editor-wrap"><div id="qsLicenseTerms"></div></div>
+      </div>
+      <p class="a-note">Leave a section blank to omit it from the email.</p>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeProfileModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="saveProfileModal()">Save Profile</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script src="admin-common.js?v=15"></script>
 <script>
@@ -258,8 +327,11 @@ let copySelectedCrm  = null;
 let crmSearchResults = [];
 let crmSearchTimer   = null;
 let copyMode         = 'search';
-let quoteSettings = { fromEmail: '', twoYrPct: 5, threeYrPct: 8 };
-let richEditors   = {};
+let quoteSettings   = { fromEmail: '', twoYrPct: 5, threeYrPct: 8 };
+let richEditors     = {};
+let richEditorsInit  = false;
+let quoteProfiles    = [];
+let editingProfileId = null;
 
 const QUILL_TOOLBAR = [
   ['bold', 'italic', 'underline'],
@@ -268,12 +340,14 @@ const QUILL_TOOLBAR = [
   ['clean'],
 ];
 
-function initRichEditors() {
+function ensureRichEditorsInit() {
+  if (richEditorsInit) return;
   ['AnnualIncludes', 'LessonPackage', 'VideoAccess', 'LicenseTerms'].forEach(key => {
     const el = document.getElementById('qs' + key);
     if (!el) return;
     richEditors[key] = new Quill(el, { theme: 'snow', modules: { toolbar: QUILL_TOOLBAR }, placeholder: 'Start typing…' });
   });
+  richEditorsInit = true;
 }
 
 function getEditorContent(key) {
@@ -283,14 +357,33 @@ function getEditorContent(key) {
   return html === '<p><br></p>' ? '' : html;
 }
 
+function setEditorContent(key, html) {
+  const q = richEditors[key];
+  if (!q) return;
+  q.setText('');
+  if (html) q.clipboard.dangerouslyPasteHTML(html);
+}
+
+function defaultProfileId() {
+  const def = quoteProfiles.find(p => p.is_default);
+  return def ? def.id : (quoteProfiles[0] ? quoteProfiles[0].id : null);
+}
+
+function profileSelectOptions(selectedId) {
+  return quoteProfiles.map(p =>
+    `<option value="${p.id}" ${Number(selectedId) === p.id ? 'selected' : ''}>${fnEscape(p.name)}${p.is_default ? ' (Default)' : ''}</option>`
+  ).join('');
+}
+
 const STATUS_LABELS  = { new: 'New', contacted: 'Contacted', converted: 'Converted', closed: 'Closed' };
 const STATUS_CLASSES = { new: 'a-pill-neutral', contacted: 'a-pill-info', converted: 'a-pill-success', closed: 'a-pill-danger' };
 
 async function init() {
-  const [qRes, lpRes, sRes] = await Promise.all([
+  const [qRes, lpRes, sRes, pfRes] = await Promise.all([
     fetch('/api/contact/quotes', { credentials: 'include' }),
     fetch('/api/license-products?all=true', { credentials: 'include' }),
     fetch('/api/settings/quote', { credentials: 'include' }),
+    fetch('/api/contact/quote-profiles', { credentials: 'include' }),
   ]);
   if (fnHandleUnauthorized(qRes)) return;
   if (!qRes.ok) { fnToast('Could not load quotes'); return; }
@@ -299,11 +392,9 @@ async function init() {
   if (sRes.ok) {
     const sd = await sRes.json();
     quoteSettings = { fromEmail: sd.fromEmail || '', twoYrPct: Number(sd.twoYrDiscountPct) || 5, threeYrPct: Number(sd.threeYrDiscountPct) || 8 };
-    if (sd.sectionAnnualIncludes && richEditors.AnnualIncludes) richEditors.AnnualIncludes.clipboard.dangerouslyPasteHTML(sd.sectionAnnualIncludes);
-    if (sd.sectionLessonPackage  && richEditors.LessonPackage)  richEditors.LessonPackage.clipboard.dangerouslyPasteHTML(sd.sectionLessonPackage);
-    if (sd.sectionVideoAccess    && richEditors.VideoAccess)    richEditors.VideoAccess.clipboard.dangerouslyPasteHTML(sd.sectionVideoAccess);
-    if (sd.sectionLicenseTerms   && richEditors.LicenseTerms)   richEditors.LicenseTerms.clipboard.dangerouslyPasteHTML(sd.sectionLicenseTerms);
   }
+  quoteProfiles = pfRes.ok ? ((await pfRes.json()).profiles || []) : [];
+  renderProfilesList();
   updateStats();
   renderTable(allQuotes);
   window.scrollTo(0, 0);
@@ -371,7 +462,7 @@ function renderTable(quotes) {
     tr.innerHTML = `
       <td style="white-space:nowrap;font-family:monospace;font-size:12px;">${q.quote_number ? '#' + fnEscape(q.quote_number) : '—'}</td>
       <td style="white-space:nowrap;">${fnFormatDate(q.created_at)}</td>
-      <td class="a-cell-title">${fnEscape(fullName)}</td>
+      <td class="a-cell-title">${fnEscape(fullName)}${q.origin === 'admin' ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Outbound</span>' : ''}</td>
       <td class="q-school-cell">${fnEscape(q.school || '—')}</td>
       <td><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></td>
       <td>${quoted}</td>
@@ -446,6 +537,11 @@ function openModal(id) {
     <div class="q-field">
       <label class="q-label" for="modalNotes">Internal Notes</label>
       <textarea id="modalNotes" class="q-notes">${fnEscape(q.notes || '')}</textarea>
+    </div>
+    <div class="q-field">
+      <label class="q-label" for="qContentProfile">Quote Content Profile</label>
+      <select id="qContentProfile" class="a-filter-select" style="width:100%;">${profileSelectOptions(q.content_profile_id || defaultProfileId())}</select>
+      <div class="a-note" style="margin-top:4px;">Controls the boilerplate sections appended to the bottom of this quote's email.</div>
     </div>
 
     <hr class="q-section-divider">
@@ -770,6 +866,8 @@ async function saveModal() {
   if (termYears    >    1)  body.quotedTermYears   = termYears;
   if (quotedValidUntil)     body.quotedValidUntil  = quotedValidUntil;
   body.quotedSchoolDomain = quotedSchoolDomain;
+  const profileEl = document.getElementById('qContentProfile');
+  if (profileEl) body.contentProfileId = Number(profileEl.value) || null;
 
   const r = await fetch(`/api/contact/quotes/${editingId}`, {
     method: 'PUT', credentials: 'include',
@@ -799,6 +897,7 @@ async function sendQuote() {
   const status = document.getElementById('modalStatus').value;
   const notes  = document.getElementById('modalNotes').value;
 
+  const profileEl = document.getElementById('qContentProfile');
   const r = await fetch(`/api/contact/quotes/${editingId}/send`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -813,6 +912,7 @@ async function sendQuote() {
       quotedDiscountPct: discountPct || null,
       quotedValidUntil: quotedValidUntil || null,
       quotedSchoolDomain: quotedSchoolDomain,
+      contentProfileId: profileEl ? (Number(profileEl.value) || null) : null,
     }),
   });
 
@@ -846,21 +946,139 @@ async function sendQuote() {
   fnToast('Quote sent');
 }
 
-async function saveContentSections() {
-  const r = await fetch('/api/settings/quote', {
-    method: 'PUT', credentials: 'include',
+function renderProfilesList() {
+  const el = document.getElementById('profilesList');
+  if (!quoteProfiles.length) {
+    el.innerHTML = '<div class="pf-empty">No content profiles yet — click "+ New Profile" to create one (e.g. "Standard" or "30 Days Free Trial").</div>';
+    return;
+  }
+  el.innerHTML = quoteProfiles.map(p => `
+    <div class="pf-row">
+      <span class="pf-name">${fnEscape(p.name)}</span>
+      ${p.is_default ? '<span class="a-pill a-pill-success" style="font-size:11px;">Default</span>' : ''}
+      <div class="pf-actions">
+        <button class="a-btn a-btn-outline" onclick="openProfileModal(${p.id})">Edit</button>
+        ${!p.is_default ? `<button class="a-btn a-btn-outline" onclick="setDefaultProfile(${p.id})">Set Default</button>` : ''}
+        ${!p.is_default ? `<button class="a-btn a-btn-outline" onclick="deleteProfile(${p.id})">Delete</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openProfileModal(id) {
+  ensureRichEditorsInit();
+  editingProfileId = id;
+  const profile = id ? quoteProfiles.find(p => p.id === id) : null;
+  document.getElementById('profileModalTitle').textContent = profile ? 'Edit Content Profile' : 'New Content Profile';
+  document.getElementById('pfName').value = profile ? profile.name : '';
+  setEditorContent('AnnualIncludes', profile ? profile.section_annual_includes : '');
+  setEditorContent('LessonPackage',  profile ? profile.section_lesson_package  : '');
+  setEditorContent('VideoAccess',    profile ? profile.section_video_access    : '');
+  setEditorContent('LicenseTerms',   profile ? profile.section_license_terms  : '');
+  document.getElementById('profileModalOverlay').style.display = 'flex';
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModalOverlay').style.display = 'none';
+  editingProfileId = null;
+}
+
+async function saveProfileModal() {
+  const name = document.getElementById('pfName').value.trim();
+  if (!name) { fnToast('Name is required'); return; }
+  const body = {
+    name,
+    sectionAnnualIncludes: getEditorContent('AnnualIncludes'),
+    sectionLessonPackage:  getEditorContent('LessonPackage'),
+    sectionVideoAccess:    getEditorContent('VideoAccess'),
+    sectionLicenseTerms:   getEditorContent('LicenseTerms'),
+  };
+  const url    = editingProfileId ? `/api/contact/quote-profiles/${editingProfileId}` : '/api/contact/quote-profiles';
+  const method = editingProfileId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method, credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sectionAnnualIncludes: getEditorContent('AnnualIncludes'),
-      sectionLessonPackage:  getEditorContent('LessonPackage'),
-      sectionVideoAccess:    getEditorContent('VideoAccess'),
-      sectionLicenseTerms:   getEditorContent('LicenseTerms'),
-    }),
+    body: JSON.stringify(body),
   });
-  if (!r.ok) { fnToast('Could not save sections'); return; }
-  const msg = document.getElementById('qsSaveMsg');
-  msg.style.display = '';
-  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+  if (!r.ok) {
+    let msg = 'Could not save profile';
+    try { const d = await r.json(); msg = d.error || msg; } catch (_) {}
+    fnToast(msg);
+    return;
+  }
+  closeProfileModal();
+  await init();
+  fnToast('Profile saved');
+}
+
+async function setDefaultProfile(id) {
+  const r = await fetch(`/api/contact/quote-profiles/${id}/set-default`, { method: 'POST', credentials: 'include' });
+  if (!r.ok) { fnToast('Could not set default'); return; }
+  await init();
+  fnToast('Default profile updated');
+}
+
+async function deleteProfile(id) {
+  const profile = quoteProfiles.find(p => p.id === id);
+  const inUse = allQuotes.filter(q => q.content_profile_id === id).length;
+  const warn = inUse
+    ? `Delete "${profile ? profile.name : 'this profile'}"? ${inUse} quote${inUse !== 1 ? 's' : ''} using it will be reassigned to the default profile.`
+    : `Delete "${profile ? profile.name : 'this profile'}"?`;
+  if (!confirm(warn)) return;
+  const r = await fetch(`/api/contact/quote-profiles/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!r.ok) {
+    let msg = 'Could not delete profile';
+    try { const d = await r.json(); msg = d.error || msg; } catch (_) {}
+    fnToast(msg);
+    return;
+  }
+  await init();
+  fnToast('Profile deleted');
+}
+
+function openNewQuoteModal() {
+  document.getElementById('nqFirstName').value = '';
+  document.getElementById('nqLastName').value  = '';
+  document.getElementById('nqEmail').value     = '';
+  document.getElementById('nqSchool').value    = '';
+  document.getElementById('nqPhone').value     = '';
+  document.getElementById('nqContentProfile').innerHTML = profileSelectOptions(defaultProfileId());
+  document.getElementById('newQuoteModalOverlay').style.display = 'flex';
+}
+
+function closeNewQuoteModal() {
+  document.getElementById('newQuoteModalOverlay').style.display = 'none';
+}
+
+async function submitNewQuote() {
+  const firstName = document.getElementById('nqFirstName').value.trim();
+  const lastName  = document.getElementById('nqLastName').value.trim();
+  const email     = document.getElementById('nqEmail').value.trim();
+  const school    = document.getElementById('nqSchool').value.trim();
+  const phone     = document.getElementById('nqPhone').value.trim();
+  const contentProfileId = Number(document.getElementById('nqContentProfile').value) || null;
+  if (!email) { fnToast('Email is required'); return; }
+
+  const btn = document.getElementById('createQuoteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  try {
+    const r = await fetch('/api/contact/quotes', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, school, phone, contentProfileId }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Could not create quote');
+    closeNewQuoteModal();
+    await init();
+    openModal(data.quote.id);
+  } catch (err) {
+    fnToast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Quote';
+  }
 }
 
 function fnEscape(s) {
@@ -1029,7 +1247,6 @@ async function confirmCopy() {
   }
 }
 
-initRichEditors();
 init();
 </script>
 

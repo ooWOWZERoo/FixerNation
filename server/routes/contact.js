@@ -46,16 +46,23 @@ function generateQuoteNumber() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+async function getDefaultContentProfileId() {
+  const [[row]] = await pool.query('SELECT id FROM quote_content_profiles WHERE is_default = 1 LIMIT 1');
+  return row ? row.id : null;
+}
+
 router.post('/quote', async (req, res) => {
   const { firstName, lastName, email, school, phone, message } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  const defaultProfileId = await getDefaultContentProfileId();
 
   let inserted = false;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       await pool.query(
-        'INSERT INTO quote_requests (quote_number, first_name, last_name, email, school, phone, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [generateQuoteNumber(), firstName || '', lastName || '', email, school || '', phone || '', message || '']
+        'INSERT INTO quote_requests (quote_number, first_name, last_name, email, school, phone, message, content_profile_id, origin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [generateQuoteNumber(), firstName || '', lastName || '', email, school || '', phone || '', message || '', defaultProfileId, 'inbound']
       );
       inserted = true;
       break;
@@ -118,6 +125,163 @@ router.post('/privacy-request', async (req, res) => {
 
 const VALID_STATUSES = ['new', 'contacted', 'converted', 'closed'];
 
+// POST /api/contact/quotes — admin-initiated quote (proactive outreach), as
+// opposed to /quote above, which only ever fires from the public inquiry
+// form. Creates a bare quote_requests row from scratch (no pricing yet) so
+// it can drop straight into the exact same build/price/send flow as any
+// inbound quote.
+router.post('/quotes', requireAuth, async (req, res) => {
+  const { firstName, lastName, email, school, phone, message, contentProfileId } = req.body || {};
+  const trimmedEmail = (email || '').trim();
+  if (!trimmedEmail) return res.status(400).json({ error: 'Email is required' });
+
+  let profileId = contentProfileId != null ? Number(contentProfileId) : null;
+  if (profileId != null) {
+    const [[profile]] = await pool.query('SELECT id FROM quote_content_profiles WHERE id = ?', [profileId]);
+    if (!profile) return res.status(400).json({ error: 'Content profile not found' });
+  } else {
+    profileId = await getDefaultContentProfileId();
+  }
+
+  let newId = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const [result] = await pool.query(
+        `INSERT INTO quote_requests
+           (quote_number, first_name, last_name, email, school, phone, message, content_profile_id, origin, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'admin', 'new')`,
+        [generateQuoteNumber(), (firstName || '').trim(), (lastName || '').trim(), trimmedEmail,
+         (school || '').trim() || null, (phone || '').trim() || null, (message || '').trim() || null, profileId]
+      );
+      newId = result.insertId;
+      break;
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY' && attempt < 4) continue;
+      throw err;
+    }
+  }
+  if (!newId) throw new Error('Could not generate unique quote number');
+
+  await pool.query(
+    `INSERT INTO newsletter_contacts (name, email, company, source, status)
+     VALUES (?, ?, ?, 'Sales Outreach', 'Subscribed')
+     ON DUPLICATE KEY UPDATE
+       name    = IF(name    = '' OR name    IS NULL, VALUES(name),    name),
+       company = IF(company = '' OR company IS NULL, VALUES(company), company)`,
+    [`${firstName || ''} ${lastName || ''}`.trim() || trimmedEmail, trimmedEmail, school || null]
+  );
+
+  const [[created]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [newId]);
+  res.status(201).json({ ok: true, quote: created });
+});
+
+// --- Quote content profiles -------------------------------------------------
+// Named, reusable sets of the 4 boilerplate sections appended to every quote
+// email (e.g. "Standard" vs. "30 Days Free Trial") — see admin-quotes.html's
+// "Quote Content Profiles" card. A quote always references one by id
+// (content_profile_id); the email always renders whatever that profile's
+// CURRENT content is (live reference, not a snapshot), matching how this
+// content worked before profiles existed (a single global, always-live set).
+
+router.get('/quote-profiles', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM quote_content_profiles ORDER BY is_default DESC, name ASC');
+  res.json({ profiles: rows });
+});
+
+router.post('/quote-profiles', requireAuth, async (req, res) => {
+  const { name, sectionAnnualIncludes, sectionLessonPackage, sectionVideoAccess, sectionLicenseTerms } = req.body || {};
+  const trimmedName = (name || '').trim();
+  if (!trimmedName) return res.status(400).json({ error: 'Name is required' });
+
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO quote_content_profiles
+         (name, section_annual_includes, section_lesson_package, section_video_access, section_license_terms)
+       VALUES (?, ?, ?, ?, ?)`,
+      [trimmedName, sectionAnnualIncludes || '', sectionLessonPackage || '', sectionVideoAccess || '', sectionLicenseTerms || '']
+    );
+    const [[created]] = await pool.query('SELECT * FROM quote_content_profiles WHERE id = ?', [result.insertId]);
+    res.status(201).json({ ok: true, profile: created });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'A profile with that name already exists' });
+    throw err;
+  }
+});
+
+router.put('/quote-profiles/:id', requireAuth, async (req, res) => {
+  const [[existing]] = await pool.query('SELECT id FROM quote_content_profiles WHERE id = ?', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+
+  const { name, sectionAnnualIncludes, sectionLessonPackage, sectionVideoAccess, sectionLicenseTerms } = req.body || {};
+  const updates = [];
+  const params = [];
+  if (name !== undefined) {
+    const trimmedName = (name || '').trim();
+    if (!trimmedName) return res.status(400).json({ error: 'Name is required' });
+    updates.push('name = ?'); params.push(trimmedName);
+  }
+  if (sectionAnnualIncludes !== undefined) { updates.push('section_annual_includes = ?'); params.push(sectionAnnualIncludes || ''); }
+  if (sectionLessonPackage  !== undefined) { updates.push('section_lesson_package = ?');  params.push(sectionLessonPackage  || ''); }
+  if (sectionVideoAccess    !== undefined) { updates.push('section_video_access = ?');    params.push(sectionVideoAccess    || ''); }
+  if (sectionLicenseTerms   !== undefined) { updates.push('section_license_terms = ?');   params.push(sectionLicenseTerms   || ''); }
+  if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
+
+  params.push(req.params.id);
+  try {
+    await pool.query(`UPDATE quote_content_profiles SET ${updates.join(', ')} WHERE id = ?`, params);
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'A profile with that name already exists' });
+    throw err;
+  }
+  const [[updated]] = await pool.query('SELECT * FROM quote_content_profiles WHERE id = ?', [req.params.id]);
+  res.json({ ok: true, profile: updated });
+});
+
+router.post('/quote-profiles/:id/set-default', requireAuth, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const [[existing]] = await conn.query('SELECT id FROM quote_content_profiles WHERE id = ?', [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    await conn.beginTransaction();
+    await conn.query('UPDATE quote_content_profiles SET is_default = 0');
+    await conn.query('UPDATE quote_content_profiles SET is_default = 1 WHERE id = ?', [req.params.id]);
+    await conn.commit();
+    res.json({ ok: true });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
+
+router.delete('/quote-profiles/:id', requireAuth, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const [[target]] = await conn.query('SELECT id, is_default FROM quote_content_profiles WHERE id = ?', [req.params.id]);
+    if (!target) return res.status(404).json({ error: 'Not found' });
+    if (target.is_default) {
+      return res.status(400).json({ error: 'Set another profile as default before deleting this one' });
+    }
+    const [[def]] = await conn.query('SELECT id FROM quote_content_profiles WHERE is_default = 1 LIMIT 1');
+    if (!def) return res.status(400).json({ error: 'No default profile exists to reassign affected quotes to' });
+
+    await conn.beginTransaction();
+    const [reassigned] = await conn.query(
+      'UPDATE quote_requests SET content_profile_id = ? WHERE content_profile_id = ?',
+      [def.id, req.params.id]
+    );
+    await conn.query('DELETE FROM quote_content_profiles WHERE id = ?', [req.params.id]);
+    await conn.commit();
+    res.json({ ok: true, reassignedQuotes: reassigned.affectedRows });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
+
 router.get('/quotes', requireAuth, async (req, res) => {
   const { status, search } = req.query;
   let sql = 'SELECT * FROM quote_requests WHERE 1=1';
@@ -141,12 +305,17 @@ router.get('/quotes', requireAuth, async (req, res) => {
 router.put('/quotes/:id', requireAuth, async (req, res) => {
   const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
           quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedValidUntil,
-          quotedSchoolDomain } = req.body || {};
+          quotedSchoolDomain, contentProfileId } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
   const [existing] = await pool.query('SELECT id FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!existing.length) return res.status(404).json({ error: 'Not found' });
+
+  if (contentProfileId !== undefined && contentProfileId !== null) {
+    const [[profile]] = await pool.query('SELECT id FROM quote_content_profiles WHERE id = ?', [contentProfileId]);
+    if (!profile) return res.status(400).json({ error: 'Content profile not found' });
+  }
 
   const updates = [];
   const params = [];
@@ -161,6 +330,7 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   if (quotedProrationFactor !== undefined) { updates.push('quoted_proration_factor = ?'); params.push(quotedProrationFactor != null ? Number(quotedProrationFactor) : null); }
   if (quotedTermYears       !== undefined) { updates.push('quoted_term_years = ?');       params.push(quotedTermYears != null ? Number(quotedTermYears) : null); }
   if (quotedSchoolDomain    !== undefined) { updates.push('quoted_school_domain = ?');    params.push(quotedSchoolDomain ? quotedSchoolDomain.trim().replace(/^@/, '').toLowerCase() : null); }
+  if (contentProfileId      !== undefined) { updates.push('content_profile_id = ?');      params.push(contentProfileId || null); }
 
   if (quotedValidUntil !== undefined) { updates.push('quote_valid_until = ?'); params.push(quotedValidUntil || null); }
 
@@ -182,13 +352,27 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
 
   const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
           quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil,
-          quotedSchoolDomain } = req.body || {};
+          quotedSchoolDomain, contentProfileId } = req.body || {};
   if (!quotedAmountCents || !quotedProductName) {
     return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
   }
   const schoolDomain = quotedSchoolDomain !== undefined
     ? (quotedSchoolDomain ? quotedSchoolDomain.trim().replace(/^@/, '').toLowerCase() : null)
     : (quote.quoted_school_domain || null);
+
+  // Resolve which content profile to render — an explicit override in this
+  // request, else whatever the quote already has, else the default. Always
+  // rendered from the profile's CURRENT content (live reference), never a
+  // snapshot, so editing a profile later updates every quote using it,
+  // including on resend.
+  let profileId = contentProfileId !== undefined ? contentProfileId : quote.content_profile_id;
+  if (!profileId) profileId = await getDefaultContentProfileId();
+  const [[profile]] = profileId
+    ? await pool.query('SELECT * FROM quote_content_profiles WHERE id = ?', [profileId])
+    : [[null]];
+  if (contentProfileId !== undefined && contentProfileId && !profile) {
+    return res.status(400).json({ error: 'Content profile not found' });
+  }
 
   // Reuse existing token on re-send so existing links stay valid
   let acceptToken = quote.accept_token;
@@ -200,13 +384,9 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   const siteUrl = process.env.SITE_URL || '';
   const acceptUrl = `${siteUrl}/accept-quote.html?token=${acceptToken}`;
 
-  const [replyTo, fromEmail, s1, s2, s3, s4] = await Promise.all([
+  const [replyTo, fromEmail] = await Promise.all([
     getSetting('contact_email_quote'),
     getSetting('quote_from_email'),
-    getSetting('quote_section_annual_includes'),
-    getSetting('quote_section_lesson_package'),
-    getSetting('quote_section_video_access'),
-    getSetting('quote_section_license_terms'),
   ]);
 
   const validUntil = quotedValidUntil || (quote.quote_valid_until ? String(quote.quote_valid_until).slice(0, 10) : null);
@@ -228,10 +408,10 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
     quoteValidUntil: validUntil,
     acceptUrl,
     contentSections: {
-      annualIncludes: s1 || '',
-      lessonPackage:  s2 || '',
-      videoAccess:    s3 || '',
-      licenseTerms:   s4 || '',
+      annualIncludes: (profile && profile.section_annual_includes) || '',
+      lessonPackage:  (profile && profile.section_lesson_package)  || '',
+      videoAccess:    (profile && profile.section_video_access)    || '',
+      licenseTerms:   (profile && profile.section_license_terms)   || '',
     },
   });
 
@@ -242,7 +422,8 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
          status = IF(status = 'new', 'contacted', status),
          quoted_tier_name = ?, quoted_addon_seats = ?,
          quoted_term_years = ?, quoted_school_domain = ?,
-         quote_valid_until = COALESCE(?, quote_valid_until)
+         quote_valid_until = COALESCE(?, quote_valid_until),
+         content_profile_id = ?
      WHERE id = ?`,
     [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents,
      quotedTierName || null,
@@ -250,6 +431,7 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
      quotedTermYears != null ? Number(quotedTermYears) : null,
      schoolDomain,
      validUntil || null,
+     profile ? profile.id : null,
      quote.id]
   );
 
@@ -280,8 +462,8 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
            (quote_number, first_name, last_name, email, school, phone, message,
             quoted_product_id, quoted_product_name, quoted_tier_name,
             quoted_seat_count, quoted_amount_cents, quoted_addon_seats,
-            quoted_term_years, quoted_school_domain, quote_valid_until, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+            quoted_term_years, quoted_school_domain, quote_valid_until, content_profile_id, origin, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin', 'new')`,
         [
           generateQuoteNumber(),
           firstName, lastName, email, school, phone,
@@ -290,6 +472,7 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
           src.quoted_tier_name || null, src.quoted_seat_count || null,
           src.quoted_amount_cents || null, src.quoted_addon_seats || null,
           src.quoted_term_years || null, src.quoted_school_domain || null, src.quote_valid_until || null,
+          src.content_profile_id || null,
         ]
       );
       newId = result.insertId;

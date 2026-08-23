@@ -63,23 +63,15 @@ router.put('/invoice-branding', requireAuth, async (req, res) => {
 });
 
 router.get('/quote', requireAuth, async (req, res) => {
-  const [fromEmail, twoYrPct, threeYrPct, s1, s2, s3, s4] = await Promise.all([
+  const [fromEmail, twoYrPct, threeYrPct] = await Promise.all([
     getSetting('quote_from_email'),
     getSetting('quote_2yr_discount_pct'),
     getSetting('quote_3yr_discount_pct'),
-    getSetting('quote_section_annual_includes'),
-    getSetting('quote_section_lesson_package'),
-    getSetting('quote_section_video_access'),
-    getSetting('quote_section_license_terms'),
   ]);
   res.json({
     fromEmail: fromEmail || '',
     twoYrDiscountPct: Number(twoYrPct) || 5,
     threeYrDiscountPct: Number(threeYrPct) || 8,
-    sectionAnnualIncludes: s1 || '',
-    sectionLessonPackage:  s2 || '',
-    sectionVideoAccess:    s3 || '',
-    sectionLicenseTerms:   s4 || '',
   });
 });
 
@@ -105,16 +97,6 @@ router.put('/quote', requireAuth, async (req, res) => {
     const pct = parseInt(b.threeYrDiscountPct, 10);
     if (isNaN(pct) || pct < 0 || pct > 100) return res.status(400).json({ error: '3-year discount must be 0–100' });
     saves.push(setSetting('quote_3yr_discount_pct', String(pct)));
-  }
-
-  const sectionMap = {
-    sectionAnnualIncludes: 'quote_section_annual_includes',
-    sectionLessonPackage:  'quote_section_lesson_package',
-    sectionVideoAccess:    'quote_section_video_access',
-    sectionLicenseTerms:   'quote_section_license_terms',
-  };
-  for (const [bodyKey, dbKey] of Object.entries(sectionMap)) {
-    if (b[bodyKey] !== undefined) saves.push(setSetting(dbKey, String(b[bodyKey])));
   }
 
   if (!saves.length) return res.status(400).json({ error: 'Nothing to update' });
