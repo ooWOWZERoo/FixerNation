@@ -61,6 +61,19 @@ test.describe("Quote-accept PO flow — payment gate matches cart PO flow", () =
     purchaseId = acceptBody.purchaseId;
     invoiceId = acceptBody.invoiceId;
 
+    // Regression check for the race-condition fix itself: a second accept
+    // attempt with the SAME token, immediately after the first succeeded,
+    // must be rejected — not create a second duplicate purchase/invoice.
+    // Before the fix, the accepted_at write had no WHERE accepted_at IS
+    // NULL guard, so this exact sequence used to succeed twice.
+    const secondAcceptRes = await request.post("/api/quotes/accept", {
+      headers: { "Content-Type": "application/json" },
+      data: { token, paymentMethod: "po", poNumber: `${poNumber}-DUPLICATE` },
+    });
+    expect(secondAcceptRes.status()).toBe(400);
+    const secondAcceptBody = await secondAcceptRes.json();
+    expect(secondAcceptBody.error).toBe("already_accepted");
+
     await signInAsAdmin(page);
 
     const invoiceRes = await page.request.get(`/api/invoices/${invoiceId}`);
