@@ -182,6 +182,12 @@ router.post('/:id/po-received', requireAuth, async (req, res) => {
   if (inv.po_received_date) {
     return res.status(400).json({ error: 'PO already marked as received' });
   }
+  // admin-invoices.html only hides the button for a cancelled invoice
+  // client-side — a stale tab or a direct API call could otherwise still
+  // activate licenses on an invoice that's since been cancelled.
+  if (inv.status === 'cancelled') {
+    return res.status(400).json({ error: 'This invoice has been cancelled' });
+  }
 
   const connection = await pool.getConnection();
   try {

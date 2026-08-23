@@ -211,9 +211,13 @@ async function resolveCartItems(items) {
   return { lineItems, resolved };
 }
 
+// Returns the purchaseIds created for license_product items specifically
+// (not books) — callers that need to grant school-admin setup access
+// (setupSchoolAdmin) only ever want the license purchases, never a book.
 async function fulfillResolvedItems(contactId, resolved, fulfillmentFields) {
+  const licensePurchaseIds = [];
   for (const item of resolved) {
-    await createPurchase(contactId, {
+    const purchaseId = await createPurchase(contactId, {
       productType: item.type === 'book' ? 'book' : 'group_license',
       bookId: item.type === 'book' ? item.id : undefined,
       licenseProductId: item.type === 'license_product' ? item.id : undefined,
@@ -222,7 +226,9 @@ async function fulfillResolvedItems(contactId, resolved, fulfillmentFields) {
       amountCents: item.amountCents,
       ...fulfillmentFields,
     });
+    if (item.type === 'license_product') licensePurchaseIds.push(purchaseId);
   }
+  return licensePurchaseIds;
 }
 
 // Cart checkout — multiple books and/or license products in one Stripe
@@ -313,7 +319,7 @@ router.post('/create-po-order', async (req, res) => {
     connection.release();
   }
 
-  await fulfillResolvedItems(contactId, resolved, {
+  const licensePurchaseIds = await fulfillResolvedItems(contactId, resolved, {
     source: 'Purchase Order',
     paymentMethod: 'po',
     paymentStatus: 'pending',
@@ -321,12 +327,21 @@ router.post('/create-po-order', async (req, res) => {
     invoiceId,
   });
 
-  // PO orders do not grant immediate access — license activates only after
-  // an admin marks the hard-copy PO received (POST /api/invoices/:id/po-received).
+  // PO orders do not grant immediate CONTENT access — license activates
+  // only after an admin marks the hard-copy PO received
+  // (POST /api/invoices/:id/po-received). But the buyer still needs a way
+  // to log in and manage the roster/invite teachers in the meantime — the
+  // quote-accepted PO path and the Stripe cart path both call
+  // setupSchoolAdmin() for exactly this reason; this direct-cart PO path
+  // never did, leaving a school that pays in full via PO with no way to
+  // log in at all until this fix.
   await pool.query(
     "UPDATE purchases SET license_status = 'pending' WHERE invoice_id = ?",
     [invoiceId]
   );
+  if (licensePurchaseIds.length) {
+    await setupSchoolAdmin(email, licensePurchaseIds);
+  }
 
   res.status(201).json({ ok: true, invoiceId, invoiceNumber });
 });
@@ -406,6 +421,7 @@ async function handleMembershipCheckoutCompleted(session, metadata) {
       stripeSessionId: session.id,
       paymentMethod: 'stripe',
       paymentStatus: 'paid',
+      skipThankYouAutomation: true, // fired explicitly below, with setPasswordUrl
     });
     const endsAt = plan.duration_days ? daysFromNow(plan.duration_days) : null;
     await pool.query(
@@ -477,6 +493,7 @@ async function handleMembershipInvoicePaid(invoice) {
     stripeInvoiceId: invoice.id,
     paymentMethod: 'stripe',
     paymentStatus: 'paid',
+    skipThankYouAutomation: true, // fired explicitly below, only when wasTrial — a plain renewal shouldn't get this at all
   });
 
   // A real charge just succeeded, so the next period is a normal billing
@@ -515,7 +532,15 @@ async function handleMembershipPaymentFailed(invoice) {
   const membership = rows[0];
   if (!membership) return;
 
-  await pool.query("UPDATE contact_memberships SET status = 'past_due' WHERE id = ?", [membership.id]);
+  // Stripe retries webhook delivery — guard against re-processing the same
+  // failed invoice twice, the same pattern checkout.session.completed and
+  // invoice.paid already use (stripe_session_id / stripe_invoice_id).
+  if (membership.last_failed_invoice_id === invoice.id) return;
+
+  await pool.query(
+    "UPDATE contact_memberships SET status = 'past_due', last_failed_invoice_id = ? WHERE id = ?",
+    [invoice.id, membership.id]
+  );
   await fireAutomation('payment_failed', {
     to: membership.email,
     mergeFields: { firstName: (membership.contact_name || '').split(' ')[0] || 'there', planName: membership.plan_name },
