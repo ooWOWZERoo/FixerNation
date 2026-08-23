@@ -66,14 +66,14 @@ a:hover { text-decoration: none; }
 }
 .sa-logo-pill {
   background: #fff;
-  border-radius: 9px;
-  padding: 5px 8px;
+  border-radius: 11px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
 .sa-logo-img {
-  height: 24px;
+  height: 48px;
   width: auto;
   display: block;
 }
