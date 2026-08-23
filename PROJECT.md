@@ -1,123 +1,148 @@
 # Fixer Nation Education — Project Notes
 
-Production site and admin backend for Fixer Nation Education, live at **fixernationeducation.com**, hosted on Hosting.com/cPanel. A real Node/Express + MariaDB application — not a demo. For the full history of what's shipped, see **`CHANGELOG.md`**.
+Production site and admin backend for Fixer Nation Education, live at **fixernationeducation.com**, hosted on Hosting.com/cPanel. A real Node/Express + MariaDB application — not a demo. This file describes **current state** (every real page, feature, and business rule as of the date below) — for history of what shipped when, see `CHANGELOG.md`.
 
-**Current direction: v1** (teal/coral, serif headings). The `-v2` set (navy/amber, Second Step-inspired mega-nav) was an earlier alternate direction reviewed and decided against — those files are kept for reference but are frozen, not under active development.
+**Maintenance rule (standing convention — see `CLAUDE.md`/`AGENTS.md`):** update this file in the same commit as any change that adds/removes a page, changes a gating rule, or changes a known limitation. This file is what a new developer (human or AI) should read first to understand what the app actually does today — keep it honest.
+
+*Last full rewrite: 2026-08-23, via a from-scratch code survey (not just prior notes) covering every HTML page and every `server/routes/*.js` file.*
+
+**Current direction: v1** (teal/coral, serif headings). The `-v2` set (navy/amber, Second Step-inspired mega-nav) was an earlier alternate direction reviewed and decided against — those files are kept for reference but are frozen, not under active development, and are not described further in this doc.
 
 ## Architecture
 
-- **Backend:** Node/Express (`server/`), MariaDB database. Deployed via cPanel's "Setup Node.js App" at `repositories/fixernation/server`, mounted at `fixernationeducation.com/api` — all Express routes live under `/api/*`.
-- **Frontend:** plain HTML/CSS/vanilla JS, no build step, no framework. Public pages and admin pages are separate flat files served statically from `public_html`.
-- **Auth:** two independent JWT-in-cookie systems — `fn_session` for the single admin login, `fn_user_session` for public site-user accounts (teachers/schools). They never cross.
-- **Email:** real SMTP via `nodemailer` (`server/lib/mailer.js`), currently a cPanel-hosted mailbox. No third-party ESP (SendGrid/Mailgun/etc.) — see the Known Limitations note on email tracking below.
-- **File uploads:** `/api/uploads`, real files (not just filename references) for book covers, curriculum videos/documents, blog images.
-- **Curriculum file serving:** curriculum resources (handouts, teacher copies, posters, videos) and lesson-plan documents are never linked directly from `/uploads/`. They are served exclusively through `GET /api/curricula/:id/file?resource=<name>` (or `?doc=<index>`), which enforces the access matrix (view-only for anonymous, counted download for licensed teachers, unrestricted for admin) and records hits in `curriculum_downloads`. Files render via `pdf-modal.js` on the front end — no native browser PDF viewer, no direct URL exposure.
-- **Deploy workflow:** commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation`, **public repo — never commit real PII or secrets**) → in cPanel Terminal: `git pull` in the git clone, `rsync` the static files into `public_html` (excluding `server/`, `api/`, `uploads/` — see `CLAUDE.md`), `npm install` if `server/package.json` changed, restart the Node app if any `server/` code changed. Schema changes to *existing* tables need a manual one-off migration script (see `server/scripts/alter-*.js` for examples) since `migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`.
+- **Backend:** Node/Express (`server/`), MariaDB. Deployed via cPanel's "Setup Node.js App" at `repositories/fixernation/server`, mounted at `fixernationeducation.com/api` — all Express routes live under `/api/*`.
+- **Frontend:** plain HTML/CSS/vanilla JS, no build step, no framework. Shared client-side includes (`nav.js`, `footer.js`, `site-auth.js`, `admin-common.js`/`admin-nav.js`, `school-admin-nav.js`, `cart.js`, `pdf-modal.js`) are injected via `<script src="...?v=N">` tags — bump the `?v=N` cache-bust on every page that references a shared file whenever that file changes (browsers cache these indefinitely otherwise).
+- **Three independent JWT-in-cookie auth systems, deliberately never able to satisfy one another's middleware** (`server/lib/session.js`):
 
-## Public site pages (v1 = primary, `-v2` = frozen alternate)
+  | Cookie | Max age | Covers | Login route |
+  |---|---|---|---|
+  | `fn_session` | 24h | The single admin account (`admin_users`) | `server/routes/auth.js` |
+  | `fn_user_session` | 30 days | `site_users` — teachers, school license admins, parents, community members, consumers | `server/routes/site-auth.js` |
+  | `fn_student_session` | 8h (one school day) | `classroom_students` — PIN-based, no email at all | `server/routes/classroom-auth.js` |
 
-| Page | v1 file | v2 file |
-|---|---|---|
-| Home | index.html | fixernation-redesign-v2.html |
-| About | about.html | about-v2.html |
-| Books listing | books.html | books-v2.html |
-| Book detail — Kill the Bully | book-kill-the-bully.html | book-kill-the-bully-v2.html |
-| Book detail — Your Past Doesn't Define You | book-your-past.html | book-your-past-v2.html |
-| Book detail — Think with 5 Brains | book-5-brains.html | book-5-brains-v2.html |
-| Book detail — How to Lie | book-how-to-lie.html | book-how-to-lie-v2.html |
-| Join / Membership pricing (consumer) | join.html | join-v2.html |
-| Service Provider memberships (v1 only) | service-providers.html | — |
-| Brand Ambassador program (v1 only) | brand-ambassador.html | — |
-| FN Network | fnnetwork.html | fnnetwork-v2.html |
-| Ask The Fixer | askthefixer.html | askthefixer-v2.html |
-| National Education Portal (lesson-plan grid fetches live from `/api/curricula`, dynamic series filters) | education-portal.html | education-portal-v2.html |
-| 2D Education - Schools | education-schools.html | education-schools-v2.html |
-| Programs | programs.html | programs-v2.html |
-| FN Blogs | blog.html | blog-v2.html |
-| Lesson plan detail — overview preserves paragraph/line-break formatting (v1 only) | lesson-detail.html?id=&lt;curriculumId&gt; | — |
-| Student classroom view (assigned curricula, handout/quiz access, gated by seat) | student-lesson.html?id=&lt;curriculumId&gt; | — |
-| School license pricing / checkout (v1 only) | licenses.html | — |
-| Shopping cart (v1 only) | cart.html | — |
-| Self-service license management (v1 only) | my-license.html | — |
-| Password reset (v1 only) | reset-password.html | — |
-| Your Privacy Choices (v1 only) | privacy-choices.html | — |
-| Contact Us (v1 only) | contact.html | — |
+  **Session invalidation** (site-user only): `site_users.session_invalidated_at` + a JWT `iat` check in `requireSiteAuth`. Set on password change/reset and on any admin action that revokes access (seat unregister, license suspend/cancel/delete-by-domain, both expiry crons) — closes the gap where `hasActiveLicense()` re-checks live but a still-valid 30-day cookie would otherwise keep working for non-license-gated pages (roster tools, classroom management, community). Admin (`fn_session`) sessions have **no revocation mechanism at all** — a pure JWT check, by deliberate lower-priority decision.
+  **Known bypass, confirmed intentional (do not "fix" without asking):** an admin with an active `fn_session` in their browser sees full unlocked content on every public page in that same browser, independent of whatever the site-user nav shows — this occasionally reads as a contradiction during dogfooding but is by design.
 
-## Admin backend
+- **File uploads:** `/api/uploads`, real files for book covers (legacy), curriculum videos/documents, blog images, avatars, community post attachments, Morning Boost audio clips.
+- **Curriculum file serving:** never linked directly from `/uploads/` — always through `GET /api/curricula/:id/file?resource=<name>` (or `?doc=<index>`), which enforces the access matrix below and logs to `curriculum_downloads`. Rendered client-side via `pdf-modal.js` (PDF.js from cdnjs) — no native browser PDF viewer, no direct URL exposure.
+- **Deploy workflow:** commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation`, public repo — never commit real PII or secrets) → `./deploy.sh` in cPanel Terminal (git pull, rsync, npm install + migrations + restart-flag when `server/` changed). See `CLAUDE.md` for the exact command chain; schema changes to *existing* tables always need a manual one-off `server/scripts/alter-*.js` since `migrate.js` only ever runs `CREATE TABLE IF NOT EXISTS`.
+- **`server/db/schema.sql` is a stale base snapshot, not the live schema.** Many now-load-bearing columns/tables (`purchases.license_status`/trial fields/`school_domain`/`invoice_id`/`quote_id`, `school_license_admins`, `school_audit_log`, `parent_student_invitations`, `site_user_audiences`, etc.) only exist via `server/scripts/alter-*.js` migrations layered on top. Don't trust `schema.sql` alone for "what tables/columns exist today."
 
-| Page | File |
-|---|---|
-| Login | admin-login.html |
-| Dashboard (+ Financial Insights) | admin-dashboard.html |
-| Book product configuration (CRUD, Amazon format pricing) | admin-books.html |
-| Curriculum builder (CRUD, resources, quiz, download-limit testing) | admin-curriculum.html |
-| Blog builder (CRUD, multi-category, SEO fields, membership gating, scheduling; excerpt up to 500 chars with live counter) | admin-blogs.html |
-| Teacher Downloads — cross-curriculum download tracking (search/paginate by teacher/email/school/curriculum, reset per-teacher or per-curriculum) | admin-downloads.html |
-| Morning Boost Studio (calendar-aware post prefill, ElevenLabs batch voice-over generation) | admin-morning-boost.html |
-| Morning Boost Email (schedule & status, manual send trigger for the daily email) | admin-morning-boost-email.html |
-| Contacts Management — CRM (search/filter/sort, columns picker, purchases, site-account status) | admin-newsletter.html |
-| Email campaigns (real SMTP send, open/unsubscribe analytics) | admin-campaigns.html |
-| License products, school-domain lookup/management | admin-licenses.html |
-| Membership plans (CRUD, Stripe sync, duration) + Members (browse/filter/grant, expiration) | admin-memberships.html |
-| Automated emails (thank-yous, renewal reminder, payment-failed, invoice-paid, seat invite) | admin-automations.html |
-| Invoices (PO orders, filter by status, resend, cancel/delete, print) | admin-invoices.html |
-| Settings (own password, admin management, contact-form email routing for 4 forms, invoice branding) | admin-settings.html |
-| Shared styles/logic | admin-common.css, admin-common.js (cache-busted as `?v=N` — bump N in every referencing page whenever either file changes; current version: **v16**) |
-| Shared curriculum file viewer | pdf-modal.js — lazy-loads PDF.js 3.11.174 (cdnjs), renders PDFs as canvas and images as `<img>` in a modal overlay. Exposes `window.openPdfModal(url, title)` / `window.closePdfModal()`. Used by education-portal.html, lesson-detail.html, student-lesson.html. |
+## Licensing, checkout & quotes
 
-Admin styling uses FN's own brand palette (teal/coral/gold) with a light/dark theme, toggled from the topbar and persisted in `localStorage`. `admin-login.html` intentionally stays a fixed brand-teal gradient regardless of theme choice. The login/accept-invite/invoice-print pages have their own self-contained styles and don't participate in the shared theme.
+**Five distinct ways a license or book gets purchased**, all real and live except where noted:
 
-Admin login is real (bcrypt-hashed password, JWT session) — there is no demo/seeded credential shown here on purpose; ask whoever manages the account.
+| # | Entry point | Route | Payment | Live today? |
+|---|---|---|---|---|
+| 1 | Cart (`cart.html`) — books + fixed-tier license products | `POST /api/checkout/create-cart-session` | Stripe Checkout | Coded, **blocked on real `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`** — every card path throws at call time without them, no graceful fallback |
+| 2 | Cart — Purchase Order | `POST /api/checkout/create-po-order` | None (PO) | **Live** |
+| 3 | `licenses.html` standalone — flat single/group license | `POST /api/checkout/create-session` | Stripe Checkout | Stripe-blocked, same as #1 |
+| 4 | `licenses.html` standalone — variable-seat / trial product | `POST /api/checkout/create-session` | Stripe Checkout | Stripe-blocked, same as #1; confirmed working end-to-end against **Stripe test-mode keys** via the e2e suite |
+| 5 | Quote acceptance (`accept-quote.html`) | `POST /api/quote-accept/accept` | Card or PO | PO branch live; card branch Stripe-blocked |
 
-## Licensing & checkout
+PO is explicitly the designed fallback so "a school isn't blocked waiting on their business office" — it's the only checkout path guaranteed to work with zero external configuration.
 
-Two ways to buy a school/teacher license, both live:
+**License data model:** `purchases` (one row per order line — `product_type` book/single_license/group_license/membership; `payment_status` paid/pending; `license_status` pending/scheduled/active/expiring_soon/suspended/cancelled/expired/converted; `school_domain` — a real, normalized email domain, distinct from `quote_requests.school`'s free-text display name) → `license_seats` (single_license = 1 seat pre-filled with buyer's email; group_license = N unassigned seats; a signup matching a seat's `invited_email`, and for group licenses matching the school domain too, auto-claims it) → `license_products` (admin-editable catalog; flags for `call_for_quote`, `variable_seats`, `is_trial`/`trial_days`/`trial_lesson_limit`, `auto_assign_group_id`). Access (`hasActiveLicense()`) requires a `registered` seat AND a license status not in pending/expired/cancelled/suspended AND not past `expiration_date`.
 
-- **Purchase Order (PO)** — no card required. Buyer enters a PO number, the license activates immediately, FixerNation invoices the school afterward (`admin-invoices.html`). Fully live today.
-- **Stripe card checkout** — coded and deployed but **not yet live**, blocked on the admin obtaining real Stripe API keys. See `CHANGELOG.md`'s Unreleased section for what's needed to turn it on.
+**Quote lifecycle:** request (`POST /api/contact/quote`) → admin builds & sends from `admin-quotes.html` (tier/add-on-seats/term/discount, custom price override, sets `quoted_school_domain` separately from the free-text school name) → buyer opens `accept-quote.html?token=` → accepts by card or PO. The **PO branch claims the quote atomically** (`UPDATE ... WHERE accepted_at IS NULL`) before creating anything, closing a double-submit race that used to create duplicate purchases/invoices. A quoted **trial** product is always forced to `single_license`/1 seat on acceptance (a `group_license` only creates unassigned seats, which can never be self-claimed — this was a real shipped bug, fixed). PO acceptance creates a real `unpaid` invoice and forces `license_status='pending'` until PO-received (below); auto-registers the buyer as a school admin if a matching `site_users` row exists; supports a single-use, 7-day, unauthenticated co-admin invite (`POST /api/quote-accept/accept/invite`).
 
-A single admin-editable **license product catalog** (`admin-licenses.html`) backs both the cart (`cart.html`) and the standalone `licenses.html` flat-rate flow. Group licenses generate open seats a school fills with teacher emails; signing up with a matching email auto-claims a seat. Curriculum lesson documents and quizzes are gated behind an active seat — the overview/objectives/preview content stays public either way.
+**Invoicing — two deliberately independent gates, not one:**
+- **Mark Paid/Unpaid** (`PUT /api/invoices/:id`) touches only `invoices.status` → cascades to `purchases.payment_status`. Pure bookkeeping. Fires `invoice_paid` on a fresh transition to paid. Cancelling an invoice never revokes already-granted access.
+- **Mark PO Received** (`POST /api/invoices/:id/po-received`) touches only `purchases.license_status` (→ `active`, sets `effective_date`). This is the real content-access gate. No financial check at all.
+
+A school can legitimately have full content access while its invoice is still `unpaid` (admin still chasing the check) or vice versa — this is intentional, documented business logic ("give access on receipt of signed PO paperwork; track money owed separately"), not a bug. Every `invoices` row is inherently PO-sourced — Stripe/card checkouts never create one. Deleting an invoice un-links (not deletes) its purchases.
 
 ## Memberships
 
-Three member types — Consumer, Service Provider, Brand Ambassador — each with one or more admin-editable **membership plans** (`admin-memberships.html`'s Plans tab), covering the 7 real tiers (Free w/ Book, Monthly/Annual Consumer, Monthly/Annual Service Provider, 2D Education Program registration, Brand Ambassador). Public checkout lives on `join.html` (consumer), `service-providers.html`, and `brand-ambassador.html`, each rendering its pricing cards from the plan catalog and posting to `/api/checkout/create-membership-session` — recurring plans open a Stripe subscription-mode Checkout session (with a trial period), the one-time 2D Education plan opens payment mode. Like license checkout, this is **not live** until real Stripe keys are configured; unsynced plans show "Contact Us to Sign Up" instead.
+Three member types (`consumer`, `service_provider`, `brand_ambassador`), each with admin-editable plans (`membership_plans` — price, billing interval, trial days, Stripe sync when keys are configured). **Confirmed effectively dead as a public checkout path**: the three public signup pages `join.html`/`service-providers.html`/`brand-ambassador.html` do not exist anywhere in the current codebase (removed in the 2026-08-22 scope cleanup, see Known limitations), so `POST /api/checkout/create-membership-session` and its full Stripe subscription/webhook machinery are unreachable from any live page today. **The only live path onto a membership is the admin manual grant** (`admin-memberships.html` → `POST /api/memberships/contacts/:contactId`), which creates a `purchases` + `contact_memberships` row with zero Stripe involvement by design. `contact_memberships.status` (trialing/active/past_due/cancelled/expired) persists across the whole lifecycle; every real charge (first or renewal) creates its own new `purchases` row, which is why membership revenue shows up in Orders/Financial Insights alongside book/license purchases.
 
-A contact can hold multiple memberships at once, tracked in a `contact_memberships` table (status: trialing/active/past_due/cancelled/expired) separate from `purchases` — visible on the CRM contact record and browsable/filterable/manually-grantable from `admin-memberships.html`'s Members tab. Every real charge becomes its own order: the first one after a trial ends and every renewal each create a new `purchases` row (via the `invoice.paid` webhook, keyed uniquely by Stripe invoice ID so retries don't double-count), while the `contact_memberships` record persists across the whole subscription lifecycle. This is why membership revenue shows up in Orders and Financial Insights the same as book/license purchases.
+## Curriculum & content
 
-Each plan carries a `duration_days` (admin-set on `admin-memberships.html`) — for one-time plans (Free w/ Book, 2D Education registration) this is the real membership length; for monthly/annual plans Stripe governs actual billing, so it's only an estimate used for admin display and sizing the renewal-reminder window. A membership's `ends_at` is computed at signup/grant and re-anchored on every real renewal charge (clearing the reminder-sent flag so the next cycle gets its own reminder).
+Curriculum resources are gated by a consistent server-side matrix (`server/routes/curriculum.js`'s `gateAccess()`, applied identically on `education-portal.html`, `lesson-detail.html`, `student-lesson.html`): overview/objectives/materials/video/resource *labels* stay public; **Student Handout** and **Classroom Poster** are viewable by anyone but download-gated; **Teacher Copy**, lesson-plan documents, and the **Quiz + Answer Key** require an active teacher license (or a curriculum-specific parent-access check) for both view and download. Admins always see everything, everywhere on the public site (see the auth bypass note above). Trial licenses get a metered preview (`trial_lesson_limit` curricula before `documents`/`quiz` get stripped even for them). Every gated file download is per-resource rate-limited (`download_limit`, 0 = unlimited) and logged to `curriculum_downloads` (teacher email × curriculum × resource type).
+
+Blog posts (`blog_posts`) support multiple categories, SEO fields, real scheduling (`published=true` + a future `publishDate` stays hidden until that date — genuine scheduling, not just an on/off flag), and an optional `requiresMembership` flag that strips body/video server-side for non-members (note: this membership check, not a license check, is the actual gate on locked blog posts). The full 2026 Morning Boost content calendar (205 daily Theme/Series entries) lives in `morning_boost_calendar`, one-to-one linkable to a blog post; **Morning Boost Studio** (`admin-morning-boost.html`) batch-generates voice-over MP3s via ElevenLabs — coded and complete but **not live** until `ELEVENLABS_API_KEY` + a saved voice ID are configured (same deferred-but-complete pattern as Stripe). Image generation and video assembly for Morning Boost remain fully manual by design — no work started. The Morning Boost daily email (`admin-morning-boost-email.html`) is a full campaign system in its own right (config/schedule/history tabs, per-recipient open/click tracking, resend-to-failed) driven by a daily cPanel cron calling `server/scripts/send-morning-boost-email.js`.
+
+## School-Admin portal
+
+School license admins are `site_users` (`role='school_license_admin'`) linked to one or more group-license `purchases` via `school_license_admins` assignments, each carrying a **permission level**: `primary` (full access — invite, revoke, reports, co-admin visibility), `secondary` (can invite/manage but cannot revoke a seat/invitation or remove a teacher), `read_only` (view everything, write nothing). Enforcement is server-side and per-purchase (`blockIfReadOnly`/`blockIfCannotRevoke` in `server/middleware/schoolAdminAuth.js`, fail-closed by design) — **the frontend does no client-side gating by level**; a read-only or secondary admin sees every button and only gets blocked with a 403 toast after clicking.
+
+School-admin accounts are created in exactly one way: **FNE-staff manual assignment** (`admin-school-admins.html` → `POST /api/admin/school-admins/assign`) — there's no self-service way for a school admin to add a peer. Teachers get onto a license two ways: an admin sends a single or bulk invite (lands on `school-invite-accept.html`), or a teacher self-registers (`education-schools.html` → `POST /api/school-registration/check`, exact email-domain match against a `purchases.school_domain`, capacity-checked transactionally) and gets nudged to notify their school admin if no seats/plan exist yet. Seats move `pending → registered → inactive/revoked`; revoking a seat or removing a teacher force-invalidates their session and, if they also held a co-admin assignment on that purchase, soft-deactivates that too with its own audit entry.
+
+Pages: `school-admin-login.html`, `school-admin-dashboard.html` (stats + activity feed, read-only for all levels), `school-admin-roster.html` (the real merged teacher+seat management screen — `school-admin-teachers.html` and `school-admin-licenses.html` are now dead `<meta refresh>` redirect stubs into this one, kept only for old bookmarks), `school-admin-invitations.html` (send/bulk/resend/extend/revoke/delete + CSV template), `school-admin-org.html` (read-only license/plan/co-admin info — doesn't distinguish primary vs. secondary in its own UI, only "Full Access"/"Read Only"), `school-admin-reports.html` (utilization/teachers/invitations/activity-log tabs, CSV export, read-only for all levels).
+
+## Teacher portal
+
+`teacher-login.html` → `teacher-classrooms.html` (create/list classrooms — no license check to create one) → `teacher-classroom.html`, the main workspace: Students tab (add/CSV-import/reset-PIN/deactivate students, per-student parent invites — the *only* parent-linking path today, see Parent portal below), Assignments tab (assign lessons — **requires an active license**, 403 otherwise — and assign Brain Games — no license check), Progress tab (per-lesson completion summary). `teacher-classroom-progress.html` drills into one lesson × classroom: quiz scores, written reflections, CSV export, per-student quiz reset. `teacher-lesson-plans-browse.html`/`teacher-lesson-plans.html` let a teacher permanently add curricula to a personal library (capped at `teacher_lesson_plan_limit`, default 40, admin-configurable; **teacher-side removal doesn't exist** — only an FNE-internal endpoint can remove a selection).
+
+## Student / classroom system
+
+No email, ever, for a classroom-PIN student. A teacher's classroom has a `join_code`; a student registers with the code + a display name + a self-chosen PIN (`server/routes/classroom-auth.js`) and gets an auto-generated username; re-entering the same name with the matching PIN logs back into the same account instead of duplicating it. Students see only what's assigned to their specific classroom (`classroom_assignments` for lessons, `classroom_game_assignments` for Brain Games). Pages: `student-login.html`, `student-home.html`, `student-lesson.html` (full flow: overview, handout, video, pre/post reflection, one-attempt quiz, goal-setting), `student-game.html` (iframes the public brain-game page), `student-achievements.html` (goals + lesson history — no brain-game history, see below).
+
+**Architectural gap, confirmed and explicitly deferred (product decision, not a bug to silently fix):** the brain-games XP/badge/streak system is built entirely on the `fn_user_session`/`site_users` cookie. Classroom-PIN students' `fn_student_session` is never checked anywhere in `brain-games.js`. A student playing a Brain Game only ever produces a bare completion timestamp (`student_game_completions`, via `student.js`) — no score, no XP, no badge, no streak, ever. This is a real, scoped-but-not-built product gap, not an oversight to patch reflexively.
+
+## Parent portal
+
+Per-child, teacher-initiated invites only — the old shared classroom-level `parent_code` self-join flow was removed outright. A teacher invites a parent to follow **one specific student** from `teacher-classroom.html`'s roster (`POST /api/classrooms/:id/students/:sid/invite-parent`); the parent accepts via `parent-invite-accept.html`, creating a `parent_classroom_links` row keyed by `(site_user_id, classroom_id, student_id)` — a parent with two kids in the same classroom gets two independent link rows/cards. `parent-portal.html` shows one card per linked child with **completion-status progress only** (no quiz answers, no reflections — deliberately teacher-only). `parent-lesson.html` shows a curriculum's public preview plus Teacher Copy/Student Handout/Classroom Poster only (no quiz, no lesson-plan docs). A parent can never see another parent's or another student's data — every route re-checks the specific link row.
+
+## Social / community
+
+Gated to `site_users` with an active license **or** active membership (`requireSocialAccess`) — classroom-PIN students have no access at all, and there's no bridge between the two auth systems. `social.html`: groups (admin-created; users self-serve join/leave public ones — no membership-approval workflow exists), a feed (text/image/video/file posts up to 5 files/100MB each, auto-embedded YouTube/Vimeo, hashtags, reactions, threaded comments, 15s unread-badge / 5s feed polling), and direct messages. `social-profile.html`: opt-in bio/email visibility and an opt-in showcase of up to 6 featured Brain Game badges. Admin moderation (`admin-social.html`) covers posts (soft-delete) and groups (create/edit/visibility-toggle/delete) via a separate `requireAuth` (staff) gate — **comment moderation exists as a real API** (`DELETE /api/social/comments/:commentId`) **but has no admin UI to reach it**, a likely oversight since post rows show comment counts with no way to act on them.
+
+## Brain Games
+
+Six public mini-games (`brain-memory-match.html`, `brain-number-sequence.html`, `brain-quick-math.html`, `brain-reaction-time.html`, `brain-simon-sequence.html`, `brain-stroop-challenge.html`) plus a hub (`brain-games.html`), a personal stats dashboard (`brain-games-progress.html`), and a badge showcase (`brain-badges.html`, with a bio-style opt-in privacy toggle for social visibility). Anyone can play anonymously in the browser, but scoring/XP/badges/streaks require a `site_users` login — anonymous play and classroom-PIN-student play both fall through to nothing being recorded (see the architectural gap above). Server-side (`brain-games.js`): real score recalculation with anti-tamper metric validation, an XP/level table (7 levels, Beginner→Master), 20+ badge-criteria types, and daily login-streak tracking. This system is a general engagement feature, not part of the SEL curriculum/licensing business.
+
+## Admin backend
+
+All under a single `fn_session` login (`admin-login.html`; new admins are invited via a 24h single-use token, `admin-accept-invite.html`, shared with password-reset), themed teal/coral/gold with a light/dark toggle persisted in `localStorage`.
+
+**Content:**
+- `admin-curriculum.html` — full curriculum CRUD, drag-and-drop reorder, bulk publish/unpublish/duplicate/delete, per-resource download limits, and a `.docx` quiz-import parser (fuzzy title matching against the curriculum catalog).
+- `admin-blogs.html` — full post CRUD, reusable tag list, auto-slug, "Load From Morning Boost Calendar" prefill, and an auto-link-back to the calendar when a post is tagged "Morning Boost" with a publish date.
+- `admin-downloads.html` — cross-curriculum download ledger (Teachers/Parents/Students tabs — Students is UI-only, student downloads aren't tracked at all), wildcard search, per-row and bulk-reset controls.
+- `admin-morning-boost.html` / `-calendar.html` / `-email.html` — voice-over generation studio (ElevenLabs, not live), calendar-to-post linkage + batch draft creation, and the full daily-email automation (config/schedule/send-history, cron-driven).
+
+**Sales & CRM:**
+- `admin-newsletter.html` — the CRM core: contact CRUD, CSV import (upsert-by-email, blanks-only), purchase history, group-license seat assignment, contact groups, site-account actions (resend verification, password reset, delete).
+- `admin-campaigns.html` — real-SMTP email campaigns, audience segmentation (status/source/group, opt-outs always excluded regardless of filter), open/click analytics, one-click follow-up drafts targeting non-openers/clickers.
+- `admin-quotes.html` — the full quote pipeline described above (build/send/copy) plus admin-editable quote-email content sections and discount percentages.
+- `admin-invoices.html` / `admin-invoice-print.html` — PO invoice list/resend/mark-paid/mark-PO-received/cancel/delete, and a print/PDF-via-browser single-invoice view.
+- `admin-orders.html` — unified read-only order ledger merging real `purchases` with synthetic $0 rows for comped/pre-webhook memberships.
+- `admin-licenses.html` — license product catalog CRUD **and** per-school license administration (domain search, seat count edit, status/date editing with automatic session invalidation on suspend/cancel, per-teacher grade-level and lesson-plan-library management).
+- `admin-memberships.html` — membership plan CRUD (Stripe-synced when keys exist) and per-contact membership management (manual grant, status transitions, renewal reminder trigger).
+- `admin-school-admins.html` — the only way a school-admin account/permission-level gets created or changed.
+
+**System:**
+- `admin-dashboard.html` — financial summary, sales-over-time chart, six computed insight metrics (MoM growth, quote-to-sale conversion, DSO, LTV, cancellation rate, revenue-by-category), content counts.
+- `admin-analytics.html` — anonymous session-based visitor funnel/behavior tracking (sessionStorage-only session id, no purchase-tie-in by design).
+- `admin-automations.html` — **the one significant WIP surface in the admin backend.** The real, working part is GET+PUT on a fixed set of 13 system-triggered email templates (see below) — enable/disable, edit subject/body/merge-tokens. Everything else the UI implies (a no-code automation *builder* with triggers/conditions/branching, Execution History, Analytics, Audit Log, Failure Center tabs) is decorative: "Save Automation" in the builder shows a toast and calls no API at all; the History/Analytics/Audit tabs are static "coming soon" blocks. The page's own Overview tab copy admits this ("wired in the next backend phase").
+- `admin-social.html` — post/group moderation (see Social above).
+- `admin-settings.html` — own password, 4 contact-routing emails, invoice branding, teacher lesson-plan limit, quote discount %/from-email, admin auto-refresh interval, and full admin-user management (invite/edit/delete/resend-invite/reset-password, with hard guards against self-delete and deleting the last remaining admin). **Minor gap:** `GET/PUT /api/settings/quote` supports 4 additional quote-section-text fields with no corresponding form inputs on this page — implemented but currently unreachable through the UI.
 
 ## Automations
 
-A fixed set of six automated emails — book purchase thank-you, membership purchase thank-you (fires on every real charge, first and renewals), membership renewal reminder, invoice-paid confirmation, payment-failed/past-due, and license seat invite — fire from real events across `checkout.js`/`newsletter.js`/`invoices.js`. Each is admin-editable (subject/body with `{{mergeField}}` tokens, on/off, and — for the renewal reminder — how many days ahead of `ends_at` to send) from **`admin-automations.html`**, backed by a fixed `email_automations` table (`server/lib/automations.js`'s `fireAutomation()` is the single call site every trigger uses). Sending failures are swallowed and logged, never propagated — an SMTP hiccup must never block the purchase/invoice/seat action that triggered the email.
+**13 fixed system-triggered email types** (not a smaller "core six" — verified directly against `server/scripts/seed-email-automations.js`), each admin-editable (subject/body/on-off, and for the renewal reminder, days-before-`ends_at`) from `admin-automations.html`, fired through the single call site `fireAutomation()` (`server/lib/automations.js`), which swallows its own errors so a broken template/SMTP outage never blocks the purchase/invoice/seat action that triggered it:
 
-The renewal reminder and lapsed-membership expiry both run from **`server/scripts/send-membership-reminders.js`**, this project's first scheduled job — set up as a daily cPanel Cron Job (there's no in-process scheduler; cron survives Node app restarts, which an in-app timer wouldn't).
+`book_purchase_thank_you`, `membership_purchase_thank_you`, `membership_renewal_reminder`, `invoice_paid`, `payment_failed`, `membership_trial_started`, `license_seat_invite`, `school_license_expiring_soon`, `school_license_expired`, `trial_purchase_thank_you`, `trial_expired`, `trial_converted`, `quote_accepted`.
 
-## Blog & Morning Boost
-
-Blog posts (`blog_posts`) can belong to several categories at once (`blog_post_categories`, mirrors the existing per-post tag system) — the public FN Blogs page's category filter chips check against that full set, not a single value. Posts also carry SEO fields (alt text, meta description, focus keyword) and a `requiresMembership` flag: when set, `/api/blog/posts` strips the body/video server-side for any visitor without an active Fixer Nation membership (any plan) and returns a `locked: true` flag instead — `blog.html` shows a locked preview with a join link. A post with `published` on and a future Publish Date stays off the public site until that date, i.e. real scheduling, not just an on/off toggle.
-
-The full 2026 Morning Boost content calendar (205 daily Theme/Series entries, imported from the step-sheet doc) lives in `morning_boost_calendar`. `admin-blogs.html` can pull any date's Theme/Series straight into a new post ("Load From Morning Boost Calendar"), and **`admin-morning-boost.html`** ("Morning Boost Studio") batch-generates a day's voice-over clips via the ElevenLabs API instead of pasting each script into ElevenLabs one at a time — **not live** until a real `ELEVENLABS_API_KEY` is set in `server/.env` and a voice ID is saved on that page, same deferred-but-complete pattern as Stripe. Automating image generation and video assembly (replacing the ChatGPT/Google-AI image step and the iMovie build) is intentionally deferred — no work has started there.
-
-## CRM & campaigns
-
-Contacts (`admin-newsletter.html`) support search/filter/sort/pagination, a user-configurable column picker, CSV import/export, contact groups, purchase history, and site-account status (registered/verified, resend verification, password reset, delete) — the latter surfaced directly on the contact record rather than a separate page, since a site-user account and a CRM contact are linked only by matching email (no formal foreign key).
-
-Email campaigns (`admin-campaigns.html`) send for real via SMTP, always excluding unsubscribed contacts regardless of any audience filter. Per-campaign analytics (sent/opened/open rate/unsubscribed) are tracked via a `campaign_sends` log table — see the Known Limitations note below on why "opened" is directional, not exact.
+Four of these (`trial_expired`, `school_license_expiring_soon`, `school_license_expired`, `membership_renewal_reminder`) plus the daily Morning Boost email are driven by cPanel cron jobs, not live HTTP requests — the expiry crons also handle session invalidation for revoked access, not just the email.
 
 ## Known limitations
 
-- **Email open-tracking is pixel-based and imprecise.** The SMTP setup is a plain relay (cPanel mailbox), not an ESP with delivery/open webhooks, so opens are tracked via an invisible 1×1 image — many clients block remote images (undercounts), and some (e.g. Apple Mail Privacy Protection) pre-fetch every image regardless of whether a human opened it (overcounts). Plain-text campaigns can't be tracked at all (no way to embed a pixel). Treat the numbers as directional.
-- **Stripe checkout isn't live yet** — see Licensing & checkout and Memberships above.
-- **ElevenLabs voice-over generation isn't live yet** — see Blog & Morning Boost above. Image generation and video assembly for Morning Boost remain fully manual by design (deferred, not started).
-- **The renewal-reminder/expiry cron depends on the cPanel Cron Job staying configured** — if it's ever removed or misconfigured, reminders/expirations just silently stop (no alerting on a missed run). Verify with `node scripts/send-membership-reminders.js` in cPanel Terminal if renewal reminders seem to have stopped.
-- **Curriculum download limits are enforced per-teacher per-curriculum**, tracked in `curriculum_downloads`. A `download_limit` of 0 on the curriculum row means unlimited. The limit is checked server-side in the file-serving endpoint; the front end shows no special UI for it (a teacher who has hit their limit gets a 429 response shown inline in the PDF modal).
-- **Playwright e2e suite exists** (`tests/`, own `package.json`, run against production) covering every admin page, the public site, and all four site portals — see `tests/e2e/`. `server/scripts/seed-qa-test-accounts.js` provisions the dedicated QA accounts it needs. Not yet wired into CI — run manually with `cd tests && npx playwright test`.
-- **`-v2` pages are frozen** by original project decision, not neglected.
-- **`privacy-choices.html`'s "we don't sell/share data" framing reflects what's actually implemented today** — no third-party ad trackers, no data brokers, sessionStorage-only anonymous analytics. This isn't legal advice; if a real third-party data relationship is ever added, that page needs to be revisited. The analytics opt-out toggle on that page sets a real `localStorage` flag (`fnAnalyticsOptOut`) that `fnTrackEvent`/`fnTrackPageview` check before firing.
-- Full change history lives in `CHANGELOG.md`, not inline in this file.
+- **Stripe checkout isn't live** — every card-based path (cart, `licenses.html`, quote-accept card branch, membership subscriptions) throws at call time without real `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` configured (no graceful fallback, unlike `membership-plans.js`'s admin sync which does guard). Confirmed working end-to-end against Stripe **test-mode** keys via the e2e suite. PO checkout is the only guaranteed-live path with zero external config.
+- **ElevenLabs voice-over generation isn't live** — needs `ELEVENLABS_API_KEY` + a saved voice ID. Image generation and video assembly for Morning Boost are fully manual by design, not started.
+- **The consumer/service-provider/brand-ambassador membership system has zero live public checkout** — its three signup pages were removed from the site entirely on 2026-08-22 as out-of-scope leftovers from a different project (fixernation.org); the only surviving path onto a membership is an admin manual grant. `join.html`/`service-providers.html`/`brand-ambassador.html`/`books.html`/`my-memberships.html` and all consumer-book content were removed in the same cleanup — FNE today is teacher/school/curriculum-licensing focused, not a consumer bookstore or membership site.
+- **`server/routes/books.js` is still fully live but has no admin page of its own** (`admin-books.html` was removed with the rest of the consumer-book scope) — it survives only as a legacy purchase type in the CRM's "add purchase" flow (`admin-newsletter.html`) and a stat tile on `admin-dashboard.html`. Dead weight worth removing outright if book sales never come back into scope.
+- **The Automations builder UI is mostly decorative** — see admin-automations.html above.
+- **Comment moderation has no admin UI** despite a real backend endpoint existing.
+- **Brain-games XP/badges/streaks are unreachable by classroom-PIN students** — architectural, scoped, explicitly deferred (see Brain Games above).
+- **`programs.html`'s `?series=` deep link into `education-portal.html` doesn't actually pre-filter anything** — the portal builds its filter chips from live data and never reads the query string. Minor, cosmetic.
+- **Renewal-reminder/expiry crons depend on the cPanel Cron Job staying configured**, with no alerting on a missed run. Verify manually with `node scripts/send-membership-reminders.js` if reminders seem to have stopped.
+- **Email open-tracking is pixel-based and imprecise** (plain SMTP relay, not an ESP with delivery webhooks) — treat campaign/Morning-Boost open numbers as directional, not exact.
+- **`-v2` pages are frozen** by original decision, not neglected.
+- **Playwright e2e suite** (own `tests/` package, 51+ spec files, runs against live production) covers every admin page, all public flows, and all 4 site portals — see `tests/README.md`/repo memory for the QA-account seeding script and run pattern. Not wired into CI; run manually.
 
 ## Assets
 
-- Book covers: `cover-kill-the-bully.png`, `cover-your-past.png`, `cover-5-brains.png`, `cover-how-to-lie.png` — pre-cut artwork with transparent backgrounds and built-in drop shadows.
-- Book trailer videos: `trailer-kill-the-bully.mp4`, `trailer-your-past.mp4`, `trailer-5-brains.mp4` (no trailer for "How to Lie").
-- Author photo: `anthony.png`.
+- Author photo: `anthony.png` (about page).
+- Any book-cover/trailer assets referenced by the old consumer-book pages were removed along with those pages in the 2026-08-22 scope cleanup — FNE no longer sells books directly.
