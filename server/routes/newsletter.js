@@ -380,7 +380,7 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents, quoteId }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents, quoteId, skipThankYouAutomation }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
@@ -423,7 +423,13 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
     // covered by the invoice-paid and seat-invite automations instead, since
     // a single PO order can create several license purchase rows and would
     // otherwise flood the buyer with one thank-you per line item.
-    if (productType === 'book' || productType === 'membership') {
+    // skipThankYouAutomation: checkout.js's Stripe membership handlers fire
+    // their own richer version of this email themselves (with setPasswordUrl,
+    // or deliberately withheld for a plain renewal) — without this flag
+    // every one of those purchases got the email twice, and every plain
+    // renewal got a "thank you" the surrounding code explicitly didn't
+    // intend to send.
+    if (!skipThankYouAutomation && (productType === 'book' || productType === 'membership')) {
       try {
         const [[contact]] = await pool.query('SELECT email, name FROM newsletter_contacts WHERE id = ?', [contactId]);
         const firstName = (contact.name || '').split(' ')[0] || 'there';
@@ -579,7 +585,25 @@ router.delete('/purchases/by-domain', requireAuth, async (req, res) => {
   if (!rows.length) return res.status(404).json({ error: 'No group licenses found for that domain' });
 
   const ids = rows.map(r => r.id);
+
+  // hasActiveLicense() is re-checked fresh on every request, so license-
+  // gated content is cut off the instant the seats cascade-delete below —
+  // but every affected teacher's existing fn_user_session cookie (up to 30
+  // days) would otherwise stay valid for anything that isn't license-gated.
+  const [registeredTeachers] = await pool.query(
+    "SELECT DISTINCT registered_site_user_id FROM license_seats WHERE purchase_id IN (?) AND registered_site_user_id IS NOT NULL",
+    [ids]
+  );
+
   await pool.query('DELETE FROM purchases WHERE id IN (?)', [ids]);
+
+  if (registeredTeachers.length) {
+    await pool.query(
+      'UPDATE site_users SET session_invalidated_at = NOW() WHERE id IN (?)',
+      [registeredTeachers.map(r => r.registered_site_user_id)]
+    );
+  }
+
   res.json({ ok: true, deleted: ids.length });
 });
 
@@ -679,6 +703,24 @@ router.put('/purchases/:id/license-dates', requireAuth, async (req, res) => {
     [effectiveDate || null, expirationDate || null, licenseStatus, rows[0].id]
   );
 
+  // Same reasoning as the seat-unregister and delete-by-domain routes above:
+  // hasActiveLicense() denies access immediately either way, but a
+  // suspended/cancelled license can span every registered seat on a group
+  // purchase at once — the widest-blast-radius case of the same gap if
+  // sessions aren't invalidated too.
+  if (licenseStatus === 'suspended' || licenseStatus === 'cancelled') {
+    const [registeredTeachers] = await pool.query(
+      "SELECT DISTINCT registered_site_user_id FROM license_seats WHERE purchase_id = ? AND registered_site_user_id IS NOT NULL",
+      [rows[0].id]
+    );
+    if (registeredTeachers.length) {
+      await pool.query(
+        'UPDATE site_users SET session_invalidated_at = NOW() WHERE id IN (?)',
+        [registeredTeachers.map(r => r.registered_site_user_id)]
+      );
+    }
+  }
+
   pool.query(
     `INSERT INTO school_audit_log (actor_type, actor_id, action, entity_type, entity_id)
      VALUES ('admin', ?, 'license_dates_updated', 'purchase', ?)`,
@@ -767,6 +809,13 @@ router.post('/purchases/:purchaseId/seats/:seatId/unregister', requireAuth, asyn
     "UPDATE license_seats SET status = 'pending', registered_site_user_id = NULL, registered_at = NULL WHERE id = ?",
     [seat.id]
   );
+  // hasActiveLicense() is re-checked fresh on every request, so license-gated
+  // content is already cut off immediately — but without this, the teacher's
+  // existing fn_user_session cookie (up to 30 days) stays valid for anything
+  // that ISN'T license-gated (classroom/roster management, brain games).
+  if (seat.registered_site_user_id) {
+    await pool.query('UPDATE site_users SET session_invalidated_at = NOW() WHERE id = ?', [seat.registered_site_user_id]);
+  }
   res.json({ ok: true });
 });
 
