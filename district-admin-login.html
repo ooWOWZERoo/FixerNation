@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - District Admin Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg,#1a2332 0%,#2d3f55 100%); padding: 20px; }
+  .login-card { background: #fff; border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 400px; box-shadow: 0 24px 60px rgba(0,0,0,.25); }
+  .login-logo { margin-bottom: 20px; }
+  .login-logo img { height: 80px; width: auto; display: block; margin-bottom: 8px; }
+  .login-logo span { font-size: 12px; color: #6b7280; }
+  h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; }
+  .form-group input { width: 100%; padding: 10px 13px; border: 1.5px solid #e0e3eb; border-radius: 9px; font-size: 14px; font-family: inherit; outline: none; }
+  .form-group input:focus { border-color: #E06D2C; }
+  .err { color: #ef4444; font-size: 13px; margin-bottom: 14px; display: none; }
+  .btn-login { width: 100%; padding: 12px; background: #E06D2C; color: #fff; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-login:hover { background: #C45A1A; }
+  .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+  .forgot { display: block; text-align: center; margin-top: 14px; font-size: 13px; color: #6b7280; }
+  .forgot a { color: #E06D2C; }
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="login-logo">
+    <img src="logo-fne.png?v=2" alt="Fixer Nation Education">
+    <span>District Administrator</span>
+  </div>
+
+  <h2>Sign In</h2>
+  <p class="sub">Access your district administrator portal.</p>
+
+  <div class="err" id="loginErr"></div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" autocomplete="email" required placeholder="you@district.edu">
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
+  </form>
+
+  <div class="forgot"><a href="reset-password.html">Forgot your password?</a></div>
+</div>
+
+<script>
+(function () {
+  fetch('/api/district-admin/me', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && d.loggedIn) window.location.href = 'district-admin-dashboard.html'; })
+    .catch(() => {});
+
+  document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const err = document.getElementById('loginErr');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    try {
+      const r = await fetch('/api/site-auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        err.textContent = d.error || 'Login failed';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+        return;
+      }
+      if (d.role === 'district_admin') {
+        window.location.href = 'district-admin-dashboard.html';
+      } else {
+        err.textContent = 'This account does not have District Administrator access. Contact Fixer Nation Education for assistance.';
+        err.style.display = 'block';
+        await fetch('/api/site-auth/logout', { method: 'POST', credentials: 'include' });
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    } catch {
+      err.textContent = 'Unable to connect. Please try again.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  });
+})();
+</script>
+</body>
+</html>

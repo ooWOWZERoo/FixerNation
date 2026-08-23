@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS site_users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
+  role VARCHAR(32) NOT NULL DEFAULT 'teacher', -- 'teacher' | 'school_license_admin' | 'district_admin' | 'admin' | 'parent' — added by scripts/alter-school-admin.js on existing installs
+  session_invalidated_at DATETIME NULL, -- added by scripts/alter-add-session-invalidated-at.js on existing installs; JWTs issued before this timestamp are rejected
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -266,9 +268,14 @@ CREATE TABLE IF NOT EXISTS license_seats (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   purchase_id INT UNSIGNED NOT NULL,
   invited_email VARCHAR(255) NULL,
-  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'registered'
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'registered' | 'inactive' | 'revoked' | 'available'
   registered_site_user_id INT UNSIGNED NULL,
   registered_at DATETIME NULL,
+  invitation_id INT UNSIGNED NULL, -- added by scripts/alter-school-admin.js on existing installs
+  revoked_at DATETIME NULL,
+  revoked_by INT UNSIGNED NULL,
+  revocation_reason VARCHAR(255) NULL,
+  notes VARCHAR(500) NULL,
   FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
   FOREIGN KEY (registered_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -732,4 +739,188 @@ CREATE TABLE IF NOT EXISTS social_messages (
   deleted_at DATETIME NULL,
   INDEX idx_thread (sender_id, recipient_id, created_at),
   INDEX idx_recipient (recipient_id, read_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- School licensing, branding, and district hierarchy
+-- (originally added by scripts/alter-school-admin.js,
+-- scripts/alter-create-schools-and-branding.js,
+-- scripts/alter-add-logo-crop-fields.js, and scripts/alter-create-districts.js
+-- on existing installs — included here so a fresh install doesn't need to
+-- run all four before the app functions)
+-- ---------------------------------------------------------------------------
+
+-- Maps site_users to purchases (their school license admin scope).
+CREATE TABLE IF NOT EXISTS school_license_admins (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  site_user_id INT UNSIGNED NOT NULL,
+  purchase_id INT UNSIGNED NOT NULL,
+  permission_level VARCHAR(16) NOT NULL DEFAULT 'primary', -- 'primary' | 'secondary' | 'read_only'
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by_admin_id INT UNSIGNED NULL,
+  notes VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_purchase (site_user_id, purchase_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Teacher seat invitation records.
+CREATE TABLE IF NOT EXISTS school_invitations (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  purchase_id INT UNSIGNED NOT NULL,
+  seat_id INT UNSIGNED NULL,
+  invited_email VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100) NULL,
+  last_name VARCHAR(100) NULL,
+  token VARCHAR(128) NOT NULL UNIQUE,
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'opened' | 'registered' | 'expired' | 'revoked'
+  grade_level VARCHAR(64) NULL,
+  role_title VARCHAR(128) NULL,
+  department VARCHAR(128) NULL,
+  subject_area VARCHAR(128) NULL,
+  personal_message TEXT NULL,
+  invited_by_site_user_id INT UNSIGNED NULL,
+  expires_at DATETIME NOT NULL,
+  resend_count INT UNSIGNED NOT NULL DEFAULT 0,
+  last_resent_at DATETIME NULL,
+  revoked_at DATETIME NULL,
+  revoked_by_site_user_id INT UNSIGNED NULL,
+  revocation_reason VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_token (token),
+  INDEX idx_purchase (purchase_id),
+  INDEX idx_email (invited_email),
+  INDEX idx_status (status),
+  FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
+  FOREIGN KEY (seat_id) REFERENCES license_seats(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Immutable audit trail for school-admin (and, since the District-Level
+-- Branding Hierarchy follow-up, district-admin) actions.
+CREATE TABLE IF NOT EXISTS school_audit_log (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  actor_type VARCHAR(16) NOT NULL,
+  actor_id INT UNSIGNED NULL,
+  actor_email VARCHAR(255) NULL,
+  action VARCHAR(64) NOT NULL,
+  entity_type VARCHAR(32) NULL,
+  entity_id INT UNSIGNED NULL,
+  purchase_id INT UNSIGNED NULL, -- NULL for district-scoped actions, which have no purchase
+  school_domain VARCHAR(255) NULL,
+  prev_value TEXT NULL,
+  new_value TEXT NULL,
+  reason VARCHAR(255) NULL,
+  ip_address VARCHAR(64) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_purchase (purchase_id),
+  INDEX idx_actor (actor_type, actor_id),
+  INDEX idx_entity (entity_type, entity_id),
+  INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Throttles duplicate license-utilization-threshold email alerts.
+CREATE TABLE IF NOT EXISTS license_utilization_alerts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  purchase_id INT UNSIGNED NOT NULL,
+  threshold_pct INT UNSIGNED NOT NULL,
+  sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_purchase_threshold (purchase_id, threshold_pct, sent_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- District-Level Branding Hierarchy — groups schools so a district can set a
+-- default look individual schools can still override (see
+-- getPublishedBranding()'s school -> district -> FNE-default resolution
+-- chain in server/lib/branding.js). A school's own published branding always
+-- wins over its district's. Defined before `schools` below since schools.
+-- district_id has a foreign key to this table.
+CREATE TABLE IF NOT EXISTS districts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Formalizes "school" as a first-class entity, separate from the free-form
+-- purchases.school_domain string. district_id (nullable) groups a school
+-- under a district for the branding fallback chain in server/lib/branding.js.
+CREATE TABLE IF NOT EXISTS schools (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  domain VARCHAR(255) NOT NULL UNIQUE,
+  district_id INT UNSIGNED NULL,
+  display_name VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- purchases.school_id — added alongside (not replacing) school_domain.
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS school_id INT UNSIGNED NULL AFTER school_domain;
+
+-- School-Level Branding — draft/published are a SNAPSHOT PAIR, not one
+-- column set: "Save Draft" must never affect the live (published) look even
+-- when a previous publish already exists. draft_logo_crop/published_logo_crop
+-- (added by scripts/alter-add-logo-crop-fields.js on existing installs) hold
+-- the non-destructive crop rect ({x,y,width,height} within the ORIGINAL
+-- uploaded image) for the crop/reposition tool — re-applying a crop always
+-- starts from the untouched original, never a previously-cropped copy.
+CREATE TABLE IF NOT EXISTS school_branding (
+  school_id INT UNSIGNED PRIMARY KEY,
+  draft_logo_original_url VARCHAR(500) NULL,
+  draft_logo_display_url VARCHAR(500) NULL,
+  draft_logo_crop JSON NULL,
+  draft_primary_color VARCHAR(7) NULL,
+  draft_secondary_color VARCHAR(7) NULL,
+  draft_accent_color VARCHAR(7) NULL,
+  published_logo_original_url VARCHAR(500) NULL,
+  published_logo_display_url VARCHAR(500) NULL,
+  published_logo_crop JSON NULL,
+  published_primary_color VARCHAR(7) NULL,
+  published_secondary_color VARCHAR(7) NULL,
+  published_accent_color VARCHAR(7) NULL,
+  branding_status ENUM('DEFAULT','DRAFT','PUBLISHED') NOT NULL DEFAULT 'DEFAULT',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by INT UNSIGNED NULL,
+  published_at DATETIME NULL,
+  FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+  FOREIGN KEY (updated_by) REFERENCES site_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Same column shape as school_branding, keyed by district_id.
+CREATE TABLE IF NOT EXISTS district_branding (
+  district_id INT UNSIGNED PRIMARY KEY,
+  draft_logo_original_url VARCHAR(500) NULL,
+  draft_logo_display_url VARCHAR(500) NULL,
+  draft_logo_crop JSON NULL,
+  draft_primary_color VARCHAR(7) NULL,
+  draft_secondary_color VARCHAR(7) NULL,
+  draft_accent_color VARCHAR(7) NULL,
+  published_logo_original_url VARCHAR(500) NULL,
+  published_logo_display_url VARCHAR(500) NULL,
+  published_logo_crop JSON NULL,
+  published_primary_color VARCHAR(7) NULL,
+  published_secondary_color VARCHAR(7) NULL,
+  published_accent_color VARCHAR(7) NULL,
+  branding_status ENUM('DEFAULT','DRAFT','PUBLISHED') NOT NULL DEFAULT 'DEFAULT',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by INT UNSIGNED NULL,
+  published_at DATETIME NULL,
+  FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE CASCADE,
+  FOREIGN KEY (updated_by) REFERENCES site_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Maps site_users to districts (their district_admin scope). Deliberately no
+-- permission_level tiers, unlike school_license_admins — every active
+-- assignment gets full read/write on that district's branding.
+CREATE TABLE IF NOT EXISTS district_license_admins (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  site_user_id INT UNSIGNED NOT NULL,
+  district_id INT UNSIGNED NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by_admin_id INT UNSIGNED NULL,
+  notes VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_district (site_user_id, district_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

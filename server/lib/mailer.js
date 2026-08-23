@@ -250,6 +250,29 @@ async function sendSchoolAdminWelcomeEmail({ to, firstName, schoolDomain, portal
   });
 }
 
+// Sent to a newly assigned district administrator — mirrors
+// sendSchoolAdminWelcomeEmail's shape, one tier up (a district, not a school)
+async function sendDistrictAdminWelcomeEmail({ to, firstName, districtName, portalUrl, activateUrl, isNewUser }) {
+  const actionLine = isNewUser
+    ? `Please set your password and access your portal here:\n${activateUrl}`
+    : `Access your District Administrator portal here:\n${portalUrl}`;
+  const actionHtml = isNewUser
+    ? `<p><a href="${activateUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
+    : `<p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Go to District Admin Portal</a></p>`;
+
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: `You're now a District Administrator for ${districtName || 'your district'} on Fixer Nation Education`,
+    text: `Hi ${firstName},\n\nYou have been assigned as a District Administrator for ${districtName || 'your district'} on Fixer Nation Education.\n\nAs a District Administrator, you can set default branding (logo and colors) for every school in your district that hasn't set its own.\n\n${actionLine}\n\nIf you have questions, contact Fixer Nation Education support.`,
+    html: `<p>Hi ${firstName},</p>
+      <p>You have been assigned as a <strong>District Administrator</strong> for <strong>${districtName || 'your district'}</strong> on Fixer Nation Education.</p>
+      <p>As a District Administrator, you can set default branding (logo and colors) for every school in your district that hasn't set its own.</p>
+      ${actionHtml}
+      <p style="font-size:13px;color:#888;">If you didn't expect this email, contact Fixer Nation Education support.</p>`,
+  });
+}
+
 // Utilization threshold alert to school license administrator
 async function sendLicenseUtilizationAlertEmail({ to, adminName, schoolDomain, totalSeats, assignedSeats, pctUsed, purchaseMoreUrl }) {
   await getTransporter().sendMail({
@@ -399,4 +422,4 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail };
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail };

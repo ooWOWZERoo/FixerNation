@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fixer Nation Education - School Branding</title>
+<title>Fixer Nation Education - District Branding</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -22,7 +22,8 @@
   .color-swatch { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--sa-border); padding: 0; cursor: pointer; background: none; }
   .color-hex { width: 100px; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--sa-border); font-size: 13px; font-family: monospace; text-transform: uppercase; }
 
-  /* ── Live preview mockups ── */
+  /* ── Live preview mockups (same shared fnApplyBranding used by every real
+     surface + the school-level branding editor's own preview) ── */
   .preview-panel { border: 1.5px solid var(--sa-border); border-radius: 12px; overflow: hidden; max-width: 420px; }
   .pv-admin-header { background: var(--sa-sidebar-bg, #1a2332); color: var(--sa-sidebar-text, rgba(255,255,255,.85)); padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
   .pv-admin-header img { height: 26px; width: auto; display: block; background: #fff; border-radius: 6px; padding: 3px 5px; }
@@ -42,11 +43,11 @@
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
   <script src="logo-crop-widget.js?v=1"></script>
-  <script src="school-admin-nav.js?v=16"></script>
+  <script src="district-admin-nav.js?v=1"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
-      <h1>School Branding</h1>
+      <h1>District Branding</h1>
       <div class="sa-user">
         <div class="avatar" id="saUserAvatar">?</div>
         <span id="saUserName">Loading…</span>
@@ -60,14 +61,14 @@
         <div class="sa-card" style="margin-bottom:20px;">
           <div class="sa-card-head"><h2>Identity</h2></div>
           <div class="info-item">
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sa-text-soft);margin-bottom:4px;">School Name</div>
-            <div style="font-size:15px;font-weight:600;" id="brandSchoolName">—</div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sa-text-soft);margin-bottom:4px;">District Name</div>
+            <div style="font-size:15px;font-weight:600;" id="brandDistrictName">—</div>
           </div>
-          <p class="brand-help">To change your school's name, contact <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a>.</p>
+          <p class="brand-help">This is the DEFAULT look for every school in this district that hasn't published its own branding — an individual school's own branding always overrides this. To change your district's name, contact <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a>.</p>
         </div>
 
         <div class="sa-card" style="margin-bottom:20px;">
-          <div class="sa-card-head"><h2>School Logo</h2></div>
+          <div class="sa-card-head"><h2>District Logo</h2></div>
           <div class="logo-row">
             <div class="logo-box" id="logoPreviewBox"><span>No logo uploaded</span></div>
             <div>
@@ -81,7 +82,7 @@
         </div>
 
         <div class="sa-card" style="margin-bottom:20px;">
-          <div class="sa-card-head"><h2>School Colors</h2></div>
+          <div class="sa-card-head"><h2>District Colors</h2></div>
           <div class="color-row">
             <div class="color-label"><div class="name">Primary</div><div class="desc">Buttons, active states, classroom accents</div></div>
             <input type="color" class="color-swatch" id="primarySwatch" value="#F26B4D" oninput="onSwatchChange('primary')">
@@ -101,7 +102,7 @@
         </div>
 
         <div class="sa-card" style="margin-bottom:20px;">
-          <div class="sa-card-head"><h2>Preview Your School Experience</h2></div>
+          <div class="sa-card-head"><h2>Preview a School in This District</h2></div>
           <div class="sa-tabs" id="previewTabs">
             <button class="sa-tab active" data-tab="admin">Administrator</button>
             <button class="sa-tab" data-tab="teacher">Teacher</button>
@@ -145,7 +146,7 @@
               <div class="pv-marketing-body"><div class="pv-marketing-title">John's Classroom</div><span class="pv-marketing-badge">2 lessons in progress</span></div>
             </div>
           </div>
-          <p class="brand-help" style="margin-top:12px;">Every preview includes "Powered by Fixer Nation Education," which always stays visible.</p>
+          <p class="brand-help" style="margin-top:12px;">This shows any school in this district that hasn't published its own branding. Every preview includes "Powered by Fixer Nation Education," which always stays visible.</p>
         </div>
 
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
@@ -164,7 +165,7 @@
 <div class="sa-modal-overlay" id="publishModal" style="display:none;">
   <div class="sa-modal">
     <div class="sa-modal-head"><h2>Publish Branding</h2></div>
-    <p style="font-size:13.5px;color:var(--sa-text-soft);margin-bottom:16px;">This branding will be applied to your school's administrator, teacher, classroom, student, and parent experiences.</p>
+    <p style="font-size:13.5px;color:var(--sa-text-soft);margin-bottom:16px;">This branding will become the default for every school in your district that hasn't published its own branding.</p>
     <div class="sa-modal-foot">
       <button class="sa-btn sa-btn-secondary" onclick="closePublishModal()">Cancel</button>
       <button class="sa-btn sa-btn-primary" onclick="publishBranding()">Publish Branding</button>
@@ -173,10 +174,10 @@
 </div>
 
 <script>
-var currentSchoolId = null;
+var currentDistrictId = null;
 
-document.addEventListener('saReady', function () { loadBranding(); });
-document.addEventListener('saSchoolChanged', function () { loadBranding(); });
+document.addEventListener('daReady', function () { loadBranding(); });
+document.addEventListener('daDistrictChanged', function () { loadBranding(); });
 
 document.getElementById('previewTabs').addEventListener('click', function (e) {
   var btn = e.target.closest('.sa-tab');
@@ -188,12 +189,12 @@ document.getElementById('previewTabs').addEventListener('click', function (e) {
 });
 
 async function loadBranding() {
-  var purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
-  if (!purchaseId) return;
+  var districtId = window.daActiveDistrictId ? window.daActiveDistrictId() : null;
+  if (!districtId) return;
   try {
-    var d = await saFetch('/api/school-admin/branding?purchaseId=' + purchaseId);
-    currentSchoolId = d.schoolId;
-    document.getElementById('brandSchoolName').textContent = d.schoolDisplayName || '—';
+    var d = await daFetch('/api/district-admin/branding?districtId=' + districtId);
+    currentDistrictId = d.districtId;
+    document.getElementById('brandDistrictName').textContent = d.districtName || '—';
 
     if (d.draft.primary_color) setColor('primary', d.draft.primary_color);
     if (d.draft.secondary_color) setColor('secondary', d.draft.secondary_color);
@@ -206,7 +207,7 @@ async function loadBranding() {
     document.getElementById('pageLoading').style.display = 'none';
     document.getElementById('pageContent').style.display = 'block';
   } catch (e) {
-    saToast('Failed to load branding: ' + e.message, 'error');
+    daToast('Failed to load branding: ' + e.message, 'error');
   }
 }
 
@@ -228,13 +229,13 @@ function setLogoPreview(displayUrl, originalUrl, cropRect) {
 
 function openCropEditor() {
   if (!currentLogoOriginalUrl) return;
-  var purchaseId = window.saActivePurchaseId();
+  var districtId = window.daActiveDistrictId();
   openLogoCropModal({
     originalUrl: currentLogoOriginalUrl,
     cropRect: currentLogoCropRect,
-    putUrl: function () { return '/api/school-admin/branding/logo/crop?purchaseId=' + purchaseId; },
-    fetchFn: saFetch,
-    toastFn: saToast,
+    putUrl: function () { return '/api/district-admin/branding/logo/crop?districtId=' + districtId; },
+    fetchFn: daFetch,
+    toastFn: daToast,
     onApplied: function (result) {
       setLogoPreview(result.logoDisplayUrl, currentLogoOriginalUrl, result.cropRect);
       updateLivePreview();
@@ -269,9 +270,6 @@ function currentDraftBranding() {
   };
 }
 
-// The SAME fnApplyBranding used on every real page — the preview panels
-// are just small DOM scopes that happen to share the same CSS variable
-// names as the real surfaces they represent.
 function updateLivePreview() {
   var b = currentDraftBranding();
   fnApplyBranding(b, document.getElementById('panelAdmin'), window.FN_SCHOOL_ADMIN_VARMAP);
@@ -283,21 +281,21 @@ function updateLivePreview() {
 async function handleLogoFile(input) {
   var file = input.files[0];
   if (!file) return;
-  var purchaseId = window.saActivePurchaseId();
+  var districtId = window.daActiveDistrictId();
   var errEl = document.getElementById('logoError');
   errEl.style.display = 'none';
 
   var fd = new FormData();
   fd.append('file', file);
   try {
-    var r = await fetch('/api/school-admin/branding/logo?purchaseId=' + purchaseId, {
+    var r = await fetch('/api/district-admin/branding/logo?districtId=' + districtId, {
       method: 'POST', credentials: 'include', body: fd,
     });
     var data = await r.json();
     if (!r.ok) { errEl.textContent = data.error || 'Upload failed'; errEl.style.display = ''; return; }
     setLogoPreview(data.logoDisplayUrl, data.logoOriginalUrl, null);
     updateLivePreview();
-    saToast('Logo uploaded. Publish to make it live.', 'success');
+    daToast('Logo uploaded. Publish to make it live.', 'success');
   } catch (e) {
     errEl.textContent = 'Upload failed. Please try again.';
     errEl.style.display = '';
@@ -306,9 +304,9 @@ async function handleLogoFile(input) {
 }
 
 async function saveDraft() {
-  var purchaseId = window.saActivePurchaseId();
+  var districtId = window.daActiveDistrictId();
   try {
-    await saFetch('/api/school-admin/branding?purchaseId=' + purchaseId, {
+    await daFetch('/api/district-admin/branding?districtId=' + districtId, {
       method: 'PUT',
       body: JSON.stringify({
         primaryColor: document.getElementById('primaryHex').value,
@@ -316,10 +314,10 @@ async function saveDraft() {
         accentColor: document.getElementById('accentHex').value,
       }),
     });
-    saToast('Draft saved.', 'success');
+    daToast('Draft saved.', 'success');
     loadBranding();
   } catch (e) {
-    saToast('Failed to save draft: ' + e.message, 'error');
+    daToast('Failed to save draft: ' + e.message, 'error');
   }
 }
 
@@ -327,33 +325,33 @@ function confirmPublish() { document.getElementById('publishModal').style.displa
 function closePublishModal() { document.getElementById('publishModal').style.display = 'none'; }
 
 async function publishBranding() {
-  var purchaseId = window.saActivePurchaseId();
+  var districtId = window.daActiveDistrictId();
   try {
     await saveDraft();
-    await saFetch('/api/school-admin/branding/publish', {
+    await daFetch('/api/district-admin/branding/publish', {
       method: 'POST',
-      body: JSON.stringify({ purchaseId: purchaseId }),
+      body: JSON.stringify({ districtId: districtId }),
     });
     closePublishModal();
-    saToast('Branding published.', 'success');
+    daToast('Branding published.', 'success');
     loadBranding();
   } catch (e) {
-    saToast('Failed to publish: ' + e.message, 'error');
+    daToast('Failed to publish: ' + e.message, 'error');
   }
 }
 
 async function resetToDefault() {
-  if (!confirm('Reset your school branding to the FNE default look? This clears your logo and colors.')) return;
-  var purchaseId = window.saActivePurchaseId();
+  if (!confirm('Reset this district\'s branding to the FNE default look? This clears the logo and colors every school in this district would otherwise inherit.')) return;
+  var districtId = window.daActiveDistrictId();
   try {
-    await saFetch('/api/school-admin/branding/reset', {
+    await daFetch('/api/district-admin/branding/reset', {
       method: 'POST',
-      body: JSON.stringify({ purchaseId: purchaseId }),
+      body: JSON.stringify({ districtId: districtId }),
     });
-    saToast('Branding reset to FNE default.', 'success');
+    daToast('Branding reset to FNE default.', 'success');
     location.reload();
   } catch (e) {
-    saToast('Failed to reset: ' + e.message, 'error');
+    daToast('Failed to reset: ' + e.message, 'error');
   }
 }
 </script>
