@@ -84,6 +84,14 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
   if (!nav) return;
   if (loggedIn) {
     const isParent = role === 'parent';
+    const isSchoolAdmin = role === 'school_license_admin';
+    // site_users.role can be 'admin' for an account that ALSO holds separate
+    // admin-backend credentials (fn_session, a wholly different auth system
+    // from this fn_user_session-driven dropdown) — this link is a
+    // convenience shortcut, not a grant of access. Someone without a live
+    // admin session in this browser just lands on admin-login.html, same as
+    // any other unauthenticated visit to that page.
+    const isAdmin = role === 'admin';
     const li = (href, label) => `<a href="${href}" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">${label}</a>`;
     nav.innerHTML = `
       <div style="position:relative;">
@@ -94,6 +102,8 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
           ${!isParent ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
           ${!isParent ? li('teacher-classrooms.html', 'My Classrooms') : ''}
           ${isParent ? li('parent-portal.html', 'Parent Portal') : ''}
+          ${isSchoolAdmin ? li('school-admin-dashboard.html', 'School Admin Portal') : ''}
+          ${isAdmin ? li('admin-dashboard.html', 'FNE Admin Dashboard') : ''}
           ${li('my-purchases.html', 'Purchase History')}
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>
           <a href="#" onclick="fnAuthLogout(); return false;" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#D9502F; border-radius:6px;">Log Out</a>
