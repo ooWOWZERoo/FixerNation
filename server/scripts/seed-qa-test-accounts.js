@@ -375,6 +375,100 @@ async function main() {
     out.quotePoGateToken = poGateToken;
   }
 
+  // --- Unaccepted quote against a REAL trial product, fixed token — for a
+  // regression test on the 2026-08-22 fix where quote-accepted trials were
+  // hardcoded to productType:'group_license' (unassigned 'available' seats,
+  // unclaimable by the registering buyer) instead of 'single_license'
+  // (a pre-filled, claimable 'pending' seat) — a school that paid for a
+  // trial via quote ended up with an active purchase and zero actual
+  // content access. Re-seedable, same pattern as the PO-gate fixture above.
+  const [[trialProduct]] = await conn.query(
+    'SELECT id, name FROM license_products WHERE is_trial = 1 LIMIT 1'
+  );
+  if (trialProduct) {
+    const trialQuoteToken = 'qa-fixed-quote-trial-token-000000000000000000000000000000000';
+    const trialQuoteEmail = 'qa-quote-trial@example.com';
+
+    const [[existingTrialQuote]] = await conn.query('SELECT id FROM quote_requests WHERE accept_token = ?', [trialQuoteToken]);
+    let trialQuoteId;
+    if (existingTrialQuote) {
+      trialQuoteId = existingTrialQuote.id;
+      const [oldPurchases] = await conn.query('SELECT id, invoice_id FROM purchases WHERE quote_id = ?', [trialQuoteId]);
+      const oldInvoiceIds = oldPurchases.map(p => p.invoice_id).filter(Boolean);
+      await conn.query('DELETE FROM purchases WHERE quote_id = ?', [trialQuoteId]);
+      if (oldInvoiceIds.length) {
+        await conn.query('DELETE FROM invoices WHERE id IN (?)', [oldInvoiceIds]);
+      }
+      // Also drop any site_users account this quote's own test may have
+      // registered in a prior run, so accepting it fresh always exercises
+      // the new-account path instead of hitting "account already exists."
+      await conn.query('DELETE FROM site_users WHERE email = ?', [trialQuoteEmail]);
+      await conn.query(
+        `UPDATE quote_requests SET accepted_at = NULL, accepted_payment_method = NULL, admin_invited_at = NULL,
+         status = 'sent', quote_valid_until = NULL, quoted_product_id = ?, quoted_product_name = ?,
+         quoted_seat_count = 1, quoted_amount_cents = 5000 WHERE id = ?`,
+        [trialProduct.id, trialProduct.name, trialQuoteId]
+      );
+    } else {
+      const [r] = await conn.query(
+        `INSERT INTO quote_requests (first_name, last_name, email, school, accept_token, status, quoted_product_id, quoted_product_name, quoted_seat_count, quoted_amount_cents)
+         VALUES ('QA', 'QuoteTrial', ?, 'QA Trial School', ?, 'sent', ?, ?, 1, 5000)`,
+        [trialQuoteEmail, trialQuoteToken, trialProduct.id, trialProduct.name]
+      );
+      trialQuoteId = r.insertId;
+    }
+    out.quoteTrialToken = trialQuoteToken;
+    out.quoteTrialEmail = trialQuoteEmail;
+  } else {
+    console.warn('No is_trial=1 license product found — skipping the quote-accepted-trial fixture. Run seed-trial-product.js or mark-pilot-product-as-trial.js first.');
+  }
+
+  // --- Dedicated teacher + seat for FNE-admin session-invalidation tests --
+  // Separate from qa-removable-teacher (used by school-admin.spec.ts's own
+  // remove-teacher test via the school-admin self-service path) — this one
+  // is for exercising the FNE-admin unregister-seat route specifically
+  // (server/routes/newsletter.js), so the two tests never fight over the
+  // same seat regardless of run order. Re-seedable: always resets the seat
+  // back to 'registered' and clears session_invalidated_at.
+  if (licenseProduct) {
+    const sessionInvalTeacherEmail = 'qa-session-invalidation-teacher@example.com';
+    const sessionInvalContactId = await findOrCreateContact(conn, { email: sessionInvalTeacherEmail, name: 'QA SessionInvalidation' });
+    const sessionInvalUserId = await findOrCreateSiteUser(conn, {
+      email: sessionInvalTeacherEmail, firstName: 'QA', lastName: 'SessionInvalidation', role: 'teacher',
+    });
+    const sessionInvalPasswordHash = await bcrypt.hash(QA_PASSWORD, 10);
+    await conn.query('UPDATE site_users SET password_hash = ?, session_invalidated_at = NULL WHERE id = ?', [sessionInvalPasswordHash, sessionInvalUserId]);
+
+    const [[existingSessionInvalPurchase]] = await conn.query(
+      "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'single_license'",
+      [sessionInvalContactId]
+    );
+    const sessionInvalPurchaseId = existingSessionInvalPurchase ? existingSessionInvalPurchase.id : (await conn.query(
+      `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, license_status)
+       VALUES (?, 'single_license', ?, 1, 'QA Seed', 'manual', 'paid', 'active')`,
+      [sessionInvalContactId, licenseProduct.id]
+    ))[0].insertId;
+
+    const [[existingSessionInvalSeat]] = await conn.query(
+      'SELECT id FROM license_seats WHERE purchase_id = ?',
+      [sessionInvalPurchaseId]
+    );
+    if (existingSessionInvalSeat) {
+      await conn.query(
+        "UPDATE license_seats SET status = 'registered', registered_site_user_id = ?, registered_at = NOW() WHERE id = ?",
+        [sessionInvalUserId, existingSessionInvalSeat.id]
+      );
+    } else {
+      await conn.query(
+        `INSERT INTO license_seats (purchase_id, invited_email, status, registered_site_user_id, registered_at)
+         VALUES (?, ?, 'registered', ?, NOW())`,
+        [sessionInvalPurchaseId, sessionInvalTeacherEmail, sessionInvalUserId]
+      );
+    }
+    out.sessionInvalTeacherEmail = sessionInvalTeacherEmail;
+    out.sessionInvalPurchaseId = sessionInvalPurchaseId;
+  }
+
   // --- Session-revocation fixture ------------------------------------------
   // A school_license_admin account dedicated to session-invalidation tests
   // (change-password / reset-password bumping session_invalidated_at, and
@@ -695,6 +789,10 @@ async function main() {
   if (out.inviteEmail) console.log(`TEST_TEACHER_INVITE_EMAIL=${out.inviteEmail}`);
   if (out.quoteAcceptToken) console.log(`TEST_QUOTE_ACCEPT_TOKEN=${out.quoteAcceptToken}`);
   if (out.quotePoGateToken) console.log(`TEST_QUOTE_PO_GATE_TOKEN=${out.quotePoGateToken}`);
+  if (out.quoteTrialToken) console.log(`TEST_QUOTE_TRIAL_TOKEN=${out.quoteTrialToken}`);
+  if (out.quoteTrialEmail) console.log(`TEST_QUOTE_TRIAL_EMAIL=${out.quoteTrialEmail}`);
+  if (out.sessionInvalTeacherEmail) console.log(`TEST_SESSION_INVAL_TEACHER_EMAIL=${out.sessionInvalTeacherEmail}`);
+  if (out.sessionInvalPurchaseId) console.log(`TEST_SESSION_INVAL_PURCHASE_ID=${out.sessionInvalPurchaseId}`);
   if (out.quoteBuilderId) console.log(`TEST_QUOTE_BUILDER_ID=${out.quoteBuilderId}`);
   if (out.qaLicenseProductId) console.log(`TEST_LICENSE_PRODUCT_ID=${out.qaLicenseProductId}`);
   if (out.sessionRevokeEmail) {
