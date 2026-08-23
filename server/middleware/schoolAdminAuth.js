@@ -83,7 +83,12 @@ async function requireSchoolAdminRead(req, res, next) {
 // teacher id) first. Returns true (and has already sent the 403) if blocked.
 function blockIfReadOnly(req, res, purchaseId) {
   const assignment = req.schoolAdmin.purchases.find(p => p.purchase_id === purchaseId);
-  if (assignment && assignment.permission_level === 'read_only') {
+  // Fail CLOSED, not open: every current call site pre-validates purchaseId
+  // against req.schoolAdmin.purchaseIds first, so `assignment` missing here
+  // can't happen today — but a future route resolving purchaseId from a new
+  // source without that pre-check should be denied by default, not silently
+  // allowed through.
+  if (!assignment || assignment.permission_level === 'read_only') {
     res.status(403).json({ error: 'Your administrator role is read-only' });
     return true;
   }
@@ -97,7 +102,8 @@ function blockIfReadOnly(req, res, purchaseId) {
 // revoke seats" — the backend never enforced that distinction until now.
 function blockIfCannotRevoke(req, res, purchaseId) {
   const assignment = req.schoolAdmin.purchases.find(p => p.purchase_id === purchaseId);
-  if (assignment && assignment.permission_level !== 'primary') {
+  // Same fail-closed reasoning as blockIfReadOnly above.
+  if (!assignment || assignment.permission_level !== 'primary') {
     res.status(403).json({ error: 'Only a primary administrator can revoke a seat' });
     return true;
   }
