@@ -183,7 +183,7 @@ test.describe("Admin Morning Boost Calendar", () => {
     await expect(createBtn).toBeDisabled();
   });
 
-  test("create a draft post for an unlinked day, then delete it and unlink the calendar entry", async ({ page }) => {
+  test("create a draft post for an unlinked day, then delete it — the calendar entry unlinks on its own", async ({ page }) => {
     const freeCheckbox = page.locator(".row-cb:not([disabled])").first();
     const freeCount = await freeCheckbox.count();
     test.skip(freeCount === 0, "No unlinked calendar day available to safely test against");
@@ -206,25 +206,17 @@ test.describe("Admin Morning Boost Calendar", () => {
     await expect(row.locator(".pill-linked")).toBeVisible({ timeout: 8000 });
     await expect(row.getByRole("link", { name: /Edit Post/ })).toBeVisible();
 
-    // Cleanup: delete the QA-created draft post, then unlink the calendar
-    // day so this real calendar entry is restored exactly as found.
-    // Best-effort — do not mask the assertions above if this throws.
-    try {
-      const entryRes = await page.request.get(`/api/morning-boost/${date}`);
-      if (entryRes.ok()) {
-        const { entry } = await entryRes.json();
-        if (entry && entry.blogPostId) {
-          await page.request.delete(`/api/blog/posts/${entry.blogPostId}`);
-        }
-      }
-      await page.request.put(`/api/morning-boost/${date}/blog-post`, {
-        data: { blogPostId: null },
-      });
-    } catch {
-      // best-effort — verified explicitly below regardless
-    }
+    // Cleanup + regression check in one: deleting the post should unlink
+    // the calendar day on its own via the DB's own FK (ON DELETE SET NULL,
+    // added by server/scripts/alter-add-morning-boost-calendar-fk.js — the
+    // live table predated that constraint in schema.sql until this session,
+    // so a deleted post used to leave a dangling blogPostId behind). No
+    // manual PUT .../blog-post {blogPostId:null} step should be needed.
+    const entryBefore = await page.request.get(`/api/morning-boost/${date}`);
+    const { entry } = await entryBefore.json();
+    expect(entry.blogPostId).toBeTruthy();
+    await page.request.delete(`/api/blog/posts/${entry.blogPostId}`);
 
-    // Verify the cleanup actually restored the day to unlinked.
     const verifyRes = await page.request.get(`/api/morning-boost/${date}`);
     expect(verifyRes.ok()).toBeTruthy();
     const { entry: verifyEntry } = await verifyRes.json();
