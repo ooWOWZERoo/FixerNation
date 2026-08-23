@@ -88,7 +88,7 @@ function renderInvoice(inv, branding) {
   const tagline = branding.tagline || '';
   const brandMark = branding.logoUrl
     ? `<img src="${branding.logoUrl}" style="width:40px; height:40px; border-radius:12px; object-fit:contain;">`
-    : `<img src="logo-fne.png" alt="Fixer Nation Education" style="height:80px; width:auto; object-fit:contain;">`;
+    : `<img src="logo-fne.png?v=2" alt="Fixer Nation Education" style="height:80px; width:auto; object-fit:contain;">`;
   const buyer = inv.buyer || {};
   const address = buyer.address || {};
   const addressLine = [address.street, [address.city, address.state].filter(Boolean).join(', '), address.zip].filter(Boolean).join(' · ');

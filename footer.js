@@ -36,7 +36,7 @@
 
         // Column 1 — Brand
         '<div>' +
-          '<a class="fn-flogo" href="index.html"><span class="fn-flogo-pill"><img src="logo-fne.png" alt="Fixer Nation Education" class="fn-flogo-img"></span></a>' +
+          '<a class="fn-flogo" href="index.html"><span class="fn-flogo-pill"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="fn-flogo-img"></span></a>' +
           '<p class="fn-fcredo">&ldquo;There are no problems in life&hellip; only issues and answers.&rdquo;</p>' +
           '<div class="fn-fsocial">' +
             '<a href="#">IG</a>' +

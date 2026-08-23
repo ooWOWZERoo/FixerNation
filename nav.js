@@ -106,7 +106,7 @@
   // ── Nav HTML ─────────────────────────────────────────────────────────────────
   var inner =
     '<div class="nav">' +
-      '<a href="index.html" class="brand"><img src="logo-fne.png" alt="Fixer Nation Education" class="brand-logo"></a>' +
+      '<a href="index.html" class="brand"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="brand-logo"></a>' +
       '<nav class="nav-links">' +
         '<div class="fn-nav-dropdown">' +
           '<button class="fn-nav-parent' + (whyActive || researchActive || aboutActive ? ' active' : '') + '">Why FNE <span class="fn-nav-caret">&#9662;</span></button>' +
