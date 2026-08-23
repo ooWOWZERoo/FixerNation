@@ -303,11 +303,14 @@ router.get('/quotes', requireAuth, async (req, res) => {
 });
 
 router.put('/quotes/:id', requireAuth, async (req, res) => {
-  const { status, notes, quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
-          quotedTierName, quotedAddonSeats, quotedProrationFactor, quotedTermYears, quotedValidUntil,
-          quotedSchoolDomain, contentProfileId } = req.body || {};
+  const { status, notes, firstName, lastName, email, school, phone, quotedProductId, quotedProductName,
+          quotedSeatCount, quotedAmountCents, quotedTierName, quotedAddonSeats, quotedProrationFactor,
+          quotedTermYears, quotedValidUntil, quotedSchoolDomain, contentProfileId } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
+  }
+  if (email !== undefined && !String(email).trim()) {
+    return res.status(400).json({ error: 'Email cannot be blank' });
   }
   const [existing] = await pool.query('SELECT id FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!existing.length) return res.status(404).json({ error: 'Not found' });
@@ -321,6 +324,11 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   const params = [];
   if (status                !== undefined) { updates.push('status = ?');                  params.push(status); }
   if (notes                 !== undefined) { updates.push('notes = ?');                   params.push(notes); }
+  if (firstName             !== undefined) { updates.push('first_name = ?');              params.push((firstName || '').trim()); }
+  if (lastName              !== undefined) { updates.push('last_name = ?');               params.push((lastName  || '').trim()); }
+  if (email                 !== undefined) { updates.push('email = ?');                   params.push(email.trim()); }
+  if (school                !== undefined) { updates.push('school = ?');                  params.push((school || '').trim() || null); }
+  if (phone                 !== undefined) { updates.push('phone = ?');                    params.push((phone  || '').trim() || null); }
   if (quotedProductId       !== undefined) { updates.push('quoted_product_id = ?');       params.push(quotedProductId || null); }
   if (quotedProductName     !== undefined) { updates.push('quoted_product_name = ?');     params.push(quotedProductName || null); }
   if (quotedSeatCount       !== undefined) { updates.push('quoted_seat_count = ?');       params.push(quotedSeatCount || null); }

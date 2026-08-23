@@ -118,7 +118,7 @@
         <div class="a-card-head">
           <h2>Quote Requests</h2>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <button class="a-btn a-btn-primary" onclick="openNewQuoteModal()">+ New Quote</button>
+            <button class="a-btn a-btn-primary" onclick="openModal(null)">+ New Quote</button>
             <input type="search" id="searchInput" class="q-search" placeholder="Search name, email, school…" oninput="applyFilters()">
             <select id="statusFilter" class="a-filter-select" onchange="applyFilters()">
               <option value="">All Statuses</option>
@@ -173,7 +173,7 @@
     <div class="a-modal-body" id="modalBody"></div>
     <div class="a-modal-foot" id="modalFoot">
       <button class="a-btn a-btn-outline" onclick="closeModal()">Close</button>
-      <button class="a-btn a-btn-outline" onclick="copyQuote()">Copy Quote</button>
+      <button class="a-btn a-btn-outline" id="copyQuoteBtn" onclick="copyQuote()">Copy Quote</button>
       <button class="a-btn a-btn-outline" onclick="saveModal()">Save</button>
       <button class="a-btn a-btn-primary" id="sendQuoteBtn" onclick="sendQuote()">Send Quote</button>
     </div>
@@ -233,49 +233,6 @@
   </div>
 </div>
 
-<!-- New Quote modal — admin-initiated outreach, no inbound request needed -->
-<div class="a-modal-overlay" id="newQuoteModalOverlay" style="display:none;" onclick="if(event.target===this)closeNewQuoteModal()">
-  <div class="a-modal" style="max-width:480px;">
-    <div class="a-modal-head">
-      <h3>New Quote</h3>
-      <button class="a-modal-close" onclick="closeNewQuoteModal()">✕</button>
-    </div>
-    <div class="a-modal-body">
-      <p class="a-note" style="margin-bottom:16px;">Start a quote for a prospect who hasn't asked for one — enter their info, then continue into the same builder used for every other quote.</p>
-      <div class="q-row">
-        <div class="q-field">
-          <label class="q-label">First name</label>
-          <input type="text" class="q-input" id="nqFirstName" placeholder="First name">
-        </div>
-        <div class="q-field">
-          <label class="q-label">Last name</label>
-          <input type="text" class="q-input" id="nqLastName" placeholder="Last name">
-        </div>
-      </div>
-      <div class="q-field">
-        <label class="q-label">Email</label>
-        <input type="email" class="q-input" id="nqEmail" placeholder="email@school.org">
-      </div>
-      <div class="q-field">
-        <label class="q-label">School / Organization</label>
-        <input type="text" class="q-input" id="nqSchool" placeholder="School name">
-      </div>
-      <div class="q-field">
-        <label class="q-label">Phone</label>
-        <input type="tel" class="q-input" id="nqPhone" placeholder="(xxx) xxx-xxxx">
-      </div>
-      <div class="q-field">
-        <label class="q-label">Content Profile</label>
-        <select id="nqContentProfile" class="a-filter-select" style="width:100%;"></select>
-      </div>
-    </div>
-    <div class="a-modal-foot">
-      <button class="a-btn a-btn-outline" onclick="closeNewQuoteModal()">Cancel</button>
-      <button class="a-btn a-btn-primary" id="createQuoteBtn" onclick="submitNewQuote()">Create Quote</button>
-    </div>
-  </div>
-</div>
-
 <!-- Quote Content Profile modal — create/edit a named set of the 4 email sections -->
 <div class="a-modal-overlay" id="profileModalOverlay" style="display:none;" onclick="if(event.target===this)closeProfileModal()">
   <div class="a-modal" style="max-width:620px;">
@@ -321,6 +278,7 @@ fnRequireAuth();
 let allQuotes        = [];
 let licenseProds     = [];
 let editingId        = null;
+let creatingQuote    = false;
 let sortCol          = 'created_at';
 let sortDir          = 'desc';
 let copySelectedCrm  = null;
@@ -477,14 +435,21 @@ function renderTable(quotes) {
 }
 
 function openModal(id) {
-  const q = allQuotes.find(x => x.id === id);
-  if (!q) return;
-  editingId = id;
+  creatingQuote = (id === null);
+  const q = creatingQuote ? {} : allQuotes.find(x => x.id === id);
+  if (!creatingQuote && !q) return;
+  editingId = creatingQuote ? null : id;
 
-  const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || 'Quote Request';
-  const titleLabel = q.school || fullName;
-  const titleSuffix = q.quote_number ? ` — #${q.quote_number}` : '';
-  document.getElementById('modalTitle').textContent = titleLabel + titleSuffix;
+  document.getElementById('copyQuoteBtn').style.display = creatingQuote ? 'none' : '';
+
+  if (creatingQuote) {
+    document.getElementById('modalTitle').textContent = 'New Quote';
+  } else {
+    const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || 'Quote Request';
+    const titleLabel = q.school || fullName;
+    const titleSuffix = q.quote_number ? ` — #${q.quote_number}` : '';
+    document.getElementById('modalTitle').textContent = titleLabel + titleSuffix;
+  }
 
   const savedAmount = q.quoted_amount_cents ? (q.quoted_amount_cents / 100).toFixed(2) : '';
 
@@ -506,18 +471,34 @@ function openModal(id) {
   const threeYrLabel = quoteSettings.threeYrPct > 0 ? ` (${quoteSettings.threeYrPct}% off)` : '';
 
   document.getElementById('modalBody').innerHTML = `
+    ${creatingQuote ? '' : `
     <div class="q-field">
       <div class="q-label">Submitted</div>
       <div>${fnFormatDate(q.created_at)}</div>
+    </div>`}
+    <div class="q-row">
+      <div class="q-field">
+        <label class="q-label" for="qFirstName">First name</label>
+        <input type="text" id="qFirstName" class="q-input" placeholder="First name" value="${fnEscape(q.first_name || '')}">
+      </div>
+      <div class="q-field">
+        <label class="q-label" for="qLastName">Last name</label>
+        <input type="text" id="qLastName" class="q-input" placeholder="Last name" value="${fnEscape(q.last_name || '')}">
+      </div>
     </div>
     <div class="q-field">
-      <div class="q-label">Contact</div>
-      <div>${fnEscape(fullName)}</div>
-      <div style="margin-top:2px;"><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></div>
-      ${q.phone ? `<div style="margin-top:2px;">${fnEscape(q.phone)}</div>` : ''}
+      <label class="q-label" for="qEmail">Email</label>
+      <input type="email" id="qEmail" class="q-input" placeholder="email@school.org" value="${fnEscape(q.email || '')}">
     </div>
-    ${q.school ? `<div class="q-field"><div class="q-label">School / Organization</div><div>${fnEscape(q.school)}</div></div>` : ''}
-    ${q.message ? `<div class="q-field"><div class="q-label">Message</div><div class="q-msg">${fnEscape(q.message)}</div></div>` : ''}
+    <div class="q-field">
+      <label class="q-label" for="qSchoolName">School / Organization</label>
+      <input type="text" id="qSchoolName" class="q-input" placeholder="School name" value="${fnEscape(q.school || '')}">
+    </div>
+    <div class="q-field">
+      <label class="q-label" for="qPhone">Phone</label>
+      <input type="tel" id="qPhone" class="q-input" placeholder="(xxx) xxx-xxxx" value="${fnEscape(q.phone || '')}">
+    </div>
+    ${(!creatingQuote && q.message) ? `<div class="q-field"><div class="q-label">Message</div><div class="q-msg">${fnEscape(q.message)}</div></div>` : ''}
 
     <div class="q-field">
       <label class="q-label" for="qSchoolDomain">School Email Domain</label>
@@ -816,6 +797,76 @@ function calcAddon() {
 function closeModal() {
   document.getElementById('quoteModalOverlay').style.display = 'none';
   editingId = null;
+  creatingQuote = false;
+}
+
+function getContactPayload() {
+  return {
+    firstName: document.getElementById('qFirstName').value.trim(),
+    lastName:  document.getElementById('qLastName').value.trim(),
+    email:     document.getElementById('qEmail').value.trim(),
+    school:    document.getElementById('qSchoolName').value.trim(),
+    phone:     document.getElementById('qPhone').value.trim(),
+  };
+}
+
+// Creates the underlying quote_requests row the first time a brand-new
+// quote is saved/sent, then returns its id. A no-op (just returns
+// editingId) for a quote that already exists.
+async function ensureQuoteSaved() {
+  if (!creatingQuote) return editingId;
+  const contact = getContactPayload();
+  if (!contact.email) { fnToast('Email is required'); return null; }
+
+  const profileEl = document.getElementById('qContentProfile');
+  const r = await fetch('/api/contact/quotes', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...contact, contentProfileId: profileEl ? (Number(profileEl.value) || null) : null }),
+  });
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Could not create quote'); return null; }
+
+  editingId = data.quote.id;
+  creatingQuote = false;
+  allQuotes.push(data.quote);
+  document.getElementById('copyQuoteBtn').style.display = '';
+  return editingId;
+}
+
+// Pushes everything currently in the modal (contact info, status, notes,
+// content profile, pricing) to the given quote id. Shared by Save and by
+// Send (which persists any last-second edits before actually emailing).
+async function putQuoteFields(id) {
+  const contact = getContactPayload();
+  if (!contact.email) { fnToast('Email is required'); return null; }
+  const status = document.getElementById('modalStatus').value;
+  const notes  = document.getElementById('modalNotes').value;
+  const { productId, productName, tierName, addonSeats, termYears, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain } = getQuotePayload();
+
+  const body = { status, notes, ...contact };
+  if (productId   !== null) body.quotedProductId   = productId;
+  if (productName !== null) body.quotedProductName = productName;
+  if (seatCount   !== null) body.quotedSeatCount   = seatCount;
+  if (amountCents !== null) body.quotedAmountCents = amountCents;
+  if (tierName    !== null) body.quotedTierName    = tierName;
+  if (addonSeats   >    0)  body.quotedAddonSeats  = addonSeats;
+  if (termYears    >    1)  body.quotedTermYears   = termYears;
+  if (quotedValidUntil)     body.quotedValidUntil  = quotedValidUntil;
+  body.quotedSchoolDomain = quotedSchoolDomain;
+  const profileEl = document.getElementById('qContentProfile');
+  if (profileEl) body.contentProfileId = Number(profileEl.value) || null;
+
+  const r = await fetch(`/api/contact/quotes/${id}`, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) return null;
+  const { quote } = await r.json();
+  const idx = allQuotes.findIndex(q => q.id === id);
+  if (idx !== -1) allQuotes[idx] = quote; else allQuotes.push(quote);
+  return quote;
 }
 
 function getQuotePayload() {
@@ -851,33 +902,10 @@ function getQuotePayload() {
 }
 
 async function saveModal() {
-  if (!editingId) return;
-  const status = document.getElementById('modalStatus').value;
-  const notes  = document.getElementById('modalNotes').value;
-  const { productId, productName, tierName, addonSeats, termYears, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain } = getQuotePayload();
-
-  const body = { status, notes };
-  if (productId   !== null) body.quotedProductId   = productId;
-  if (productName !== null) body.quotedProductName = productName;
-  if (seatCount   !== null) body.quotedSeatCount   = seatCount;
-  if (amountCents !== null) body.quotedAmountCents = amountCents;
-  if (tierName    !== null) body.quotedTierName    = tierName;
-  if (addonSeats   >    0)  body.quotedAddonSeats  = addonSeats;
-  if (termYears    >    1)  body.quotedTermYears   = termYears;
-  if (quotedValidUntil)     body.quotedValidUntil  = quotedValidUntil;
-  body.quotedSchoolDomain = quotedSchoolDomain;
-  const profileEl = document.getElementById('qContentProfile');
-  if (profileEl) body.contentProfileId = Number(profileEl.value) || null;
-
-  const r = await fetch(`/api/contact/quotes/${editingId}`, {
-    method: 'PUT', credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) { fnToast('Could not save changes'); return; }
-  const { quote } = await r.json();
-  const idx = allQuotes.findIndex(q => q.id === editingId);
-  if (idx !== -1) allQuotes[idx] = quote;
+  const id = await ensureQuoteSaved();
+  if (!id) return;
+  const quote = await putQuoteFields(id);
+  if (!quote) { fnToast('Could not save changes'); return; }
   updateStats();
   applyFilters();
   closeModal();
@@ -885,20 +913,24 @@ async function saveModal() {
 }
 
 async function sendQuote() {
-  if (!editingId) return;
+  const id = await ensureQuoteSaved();
+  if (!id) return;
+
   const { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain } = getQuotePayload();
   if (!productName) { fnToast('Select a license package first'); return; }
   if (!amountCents) { fnToast('Enter a dollar amount'); return; }
+
+  // Persist contact info / status / notes / profile / pricing before
+  // actually emailing, so nothing typed in this session is lost.
+  const saved = await putQuoteFields(id);
+  if (!saved) { fnToast('Could not save changes'); return; }
 
   const btn = document.getElementById('sendQuoteBtn');
   btn.disabled = true;
   btn.textContent = 'Sending…';
 
-  const status = document.getElementById('modalStatus').value;
-  const notes  = document.getElementById('modalNotes').value;
-
   const profileEl = document.getElementById('qContentProfile');
-  const r = await fetch(`/api/contact/quotes/${editingId}/send`, {
+  const r = await fetch(`/api/contact/quotes/${id}/send`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -927,18 +959,8 @@ async function sendQuote() {
   }
 
   const { quote } = await r.json();
-  const idx = allQuotes.findIndex(q => q.id === editingId);
+  const idx = allQuotes.findIndex(q => q.id === id);
   if (idx !== -1) allQuotes[idx] = quote;
-
-  // Also save status/notes if changed
-  if (status !== quote.status || notes !== (quote.notes || '')) {
-    await fetch(`/api/contact/quotes/${editingId}`, {
-      method: 'PUT', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, notes }),
-    });
-    if (idx !== -1) { allQuotes[idx].status = status; allQuotes[idx].notes = notes; }
-  }
 
   updateStats();
   applyFilters();
@@ -1034,51 +1056,6 @@ async function deleteProfile(id) {
   }
   await init();
   fnToast('Profile deleted');
-}
-
-function openNewQuoteModal() {
-  document.getElementById('nqFirstName').value = '';
-  document.getElementById('nqLastName').value  = '';
-  document.getElementById('nqEmail').value     = '';
-  document.getElementById('nqSchool').value    = '';
-  document.getElementById('nqPhone').value     = '';
-  document.getElementById('nqContentProfile').innerHTML = profileSelectOptions(defaultProfileId());
-  document.getElementById('newQuoteModalOverlay').style.display = 'flex';
-}
-
-function closeNewQuoteModal() {
-  document.getElementById('newQuoteModalOverlay').style.display = 'none';
-}
-
-async function submitNewQuote() {
-  const firstName = document.getElementById('nqFirstName').value.trim();
-  const lastName  = document.getElementById('nqLastName').value.trim();
-  const email     = document.getElementById('nqEmail').value.trim();
-  const school    = document.getElementById('nqSchool').value.trim();
-  const phone     = document.getElementById('nqPhone').value.trim();
-  const contentProfileId = Number(document.getElementById('nqContentProfile').value) || null;
-  if (!email) { fnToast('Email is required'); return; }
-
-  const btn = document.getElementById('createQuoteBtn');
-  btn.disabled = true;
-  btn.textContent = 'Creating…';
-  try {
-    const r = await fetch('/api/contact/quotes', {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName, lastName, email, school, phone, contentProfileId }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Could not create quote');
-    closeNewQuoteModal();
-    await init();
-    openModal(data.quote.id);
-  } catch (err) {
-    fnToast(err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Create Quote';
-  }
 }
 
 function fnEscape(s) {
