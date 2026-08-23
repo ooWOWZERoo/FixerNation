@@ -11,9 +11,8 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #1a2332 0%, #2d3f55 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; color: #111827; }
   .card { background: #fff; border-radius: 20px; padding: 44px 40px; max-width: 480px; width: 100%; box-shadow: 0 28px 70px rgba(0,0,0,.28); }
-  .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
-  .logo .mark { width: 44px; height: 44px; background: #E06D2C; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; flex-shrink: 0; }
-  .logo .words strong { display: block; font-size: 15px; font-weight: 700; }
+  .logo { display: flex; flex-direction: column; gap: 6px; margin-bottom: 32px; }
+  .logo img { height: 40px; width: auto; display: block; }
   .logo .words span { font-size: 12px; color: #6b7280; }
   h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
   .sub { font-size: 14px; color: #6b7280; margin-bottom: 24px; line-height: 1.6; }
@@ -46,9 +45,8 @@
 <body>
 <div class="card">
   <div class="logo">
-    <div class="mark">FN</div>
+    <img src="logo-fne.png" alt="Fixer Nation Education">
     <div class="words">
-      <strong>Fixer Nation Education</strong>
       <span>Group License Invitation</span>
     </div>
   </div>

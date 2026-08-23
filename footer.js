@@ -8,10 +8,9 @@
       'footer{background:#0E3733;color:rgba(255,255,255,0.82);padding:60px 0 32px;font-size:14px;margin-top:64px;}',
       '.fn-fi{max-width:1180px;margin:0 auto;padding:0 32px;}',
       '.fn-fg{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:40px;margin-bottom:48px;}',
-      '.fn-flogo{display:flex;align-items:center;gap:12px;font-family:\'Fraunces\',serif;font-weight:700;font-size:18px;color:#fff;text-decoration:none;}',
-      '.fn-fmark{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#F26B4D,#EBA657);color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;flex-shrink:0;}',
-      '.fn-fmark-init{font-size:13px;font-weight:800;line-height:1.1;}',
-      '.fn-fmark-sub{font-size:7.5px;font-weight:700;letter-spacing:0.1em;opacity:0.8;line-height:1;}',
+      '.fn-flogo{display:flex;align-items:center;gap:12px;text-decoration:none;}',
+      '.fn-flogo-pill{background:#fff;border-radius:10px;padding:6px 10px;display:flex;align-items:center;flex-shrink:0;}',
+      '.fn-flogo-img{height:28px;width:auto;display:block;}',
       '.fn-fcredo{font-family:\'Fraunces\',serif;font-style:italic;color:#F6D9C3;margin-top:16px;font-size:15px;max-width:280px;line-height:1.55;}',
       '.fn-fsocial{display:flex;gap:10px;margin-top:20px;}',
       '.fn-fsocial a{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}',
@@ -37,7 +36,7 @@
 
         // Column 1 — Brand
         '<div>' +
-          '<a class="fn-flogo" href="index.html"><div class="fn-fmark"><span class="fn-fmark-init">FNE</span><span class="fn-fmark-sub">SEL</span></div> Fixer Nation Education</a>' +
+          '<a class="fn-flogo" href="index.html"><span class="fn-flogo-pill"><img src="logo-fne.png" alt="Fixer Nation Education" class="fn-flogo-img"></span></a>' +
           '<p class="fn-fcredo">&ldquo;There are no problems in life&hellip; only issues and answers.&rdquo;</p>' +
           '<div class="fn-fsocial">' +
             '<a href="#">IG</a>' +

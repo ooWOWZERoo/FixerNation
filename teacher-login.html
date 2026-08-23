@@ -11,10 +11,8 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0E3733 0%,#1a6b63 100%);padding:20px;}
   .card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.28);}
-  .logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
-  .logo-mark{width:44px;height:44px;background:linear-gradient(135deg,#F26B4D,#EBA657);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 8px 18px -6px rgba(242,107,77,.55);flex-shrink:0;}
-  .logo-mark .init{font-size:13px;font-weight:800;color:#fff;line-height:1.1;}
-  .logo-mark .sub{font-size:7.5px;font-weight:700;color:rgba(255,255,255,.82);letter-spacing:.1em;line-height:1;}
+  .logo{display:flex;flex-direction:column;gap:6px;margin-bottom:28px;}
+  .logo img{height:40px;width:auto;display:block;}
   .logo-words{line-height:1.2;}
   .logo-words strong{display:block;font-size:15px;font-weight:700;color:#0E3733;}
   .logo-words span{font-size:12px;color:#6b7280;}
@@ -36,12 +34,8 @@
 <body>
 <div class="card">
   <div class="logo">
-    <div class="logo-mark">
-      <span class="init">FNE</span>
-      <span class="sub">SEL</span>
-    </div>
+    <img src="logo-fne.png" alt="Fixer Nation Education">
     <div class="logo-words">
-      <strong>Fixer Nation Education</strong>
       <span>Teacher Portal</span>
     </div>
   </div>

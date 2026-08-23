@@ -16,8 +16,7 @@
 
   aside.innerHTML =
     '<div class="sa-logo">' +
-      '<div class="mark">FN</div>' +
-      '<div class="word">School Admin<span class="sub">Portal</span></div>' +
+      '<span class="sa-logo-pill"><img src="logo-fne.png" alt="Fixer Nation Education" class="sa-logo-img"></span>' +
     '</div>' +
     '<div class="sa-school-select" id="saSchoolSelectWrap" style="display:none;">' +
       '<select id="saSchoolSelect" onchange="saSelectSchool(this.value)"><option value="">Loading…</option></select>' +

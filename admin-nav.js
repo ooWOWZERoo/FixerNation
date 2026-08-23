@@ -15,7 +15,7 @@
   }
 
   aside.innerHTML =
-    '<div class="a-logo"><div class="mark">FN</div><div class="word">FN Admin</div></div>' +
+    '<div class="a-logo"><span class="a-logo-pill"><img src="logo-fne.png" alt="Fixer Nation Education" class="a-logo-img"></span></div>' +
     '<div class="a-nav-pinned">' +
       link('admin-dashboard.html', '📊', 'Dashboard') +
       '<div class="a-nav-divider"></div>' +

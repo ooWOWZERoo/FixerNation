@@ -64,30 +64,18 @@ a:hover { text-decoration: none; }
   padding: 20px 16px 16px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
-.sa-logo .mark {
-  width: 36px;
-  height: 36px;
-  background: var(--sa-accent);
-  border-radius: 10px;
+.sa-logo-pill {
+  background: #fff;
+  border-radius: 9px;
+  padding: 5px 8px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 13px;
-  color: #fff;
   flex-shrink: 0;
-  letter-spacing: -0.03em;
 }
-.sa-logo .word {
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.25;
-}
-.sa-logo .sub {
-  font-size: 10px;
-  color: var(--sa-sidebar-text);
-  font-weight: 400;
+.sa-logo-img {
+  height: 24px;
+  width: auto;
+  display: block;
 }
 
 .sa-nav {
@@ -641,11 +629,13 @@ a:hover { text-decoration: none; }
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .sa-sidebar { width: 58px; }
-  .sa-logo .word, .sa-logo .sub, .sa-nav a .label, .sa-nav-section,
+  .sa-nav a .label, .sa-nav-section,
   .sa-sidebar-foot a .label, .sa-school-select { display: none; }
   .sa-nav a { justify-content: center; padding: 12px; }
   .sa-sidebar-foot a { justify-content: center; padding: 12px; }
   .sa-logo { justify-content: center; padding: 14px 8px; }
+  .sa-logo-pill { padding: 4px 5px; }
+  .sa-logo-img { height: 15px; }
   .sa-content { padding: 16px; }
   .sa-stat-grid { grid-template-columns: 1fr 1fr; }
   .sa-form-row { grid-template-columns: 1fr; }
