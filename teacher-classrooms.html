@@ -105,8 +105,14 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
 
 <script src="nav.js?v=15"></script>
 <script src="site-auth.js?v=5"></script>
+<script src="school-branding.js?v=1"></script>
 <script>
 fnRequireSiteAuth();
+
+fetch('/api/classrooms/branding', { credentials: 'include' })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (data) { if (data) fnApplyBranding(data.branding, document.documentElement); })
+  .catch(function () {});
 
 var classrooms = [];
 

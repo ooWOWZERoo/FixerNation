@@ -24,6 +24,7 @@
     '<nav class="sa-nav">' +
       link('school-admin-dashboard.html',   '📊', 'Dashboard') +
       link('school-admin-org.html',         '🏫', 'Organization') +
+      link('school-admin-branding.html',    '🎨', 'Branding') +
       link('school-admin-roster.html',      '🪑', 'Roster') +
       link('school-admin-invitations.html', '✉️',  'Invitations') +
       link('school-admin-reports.html',     '📈', 'Reports') +
@@ -89,10 +90,26 @@
         return el && el.value ? Number(el.value) : (data.schools && data.schools[0] ? data.schools[0].purchaseId : null);
       };
 
+      applySchoolBranding(window.saActivePurchaseId());
+
       // Fire a custom event so page JS can react
       document.dispatchEvent(new CustomEvent('saReady', { detail: data }));
     })
     .catch(function () { window.location.href = 'school-admin-login.html'; });
+
+  // The admin's own dashboard reflects their school's published branding
+  // too, not just the branding editor — reapplied whenever they switch
+  // schools via the multi-school selector.
+  function applySchoolBranding(purchaseId) {
+    if (!purchaseId || typeof fnApplyBranding !== 'function') return;
+    fetch('/api/school-admin/branding/resolved?purchaseId=' + purchaseId, { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data) fnApplyBranding(data.branding, document.documentElement, window.FN_SCHOOL_ADMIN_VARMAP);
+      })
+      .catch(function () {});
+  }
+  document.addEventListener('saSchoolChanged', function (e) { applySchoolBranding(e.detail.purchaseId); });
 
   window.saSelectSchool = function (purchaseId) {
     sessionStorage.setItem('saActivePurchaseId', purchaseId);

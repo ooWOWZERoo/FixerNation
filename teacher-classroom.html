@@ -107,6 +107,7 @@ table.data-table tr:hover td{background:#fafaf9;}
     <div class="topbar-left">
       <h1 id="classroomName">Loading…</h1>
       <div class="meta" id="classroomMeta"></div>
+      <div class="meta" id="fnSchoolLine" style="margin-top:4px;"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-outline btn-sm" onclick="regenCode()">Regenerate Join Code</button>
@@ -281,8 +282,19 @@ table.data-table tr:hover td{background:#fafaf9;}
 <script src="cart.js"></script>
 <script src="nav.js?v=15"></script>
 <script src="site-auth.js?v=5"></script>
+<script src="school-branding.js?v=1"></script>
 <script>
 fnRequireSiteAuth();
+
+fetch('/api/classrooms/branding', { credentials: 'include' })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (data) {
+    if (!data || !data.branding) return;
+    fnApplyBranding(data.branding, document.documentElement);
+    var line = document.getElementById('fnSchoolLine');
+    if (line && data.branding.schoolDisplayName) line.textContent = data.branding.schoolDisplayName;
+  })
+  .catch(function () {});
 
 var classroomId = new URLSearchParams(location.search).get('id');
 var classroom = null;

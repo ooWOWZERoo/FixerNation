@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
 const { hasActiveLicense } = require('../lib/access');
+const { resolveSchoolIdForTeacher, getPublishedBranding } = require('../lib/branding');
 const { sendParentInvitationEmail } = require('../lib/mailer');
 
 const PARENT_INVITE_EXPIRY_DAYS = 14;
@@ -91,6 +92,15 @@ router.post('/', requireSiteAuth, async (req, res) => {
   } finally {
     conn.release();
   }
+});
+
+// GET /api/classrooms/branding — the teacher's school's published branding
+// (null when unpublished/unset — the client leaves FNE defaults in place).
+// Registered before the /:id routes below so it isn't shadowed by them.
+router.get('/branding', requireSiteAuth, async (req, res) => {
+  const schoolId = await resolveSchoolIdForTeacher(req.siteUser.id);
+  const branding = await getPublishedBranding(schoolId);
+  res.json({ branding });
 });
 
 // ---------------------------------------------------------------------------

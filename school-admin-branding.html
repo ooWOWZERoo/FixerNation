@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - School Branding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+<style>
+  .brand-help { font-size: 12.5px; color: var(--sa-text-soft); margin-top: 6px; line-height: 1.5; }
+  .logo-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .logo-box { width: 200px; height: 100px; border: 1.5px dashed var(--sa-border); border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--sa-bg); overflow: hidden; flex-shrink: 0; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-box.empty { color: var(--sa-text-soft); font-size: 12px; }
+  .color-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--sa-border); }
+  .color-row:last-child { border-bottom: none; }
+  .color-row .color-label { flex: 1; }
+  .color-row .color-label .name { font-weight: 700; font-size: 13.5px; }
+  .color-row .color-label .desc { font-size: 12px; color: var(--sa-text-soft); margin-top: 2px; }
+  .color-swatch { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--sa-border); padding: 0; cursor: pointer; background: none; }
+  .color-hex { width: 100px; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--sa-border); font-size: 13px; font-family: monospace; text-transform: uppercase; }
+
+  /* ── Live preview mockups ── */
+  .preview-panel { border: 1.5px solid var(--sa-border); border-radius: 12px; overflow: hidden; max-width: 420px; }
+  .pv-admin-header { background: var(--sa-sidebar-bg, #1a2332); color: var(--sa-sidebar-text, rgba(255,255,255,.85)); padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .pv-admin-header img { height: 26px; width: auto; display: block; background: #fff; border-radius: 6px; padding: 3px 5px; }
+  .pv-admin-body { padding: 16px; background: var(--sa-bg, #f5f6fa); }
+  .pv-admin-btn { display: inline-block; padding: 8px 16px; border-radius: 8px; background: var(--sa-accent, #E06D2C); color: #fff; font-size: 12.5px; font-weight: 700; }
+  .pv-marketing-header { background: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+  .pv-marketing-header img { height: 30px; width: auto; display: block; }
+  .pv-marketing-body { padding: 16px; background: var(--cream, #FBF5EC); }
+  .pv-marketing-title { font-family: 'Fraunces', serif; color: var(--teal-dark, #0E3733); font-size: 16px; margin-bottom: 8px; }
+  .pv-marketing-btn { display: inline-block; padding: 8px 16px; border-radius: 999px; background: var(--coral, #F26B4D); color: #fff; font-size: 12.5px; font-weight: 700; margin-right: 8px; }
+  .pv-marketing-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--gold, #EBA657); color: var(--teal-dark, #0E3733); font-size: 11px; font-weight: 700; }
+  .pv-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--sa-text-soft); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-branding.js?v=1"></script>
+  <script src="school-admin-nav.js?v=16"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>School Branding</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>Identity</h2></div>
+          <div class="info-item">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sa-text-soft);margin-bottom:4px;">School Name</div>
+            <div style="font-size:15px;font-weight:600;" id="brandSchoolName">—</div>
+          </div>
+          <p class="brand-help">To change your school's name, contact <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a>.</p>
+        </div>
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>School Logo</h2></div>
+          <div class="logo-row">
+            <div class="logo-box" id="logoPreviewBox"><span>No logo uploaded</span></div>
+            <div>
+              <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoFile(this)">
+              <button class="sa-btn sa-btn-secondary sa-btn-sm" onclick="document.getElementById('logoFile').click()">Upload Logo</button>
+              <p class="brand-help">PNG, JPG, or WebP. Max 2 MB. Recommended 600 × 200px or larger (minimum 200 × 100px). Transparent PNG preferred.</p>
+              <div id="logoError" style="display:none;color:var(--sa-danger);font-size:12.5px;margin-top:6px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>School Colors</h2></div>
+          <div class="color-row">
+            <div class="color-label"><div class="name">Primary</div><div class="desc">Buttons, active states, classroom accents</div></div>
+            <input type="color" class="color-swatch" id="primarySwatch" value="#F26B4D" oninput="onSwatchChange('primary')">
+            <input type="text" class="color-hex" id="primaryHex" value="#F26B4D" oninput="onHexChange('primary')">
+          </div>
+          <div class="color-row">
+            <div class="color-label"><div class="name">Secondary</div><div class="desc">Headers, navigation, structural accents</div></div>
+            <input type="color" class="color-swatch" id="secondarySwatch" value="#0E3733" oninput="onSwatchChange('secondary')">
+            <input type="text" class="color-hex" id="secondaryHex" value="#0E3733" oninput="onHexChange('secondary')">
+          </div>
+          <div class="color-row">
+            <div class="color-label"><div class="name">Accent <span style="font-weight:400;color:var(--sa-text-soft);">(optional)</span></div><div class="desc">Badges and minor highlights</div></div>
+            <input type="color" class="color-swatch" id="accentSwatch" value="#EBA657" oninput="onSwatchChange('accent')">
+            <input type="text" class="color-hex" id="accentHex" value="#EBA657" oninput="onHexChange('accent')">
+          </div>
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" style="margin-top:12px;" onclick="restoreDefaultColors()">Restore FNE Colors</button>
+        </div>
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>Preview Your School Experience</h2></div>
+          <div class="sa-tabs" id="previewTabs">
+            <button class="sa-tab active" data-tab="admin">Administrator</button>
+            <button class="sa-tab" data-tab="teacher">Teacher</button>
+            <button class="sa-tab" data-tab="classroom">Classroom</button>
+            <button class="sa-tab" data-tab="student">Student</button>
+            <button class="sa-tab" data-tab="parent">Parent</button>
+          </div>
+
+          <div id="pv-admin" class="preview-tab">
+            <div class="pv-label">School License Administrator Dashboard</div>
+            <div class="preview-panel" id="panelAdmin">
+              <div class="pv-admin-header"><img class="brand-logo" src="logo-fne.png" alt=""><span>School Admin</span></div>
+              <div class="pv-admin-body"><div class="pv-admin-btn">Invite a Teacher</div></div>
+            </div>
+          </div>
+          <div id="pv-teacher" class="preview-tab" style="display:none;">
+            <div class="pv-label">Teacher Dashboard</div>
+            <div class="preview-panel" id="panelTeacher">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">My Classrooms</div><span class="pv-marketing-btn">Create Classroom</span></div>
+            </div>
+          </div>
+          <div id="pv-classroom" class="preview-tab" style="display:none;">
+            <div class="pv-label">Digital Classroom</div>
+            <div class="preview-panel" id="panelClassroom">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">Mrs. Smith's Classroom</div><span class="pv-marketing-badge">Lesson 3 of 12</span></div>
+            </div>
+          </div>
+          <div id="pv-student" class="preview-tab" style="display:none;">
+            <div class="pv-label">Student Experience</div>
+            <div class="preview-panel" id="panelStudent">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">Today's Morning Boost</div><span class="pv-marketing-btn">Start Lesson</span></div>
+            </div>
+          </div>
+          <div id="pv-parent" class="preview-tab" style="display:none;">
+            <div class="pv-label">Parent Experience</div>
+            <div class="preview-panel" id="panelParent">
+              <div class="pv-marketing-header"><img class="brand-logo" src="logo-fne.png" alt=""></div>
+              <div class="pv-marketing-body"><div class="pv-marketing-title">John's Classroom</div><span class="pv-marketing-badge">2 lessons in progress</span></div>
+            </div>
+          </div>
+          <p class="brand-help" style="margin-top:12px;">Every preview includes "Powered by Fixer Nation Education," which always stays visible.</p>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+          <button class="sa-btn sa-btn-ghost" onclick="resetToDefault()">Reset to FNE Default</button>
+          <button class="sa-btn sa-btn-secondary" onclick="saveDraft()">Save Draft</button>
+          <button class="sa-btn sa-btn-primary" onclick="confirmPublish()">Publish Branding</button>
+        </div>
+        <div id="unpublishedNote" style="display:none;margin-top:10px;text-align:right;font-size:12.5px;color:var(--sa-warn);">You have unpublished changes.</div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Publish confirmation modal -->
+<div class="sa-modal-overlay" id="publishModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head"><h2>Publish Branding</h2></div>
+    <p style="font-size:13.5px;color:var(--sa-text-soft);margin-bottom:16px;">This branding will be applied to your school's administrator, teacher, classroom, student, and parent experiences.</p>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closePublishModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" onclick="publishBranding()">Publish Branding</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentSchoolId = null;
+
+document.addEventListener('saReady', function () { loadBranding(); });
+document.addEventListener('saSchoolChanged', function () { loadBranding(); });
+
+document.getElementById('previewTabs').addEventListener('click', function (e) {
+  var btn = e.target.closest('.sa-tab');
+  if (!btn) return;
+  document.querySelectorAll('.sa-tab').forEach(function (t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.preview-tab').forEach(function (p) { p.style.display = 'none'; });
+  document.getElementById('pv-' + btn.dataset.tab).style.display = '';
+});
+
+async function loadBranding() {
+  var purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  try {
+    var d = await saFetch('/api/school-admin/branding?purchaseId=' + purchaseId);
+    currentSchoolId = d.schoolId;
+    document.getElementById('brandSchoolName').textContent = d.schoolDisplayName || '—';
+
+    if (d.draft.primary_color) setColor('primary', d.draft.primary_color);
+    if (d.draft.secondary_color) setColor('secondary', d.draft.secondary_color);
+    if (d.draft.accent_color) setColor('accent', d.draft.accent_color);
+    if (d.draft.logo_display_url) setLogoPreview(d.draft.logo_display_url);
+
+    document.getElementById('unpublishedNote').style.display = d.hasUnpublishedChanges ? '' : 'none';
+
+    updateLivePreview();
+    document.getElementById('pageLoading').style.display = 'none';
+    document.getElementById('pageContent').style.display = 'block';
+  } catch (e) {
+    saToast('Failed to load branding: ' + e.message, 'error');
+  }
+}
+
+function setColor(key, hex) {
+  document.getElementById(key + 'Swatch').value = hex;
+  document.getElementById(key + 'Hex').value = hex.toUpperCase();
+}
+
+var currentLogoDisplayUrl = null;
+function setLogoPreview(url) {
+  currentLogoDisplayUrl = url;
+  document.getElementById('logoPreviewBox').innerHTML = '<img src="' + url + '" alt="Current logo">';
+}
+
+function onSwatchChange(key) {
+  document.getElementById(key + 'Hex').value = document.getElementById(key + 'Swatch').value.toUpperCase();
+  updateLivePreview();
+}
+function onHexChange(key) {
+  var v = document.getElementById(key + 'Hex').value;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById(key + 'Swatch').value = v;
+  updateLivePreview();
+}
+
+function restoreDefaultColors() {
+  setColor('primary', '#F26B4D');
+  setColor('secondary', '#0E3733');
+  setColor('accent', '#EBA657');
+  updateLivePreview();
+}
+
+function currentDraftBranding() {
+  return {
+    logoDisplayUrl: currentLogoDisplayUrl,
+    primaryColor: document.getElementById('primaryHex').value,
+    secondaryColor: document.getElementById('secondaryHex').value,
+    accentColor: document.getElementById('accentHex').value,
+  };
+}
+
+// The SAME fnApplyBranding used on every real page — the preview panels
+// are just small DOM scopes that happen to share the same CSS variable
+// names as the real surfaces they represent.
+function updateLivePreview() {
+  var b = currentDraftBranding();
+  fnApplyBranding(b, document.getElementById('panelAdmin'), window.FN_SCHOOL_ADMIN_VARMAP);
+  ['panelTeacher', 'panelClassroom', 'panelStudent', 'panelParent'].forEach(function (id) {
+    fnApplyBranding(b, document.getElementById(id), window.FN_MARKETING_VARMAP);
+  });
+}
+
+async function handleLogoFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var purchaseId = window.saActivePurchaseId();
+  var errEl = document.getElementById('logoError');
+  errEl.style.display = 'none';
+
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/api/school-admin/branding/logo?purchaseId=' + purchaseId, {
+      method: 'POST', credentials: 'include', body: fd,
+    });
+    var data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Upload failed'; errEl.style.display = ''; return; }
+    setLogoPreview(data.logoDisplayUrl);
+    updateLivePreview();
+    saToast('Logo uploaded. Publish to make it live.', 'success');
+  } catch (e) {
+    errEl.textContent = 'Upload failed. Please try again.';
+    errEl.style.display = '';
+  }
+  input.value = '';
+}
+
+async function saveDraft() {
+  var purchaseId = window.saActivePurchaseId();
+  try {
+    await saFetch('/api/school-admin/branding?purchaseId=' + purchaseId, {
+      method: 'PUT',
+      body: JSON.stringify({
+        primaryColor: document.getElementById('primaryHex').value,
+        secondaryColor: document.getElementById('secondaryHex').value,
+        accentColor: document.getElementById('accentHex').value,
+      }),
+    });
+    saToast('Draft saved.', 'success');
+    loadBranding();
+  } catch (e) {
+    saToast('Failed to save draft: ' + e.message, 'error');
+  }
+}
+
+function confirmPublish() { document.getElementById('publishModal').style.display = 'flex'; }
+function closePublishModal() { document.getElementById('publishModal').style.display = 'none'; }
+
+async function publishBranding() {
+  var purchaseId = window.saActivePurchaseId();
+  try {
+    await saveDraft();
+    await saFetch('/api/school-admin/branding/publish', {
+      method: 'POST',
+      body: JSON.stringify({ purchaseId: purchaseId }),
+    });
+    closePublishModal();
+    saToast('Branding published.', 'success');
+    loadBranding();
+  } catch (e) {
+    saToast('Failed to publish: ' + e.message, 'error');
+  }
+}
+
+async function resetToDefault() {
+  if (!confirm('Reset your school branding to the FNE default look? This clears your logo and colors.')) return;
+  var purchaseId = window.saActivePurchaseId();
+  try {
+    await saFetch('/api/school-admin/branding/reset', {
+      method: 'POST',
+      body: JSON.stringify({ purchaseId: purchaseId }),
+    });
+    saToast('Branding reset to FNE default.', 'success');
+    location.reload();
+  } catch (e) {
+    saToast('Failed to reset: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>

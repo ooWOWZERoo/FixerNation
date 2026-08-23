@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireStudentAuth } = require('../middleware/studentAuth');
+const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/branding');
 
 const router = express.Router();
 router.use(requireStudentAuth);
@@ -323,6 +324,14 @@ router.post('/games/:gaid/complete', async (req, res) => {
   );
   const [[row]] = await pool.query('SELECT * FROM student_game_completions WHERE id = ?', [r.insertId]);
   res.status(201).json(row);
+});
+
+// GET /api/student/branding — the student's classroom's school's published
+// branding (null when unset — the client leaves FNE defaults in place).
+router.get('/branding', async (req, res) => {
+  const schoolId = await resolveSchoolIdForClassroom(req.student.classroom_id);
+  const branding = await getPublishedBranding(schoolId);
+  res.json({ branding });
 });
 
 module.exports = router;

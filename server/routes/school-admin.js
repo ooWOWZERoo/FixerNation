@@ -1,14 +1,37 @@
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const sharp = require('sharp');
 const pool = require('../db/pool');
 const { requireSchoolAdmin, blockIfReadOnly, blockIfCannotRevoke } = require('../middleware/schoolAdminAuth');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
+const { resolveSchoolIdForPurchase, getPublishedBranding } = require('../lib/branding');
 const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
 } = require('../lib/mailer');
 
 const router = express.Router();
+
+const LOGO_MIN_WIDTH = 200;
+const LOGO_MIN_HEIGHT = 100;
+const LOGO_MAX_DIMENSION = 6000;
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const logoUploadsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'school-logos');
+fs.mkdirSync(logoUploadsDir, { recursive: true });
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: LOGO_MAX_BYTES },
+  fileFilter: (req, file, cb) => {
+    if (!/^image\/(png|jpeg|webp)$/.test(file.mimetype)) {
+      return cb(new Error('Logos must be a PNG, JPG, or WebP image.'));
+    }
+    cb(null, true);
+  },
+});
 
 const INVITATION_EXPIRY_DAYS = 14;
 const RESEND_LIMIT = 5;
@@ -1343,6 +1366,242 @@ router.get('/classrooms', requireSchoolAdmin, async (req, res) => {
   }));
 
   res.json(result);
+});
+
+// ---------------------------------------------------------------------------
+// School Branding
+// ---------------------------------------------------------------------------
+
+function resolvePurchaseId(req) {
+  const purchaseId = req.query.purchaseId
+    ? Number(req.query.purchaseId)
+    : req.schoolAdmin.purchaseIds[0];
+  if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) return null;
+  return purchaseId;
+}
+
+const BRANDING_COLOR_FIELDS = ['primary_color', 'secondary_color', 'accent_color'];
+const BRANDING_LOGO_FIELDS = ['logo_original_url', 'logo_display_url'];
+
+function pickBranding(row, prefix) {
+  const out = {};
+  [...BRANDING_LOGO_FIELDS, ...BRANDING_COLOR_FIELDS].forEach((f) => {
+    out[f] = row ? row[`${prefix}_${f}`] : null;
+  });
+  return out;
+}
+
+// GET /api/school-admin/branding/resolved?purchaseId= — the school's
+// published branding with derived shades/contrast colors already computed,
+// same shape teacher/student/parent get. Used to theme the admin's OWN
+// dashboard pages, as distinct from the editor payload below (which needs
+// the raw draft/published columns, not the derived display values).
+router.get('/branding/resolved', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = resolvePurchaseId(req);
+  if (purchaseId === null) return res.status(403).json({ error: 'Access denied to this school' });
+  const schoolId = await resolveSchoolIdForPurchase(purchaseId);
+  const branding = await getPublishedBranding(schoolId);
+  res.json({ branding });
+});
+
+// GET /api/school-admin/branding?purchaseId=
+router.get('/branding', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = resolvePurchaseId(req);
+  if (purchaseId === null) return res.status(403).json({ error: 'Access denied to this school' });
+
+  const schoolId = await resolveSchoolIdForPurchase(purchaseId);
+  if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
+
+  const [[school]] = await pool.query('SELECT display_name, domain FROM schools WHERE id = ?', [schoolId]);
+  const [[row]] = await pool.query('SELECT * FROM school_branding WHERE school_id = ?', [schoolId]);
+
+  const published = pickBranding(row, 'published');
+  const draft = pickBranding(row, 'draft');
+  // The edit form always starts from whatever is currently live if no
+  // in-progress draft exists yet — never persisted, just how the form seeds.
+  const draftForEditing = { ...published, ...Object.fromEntries(Object.entries(draft).filter(([, v]) => v != null)) };
+
+  const hasUnpublishedChanges = row
+    ? [...BRANDING_LOGO_FIELDS, ...BRANDING_COLOR_FIELDS].some(f => row[`draft_${f}`] != null && row[`draft_${f}`] !== row[`published_${f}`])
+    : false;
+
+  res.json({
+    schoolId,
+    schoolDisplayName: school.display_name || school.domain,
+    status: row ? row.branding_status : 'DEFAULT',
+    published,
+    draft: draftForEditing,
+    hasUnpublishedChanges,
+  });
+});
+
+// PUT /api/school-admin/branding — save draft colors
+router.put('/branding', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = resolvePurchaseId(req);
+  if (purchaseId === null) return res.status(403).json({ error: 'Access denied to this school' });
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+
+  const schoolId = await resolveSchoolIdForPurchase(purchaseId);
+  if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
+
+  const { primaryColor, secondaryColor, accentColor } = req.body || {};
+  const hexOrNull = (v) => (v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null);
+  if (primaryColor && !hexOrNull(primaryColor)) return res.status(400).json({ error: 'Primary color must be a valid hex value, e.g. #003B71' });
+  if (secondaryColor && !hexOrNull(secondaryColor)) return res.status(400).json({ error: 'Secondary color must be a valid hex value.' });
+  if (accentColor && !hexOrNull(accentColor)) return res.status(400).json({ error: 'Accent color must be a valid hex value.' });
+
+  await pool.query(
+    `INSERT INTO school_branding (school_id, draft_primary_color, draft_secondary_color, draft_accent_color, branding_status, updated_by)
+     VALUES (?, ?, ?, ?, 'DRAFT', ?)
+     ON DUPLICATE KEY UPDATE
+       draft_primary_color = COALESCE(?, draft_primary_color),
+       draft_secondary_color = COALESCE(?, draft_secondary_color),
+       draft_accent_color = COALESCE(?, draft_accent_color),
+       branding_status = IF(branding_status = 'DEFAULT', 'DRAFT', branding_status),
+       updated_by = ?`,
+    [schoolId, hexOrNull(primaryColor), hexOrNull(secondaryColor), hexOrNull(accentColor), req.schoolAdmin.siteUserId,
+     hexOrNull(primaryColor), hexOrNull(secondaryColor), hexOrNull(accentColor), req.schoolAdmin.siteUserId]
+  );
+
+  res.json({ ok: true });
+});
+
+// POST /api/school-admin/branding/logo — upload + validate + resize a logo
+router.post('/branding/logo', requireSchoolAdmin, (req, res, next) => {
+  logoUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    next();
+  });
+}, async (req, res) => {
+  const purchaseId = resolvePurchaseId(req);
+  if (purchaseId === null) return res.status(403).json({ error: 'Access denied to this school' });
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const schoolId = await resolveSchoolIdForPurchase(purchaseId);
+  if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
+
+  let metadata;
+  try {
+    metadata = await sharp(req.file.buffer).metadata();
+  } catch {
+    return res.status(400).json({ error: 'This file could not be read as a valid image. Please try a different file.' });
+  }
+
+  const { width, height } = metadata;
+  if (!width || !height) {
+    return res.status(400).json({ error: 'This file could not be read as a valid image. Please try a different file.' });
+  }
+  if (width < LOGO_MIN_WIDTH || height < LOGO_MIN_HEIGHT) {
+    return res.status(400).json({
+      error: `This image is ${width} × ${height} pixels. School logos must be at least ${LOGO_MIN_WIDTH} × ${LOGO_MIN_HEIGHT} pixels. Please upload a larger image.`,
+    });
+  }
+  if (width > LOGO_MAX_DIMENSION || height > LOGO_MAX_DIMENSION) {
+    return res.status(400).json({ error: `This image is too large (${width} × ${height} pixels). Please upload an image no larger than ${LOGO_MAX_DIMENSION} × ${LOGO_MAX_DIMENSION} pixels.` });
+  }
+
+  const ext = metadata.format === 'jpeg' ? 'jpg' : metadata.format;
+  const base = `${schoolId}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+  const originalFilename = `${base}-original.${ext}`;
+  const displayFilename = `${base}-display.png`;
+
+  try {
+    fs.writeFileSync(path.join(logoUploadsDir, originalFilename), req.file.buffer);
+    await sharp(req.file.buffer)
+      .resize({ width: 800, height: 400, fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toFile(path.join(logoUploadsDir, displayFilename));
+  } catch (e) {
+    return res.status(500).json({ error: 'Could not process this image. Please try again.' });
+  }
+
+  const urlPrefix = process.env.UPLOADS_URL_PREFIX || '/uploads/';
+  const originalUrl = `${urlPrefix}school-logos/${originalFilename}`;
+  const displayUrl = `${urlPrefix}school-logos/${displayFilename}`;
+
+  await pool.query(
+    `INSERT INTO school_branding (school_id, draft_logo_original_url, draft_logo_display_url, branding_status, updated_by)
+     VALUES (?, ?, ?, 'DRAFT', ?)
+     ON DUPLICATE KEY UPDATE
+       draft_logo_original_url = ?,
+       draft_logo_display_url = ?,
+       branding_status = IF(branding_status = 'DEFAULT', 'DRAFT', branding_status),
+       updated_by = ?`,
+    [schoolId, originalUrl, displayUrl, req.schoolAdmin.siteUserId, originalUrl, displayUrl, req.schoolAdmin.siteUserId]
+  );
+
+  res.status(201).json({ logoOriginalUrl: originalUrl, logoDisplayUrl: displayUrl });
+});
+
+// POST /api/school-admin/branding/publish
+router.post('/branding/publish', requireSchoolAdmin, async (req, res) => {
+  const { purchaseId: rawPurchaseId } = req.body || {};
+  const purchaseId = rawPurchaseId ? Number(rawPurchaseId) : resolvePurchaseId(req);
+  if (purchaseId === null || !req.schoolAdmin.purchaseIds.includes(purchaseId)) {
+    return res.status(403).json({ error: 'Access denied to this school' });
+  }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+
+  const schoolId = await resolveSchoolIdForPurchase(purchaseId);
+  if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
+
+  const [[row]] = await pool.query('SELECT * FROM school_branding WHERE school_id = ?', [schoolId]);
+  if (!row) return res.status(400).json({ error: 'There is no draft branding to publish yet.' });
+
+  await pool.query(
+    `UPDATE school_branding SET
+       published_logo_original_url = COALESCE(draft_logo_original_url, published_logo_original_url),
+       published_logo_display_url = COALESCE(draft_logo_display_url, published_logo_display_url),
+       published_primary_color = COALESCE(draft_primary_color, published_primary_color),
+       published_secondary_color = COALESCE(draft_secondary_color, published_secondary_color),
+       published_accent_color = COALESCE(draft_accent_color, published_accent_color),
+       branding_status = 'PUBLISHED',
+       published_at = NOW(),
+       updated_by = ?
+     WHERE school_id = ?`,
+    [req.schoolAdmin.siteUserId, schoolId]
+  );
+
+  await audit(pool, {
+    actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
+    actorEmail: req.schoolAdmin.email, action: 'branding_published',
+    entityType: 'school_branding', entityId: schoolId, purchaseId, ipAddress: req.ip,
+  });
+
+  res.json({ ok: true });
+});
+
+// POST /api/school-admin/branding/reset — restore FNE default look
+router.post('/branding/reset', requireSchoolAdmin, async (req, res) => {
+  const { purchaseId: rawPurchaseId } = req.body || {};
+  const purchaseId = rawPurchaseId ? Number(rawPurchaseId) : resolvePurchaseId(req);
+  if (purchaseId === null || !req.schoolAdmin.purchaseIds.includes(purchaseId)) {
+    return res.status(403).json({ error: 'Access denied to this school' });
+  }
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+
+  const schoolId = await resolveSchoolIdForPurchase(purchaseId);
+  if (!schoolId) return res.status(404).json({ error: 'This school has no school record yet — contact support.' });
+
+  await pool.query(
+    `UPDATE school_branding SET
+       draft_logo_original_url = NULL, draft_logo_display_url = NULL,
+       draft_primary_color = NULL, draft_secondary_color = NULL, draft_accent_color = NULL,
+       published_logo_original_url = NULL, published_logo_display_url = NULL,
+       published_primary_color = NULL, published_secondary_color = NULL, published_accent_color = NULL,
+       branding_status = 'DEFAULT', published_at = NULL, updated_by = ?
+     WHERE school_id = ?`,
+    [req.schoolAdmin.siteUserId, schoolId]
+  );
+
+  await audit(pool, {
+    actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,
+    actorEmail: req.schoolAdmin.email, action: 'branding_reset',
+    entityType: 'school_branding', entityId: schoolId, purchaseId, ipAddress: req.ip,
+  });
+
+  res.json({ ok: true });
 });
 
 module.exports = router;

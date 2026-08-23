@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
 const { getParentClassrooms, hasParentAccessToCurriculum } = require('../lib/access');
+const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/branding');
 
 const router = express.Router();
 
@@ -148,6 +149,27 @@ router.get('/lesson/:curriculumId', requireSiteAuth, async (req, res) => {
       videos: videoRows,
     },
   });
+});
+
+// GET /api/parent/branding — published branding per linked child, keyed by
+// classroomId. A parent with children at different schools gets a
+// different entry per classroom rather than one global theme, since the
+// portal renders one block per child on a single page.
+router.get('/branding', requireSiteAuth, async (req, res) => {
+  if (req.siteUser.role !== 'parent') {
+    return res.status(403).json({ error: 'Parent access required' });
+  }
+
+  const linked = (await getParentClassrooms(req.siteUser.id)).filter(c => c.studentId != null);
+  const classroomIds = [...new Set(linked.map(c => c.classroomId))];
+
+  const brandingByClassroom = {};
+  for (const classroomId of classroomIds) {
+    const schoolId = await resolveSchoolIdForClassroom(classroomId);
+    brandingByClassroom[classroomId] = await getPublishedBranding(schoolId);
+  }
+
+  res.json({ branding: brandingByClassroom });
 });
 
 module.exports = router;

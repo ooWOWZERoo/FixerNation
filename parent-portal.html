@@ -170,6 +170,7 @@ ul{list-style:none;}
 
 <script src="nav.js?v=15"></script>
 <script src="site-auth.js?v=5"></script>
+<script src="school-branding.js?v=1"></script>
 <script>
 var currentUser = null;
 
@@ -249,7 +250,8 @@ async function renderPortal(children) {
         '</a>';
     }).join('');
 
-    return '<div class="classroom-block">' +
+    return '<div class="classroom-block" data-classroom-id="' + esc(child.classroomId) + '">' +
+      '<div class="fn-school-line" style="display:none;"></div>' +
       '<div class="classroom-head"><div><h3>' + esc(child.studentName) + '</h3><div class="sub">' + esc(child.className) + '</div></div></div>' +
       (lessonCards
         ? '<div class="lesson-grid">' + lessonCards + '</div>'
@@ -258,6 +260,32 @@ async function renderPortal(children) {
   }));
 
   document.getElementById('portalContent').innerHTML = blocks.join('');
+  applyChildBranding(children);
+}
+
+// Each child's block gets its own school's branding scoped to that block —
+// a parent with children at different schools sees each block themed
+// independently rather than one global page-wide theme.
+async function applyChildBranding(children) {
+  var r = await fetch('/api/parent/branding', { credentials: 'include' });
+  if (!r.ok) return;
+  var data = await r.json().catch(function () { return null; });
+  if (!data || !data.branding) return;
+
+  children.forEach(function (child) {
+    var branding = data.branding[child.classroomId];
+    if (!branding) return;
+    var block = document.querySelector('.classroom-block[data-classroom-id="' + child.classroomId + '"]');
+    if (!block) return;
+    fnApplyBranding(branding, block);
+    var line = block.querySelector('.fn-school-line');
+    if (line && branding.schoolDisplayName) {
+      line.style.display = '';
+      line.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--teal-dark);';
+      line.innerHTML = (branding.logoDisplayUrl ? '<img src="' + branding.logoDisplayUrl + '" alt="" style="height:20px;width:auto;display:block;">' : '') +
+        esc(branding.schoolDisplayName);
+    }
+  });
 }
 </script>
 <script src="footer.js?v=2"></script>

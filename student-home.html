@@ -97,6 +97,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
   </div>
 </div>
 
+<script src="school-branding.js?v=1"></script>
 <script>
 var me = null;
 
@@ -112,6 +113,11 @@ async function load() {
   var name = me.student.displayName.split(' ')[0];
   document.getElementById('greeting').textContent = 'Hey, ' + name + '!';
   document.getElementById('classroomLabel').textContent = me.classroom.name;
+
+  fetch('/api/student/branding', { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) { if (data) fnApplyBranding(data.branding, document.documentElement); })
+    .catch(function () {});
 
   renderLessons();
   renderGames();
