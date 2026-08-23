@@ -41,6 +41,15 @@ test.describe("Quote-accept PO flow — payment gate matches cart PO flow", () =
   test("accepting by PO creates a real unpaid invoice and a pending license", async ({ request, page }) => {
     test.skip(!token, "TEST_QUOTE_PO_GATE_TOKEN not set — see tests/.env.test.example");
 
+    // A quote can only ever be accepted once — POST /api/quotes/accept now
+    // claims it atomically (fixed 2026-08-22, see quote-accept.js) instead
+    // of the old no-guard write that let a re-run silently create another
+    // duplicate purchase/invoice every time. Detect that state and skip
+    // cleanly instead of failing confusingly; re-run seed-qa-test-
+    // accounts.js to reset it.
+    const validateRes = await request.get(`/api/quotes/accept?token=${token}`);
+    test.skip(!validateRes.ok(), "Quote already accepted by a prior run — re-run seed-qa-test-accounts.js to reset it");
+
     const acceptRes = await request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
       data: { token, paymentMethod: "po", poNumber },

@@ -63,6 +63,15 @@ test.describe("Quote lifecycle: build -> send -> accept by PO", () => {
   test("accepting the sent quote by PO creates a real unpaid invoice with a pending license", async ({ page }) => {
     test.skip(!acceptToken, "depends on the previous test's accept_token");
 
+    // Documented one-run-per-seed limitation above, now actually enforced
+    // as a clean skip instead of a hard failure: POST /api/quotes/accept
+    // claims the quote atomically (fixed 2026-08-22), so a second run
+    // within the same seed correctly gets rejected rather than silently
+    // creating another duplicate purchase/invoice the way the old,
+    // unguarded code did.
+    const validateRes = await page.request.get(`/api/quotes/accept?token=${acceptToken}`);
+    test.skip(!validateRes.ok(), "Quote already accepted by a prior run — re-run seed-qa-test-accounts.js to reset it");
+
     const acceptRes = await page.request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
       data: { token: acceptToken, paymentMethod: "po", poNumber },
