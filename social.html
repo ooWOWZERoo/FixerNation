@@ -430,7 +430,7 @@ async function leaveGroup(groupId){
 }
 
 function renderGroupList(){
-  const icons = {all_teachers:'👩‍🏫', school:'🏫', membership:'🪪'};
+  const icons = {all_teachers:'👩‍🏫', school:'🏫'};
   document.getElementById('groupList').innerHTML = groups.map(g => {
     const n = unreadCounts[g.id] || 0;
     const badge = n > 0 ? `<span class="g-unread">${n > 99 ? '99+' : n}</span>` : '';

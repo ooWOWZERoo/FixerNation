@@ -181,11 +181,11 @@ router.get('/insights', requireAuth, async (req, res) => {
     "SELECT product_type, COALESCE(SUM(amount_cents),0) AS cents FROM purchases GROUP BY product_type"
   );
   const categoryByType = Object.fromEntries(categoryRows.map(r => [r.product_type, toDollars(r.cents)]));
-  const categoryTotal = Object.values(categoryByType).reduce((a, b) => a + b, 0);
   const CATEGORY_LABELS = {
-    book: 'Books', single_license: 'Single Teacher Licenses', group_license: 'School/Group Licenses', membership: 'Memberships',
+    book: 'Books', single_license: 'Single Teacher Licenses', group_license: 'School/Group Licenses',
   };
-  const revenueByCategory = ['book', 'single_license', 'group_license', 'membership'].map(type => ({
+  const categoryTotal = Object.keys(CATEGORY_LABELS).reduce((sum, type) => sum + (categoryByType[type] || 0), 0);
+  const revenueByCategory = Object.keys(CATEGORY_LABELS).map(type => ({
     type,
     label: CATEGORY_LABELS[type],
     revenue: categoryByType[type] || 0,

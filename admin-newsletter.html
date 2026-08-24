@@ -879,9 +879,6 @@ async function renderPurchasesList() {
     if (p.productType === 'book') {
       return purchaseCard(p, `📗 Book: ${p.bookTitle || '(deleted book)'}`, `Purchased ${dateLabel}`, '');
     }
-    if (p.productType === 'membership') {
-      return purchaseCard(p, `🪪 Membership: ${p.membershipPlanName || '(deleted plan)'}`, `Purchased ${dateLabel}`, '');
-    }
     if (p.productType === 'single_license') {
       const seat = p.seats[0];
       const statusLine = seat && seat.status === 'registered'
@@ -889,17 +886,20 @@ async function renderPurchasesList() {
         : `Pending — awaiting sign-up from ${seat ? seat.invitedEmail : 'this contact'}`;
       return purchaseCard(p, '🔑 Single Teacher License', `Purchased ${dateLabel} · ${statusLine}`, '');
     }
-    // group_license
-    const registeredCount = p.seats.filter(s => s.status === 'registered').length;
-    const seatRows = p.seats.map(s => seatRowHtml(p.id, s)).join('');
-    const domainLabel = p.schoolDomain ? ` · ${p.schoolDomain}` : ' · no school domain set';
-    const productLabel = p.licenseProductName ? ` (${p.licenseProductName})` : '';
-    return purchaseCard(
-      p,
-      `🏫 Group License${productLabel} — ${registeredCount}/${p.seatCount} seats used`,
-      `Purchased ${dateLabel}${domainLabel}`,
-      `<div style="margin-top:10px;">${seatRows}</div>`
-    );
+    if (p.productType === 'group_license') {
+      const registeredCount = p.seats.filter(s => s.status === 'registered').length;
+      const seatRows = p.seats.map(s => seatRowHtml(p.id, s)).join('');
+      const domainLabel = p.schoolDomain ? ` · ${p.schoolDomain}` : ' · no school domain set';
+      const productLabel = p.licenseProductName ? ` (${p.licenseProductName})` : '';
+      return purchaseCard(
+        p,
+        `🏫 Group License${productLabel} — ${registeredCount}/${p.seatCount} seats used`,
+        `Purchased ${dateLabel}${domainLabel}`,
+        `<div style="margin-top:10px;">${seatRows}</div>`
+      );
+    }
+    // Legacy/unrecognized product type (e.g. a historical membership purchase from before that feature was removed) — render a generic card instead of crashing on fields (like p.seats) that only exist for license purchases.
+    return purchaseCard(p, `Purchase (${p.productType})`, `Purchased ${dateLabel}`, '');
   }).join('');
 }
 

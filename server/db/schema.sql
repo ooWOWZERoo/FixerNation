@@ -146,56 +146,6 @@ CREATE TABLE IF NOT EXISTS license_products (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- Memberships (Consumers, Service Providers, Brand Ambassadors) — a separate
--- catalog/system from school licensing (license_products above). A contact
--- can hold more than one membership at once (e.g. a Service Provider who's
--- also a Brand Ambassador), so member type is derived from active
--- contact_memberships joined to membership_plans, not stored as a single
--- fixed attribute on the contact.
--- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS membership_plans (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  member_type VARCHAR(32) NOT NULL, -- 'consumer' | 'service_provider' | 'brand_ambassador'
-  price_cents INT UNSIGNED NOT NULL,
-  regular_price_cents INT UNSIGNED NULL, -- shown struck-through as the "regular price" comparison; NULL if there's no intro-discount framing
-  billing_interval VARCHAR(16) NOT NULL, -- 'one_time' | 'monthly' | 'annual'
-  trial_days INT UNSIGNED NOT NULL DEFAULT 0,
-  duration_days INT UNSIGNED NULL, -- how long one purchase/cycle lasts before expiring or renewing; NULL means no expiration is tracked. For 'one_time' plans this is the real membership length (e.g. 90). For 'monthly'/'annual' plans this is informational only (Stripe governs the actual billing cycle) — used to estimate contact_memberships.ends_at for admin display and to size the renewal-reminder window.
-  description VARCHAR(1000),
-  benefits TEXT, -- one bullet per line, shown as a checklist on the public pricing cards
-  policy TEXT NULL, -- cancellation / refund / terms policy text, shown below benefits on public plan pages
-  stripe_price_id VARCHAR(255) NULL, -- synced to a real Stripe Product+Price on save, once Stripe is configured
-  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
-  active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- One row per contact per membership they've held — a contact resubscribing
--- to the same plan later gets a new row rather than reusing an old one, so
--- history (e.g. a lapsed-then-renewed member) stays intact. purchase_id
--- links to the "order" this membership's most recent charge created (see
--- purchases.membership_plan_id below); recurring renewals create additional
--- purchases rows but don't change which contact_memberships row they belong to.
-CREATE TABLE IF NOT EXISTS contact_memberships (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  contact_id INT UNSIGNED NOT NULL,
-  membership_plan_id INT UNSIGNED NOT NULL,
-  status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired'
-  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  ends_at DATETIME NULL, -- current cycle/expiration estimate — set on grant/renewal from the plan's duration_days (or trial_days while trialing), advanced on each real charge, and set on cancellation. NULL if the plan has no duration_days configured.
-  reminder_sent_at DATETIME NULL, -- guards against re-sending the renewal reminder every day until ends_at actually changes (renewal clears this)
-  purchase_id INT UNSIGNED NULL,
-  stripe_subscription_id VARCHAR(255) NULL,
-  stripe_customer_id VARCHAR(255) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
-  FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- One row per notification event the system can send automatically — a fixed
 -- set (seeded by server/scripts/seed-email-automations.js), not admin-creatable,
 -- since the *code* is what actually fires each one; the admin only edits
@@ -203,12 +153,12 @@ CREATE TABLE IF NOT EXISTS contact_memberships (
 -- looks up by.
 CREATE TABLE IF NOT EXISTS email_automations (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  event_key VARCHAR(64) NOT NULL UNIQUE, -- 'book_purchase_thank_you' | 'membership_purchase_thank_you' | 'membership_renewal_reminder' | 'invoice_paid' | 'payment_failed' | 'license_seat_invite'
+  event_key VARCHAR(64) NOT NULL UNIQUE, -- 'book_purchase_thank_you' | 'invoice_paid' | 'license_seat_invite' | 'school_license_expiring_soon' | 'school_license_expired' | 'trial_purchase_thank_you' | 'trial_expired' | 'trial_converted' | 'quote_accepted' — see server/scripts/seed-email-automations.js for the authoritative full list
   label VARCHAR(255) NOT NULL,
   enabled TINYINT(1) NOT NULL DEFAULT 1,
   subject VARCHAR(255) NOT NULL,
   body TEXT NOT NULL, -- plain text with {{mergeField}} tokens; rendered as both text and simple HTML on send
-  reminder_days_before INT UNSIGNED NULL, -- only meaningful for membership_renewal_reminder — how many days before contact_memberships.ends_at to send
+  reminder_days_before INT UNSIGNED NULL, -- unused by any currently-seeded event (was for the now-removed membership_renewal_reminder); kept nullable rather than dropped since it's harmless and cheap to reuse for a future reminder-style automation
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -236,16 +186,15 @@ CREATE TABLE IF NOT EXISTS invoices (
 CREATE TABLE IF NOT EXISTS purchases (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   contact_id INT UNSIGNED NOT NULL,
-  product_type VARCHAR(32) NOT NULL, -- 'book' | 'single_license' | 'group_license' | 'membership'
+  product_type VARCHAR(32) NOT NULL, -- 'book' | 'single_license' | 'group_license'
   book_id INT UNSIGNED NULL,
   license_product_id INT UNSIGNED NULL, -- set when bought from the cart against a fixed license_products tier
-  membership_plan_id INT UNSIGNED NULL, -- set for product_type='membership' — each recurring renewal charge creates its own purchases row against the same plan, so this stays an "order" record, not the subscription itself (see contact_memberships)
-  seat_count INT UNSIGNED NULL, -- 1 for single_license, N for group_license, NULL for book/membership
+  seat_count INT UNSIGNED NULL, -- 1 for single_license, N for group_license, NULL for book
   purchased_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(64) NOT NULL DEFAULT 'Manual Entry',
   notes VARCHAR(500),
   stripe_session_id VARCHAR(255) NULL, -- set when created from a real Stripe payment; one session can now produce multiple purchase rows (a cart), so this is intentionally NOT unique — idempotency is checked by existence, not a DB constraint
-  stripe_invoice_id VARCHAR(255) NULL UNIQUE, -- set for membership renewal charges (Stripe invoice.paid), where there's no checkout session to key off of — unique so a retried webhook can't double-record the same renewal
+  stripe_invoice_id VARCHAR(255) NULL UNIQUE, -- unique so a retried webhook can't double-record the same charge
   school_domain VARCHAR(255) NULL, -- meaningful for group_license only — lets the admin look up a school's whole license block by domain instead of hunting for the buyer's CRM contact
   payment_method VARCHAR(16) NOT NULL DEFAULT 'manual', -- 'manual' | 'stripe' | 'po'
   payment_status VARCHAR(16) NOT NULL DEFAULT 'paid', -- 'paid' | 'pending' — POs start pending until an admin marks them paid; access is granted immediately either way
@@ -255,7 +204,6 @@ CREATE TABLE IF NOT EXISTS purchases (
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
   FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL,
-  FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE SET NULL,
   FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -472,7 +420,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   alt_text VARCHAR(255), -- accessibility/SEO alt text for the featured image or video thumbnail
   meta_description VARCHAR(500), -- SEO meta description; falls back to excerpt if blank
   focus_keyword VARCHAR(255), -- SEO focus keyword (Wix's "add focus keyword to title tag/URL slug" step)
-  requires_membership TINYINT(1) NOT NULL DEFAULT 0, -- gates the post behind an active Fixer Nation membership (any type) — replaces Wix's "Monetize" tab
+  requires_membership TINYINT(1) NOT NULL DEFAULT 0, -- gates the post behind an active Fixer Nation Education teacher license — replaces Wix's "Monetize" tab. Column name predates the membership-feature removal; kept as-is since it's an internal name only, not shown to users
   publish_date DATE,
   featured TINYINT(1) NOT NULL DEFAULT 0,
   published TINYINT(1) NOT NULL DEFAULT 0, -- combined with publish_date: published=1 with a future publish_date is "Scheduled", not yet publicly visible
@@ -678,7 +626,7 @@ CREATE TABLE IF NOT EXISTS social_group_reads (
 CREATE TABLE IF NOT EXISTS social_groups (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  type ENUM('all_teachers','school','membership','custom') NOT NULL DEFAULT 'custom',
+  type ENUM('all_teachers','school','custom') NOT NULL DEFAULT 'custom',
   school_domain VARCHAR(255) NULL,
   description TEXT NULL,
   is_public TINYINT(1) NOT NULL DEFAULT 1,
