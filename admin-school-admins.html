@@ -203,6 +203,9 @@ function renderTable(rows) {
       const resendBtn = !r.email_verified
         ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',\'' + esc(r.email) + '\',this)">Resend Welcome</button> '
         : '';
+      const resetPasswordBtn = r.email_verified
+        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="sendPasswordReset(' + r.site_user_id + ',\'' + esc(r.email) + '\',this)">Reset Password</button> '
+        : '';
       return '<tr>' +
         '<td style="font-weight:600;">' + esc(name) + '</td>' +
         '<td style="font-size:13px;color:var(--a-text-soft);">' + esc(r.email) + verifiedPill + '</td>' +
@@ -211,6 +214,7 @@ function renderTable(rows) {
         '<td>' + statusPill + '</td>' +
         '<td style="white-space:nowrap;">' +
           resendBtn +
+          resetPasswordBtn +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEditModal(' + r.id + ')">Edit</button> ' +
           '<button class="a-btn a-btn-danger a-btn-sm" onclick="openRemoveModal(' + r.id + ',\'' + esc(r.email) + '\')">Remove</button>' +
         '</td></tr>';
@@ -381,6 +385,28 @@ async function resendWelcome(id, email, btn) {
     }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Resend Welcome'; }
+    setResendMsg('<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;margin-bottom:12px;">Failed to send email: ' + esc(e.message) + '</div>');
+  }
+}
+
+async function sendPasswordReset(siteUserId, email, btn) {
+  if (!confirm('Send a password reset email to ' + email + '?')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  setResendMsg('');
+  try {
+    const r = await fetch('/api/site-auth/site-users/' + siteUserId + '/send-password-reset', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    let d = {};
+    try { d = await r.json(); } catch (_) {}
+    if (!r.ok) throw new Error(d.error || 'Server error (' + r.status + ')');
+    setResendMsg('<div style="background:#d1fae5;color:#065f46;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;margin-bottom:12px;">✓ Password reset email sent to ' + esc(email) + '.</div>');
+    if (btn) { btn.disabled = false; btn.textContent = 'Reset Password'; }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Reset Password'; }
     setResendMsg('<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;margin-bottom:12px;">Failed to send email: ' + esc(e.message) + '</div>');
   }
 }
