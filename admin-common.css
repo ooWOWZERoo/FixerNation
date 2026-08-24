@@ -116,8 +116,13 @@ button, input, select, textarea{font-family:inherit;}
 .a-nav-pinned a.active,.a-nav a.active{background:var(--a-accent-fill); color:#fff;}
 .a-nav{display:flex; flex-direction:column; gap:3px; flex:1; min-height:0; overflow-y:auto;}
 .a-nav-divider{border-top:1px solid rgba(255,255,255,0.1); margin:8px 12px;}
-.a-nav-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--a-sidebar-text); opacity:.6; padding:14px 16px 4px;}
-.a-nav-section-label:first-child{padding-top:6px;}
+.a-nav-section:first-child .a-nav-section-head{padding-top:6px;}
+.a-nav-section-head{display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:14px 16px 4px; margin:0; cursor:pointer; font-family:inherit;}
+.a-nav-section-head:hover .a-nav-section-label{opacity:.9;}
+.a-nav-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--a-sidebar-text); opacity:.6;}
+.a-nav-section-arrow{font-size:10px; color:var(--a-sidebar-text); opacity:.5; transition:transform .15s ease;}
+.a-nav-section.collapsed .a-nav-section-arrow{transform:rotate(-90deg);}
+.a-nav-section.collapsed .a-nav-section-body{display:none;}
 .a-sidebar-foot{border-top:1px solid rgba(255,255,255,0.1); padding-top:14px; margin-top:14px; display:flex; flex-direction:column; gap:3px;}
 .a-sidebar-foot a{display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:999px; font-size:13.5px; font-weight:600; color:var(--a-sidebar-text);}
 .a-sidebar-foot a:hover{background:var(--a-sidebar-soft); color:#fff;}
@@ -256,7 +261,8 @@ table.a-table tr:hover td{background:var(--a-bg);}
 @media (max-width:900px){
   .a-sidebar{width:76px; padding:18px 10px;}
   .a-nav a span.label, .a-sidebar-foot a span.label{display:none;}
-  .a-nav-section-label{display:none;}
+  .a-nav-section-head{display:none;}
+  .a-nav-section.collapsed .a-nav-section-body{display:block;}
   .a-logo{justify-content:center;}
   .a-logo .a-logo-pill{padding:4px 5px;}
   .a-logo .a-logo-img{height:15px;}
