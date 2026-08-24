@@ -203,13 +203,18 @@ router.get('/me', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   const email = (req.body && req.body.email || '').trim();
   if (!email) return res.status(400).json({ error: 'Email is required' });
+  // Only accept a same-site path (e.g. from the school-invite-accept flow,
+  // so resetting a password can drop the user right back into claiming
+  // their invitation) — never an absolute/external URL, to avoid turning
+  // this into an open redirect via an emailed link.
+  const nextPath = typeof req.body.next === 'string' && req.body.next.startsWith('/') ? req.body.next : '';
 
   const [rows] = await pool.query('SELECT id, first_name FROM site_users WHERE email = ?', [email]);
   const user = rows[0];
   // Always respond ok, regardless of whether the email is registered.
   if (user) {
     const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
-    const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}`;
+    const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}` + (nextPath ? `&next=${encodeURIComponent(nextPath)}` : '');
     await sendPasswordResetEmail({ to: email, firstName: user.first_name, resetUrl });
   }
   res.json({ ok: true });

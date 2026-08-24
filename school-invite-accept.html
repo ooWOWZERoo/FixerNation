@@ -150,6 +150,7 @@
       </div>
       <button type="submit" class="btn btn-primary" id="signInBtn">Sign In &amp; Accept Invitation</button>
     </form>
+    <p style="text-align:center;margin-top:14px;font-size:13.5px;"><a href="#" onclick="sendInviteForgotPassword(event)" id="forgotPasswordLink">Forgot your password?</a></p>
     <p class="expires" id="signInExpires"></p>
   </div>
 
@@ -314,6 +315,7 @@ document.getElementById('signInForm').addEventListener('submit', async function(
   e.preventDefault();
   var btn = document.getElementById('signInBtn');
   var err = document.getElementById('signInErr');
+  err.className = 'alert alert-danger';
   err.style.display = 'none';
   var pass = document.getElementById('signInPass').value;
   if (!pass) { err.textContent = 'Password is required.'; err.style.display = 'block'; return; }
@@ -354,6 +356,28 @@ document.getElementById('signInForm').addEventListener('submit', async function(
     btn.disabled = false; btn.textContent = 'Sign In & Accept Invitation';
   }
 });
+
+async function sendInviteForgotPassword(e) {
+  e.preventDefault();
+  var link = document.getElementById('forgotPasswordLink');
+  var err = document.getElementById('signInErr');
+  err.style.display = 'none';
+  link.textContent = 'Sending…';
+  try {
+    await fetch('/api/site-auth/forgot-password', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: invData.invitedEmail,
+        next: '/school-invite-accept.html?token=' + encodeURIComponent(token),
+      }),
+    });
+  } catch (ex) { /* fall through to the same message either way — never reveal whether the send failed */ }
+  link.textContent = 'Forgot your password?';
+  err.className = 'alert alert-success';
+  err.textContent = 'If that email has an account, a reset link is on its way. The link will bring you right back here to finish accepting your invitation.';
+  err.style.display = 'block';
+}
 
 function showError(msg) {
   hide('stateLoading'); hide('stateNew'); hide('stateClaim'); hide('stateWrongAccount'); hide('stateSignIn');
