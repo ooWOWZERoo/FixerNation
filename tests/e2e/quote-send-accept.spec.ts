@@ -49,6 +49,9 @@ test.describe("Quote lifecycle: build -> send -> accept by PO", () => {
     // populates the hidden fields sendQuote() actually reads.
     await page.locator("#qValidUntil").waitFor({ state: "visible" });
 
+    // sendQuote() now confirm()s the product/profile before actually sending
+    // (a quick human sanity check, not a real gate) — auto-accept it.
+    page.once("dialog", (dialog) => dialog.accept());
     const [sendRes] = await Promise.all([
       page.waitForResponse((r) => /\/api\/contact\/quotes\/\d+\/send$/.test(r.url()) && r.request().method() === "POST"),
       page.getByRole("button", { name: /send quote/i }).click(),

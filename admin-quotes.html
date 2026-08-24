@@ -984,6 +984,21 @@ async function sendQuote() {
   // missing/invalid amount, not a falsy-but-valid zero.
   if (amountCents == null || isNaN(amountCents)) { fnToast('Enter a dollar amount'); return; }
 
+  // Quotes aren't sent often enough for a confirm-every-time prompt to
+  // become fatiguing, and there's no reliable structural way to detect a
+  // real product/profile mismatch (quote_content_profiles has no tag
+  // linking it to a tier or trial status) — so just surface what's about
+  // to be sent and let a human catch it.
+  const profileSel = document.getElementById('qContentProfile');
+  const profileId = profileSel ? Number(profileSel.value) || null : null;
+  const profile = profileId ? quoteProfiles.find(p => p.id === profileId) : null;
+  const profileLabel = profile ? profile.name : '(none selected)';
+  const confirmed = confirm(
+    `Send this quote?\n\nProduct: ${productName}\nQuote Content Profile: ${profileLabel}\n\n` +
+    `Are you sure you selected the correct Quote Content Profile?`
+  );
+  if (!confirmed) return;
+
   // Persist contact info / status / notes / profile / pricing before
   // actually emailing, so nothing typed in this session is lost.
   const saved = await putQuoteFields(id);

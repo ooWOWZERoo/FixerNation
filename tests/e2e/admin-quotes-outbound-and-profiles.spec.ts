@@ -130,6 +130,9 @@ test.describe("Admin-initiated quotes + Quote Content Profiles", () => {
     await expect(page.locator("#copyQuoteBtn")).toBeVisible();
     await expect(page.locator("#qContentProfile")).toHaveValue(String(profileId));
 
+    // sendQuote() now confirm()s the product/profile before actually sending
+    // (a quick human sanity check, not a real gate) — auto-accept it.
+    page.once("dialog", (dialog) => dialog.accept());
     const [sendRes] = await Promise.all([
       page.waitForResponse((r) => /\/api\/contact\/quotes\/\d+\/send$/.test(r.url()) && r.request().method() === "POST"),
       page.getByRole("button", { name: /send quote/i }).click(),
