@@ -14,6 +14,10 @@
     return '<a href="' + href + '"' + cls + attrs + '><span class="ic">' + icon + '</span><span class="label">' + label + '</span></a>';
   }
 
+  function sectionLabel(text) {
+    return '<div class="a-nav-section-label">' + text + '</div>';
+  }
+
   aside.innerHTML =
     '<div class="a-logo"><span class="a-logo-pill"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="a-logo-img"></span></div>' +
     '<div class="a-nav-pinned">' +
@@ -21,21 +25,30 @@
       '<div class="a-nav-divider"></div>' +
     '</div>' +
     '<nav class="a-nav">' +
-      link('admin-automations.html',        '🤖', 'Automations') +
-      link('admin-blogs.html',              '📝', 'Blogs') +
-      link('admin-campaigns.html',          '📣', 'Campaigns') +
-      link('admin-newsletter.html',         '✉️', 'CRM') +
-      link('admin-curriculum.html',         '🎓', 'Curriculums') +
-      link('admin-districts.html',          '🗺️', 'Districts') +
-      link('admin-downloads.html',          '⬇️', 'Downloads') +
+      sectionLabel('Sales &amp; Schools') +
+      link('admin-quotes.html',             '💬', 'Quotes') +
+      link('admin-orders.html',             '📦', 'Orders') +
       link('admin-invoices.html',           '🧾', 'Invoices') +
-      link('admin-licenses.html',           '🏫', 'License Products') +
+      link('admin-licenses.html',           '🏷️', 'License Products') +
+      link('admin-school-admins.html',      '🏫', 'School Admins') +
+      link('admin-districts.html',          '🗺️', 'Districts') +
+
+      sectionLabel('Content') +
+      link('admin-curriculum.html',         '🎓', 'Curriculums') +
+      link('admin-blogs.html',              '📝', 'Blogs') +
       link('admin-morning-boost.html',      '🌅', 'Morning Boost Studio') +
       link('admin-morning-boost-email.html','📨', 'Morning Boost Email') +
-      link('admin-orders.html',             '📦', 'Orders') +
-      link('admin-quotes.html',             '💬', 'Quotes') +
-      link('admin-school-admins.html',      '🏫', 'School Admins') +
-      link('admin-social.html',             '💬', 'Social') +
+
+      sectionLabel('Marketing &amp; CRM') +
+      link('admin-newsletter.html',         '✉️', 'CRM') +
+      link('admin-campaigns.html',          '📣', 'Campaigns') +
+      link('admin-automations.html',        '🤖', 'Automations') +
+
+      sectionLabel('Community') +
+      link('admin-social.html',             '👥', 'Social') +
+
+      sectionLabel('Reports') +
+      link('admin-downloads.html',          '⬇️', 'Downloads') +
       link('admin-analytics.html',          '👣', 'Visitor Paths') +
     '</nav>' +
     '<div class="a-sidebar-foot">' +
