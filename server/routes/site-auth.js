@@ -10,6 +10,7 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer
 const { createToken, consumeToken } = require('../lib/site-tokens');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
+const { hasActiveLicense, getParentClassrooms } = require('../lib/access');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
@@ -194,7 +195,23 @@ router.get('/me', async (req, res) => {
     const payload = jwt.verify(token, process.env.SESSION_SECRET);
     const [rows] = await pool.query('SELECT email FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return res.json({ loggedIn: false });
-    res.json({ loggedIn: true, firstName: payload.firstName, role: payload.role || 'teacher', email: rows[0].email });
+    // hasLicense/isParent are real entitlement checks, independent of
+    // site_users.role — an account can hold both (e.g. a parent later
+    // invited and registered as a teacher under the same email), and role
+    // alone can't represent that. The nav uses these to show every
+    // applicable section rather than one exclusive role-based branch.
+    const [hasLicense, parentClassrooms] = await Promise.all([
+      hasActiveLicense(payload.userId),
+      getParentClassrooms(payload.userId),
+    ]);
+    res.json({
+      loggedIn: true,
+      firstName: payload.firstName,
+      role: payload.role || 'teacher',
+      email: rows[0].email,
+      hasLicense,
+      isParent: parentClassrooms.length > 0,
+    });
   } catch {
     res.json({ loggedIn: false });
   }

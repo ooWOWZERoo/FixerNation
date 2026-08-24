@@ -70,20 +70,31 @@ function fnAuthCloseModal() {
 // the hint (and the nav) if it's ever stale.
 const FN_AUTH_HINT_KEY = 'fnUserFirstName';
 const FN_AUTH_ROLE_KEY = 'fnUserRole';
+const FN_AUTH_HAS_LICENSE_KEY = 'fnUserHasLicense';
+const FN_AUTH_IS_PARENT_KEY = 'fnUserIsParent';
 
-function fnAuthRenderNav(loggedIn, firstName, role) {
+// hasLicense/isParent are real, independent entitlement checks (does this
+// account have a registered license seat? is it linked to any classroom as
+// a parent?) — NOT mutually exclusive the way a single role string is. An
+// account can be both (e.g. a parent later invited and registered as a
+// teacher under the same email), and the nav needs to show every section
+// that applies, not pick just one.
+function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent) {
   const nav = document.getElementById('fnAuthNav');
   if (loggedIn) {
     localStorage.setItem(FN_AUTH_HINT_KEY, firstName);
     localStorage.setItem(FN_AUTH_ROLE_KEY, role || 'teacher');
+    localStorage.setItem(FN_AUTH_HAS_LICENSE_KEY, hasLicense ? '1' : '0');
+    localStorage.setItem(FN_AUTH_IS_PARENT_KEY, isParent ? '1' : '0');
   } else {
     localStorage.removeItem(FN_AUTH_HINT_KEY);
     localStorage.removeItem(FN_AUTH_ROLE_KEY);
+    localStorage.removeItem(FN_AUTH_HAS_LICENSE_KEY);
+    localStorage.removeItem(FN_AUTH_IS_PARENT_KEY);
   }
   document.body.classList.toggle('fn-user-authed', !!loggedIn);
   if (!nav) return;
   if (loggedIn) {
-    const isParent = role === 'parent';
     const isSchoolAdmin = role === 'school_license_admin';
     // site_users.role can be 'admin' for an account that ALSO holds separate
     // admin-backend credentials (fn_session, a wholly different auth system
@@ -92,15 +103,21 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
     // admin session in this browser just lands on admin-login.html, same as
     // any other unauthenticated visit to that page.
     const isAdmin = role === 'admin';
+    // Preserves the pre-existing default exactly: teacher links show for
+    // anyone not a parent (a school admin or a brand-new account with no
+    // entitlements yet both already saw them). The only behavior change is
+    // the `hasLicense ||` — a parent who ALSO holds a registered license
+    // seat now sees both sections instead of only Parent Portal.
+    const showTeacherLinks = hasLicense || !isParent;
     const li = (href, label) => `<a href="${href}" style="display:block; padding:8px 12px; font-size:13.5px; font-weight:600; color:#2A2420; border-radius:6px;">${label}</a>`;
     nav.innerHTML = `
       <div style="position:relative;">
         <a href="#" onclick="fnAuthToggleUserMenu(event); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
         <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:175px; z-index:300;">
           ${li('my-profile.html', 'My Profile')}
-          ${!isParent ? li('my-license.html', 'My Licenses') : ''}
-          ${!isParent ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
-          ${!isParent ? li('teacher-classrooms.html', 'My Classrooms') : ''}
+          ${showTeacherLinks ? li('my-license.html', 'My Licenses') : ''}
+          ${showTeacherLinks ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
+          ${showTeacherLinks ? li('teacher-classrooms.html', 'My Classrooms') : ''}
           ${isParent ? li('parent-portal.html', 'Parent Portal') : ''}
           ${isSchoolAdmin ? li('school-admin-dashboard.html', 'School Admin Portal') : ''}
           ${isAdmin ? li('admin-dashboard.html', 'FNE Admin Dashboard') : ''}
@@ -121,7 +138,9 @@ function fnAuthRenderNav(loggedIn, firstName, role) {
 function fnAuthRenderNavOptimistic() {
   const hint = localStorage.getItem(FN_AUTH_HINT_KEY);
   const role = localStorage.getItem(FN_AUTH_ROLE_KEY) || 'teacher';
-  fnAuthRenderNav(!!hint, hint || null, role);
+  const hasLicense = localStorage.getItem(FN_AUTH_HAS_LICENSE_KEY) === '1';
+  const isParent = localStorage.getItem(FN_AUTH_IS_PARENT_KEY) === '1';
+  fnAuthRenderNav(!!hint, hint || null, role, hasLicense, isParent);
 }
 fnAuthRenderNavOptimistic();
 
@@ -160,7 +179,7 @@ function fnAuthCheckSession() {
   fetch('/api/site-auth/me', { credentials: 'include' })
     .then(r => r.json())
     .then(function(data) {
-      fnAuthRenderNav(data.loggedIn, data.firstName, data.role);
+      fnAuthRenderNav(data.loggedIn, data.firstName, data.role, data.hasLicense, data.isParent);
       if (data.loggedIn) fnFetchCommunityBadge();
     })
     .catch(function() { fnAuthRenderNav(false); });
@@ -207,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       fnAuthRenderNav(true, result.firstName, result.role);
+      fnAuthCheckSession(); // self-corrects with hasLicense/isParent, same pattern as the optimistic-render path above
       fnAuthCloseModal();
       document.dispatchEvent(new CustomEvent('fn-auth-changed'));
       const _pa = sessionStorage.getItem('fn_pending_audiences');
