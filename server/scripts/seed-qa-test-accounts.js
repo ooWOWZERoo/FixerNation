@@ -616,6 +616,83 @@ async function main() {
     out.secondaryRevokeInvitationId = revokeInvitationId;
   }
 
+  // --- Dual-role admin (school admin + district admin, same account) -----
+  // Regression fixture for the multi-role access fix (2026-08-24): an
+  // account holding both roles must be able to sign into BOTH
+  // school-admin-login.html and district-admin-login.html, and see both
+  // portal links in the nav — neither should reject it just because
+  // site_users.role can only ever hold one value at a time.
+  const dualRoleEmail = 'qa-dual-role-admin@example.com';
+  const dualRoleContactId = await findOrCreateContact(conn, { email: dualRoleEmail, name: 'QA Dual Role Admin' });
+  const dualRoleUserId = await findOrCreateSiteUser(conn, {
+    email: dualRoleEmail, firstName: 'QA', lastName: 'DualRoleAdmin', role: 'school_license_admin',
+  });
+
+  let [[qaDistrict]] = await conn.query("SELECT id FROM districts WHERE name = 'QA District'");
+  const qaDistrictId = qaDistrict
+    ? qaDistrict.id
+    : (await conn.query("INSERT INTO districts (name) VALUES ('QA District')"))[0].insertId;
+
+  let dualRolePurchaseId;
+  if (licenseProduct) {
+    let [[dualPurchase]] = await conn.query(
+      "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license' AND license_product_id = ?",
+      [dualRoleContactId, licenseProduct.id]
+    );
+    dualRolePurchaseId = dualPurchase ? dualPurchase.id : (await conn.query(
+      `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, school_domain)
+       VALUES (?, 'group_license', ?, 10, 'QA Seed', 'manual', 'paid', 'qa-dual-role-school.example.com')`,
+      [dualRoleContactId, licenseProduct.id]
+    ))[0].insertId;
+
+    await conn.query(
+      `INSERT INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active)
+       VALUES (?, ?, 'primary', 1)
+       ON DUPLICATE KEY UPDATE is_active = 1`,
+      [dualRoleUserId, dualRolePurchaseId]
+    );
+  } else {
+    console.warn('Skipping dual-role school_license_admins row — no license_products available.');
+  }
+
+  await conn.query(
+    `INSERT INTO district_license_admins (site_user_id, district_id, is_active)
+     VALUES (?, ?, 1)
+     ON DUPLICATE KEY UPDATE is_active = 1`,
+    [dualRoleUserId, qaDistrictId]
+  );
+
+  // A freshly-issued, stable password-reset token — lets the e2e suite
+  // exercise the actual reset-password + login round trip without needing
+  // to read a real email (same reasoning as TEST_TEACHER_INVITE_TOKEN
+  // above: there's no way for this suite to click a link from an inbox).
+  const dualRoleResetToken = crypto.randomBytes(32).toString('hex');
+  await conn.query(
+    'INSERT INTO site_user_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+    [dualRoleUserId, dualRoleResetToken, 'reset', new Date(Date.now() + 60 * 60 * 1000)]
+  );
+
+  out.dualRoleEmail = dualRoleEmail;
+  out.dualRoleResetToken = dualRoleResetToken;
+  out.qaDistrictId = qaDistrictId;
+  out.dualRolePurchaseId = dualRolePurchaseId;
+
+  // --- Dedicated forgot-password round-trip fixture -----------------------
+  // Isolated from every other fixture (per project convention: a
+  // state-mutating test — this one actually changes the account's password
+  // every run — gets its own dedicated account, never a shared one).
+  const forgotPwEmail = 'qa-forgot-password-test@example.com';
+  const forgotPwUserId = await findOrCreateSiteUser(conn, {
+    email: forgotPwEmail, firstName: 'QA', lastName: 'ForgotPasswordTest', role: 'teacher',
+  });
+  const forgotPwResetToken = crypto.randomBytes(32).toString('hex');
+  await conn.query(
+    'INSERT INTO site_user_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+    [forgotPwUserId, forgotPwResetToken, 'reset', new Date(Date.now() + 60 * 60 * 1000)]
+  );
+  out.forgotPwEmail = forgotPwEmail;
+  out.forgotPwResetToken = forgotPwResetToken;
+
   // --- Teacher with a classroom -------------------------------------------
   const teacherEmail = 'qa-teacher@example.com';
   const teacherUserId = await findOrCreateSiteUser(conn, {
@@ -780,6 +857,17 @@ async function main() {
   if (out.secondaryAdminEmail) {
     console.log(`TEST_SECONDARY_ADMIN_EMAIL=${out.secondaryAdminEmail}`);
     console.log(`TEST_SECONDARY_REVOKE_INVITATION_ID=${out.secondaryRevokeInvitationId}`);
+  }
+  if (out.dualRoleEmail) {
+    console.log(`TEST_DUAL_ROLE_EMAIL=${out.dualRoleEmail}`);
+    console.log(`TEST_DUAL_ROLE_PASSWORD=${out.password}`);
+    console.log(`TEST_DUAL_ROLE_RESET_TOKEN=${out.dualRoleResetToken}`);
+    console.log(`TEST_QA_DISTRICT_ID=${out.qaDistrictId}`);
+    if (out.dualRolePurchaseId) console.log(`TEST_DUAL_ROLE_PURCHASE_ID=${out.dualRolePurchaseId}`);
+  }
+  if (out.forgotPwEmail) {
+    console.log(`TEST_FORGOT_PW_EMAIL=${out.forgotPwEmail}`);
+    console.log(`TEST_FORGOT_PW_RESET_TOKEN=${out.forgotPwResetToken}`);
   }
   console.log(`TEST_CLASSROOM_JOIN_CODE=${out.classroomJoinCode}`);
   console.log(`\n(Classroom #${out.classroomId} — join code ${out.classroomJoinCode}, parent code ${out.classroomParentCode})`);

@@ -62,12 +62,10 @@ async function searchFor(page: Page, query: string) {
 //     side effect, so there's no "create via API, skip the email" path,
 //     and doing it via the real UI form would mean triggering a real send
 //     to complete setup — which is exactly the risk being avoided.
-//   - There is no separate "send password reset" button on this page as
-//     currently implemented (only Resend Welcome, gated on unverified, plus
-//     Edit and Remove) — grepped the HTML for "reset"/"password" and found
-//     no such control, despite the task brief describing one. Noting this
-//     as a possible spec/implementation mismatch rather than testing a
-//     feature that doesn't exist in the current markup.
+//   - "Reset Password" (shown when email_verified=1, the opposite condition
+//     from Resend Welcome) calls POST /api/site-auth/site-users/:id/send-
+//     password-reset — a real email send, same reasoning as Resend Welcome
+//     above for why it's only checked for presence/absence, never clicked.
 // ---------------------------------------------------------------------------
 
 test.describe("Admin School Admins", () => {
@@ -138,8 +136,10 @@ test.describe("Admin School Admins", () => {
     await expect(row).toBeVisible({ timeout: 8000 });
 
     // Fixture is email_verified=1 -> renderTable omits the Resend Welcome
-    // button entirely for this row (only rendered when !email_verified).
+    // button entirely for this row (only rendered when !email_verified) and
+    // shows Reset Password instead (only rendered when email_verified).
     await expect(row.getByRole("button", { name: "Resend Welcome" })).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Reset Password" })).toBeEnabled();
     await expect(row.getByRole("button", { name: "Edit" })).toBeEnabled();
     await expect(row.getByRole("button", { name: "Remove" })).toBeEnabled();
   });

@@ -80,6 +80,19 @@ export async function signInAsSchoolAdmin(page: Page) {
 }
 
 // ---------------------------------------------------------------------------
+// District admin portal
+// Login page: /district-admin-login.html — fields: #email, #password
+// ---------------------------------------------------------------------------
+
+export async function signInAsDistrictAdminAccount(page: Page, email: string, password: string) {
+  await page.goto("/district-admin-login.html");
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(password);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page).toHaveURL(/district-admin-dashboard\.html/, { timeout: 15000 });
+}
+
+// ---------------------------------------------------------------------------
 // Teacher portal
 // Login page: /teacher-login.html — fields: #email, #password
 // ---------------------------------------------------------------------------
