@@ -980,7 +980,9 @@ async function sendQuote() {
 
   const { productId, productName, tierName, addonSeats, termYears, discountPct, seatCount, amountCents, quotedValidUntil, quotedSchoolDomain } = getQuotePayload();
   if (!productName) { fnToast('Select a license package first'); return; }
-  if (!amountCents) { fnToast('Enter a dollar amount'); return; }
+  // amountCents can legitimately be 0 (a free trial) — only reject a
+  // missing/invalid amount, not a falsy-but-valid zero.
+  if (amountCents == null || isNaN(amountCents)) { fnToast('Enter a dollar amount'); return; }
 
   // Persist contact info / status / notes / profile / pricing before
   // actually emailing, so nothing typed in this session is lost.

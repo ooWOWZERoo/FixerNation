@@ -332,7 +332,7 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   if (quotedProductId       !== undefined) { updates.push('quoted_product_id = ?');       params.push(quotedProductId || null); }
   if (quotedProductName     !== undefined) { updates.push('quoted_product_name = ?');     params.push(quotedProductName || null); }
   if (quotedSeatCount       !== undefined) { updates.push('quoted_seat_count = ?');       params.push(quotedSeatCount || null); }
-  if (quotedAmountCents     !== undefined) { updates.push('quoted_amount_cents = ?');     params.push(quotedAmountCents || null); }
+  if (quotedAmountCents     !== undefined) { updates.push('quoted_amount_cents = ?');     params.push(quotedAmountCents != null ? quotedAmountCents : null); }
   if (quotedTierName        !== undefined) { updates.push('quoted_tier_name = ?');        params.push(quotedTierName || null); }
   if (quotedAddonSeats      !== undefined) { updates.push('quoted_addon_seats = ?');      params.push(quotedAddonSeats != null ? Number(quotedAddonSeats) : null); }
   if (quotedProrationFactor !== undefined) { updates.push('quoted_proration_factor = ?'); params.push(quotedProrationFactor != null ? Number(quotedProrationFactor) : null); }
@@ -361,7 +361,9 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
           quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil,
           quotedSchoolDomain, contentProfileId } = req.body || {};
-  if (!quotedAmountCents || !quotedProductName) {
+  // quotedAmountCents can legitimately be 0 (a free trial) — only reject a
+  // missing amount, not a falsy-but-valid zero.
+  if (quotedAmountCents == null || !quotedProductName) {
     return res.status(400).json({ error: 'Product name and amount are required to send a quote' });
   }
   const schoolDomain = quotedSchoolDomain !== undefined

@@ -41,7 +41,7 @@ router.get('/accept', async (req, res) => {
     email: quote.email || '',
     productName: quote.quoted_product_name || '',
     seatCount: quote.quoted_seat_count || null,
-    amountDollars: quote.quoted_amount_cents ? quote.quoted_amount_cents / 100 : null,
+    amountDollars: quote.quoted_amount_cents != null ? quote.quoted_amount_cents / 100 : null,
     quoteValidUntil: quote.quote_valid_until ? String(quote.quote_valid_until).slice(0, 10) : null,
   });
 });
@@ -128,7 +128,7 @@ router.post('/accept', async (req, res) => {
     productType: isTrial ? 'single_license' : 'group_license',
     licenseProductId: quote.quoted_product_id || null,
     seatCount: isTrial ? 1 : (quote.quoted_seat_count || 1),
-    amountCents: quote.quoted_amount_cents || null,
+    amountCents: quote.quoted_amount_cents != null ? quote.quoted_amount_cents : null,
     paymentMethod,
     paymentStatus: 'pending',
     source: 'quote',
