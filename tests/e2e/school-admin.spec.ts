@@ -78,6 +78,14 @@ test.describe("School Admin portal", () => {
 
     const sidebarLink = page.locator(".sa-sidebar a[href='school-admin-org.html']");
     await expect(sidebarLink).toBeVisible();
+
+    // Real field values, not just placeholders — a prior GET /api/school-admin/org
+    // response-shape mismatch (unwrapped fields the page expected under
+    // `purchase`/`utilization`) left every value on this page silently reading
+    // "—"/"0 of 0" while the page itself still loaded and rendered fine.
+    await expect(page.getByText("qa-school.example.com")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("#utilDetail")).not.toHaveText("— of — seats assigned");
+    await expect(page.locator("#licenseInfo")).not.toContainText("—");
   });
 
   // -------------------------------------------------------------------------

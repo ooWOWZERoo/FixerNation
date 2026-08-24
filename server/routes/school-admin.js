@@ -200,7 +200,8 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
 
   const [[row]] = await pool.query(
     `SELECT p.id, p.school_domain, p.seat_count, p.payment_status, p.payment_method,
-            p.purchased_at, p.invoice_id, p.notes,
+            p.purchased_at, p.effective_date, p.expiration_date, p.license_status,
+            p.invoice_id, p.notes,
             lp.name AS plan_name, lp.footer_note AS plan_term,
             nc.name AS buyer_name, nc.email AS buyer_email, nc.phone,
             nc.company, nc.street, nc.city, nc.state, nc.zip,
@@ -215,8 +216,23 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
 
   if (!row) return res.status(404).json({ error: 'Not found' });
 
+  // Seat utilization — same "assigned" definition (registered + pending +
+  // inactive seats) as the dashboard endpoint above, for a consistent number
+  // across both pages.
+  const [[counts]] = await pool.query(
+    `SELECT
+       SUM(CASE WHEN status = 'registered' THEN 1 ELSE 0 END) AS registered,
+       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+       SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive
+     FROM license_seats WHERE purchase_id = ?`,
+    [purchaseId]
+  );
+  const total = row.seat_count || 0;
+  const assigned = Number(counts.registered || 0) + Number(counts.pending || 0) + Number(counts.inactive || 0);
+  const pctUsed = total > 0 ? Math.round((assigned / total) * 100) : 0;
+
   // Co-admins on this purchase
-  const [admins] = await pool.query(
+  const [coAdmins] = await pool.query(
     `SELECT sla.id, sla.permission_level, sla.is_active, sla.created_at,
             su.first_name, su.last_name, su.email
      FROM school_license_admins sla
@@ -227,25 +243,31 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
   );
 
   res.json({
-    purchaseId: row.id,
-    schoolDomain: row.school_domain,
-    company: row.company,
-    buyerName: row.buyer_name,
-    buyerEmail: row.buyer_email,
-    phone: row.phone,
-    address: [row.street, row.city, row.state, row.zip].filter(Boolean).join(', '),
-    planName: row.plan_name || 'Group License',
-    planTerm: row.plan_term,
-    seatCount: row.seat_count,
-    paymentStatus: row.payment_status,
-    paymentMethod: row.payment_method,
-    invoiceNumber: row.invoice_number,
-    invoiceStatus: row.invoice_status,
-    paidAt: row.paid_at,
-    totalCents: row.total_cents,
-    purchasedAt: row.purchased_at,
-    notes: row.notes,
-    admins,
+    purchase: {
+      id: row.id,
+      schoolDomain: row.school_domain,
+      company: row.company,
+      buyerName: row.buyer_name,
+      buyerEmail: row.buyer_email,
+      phone: row.phone,
+      address: [row.street, row.city, row.state, row.zip].filter(Boolean).join(', '),
+      planName: row.plan_name || 'Group License',
+      planTerm: row.plan_term,
+      seatCount: row.seat_count,
+      paymentStatus: row.payment_status,
+      paymentMethod: row.payment_method,
+      invoiceNumber: row.invoice_number,
+      invoiceStatus: row.invoice_status,
+      paidAt: row.paid_at,
+      totalCents: row.total_cents,
+      purchasedAt: row.purchased_at,
+      effectiveDate: row.effective_date,
+      expirationDate: row.expiration_date,
+      licenseStatus: row.license_status,
+      notes: row.notes,
+    },
+    utilization: { total, assigned, pctUsed },
+    coAdmins,
   });
 });
 

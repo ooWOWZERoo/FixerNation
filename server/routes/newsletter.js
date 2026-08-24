@@ -276,6 +276,17 @@ function normalizeDomain(domain) {
   return (domain || '').trim().replace(/^@/, '').toLowerCase();
 }
 
+// Every group-license purchase's school_domain must have a matching schools
+// row + purchases.school_id, or branding (server/lib/branding.js) can't
+// resolve a school for it. schools.domain is UNIQUE, so INSERT IGNORE is
+// safe under concurrent callers racing on the same new domain.
+async function findOrCreateSchoolId(domain, conn = pool) {
+  if (!domain) return null;
+  await conn.query('INSERT IGNORE INTO schools (domain) VALUES (?)', [domain]);
+  const [[row]] = await conn.query('SELECT id FROM schools WHERE domain = ?', [domain]);
+  return row ? row.id : null;
+}
+
 // Translates a user search term into a SQL LIKE pattern.
 // * → %, ? → _, literal % and _ are escaped. No wildcards → %term% (contains).
 function toSqlLike(term) {
@@ -367,17 +378,20 @@ async function attachPurchaseDetails(purchases) {
 async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents, quoteId, skipThankYouAutomation }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
+  const normalizedDomain = productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null;
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    const schoolId = await findOrCreateSchoolId(normalizedDomain, connection);
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents, quote_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, school_id, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents, quote_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         contactId, productType, productType === 'book' ? bookId : null,
         (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null,
         finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null, stripeInvoiceId || null,
-        productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null,
+        normalizedDomain, schoolId,
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
         invoiceId || null, amountCents === undefined ? null : amountCents,
         trialExpirationDate || null, trialLessonLimit || null, conversionCreditCents || null,
@@ -584,6 +598,9 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
   const schoolDomain = purchase.product_type === 'group_license'
     ? (b.schoolDomain !== undefined ? normalizeDomain(b.schoolDomain) || null : purchase.school_domain)
     : purchase.school_domain;
+  const schoolId = purchase.product_type === 'group_license'
+    ? await findOrCreateSchoolId(schoolDomain)
+    : purchase.school_id;
 
   if (purchase.product_type === 'group_license' && b.seatCount !== undefined) {
     const newCount = Number(b.seatCount);
@@ -599,8 +616,8 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
     try {
       await connection.beginTransaction();
       await connection.query(
-        'UPDATE purchases SET seat_count = ?, notes = ?, source = ?, school_domain = ?, payment_status = ?, po_number = ? WHERE id = ?',
-        [newCount, notes, source, schoolDomain, paymentStatus, poNumber, purchase.id]
+        'UPDATE purchases SET seat_count = ?, notes = ?, source = ?, school_domain = ?, school_id = ?, payment_status = ?, po_number = ? WHERE id = ?',
+        [newCount, notes, source, schoolDomain, schoolId, paymentStatus, poNumber, purchase.id]
       );
 
       const currentTotal = seatRows.length;
@@ -626,8 +643,8 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
     }
   } else {
     await pool.query(
-      'UPDATE purchases SET notes = ?, source = ?, school_domain = ?, payment_status = ?, po_number = ? WHERE id = ?',
-      [notes, source, schoolDomain, paymentStatus, poNumber, purchase.id]
+      'UPDATE purchases SET notes = ?, source = ?, school_domain = ?, school_id = ?, payment_status = ?, po_number = ? WHERE id = ?',
+      [notes, source, schoolDomain, schoolId, paymentStatus, poNumber, purchase.id]
     );
   }
 

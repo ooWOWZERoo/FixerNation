@@ -118,8 +118,8 @@ function renderOrg(d) {
     : '<span class="sa-badge sa-badge-warn">⚠ Payment Pending</span>';
 
   // License info grid
-  const purchaseDate = p.createdAt ? new Date(p.createdAt).toLocaleDateString([], { year:'numeric', month:'long', day:'numeric' }) : '—';
-  const expiresDate = p.expiresAt ? new Date(p.expiresAt).toLocaleDateString([], { year:'numeric', month:'long', day:'numeric' }) : 'No expiration';
+  const purchaseDate = p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString([], { year:'numeric', month:'long', day:'numeric' }) : '—';
+  const expiresDate = p.expirationDate ? new Date(p.expirationDate).toLocaleDateString([], { year:'numeric', month:'long', day:'numeric' }) : 'No expiration';
   document.getElementById('licenseInfo').innerHTML =
     info('School Domain', p.schoolDomain || '—') +
     info('Plan', p.planName || '—') +
