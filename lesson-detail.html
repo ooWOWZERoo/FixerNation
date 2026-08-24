@@ -327,12 +327,27 @@ function renderDetailResources(c) {
     }
   });
 
-  // Lock notice — shown when not licensed
+  // Lock notice — shown when not licensed. A trial user who's used up their
+  // preview allotment or whose trial has run out gets a message specific to
+  // that, rather than the generic "no license at all" one — otherwise a
+  // trial teacher who did everything right (signed up, used their trial)
+  // sees the exact same wording as someone who never had access at all.
   if (!licensed) {
+    const reason = c.access && c.access.reason;
     const loginPrompt = loggedIn
       ? ''
       : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
-    parts.push(`<div class="locked-panel" style="margin-top:${resources.length ? '12px' : '0'}">🔒 Teacher Copy, lesson plans, and the quiz require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`);
+    let message;
+    if (reason === 'trial_limit') {
+      const used = c.access.trialUsed != null ? c.access.trialUsed : '?';
+      const limit = c.access.trialLimit != null ? c.access.trialLimit : '?';
+      message = `🔒 You've used all ${limit} lesson preview${limit === 1 ? '' : 's'} included in your trial (${used} of ${limit}). <a href="licenses.html">Upgrade to a full license →</a> for unlimited access.`;
+    } else if (reason === 'trial_expired') {
+      message = `🔒 Your trial has ended. <a href="licenses.html">Upgrade to a full license →</a> to keep access.`;
+    } else {
+      message = `🔒 Teacher Copy, lesson plans, and the quiz require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}`;
+    }
+    parts.push(`<div class="locked-panel" style="margin-top:${resources.length ? '12px' : '0'}">${message}</div>`);
   }
 
   if (!parts.length) {

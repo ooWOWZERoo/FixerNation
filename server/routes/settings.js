@@ -142,6 +142,22 @@ router.put('/teacher-lesson-plan-limit', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Default library limit for trial teachers — see settings.js's DEFAULTS
+// comment for how this is used (fallback for older trial purchases, and a
+// one-time pre-fill in admin-licenses.html's "Trial?" checkbox).
+router.get('/teacher-lesson-plan-limit-trial', requireAuth, async (req, res) => {
+  const raw = await getSetting('teacher_lesson_plan_limit_trial');
+  const limit = Math.max(1, parseInt(raw || '10', 10));
+  res.json({ limit });
+});
+
+router.put('/teacher-lesson-plan-limit-trial', requireAuth, async (req, res) => {
+  const limit = parseInt(req.body && req.body.limit, 10);
+  if (!limit || limit < 1) return res.status(400).json({ error: 'Limit must be at least 1' });
+  await setSetting('teacher_lesson_plan_limit_trial', String(limit));
+  res.json({ ok: true });
+});
+
 router.get('/auto-refresh', requireAuth, async (req, res) => {
   const raw = await getSetting('admin_auto_refresh_sec');
   res.json({ intervalSec: Math.max(0, parseInt(raw || '0', 10)) });

@@ -78,7 +78,7 @@ test.describe("Admin-initiated quotes + Quote Content Profiles", () => {
     // The actual bug being fixed: pricing controls present immediately on a
     // brand-new quote, not only after a separate create-then-reopen step.
     await expect(page.locator("#qTierSelect")).toBeVisible();
-    await expect(page.getByRole("button", { name: "90-Day Pilot" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Trial" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Add-On Seats" })).toBeVisible();
     await expect(page.locator("#qContentProfile")).toBeVisible();
     // Nothing to copy yet

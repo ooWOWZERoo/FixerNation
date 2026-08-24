@@ -6,7 +6,28 @@ const { getSetting } = require('../lib/settings');
 
 const router = express.Router();
 
-async function getLimit() {
+// A trial purchase's own trial_library_limit (snapshotted at purchase time
+// from license_products.trial_library_limit — see server/routes/newsletter.js's
+// createPurchase()) always wins when present. If the teacher's active seat
+// belongs to a trial purchase with no snapshot of its own (e.g. one created
+// before this field existed), the trial-specific default setting applies
+// instead of silently falling through to the full-license default of 40 —
+// a trial should never accidentally get the same cap as a paid license.
+async function getLimit(siteUserId) {
+  const [[trial]] = await pool.query(
+    `SELECT p.trial_library_limit, p.trial_lesson_limit
+     FROM license_seats ls
+     JOIN purchases p ON p.id = ls.purchase_id
+     WHERE ls.registered_site_user_id = ? AND ls.status = 'registered'
+       AND (p.trial_library_limit IS NOT NULL OR p.trial_lesson_limit IS NOT NULL)
+     LIMIT 1`,
+    [siteUserId]
+  );
+  if (trial) {
+    if (trial.trial_library_limit != null) return Math.max(1, trial.trial_library_limit);
+    const rawTrial = await getSetting('teacher_lesson_plan_limit_trial');
+    return Math.max(1, parseInt(rawTrial || '10', 10));
+  }
   const raw = await getSetting('teacher_lesson_plan_limit');
   return Math.max(1, parseInt(raw || '40', 10));
 }
@@ -21,7 +42,7 @@ router.get('/', requireSiteAuth, async (req, res) => {
     'SELECT curriculum_id, selected_at FROM teacher_lesson_plans WHERE site_user_id = ? ORDER BY selected_at',
     [req.siteUser.id]
   );
-  const limit = await getLimit();
+  const limit = await getLimit(req.siteUser.id);
   res.json({
     selections: rows.map(r => r.curriculum_id),
     count: rows.length,
@@ -44,7 +65,7 @@ router.get('/browse', requireSiteAuth, async (req, res) => {
     [req.siteUser.id]
   );
   const selectedSet = new Set(selected.map(r => r.curriculum_id));
-  const limit = await getLimit();
+  const limit = await getLimit(req.siteUser.id);
 
   const ids = curricula.map(c => c.id);
   const [audienceRows] = ids.length
@@ -87,7 +108,7 @@ router.post('/', requireSiteAuth, async (req, res) => {
     'SELECT COUNT(*) AS count FROM teacher_lesson_plans WHERE site_user_id = ?',
     [req.siteUser.id]
   );
-  const limit = await getLimit();
+  const limit = await getLimit(req.siteUser.id);
   if (count >= limit) {
     return res.status(400).json({ error: 'Lesson plan library is full', count, limit });
   }

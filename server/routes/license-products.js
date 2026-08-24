@@ -4,6 +4,19 @@ const { requireAuth, getAuthUser } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Trial fields are only meaningful when isTrial is true — unchecking "Trial?"
+// clears them, so a product never carries stale trial numbers around that
+// a future accidental re-check could resurrect unexpectedly.
+function trialFieldsFromBody(b) {
+  const isTrial = !!b.isTrial;
+  return {
+    isTrial: isTrial ? 1 : 0,
+    trialDays: isTrial && b.trialDays != null ? (Number(b.trialDays) || null) : null,
+    trialLessonLimit: isTrial && b.trialLessonLimit != null ? (Number(b.trialLessonLimit) || null) : null,
+    trialLibraryLimit: isTrial && b.trialLibraryLimit != null ? (Number(b.trialLibraryLimit) || null) : null,
+  };
+}
+
 function serialize(row) {
   return {
     id: row.id,
@@ -20,10 +33,10 @@ function serialize(row) {
     footerNote: row.footer_note || '',
     createdAt: row.created_at,
     addonRate: row.addon_rate_cents ? Number(row.addon_rate_cents) / 100 : null,
-    isPilot: row.name === '90-Day Classroom Pilot',
     isTrial: !!row.is_trial,
     trialDays: row.trial_days || null,
     trialLessonLimit: row.trial_lesson_limit || null,
+    trialLibraryLimit: row.trial_library_limit || null,
   };
 }
 
@@ -55,9 +68,10 @@ router.post('/', requireAuth, async (req, res) => {
   const groupId = Number(b.autoAssignGroupId) || null;
   const bulletPoints = Array.isArray(b.bulletPoints) ? b.bulletPoints.filter(Boolean).join('\n') : (b.bulletPoints || '');
   const addonRateCents = b.addonRateCents != null ? (Number(b.addonRateCents) || null) : null;
+  const trial = trialFieldsFromBody(b);
   const [result] = await pool.query(
-    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, sort_order, active, auto_assign_group_id, bullet_points, footer_note, addon_rate_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPoints || null, b.footerNote || null, addonRateCents]
+    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, sort_order, active, auto_assign_group_id, bullet_points, footer_note, addon_rate_cents, is_trial, trial_days, trial_lesson_limit, trial_library_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPoints || null, b.footerNote || null, addonRateCents, trial.isTrial, trial.trialDays, trial.trialLessonLimit, trial.trialLibraryLimit]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [result.insertId]);
@@ -77,9 +91,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   const groupId = Number(b.autoAssignGroupId) || null;
   const bulletPointsUpd = Array.isArray(b.bulletPoints) ? b.bulletPoints.filter(Boolean).join('\n') : (b.bulletPoints || '');
   const addonRateCentsUpd = b.addonRateCents != null ? (Number(b.addonRateCents) || null) : null;
+  const trial = trialFieldsFromBody(b);
   await pool.query(
-    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, variable_seats=?, sort_order=?, active=?, auto_assign_group_id=?, bullet_points=?, footer_note=?, addon_rate_cents=? WHERE id=?',
-    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPointsUpd || null, b.footerNote || null, addonRateCentsUpd, req.params.id]
+    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, variable_seats=?, sort_order=?, active=?, auto_assign_group_id=?, bullet_points=?, footer_note=?, addon_rate_cents=?, is_trial=?, trial_days=?, trial_lesson_limit=?, trial_library_limit=? WHERE id=?',
+    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPointsUpd || null, b.footerNote || null, addonRateCentsUpd, trial.isTrial, trial.trialDays, trial.trialLessonLimit, trial.trialLibraryLimit, req.params.id]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [req.params.id]);

@@ -457,14 +457,18 @@ function openModal(id) {
     ? `<div class="q-sent-badge">✓ Quote emailed on ${fnFormatDate(q.quote_sent_at)}</div>`
     : '';
 
-  const annualProds = licenseProds.filter(p => !p.isPilot);
+  const annualProds = licenseProds.filter(p => !p.isTrial);
   const addonProds  = annualProds.filter(p => p.addonRate > 0);
+  const trialProds  = licenseProds.filter(p => p.isTrial);
 
   const annualOptions = annualProds.map(p =>
     `<option value="${p.id}" data-price="${p.price}" data-seats="${p.seatCount}" data-addon-rate="${p.addonRate || 0}">${fnEscape(p.name)} — ${p.seatCount} seat${p.seatCount !== 1 ? 's' : ''} — $${p.price.toFixed(2)}/yr</option>`
   ).join('');
   const addonOptions = addonProds.map(p =>
     `<option value="${p.id}" data-addon-rate="${p.addonRate}" data-price="${p.price}">${fnEscape(p.name)} ($${p.addonRate.toFixed(2)}/seat)</option>`
+  ).join('');
+  const trialOptions = trialProds.map(p =>
+    `<option value="${p.id}" data-price="${p.price}" data-seats="${p.seatCount || 1}" data-trial-days="${p.trialDays || 90}" data-trial-library-limit="${p.trialLibraryLimit || ''}">${fnEscape(p.name)} — $${p.price.toFixed(2)}</option>`
   ).join('');
 
   const twoYrLabel   = quoteSettings.twoYrPct   > 0 ? ` (${quoteSettings.twoYrPct}% off)`   : '';
@@ -541,7 +545,7 @@ function openModal(id) {
     <!-- Tab selector -->
     <div style="display:flex;gap:2px;border-bottom:2px solid var(--a-border);margin-bottom:16px;">
       <button class="q-tab-btn q-tab-active" id="tabBtnAnnual" onclick="switchQuoteTab('annual')">Annual License</button>
-      <button class="q-tab-btn" id="tabBtnPilot" onclick="switchQuoteTab('pilot')">90-Day Pilot</button>
+      <button class="q-tab-btn" id="tabBtnPilot" onclick="switchQuoteTab('pilot')">Trial</button>
       <button class="q-tab-btn" id="tabBtnAddon" onclick="switchQuoteTab('addon')">Add-On Seats</button>
     </div>
 
@@ -581,13 +585,16 @@ function openModal(id) {
       <div class="q-breakdown" id="qBreakdown" style="display:none;"></div>
     </div>
 
-    <!-- 90-Day Pilot tab -->
+    <!-- Trial tab -->
     <div id="tabPilot" style="display:none;">
-      <div class="q-breakdown">
-        <div class="q-breakdown-row"><span>90-Day Classroom Pilot (1 seat)</span><span>$149.00</span></div>
-        <div class="q-breakdown-row total"><span>Total</span><span>$149.00</span></div>
-        <div style="font-size:11.5px;color:var(--a-text-soft);margin-top:6px;">Includes 4 lessons. $74.50 conversion credit toward annual license within 30 days.</div>
+      <div class="q-field">
+        <label class="q-label">Trial Product</label>
+        <select id="qTrialTierSelect" class="a-filter-select" style="width:100%;" onchange="calcTrialBreakdown()">
+          <option value="">— Select a trial product —</option>
+          ${trialOptions}
+        </select>
       </div>
+      <div class="q-breakdown" id="qTrialBreakdown" style="display:none;"></div>
     </div>
 
     <!-- Add-On Seats tab -->
@@ -614,10 +621,12 @@ function openModal(id) {
       document.getElementById('qProductName').value = q.quoted_product_name || '';
       document.getElementById('qTierName').value    = q.quoted_tier_name || '';
       const tierSel = document.getElementById('qTierSelect');
+      let foundInAnnual = false;
       if (tierSel) {
         for (let i = 0; i < tierSel.options.length; i++) {
           if (String(tierSel.options[i].value) === String(q.quoted_product_id)) {
             tierSel.selectedIndex = i;
+            foundInAnnual = true;
             onTierChange();
             // onTierChange() resets modalAmount to catalog price; restore saved amount as annual base
             if (q.quoted_amount_cents) {
@@ -629,6 +638,21 @@ function openModal(id) {
               document.getElementById('modalAmount').value = annualBase.toFixed(2);
             }
             break;
+          }
+        }
+      }
+      // Not an annual tier — a saved quote can also have been built from a
+      // trial product, which lives in its own tab/select, not qTierSelect.
+      if (!foundInAnnual) {
+        const trialSel = document.getElementById('qTrialTierSelect');
+        if (trialSel) {
+          for (let i = 0; i < trialSel.options.length; i++) {
+            if (String(trialSel.options[i].value) === String(q.quoted_product_id)) {
+              switchQuoteTab('pilot');
+              trialSel.selectedIndex = i;
+              calcTrialBreakdown();
+              break;
+            }
           }
         }
       }
@@ -667,16 +691,52 @@ function switchQuoteTab(tab) {
     document.getElementById('tab' + t).style.display = t.toLowerCase() === tab ? '' : 'none';
   });
   if (tab === 'pilot') {
-    const pilot = licenseProds.find(p => p.isPilot);
-    document.getElementById('qProductId').value          = pilot ? pilot.id : '';
-    document.getElementById('qProductName').value        = '90-Day Classroom Pilot';
-    document.getElementById('qTierName').value           = '90-Day Classroom Pilot';
-    document.getElementById('qAddonSeats').value         = 0;
-    document.getElementById('qTermYears').value          = 1;
-    document.getElementById('qDiscountPct').value        = 0;
-    document.getElementById('modalAmount').value         = '149.00';
-    document.getElementById('qFinalTotal').value         = '149.00';
+    const trialSel = document.getElementById('qTrialTierSelect');
+    // Auto-select the only option when there's just one trial product (the
+    // common case today), matching the old single-Pilot tab's convenience
+    // of showing a breakdown the instant you switch tabs. With more than
+    // one trial product, leave the placeholder selected so staff choose.
+    if (trialSel && !trialSel.value && trialSel.options.length === 2) {
+      trialSel.selectedIndex = 1;
+    }
+    calcTrialBreakdown();
   }
+}
+
+function calcTrialBreakdown() {
+  const sel = document.getElementById('qTrialTierSelect');
+  const opt = sel && sel.options[sel.selectedIndex];
+  const breakdown = document.getElementById('qTrialBreakdown');
+  if (!opt || !opt.value) {
+    breakdown.style.display = 'none';
+    return;
+  }
+  const price = parseFloat(opt.dataset.price || 0);
+  const seats = parseInt(opt.dataset.seats || 1);
+  const trialDays = parseInt(opt.dataset.trialDays || 90);
+  const libraryLimit = opt.dataset.trialLibraryLimit;
+  const name = opt.text.split(' — ')[0];
+
+  let rows = `<div class="q-breakdown-row"><span>${name} (${seats} seat${seats !== 1 ? 's' : ''})</span><span>$${price.toFixed(2)}</span></div>`;
+  rows += `<div class="q-breakdown-row total"><span>Total</span><span>$${price.toFixed(2)}</span></div>`;
+  // conversionCreditCents is set to the trial's own full price at
+  // conversion time (checkout.js/quote-accept.js: "so a later paid
+  // conversion isn't charged full price on top of what was already paid")
+  // — this note previously said half that (a stale/incorrect number carried
+  // over from the old hardcoded Pilot text), fixed here to match reality.
+  const libraryNote = libraryLimit ? `Up to ${libraryLimit} lesson plan${libraryLimit !== '1' ? 's' : ''} in their library. ` : '';
+  rows += `<div style="font-size:11.5px;color:var(--a-text-soft);margin-top:6px;">${trialDays}-day trial. ${libraryNote}$${price.toFixed(2)} conversion credit toward an annual license within 30 days.</div>`;
+  breakdown.innerHTML = rows;
+  breakdown.style.display = '';
+
+  document.getElementById('qProductId').value   = opt.value;
+  document.getElementById('qProductName').value = name;
+  document.getElementById('qTierName').value    = name;
+  document.getElementById('qAddonSeats').value  = 0;
+  document.getElementById('qTermYears').value   = 1;
+  document.getElementById('qDiscountPct').value = 0;
+  document.getElementById('modalAmount').value  = price.toFixed(2);
+  document.getElementById('qFinalTotal').value  = price.toFixed(2);
 }
 
 function selectChip(group, btn) {
@@ -888,7 +948,9 @@ function getQuotePayload() {
   if (addonTabActive) {
     seatCount = parseInt(document.getElementById('qAddonSeatsInput').value) || null;
   } else if (pilotTabActive) {
-    seatCount = 1;
+    const trialSel = document.getElementById('qTrialTierSelect');
+    const trialOpt = trialSel && trialSel.options[trialSel.selectedIndex];
+    seatCount = trialOpt && trialOpt.value ? (parseInt(trialOpt.dataset.seats) || 1) : 1;
   } else {
     const tierSel = document.getElementById('qTierSelect');
     const tierOpt = tierSel && tierSel.options[tierSel.selectedIndex];

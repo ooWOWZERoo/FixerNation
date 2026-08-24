@@ -12,6 +12,15 @@ const DEFAULTS = {
   invoice_tagline: 'fixernationeducation.com',
   invoice_logo_url: '',
   teacher_lesson_plan_limit: '40',
+  // Default trial-teacher library limit — used two ways: (1) as the
+  // fallback for any trial purchase with no trial_library_limit snapshot of
+  // its own (e.g. one created before this field existed), so an existing
+  // trial doesn't silently fall through to the full-license default of 40;
+  // and (2) to pre-fill a license product's own trial_library_limit field
+  // the moment "Trial?" is checked on it in admin-licenses.html (a one-time
+  // client-side pre-fill — the product's own field, once saved, is what
+  // actually gets snapshotted onto purchases going forward).
+  teacher_lesson_plan_limit_trial: '10',
 };
 
 async function getSetting(key) {

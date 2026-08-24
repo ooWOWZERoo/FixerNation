@@ -6,6 +6,7 @@ const { fireAutomation } = require('../lib/automations');
 const { createSetPasswordUrl } = require('./checkout');
 const { sendAutomationEmail } = require('../lib/mailer');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
+const { getSetting } = require('../lib/settings');
 
 const router = express.Router();
 
@@ -107,7 +108,7 @@ router.post('/accept', async (req, res) => {
   let isTrial = false;
   if (quote.quoted_product_id) {
     const [[lp]] = await pool.query(
-      'SELECT is_trial, trial_days, trial_lesson_limit, price_cents FROM license_products WHERE id = ?',
+      'SELECT is_trial, trial_days, trial_lesson_limit, trial_library_limit, price_cents FROM license_products WHERE id = ?',
       [quote.quoted_product_id]
     );
     if (lp && lp.is_trial) {
@@ -117,6 +118,7 @@ router.post('/accept', async (req, res) => {
       trialFields = {
         trialExpirationDate,
         trialLessonLimit: lp.trial_lesson_limit || null,
+        trialLibraryLimit: lp.trial_library_limit || Math.max(1, parseInt(await getSetting('teacher_lesson_plan_limit_trial') || '10', 10)),
         conversionCreditCents: lp.price_cents || null,
       };
     }

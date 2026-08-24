@@ -8,6 +8,7 @@ const { fireAutomation } = require('../lib/automations');
 const { getSiteUser } = require('../lib/access');
 const { createToken } = require('../lib/site-tokens');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
+const { getSetting } = require('../lib/settings');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -580,11 +581,12 @@ async function webhookHandler(req, res) {
         // Variable-seat or trial flow from licenses.html — look up the product
         // to decide whether this is a trial (single seat) or group license.
         const [lpRows] = await pool.query(
-          'SELECT id, name, price_cents, is_trial, trial_days, trial_lesson_limit FROM license_products WHERE id = ?',
+          'SELECT id, name, price_cents, is_trial, trial_days, trial_lesson_limit, trial_library_limit FROM license_products WHERE id = ?',
           [Number(metadata.productId)]
         );
         const lp = lpRows[0];
         if (lp && lp.is_trial) {
+          const trialLibraryLimit = lp.trial_library_limit || Math.max(1, parseInt(await getSetting('teacher_lesson_plan_limit_trial') || '10', 10));
           await createPurchase(contactId, {
             productType: 'single_license',
             licenseProductId: lp.id,
@@ -596,6 +598,7 @@ async function webhookHandler(req, res) {
             amountCents: session.amount_total,
             trialExpirationDate: daysFromNow(lp.trial_days || 30),
             trialLessonLimit: lp.trial_lesson_limit || 4,
+            trialLibraryLimit,
             conversionCreditCents: lp.price_cents,
           });
           const firstName = (metadata.email || '').split('@')[0].split('.')[0] || 'there';

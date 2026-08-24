@@ -11,7 +11,8 @@ import { signInAsAdmin } from "./helpers/auth";
 // silently defaulted to 1 seat on acceptance. Fixed by having
 // getQuotePayload() check which tab div is actually visible and read seat
 // count from that tab's own inputs (#qAddonSeatsInput for Add-On Seats,
-// hardcoded 1 for the 90-Day Pilot, #qTierSelect only for Annual).
+// #qTrialTierSelect's own data-seats for the Trial tab, #qTierSelect only
+// for Annual).
 //
 // This drives the page's own getQuotePayload() function directly via
 // page.evaluate() rather than sending a real quote email — there's no need
@@ -56,12 +57,24 @@ test.describe("Quote builder — seat count follows the active tab", () => {
     expect(payload.seatCount).toBe(7);
   });
 
-  test("90-Day Pilot tab always sends exactly 1 seat", async ({ page }) => {
-    await page.getByRole("button", { name: "90-Day Pilot" }).click();
+  test("Trial tab sends the selected trial product's own seat count", async ({ page }) => {
+    await page.getByRole("button", { name: "Trial" }).click();
     await expect(page.locator("#tabPilot")).toBeVisible();
 
+    const trialSelect = page.locator("#qTrialTierSelect");
+    const optionCount = await trialSelect.locator("option").count();
+    test.skip(optionCount <= 1, "No trial products configured — nothing to select");
+    // Tab switch auto-selects when there's exactly one trial product; select
+    // explicitly here so the test doesn't depend on that convenience default.
+    await trialSelect.selectOption({ index: 1 });
+
+    const expectedSeats = await trialSelect.evaluate((el: HTMLSelectElement) => {
+      const opt = el.options[el.selectedIndex];
+      return parseInt(opt.dataset.seats || "1");
+    });
+
     const payload = await page.evaluate(() => (window as any).getQuotePayload());
-    expect(payload.seatCount).toBe(1);
+    expect(payload.seatCount).toBe(expectedSeats);
   });
 
   test("Annual tab still reads seat count from the selected tier", async ({ page }) => {

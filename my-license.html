@@ -118,8 +118,18 @@ function renderTrialCard(p) {
     ? `<span style="background:#e0f2fe;color:#075985;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:6px;">Up to ${p.trialLessonLimit} lessons</span>`
     : '';
 
+  // trial_days lives on the license product, not the purchase — derive the
+  // actual granted duration from the purchase's own dates instead, which is
+  // both more accurate (immune to a later product-setting change) and
+  // available for every trial purchase regardless of when it was created.
+  // The old hardcoded "30-Day" was wrong for the real Pilot product, which
+  // grants 90 days.
+  const purchasedAt = p.purchasedAt ? new Date(p.purchasedAt) : null;
+  const totalDays = expiry && purchasedAt ? Math.round((expiry - purchasedAt) / 86400000) : null;
+  const trialLabel = totalDays ? `${totalDays}-Day Trial` : 'Trial';
+
   return `<div class="card" style="border:2px solid var(--coral);">
-    <div class="card-title">🎒 30-Day Trial${statusBadge}${lessonBadge}</div>
+    <div class="card-title">🎒 ${trialLabel}${statusBadge}${lessonBadge}</div>
     <div class="card-sub">Started ${formatDate(p.purchasedAt)}${expiry ? ' · Expires ' + formatDate(p.trialExpirationDate) : ''}</div>
     ${!isConverted && p.conversionCreditCents ? '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:6px;">$' + (p.conversionCreditCents / 100).toFixed(2) + ' conversion credit available toward an annual license.</div>' : ''}
     ${ctaHtml}

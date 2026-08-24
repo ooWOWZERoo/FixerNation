@@ -115,6 +115,11 @@
             <input type="number" id="lessonPlanLimit" min="1" step="1" style="max-width:120px;">
             <div class="a-note">Each licensed teacher can permanently add up to this many lesson plans to their personal library. Default is 40.</div>
           </div>
+          <div class="a-field">
+            <label>Plans per Teacher — Trial (limit)</label>
+            <input type="number" id="lessonPlanLimitTrial" min="1" step="1" style="max-width:120px;">
+            <div class="a-note">A lower limit for teachers on a trial license. Used two ways: as the fallback for any trial purchase with no limit of its own, and to pre-fill the "Trial Library Limit" field when an admin checks "Trial?" on a license product (admin-licenses.html) — that product's own field is what actually applies once saved.</div>
+          </div>
           <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
         </form>
       </div>
@@ -526,10 +531,15 @@ async function sendAdminInvite() {
 }
 
 async function loadLessonPlanLimit() {
-  const r = await fetch('/api/settings/teacher-lesson-plan-limit', { credentials: 'include' });
+  const [r, rTrial] = await Promise.all([
+    fetch('/api/settings/teacher-lesson-plan-limit', { credentials: 'include' }),
+    fetch('/api/settings/teacher-lesson-plan-limit-trial', { credentials: 'include' }),
+  ]);
   if (fnHandleUnauthorized(r)) return;
   const data = await r.json();
   document.getElementById('lessonPlanLimit').value = data.limit || 40;
+  const dataTrial = await rTrial.json();
+  document.getElementById('lessonPlanLimitTrial').value = dataTrial.limit || 10;
 }
 
 document.getElementById('lessonPlanLimitForm').addEventListener('submit', async function(e) {
@@ -537,16 +547,27 @@ document.getElementById('lessonPlanLimitForm').addEventListener('submit', async 
   const errorBox = document.getElementById('lessonPlanLimitError');
   errorBox.textContent = '';
   const limit = parseInt(document.getElementById('lessonPlanLimit').value, 10);
-  const r = await fetch('/api/settings/teacher-lesson-plan-limit', {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ limit }),
-  });
+  const limitTrial = parseInt(document.getElementById('lessonPlanLimitTrial').value, 10);
+  const [r, rTrial] = await Promise.all([
+    fetch('/api/settings/teacher-lesson-plan-limit', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit }),
+    }),
+    fetch('/api/settings/teacher-lesson-plan-limit-trial', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit: limitTrial }),
+    }),
+  ]);
   if (fnHandleUnauthorized(r)) return;
   const data = await r.json();
+  const dataTrial = await rTrial.json();
   if (!r.ok) { errorBox.textContent = data.error || 'Could not save'; return; }
-  fnToast('Lesson plan limit saved');
+  if (!rTrial.ok) { errorBox.textContent = dataTrial.error || 'Could not save trial limit'; return; }
+  fnToast('Lesson plan limits saved');
 });
 
 async function loadAutoRefresh() {

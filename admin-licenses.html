@@ -98,6 +98,20 @@
       <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:10px;">
         <input type="checkbox" id="productActive" checked> Active (visible on education-portal.html)
       </label>
+      <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:10px;">
+        <input type="checkbox" id="productIsTrial" onchange="onTrialChange()"> Trial? (time-limited, with a capped lesson plan library)
+      </label>
+      <div id="productTrialFields" style="display:none; margin-top:10px; padding:12px; border-radius:10px; background:var(--a-bg);">
+        <div class="a-form-row">
+          <div class="a-field"><label>Trial Days</label><input type="number" id="productTrialDays" min="1" placeholder="e.g. 90"></div>
+          <div class="a-field"><label>Trial Preview Limit</label><input type="number" id="productTrialLessonLimit" min="1" placeholder="curricula previewable"></div>
+        </div>
+        <div class="a-field">
+          <label>Trial Library Limit</label>
+          <input type="number" id="productTrialLibraryLimit" min="1">
+          <div class="a-note">How many lesson plans a trial teacher can permanently add to their library — pre-filled from Settings → Teacher Lesson Plan Library when you check "Trial?", still editable per product.</div>
+        </div>
+      </div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeProductModal()">Cancel</button>
@@ -187,7 +201,7 @@ async function renderProducts() {
   productsCache.forEach(p => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="a-cell-title">${p.name}</td>
+      <td class="a-cell-title">${p.name}${p.isTrial ? ' <span class="a-pill a-pill-warn" title="' + (p.trialDays || 90) + '-day trial, up to ' + (p.trialLibraryLimit || '—') + ' library plans">Trial</span>' : ''}</td>
       <td>${p.seatCount}</td>
       <td>${p.callForQuote ? 'Call For Quote' : fnFormatCurrency(p.price)}</td>
       <td><span class="a-pill ${p.active ? 'a-pill-success' : 'a-pill-neutral'}">${p.active ? 'Active' : 'Inactive'}</span></td>
@@ -212,6 +226,22 @@ function onCallForQuoteChange() {
   document.getElementById('productPriceField').style.display = isQuote ? 'none' : 'block';
 }
 
+async function onTrialChange() {
+  const isTrial = document.getElementById('productIsTrial').checked;
+  document.getElementById('productTrialFields').style.display = isTrial ? 'block' : 'none';
+  if (!isTrial) return;
+  // Pre-fill the library limit from Settings only when it's not already
+  // set — never clobber a value an admin already saved for this product.
+  const libraryLimitEl = document.getElementById('productTrialLibraryLimit');
+  if (libraryLimitEl.value) return;
+  try {
+    const r = await fetch('/api/settings/teacher-lesson-plan-limit-trial', { credentials: 'include' });
+    if (!r.ok) return;
+    const data = await r.json();
+    libraryLimitEl.value = data.limit || 10;
+  } catch (e) { /* leave blank on failure — not worth blocking product setup over */ }
+}
+
 function openProductModal(id) {
   editingProductId = id || null;
   const p = id ? productsCache.find(x => x.id === id) : null;
@@ -229,6 +259,11 @@ function openProductModal(id) {
   document.getElementById('productActive').checked = p ? p.active : true;
   document.getElementById('productGroup').value = p && p.autoAssignGroupId ? p.autoAssignGroupId : '';
   document.getElementById('productAddonRate').value = p && p.addonRate ? p.addonRate : '';
+  document.getElementById('productIsTrial').checked = p ? p.isTrial : false;
+  document.getElementById('productTrialDays').value = p && p.trialDays ? p.trialDays : '';
+  document.getElementById('productTrialLessonLimit').value = p && p.trialLessonLimit ? p.trialLessonLimit : '';
+  document.getElementById('productTrialLibraryLimit').value = p && p.trialLibraryLimit ? p.trialLibraryLimit : '';
+  document.getElementById('productTrialFields').style.display = (p && p.isTrial) ? 'block' : 'none';
   onVariableSeatsChange();
   onCallForQuoteChange();
   document.getElementById('productModalOverlay').classList.add('show');
@@ -255,6 +290,10 @@ async function saveProduct() {
     active: document.getElementById('productActive').checked,
     autoAssignGroupId: groupVal ? Number(groupVal) : null,
     addonRateCents: (() => { const v = parseFloat(document.getElementById('productAddonRate').value); return isNaN(v) || v <= 0 ? null : Math.round(v * 100); })(),
+    isTrial: document.getElementById('productIsTrial').checked,
+    trialDays: Number(document.getElementById('productTrialDays').value) || null,
+    trialLessonLimit: Number(document.getElementById('productTrialLessonLimit').value) || null,
+    trialLibraryLimit: Number(document.getElementById('productTrialLibraryLimit').value) || null,
   };
   if (!body.name || (!variableSeats && !(body.seatCount > 0)) || (!callForQuote && !(body.price >= 0))) {
     fnToast('Name, seat count, and (unless Call For Quote) price are required');
