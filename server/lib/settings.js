@@ -8,6 +8,11 @@ const DEFAULTS = {
   contact_email_quote: 'admin@fixernationeducation.com',
   contact_email_privacy: 'admin@fixernationeducation.com',
   contact_email_general: 'admin@fixernationeducation.com',
+  // Real-time "money moved" staff alerts (quote accepted, new paid order,
+  // PO submitted and awaiting Mark Received) — see mailer.js's
+  // sendSalesAlertEmail(). Distinct from contact_email_quote, which only
+  // routes *inbound* quote-request form submissions.
+  contact_email_sales_alerts: 'admin@fixernationeducation.com',
   invoice_business_name: 'Fixer Nation Education',
   invoice_tagline: 'fixernationeducation.com',
   invoice_logo_url: '',

@@ -71,6 +71,11 @@
             <input type="email" id="contactEmailGeneral" required>
           </div>
           <div class="a-note">Each public contact form on the site emails whoever is set here.</div>
+          <div class="a-field" style="margin-top:16px;">
+            <label>Sales alerts go to</label>
+            <input type="email" id="contactEmailSalesAlerts" required>
+            <div class="a-note">Real-time alert when a quote is accepted, a new order is paid, or a Purchase Order comes in and needs to be marked received once payment arrives.</div>
+          </div>
           <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
         </form>
       </div>
@@ -119,29 +124,6 @@
             <label>Plans per Teacher — Trial (limit)</label>
             <input type="number" id="lessonPlanLimitTrial" min="1" step="1" style="max-width:120px;">
             <div class="a-note">A lower limit for teachers on a trial license. Used two ways: as the fallback for any trial purchase with no limit of its own, and to pre-fill the "Trial Library Limit" field when an admin checks "Trial?" on a license product (admin-licenses.html) — that product's own field is what actually applies once saved.</div>
-          </div>
-          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
-        </form>
-      </div>
-
-      <div class="a-card" style="margin-top:24px; max-width:480px;">
-        <div class="a-card-head">
-          <h2>Quote Settings</h2>
-        </div>
-        <form id="quoteSettingsForm">
-          <div class="a-error" id="quoteSettingsError"></div>
-          <div class="a-field">
-            <label>Quote From Email</label>
-            <input type="email" id="quoteFromEmail" placeholder="sales@fixernationeducation.com">
-            <div class="a-note">The "from" address on quote emails sent to prospects. Leave empty to use the system default.</div>
-          </div>
-          <div class="a-field">
-            <label>2-Year Discount (%)</label>
-            <input type="number" id="quoteTwoYrPct" min="0" max="100" step="1">
-          </div>
-          <div class="a-field">
-            <label>3-Year Discount (%)</label>
-            <input type="number" id="quoteThreeYrPct" min="0" max="100" step="1">
           </div>
           <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
         </form>
@@ -259,6 +241,7 @@ async function loadContactEmails() {
   document.getElementById('contactEmailQuote').value = data.quote || '';
   document.getElementById('contactEmailPrivacy').value = data.privacy || '';
   document.getElementById('contactEmailGeneral').value = data.general || '';
+  document.getElementById('contactEmailSalesAlerts').value = data.salesAlerts || '';
 }
 
 document.getElementById('contactEmailsForm').addEventListener('submit', async function(e) {
@@ -267,6 +250,7 @@ document.getElementById('contactEmailsForm').addEventListener('submit', async fu
   const quote = document.getElementById('contactEmailQuote').value.trim();
   const privacy = document.getElementById('contactEmailPrivacy').value.trim();
   const general = document.getElementById('contactEmailGeneral').value.trim();
+  const salesAlerts = document.getElementById('contactEmailSalesAlerts').value.trim();
   const errorBox = document.getElementById('contactEmailsError');
   errorBox.classList.remove('show');
 
@@ -274,7 +258,7 @@ document.getElementById('contactEmailsForm').addEventListener('submit', async fu
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ askTheFixer, quote, privacy, general }),
+    body: JSON.stringify({ askTheFixer, quote, privacy, general, salesAlerts }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json().catch(() => ({}));
@@ -357,40 +341,6 @@ document.getElementById('invoiceBrandingForm').addEventListener('submit', async 
   invoiceLogoData = logoUrl;
   document.getElementById('invoiceLogoUrl').value = logoUrl;
   fnToast('Invoice branding updated');
-});
-
-async function loadQuoteSettings() {
-  const r = await fetch('/api/settings/quote', { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return;
-  if (!r.ok) return;
-  const data = await r.json();
-  document.getElementById('quoteFromEmail').value   = data.fromEmail          || '';
-  document.getElementById('quoteTwoYrPct').value    = data.twoYrDiscountPct   ?? 5;
-  document.getElementById('quoteThreeYrPct').value  = data.threeYrDiscountPct ?? 8;
-}
-
-document.getElementById('quoteSettingsForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const fromEmail    = document.getElementById('quoteFromEmail').value.trim();
-  const twoYrPct    = document.getElementById('quoteTwoYrPct').value;
-  const threeYrPct  = document.getElementById('quoteThreeYrPct').value;
-  const errorBox    = document.getElementById('quoteSettingsError');
-  errorBox.classList.remove('show');
-
-  const r = await fetch('/api/settings/quote', {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fromEmail, twoYrDiscountPct: Number(twoYrPct), threeYrDiscountPct: Number(threeYrPct) }),
-  });
-  if (fnHandleUnauthorized(r)) return;
-  const result = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    errorBox.textContent = result.error || 'Could not save changes.';
-    errorBox.classList.add('show');
-    return;
-  }
-  fnToast('Quote settings updated');
 });
 
 let adminsCache = [];
@@ -599,7 +549,6 @@ async function saveAutoRefresh(e) {
 loadContactEmails();
 loadInvoiceBranding();
 loadLessonPlanLimit();
-loadQuoteSettings();
 loadAutoRefresh();
 loadAdmins();
 </script>

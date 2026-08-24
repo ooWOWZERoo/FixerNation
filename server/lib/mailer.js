@@ -134,6 +134,27 @@ async function sendContactFormEmail({ to, formName, fields, replyTo }) {
   });
 }
 
+// Real-time staff notification for a "money moved, someone may need to act"
+// event in the sales funnel (quote accepted, new paid order, PO awaiting
+// Mark Received) — distinct from every other automation in this file, which
+// is customer-facing. Callers wrap this in try/catch and never let a failed
+// alert block the underlying purchase/response, same convention as
+// fireAutomation() elsewhere.
+async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel }) {
+  const rows = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `<p><strong>${label}:</strong> ${value}</p>`).join('');
+  const text = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
+  const linkHtml = linkUrl ? `<p style="margin-top:14px;"><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">${linkLabel || 'View in Admin'}</a></p>` : '';
+  const linkText = linkUrl ? `\n\n${linkLabel || 'View in Admin'}: ${linkUrl}` : '';
+
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to: to || CONTACT_INBOX,
+    subject: `${subject} — Fixer Nation`,
+    text: text + linkText,
+    html: rows + linkHtml,
+  });
+}
+
 // There's no customer-facing invoice page (admin-invoice-print.html requires
 // admin login), so the invoice contents are embedded directly in the email
 // body rather than linked to.
@@ -422,4 +443,4 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail };
+module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail };

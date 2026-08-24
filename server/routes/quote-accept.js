@@ -4,7 +4,7 @@ const pool = require('../db/pool');
 const { createPurchase } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { createSetPasswordUrl } = require('./checkout');
-const { sendAutomationEmail } = require('../lib/mailer');
+const { sendAutomationEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 
@@ -197,6 +197,24 @@ router.post('/accept', async (req, res) => {
         },
       });
     } catch (e) { console.error('quote_accepted automation failed:', e.message); }
+
+    try {
+      await sendSalesAlertEmail({
+        to: await getSetting('contact_email_sales_alerts'),
+        subject: `Quote accepted (PO) — ${quote.school || quote.email}`,
+        fields: {
+          Quote: quote.quote_number || null,
+          School: quote.school || null,
+          Buyer: quote.email,
+          Product: quote.quoted_product_name || null,
+          'PO Number': poNumber,
+          Amount: quote.quoted_amount_cents != null ? `$${(quote.quoted_amount_cents / 100).toFixed(2)}` : null,
+          Note: invoiceId ? 'Mark this invoice "Received" once the actual PO payment arrives.' : null,
+        },
+        linkUrl: `${process.env.SITE_URL || ''}/admin-quotes.html`,
+        linkLabel: 'View Quote',
+      });
+    } catch (e) { console.error('sales alert (quote accepted, PO) failed:', e.message); }
 
     return res.json({ ok: true, purchaseId, invoiceId, setupUrl });
   }

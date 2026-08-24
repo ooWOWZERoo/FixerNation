@@ -9,6 +9,7 @@ const { getSiteUser } = require('../lib/access');
 const { createToken } = require('../lib/site-tokens');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
+const { sendSalesAlertEmail } = require('../lib/mailer');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -343,6 +344,22 @@ router.post('/create-po-order', async (req, res) => {
     await setupSchoolAdmin(email, licensePurchaseIds);
   }
 
+  try {
+    await sendSalesAlertEmail({
+      to: await getSetting('contact_email_sales_alerts'),
+      subject: `New PO order — ${invoiceNumber} (awaiting payment)`,
+      fields: {
+        Invoice: invoiceNumber,
+        'PO Number': poNumber,
+        Buyer: email,
+        Total: `$${(totalCents / 100).toFixed(2)}`,
+        Note: 'Mark this invoice "Received" once the actual PO payment arrives.',
+      },
+      linkUrl: `${process.env.SITE_URL || ''}/admin-invoices.html`,
+      linkLabel: 'View Invoice',
+    });
+  } catch (e) { console.error('sales alert (PO order) failed:', e.message); }
+
   res.status(201).json({ ok: true, invoiceId, invoiceNumber });
 });
 
@@ -389,6 +406,20 @@ async function handleTrialConversionCompleted(session, metadata) {
     to: trial.email,
     mergeFields: { firstName },
   });
+
+  try {
+    await sendSalesAlertEmail({
+      to: await getSetting('contact_email_sales_alerts'),
+      subject: `Trial converted to paid — ${trial.email}`,
+      fields: {
+        Buyer: trial.email,
+        Amount: session.amount_total != null ? `$${(session.amount_total / 100).toFixed(2)}` : null,
+        'Converted From Trial Purchase': trialPurchaseId,
+      },
+      linkUrl: `${process.env.SITE_URL || ''}/admin-orders.html`,
+      linkLabel: 'View Order',
+    });
+  } catch (e) { console.error('sales alert (trial converted) failed:', e.message); }
 }
 
 router.post('/convert-trial', async (req, res) => {
@@ -550,6 +581,22 @@ async function webhookHandler(req, res) {
             },
           });
         } catch (e) { console.error('quote_accepted automation failed:', e.message); }
+
+        try {
+          await sendSalesAlertEmail({
+            to: await getSetting('contact_email_sales_alerts'),
+            subject: `Quote accepted (card) — ${qt.school || qt.email}`,
+            fields: {
+              Quote: qt.quote_number || null,
+              School: qt.school || null,
+              Buyer: qt.email,
+              Product: qt.quoted_product_name || null,
+              Amount: session.amount_total != null ? `$${(session.amount_total / 100).toFixed(2)}` : null,
+            },
+            linkUrl: `${siteUrl}/admin-quotes.html`,
+            linkLabel: 'View Quote',
+          });
+        } catch (e) { console.error('sales alert (quote accepted, card) failed:', e.message); }
       }
       return res.json({ received: true });
     }
@@ -560,6 +607,9 @@ async function webhookHandler(req, res) {
     const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_session_id = ? LIMIT 1', [session.id]);
     if (!existing.length && metadata.email) {
       const contactId = await findOrCreateContact(metadata.email, 'License Purchase');
+      // A trial signup is a lead, not a sale worth a real-time staff
+      // ping — trial_purchase_thank_you already covers it customer-side.
+      let isTrialSignup = false;
 
       if (metadata.cart) {
         const resolved = JSON.parse(metadata.cart);
@@ -586,6 +636,7 @@ async function webhookHandler(req, res) {
         );
         const lp = lpRows[0];
         if (lp && lp.is_trial) {
+          isTrialSignup = true;
           const trialLibraryLimit = lp.trial_library_limit || Math.max(1, parseInt(await getSetting('teacher_lesson_plan_limit_trial') || '10', 10));
           await createPurchase(contactId, {
             productType: 'single_license',
@@ -631,6 +682,22 @@ async function webhookHandler(req, res) {
           paymentMethod: 'stripe',
           paymentStatus: 'paid',
         });
+      }
+
+      if (!isTrialSignup) {
+        try {
+          await sendSalesAlertEmail({
+            to: await getSetting('contact_email_sales_alerts'),
+            subject: `New paid order — ${metadata.email}`,
+            fields: {
+              Buyer: metadata.email,
+              Amount: session.amount_total != null ? `$${(session.amount_total / 100).toFixed(2)}` : null,
+              'Stripe Session': session.id,
+            },
+            linkUrl: `${process.env.SITE_URL || ''}/admin-orders.html`,
+            linkLabel: 'View Order',
+          });
+        } catch (e) { console.error('sales alert (new order) failed:', e.message); }
       }
     }
   }

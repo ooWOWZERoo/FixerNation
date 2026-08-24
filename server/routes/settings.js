@@ -6,13 +6,14 @@ const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 router.get('/contact-emails', requireAuth, async (req, res) => {
-  const [askTheFixer, quote, privacy, general] = await Promise.all([
+  const [askTheFixer, quote, privacy, general, salesAlerts] = await Promise.all([
     getSetting('contact_email_ask_the_fixer'),
     getSetting('contact_email_quote'),
     getSetting('contact_email_privacy'),
     getSetting('contact_email_general'),
+    getSetting('contact_email_sales_alerts'),
   ]);
-  res.json({ askTheFixer, quote, privacy, general });
+  res.json({ askTheFixer, quote, privacy, general, salesAlerts });
 });
 
 router.put('/contact-emails', requireAuth, async (req, res) => {
@@ -21,8 +22,9 @@ router.put('/contact-emails', requireAuth, async (req, res) => {
   const quote = (b.quote || '').trim();
   const privacy = (b.privacy || '').trim();
   const general = (b.general || '').trim();
+  const salesAlerts = (b.salesAlerts || '').trim();
 
-  if (![askTheFixer, quote, privacy, general].every(v => EMAIL_PATTERN.test(v))) {
+  if (![askTheFixer, quote, privacy, general, salesAlerts].every(v => EMAIL_PATTERN.test(v))) {
     return res.status(400).json({ error: 'All fields need a valid email address' });
   }
 
@@ -31,6 +33,7 @@ router.put('/contact-emails', requireAuth, async (req, res) => {
     setSetting('contact_email_quote', quote),
     setSetting('contact_email_privacy', privacy),
     setSetting('contact_email_general', general),
+    setSetting('contact_email_sales_alerts', salesAlerts),
   ]);
   res.json({ ok: true });
 });
