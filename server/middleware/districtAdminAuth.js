@@ -5,8 +5,12 @@ const { SITE_COOKIE_NAME } = require('../lib/session');
 // District admins are a THIRD role on the existing site_user / fn_user_session
 // system, structurally identical to requireSchoolAdmin (school_license_admin)
 // — not a fourth session cookie. Verifies the requester is a logged-in
-// site_user with role='district_admin' AND has at least one active
-// district_license_admins assignment.
+// site_user with at least one active district_license_admins assignment.
+// Deliberately does NOT also require role==='district_admin' — role is a
+// single mutually-exclusive value that can't represent an account holding
+// this role alongside teacher/parent/school_license_admin at the same time,
+// and the assignments query below is already the correct, sufficient check
+// on its own.
 // Sets req.districtAdmin = { siteUserId, email, firstName, lastName, districtIds, districts }
 async function requireDistrictAdmin(req, res, next) {
   const token = req.cookies && req.cookies[SITE_COOKIE_NAME];
@@ -19,13 +23,12 @@ async function requireDistrictAdmin(req, res, next) {
     return res.status(401).json({ error: 'Not logged in' });
   }
 
-  // Always verify role against DB — role could have been revoked since token was issued
   const [userRows] = await pool.query(
-    'SELECT id, first_name, last_name, email, role, session_invalidated_at FROM site_users WHERE id = ?',
+    'SELECT id, first_name, last_name, email, session_invalidated_at FROM site_users WHERE id = ?',
     [payload.userId]
   );
   const user = userRows[0];
-  if (!user || user.role !== 'district_admin') {
+  if (!user) {
     return res.status(403).json({ error: 'District Administrator access required' });
   }
   // Same revocation check requireSiteAuth/requireSchoolAdmin enforce — this

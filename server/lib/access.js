@@ -36,6 +36,29 @@ async function hasActiveLicense(siteUserId) {
   return rows.length > 0;
 }
 
+// True if this site_user has at least one active school_license_admins
+// assignment — independent of site_users.role, which is a single
+// mutually-exclusive value that can't represent an account holding this
+// role alongside teacher/parent/district_admin at the same time.
+async function hasActiveSchoolAdminAssignment(siteUserId) {
+  if (!siteUserId) return false;
+  const [rows] = await pool.query(
+    'SELECT 1 FROM school_license_admins WHERE site_user_id = ? AND is_active = 1 LIMIT 1',
+    [siteUserId]
+  );
+  return rows.length > 0;
+}
+
+// Same as above for district_license_admins.
+async function hasActiveDistrictAdminAssignment(siteUserId) {
+  if (!siteUserId) return false;
+  const [rows] = await pool.query(
+    'SELECT 1 FROM district_license_admins WHERE site_user_id = ? AND is_active = 1 LIMIT 1',
+    [siteUserId]
+  );
+  return rows.length > 0;
+}
+
 // Returns all classroom+child links a parent has — one row per linked
 // student, not per classroom, so a parent with two children in the same
 // classroom gets two distinct rows. student_id is only NULL for a link
@@ -68,4 +91,4 @@ async function hasParentAccessToCurriculum(siteUserId, curriculumId) {
   return rows.length > 0;
 }
 
-module.exports = { getSiteUser, hasActiveLicense, getParentClassrooms, hasParentAccessToCurriculum };
+module.exports = { getSiteUser, hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, getParentClassrooms, hasParentAccessToCurriculum };

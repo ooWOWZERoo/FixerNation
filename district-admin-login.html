@@ -52,7 +52,8 @@
     <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
   </form>
 
-  <div class="forgot"><a href="reset-password.html">Forgot your password?</a></div>
+  <div class="forgot"><a href="#" onclick="sendForgotPassword(event)" id="forgotLink">Forgot your password?</a></div>
+  <div class="err" id="forgotMsg" style="color:#166534;"></div>
 </div>
 
 <script>
@@ -88,7 +89,11 @@
         btn.textContent = 'Sign In';
         return;
       }
-      if (d.role === 'district_admin') {
+      // isDistrictAdmin is a real entitlement check (an active
+      // district_license_admins row) — NOT role === 'district_admin', which
+      // is a single mutually-exclusive value that would incorrectly reject
+      // someone who is also a school admin or teacher under the same account.
+      if (d.isDistrictAdmin) {
         window.location.href = 'district-admin-dashboard.html';
       } else {
         err.textContent = 'This account does not have District Administrator access. Contact Fixer Nation Education for assistance.';
@@ -104,6 +109,30 @@
       btn.textContent = 'Sign In';
     }
   });
+
+  window.sendForgotPassword = async function (e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const msg = document.getElementById('forgotMsg');
+    if (!email) {
+      msg.style.color = '#ef4444';
+      msg.textContent = 'Enter your email address above first.';
+      msg.style.display = 'block';
+      return;
+    }
+    document.getElementById('forgotLink').textContent = 'Sending…';
+    try {
+      await fetch('/api/site-auth/forgot-password', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, next: '/district-admin-dashboard.html' }),
+      });
+    } catch (ex) { /* fall through to the same message either way */ }
+    document.getElementById('forgotLink').textContent = 'Forgot your password?';
+    msg.style.color = '#166534';
+    msg.textContent = 'If that email has an account, a reset link is on its way.';
+    msg.style.display = 'block';
+  };
 })();
 </script>
 </body>

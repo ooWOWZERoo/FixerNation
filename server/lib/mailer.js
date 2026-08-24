@@ -248,14 +248,19 @@ async function sendInvitationReminderEmail({ to, firstName, inviteUrl, schoolDom
   });
 }
 
-// Sent to a newly assigned school license administrator
+// Sent to a newly assigned school license administrator. isNewUser controls
+// framing, not just the link — an account can hold this role alongside
+// others (e.g. also a district admin) under the same email, and someone who
+// already has a working password should be told to sign in, not "set up"
+// an account they already have.
 async function sendSchoolAdminWelcomeEmail({ to, firstName, schoolDomain, portalUrl, activateUrl, isNewUser }) {
   const actionLine = isNewUser
     ? `Please set your password and access your portal here:\n${activateUrl}`
-    : `Access your School License Administrator portal here:\n${portalUrl}`;
+    : `You already have a Fixer Nation Education account (${to}) — sign in to access your new School License Administrator portal here:\n${portalUrl}`;
   const actionHtml = isNewUser
     ? `<p><a href="${activateUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
-    : `<p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Go to School Admin Portal</a></p>`;
+    : `<p>You already have a Fixer Nation Education account (<strong>${to}</strong>) — sign in to access your new portal. Forgot your password? Use the "Forgot your password?" link on the sign-in page.</p>
+       <p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Sign In to School Admin Portal</a></p>`;
 
   await getTransporter().sendMail({
     from: systemFromAddress(),
@@ -272,14 +277,19 @@ async function sendSchoolAdminWelcomeEmail({ to, firstName, schoolDomain, portal
 }
 
 // Sent to a newly assigned district administrator — mirrors
-// sendSchoolAdminWelcomeEmail's shape, one tier up (a district, not a school)
+// sendSchoolAdminWelcomeEmail's shape, one tier up (a district, not a
+// school). isNewUser controls framing, not just the link — an account can
+// hold this role alongside others (e.g. also a school admin) under the same
+// email, and someone who already has a working password should be told to
+// sign in, not "set up" an account they already have.
 async function sendDistrictAdminWelcomeEmail({ to, firstName, districtName, portalUrl, activateUrl, isNewUser }) {
   const actionLine = isNewUser
     ? `Please set your password and access your portal here:\n${activateUrl}`
-    : `Access your District Administrator portal here:\n${portalUrl}`;
+    : `You already have a Fixer Nation Education account (${to}) — sign in to access your new District Administrator portal here:\n${portalUrl}`;
   const actionHtml = isNewUser
     ? `<p><a href="${activateUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
-    : `<p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Go to District Admin Portal</a></p>`;
+    : `<p>You already have a Fixer Nation Education account (<strong>${to}</strong>) — sign in to access your new portal. Forgot your password? Use the "Forgot your password?" link on the sign-in page.</p>
+       <p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Sign In to District Admin Portal</a></p>`;
 
   await getTransporter().sendMail({
     from: systemFromAddress(),

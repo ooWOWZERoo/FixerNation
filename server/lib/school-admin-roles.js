@@ -1,22 +1,22 @@
 const pool = require('../db/pool');
 
-// If a site_user has no remaining active school_license_admins (or, since
-// the district-admin role was added, district_license_admins) assignment,
-// their site_users.role drifts back to 'teacher' — every requireSchoolAdmin/
-// requireDistrictAdmin check gates on role first, so leaving a stale role
-// value with zero active assignments is a dead-end account (correct-looking
-// role, always denied). Conversely, activating any assignment should always
-// promote the role back, or a reactivated assignment leaves them stuck
-// denied. Shared by the FNE super-admin's admin-school-admins.js /
+// Keeps site_users.role roughly in sync with assignment changes, mostly for
+// display/hint purposes (the JWT payload's role field, the optimistic nav
+// render, the default landing experience). It is NOT what gates access
+// anymore — requireSchoolAdmin/requireDistrictAdmin (server/middleware/
+// schoolAdminAuth.js, districtAdminAuth.js) and the school/district admin
+// login pages check for a real active assignment row directly, independent
+// of this column, specifically so an account can hold both roles (or
+// teacher/parent alongside either) at once without one silently locking out
+// the other. Shared by the FNE super-admin's admin-school-admins.js /
 // admin-districts.js and the school-admin self-service teacher-removal
 // route in school-admin.js — all of these can deactivate an assignment.
 //
-// role is a single mutually-exclusive value (same simplification the
-// codebase already accepts for 'admin' vs 'school_license_admin') — a
-// site_user holding both an active district and an active school assignment
-// at once resolves to 'district_admin' (the broader scope wins). This isn't
-// expected to occur in practice; it's a documented limitation, not a
-// supported multi-role configuration.
+// role itself is still a single value, so a site_user holding both an
+// active district and an active school assignment resolves to 'district_admin'
+// here (the broader scope wins) — that only affects which portal the login
+// response/nav *defaults* to highlighting, not which portals they can
+// actually reach.
 async function syncRoleToAssignments(siteUserId) {
   // Guarded separately from the school_license_admins check below: if
   // alter-create-districts.js hasn't been run yet on this environment,

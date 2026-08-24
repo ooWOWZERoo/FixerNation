@@ -72,36 +72,46 @@ const FN_AUTH_HINT_KEY = 'fnUserFirstName';
 const FN_AUTH_ROLE_KEY = 'fnUserRole';
 const FN_AUTH_HAS_LICENSE_KEY = 'fnUserHasLicense';
 const FN_AUTH_IS_PARENT_KEY = 'fnUserIsParent';
+const FN_AUTH_IS_SCHOOL_ADMIN_KEY = 'fnUserIsSchoolAdmin';
+const FN_AUTH_IS_DISTRICT_ADMIN_KEY = 'fnUserIsDistrictAdmin';
 
-// hasLicense/isParent are real, independent entitlement checks (does this
-// account have a registered license seat? is it linked to any classroom as
-// a parent?) — NOT mutually exclusive the way a single role string is. An
-// account can be both (e.g. a parent later invited and registered as a
-// teacher under the same email), and the nav needs to show every section
-// that applies, not pick just one.
-function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent) {
+// hasLicense/isParent/isSchoolAdmin/isDistrictAdmin are real, independent
+// entitlement checks (does this account have a registered license seat? is
+// it linked to any classroom as a parent? does it have an active
+// school_license_admins/district_license_admins row?) — NOT mutually
+// exclusive the way a single role string is. An account can hold any
+// combination of these (e.g. a parent later invited and registered as a
+// teacher, or a district admin who is also a school admin, under the same
+// email), and the nav needs to show every section that applies, not pick
+// just one.
+function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isSchoolAdmin, isDistrictAdmin) {
   const nav = document.getElementById('fnAuthNav');
   if (loggedIn) {
     localStorage.setItem(FN_AUTH_HINT_KEY, firstName);
     localStorage.setItem(FN_AUTH_ROLE_KEY, role || 'teacher');
     localStorage.setItem(FN_AUTH_HAS_LICENSE_KEY, hasLicense ? '1' : '0');
     localStorage.setItem(FN_AUTH_IS_PARENT_KEY, isParent ? '1' : '0');
+    localStorage.setItem(FN_AUTH_IS_SCHOOL_ADMIN_KEY, isSchoolAdmin ? '1' : '0');
+    localStorage.setItem(FN_AUTH_IS_DISTRICT_ADMIN_KEY, isDistrictAdmin ? '1' : '0');
   } else {
     localStorage.removeItem(FN_AUTH_HINT_KEY);
     localStorage.removeItem(FN_AUTH_ROLE_KEY);
     localStorage.removeItem(FN_AUTH_HAS_LICENSE_KEY);
     localStorage.removeItem(FN_AUTH_IS_PARENT_KEY);
+    localStorage.removeItem(FN_AUTH_IS_SCHOOL_ADMIN_KEY);
+    localStorage.removeItem(FN_AUTH_IS_DISTRICT_ADMIN_KEY);
   }
   document.body.classList.toggle('fn-user-authed', !!loggedIn);
   if (!nav) return;
   if (loggedIn) {
-    const isSchoolAdmin = role === 'school_license_admin';
     // site_users.role can be 'admin' for an account that ALSO holds separate
     // admin-backend credentials (fn_session, a wholly different auth system
     // from this fn_user_session-driven dropdown) — this link is a
     // convenience shortcut, not a grant of access. Someone without a live
     // admin session in this browser just lands on admin-login.html, same as
-    // any other unauthenticated visit to that page.
+    // any other unauthenticated visit to that page. Unlike school/district
+    // admin, this one stays role-based — 'admin' is a distinct backend
+    // credential, not an entitlement tracked in its own assignment table.
     const isAdmin = role === 'admin';
     // Preserves the pre-existing default exactly: teacher links show for
     // anyone not a parent (a school admin or a brand-new account with no
@@ -120,6 +130,7 @@ function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent) {
           ${showTeacherLinks ? li('teacher-classrooms.html', 'My Classrooms') : ''}
           ${isParent ? li('parent-portal.html', 'Parent Portal') : ''}
           ${isSchoolAdmin ? li('school-admin-dashboard.html', 'School Admin Portal') : ''}
+          ${isDistrictAdmin ? li('district-admin-dashboard.html', 'District Admin Portal') : ''}
           ${isAdmin ? li('admin-dashboard.html', 'FNE Admin Dashboard') : ''}
           ${li('my-purchases.html', 'Purchase History')}
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>
@@ -140,7 +151,9 @@ function fnAuthRenderNavOptimistic() {
   const role = localStorage.getItem(FN_AUTH_ROLE_KEY) || 'teacher';
   const hasLicense = localStorage.getItem(FN_AUTH_HAS_LICENSE_KEY) === '1';
   const isParent = localStorage.getItem(FN_AUTH_IS_PARENT_KEY) === '1';
-  fnAuthRenderNav(!!hint, hint || null, role, hasLicense, isParent);
+  const isSchoolAdmin = localStorage.getItem(FN_AUTH_IS_SCHOOL_ADMIN_KEY) === '1';
+  const isDistrictAdmin = localStorage.getItem(FN_AUTH_IS_DISTRICT_ADMIN_KEY) === '1';
+  fnAuthRenderNav(!!hint, hint || null, role, hasLicense, isParent, isSchoolAdmin, isDistrictAdmin);
 }
 fnAuthRenderNavOptimistic();
 
@@ -179,7 +192,7 @@ function fnAuthCheckSession() {
   fetch('/api/site-auth/me', { credentials: 'include' })
     .then(r => r.json())
     .then(function(data) {
-      fnAuthRenderNav(data.loggedIn, data.firstName, data.role, data.hasLicense, data.isParent);
+      fnAuthRenderNav(data.loggedIn, data.firstName, data.role, data.hasLicense, data.isParent, data.isSchoolAdmin, data.isDistrictAdmin);
       if (data.loggedIn) fnFetchCommunityBadge();
     })
     .catch(function() { fnAuthRenderNav(false); });

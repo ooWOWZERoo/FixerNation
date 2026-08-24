@@ -77,17 +77,23 @@ router.post('/:districtId/admins/assign', requireAuth, async (req, res) => {
     conn.release();
 
     const siteUrl = process.env.SITE_URL || '';
+    // Only frame this as "set your password" when they genuinely don't have
+    // a usable one yet — a brand-new account, or an existing account that
+    // was never verified. An already-verified existing account (e.g.
+    // already a school admin under this email) has a working password and
+    // should be told to sign in, not to "set up" an account they already have.
+    const needsSetup = isNewUser || !user.email_verified;
     try {
       const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000);
-      const portalUrl = `${siteUrl}/district-admin-dashboard.html`;
+      const loginUrl = `${siteUrl}/district-admin-login.html`;
       const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/district-admin-dashboard.html`;
       await sendDistrictAdminWelcomeEmail({
         to: normalEmail,
         firstName: user.first_name,
         districtName: district.name,
-        portalUrl,
+        portalUrl: loginUrl,
         activateUrl,
-        isNewUser: true,
+        isNewUser: needsSetup,
       });
     } catch (e) {
       console.error('sendDistrictAdminWelcomeEmail failed:', e.message);
@@ -124,7 +130,7 @@ router.post('/admins/:assignmentId/resend-welcome', requireAuth, async (req, res
       to: user.email,
       firstName: user.first_name,
       districtName: assignment.district_name,
-      portalUrl: `${siteUrl}/district-admin-dashboard.html`,
+      portalUrl: `${siteUrl}/district-admin-login.html`,
       activateUrl,
       isNewUser: !user.email_verified,
     });

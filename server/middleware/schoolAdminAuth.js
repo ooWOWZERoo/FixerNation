@@ -2,8 +2,14 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
 
-// Verifies that the requester is a logged-in site_user with role='school_license_admin'
-// AND has at least one active school_license_admins assignment.
+// Verifies that the requester is a logged-in site_user with at least one
+// active school_license_admins assignment. Deliberately does NOT also
+// require role==='school_license_admin' — role is a single mutually-
+// exclusive value that can't represent an account holding this role
+// alongside teacher/parent/district_admin at the same time (e.g. a district
+// admin who is also a school admin), and the assignments query below is
+// already the correct, sufficient check on its own (revoking is_active
+// correctly locks them out without any role check needed).
 // Sets req.schoolAdmin = { siteUserId, email, firstName, lastName, purchaseIds, purchases, permissionLevel }
 // where purchases is the array of purchase rows this admin manages.
 async function requireSchoolAdmin(req, res, next) {
@@ -17,13 +23,12 @@ async function requireSchoolAdmin(req, res, next) {
     return res.status(401).json({ error: 'Not logged in' });
   }
 
-  // Always verify role against DB — role could have been revoked since token was issued
   const [userRows] = await pool.query(
-    'SELECT id, first_name, last_name, email, role, session_invalidated_at FROM site_users WHERE id = ?',
+    'SELECT id, first_name, last_name, email, session_invalidated_at FROM site_users WHERE id = ?',
     [payload.userId]
   );
   const user = userRows[0];
-  if (!user || user.role !== 'school_license_admin') {
+  if (!user) {
     return res.status(403).json({ error: 'School License Administrator access required' });
   }
   // Same revocation check requireSiteAuth already enforces — this middleware

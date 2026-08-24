@@ -125,16 +125,22 @@ router.post('/assign', requireAuth, async (req, res) => {
     const siteUrl = process.env.SITE_URL || '';
     try {
       const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000); // 7-day link for new admins
-      const portalUrl = `${siteUrl}/school-admin-dashboard.html`;
+      const loginUrl = `${siteUrl}/school-admin-login.html`;
       const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
 
-      const needsSetup = true; // always send a reset link so admins can set/confirm their portal password
+      // Only frame this as "set your password" when they genuinely don't
+      // have a usable one yet — a brand-new account, or an existing account
+      // that was never verified. An already-verified existing account (e.g.
+      // already a district admin under this email) has a working password
+      // and should be told to sign in, not to "set up" an account they
+      // already have.
+      const needsSetup = isNewUser || !user.email_verified;
       await sendSchoolAdminWelcomeEmail({
         to: normalEmail,
         firstName: user.first_name,
         schoolDomain: purchase.school_domain,
-        portalUrl,
-        activateUrl: needsSetup ? activateUrl : portalUrl,
+        portalUrl: loginUrl,
+        activateUrl: needsSetup ? activateUrl : loginUrl,
         isNewUser: needsSetup,
       });
     } catch (e) {
@@ -181,7 +187,7 @@ router.post('/:assignmentId/resend-welcome', requireAuth, async (req, res) => {
       to: user.email,
       firstName: user.first_name,
       schoolDomain: assignment.school_domain,
-      portalUrl: `${siteUrl}/school-admin-dashboard.html`,
+      portalUrl: `${siteUrl}/school-admin-login.html`,
       activateUrl,
       isNewUser: !user.email_verified,
     });
