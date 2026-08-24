@@ -58,15 +58,4 @@ async function addTeacherToSocialGroups(siteUserId) {
   }
 }
 
-async function addMemberToSocialGroups(email) {
-  const [userRows] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email]);
-  if (!userRows[0]) return;
-  const userId = userRows[0].id;
-
-  await ensureProfile(userId);
-
-  const membersGroupId = await ensureGroup('membership', 'Fixer Nation Members', null);
-  await joinGroup(membersGroupId, userId);
-}
-
-module.exports = { addTeacherToSocialGroups, addMemberToSocialGroups, ensureProfile, ensureGroup, joinGroup };
+module.exports = { addTeacherToSocialGroups, ensureProfile, ensureGroup, joinGroup };

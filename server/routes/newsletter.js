@@ -185,7 +185,7 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
 
 // Auto-assigns a contact to the correct system group(s) based on what they
 // just purchased. Safe to call repeatedly — INSERT IGNORE prevents duplicates.
-async function assignContactToGroups(contactId, { productType, memberType, licenseProductId }) {
+async function assignContactToGroups(contactId, { productType, licenseProductId }) {
   const groupIds = new Set();
 
   if (productType === 'single_license' || productType === 'group_license') {
@@ -203,15 +203,9 @@ async function assignContactToGroups(contactId, { productType, memberType, licen
       const [[tg]] = await pool.query("SELECT id FROM contact_groups WHERE system_key = 'teachers'");
       if (tg) groupIds.add(tg.id);
     }
-  } else {
-    const keys = [];
-    if (productType === 'book' || memberType === 'consumer') keys.push('consumer');
-    if (memberType === 'service_provider') keys.push('service_provider');
-    if (memberType === 'brand_ambassador') keys.push('brand_ambassador');
-    if (keys.length) {
-      const [groups] = await pool.query('SELECT id FROM contact_groups WHERE system_key IN (?)', [keys]);
-      groups.forEach(g => groupIds.add(g.id));
-    }
+  } else if (productType === 'book') {
+    const [[cg]] = await pool.query("SELECT id FROM contact_groups WHERE system_key = 'consumer'");
+    if (cg) groupIds.add(cg.id);
   }
 
   for (const id of groupIds) {
@@ -297,7 +291,6 @@ async function attachPurchaseDetails(purchases) {
   const ids = purchases.map(p => p.id);
   const bookIds = purchases.map(p => p.book_id).filter(Boolean);
   const licenseProductIds = purchases.map(p => p.license_product_id).filter(Boolean);
-  const membershipPlanIds = purchases.map(p => p.membership_plan_id).filter(Boolean);
 
   const [seatRows] = await pool.query(
     `SELECT s.*, u.first_name, u.last_name FROM license_seats s
@@ -314,12 +307,6 @@ async function attachPurchaseDetails(purchases) {
     : [[]];
   const licenseProductNameById = {};
   licenseProductRows.forEach(lp => { licenseProductNameById[lp.id] = lp.name; });
-
-  const [membershipPlanRows] = membershipPlanIds.length
-    ? await pool.query('SELECT id, name, member_type FROM membership_plans WHERE id IN (?)', [membershipPlanIds])
-    : [[]];
-  const membershipPlanById = {};
-  membershipPlanRows.forEach(mp => { membershipPlanById[mp.id] = mp; });
 
   const registeredUserIds = seatRows.map(s => s.registered_site_user_id).filter(Boolean);
   const [audRows] = registeredUserIds.length
@@ -349,9 +336,6 @@ async function attachPurchaseDetails(purchases) {
     bookTitle: p.book_id ? bookTitleById[p.book_id] || null : null,
     licenseProductId: p.license_product_id,
     licenseProductName: p.license_product_id ? licenseProductNameById[p.license_product_id] || null : null,
-    membershipPlanId: p.membership_plan_id,
-    membershipPlanName: p.membership_plan_id ? (membershipPlanById[p.membership_plan_id] || {}).name || null : null,
-    memberType: p.membership_plan_id ? (membershipPlanById[p.membership_plan_id] || {}).member_type || null : null,
     seatCount: p.seat_count,
     purchasedAt: p.purchased_at,
     source: p.source,
@@ -380,19 +364,18 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, membershipPlanId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents, quoteId, skipThankYouAutomation }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, conversionCreditCents, quoteId, skipThankYouAutomation }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, membership_plan_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents, quote_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, conversion_credit_cents, quote_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         contactId, productType, productType === 'book' ? bookId : null,
         (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null,
-        productType === 'membership' ? membershipPlanId || null : null,
         finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null, stripeInvoiceId || null,
         productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null,
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
@@ -419,37 +402,19 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
 
     // Automated thank-you email — best-effort (fireAutomation swallows its
     // own errors), so a template/lookup issue here never fails the purchase
-    // itself. Only book/membership purchases get one; license purchases are
-    // covered by the invoice-paid and seat-invite automations instead, since
-    // a single PO order can create several license purchase rows and would
-    // otherwise flood the buyer with one thank-you per line item.
-    // skipThankYouAutomation: checkout.js's Stripe membership handlers fire
-    // their own richer version of this email themselves (with setPasswordUrl,
-    // or deliberately withheld for a plain renewal) — without this flag
-    // every one of those purchases got the email twice, and every plain
-    // renewal got a "thank you" the surrounding code explicitly didn't
-    // intend to send.
-    if (!skipThankYouAutomation && (productType === 'book' || productType === 'membership')) {
+    // itself. Only book purchases get one; license purchases are covered by
+    // the invoice-paid and seat-invite automations instead, since a single
+    // PO order can create several license purchase rows and would otherwise
+    // flood the buyer with one thank-you per line item.
+    if (!skipThankYouAutomation && productType === 'book') {
       try {
         const [[contact]] = await pool.query('SELECT email, name FROM newsletter_contacts WHERE id = ?', [contactId]);
         const firstName = (contact.name || '').split(' ')[0] || 'there';
-        if (productType === 'book') {
-          const [[book]] = await pool.query('SELECT title FROM books WHERE id = ?', [bookId]);
-          await fireAutomation('book_purchase_thank_you', {
-            to: contact.email,
-            mergeFields: { firstName, bookTitle: book ? book.title : 'your book' },
-          });
-        } else {
-          const [[plan]] = await pool.query('SELECT name FROM membership_plans WHERE id = ?', [membershipPlanId]);
-          await fireAutomation('membership_purchase_thank_you', {
-            to: contact.email,
-            mergeFields: {
-              firstName,
-              planName: plan ? plan.name : 'your membership',
-              amount: amountCents === null || amountCents === undefined ? '' : '$' + (amountCents / 100).toFixed(2),
-            },
-          });
-        }
+        const [[book]] = await pool.query('SELECT title FROM books WHERE id = ?', [bookId]);
+        await fireAutomation('book_purchase_thank_you', {
+          to: contact.email,
+          mergeFields: { firstName, bookTitle: book ? book.title : 'your book' },
+        });
       } catch (err) {
         console.error('Thank-you automation lookup failed:', err.message);
       }
@@ -458,12 +423,7 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
     // Auto-assign contact to system user groups based on what they bought.
     // Best-effort — a missing system_key row never blocks the purchase.
     try {
-      let memberType = null;
-      if (productType === 'membership' && membershipPlanId) {
-        const [[plan]] = await pool.query('SELECT member_type FROM membership_plans WHERE id = ?', [membershipPlanId]);
-        memberType = plan && plan.member_type;
-      }
-      await assignContactToGroups(contactId, { productType, memberType, licenseProductId: licenseProductId || null });
+      await assignContactToGroups(contactId, { productType, licenseProductId: licenseProductId || null });
     } catch (e) { console.error('assignContactToGroups failed:', e.message); }
 
     return purchaseId;

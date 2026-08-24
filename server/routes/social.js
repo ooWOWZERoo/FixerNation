@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
-const { hasActiveLicense, hasActiveMembership } = require('../lib/access');
+const { hasActiveLicense } = require('../lib/access');
 const { requireAuth } = require('../middleware/auth');
 const { ensureProfile } = require('../lib/social-groups');
 
@@ -51,18 +51,15 @@ async function requireSocialAccess(req, res, next) {
   // Same revocation check requireSiteAuth already enforces — without this,
   // a password change (or any of the license-revocation paths that now
   // bump this) doesn't actually invalidate an old token's community access,
-  // only its access to license/membership-gated features elsewhere.
+  // only its access to license-gated features elsewhere.
   if (rows[0].session_invalidated_at && payload.iat * 1000 < new Date(rows[0].session_invalidated_at).getTime()) {
     return res.status(401).json({ error: 'Login required' });
   }
   req.siteUser = rows[0];
 
-  const [licensed, member] = await Promise.all([
-    hasActiveLicense(rows[0].id),
-    hasActiveMembership(rows[0].email),
-  ]);
-  if (!licensed && !member) {
-    return res.status(403).json({ error: 'A valid license or membership is required to access the community.' });
+  const licensed = await hasActiveLicense(rows[0].id);
+  if (!licensed) {
+    return res.status(403).json({ error: 'A valid license is required to access the community.' });
   }
   next();
 }
@@ -427,11 +424,8 @@ router.post('/messages', requireSocialAccess, async (req, res) => {
 
   const [recipRows] = await pool.query('SELECT id, email FROM site_users WHERE id = ?', [recipientId]);
   if (!recipRows[0]) return res.status(404).json({ error: 'Recipient not found' });
-  const [rLicensed, rMember] = await Promise.all([
-    hasActiveLicense(recipientId),
-    hasActiveMembership(recipRows[0].email),
-  ]);
-  if (!rLicensed && !rMember) return res.status(403).json({ error: 'Recipient is not a community member' });
+  const rLicensed = await hasActiveLicense(recipientId);
+  if (!rLicensed) return res.status(403).json({ error: 'Recipient is not a community member' });
 
   const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
   const [result] = await pool.query(

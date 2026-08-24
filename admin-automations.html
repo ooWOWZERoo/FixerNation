@@ -172,7 +172,6 @@
           <select id="autoCatFilter" onchange="filterAutomations()">
             <option value="">All categories</option>
             <option value="email">Email</option>
-            <option value="membership">Membership</option>
             <option value="license">School License</option>
             <option value="ecommerce">E-commerce</option>
             <option value="curriculum">Curriculum</option>
@@ -299,7 +298,6 @@
               <option value="">Select…</option>
               <option value="email">Email</option>
               <option value="ecommerce">E-commerce</option>
-              <option value="membership">Membership</option>
               <option value="license">School License</option>
               <option value="curriculum">Curriculum</option>
               <option value="blog">Blog</option>
@@ -326,7 +324,6 @@
           <select id="bTrigCat" onchange="renderTrigEvents()">
             <option value="">Select a category…</option>
             <option value="ecommerce">E-commerce</option>
-            <option value="membership">Membership</option>
             <option value="license">School Licenses</option>
             <option value="curriculum">Curriculum</option>
             <option value="blog">Blog</option>
@@ -359,7 +356,6 @@
           <div class="action-pick-btn" onclick="addAction('inapp')"><span class="icon">🔔</span>In-App Notice</div>
           <div class="action-pick-btn" onclick="addAction('admin')"><span class="icon">👤</span>Admin Alert</div>
           <div class="action-pick-btn" onclick="addAction('tag')"><span class="icon">🏷️</span>Add / Remove Tag</div>
-          <div class="action-pick-btn" onclick="addAction('membership')"><span class="icon">🪪</span>Membership Action</div>
           <div class="action-pick-btn" onclick="addAction('license')"><span class="icon">🏫</span>License Action</div>
           <div class="action-pick-btn" onclick="addAction('curriculum')"><span class="icon">🎓</span>Curriculum Action</div>
           <div class="action-pick-btn" onclick="addAction('webhook')"><span class="icon">🔗</span>Webhook</div>
@@ -384,7 +380,6 @@
           <select id="bGoal">
             <option value="">No goal — always run all actions</option>
             <option value="purchase">Contact makes any purchase</option>
-            <option value="membership_upgrade">Contact upgrades membership</option>
             <option value="license_purchase">Contact purchases a license</option>
             <option value="email_reply">Contact replies to any email</option>
             <option value="link_click">Contact clicks a link</option>
@@ -395,7 +390,6 @@
           <select id="bExit">
             <option value="">No special exit</option>
             <option value="unsubscribe">Contact unsubscribes</option>
-            <option value="membership_cancelled">Membership cancelled or expired</option>
             <option value="contact_deleted">Contact removed from CRM</option>
           </select>
         </div>
@@ -464,22 +458,15 @@ fnRequireAuth();
 
 const MERGE_FIELDS = {
   book_purchase_thank_you:       ['firstName','bookTitle'],
-  membership_trial_started:      ['firstName','planName','trialDays','setPasswordUrl'],
-  membership_purchase_thank_you: ['firstName','planName','amount','setPasswordUrl'],
-  membership_renewal_reminder:   ['firstName','planName','expiresOn'],
   invoice_paid:                  ['buyerName','invoiceNumber','total'],
-  payment_failed:                ['firstName','planName'],
   license_seat_invite:           ['licenseProductName','schoolLabel'],
 };
 
 const MERGE_FIELD_DESCS = {
   firstName:          "Recipient's first name",
   bookTitle:          'Title of the purchased book',
-  planName:           'Name of the membership plan',
-  trialDays:          'Number of trial days',
   setPasswordUrl:     'One-time link to set or reset their password',
   amount:             'Payment amount, e.g. $49.00',
-  expiresOn:          'Membership expiration date',
   buyerName:          "Buyer's full name",
   invoiceNumber:      'Invoice reference number, e.g. INV-00001',
   total:              'Invoice total amount',
@@ -495,16 +482,6 @@ const TRIGGER_EVENTS = {
     {key:'payment_failed',        label:'Payment Failed'},
     {key:'payment_retry_success', label:'Payment Retry Succeeded'},
     {key:'refund_issued',         label:'Refund Issued'},
-  ],
-  membership:[
-    {key:'trial_started',         label:'Trial Started'},
-    {key:'trial_converted',       label:'Trial Converted to Paid'},
-    {key:'membership_purchased',  label:'Membership Purchased'},
-    {key:'membership_renewed',    label:'Membership Renewed'},
-    {key:'membership_cancelled',  label:'Membership Cancelled'},
-    {key:'membership_expired',    label:'Membership Expired'},
-    {key:'membership_paused',     label:'Membership Paused'},
-    {key:'renewal_approaching',   label:'Renewal Approaching (N days before)'},
   ],
   license:[
     {key:'license_purchased',     label:'License Purchased'},
@@ -549,7 +526,6 @@ const TPL_CATS = [
   {key:'lead',       label:'Lead Generation'},
   {key:'cart',       label:'Cart & Checkout'},
   {key:'books',      label:'Books'},
-  {key:'membership', label:'Memberships'},
   {key:'license',    label:'School Licenses'},
   {key:'curriculum', label:'Curriculum'},
   {key:'marketing',  label:'Marketing'},
@@ -579,15 +555,6 @@ const TEMPLATES = [
   {id:'bk4',cat:'books',icon:'📚',name:'Related Book Recommendation', desc:'Suggest a follow-up title based on what was purchased.'},
   {id:'bk5',cat:'books',icon:'📖',name:'Reading Progress Check-In',  desc:'Check in at a midpoint to encourage completion.'},
   {id:'bk6',cat:'books',icon:'🆕',name:'New Book Release Announcement',desc:'Notify past buyers when a new Fixer Nation book is published.'},
-  // Memberships (8)
-  {id:'mb1',cat:'membership',icon:'🎟️',name:'Trial Started — Welcome Sequence', desc:'Onboard new trial members with a multi-day welcome series.'},
-  {id:'mb2',cat:'membership',icon:'💡',name:'Trial Mid-Point Value Check-In',   desc:'Highlight key benefits at the halfway point of the trial.'},
-  {id:'mb3',cat:'membership',icon:'⏳',name:'Trial Ending Soon (3 Days)',        desc:'Warn trial users before their free period ends.'},
-  {id:'mb4',cat:'membership',icon:'🥳',name:'Trial Converted — Paid Welcome',   desc:'Celebrate when a trial converts to a paid membership.'},
-  {id:'mb5',cat:'membership',icon:'🎉',name:'Membership Purchase Thank You',    desc:'Thank a new paid member and explain what is included.'},
-  {id:'mb6',cat:'membership',icon:'🔔',name:'Renewal Reminder (30 Days)',       desc:'Give members 30-day advance notice before their renewal.'},
-  {id:'mb7',cat:'membership',icon:'⚠️',name:'Renewal Reminder (7 Days)',        desc:'Final reminder 7 days before membership renewal date.'},
-  {id:'mb8',cat:'membership',icon:'😢',name:'Membership Lapsed — Win-Back',     desc:'Re-engage former members after their membership expires.'},
   // School Licenses (8)
   {id:'sl1',cat:'license',icon:'🏫',name:'License Purchase Confirmation', desc:'Confirm a group or single teacher license purchase.'},
   {id:'sl2',cat:'license',icon:'📧',name:'Seat Invitation to Teacher',    desc:'Send a seat invite email to a teacher added by the admin.'},
@@ -634,9 +601,9 @@ const TEMPLATES = [
   {id:'rp5',cat:'reporting',icon:'👥',name:'Monthly New Member Report',      desc:'Count of new members by plan, delivered each month.'},
 ];
 
-const ACTION_LABELS = {email:'Send Email',inapp:'In-App Notice',admin:'Admin Alert',tag:'Add / Remove Tag',membership:'Membership Action',license:'License Action',curriculum:'Curriculum Action',webhook:'Webhook',wait:'Wait / Delay'};
-const ACTION_ICONS  = {email:'📧',inapp:'🔔',admin:'👤',tag:'🏷️',membership:'🪪',license:'🏫',curriculum:'🎓',webhook:'🔗',wait:'⏳'};
-const ACTION_HINTS  = {email:'Click to configure subject and body',inapp:'Click to configure notice text',admin:'Alert will be sent to all admins',tag:'Click to choose tag to add or remove',membership:'Click to choose plan action',license:'Click to choose license action',curriculum:'Click to choose curriculum action',webhook:'Click to configure endpoint URL',wait:'Default: 1 day'};
+const ACTION_LABELS = {email:'Send Email',inapp:'In-App Notice',admin:'Admin Alert',tag:'Add / Remove Tag',license:'License Action',curriculum:'Curriculum Action',webhook:'Webhook',wait:'Wait / Delay'};
+const ACTION_ICONS  = {email:'📧',inapp:'🔔',admin:'👤',tag:'🏷️',license:'🏫',curriculum:'🎓',webhook:'🔗',wait:'⏳'};
+const ACTION_HINTS  = {email:'Click to configure subject and body',inapp:'Click to configure notice text',admin:'Alert will be sent to all admins',tag:'Click to choose tag to add or remove',license:'Click to choose license action',curriculum:'Click to choose curriculum action',webhook:'Click to configure endpoint URL',wait:'Default: 1 day'};
 
 // ─── State ─────────────────────────────────────────────────────────────────────
 let autoCache  = [];
@@ -895,7 +862,7 @@ function renderTrigEvents() {
     '<option value="">Select event…</option>' +
     evts.map(e => '<option value="' + e.key + '">' + e.label + '</option>').join('') +
     '</select></div>';
-  const showDelay = (cat === 'membership' || cat === 'license');
+  const showDelay = (cat === 'license');
   document.getElementById('bTrigDelay').style.display = showDelay ? 'block' : 'none';
 }
 
@@ -911,9 +878,6 @@ function addCondition() {
     '<div class="cond-row">' +
     '<select>' +
     '<option value="">Field…</option>' +
-    '<option>Membership Status</option>' +
-    '<option>Member Type</option>' +
-    '<option>Plan Name</option>' +
     '<option>Total Spent</option>' +
     '<option>Country</option>' +
     '<option>Has Tag</option>' +
@@ -951,7 +915,7 @@ function addAction(type) {
   } else if (type === 'inapp') {
     fieldsHtml =
       '<div class="action-card-fields">' +
-      '<div><label>Notice Text</label><textarea rows="2" placeholder="e.g. Your membership is now active."></textarea></div>' +
+      '<div><label>Notice Text</label><textarea rows="2" placeholder="e.g. Your license is now active."></textarea></div>' +
       '</div>';
   } else if (type === 'webhook') {
     fieldsHtml =
@@ -1007,7 +971,7 @@ function openEditAuto(key) {
   document.getElementById('editEnabled').checked       = a.enabled;
   document.getElementById('editSubject').value         = a.subject;
   document.getElementById('editBody').value            = a.body;
-  const isReminder = key === 'membership_renewal_reminder';
+  const isReminder = key === 'school_license_expiring_soon';
   document.getElementById('editReminderField').style.display = isReminder ? 'block' : 'none';
   document.getElementById('editReminderDays').value    = a.reminderDaysBefore || 7;
   const fields = MERGE_FIELDS[key] || [];
@@ -1050,7 +1014,7 @@ async function saveEditAuto() {
     body,
     enabled: document.getElementById('editEnabled').checked,
   };
-  if (editingKey === 'membership_renewal_reminder') {
+  if (editingKey === 'school_license_expiring_soon') {
     payload.reminderDaysBefore = Number(document.getElementById('editReminderDays').value) || 7;
   }
   const r = await fetch('/api/automations/' + editingKey, {

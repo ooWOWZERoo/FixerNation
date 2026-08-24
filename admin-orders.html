@@ -69,7 +69,6 @@ fnRequireAuth();
 
 function describeItem(p) {
   if (p.productType === 'book') return `📗 ${p.bookTitle || 'Book'}`;
-  if (p.productType === 'membership') return `🪪 ${p.membershipPlanName || 'Membership'}`;
   const name = p.licenseProductName || (p.productType === 'single_license' ? 'Single Teacher License' : 'School License');
   const seats = p.seatCount ? ` — ${p.seatCount} seat${p.seatCount === 1 ? '' : 's'}` : '';
   const domain = p.schoolDomain ? ` (${p.schoolDomain})` : '';
@@ -80,43 +79,12 @@ async function loadOrders(start, end) {
   const params = new URLSearchParams();
   if (start) params.set('start', start);
   if (end) params.set('end', end);
-  const [purchaseRes, memRes] = await Promise.all([
-    fetch(`/api/newsletter/purchases?${params}`, { credentials: 'include' }),
-    fetch('/api/memberships', { credentials: 'include' }),
-  ]);
+  const purchaseRes = await fetch(`/api/newsletter/purchases?${params}`, { credentials: 'include' });
   if (fnHandleUnauthorized(purchaseRes)) return;
   if (!purchaseRes.ok) { fnToast('Could not load orders'); return; }
   const { purchases } = await purchaseRes.json();
 
-  // Memberships that have no purchase record (comped, trialing, or pre-webhook)
-  // appear as $0 comped entries so every signup is visible here.
-  let extra = [];
-  if (memRes.ok) {
-    const { memberships } = await memRes.json();
-    extra = memberships
-      .filter(m => m.purchaseId === null)
-      .map(m => ({
-        purchasedAt: m.startedAt,
-        contactId: m.contactId,
-        buyer: m.contact,
-        productType: 'membership',
-        membershipPlanName: m.planName,
-        amount: 0,
-        paymentMethod: 'comped',
-        paymentStatus: 'paid',
-        invoiceId: null,
-      }));
-    // Apply same date filter to the extra entries
-    if (start || end) {
-      extra = extra.filter(m => {
-        const d = m.purchasedAt ? m.purchasedAt.slice(0, 10) : '';
-        return (!start || d >= start) && (!end || d <= end);
-      });
-    }
-  }
-
-  const all = [...purchases, ...extra].sort((a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt));
-  renderOrders(all);
+  renderOrders(purchases.sort((a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt)));
 }
 
 function renderOrders(purchases) {

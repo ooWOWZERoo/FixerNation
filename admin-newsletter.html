@@ -218,10 +218,6 @@
       <button class="a-modal-close" onclick="closePurchasesModal()">✕</button>
     </div>
     <div class="a-modal-body">
-      <div id="membershipsSummary" style="display:none; margin-bottom:16px;">
-        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--a-text-soft); margin-bottom:6px;">MEMBERSHIPS</label>
-        <div id="membershipsSummaryPills" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
-      </div>
       <div id="purchasesList"></div>
       <div class="a-empty" id="purchasesEmpty" style="display:none; padding:20px 0;">No purchases logged yet for this contact.</div>
 
@@ -864,7 +860,6 @@ async function openPurchasesModal(contactId) {
   document.getElementById('purchaseNotes').value = '';
   onPurchaseTypeChange();
 
-  await renderMembershipsSummary(contactId);
   await renderPurchasesList();
   document.getElementById('purchasesModalOverlay').classList.add('show');
 }
@@ -872,19 +867,6 @@ async function openPurchasesModal(contactId) {
 function closePurchasesModal() {
   document.getElementById('purchasesModalOverlay').classList.remove('show');
   purchasesContactId = null;
-}
-
-const MEMBERSHIP_STATUS_PILLS = { trialing: 'a-pill-warning', active: 'a-pill-success', past_due: 'a-pill-danger', cancelled: 'a-pill-neutral', expired: 'a-pill-neutral' };
-
-async function renderMembershipsSummary(contactId) {
-  const r = await fetch(`/api/memberships/contacts/${contactId}`, { credentials: 'include' });
-  if (fnHandleUnauthorized(r)) return;
-  const { memberships } = await r.json();
-  const wrap = document.getElementById('membershipsSummary');
-  wrap.style.display = memberships.length ? 'block' : 'none';
-  document.getElementById('membershipsSummaryPills').innerHTML = memberships.map(m => `
-    <span class="a-pill ${MEMBERSHIP_STATUS_PILLS[m.status] || 'a-pill-neutral'}">${m.planName} · ${m.status.replace('_', ' ')}</span>
-  `).join('');
 }
 
 async function renderPurchasesList() {

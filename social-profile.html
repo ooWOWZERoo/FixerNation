@@ -147,14 +147,14 @@ async function init(){
   const meRes = await fetch(`${API}/profile`,{credentials:'include'});
   if(meRes.status === 401){
     page.style.display='none';
-    document.getElementById('gateMsg').textContent="Fixer Nation Education's Community is available to licensed teachers and active members. Sign in to continue, or get started below.";
+    document.getElementById('gateMsg').textContent="Fixer Nation Education's Community is available to licensed teachers. Sign in to continue, or get started below.";
     document.getElementById('gateBtns401').style.display='flex';
     document.getElementById('gatePanel').style.display='';
     return;
   }
   if(meRes.status === 403){
     page.style.display='none';
-    document.getElementById('gateMsg').textContent='Community access requires an active Fixer Nation license or membership. Get started with one of the options below.';
+    document.getElementById('gateMsg').textContent='Community access requires an active Fixer Nation Education license. Get started below.';
     document.getElementById('gateBtns403').style.display='flex';
     document.getElementById('gatePanel').style.display='';
     return;

@@ -131,31 +131,6 @@ async function main() {
   });
   out.siteUserUnlicensed = unlicensedEmail;
 
-  // --- Morning Boost member ----------------------------------------------
-  const memberEmail = 'qa-member@example.com';
-  const memberContactId = await findOrCreateContact(conn, { email: memberEmail, name: 'QA Member' });
-  await findOrCreateSiteUser(conn, {
-    email: memberEmail, firstName: 'QA', lastName: 'Member', role: 'teacher',
-  });
-  const [[membershipPlan]] = await conn.query(
-    "SELECT id FROM membership_plans WHERE active = 1 ORDER BY id LIMIT 1"
-  );
-  if (!membershipPlan) {
-    console.warn('No active membership_plans row found — skipping membership setup. Run scripts/seed-membership-plans.js first.');
-  } else {
-    const [[existingMembership]] = await conn.query(
-      "SELECT id FROM contact_memberships WHERE contact_id = ? AND status IN ('trialing','active')",
-      [memberContactId]
-    );
-    if (!existingMembership) {
-      await conn.query(
-        `INSERT INTO contact_memberships (contact_id, membership_plan_id, status) VALUES (?, ?, 'active')`,
-        [memberContactId, membershipPlan.id]
-      );
-    }
-  }
-  out.member = memberEmail;
-
   // --- School license admin ----------------------------------------------
   const schoolAdminEmail = 'qa-school-admin@example.com';
   const schoolAdminContactId = await findOrCreateContact(conn, { email: schoolAdminEmail, name: 'QA School Admin' });
@@ -770,8 +745,6 @@ async function main() {
   console.log(`TEST_SITE_USER_PASSWORD=${out.password}`);
   console.log(`TEST_SITE_USER_UNLICENSED_EMAIL=${out.siteUserUnlicensed}`);
   console.log(`TEST_SITE_USER_UNLICENSED_PASSWORD=${out.password}`);
-  console.log(`TEST_MEMBER_EMAIL=${out.member}`);
-  console.log(`TEST_MEMBER_PASSWORD=${out.password}`);
   console.log(`TEST_SCHOOL_ADMIN_EMAIL=${out.schoolAdmin}`);
   console.log(`TEST_SCHOOL_ADMIN_PASSWORD=${out.password}`);
   console.log(`TEST_TEACHER_EMAIL=${out.teacher}`);

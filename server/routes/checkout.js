@@ -3,11 +3,10 @@ const Stripe = require('stripe');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
-const { createPurchase, assignContactToGroups } = require('./newsletter');
+const { createPurchase } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { getSiteUser } = require('../lib/access');
 const { createToken } = require('../lib/site-tokens');
-const { addMemberToSocialGroups } = require('../lib/social-groups');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 
 const router = express.Router();
@@ -346,221 +345,6 @@ router.post('/create-po-order', async (req, res) => {
   res.status(201).json({ ok: true, invoiceId, invoiceNumber });
 });
 
-// Where a paid membership plan's checkout should return to — derived from
-// the plan's member type server-side, never from client input, so there's
-// no open-redirect surface here.
-const MEMBERSHIP_RETURN_PAGES = {
-  consumer: 'join.html',
-  service_provider: 'service-providers.html',
-  brand_ambassador: 'brand-ambassador.html',
-};
-
-// Recurring plans (monthly/annual) check out in Stripe subscription mode;
-// one_time plans (the free book-perk tier is granted directly, never through
-// checkout — see below) use plain payment mode. Fulfillment for both only
-// happens from the webhook once Stripe confirms it, same as every other
-// checkout flow in this file.
-router.post('/create-membership-session', async (req, res) => {
-  const b = req.body || {};
-  const email = (b.email || '').trim();
-  const firstName = (b.firstName || '').trim();
-  const lastName = (b.lastName || '').trim();
-  const membershipPlanId = Number(b.membershipPlanId);
-
-  if (!email || !EMAIL_PATTERN.test(email)) return res.status(400).json({ error: 'A valid email is required' });
-  if (!membershipPlanId) return res.status(400).json({ error: 'membershipPlanId is required' });
-
-  const [planRows] = await pool.query('SELECT * FROM membership_plans WHERE id = ? AND active = 1', [membershipPlanId]);
-  const plan = planRows[0];
-  if (!plan) return res.status(404).json({ error: 'Membership plan not found' });
-  if (!plan.stripe_price_id) return res.status(400).json({ error: "This plan isn't available for online checkout yet — contact us to sign up." });
-
-  const returnPage = MEMBERSHIP_RETURN_PAGES[plan.member_type] || 'join.html';
-  const siteUrl = process.env.SITE_URL || '';
-  const isRecurring = plan.billing_interval === 'monthly' || plan.billing_interval === 'annual';
-
-  const sessionParams = {
-    mode: isRecurring ? 'subscription' : 'payment',
-    payment_method_types: ['card'],
-    customer_email: email,
-    line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-    metadata: { type: 'membership', membershipPlanId: String(plan.id), email, firstName, lastName },
-    success_url: `${siteUrl}/${returnPage}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteUrl}/${returnPage}?checkout=cancelled`,
-  };
-  if (isRecurring && plan.trial_days > 0) {
-    sessionParams.subscription_data = { trial_period_days: plan.trial_days };
-  }
-
-  const session = await getStripe().checkout.sessions.create(sessionParams);
-  res.json({ url: session.url });
-});
-
-// A subscription's very first real charge and every renewal after it all
-// fire invoice.paid — routing every one of them through here (not through
-// checkout.session.completed) means each actual charge becomes exactly one
-// order, whether or not there was a trial in front of it. checkout.session.
-// completed only establishes the subscription/membership record itself.
-async function handleMembershipCheckoutCompleted(session, metadata) {
-  const membershipPlanId = Number(metadata.membershipPlanId);
-  const [planRows] = await pool.query('SELECT * FROM membership_plans WHERE id = ?', [membershipPlanId]);
-  const plan = planRows[0];
-  if (!plan) return;
-
-  const contactId = await findOrCreateContact(metadata.email, 'Membership Signup', `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim());
-  const firstName = (metadata.firstName || '').trim() || 'there';
-
-  if (session.mode === 'payment') {
-    const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_session_id = ? LIMIT 1', [session.id]);
-    if (existing.length) return;
-    const purchaseId = await createPurchase(contactId, {
-      productType: 'membership',
-      membershipPlanId,
-      amountCents: session.amount_total,
-      source: 'Stripe',
-      stripeSessionId: session.id,
-      paymentMethod: 'stripe',
-      paymentStatus: 'paid',
-      skipThankYouAutomation: true, // fired explicitly below, with setPasswordUrl
-    });
-    const endsAt = plan.duration_days ? daysFromNow(plan.duration_days) : null;
-    await pool.query(
-      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, purchase_id, ends_at) VALUES (?, ?, ?, ?, ?)',
-      [contactId, membershipPlanId, 'active', purchaseId, endsAt]
-    );
-    try { await assignContactToGroups(contactId, { productType: 'membership', memberType: plan.member_type }); } catch (e) { console.error('assignContactToGroups failed:', e.message); }
-    try { await addMemberToSocialGroups(metadata.email); } catch (e) { console.error('addMemberToSocialGroups failed:', e.message); }
-    let setPasswordUrl = '';
-    try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
-    await fireAutomation('membership_purchase_thank_you', {
-      to: metadata.email,
-      mergeFields: { firstName, planName: plan.name, setPasswordUrl, amount: '$' + (session.amount_total / 100).toFixed(2) },
-    });
-  } else if (session.mode === 'subscription' && session.subscription) {
-    const [existing] = await pool.query('SELECT id FROM contact_memberships WHERE stripe_subscription_id = ? LIMIT 1', [session.subscription]);
-    if (existing.length) return;
-    // While trialing, the date that matters is when the trial ends (the
-    // first real charge); once a real charge happens, handleMembershipInvoicePaid
-    // re-anchors ends_at to the plan's normal billing-cycle length instead.
-    const daysUntilEnd = plan.trial_days > 0 ? plan.trial_days : plan.duration_days;
-    const endsAt = daysUntilEnd ? daysFromNow(daysUntilEnd) : null;
-    await pool.query(
-      'INSERT INTO contact_memberships (contact_id, membership_plan_id, status, stripe_subscription_id, stripe_customer_id, ends_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [contactId, membershipPlanId, plan.trial_days > 0 ? 'trialing' : 'active', session.subscription, session.customer, endsAt]
-    );
-    try { await assignContactToGroups(contactId, { productType: 'membership', memberType: plan.member_type }); } catch (e) { console.error('assignContactToGroups failed:', e.message); }
-    try { await addMemberToSocialGroups(metadata.email); } catch (e) { console.error('addMemberToSocialGroups failed:', e.message); }
-    let setPasswordUrl = '';
-    try { setPasswordUrl = await createSetPasswordUrl(metadata.email, (metadata.firstName || '').trim(), (metadata.lastName || '').trim()); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
-    if (plan.trial_days > 0) {
-      await fireAutomation('membership_trial_started', {
-        to: metadata.email,
-        mergeFields: { firstName, planName: plan.name, trialDays: String(plan.trial_days), setPasswordUrl },
-      });
-    } else {
-      await fireAutomation('membership_purchase_thank_you', {
-        to: metadata.email,
-        mergeFields: { firstName, planName: plan.name, setPasswordUrl, amount: '$' + (session.amount_total / 100).toFixed(2) },
-      });
-    }
-  }
-}
-
-async function handleMembershipInvoicePaid(invoice) {
-  if (!invoice.subscription) return; // not a subscription invoice — not ours to handle here
-
-  const [membershipRows] = await pool.query(
-    `SELECT cm.*, mp.duration_days, mp.name AS plan_name, nc.email, nc.name AS contact_name
-     FROM contact_memberships cm
-     JOIN membership_plans mp ON mp.id = cm.membership_plan_id
-     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
-     WHERE cm.stripe_subscription_id = ? LIMIT 1`,
-    [invoice.subscription]
-  );
-  const membership = membershipRows[0];
-  if (!membership) return;
-
-  const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_invoice_id = ? LIMIT 1', [invoice.id]);
-  if (existing.length) return; // Stripe retries webhook delivery — guard against double-counting a renewal
-
-  const wasTrial = membership.status === 'trialing';
-
-  const purchaseId = await createPurchase(membership.contact_id, {
-    productType: 'membership',
-    membershipPlanId: membership.membership_plan_id,
-    amountCents: invoice.amount_paid,
-    source: 'Stripe',
-    stripeInvoiceId: invoice.id,
-    paymentMethod: 'stripe',
-    paymentStatus: 'paid',
-    skipThankYouAutomation: true, // fired explicitly below, only when wasTrial — a plain renewal shouldn't get this at all
-  });
-
-  // A real charge just succeeded, so the next period is a normal billing
-  // cycle (not a trial) — re-anchor ends_at from here and clear
-  // reminder_sent_at so the reminder can fire again ahead of the new date.
-  const endsAt = membership.duration_days ? daysFromNow(membership.duration_days) : null;
-  await pool.query(
-    "UPDATE contact_memberships SET purchase_id = ?, status = IF(status IN ('past_due','trialing'), 'active', status), ends_at = ?, reminder_sent_at = NULL WHERE id = ?",
-    [purchaseId, endsAt, membership.id]
-  );
-
-  // Send a receipt when a trial ends and the first real charge succeeds.
-  // Regular renewals (status was already 'active') don't get this email.
-  if (wasTrial) {
-    await fireAutomation('membership_purchase_thank_you', {
-      to: membership.email,
-      mergeFields: {
-        firstName: (membership.contact_name || '').split(' ')[0] || 'there',
-        planName: membership.plan_name,
-        amount: '$' + (invoice.amount_paid / 100).toFixed(2),
-      },
-    });
-  }
-}
-
-async function handleMembershipPaymentFailed(invoice) {
-  if (!invoice.subscription) return;
-  const [rows] = await pool.query(
-    `SELECT cm.*, mp.name AS plan_name, nc.email, nc.name AS contact_name
-     FROM contact_memberships cm
-     JOIN membership_plans mp ON mp.id = cm.membership_plan_id
-     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
-     WHERE cm.stripe_subscription_id = ? LIMIT 1`,
-    [invoice.subscription]
-  );
-  const membership = rows[0];
-  if (!membership) return;
-
-  // Stripe retries webhook delivery — guard against re-processing the same
-  // failed invoice twice, the same pattern checkout.session.completed and
-  // invoice.paid already use (stripe_session_id / stripe_invoice_id).
-  if (membership.last_failed_invoice_id === invoice.id) return;
-
-  await pool.query(
-    "UPDATE contact_memberships SET status = 'past_due', last_failed_invoice_id = ? WHERE id = ?",
-    [invoice.id, membership.id]
-  );
-  await fireAutomation('payment_failed', {
-    to: membership.email,
-    mergeFields: { firstName: (membership.contact_name || '').split(' ')[0] || 'there', planName: membership.plan_name },
-  });
-}
-
-async function handleMembershipSubscriptionUpdated(subscription) {
-  const statusMap = {
-    trialing: 'trialing', active: 'active', past_due: 'past_due',
-    canceled: 'cancelled', unpaid: 'past_due', incomplete: 'trialing', incomplete_expired: 'expired',
-  };
-  const status = statusMap[subscription.status] || 'active';
-  const endsAt = subscription.status === 'canceled' && subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null;
-  await pool.query('UPDATE contact_memberships SET status = ?, ends_at = ? WHERE stripe_subscription_id = ?', [status, endsAt, subscription.id]);
-}
-
-async function handleMembershipSubscriptionDeleted(subscription) {
-  await pool.query("UPDATE contact_memberships SET status = 'cancelled', ends_at = NOW() WHERE stripe_subscription_id = ?", [subscription.id]);
-}
-
 async function handleTrialConversionCompleted(session, metadata) {
   const trialPurchaseId = Number(metadata.trialPurchaseId);
   const targetProductId = Number(metadata.targetProductId);
@@ -723,11 +507,6 @@ async function webhookHandler(req, res) {
     const session = event.data.object;
     const metadata = session.metadata || {};
 
-    if (metadata.type === 'membership') {
-      await handleMembershipCheckoutCompleted(session, metadata);
-      return res.json({ received: true });
-    }
-
     if (metadata.type === 'trial_conversion') {
       await handleTrialConversionCompleted(session, metadata);
       return res.json({ received: true });
@@ -851,14 +630,6 @@ async function webhookHandler(req, res) {
         });
       }
     }
-  } else if (event.type === 'invoice.paid') {
-    await handleMembershipInvoicePaid(event.data.object);
-  } else if (event.type === 'invoice.payment_failed') {
-    await handleMembershipPaymentFailed(event.data.object);
-  } else if (event.type === 'customer.subscription.updated') {
-    await handleMembershipSubscriptionUpdated(event.data.object);
-  } else if (event.type === 'customer.subscription.deleted') {
-    await handleMembershipSubscriptionDeleted(event.data.object);
   }
 
   res.json({ received: true });

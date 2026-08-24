@@ -30,7 +30,6 @@
       link('admin-downloads.html',          '⬇️', 'Downloads') +
       link('admin-invoices.html',           '🧾', 'Invoices') +
       link('admin-licenses.html',           '🏫', 'License Products') +
-      link('admin-memberships.html',        '🪪', 'Memberships') +
       link('admin-morning-boost.html',      '🌅', 'Morning Boost Studio') +
       link('admin-morning-boost-email.html','📨', 'Morning Boost Email') +
       link('admin-orders.html',             '📦', 'Orders') +

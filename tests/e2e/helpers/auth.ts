@@ -57,15 +57,6 @@ export async function signInAsUnlicensedSiteUser(page: Page) {
   await signInAsSiteUserWithCredentials(page, email, password);
 }
 
-export async function signInAsMember(page: Page) {
-  const email = process.env.TEST_MEMBER_EMAIL;
-  const password = process.env.TEST_MEMBER_PASSWORD;
-  if (!email || !password) {
-    throw new Error("TEST_MEMBER_EMAIL / TEST_MEMBER_PASSWORD not set — see tests/.env.test.example");
-  }
-  await signInAsSiteUserWithCredentials(page, email, password);
-}
-
 // ---------------------------------------------------------------------------
 // School admin portal (school_admin_session cookie)
 // Login page: /school-admin-login.html — fields: #email, #password

@@ -36,22 +36,6 @@ async function hasActiveLicense(siteUserId) {
   return rows.length > 0;
 }
 
-// True if the given email has any membership (any of the 7 plans/3 member
-// types) in trialing or active status — replaces Wix's "Monetize" gate for
-// Morning Boost blog posts. Resolved by email since site_users and
-// newsletter_contacts are only ever linked by matching email, same as every
-// other cross-reference between the two in this project.
-async function hasActiveMembership(email) {
-  if (!email) return false;
-  const [rows] = await pool.query(
-    `SELECT 1 FROM contact_memberships cm
-     JOIN newsletter_contacts nc ON nc.id = cm.contact_id
-     WHERE nc.email = ? AND cm.status IN ('trialing', 'active') LIMIT 1`,
-    [email]
-  );
-  return rows.length > 0;
-}
-
 // Returns all classroom+child links a parent has — one row per linked
 // student, not per classroom, so a parent with two children in the same
 // classroom gets two distinct rows. student_id is only NULL for a link
@@ -84,4 +68,4 @@ async function hasParentAccessToCurriculum(siteUserId, curriculumId) {
   return rows.length > 0;
 }
 
-module.exports = { getSiteUser, hasActiveLicense, hasActiveMembership, getParentClassrooms, hasParentAccessToCurriculum };
+module.exports = { getSiteUser, hasActiveLicense, getParentClassrooms, hasParentAccessToCurriculum };
