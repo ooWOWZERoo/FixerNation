@@ -12,6 +12,12 @@ import { signInAsDistrictAdminAccount } from "./helpers/auth";
 
 const INVITE_EMAIL = "qa-district-invite-test@example.com";
 
+// Both tests invite/mutate the SAME email on the SAME school -- running them
+// in parallel workers raced and left stale debris the first time (one test's
+// "invite" landed after the other's "revoke"). test.describe.serial forces
+// them to run one after another in the same worker.
+test.describe.serial("district admin school-invite management", () => {
+
 test("district admin sees their district's licensed school and can invite a school license admin", async ({ page }) => {
   await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", "QaTest!2026");
   await page.goto("/district-admin-schools.html");
@@ -71,4 +77,6 @@ test("district admin can resend welcome, edit permission level, and revoke an ad
   page.once("dialog", (d) => d.accept());
   await page.locator(`[data-email="${INVITE_EMAIL}"]`).getByRole("button", { name: "Revoke" }).click();
   await expect(page.locator(`[data-email="${INVITE_EMAIL}"]`)).toHaveCount(0, { timeout: 10000 });
+});
+
 });
