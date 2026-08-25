@@ -210,7 +210,7 @@ router.get('/schools', requireDistrictAdmin, async (req, res) => {
   let admins = [];
   if (purchaseIds.length) {
     [admins] = await pool.query(
-      `SELECT sla.purchase_id, su.first_name, su.last_name, su.email, su.email_verified, sla.permission_level
+      `SELECT sla.id AS assignment_id, sla.purchase_id, su.first_name, su.last_name, su.email, su.email_verified, sla.permission_level
        FROM school_license_admins sla
        JOIN site_users su ON su.id = sla.site_user_id
        WHERE sla.purchase_id IN (?) AND sla.is_active = 1`,
