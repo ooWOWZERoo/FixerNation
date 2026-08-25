@@ -77,6 +77,29 @@
   </div>
 </div>
 
+<!-- Edit permission level modal -->
+<div class="sa-modal-overlay" id="editPermissionModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Edit Permission Level</h2>
+      <button class="sa-modal-close" onclick="closeEditPermissionModal()">✕</button>
+    </div>
+    <div id="editPermissionErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-form-group">
+      <label>Permission Level</label>
+      <select id="editPermissionSelect">
+        <option value="primary">Primary (full access)</option>
+        <option value="secondary">Secondary (full access)</option>
+        <option value="read_only">Read Only</option>
+      </select>
+    </div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeEditPermissionModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" onclick="submitEditPermission()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let currentPurchaseId = null;
 
@@ -102,10 +125,7 @@ function renderSchools(schools) {
   }
   el.innerHTML = schools.map(function (s) {
     const adminsHtml = s.admins.length
-      ? s.admins.map(function (a) {
-          const verified = a.email_verified ? '' : ' <span class="sa-badge sa-badge-warn" style="margin-left:6px;">Pending Setup</span>';
-          return '<div style="font-size:13px;padding:4px 0;">' + esc(a.first_name + ' ' + a.last_name) + ' — ' + esc(a.email) + verified + '</div>';
-        }).join('')
+      ? s.admins.map(adminRow).join('')
       : '<div style="font-size:13px;color:var(--sa-text-soft);padding:4px 0;">No license administrator assigned yet.</div>';
 
     return '<div class="sa-card" style="margin-bottom:14px; box-shadow:none; border:1px solid var(--sa-border);">' +
@@ -119,6 +139,95 @@ function renderSchools(schools) {
       '<div style="margin-top:10px; border-top:1px solid var(--sa-border); padding-top:10px;">' + adminsHtml + '</div>' +
     '</div>';
   }).join('');
+}
+
+function adminRow(a) {
+  const verifiedPill = a.email_verified
+    ? ''
+    : ' <span class="sa-badge sa-badge-orange" style="margin-left:6px;">Pending Setup</span>';
+  const permLabel = a.permission_level === 'read_only' ? 'Read Only' : (a.permission_level === 'secondary' ? 'Secondary' : 'Primary');
+  const escEmail = esc(a.email).replace(/'/g, "\\'");
+
+  const resendBtn = !a.email_verified
+    ? '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="resendWelcome(' + a.assignment_id + ', this)">Resend Welcome</button>'
+    : '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="sendPasswordReset(' + a.assignment_id + ', this)">Reset Password</button>';
+
+  return '<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:6px 0;">' +
+    '<div style="font-size:13px;">' + esc(a.first_name + ' ' + a.last_name) + ' — ' + esc(a.email) + verifiedPill +
+      ' <span class="sa-badge" style="margin-left:6px;">' + permLabel + '</span></div>' +
+    '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
+      resendBtn +
+      '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="openEditPermissionModal(' + a.assignment_id + ', \'' + a.permission_level + '\')">Edit</button>' +
+      '<button class="sa-btn sa-btn-danger sa-btn-sm" onclick="revokeAdmin(' + a.assignment_id + ', \'' + escEmail + '\')">Revoke</button>' +
+    '</div>' +
+  '</div>';
+}
+
+async function resendWelcome(assignmentId, btn) {
+  btn.disabled = true;
+  try {
+    await daFetch('/api/district-admin/schools/admin-assignments/' + assignmentId + '/resend-welcome', { method: 'POST', body: '{}' });
+    daToast('Welcome email resent');
+  } catch (e) {
+    daToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function sendPasswordReset(assignmentId, btn) {
+  btn.disabled = true;
+  try {
+    await daFetch('/api/district-admin/schools/admin-assignments/' + assignmentId + '/send-password-reset', { method: 'POST', body: '{}' });
+    daToast('Password reset email sent');
+  } catch (e) {
+    daToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function revokeAdmin(assignmentId, email) {
+  if (!confirm('Revoke ' + email + '\'s access to this school? Their account itself is not deleted.')) return;
+  try {
+    await daFetch('/api/district-admin/schools/admin-assignments/' + assignmentId, { method: 'DELETE' });
+    daToast('Access revoked');
+    loadSchools();
+  } catch (e) {
+    daToast(e.message, 'error');
+  }
+}
+
+let currentEditAssignmentId = null;
+
+function openEditPermissionModal(assignmentId, currentLevel) {
+  currentEditAssignmentId = assignmentId;
+  document.getElementById('editPermissionErr').style.display = 'none';
+  document.getElementById('editPermissionSelect').value = currentLevel;
+  document.getElementById('editPermissionModal').style.display = 'flex';
+}
+
+function closeEditPermissionModal() {
+  document.getElementById('editPermissionModal').style.display = 'none';
+  currentEditAssignmentId = null;
+}
+
+async function submitEditPermission() {
+  const err = document.getElementById('editPermissionErr');
+  err.style.display = 'none';
+  if (!currentEditAssignmentId) return;
+  try {
+    await daFetch('/api/district-admin/schools/admin-assignments/' + currentEditAssignmentId, {
+      method: 'PUT',
+      body: JSON.stringify({ permissionLevel: document.getElementById('editPermissionSelect').value }),
+    });
+    closeEditPermissionModal();
+    daToast('Permission level updated');
+    loadSchools();
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
 }
 
 function openAssignModal(purchaseId, schoolLabel) {

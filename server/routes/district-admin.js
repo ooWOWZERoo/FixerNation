@@ -15,7 +15,13 @@ const {
   publishBranding,
   resetBranding,
 } = require('../lib/branding-editor');
-const { assignSchoolLicenseAdmin } = require('../lib/school-admin-assignment');
+const {
+  assignSchoolLicenseAdmin,
+  resendSchoolAdminWelcome,
+  sendSchoolAdminPasswordReset,
+  revokeSchoolAdminAssignment,
+  updateSchoolAdminAssignment,
+} = require('../lib/school-admin-assignment');
 
 const router = express.Router();
 
@@ -268,6 +274,92 @@ router.post('/schools/:purchaseId/assign-admin', requireDistrictAdmin, async (re
     purchaseId,
     schoolDomain: result.purchase.school_domain,
   });
+});
+
+// Every management action below acts on a school_license_admins.id
+// (assignment), not a purchaseId directly — this helper is the one server-
+// side gate all four share, resolving the assignment's purchase's school and
+// confirming it belongs to one of the caller's own districts. Never trust
+// the assignmentId alone; a district admin could otherwise probe/act on any
+// assignment ID system-wide just by guessing numbers.
+async function assertAssignmentInOwnDistrict(assignmentId, districtIds) {
+  const [[row]] = await pool.query(
+    `SELECT sla.id FROM school_license_admins sla
+     JOIN purchases p ON p.id = sla.purchase_id
+     JOIN schools s ON (s.id = p.school_id OR s.domain = p.school_domain)
+     WHERE sla.id = ? AND s.district_id IN (?)`,
+    [assignmentId, districtIds]
+  );
+  return !!row;
+}
+
+// POST /api/district-admin/schools/admin-assignments/:assignmentId/resend-welcome
+router.post('/schools/admin-assignments/:assignmentId/resend-welcome', requireDistrictAdmin, async (req, res) => {
+  if (!(await assertAssignmentInOwnDistrict(req.params.assignmentId, req.districtAdmin.districtIds))) {
+    return res.status(403).json({ error: 'Access denied to this assignment' });
+  }
+  try {
+    await resendSchoolAdminWelcome(req.params.assignmentId);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+});
+
+// POST /api/district-admin/schools/admin-assignments/:assignmentId/send-password-reset
+router.post('/schools/admin-assignments/:assignmentId/send-password-reset', requireDistrictAdmin, async (req, res) => {
+  if (!(await assertAssignmentInOwnDistrict(req.params.assignmentId, req.districtAdmin.districtIds))) {
+    return res.status(403).json({ error: 'Access denied to this assignment' });
+  }
+  const [[assignment]] = await pool.query('SELECT site_user_id FROM school_license_admins WHERE id = ?', [req.params.assignmentId]);
+  try {
+    await sendSchoolAdminPasswordReset(assignment.site_user_id);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+});
+
+// PUT /api/district-admin/schools/admin-assignments/:assignmentId — { permissionLevel, notes }
+// Deliberately does NOT accept isActive here — revoking goes through the
+// dedicated DELETE below, which also logs to school_audit_log; editing
+// permission level/notes doesn't need the same audit weight.
+router.put('/schools/admin-assignments/:assignmentId', requireDistrictAdmin, async (req, res) => {
+  if (!(await assertAssignmentInOwnDistrict(req.params.assignmentId, req.districtAdmin.districtIds))) {
+    return res.status(403).json({ error: 'Access denied to this assignment' });
+  }
+  const { permissionLevel, notes } = req.body || {};
+  try {
+    await updateSchoolAdminAssignment(req.params.assignmentId, { permissionLevel, notes });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+});
+
+// DELETE /api/district-admin/schools/admin-assignments/:assignmentId — revoke
+router.delete('/schools/admin-assignments/:assignmentId', requireDistrictAdmin, async (req, res) => {
+  if (!(await assertAssignmentInOwnDistrict(req.params.assignmentId, req.districtAdmin.districtIds))) {
+    return res.status(403).json({ error: 'Access denied to this assignment' });
+  }
+  let assignment;
+  try {
+    assignment = await revokeSchoolAdminAssignment(req.params.assignmentId);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+
+  await pool.query(
+    `INSERT INTO school_audit_log (actor_type, actor_id, actor_email, action, entity_type, entity_id, purchase_id, ip_address)
+     VALUES ('site_user', ?, ?, 'school_admin_revoked_by_district_admin', 'school_license_admins', ?, ?, ?)`,
+    [req.districtAdmin.siteUserId, req.districtAdmin.email, assignment.id, assignment.purchase_id, req.ip]
+  );
+
+  res.json({ ok: true });
 });
 
 module.exports = router;

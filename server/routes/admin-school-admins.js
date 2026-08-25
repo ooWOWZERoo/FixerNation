@@ -3,10 +3,12 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
-const { createToken } = require('../lib/site-tokens');
-const { sendSchoolAdminWelcomeEmail } = require('../lib/mailer');
-const { syncRoleToAssignments } = require('../lib/school-admin-roles');
-const { assignSchoolLicenseAdmin } = require('../lib/school-admin-assignment');
+const {
+  assignSchoolLicenseAdmin,
+  resendSchoolAdminWelcome,
+  revokeSchoolAdminAssignment,
+  updateSchoolAdminAssignment,
+} = require('../lib/school-admin-assignment');
 
 const router = express.Router();
 
@@ -85,82 +87,39 @@ router.post('/assign', requireAuth, async (req, res) => {
 
 // POST /api/admin/school-admins/:assignmentId/resend-welcome
 router.post('/:assignmentId/resend-welcome', requireAuth, async (req, res) => {
-  const [[assignment]] = await pool.query(
-    `SELECT sla.id, sla.site_user_id, p.school_domain
-     FROM school_license_admins sla
-     JOIN purchases p ON p.id = sla.purchase_id
-     WHERE sla.id = ?`,
-    [req.params.assignmentId]
-  );
-  if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
-
-  const [[user]] = await pool.query(
-    'SELECT id, first_name, email, email_verified FROM site_users WHERE id = ?',
-    [assignment.site_user_id]
-  );
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const siteUrl = process.env.SITE_URL || '';
-  const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000);
-  const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
-
   try {
-    await sendSchoolAdminWelcomeEmail({
-      to: user.email,
-      firstName: user.first_name,
-      schoolDomain: assignment.school_domain,
-      portalUrl: `${siteUrl}/school-admin-login.html`,
-      activateUrl,
-      isNewUser: !user.email_verified,
-    });
-    console.log(`[school-admin] Resent welcome email to ${user.email} (assignment ${req.params.assignmentId})`);
-  } catch (e) {
-    console.error(`[school-admin] resend-welcome failed for ${user.email}:`, e.message);
-    return res.status(500).json({ error: `Failed to send email: ${e.message}` });
+    const { email } = await resendSchoolAdminWelcome(req.params.assignmentId);
+    console.log(`[school-admin] Resent welcome email to ${email} (assignment ${req.params.assignmentId})`);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(`[school-admin] resend-welcome failed:`, err.message);
+    res.status(500).json({ error: `Failed to send email: ${err.message}` });
   }
-
-  res.json({ ok: true });
 });
 
 // DELETE /api/admin/school-admins/:assignmentId
 // Removes a school admin assignment; also reverts role if they have no other assignments
 router.delete('/:assignmentId', requireAuth, async (req, res) => {
-  const [[assignment]] = await pool.query(
-    'SELECT sla.*, p.school_domain FROM school_license_admins sla JOIN purchases p ON p.id = sla.purchase_id WHERE sla.id = ?',
-    [req.params.assignmentId]
-  );
-  if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
-
-  await pool.query('UPDATE school_license_admins SET is_active = 0 WHERE id = ?', [assignment.id]);
-  await syncRoleToAssignments(assignment.site_user_id);
-
-  res.json({ ok: true });
+  try {
+    await revokeSchoolAdminAssignment(req.params.assignmentId);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
 });
 
 // PUT /api/admin/school-admins/:assignmentId — update permission level
 router.put('/:assignmentId', requireAuth, async (req, res) => {
   const { permissionLevel, isActive, notes } = req.body || {};
-  if (permissionLevel && !['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
-    return res.status(400).json({ error: 'Invalid permission level' });
+  try {
+    await updateSchoolAdminAssignment(req.params.assignmentId, { permissionLevel, isActive, notes });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
   }
-
-  const [[existing]] = await pool.query('SELECT site_user_id FROM school_license_admins WHERE id = ?', [req.params.assignmentId]);
-  if (!existing) return res.status(404).json({ error: 'Assignment not found' });
-
-  const updates = [];
-  const params = [];
-  if (permissionLevel) { updates.push('permission_level = ?'); params.push(permissionLevel); }
-  if (isActive !== undefined) { updates.push('is_active = ?'); params.push(isActive ? 1 : 0); }
-  if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
-  if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
-
-  params.push(req.params.assignmentId);
-  const [result] = await pool.query(`UPDATE school_license_admins SET ${updates.join(', ')} WHERE id = ?`, params);
-  if (!result.affectedRows) return res.status(404).json({ error: 'Assignment not found' });
-
-  if (isActive !== undefined) await syncRoleToAssignments(existing.site_user_id);
-
-  res.json({ ok: true });
 });
 
 module.exports = router;

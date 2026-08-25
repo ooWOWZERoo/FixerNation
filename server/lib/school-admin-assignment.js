@@ -14,7 +14,8 @@
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { createToken } = require('./site-tokens');
-const { sendSchoolAdminWelcomeEmail } = require('./mailer');
+const { sendSchoolAdminWelcomeEmail, sendPasswordResetEmail } = require('./mailer');
+const { syncRoleToAssignments } = require('./school-admin-roles');
 
 async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = 'primary', notes, createdByAdminId = null, firstName: bodyFirstName, lastName: bodyLastName }) {
   if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
@@ -101,4 +102,94 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
   return { user, isNewUser, purchase };
 }
 
-module.exports = { assignSchoolLicenseAdmin };
+// Re-sends the "set your password" welcome email — for an assignment whose
+// account hasn't completed setup yet. Shared by admin-school-admins.js
+// (unscoped, FNE staff) and district-admin.js (scoped to the caller's own
+// district(s) before this is ever called).
+async function resendSchoolAdminWelcome(assignmentId) {
+  const [[assignment]] = await pool.query(
+    'SELECT sla.site_user_id, p.school_domain FROM school_license_admins sla JOIN purchases p ON p.id = sla.purchase_id WHERE sla.id = ?',
+    [assignmentId]
+  );
+  if (!assignment) throw Object.assign(new Error('Assignment not found'), { status: 404 });
+
+  const [[user]] = await pool.query('SELECT id, first_name, email, email_verified FROM site_users WHERE id = ?', [assignment.site_user_id]);
+  if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
+
+  const siteUrl = process.env.SITE_URL || '';
+  const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000);
+  const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
+
+  await sendSchoolAdminWelcomeEmail({
+    to: user.email,
+    firstName: user.first_name,
+    schoolDomain: assignment.school_domain,
+    portalUrl: `${siteUrl}/school-admin-login.html`,
+    activateUrl,
+    isNewUser: !user.email_verified,
+  });
+  return { email: user.email };
+}
+
+// Sends the customer the same password-reset email self-service "Forgot
+// Password" would — for an already-verified account that just needs a new
+// password, not a full account setup.
+async function sendSchoolAdminPasswordReset(siteUserId) {
+  const [[user]] = await pool.query('SELECT id, first_name, email FROM site_users WHERE id = ?', [siteUserId]);
+  if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
+
+  const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
+  const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}`;
+  await sendPasswordResetEmail({ to: user.email, firstName: user.first_name, resetUrl });
+  return { email: user.email };
+}
+
+// Deactivates (not hard-deletes) an assignment — same semantics as FNE's
+// existing "Remove" action: the site_user account itself survives, just
+// loses admin access to this one school, and reverts to a non-admin role if
+// they hold no other active assignment.
+async function revokeSchoolAdminAssignment(assignmentId) {
+  const [[assignment]] = await pool.query('SELECT * FROM school_license_admins WHERE id = ?', [assignmentId]);
+  if (!assignment) throw Object.assign(new Error('Assignment not found'), { status: 404 });
+
+  await pool.query('UPDATE school_license_admins SET is_active = 0 WHERE id = ?', [assignmentId]);
+  await syncRoleToAssignments(assignment.site_user_id);
+  return assignment;
+}
+
+async function updateSchoolAdminAssignment(assignmentId, { permissionLevel, notes, isActive }) {
+  const [[existing]] = await pool.query('SELECT site_user_id FROM school_license_admins WHERE id = ?', [assignmentId]);
+  if (!existing) throw Object.assign(new Error('Assignment not found'), { status: 404 });
+
+  const updates = [];
+  const params = [];
+  if (permissionLevel !== undefined) {
+    if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
+      throw Object.assign(new Error('Invalid permission level'), { status: 400 });
+    }
+    updates.push('permission_level = ?');
+    params.push(permissionLevel);
+  }
+  if (notes !== undefined) {
+    updates.push('notes = ?');
+    params.push(notes);
+  }
+  if (isActive !== undefined) {
+    updates.push('is_active = ?');
+    params.push(isActive ? 1 : 0);
+  }
+  if (!updates.length) throw Object.assign(new Error('Nothing to update'), { status: 400 });
+
+  params.push(assignmentId);
+  await pool.query(`UPDATE school_license_admins SET ${updates.join(', ')} WHERE id = ?`, params);
+  if (isActive !== undefined) await syncRoleToAssignments(existing.site_user_id);
+  return true;
+}
+
+module.exports = {
+  assignSchoolLicenseAdmin,
+  resendSchoolAdminWelcome,
+  sendSchoolAdminPasswordReset,
+  revokeSchoolAdminAssignment,
+  updateSchoolAdminAssignment,
+};
