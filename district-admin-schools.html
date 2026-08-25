@@ -152,7 +152,7 @@ function adminRow(a) {
     ? '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="resendWelcome(' + a.assignment_id + ', this)">Resend Welcome</button>'
     : '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="sendPasswordReset(' + a.assignment_id + ', this)">Reset Password</button>';
 
-  return '<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:6px 0;">' +
+  return '<div data-email="' + esc(a.email) + '" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:6px 0;">' +
     '<div style="font-size:13px;">' + esc(a.first_name + ' ' + a.last_name) + ' — ' + esc(a.email) + verifiedPill +
       ' <span class="sa-badge" style="margin-left:6px;">' + permLabel + '</span></div>' +
     '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
