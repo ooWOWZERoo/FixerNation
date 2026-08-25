@@ -363,7 +363,11 @@ async function submitReflect(promptKey, inputId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ promptKey: promptKey, responseText: text }),
   });
-  if (!r.ok) { toast('Could not save. Try again.'); return; }
+  if (!r.ok) {
+    var err = await r.json().catch(function () { return {}; });
+    toast(err.error || 'Could not save. Try again.');
+    return;
+  }
   var saved = await r.json();
   lesson.reflections = lesson.reflections || [];
   lesson.reflections.push(saved);
@@ -381,7 +385,13 @@ async function saveGoal() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ goalText: text }),
   });
-  if (r.ok) { document.getElementById('goalText').value = ''; toast('Goal saved! Find it on your home page.'); }
+  if (r.ok) {
+    document.getElementById('goalText').value = '';
+    toast('Goal saved! Find it on your home page.');
+  } else {
+    var err = await r.json().catch(function () { return {}; });
+    toast(err.error || 'Could not save. Try again.');
+  }
 }
 
 async function markComplete() {
