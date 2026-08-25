@@ -7,14 +7,20 @@ const { fireAutomation } = require('../lib/automations');
 
 const router = express.Router();
 
-function serialize(row, contact) {
+// paymentMethod is NOT a column on `invoices` (it lives on `purchases`,
+// which can have multiple rows per invoice) -- this was previously read as
+// `row.payment_method`, which is always undefined on an invoices row, so
+// admin-invoices.html's "Mark PO Received" button (gated on
+// paymentMethod === 'po') could never render for ANY invoice, ever. Callers
+// must now pass the real value, derived from that invoice's purchases.
+function serialize(row, contact, paymentMethod) {
   return {
     id: row.id,
     invoiceNumber: row.invoice_number,
     contactId: row.contact_id,
     buyer: contact ? { name: contact.name, email: contact.email, company: contact.company } : null,
     poNumber: row.po_number,
-    paymentMethod: row.payment_method || null,
+    paymentMethod: paymentMethod || null,
     poReceivedDate: row.po_received_date || null,
     total: Number(row.total_cents) / 100,
     status: row.status,
@@ -35,7 +41,7 @@ async function fetchInvoiceWithLineItems(id) {
   const lineItems = await attachPurchaseDetails(purchaseRows);
 
   return {
-    ...serialize(invoice, contactRows[0]),
+    ...serialize(invoice, contactRows[0], purchaseRows[0] && purchaseRows[0].payment_method),
     buyer: contactRows[0] ? {
       name: contactRows[0].name,
       email: contactRows[0].email,
@@ -76,9 +82,18 @@ router.get('/', requireAuth, async (req, res) => {
   );
   const itemCountByInvoice = Object.fromEntries(itemCountRows.map(r => [r.invoice_id, r.count]));
 
+  // Every purchase grouped under one invoice comes from the same checkout
+  // transaction (one cart or PO submission), so they always share a single
+  // payment_method -- any() is safe here, not just the first row by luck.
+  const [paymentMethodRows] = await pool.query(
+    'SELECT invoice_id, MIN(payment_method) AS payment_method FROM purchases WHERE invoice_id IN (?) GROUP BY invoice_id',
+    [rows.map(i => i.id)]
+  );
+  const paymentMethodByInvoice = Object.fromEntries(paymentMethodRows.map(r => [r.invoice_id, r.payment_method]));
+
   res.json({
     invoices: rows.map(row => ({
-      ...serialize(row, contactById[row.contact_id]),
+      ...serialize(row, contactById[row.contact_id], paymentMethodByInvoice[row.id]),
       itemCount: itemCountByInvoice[row.id] || 0,
     })),
   });
