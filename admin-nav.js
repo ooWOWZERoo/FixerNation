@@ -27,6 +27,7 @@
       link('admin-licenses.html',           '🏷️', 'License Products'),
       link('admin-school-admins.html',      '🏫', 'School Admins'),
       link('admin-districts.html',          '🗺️', 'Districts'),
+      link('admin-account-lookup.html',     '🔎', 'Account Lookup'),
     ]},
     { key: 'content', label: 'Content', links: [
       link('admin-curriculum.html',         '🎓', 'Curriculums'),

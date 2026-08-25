@@ -38,6 +38,7 @@ const teacherLessonPlansRoutes = require('./routes/teacher-lesson-plans');
 const adminTeacherLessonPlansRoutes = require('./routes/admin-teacher-lesson-plans');
 const quoteAcceptRoutes = require('./routes/quote-accept');
 const contentSafetyRoutes = require('./routes/content-safety');
+const adminAccountLookupRoutes = require('./routes/admin-account-lookup');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -88,6 +89,7 @@ app.use('/api/teacher/lesson-plans', teacherLessonPlansRoutes);
 app.use('/api/admin/teacher-lesson-plans', adminTeacherLessonPlansRoutes);
 app.use('/api/quotes', quoteAcceptRoutes);
 app.use('/api/content-safety', contentSafetyRoutes);
+app.use('/api/admin/account-lookup', adminAccountLookupRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
 // In production LiteSpeed checks public_html/uploads/ first; if the file isn't

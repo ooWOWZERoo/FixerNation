@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Account Lookup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=17">
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=19"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Account Lookup</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <div class="a-card" style="max-width:640px;">
+        <div class="a-card-head"><h2>Look up an email address</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          Shows everything tied to one email across the whole system — the real account, every invitation it's
+          ever received (even under a different name), every license seat, and every school/district admin
+          assignment — so you can reconcile a confusing case (e.g. someone invited under three different names
+          over time) in one place instead of hunting across pages.
+        </div>
+        <form id="lookupForm" onsubmit="doLookup(event)" style="display:flex; gap:10px;">
+          <input type="email" id="lookupEmail" placeholder="someone@school.edu" style="flex:1;" required>
+          <button type="submit" class="a-btn a-btn-primary">Look Up</button>
+        </form>
+      </div>
+
+      <div id="resultsWrap" style="display:none; margin-top:24px;">
+
+        <div class="a-card">
+          <div class="a-card-head"><h2>Account</h2></div>
+          <div id="accountSection"></div>
+        </div>
+
+        <div class="a-card" style="margin-top:24px;">
+          <div class="a-card-head"><h2>School Invitations</h2></div>
+          <div class="a-note" style="margin:0 0 12px;">The name/school shown is whatever that specific invite used — it doesn't have to match the account's real name.</div>
+          <table class="a-table" id="invitationsTable"><thead><tr><th>Invited As</th><th>School</th><th>Status</th><th>Sent</th><th></th></tr></thead><tbody></tbody></table>
+        </div>
+
+        <div class="a-card" style="margin-top:24px;">
+          <div class="a-card-head"><h2>License Seats</h2></div>
+          <table class="a-table" id="seatsTable"><thead><tr><th>School</th><th>Status</th><th>Registered</th><th></th></tr></thead><tbody></tbody></table>
+        </div>
+
+        <div class="a-card" style="margin-top:24px;">
+          <div class="a-card-head"><h2>School License Admin Assignments</h2></div>
+          <table class="a-table" id="schoolAdminTable"><thead><tr><th>School</th><th>Permission</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+        </div>
+
+        <div class="a-card" style="margin-top:24px;">
+          <div class="a-card-head"><h2>District Admin Assignments</h2></div>
+          <table class="a-table" id="districtAdminTable"><thead><tr><th>District</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+        </div>
+
+      </div>
+
+      <div id="notFoundNote" class="a-note" style="display:none; margin-top:16px;">No account exists yet for this email — but it may still show invitations/seats below if it's been invited without registering.</div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+let currentEmail = '';
+
+async function doLookup(e) {
+  e.preventDefault();
+  currentEmail = document.getElementById('lookupEmail').value.trim().toLowerCase();
+  if (!currentEmail) return;
+  const r = await fetch('/api/admin/account-lookup?email=' + encodeURIComponent(currentEmail), { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Lookup failed', 'error'); return; }
+  render(data);
+}
+
+function render(data) {
+  document.getElementById('resultsWrap').style.display = 'block';
+  document.getElementById('notFoundNote').style.display = data.account ? 'none' : 'block';
+  renderAccount(data.account);
+  renderInvitations(data.invitations || []);
+  renderSeats(data.seats || []);
+  renderSchoolAdmin(data.schoolAdminAssignments || []);
+  renderDistrictAdmin(data.districtAdminAssignments || []);
+}
+
+function renderAccount(account) {
+  const el = document.getElementById('accountSection');
+  if (!account) { el.innerHTML = '<div class="a-note">No account exists for this email.</div>'; return; }
+  const verified = account.email_verified ? '<span class="a-pill a-pill-success">Verified</span>' : '<span class="a-pill a-pill-warning">Unverified</span>';
+  const revoked = account.session_invalidated_at ? '<div class="a-note">Sessions invalidated as of ' + fmtDate(account.session_invalidated_at) + '</div>' : '';
+  el.innerHTML =
+    '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">' +
+      '<div>' +
+        '<div style="font-weight:700; font-size:16px;">' + esc(account.first_name + ' ' + account.last_name) + ' ' + verified + '</div>' +
+        '<div style="font-size:13px; color:var(--a-text-soft);">' + esc(account.email) + ' · role: ' + esc(account.role) + ' · created ' + fmtDate(account.created_at) + '</div>' +
+        revoked +
+      '</div>' +
+      '<button class="a-btn a-btn-danger a-btn-sm" onclick="deleteAccount(' + account.id + ')">Delete Account</button>' +
+    '</div>';
+}
+
+async function deleteAccount(id) {
+  if (!confirm('Permanently delete this account? This cannot be undone. Any license seats it held will be freed up for someone else, not deleted.')) return;
+  const r = await fetch('/api/site-auth/site-users/' + id, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Delete failed', 'error'); return; }
+  fnToast('Account deleted');
+  doLookup({ preventDefault: function () {} });
+}
+
+function renderInvitations(rows) {
+  const tbody = document.querySelector('#invitationsTable tbody');
+  tbody.innerHTML = rows.map(function (i) {
+    const canCancel = !['revoked', 'registered'].includes(i.status);
+    return '<tr>' +
+      '<td>' + esc(i.first_name + ' ' + i.last_name) + '</td>' +
+      '<td>' + esc(i.school_domain) + '</td>' +
+      '<td>' + statusPill(i.status) + '</td>' +
+      '<td>' + fmtDate(i.created_at) + '</td>' +
+      '<td>' + (canCancel ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="cancelInvitation(' + i.id + ')">Cancel</button>' : '') + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="5">No invitations found.</td></tr>';
+}
+
+async function cancelInvitation(id) {
+  if (!confirm('Cancel this invitation?')) return;
+  const r = await fetch('/api/admin/account-lookup/invitations/' + id + '/cancel', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Failed', 'error'); return; }
+  fnToast('Invitation cancelled');
+  doLookup({ preventDefault: function () {} });
+}
+
+function renderSeats(rows) {
+  const tbody = document.querySelector('#seatsTable tbody');
+  tbody.innerHTML = rows.map(function (s) {
+    return '<tr>' +
+      '<td>' + esc(s.school_domain) + '</td>' +
+      '<td>' + statusPill(s.status) + '</td>' +
+      '<td>' + (s.registered_at ? fmtDate(s.registered_at) : '—') + '</td>' +
+      '<td>' + (s.status !== 'revoked' ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="revokeSeat(' + s.id + ')">Revoke</button>' : '') + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="4">No license seats found.</td></tr>';
+}
+
+async function revokeSeat(id) {
+  if (!confirm('Revoke this license seat?')) return;
+  const r = await fetch('/api/admin/account-lookup/seats/' + id + '/revoke', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Failed', 'error'); return; }
+  fnToast('Seat revoked');
+  doLookup({ preventDefault: function () {} });
+}
+
+function renderSchoolAdmin(rows) {
+  const tbody = document.querySelector('#schoolAdminTable tbody');
+  tbody.innerHTML = rows.map(function (a) {
+    return '<tr>' +
+      '<td>' + esc(a.school_domain) + '</td>' +
+      '<td>' + esc(a.permission_level) + '</td>' +
+      '<td>' + (a.is_active ? '<span class="a-pill a-pill-success">Active</span>' : '<span class="a-pill a-pill-danger">Revoked</span>') + '</td>' +
+      '<td>' + (a.is_active ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="revokeSchoolAdmin(' + a.id + ')">Revoke</button>' : '') + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="4">No school admin assignments found.</td></tr>';
+}
+
+async function revokeSchoolAdmin(assignmentId) {
+  if (!confirm('Revoke this school license admin assignment?')) return;
+  const r = await fetch('/api/admin/school-admins/' + assignmentId, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Failed', 'error'); return; }
+  fnToast('Assignment revoked');
+  doLookup({ preventDefault: function () {} });
+}
+
+function renderDistrictAdmin(rows) {
+  const tbody = document.querySelector('#districtAdminTable tbody');
+  tbody.innerHTML = rows.map(function (a) {
+    return '<tr>' +
+      '<td>' + esc(a.district_name) + '</td>' +
+      '<td>' + (a.is_active ? '<span class="a-pill a-pill-success">Active</span>' : '<span class="a-pill a-pill-danger">Revoked</span>') + '</td>' +
+      '<td>' + (a.is_active ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="revokeDistrictAdmin(' + a.id + ')">Revoke</button>' : '') + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="3">No district admin assignments found.</td></tr>';
+}
+
+async function revokeDistrictAdmin(assignmentId) {
+  if (!confirm('Revoke this district admin assignment?')) return;
+  const r = await fetch('/api/admin/districts/admins/' + assignmentId, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { fnToast(data.error || 'Failed', 'error'); return; }
+  fnToast('Assignment revoked');
+  doLookup({ preventDefault: function () {} });
+}
+
+function statusPill(status) {
+  const map = {
+    pending: 'a-pill-warning', opened: 'a-pill', registered: 'a-pill-success',
+    expired: 'a-pill-danger', revoked: 'a-pill-danger',
+  };
+  return '<span class="a-pill ' + (map[status] || '') + '">' + esc(status) + '</span>';
+}
+
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : '—'; }
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
