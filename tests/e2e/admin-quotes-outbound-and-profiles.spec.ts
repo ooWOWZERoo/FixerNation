@@ -93,9 +93,12 @@ test.describe("Admin-initiated quotes + Quote Content Profiles", () => {
     await page.locator("#qTierSelect").selectOption(String(QA_LICENSE_PRODUCT_ID));
     await page.locator("#qValidUntil").waitFor({ state: "visible" });
 
+    // Scoped to #modalFoot — admin-quotes.html also has its own page-level
+    // Quote Settings "Save" button now (moved here from admin-settings.html),
+    // which a page-wide getByRole("button", {name: /^save$/i}) ambiguously matches too.
     const [saveRes] = await Promise.all([
       page.waitForResponse((r) => /\/api\/contact\/quotes\/\d+$/.test(r.url()) && r.request().method() === "PUT"),
-      page.getByRole("button", { name: /^save$/i }).click(),
+      page.locator("#modalFoot").getByRole("button", { name: /^save$/i }).click(),
     ]);
     expect(saveRes.status()).toBe(200);
     const { quote } = await saveRes.json();

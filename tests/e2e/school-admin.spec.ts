@@ -83,7 +83,11 @@ test.describe("School Admin portal", () => {
     // response-shape mismatch (unwrapped fields the page expected under
     // `purchase`/`utilization`) left every value on this page silently reading
     // "—"/"0 of 0" while the page itself still loaded and rendered fine.
-    await expect(page.getByText("qa-school.example.com")).toBeVisible({ timeout: 10000 });
+    // Scoped to #licenseInfo — #saSchoolInfo (a shared sidebar/header
+    // element) also shows the same domain string, which makes an unscoped
+    // getByText ambiguous (strict-mode violation) even though the fix this
+    // guards is specifically about #licenseInfo's fields.
+    await expect(page.locator("#licenseInfo").getByText("qa-school.example.com")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("#utilDetail")).not.toHaveText("— of — seats assigned");
     await expect(page.locator("#licenseInfo")).not.toContainText("—");
   });

@@ -136,6 +136,12 @@ test.describe("Multi-role admin access", () => {
     // Dedicated, isolated fixture (per project convention for state-mutating
     // tests) — this really does change its password, every run, using a
     // fresh token the seed script issues each time it's re-run.
+    //
+    // Single-use by design (consumeToken() deletes the row on success) — if
+    // this test already consumed TEST_FORGOT_PW_RESET_TOKEN in a prior run
+    // against the SAME .env.test values, this will correctly fail with a 400
+    // ("invalid or expired") on re-run. That's not a regression; re-run
+    // seed-qa-test-accounts.js to mint a fresh token before retrying.
     const newPassword = "QaTest!2026-Reset";
 
     const resetRes = await page.request.post("/api/site-auth/reset-password", {

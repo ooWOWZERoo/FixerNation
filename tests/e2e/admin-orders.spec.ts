@@ -22,19 +22,14 @@ test.describe("Admin orders (read-only)", () => {
   test.beforeEach(async ({ page }) => {
     await signInAsAdmin(page);
     await page.goto("/admin-orders.html");
-    // Wait for both the purchases and memberships API calls that loadOrders() fires
-    await Promise.all([
-      page.waitForResponse(
-        (r) =>
-          r.url().includes("/api/newsletter/purchases") && r.status() === 200,
-        { timeout: 20000 }
-      ),
-      page.waitForResponse(
-        (r) =>
-          r.url().includes("/api/memberships") && r.status() === 200,
-        { timeout: 20000 }
-      ),
-    ]);
+    // loadOrders() used to also fire a memberships API call before the
+    // membership feature was removed entirely (commit 565836d) — that
+    // endpoint no longer exists, so waiting on it here just timed out every
+    // test in this file. Only the purchases call remains.
+    await page.waitForResponse(
+      (r) => r.url().includes("/api/newsletter/purchases") && r.status() === 200,
+      { timeout: 20000 }
+    );
   });
 
   // ── 1. Page title ──────────────────────────────────────────────────────────
