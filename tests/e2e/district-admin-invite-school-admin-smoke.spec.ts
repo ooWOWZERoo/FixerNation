@@ -52,6 +52,8 @@ test("district admin can resend welcome, edit permission level, and revoke an ad
   // itself), so every action below is scoped to this specific row via
   // data-email, not the shared schoolCard.
   await schoolCard.getByRole("button", { name: "+ Invite Admin" }).click();
+  await page.locator("#assignFirstName").fill("QA");
+  await page.locator("#assignLastName").fill("DistrictInviteTest");
   await page.locator("#assignEmail").fill(INVITE_EMAIL);
   await page.getByRole("button", { name: "Send Invitation" }).click();
   await expect(page.locator("#assignModal")).toBeHidden({ timeout: 10000 });
@@ -77,6 +79,23 @@ test("district admin can resend welcome, edit permission level, and revoke an ad
   page.once("dialog", (d) => d.accept());
   await page.locator(`[data-email="${INVITE_EMAIL}"]`).getByRole("button", { name: "Revoke" }).click();
   await expect(page.locator(`[data-email="${INVITE_EMAIL}"]`)).toHaveCount(0, { timeout: 10000 });
+});
+
+test("rejects an invite with a blank first or last name", async ({ page }) => {
+  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", "QaTest!2026");
+  await page.goto("/district-admin-schools.html");
+
+  const schoolCard = page.locator("#schoolsList .sa-card", { hasText: "qa-dual-role-school.example.com" });
+  await expect(schoolCard).toBeVisible({ timeout: 15000 });
+
+  await schoolCard.getByRole("button", { name: "+ Invite Admin" }).click();
+  await page.locator("#assignEmail").fill(INVITE_EMAIL);
+  // Deliberately leave first/last name blank.
+  await page.getByRole("button", { name: "Send Invitation" }).click();
+
+  await expect(page.locator("#assignErr")).toContainText("name", { timeout: 5000 });
+  await expect(page.locator("#assignModal")).toBeVisible(); // never closed -- request never sent
+  await expect(page.locator(`[data-email="${INVITE_EMAIL}"]`)).toHaveCount(0);
 });
 
 });
