@@ -133,10 +133,12 @@
         <div class="success-inline" id="adminsSuccess"></div>
         <div id="adminsList"><div class="a-hint">Loading…</div></div>
         <div class="manage-add-row">
-          <input type="email" id="addAdminEmail" placeholder="admin@district.edu">
+          <input type="text" id="addAdminFirstName" placeholder="First name" style="flex:0.7;" required>
+          <input type="text" id="addAdminLastName" placeholder="Last name" style="flex:0.7;" required>
+          <input type="email" id="addAdminEmail" placeholder="admin@district.edu" required>
           <button class="a-btn a-btn-outline a-btn-sm" onclick="doAssignAdmin()">Invite</button>
         </div>
-        <p class="a-hint">If this email doesn't have an account, one will be created and a setup link emailed to them.</p>
+        <p class="a-hint">First/last name and email are all required. If this email doesn't have an account, one will be created and a setup link emailed to them.</p>
       </div>
 
       <div class="manage-section">
@@ -309,6 +311,8 @@ function openManageModal(id, name) {
   document.getElementById('adminsErr').style.display = 'none';
   document.getElementById('adminsSuccess').style.display = 'none';
   document.getElementById('addAdminEmail').value = '';
+  document.getElementById('addAdminFirstName').value = '';
+  document.getElementById('addAdminLastName').value = '';
   document.getElementById('manageModal').classList.add('show');
   loadManageSchools();
   loadManageAdmins();
@@ -416,12 +420,15 @@ async function doAssignAdmin() {
   const success = document.getElementById('adminsSuccess');
   err.style.display = 'none'; success.style.display = 'none';
   const email = document.getElementById('addAdminEmail').value.trim();
+  const firstName = document.getElementById('addAdminFirstName').value.trim();
+  const lastName = document.getElementById('addAdminLastName').value.trim();
   if (!email) { err.textContent = 'Email is required.'; err.style.display = 'block'; return; }
+  if (!firstName || !lastName) { err.textContent = 'First and last name are required.'; err.style.display = 'block'; return; }
   try {
     const r = await fetch('/api/admin/districts/' + manageDistrictId + '/admins/assign', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, firstName, lastName }),
     });
     if (fnHandleUnauthorized(r)) return;
     const d = await r.json();
@@ -429,6 +436,8 @@ async function doAssignAdmin() {
     success.textContent = (d.isNewUser ? 'New user created — setup email sent. ' : '') + email + ' assigned as district admin.';
     success.style.display = 'block';
     document.getElementById('addAdminEmail').value = '';
+    document.getElementById('addAdminFirstName').value = '';
+    document.getElementById('addAdminLastName').value = '';
     loadManageAdmins();
     loadDistricts();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }

@@ -358,6 +358,12 @@ router.post('/invitations', requireSchoolAdmin, async (req, res) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'A valid email is required' });
   }
+  // Guardrail: a real name is required for every invitation -- an invite
+  // sent without one used to leave a permanent NULL/NULL gap on the
+  // resulting school_invitations row, with no way to backfill it later.
+  if (!firstName || !firstName.trim() || !lastName || !lastName.trim()) {
+    return res.status(400).json({ error: 'First and last name are required' });
+  }
 
   const normalEmail = email.trim().toLowerCase();
 
@@ -499,6 +505,15 @@ router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
       results.errors.push({ email: inv.email, reason: 'Invalid email' });
       continue;
     }
+    // Guardrail: a real name is required for every invitation -- the CSV
+    // upload UI already filters these out client-side, but the server
+    // must not trust that alone.
+    const rowFirstName = (inv.firstName || inv.first_name || '').trim();
+    const rowLastName = (inv.lastName || inv.last_name || '').trim();
+    if (!rowFirstName || !rowLastName) {
+      results.errors.push({ email, reason: 'First and last name are required' });
+      continue;
+    }
 
     // Check for existing active invitation or registered seat
     const [[dup]] = await pool.query(
@@ -551,9 +566,14 @@ router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
            (purchase_id, seat_id, invited_email, first_name, last_name, token, status,
             grade_level, role_title, department, subject_area, invited_by_site_user_id, expires_at)
          VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
-        [purchaseId, seatResult.insertId, email, inv.firstName || null, inv.lastName || null,
-         token, inv.gradeLevel || null, inv.role || null, inv.department || null,
-         inv.subjectArea || null, req.schoolAdmin.siteUserId, expiresAt]
+        // CSV rows key by the lowercased column header (snake_case);
+        // JSON-body rows (single invite, or a future non-CSV bulk source)
+        // key camelCase -- accept either so a name/field typed into the CSV
+        // never silently gets dropped again (this is exactly how invitation
+        // #4's NULL/NULL name happened).
+        [purchaseId, seatResult.insertId, email, rowFirstName, rowLastName,
+         token, inv.gradeLevel || inv.grade_level || null, inv.role || inv.role_title || null, inv.department || null,
+         inv.subjectArea || inv.subject_area || null, req.schoolAdmin.siteUserId, expiresAt]
       );
 
       await conn.commit();

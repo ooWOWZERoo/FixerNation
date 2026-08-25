@@ -51,8 +51,8 @@
     <div id="assignErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
     <div class="sa-note" style="margin-bottom:12px; font-size:13px; color:var(--sa-text-soft);" id="assignSchoolLabel"></div>
     <div class="sa-form-row">
-      <div class="sa-form-group"><label>First Name</label><input type="text" id="assignFirstName" placeholder="Jane"></div>
-      <div class="sa-form-group"><label>Last Name</label><input type="text" id="assignLastName" placeholder="Smith"></div>
+      <div class="sa-form-group"><label>First Name *</label><input type="text" id="assignFirstName" placeholder="Jane" required></div>
+      <div class="sa-form-group"><label>Last Name *</label><input type="text" id="assignLastName" placeholder="Smith" required></div>
     </div>
     <div class="sa-form-group">
       <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
@@ -271,7 +271,10 @@ async function submitAssign() {
   const err = document.getElementById('assignErr');
   err.style.display = 'none';
   const email = document.getElementById('assignEmail').value.trim();
+  const firstName = document.getElementById('assignFirstName').value.trim();
+  const lastName = document.getElementById('assignLastName').value.trim();
   if (!email) { err.textContent = 'Email is required.'; err.style.display = 'block'; return; }
+  if (!firstName || !lastName) { err.textContent = 'First and last name are required.'; err.style.display = 'block'; return; }
   if (!currentPurchaseId) return;
 
   btn.disabled = true;

@@ -65,8 +65,8 @@
         <div class="a-hint">If this email doesn't have an account, one will be created and a setup link emailed to them.</div>
       </div>
       <div class="a-form-row">
-        <div class="a-field"><label>First Name</label><input type="text" id="assignFirst" placeholder="Jane"></div>
-        <div class="a-field"><label>Last Name</label><input type="text" id="assignLast" placeholder="Smith"></div>
+        <div class="a-field"><label>First Name *</label><input type="text" id="assignFirst" placeholder="Jane" required></div>
+        <div class="a-field"><label>Last Name *</label><input type="text" id="assignLast" placeholder="Smith" required></div>
       </div>
       <div class="a-field">
         <label>School Purchase *</label>
@@ -261,7 +261,10 @@ async function doAssign() {
   err.style.display = 'none'; success.style.display = 'none';
   const email = document.getElementById('assignEmail').value.trim();
   const purchaseId = document.getElementById('assignPurchase').value;
+  const firstName = document.getElementById('assignFirst').value.trim();
+  const lastName = document.getElementById('assignLast').value.trim();
   if (!email) { err.textContent = 'Email is required.'; err.style.display = 'block'; return; }
+  if (!firstName || !lastName) { err.textContent = 'First and last name are required.'; err.style.display = 'block'; return; }
   if (!purchaseId) { err.textContent = 'Please select a purchase.'; err.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = 'Assigning…';
   try {

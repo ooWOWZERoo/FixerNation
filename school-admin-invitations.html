@@ -80,8 +80,8 @@
     </div>
     <div id="inviteErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
     <div class="sa-form-row">
-      <div class="sa-form-group"><label>First Name</label><input type="text" id="invFirstName" placeholder="Jane"></div>
-      <div class="sa-form-group"><label>Last Name</label><input type="text" id="invLastName" placeholder="Smith"></div>
+      <div class="sa-form-group"><label>First Name *</label><input type="text" id="invFirstName" placeholder="Jane" required></div>
+      <div class="sa-form-group"><label>Last Name *</label><input type="text" id="invLastName" placeholder="Smith" required></div>
     </div>
     <div class="sa-form-group">
       <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
@@ -120,20 +120,12 @@
     <div id="bulkErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
     <div id="bulkSuccess" class="sa-alert sa-alert-success" style="display:none;"></div>
 
-    <div class="bulk-tabs">
-      <button class="bulk-tab active" onclick="switchBulkTab('list',this)">Email List</button>
-      <button class="bulk-tab" onclick="switchBulkTab('csv',this)">CSV Upload</button>
-    </div>
-
-    <div id="tabList" class="tab-panel active">
-      <div class="sa-form-group">
-        <label>Email Addresses <span style="color:var(--sa-text-soft);font-weight:400;">— one per line, up to 200</span></label>
-        <textarea class="bulk-list" id="bulkEmails" placeholder="teacher1@school.edu&#10;teacher2@school.edu&#10;teacher3@school.edu"></textarea>
-      </div>
-    </div>
-
-    <div id="tabCsv" class="tab-panel">
-      <p style="font-size:13px;color:var(--sa-text-soft);margin-bottom:12px;">Upload a CSV with columns: email, first_name, last_name, grade_level, department (first 3 required). <a href="#" onclick="downloadTemplate();return false;">Download template →</a></p>
+    <div id="tabCsv" class="tab-panel active">
+      <p style="font-size:13px;color:var(--sa-text-soft);margin-bottom:12px;">
+        Upload a CSV with columns: email, first_name, last_name, grade_level, department (email, first_name and
+        last_name are all required for every row — a name is required for every invitation, no exceptions).
+        <a href="#" onclick="downloadTemplate();return false;">Download template →</a>
+      </p>
       <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()">
         Drop CSV here or click to browse
         <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="handleCsvFile(this)">
@@ -170,7 +162,6 @@
 
 <script>
 var page = 1, totalPages = 1, debounceTimer = null, revokeId = null, csvRows = [];
-var activeBulkTab = 'list';
 
 document.addEventListener('saReady', function () {
   loadInvitations();
@@ -319,7 +310,10 @@ async function sendInvite() {
   const err = document.getElementById('inviteErr');
   err.style.display = 'none';
   const email = document.getElementById('invEmail').value.trim();
+  const firstName = document.getElementById('invFirstName').value.trim();
+  const lastName = document.getElementById('invLastName').value.trim();
   if (!email) { err.textContent = 'Email is required.'; err.style.display = 'flex'; return; }
+  if (!firstName || !lastName) { err.textContent = 'First and last name are required.'; err.style.display = 'flex'; return; }
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevel: document.getElementById('invGrade').value.trim(), department: document.getElementById('invDept').value.trim(), roleName: document.getElementById('invRoleTitle').value.trim(), subjectArea: document.getElementById('invSubjectArea').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
@@ -335,18 +329,10 @@ function openBulkModal() {
   document.getElementById('bulkModal').style.display = 'flex';
   document.getElementById('bulkErr').style.display = 'none';
   document.getElementById('bulkSuccess').style.display = 'none';
-  document.getElementById('bulkEmails').value = '';
   document.getElementById('csvPreview').textContent = '';
   csvRows = [];
 }
 function closeBulkModal() { document.getElementById('bulkModal').style.display = 'none'; }
-function switchBulkTab(tab, el) {
-  activeBulkTab = tab;
-  document.querySelectorAll('.bulk-tab').forEach(function (b) { b.classList.remove('active'); });
-  el.classList.add('active');
-  document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
-  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-}
 function handleCsvFile(input) {
   const file = input.files[0];
   if (!file) return;
@@ -354,13 +340,19 @@ function handleCsvFile(input) {
   reader.onload = function (e) {
     const lines = e.target.result.split(/\r?\n/).filter(Boolean);
     const headers = lines[0].split(',').map(function (h) { return h.trim().toLowerCase(); });
-    csvRows = lines.slice(1).map(function (line) {
+    const allRows = lines.slice(1).map(function (line) {
       const vals = line.split(',');
       const obj = {};
       headers.forEach(function (h, i) { obj[h] = (vals[i] || '').trim(); });
       return obj;
     }).filter(function (r) { return r.email; });
-    document.getElementById('csvPreview').textContent = csvRows.length + ' email(s) ready to invite.';
+
+    // A name is required for every invitation -- rows missing either one
+    // are dropped here rather than sent to the server to fail per-row.
+    csvRows = allRows.filter(function (r) { return r.first_name && r.last_name; });
+    const droppedCount = allRows.length - csvRows.length;
+    document.getElementById('csvPreview').textContent = csvRows.length + ' email(s) ready to invite.' +
+      (droppedCount ? ' ' + droppedCount + ' row(s) skipped for missing first/last name.' : '');
   };
   reader.readAsText(file);
 }
@@ -371,15 +363,8 @@ async function sendBulk() {
   const success = document.getElementById('bulkSuccess');
   err.style.display = 'none'; success.style.display = 'none';
 
-  let invitations = [];
-  if (activeBulkTab === 'list') {
-    const raw = document.getElementById('bulkEmails').value.trim();
-    if (!raw) { err.textContent = 'Enter at least one email address.'; err.style.display = 'flex'; return; }
-    invitations = raw.split(/\r?\n/).map(function (e) { return { email: e.trim() }; }).filter(function (r) { return r.email; });
-  } else {
-    if (!csvRows.length) { err.textContent = 'Upload a CSV file first.'; err.style.display = 'flex'; return; }
-    invitations = csvRows;
-  }
+  if (!csvRows.length) { err.textContent = 'Upload a CSV file first.'; err.style.display = 'flex'; return; }
+  const invitations = csvRows;
 
   if (invitations.length > 200) { err.textContent = 'Maximum 200 invitations per bulk send.'; err.style.display = 'flex'; return; }
 

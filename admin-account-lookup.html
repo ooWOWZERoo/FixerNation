@@ -101,6 +101,17 @@ function render(data) {
   renderDistrictAdmin(data.districtAdminAssignments || []);
 }
 
+// Guards against null/undefined -- string concatenation with a bare `null`
+// or `undefined` produces the literal text "null"/"undefined" in
+// JavaScript, which is exactly what a name-less invitation row (a real gap
+// in some school_invitations rows, e.g. from a since-fixed bulk-upload bug)
+// used to render as.
+function fullName(first, last) {
+  const f = (first || '').trim();
+  const l = (last || '').trim();
+  return (f + ' ' + l).trim() || '(no name provided)';
+}
+
 function renderAccount(account) {
   const el = document.getElementById('accountSection');
   if (!account) { el.innerHTML = '<div class="a-note">No account exists for this email.</div>'; return; }
@@ -109,7 +120,7 @@ function renderAccount(account) {
   el.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">' +
       '<div>' +
-        '<div style="font-weight:700; font-size:16px;">' + esc(account.first_name + ' ' + account.last_name) + ' ' + verified + '</div>' +
+        '<div style="font-weight:700; font-size:16px;">' + esc(fullName(account.first_name, account.last_name)) + ' ' + verified + '</div>' +
         '<div style="font-size:13px; color:var(--a-text-soft);">' + esc(account.email) + ' · role: ' + esc(account.role) + ' · created ' + fmtDate(account.created_at) + '</div>' +
         revoked +
       '</div>' +
@@ -132,7 +143,7 @@ function renderInvitations(rows) {
   tbody.innerHTML = rows.map(function (i) {
     const canCancel = !['revoked', 'registered'].includes(i.status);
     return '<tr>' +
-      '<td>' + esc(i.first_name + ' ' + i.last_name) + '</td>' +
+      '<td>' + esc(fullName(i.first_name, i.last_name)) + '</td>' +
       '<td>' + esc(i.school_domain) + '</td>' +
       '<td>' + statusPill(i.status) + '</td>' +
       '<td>' + fmtDate(i.created_at) + '</td>' +

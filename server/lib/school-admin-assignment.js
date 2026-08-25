@@ -21,6 +21,14 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
   if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
     throw Object.assign(new Error('Invalid permission level'), { status: 400 });
   }
+  // Guardrail: a real name is required for every assignment, not just new
+  // accounts -- previously falling back to a name derived from the email
+  // address (e.g. "sales@vssus.com" -> "Sales"/"") is exactly what produced
+  // garbage placeholder names that then never get corrected, since a later
+  // invitation's real name never updates an already-existing account.
+  if (!bodyFirstName || !bodyFirstName.trim() || !bodyLastName || !bodyLastName.trim()) {
+    throw Object.assign(new Error('First and last name are required'), { status: 400 });
+  }
   const normalEmail = email.trim().toLowerCase();
 
   const [[purchase]] = await pool.query(
@@ -40,9 +48,8 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
 
     if (!user) {
       const randomHash = await bcrypt.hash(Math.random().toString(36), 12);
-      const nameParts = normalEmail.split('@')[0].split('.');
-      const firstName = (bodyFirstName || '').trim() || (nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Administrator');
-      const lastName = (bodyLastName || '').trim() || (nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : '');
+      const firstName = bodyFirstName.trim();
+      const lastName = bodyLastName.trim();
 
       const [result] = await conn.query(
         "INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role) VALUES (?, ?, ?, ?, 0, 'school_license_admin')",
