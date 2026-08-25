@@ -40,7 +40,14 @@ async function screenContent({ contentContext, text, images, authorSiteUserId, a
       failedClosed = true;
     }
 
-    if (images && images.length) {
+    // Local image classification is gated behind an explicit env var,
+    // default OFF. @tensorflow/tfjs-node's native thread pool has been
+    // observed to abort the entire Node process (SIGABRT — "pthread_create()
+    // failed") on this host's cPanel/CloudLinux process-limit environment,
+    // which a JS try/catch cannot contain. DO NOT set
+    // CONTENT_SAFETY_LOCAL_IMAGE_SCAN=true in server/.env until that's been
+    // proven safe on THIS host (see CONTENT_SAFETY_IMPLEMENTATION_PLAN.md).
+    if (images && images.length && process.env.CONTENT_SAFETY_LOCAL_IMAGE_SCAN === 'true') {
       for (const img of images) {
         const scores = await classifyImageBuffer(img.buffer);
         findings.push({
