@@ -9,6 +9,8 @@ const { SITE_COOKIE_NAME } = require('../lib/session');
 const { hasActiveLicense } = require('../lib/access');
 const { requireAuth } = require('../middleware/auth');
 const { ensureProfile } = require('../lib/social-groups');
+const gateway = require('../lib/safety/gateway');
+const { resolveSchoolDomainForSocialGroup, resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 
 // ── File upload for social posts ──────────────────────────────────────────
 
@@ -66,8 +68,29 @@ async function requireSocialAccess(req, res, next) {
 
 // ── Upload attachments ────────────────────────────────────────────────────
 
-router.post('/upload', requireSocialAccess, socialUploadMw.array('files', 5), (req, res) => {
+router.post('/upload', requireSocialAccess, socialUploadMw.array('files', 5), async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
+
+  // Content Safety Gateway (SOCIAL_IMAGE) — screen every uploaded image
+  // before it's ever returned to the client as an attachable URL. Non-image
+  // files (video/pdf/doc) pass through unscreened in Phase 1 (nsfwjs/OpenAI
+  // omni-moderation image support only cover still images).
+  const schoolDomain = await resolveSchoolDomainForTeacher(req.siteUser.id);
+  const imageFiles = req.files.filter(f => f.mimetype.startsWith('image/'));
+  if (imageFiles.length) {
+    const images = imageFiles.map(f => ({ buffer: fs.readFileSync(f.path), mimetype: f.mimetype }));
+    const result = await gateway.screenContent({
+      contentContext: 'SOCIAL_IMAGE',
+      images,
+      authorSiteUserId: req.siteUser.id,
+      schoolDomain,
+    });
+    if (!gateway.isPublishable(result.decision)) {
+      for (const f of req.files) fs.unlink(f.path, () => {});
+      return res.status(422).json({ error: result.message });
+    }
+  }
+
   const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'social/';
   const attachments = req.files.map(f => ({
     type: f.mimetype.startsWith('image/') ? 'image'
@@ -259,6 +282,21 @@ router.post('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
   );
   if (!mem[0]) return res.status(403).json({ error: 'Not a member of this group' });
 
+  // Content Safety Gateway (SOCIAL_POST) — text only; any attached images
+  // were already screened at upload time (see POST /upload above).
+  if (content) {
+    const schoolDomain = await resolveSchoolDomainForSocialGroup(groupId);
+    const screen = await gateway.screenContent({
+      contentContext: 'SOCIAL_POST',
+      text: content,
+      authorSiteUserId: req.siteUser.id,
+      schoolDomain,
+    });
+    if (!gateway.isPublishable(screen.decision)) {
+      return res.status(422).json({ error: screen.message });
+    }
+  }
+
   const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
   const [result] = await pool.query(
     'INSERT INTO social_posts (group_id, author_id, content, attachments) VALUES (?, ?, ?, ?)',
@@ -331,8 +369,20 @@ router.post('/posts/:postId/comments', requireSocialAccess, async (req, res) => 
   const content = (req.body && req.body.content || '').trim();
   if (!content) return res.status(400).json({ error: 'Content is required' });
 
-  const [[post]] = await pool.query('SELECT id FROM social_posts WHERE id = ? AND deleted_at IS NULL', [postId]);
+  const [[post]] = await pool.query('SELECT id, group_id FROM social_posts WHERE id = ? AND deleted_at IS NULL', [postId]);
   if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  // Content Safety Gateway (SOCIAL_COMMENT)
+  const schoolDomain = await resolveSchoolDomainForSocialGroup(post.group_id);
+  const screen = await gateway.screenContent({
+    contentContext: 'SOCIAL_COMMENT',
+    text: content,
+    authorSiteUserId: req.siteUser.id,
+    schoolDomain,
+  });
+  if (!gateway.isPublishable(screen.decision)) {
+    return res.status(422).json({ error: screen.message });
+  }
 
   const [result] = await pool.query(
     'INSERT INTO social_comments (post_id, author_id, content) VALUES (?, ?, ?)',
@@ -426,6 +476,20 @@ router.post('/messages', requireSocialAccess, async (req, res) => {
   if (!recipRows[0]) return res.status(404).json({ error: 'Recipient not found' });
   const rLicensed = await hasActiveLicense(recipientId);
   if (!rLicensed) return res.status(403).json({ error: 'Recipient is not a community member' });
+
+  // Content Safety Gateway (SOCIAL_DM) — no group to resolve school context
+  // from, so best-effort resolve via the sender's own teacher/school
+  // affiliation (lib/safety/school-context.js).
+  const schoolDomain = await resolveSchoolDomainForTeacher(req.siteUser.id);
+  const screen = await gateway.screenContent({
+    contentContext: 'SOCIAL_DM',
+    text: content,
+    authorSiteUserId: req.siteUser.id,
+    schoolDomain,
+  });
+  if (!gateway.isPublishable(screen.decision)) {
+    return res.status(422).json({ error: screen.message });
+  }
 
   const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
   const [result] = await pool.query(

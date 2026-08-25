@@ -173,4 +173,37 @@ router.put('/auto-refresh', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Content Safety — contextual AI moderation (OpenAI omni-moderation) is
+// off by default; this is the admin ON/OFF switch described in
+// CONTENT_SAFETY_IMPLEMENTATION_PLAN.md. Enabling it still requires
+// OPENAI_API_KEY to be set in server/.env (lib/safety/contextual.js) —
+// this flag alone doesn't make it live if the key is missing.
+router.get('/content-safety-openai', requireAuth, async (req, res) => {
+  const raw = await getSetting('content_safety_openai_enabled');
+  res.json({ enabled: raw === 'true' });
+});
+
+router.put('/content-safety-openai', requireAuth, async (req, res) => {
+  const enabled = req.body && req.body.enabled === true;
+  await setSetting('content_safety_openai_enabled', enabled ? 'true' : 'false');
+  res.json({ ok: true });
+});
+
+// Fallback destination for a CRITICAL_BLOCK_ALERT with zero school-configured
+// recipients (lib/safety/incident.js) — so a critical finding never reaches
+// nobody just because a school hasn't set up its own alert recipients yet.
+router.get('/content-safety-fallback-email', requireAuth, async (req, res) => {
+  const email = await getSetting('content_safety_fallback_email');
+  res.json({ email: email || '' });
+});
+
+router.put('/content-safety-fallback-email', requireAuth, async (req, res) => {
+  const email = (req.body && req.body.email || '').trim();
+  if (email && !EMAIL_PATTERN.test(email)) {
+    return res.status(400).json({ error: 'Must be a valid email address' });
+  }
+  await setSetting('content_safety_fallback_email', email);
+  res.json({ ok: true });
+});
+
 module.exports = router;

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Content Safety</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=17">
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=18"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Content Safety</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <div class="a-card" style="max-width:640px;">
+        <div class="a-card-head"><h2>Contextual AI Moderation (Beta)</h2></div>
+        <div class="a-field">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" id="openaiEnabled" onchange="saveOpenAiToggle()" style="width:auto;">
+            Enable OpenAI omni-moderation for text and images
+          </label>
+          <div class="a-note" style="color:var(--coral, #E06D2C); font-weight:600; margin-top:8px;">
+            Third-party service — enabling this sends post/comment/message text (and images) to OpenAI for review.
+            Do not enable for a school before completing a privacy review. Requires OPENAI_API_KEY to be set in
+            server/.env — the toggle alone does nothing without it.
+          </div>
+          <div id="openaiStatusNote" class="a-note" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <div class="a-card" style="margin-top:24px;">
+        <div class="a-card-head">
+          <h2>Safety Rules</h2>
+          <button class="a-btn a-btn-primary" onclick="openAddRuleModal()">+ Add Rule</button>
+        </div>
+        <div class="a-note" style="margin:0 0 12px;">
+          Every threshold that decides ALLOW vs. BLOCK vs. ALERT lives here — nothing is hardcoded. FNE-locked
+          guardrails (🔒) cannot be edited or removed; add a school-scoped row for stricter coverage instead.
+        </div>
+        <table class="a-table" id="rulesTable">
+          <thead><tr><th>Category</th><th>Min. Severity</th><th>Action</th><th>Scope</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="a-card" style="margin-top:24px;">
+        <div class="a-card-head">
+          <h2>Safety Terms</h2>
+          <button class="a-btn a-btn-primary" onclick="openAddTermModal()">+ Add Term</button>
+        </div>
+        <div class="a-note" style="margin:0 0 12px;">
+          FNE-wide and school-specific blocked terms/phrases and allowlist exceptions, layered on top of the
+          built-in profanity dictionary.
+        </div>
+        <table class="a-table" id="termsTable">
+          <thead><tr><th>Term</th><th>Category</th><th>Severity</th><th>Type</th><th>Scope</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add rule modal -->
+<div class="a-modal-overlay" id="addRuleModalOverlay">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>Add Safety Rule</h3>
+      <button class="a-modal-close" onclick="closeAddRuleModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-error" id="addRuleError"></div>
+      <div class="a-field">
+        <label>Category</label>
+        <input type="text" id="ruleCategory" placeholder="e.g. bullying">
+      </div>
+      <div class="a-field">
+        <label>Minimum Severity (0–4)</label>
+        <input type="number" id="ruleMinSeverity" min="0" max="4" step="1">
+      </div>
+      <div class="a-field">
+        <label>Action</label>
+        <select id="ruleAction">
+          <option value="allow">Allow</option>
+          <option value="allow_log">Allow + Log</option>
+          <option value="block">Block</option>
+          <option value="block_alert">Block + Alert</option>
+          <option value="critical_block_alert">Critical Block + Alert</option>
+        </select>
+      </div>
+      <div class="a-field">
+        <label>School domain (leave blank for FNE-wide)</label>
+        <input type="text" id="ruleSchoolDomain" placeholder="e.g. lincolnhigh.edu">
+      </div>
+      <div class="a-field">
+        <label style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="ruleLocked" style="width:auto;"> FNE-locked (schools cannot edit/remove)
+        </label>
+      </div>
+      <button class="a-btn a-btn-primary" onclick="saveNewRule()">Add Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add term modal -->
+<div class="a-modal-overlay" id="addTermModalOverlay">
+  <div class="a-modal" style="max-width:420px;">
+    <div class="a-modal-head">
+      <h3>Add Safety Term</h3>
+      <button class="a-modal-close" onclick="closeAddTermModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-error" id="addTermError"></div>
+      <div class="a-field">
+        <label>Term or phrase</label>
+        <input type="text" id="termText">
+      </div>
+      <div class="a-field">
+        <label>Category</label>
+        <input type="text" id="termCategory" placeholder="e.g. hate_bias">
+      </div>
+      <div class="a-field">
+        <label>Severity (0–4)</label>
+        <input type="number" id="termSeverity" min="0" max="4" step="1" value="2">
+      </div>
+      <div class="a-field">
+        <label>School domain (leave blank for FNE-wide)</label>
+        <input type="text" id="termSchoolDomain" placeholder="e.g. lincolnhigh.edu">
+      </div>
+      <div class="a-field">
+        <label style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="termAllowlist" style="width:auto;"> Allowlist exception (never blocks)
+        </label>
+      </div>
+      <button class="a-btn a-btn-primary" onclick="saveNewTerm()">Add Term</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=15"></script>
+<script>
+async function loadOpenAiToggle() {
+  const r = await fetch('/api/settings/content-safety-openai', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  document.getElementById('openaiEnabled').checked = !!data.enabled;
+}
+
+async function saveOpenAiToggle() {
+  const enabled = document.getElementById('openaiEnabled').checked;
+  const r = await fetch('/api/settings/content-safety-openai', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (r.ok) fnToast(enabled ? 'Contextual moderation enabled' : 'Contextual moderation disabled');
+}
+
+const ACTION_LABELS = {
+  allow: 'Allow', allow_log: 'Allow + Log', block: 'Block',
+  block_alert: 'Block + Alert', critical_block_alert: 'Critical Block + Alert',
+};
+
+async function loadRules() {
+  const r = await fetch('/api/content-safety/rules', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  const tbody = document.querySelector('#rulesTable tbody');
+  tbody.innerHTML = (data.rules || []).map(function (rule) {
+    return '<tr>' +
+      '<td>' + rule.category + '</td>' +
+      '<td>' + rule.min_severity + '</td>' +
+      '<td>' + (ACTION_LABELS[rule.action] || rule.action) + '</td>' +
+      '<td>' + (rule.school_domain || 'FNE-wide') + (rule.is_locked ? ' 🔒' : '') + '</td>' +
+      '<td>' + (rule.is_locked ? '' : '<button class="a-btn a-btn-sm" onclick="deleteRule(' + rule.id + ')">Delete</button>') + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="5">No rules yet.</td></tr>';
+}
+
+function openAddRuleModal() { document.getElementById('addRuleModalOverlay').classList.add('show'); document.getElementById('addRuleError').textContent = ''; }
+function closeAddRuleModal() { document.getElementById('addRuleModalOverlay').classList.remove('show'); }
+
+async function saveNewRule() {
+  const errorBox = document.getElementById('addRuleError');
+  const category = document.getElementById('ruleCategory').value.trim();
+  const minSeverity = document.getElementById('ruleMinSeverity').value;
+  const action = document.getElementById('ruleAction').value;
+  const schoolDomain = document.getElementById('ruleSchoolDomain').value.trim();
+  const isLocked = document.getElementById('ruleLocked').checked;
+  if (!category) { errorBox.textContent = 'Category is required'; return; }
+
+  const r = await fetch('/api/content-safety/rules', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, minSeverity, action, schoolDomain, isLocked }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { errorBox.textContent = data.error || 'Could not save'; return; }
+  closeAddRuleModal();
+  loadRules();
+  fnToast('Rule added');
+}
+
+async function deleteRule(id) {
+  if (!confirm('Delete this rule?')) return;
+  const r = await fetch('/api/content-safety/rules/' + id, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  loadRules();
+}
+
+async function loadTerms() {
+  const r = await fetch('/api/content-safety/terms', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  const tbody = document.querySelector('#termsTable tbody');
+  tbody.innerHTML = (data.terms || []).map(function (t) {
+    return '<tr>' +
+      '<td>' + t.term + '</td>' +
+      '<td>' + t.category + '</td>' +
+      '<td>' + t.severity + '</td>' +
+      '<td>' + (t.is_allowlist ? 'Allowlist' : 'Blocked') + '</td>' +
+      '<td>' + (t.school_domain || 'FNE-wide') + '</td>' +
+      '<td><button class="a-btn a-btn-sm" onclick="deleteTerm(' + t.id + ')">Delete</button></td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="6">No terms yet.</td></tr>';
+}
+
+function openAddTermModal() { document.getElementById('addTermModalOverlay').classList.add('show'); document.getElementById('addTermError').textContent = ''; }
+function closeAddTermModal() { document.getElementById('addTermModalOverlay').classList.remove('show'); }
+
+async function saveNewTerm() {
+  const errorBox = document.getElementById('addTermError');
+  const term = document.getElementById('termText').value.trim();
+  const category = document.getElementById('termCategory').value.trim();
+  const severity = document.getElementById('termSeverity').value;
+  const schoolDomain = document.getElementById('termSchoolDomain').value.trim();
+  const isAllowlist = document.getElementById('termAllowlist').checked;
+  if (!term || !category) { errorBox.textContent = 'Term and category are required'; return; }
+
+  const r = await fetch('/api/content-safety/terms', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ term, category, severity, schoolDomain, isAllowlist }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const data = await r.json();
+  if (!r.ok) { errorBox.textContent = data.error || 'Could not save'; return; }
+  closeAddTermModal();
+  loadTerms();
+  fnToast('Term added');
+}
+
+async function deleteTerm(id) {
+  if (!confirm('Delete this term?')) return;
+  const r = await fetch('/api/content-safety/terms/' + id, { method: 'DELETE', credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  loadTerms();
+}
+
+loadOpenAiToggle();
+loadRules();
+loadTerms();
+</script>
+</body>
+</html>

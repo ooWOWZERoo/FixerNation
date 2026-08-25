@@ -12,6 +12,8 @@ const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
 const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, getParentClassrooms } = require('../lib/access');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
+const gateway = require('../lib/safety/gateway');
+const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
@@ -292,6 +294,20 @@ router.post('/profile/avatar', requireSiteAuth, function(req, res, next) {
   });
 }, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+
+  // Content Safety Gateway (PROFILE_IMAGE)
+  const schoolDomain = await resolveSchoolDomainForTeacher(req.siteUser.id);
+  const screen = await gateway.screenContent({
+    contentContext: 'PROFILE_IMAGE',
+    images: [{ buffer: fs.readFileSync(req.file.path), mimetype: req.file.mimetype }],
+    authorSiteUserId: req.siteUser.id,
+    schoolDomain,
+  });
+  if (!gateway.isPublishable(screen.decision)) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(422).json({ error: screen.message });
+  }
+
   const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'avatars/';
   const avatarUrl = prefix + req.file.filename;
   await pool.query(

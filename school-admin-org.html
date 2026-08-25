@@ -73,6 +73,38 @@
           <div id="coAdmins"></div>
         </div>
 
+        <!-- Safety alert recipients -->
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head">
+            <h2>Safety Alert Recipients</h2>
+          </div>
+          <div class="contact-section" style="margin-top:0;">
+            When FNE's content safety system flags a serious or critical issue (bullying, self-harm, threats, an
+            inappropriate image, etc.), an email alert goes to whoever you add below. Leave the category blank for
+            a catch-all recipient who gets every alert type.
+          </div>
+          <div id="safetyRecipients" style="margin-top:12px;"></div>
+          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+            <select id="newRecipCategory" style="max-width:220px;">
+              <option value="">All categories (catch-all)</option>
+              <option value="bullying">Bullying</option>
+              <option value="hostility">Targeted Hostility</option>
+              <option value="hate_bias">Hate/Bias</option>
+              <option value="sexual_safety">Sexual Safety</option>
+              <option value="self_harm">Self-Harm</option>
+              <option value="threat_violence">Threats/Violence</option>
+              <option value="unsafe_conduct">Unsafe Conduct</option>
+              <option value="privacy_pii">Privacy/Doxing</option>
+              <option value="image_nudity">Image/Media</option>
+              <option value="profanity">Language/Profanity</option>
+            </select>
+            <input type="email" id="newRecipEmail" placeholder="email@school.edu" style="flex:1; min-width:200px;">
+            <input type="text" id="newRecipLabel" placeholder="Label (optional, e.g. Principal)" style="flex:1; min-width:160px;">
+            <button class="sa-btn sa-btn-primary" onclick="addSafetyRecipient()">+ Add</button>
+          </div>
+          <div class="a-error" id="safetyRecipientsError" style="margin-top:8px;"></div>
+        </div>
+
         <!-- Contact / Support -->
         <div class="sa-card">
           <div class="sa-card-head">
@@ -91,8 +123,75 @@
 </div>
 
 <script>
-document.addEventListener('saReady', function () { loadOrg(); });
-document.addEventListener('saSchoolChanged', function () { loadOrg(); });
+document.addEventListener('saReady', function () { loadOrg(); loadSafetyRecipients(); });
+document.addEventListener('saSchoolChanged', function () { loadOrg(); loadSafetyRecipients(); });
+
+const CATEGORY_LABELS = {
+  bullying: 'Bullying', hostility: 'Targeted Hostility', hate_bias: 'Hate/Bias',
+  sexual_safety: 'Sexual Safety', self_harm: 'Self-Harm', threat_violence: 'Threats/Violence',
+  unsafe_conduct: 'Unsafe Conduct', privacy_pii: 'Privacy/Doxing', image_nudity: 'Image/Media',
+  profanity: 'Language/Profanity',
+};
+
+async function loadSafetyRecipients() {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  if (!purchaseId) return;
+  try {
+    const d = await saFetch('/api/school-admin/safety-alert-recipients?purchaseId=' + purchaseId);
+    renderSafetyRecipients(d.recipients || [], purchaseId);
+  } catch (e) {
+    document.getElementById('safetyRecipients').innerHTML = '<div style="font-size:13px;color:var(--sa-text-soft);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderSafetyRecipients(recipients, purchaseId) {
+  const el = document.getElementById('safetyRecipients');
+  if (!recipients.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--sa-text-soft);padding:8px 0;">No safety alert recipients configured yet.</div>';
+    return;
+  }
+  el.innerHTML = recipients.map(function (r) {
+    const label = CATEGORY_LABELS[r.category] || (r.category ? r.category : 'All categories');
+    return '<div class="co-admin-row">' +
+      '<div><div style="font-weight:600;">' + esc(r.email) + (r.label ? ' <span style="color:var(--sa-text-soft);font-weight:400;">(' + esc(r.label) + ')</span>' : '') + '</div>' +
+      '<div style="font-size:12px;color:var(--sa-text-soft);">' + esc(label) + '</div></div>' +
+      '<button class="sa-btn sa-btn-ghost sa-btn-sm" style="margin-left:auto;" onclick="removeSafetyRecipient(' + r.id + ',' + purchaseId + ')">Remove</button>' +
+      '</div>';
+  }).join('');
+}
+
+async function addSafetyRecipient() {
+  const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+  const errorBox = document.getElementById('safetyRecipientsError');
+  errorBox.textContent = '';
+  const category = document.getElementById('newRecipCategory').value || null;
+  const email = document.getElementById('newRecipEmail').value.trim();
+  const label = document.getElementById('newRecipLabel').value.trim();
+  if (!email) { errorBox.textContent = 'An email address is required'; return; }
+
+  try {
+    await saFetch('/api/school-admin/safety-alert-recipients', {
+      method: 'POST',
+      body: JSON.stringify({ purchaseId, category, email, label }),
+    });
+    document.getElementById('newRecipEmail').value = '';
+    document.getElementById('newRecipLabel').value = '';
+    loadSafetyRecipients();
+    saToast('Recipient added');
+  } catch (e) {
+    errorBox.textContent = e.message;
+  }
+}
+
+async function removeSafetyRecipient(id, purchaseId) {
+  if (!confirm('Remove this alert recipient?')) return;
+  try {
+    await saFetch('/api/school-admin/safety-alert-recipients/' + id + '?purchaseId=' + purchaseId, { method: 'DELETE' });
+    loadSafetyRecipients();
+  } catch (e) {
+    saToast(e.message, 'error');
+  }
+}
 
 async function loadOrg() {
   const purchaseId = window.saActivePurchaseId ? window.saActivePurchaseId() : null;

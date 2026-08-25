@@ -1568,4 +1568,93 @@ router.post('/branding/reset', requireSchoolAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------------------------------------------------------------------------
+// Content Safety — alert recipient configuration
+// (CONTENT_SAFETY_IMPLEMENTATION_PLAN.md §4 — this IS the entire "who gets
+// notified" configuration; there is no separate safety-admin role/portal.)
+// ---------------------------------------------------------------------------
+
+const SAFETY_CATEGORY_OPTIONS = [
+  'profanity', 'bullying', 'hostility', 'hate_bias', 'sexual_safety',
+  'self_harm', 'threat_violence', 'unsafe_conduct', 'privacy_pii', 'image_nudity',
+];
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+async function resolveSchoolDomainForPurchase(req, res, purchaseId) {
+  if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
+    res.status(403).json({ error: 'Access denied' });
+    return null;
+  }
+  const [[row]] = await pool.query('SELECT school_domain FROM purchases WHERE id = ?', [purchaseId]);
+  if (!row || !row.school_domain) {
+    res.status(400).json({ error: 'This school has no domain set yet — contact support before configuring safety alerts.' });
+    return null;
+  }
+  return row.school_domain;
+}
+
+// GET /api/school-admin/safety-alert-recipients?purchaseId=
+router.get('/safety-alert-recipients', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = req.query.purchaseId ? Number(req.query.purchaseId) : req.schoolAdmin.purchaseIds[0];
+  const schoolDomain = await resolveSchoolDomainForPurchase(req, res, purchaseId);
+  if (!schoolDomain) return;
+
+  const [rows] = await pool.query(
+    'SELECT id, category, email, label, is_active, created_at FROM safety_alert_recipients WHERE school_domain = ? ORDER BY category IS NULL, category, id',
+    [schoolDomain]
+  );
+  res.json({ recipients: rows, categoryOptions: SAFETY_CATEGORY_OPTIONS });
+});
+
+// POST /api/school-admin/safety-alert-recipients { purchaseId, category, email, label }
+router.post('/safety-alert-recipients', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = Number(req.body && req.body.purchaseId);
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+  const schoolDomain = await resolveSchoolDomainForPurchase(req, res, purchaseId);
+  if (!schoolDomain) return;
+
+  const email = (req.body.email || '').trim();
+  const category = req.body.category || null; // null = catch-all
+  const label = (req.body.label || '').trim() || null;
+  if (!EMAIL_PATTERN.test(email)) return res.status(400).json({ error: 'A valid email address is required' });
+  if (category && !SAFETY_CATEGORY_OPTIONS.includes(category)) return res.status(400).json({ error: 'Unknown category' });
+
+  const [result] = await pool.query(
+    'INSERT INTO safety_alert_recipients (school_domain, category, email, label) VALUES (?, ?, ?, ?)',
+    [schoolDomain, category, email, label]
+  );
+  res.status(201).json({ id: result.insertId });
+});
+
+// PUT /api/school-admin/safety-alert-recipients/:id { purchaseId, isActive }
+router.put('/safety-alert-recipients/:id', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = Number(req.body && req.body.purchaseId);
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+  const schoolDomain = await resolveSchoolDomainForPurchase(req, res, purchaseId);
+  if (!schoolDomain) return;
+
+  const isActive = req.body.isActive === true || req.body.isActive === 1 ? 1 : 0;
+  const [result] = await pool.query(
+    'UPDATE safety_alert_recipients SET is_active = ? WHERE id = ? AND school_domain = ?',
+    [isActive, req.params.id, schoolDomain]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true });
+});
+
+// DELETE /api/school-admin/safety-alert-recipients/:id?purchaseId=
+router.delete('/safety-alert-recipients/:id', requireSchoolAdmin, async (req, res) => {
+  const purchaseId = Number(req.query.purchaseId);
+  if (blockIfReadOnly(req, res, purchaseId)) return;
+  const schoolDomain = await resolveSchoolDomainForPurchase(req, res, purchaseId);
+  if (!schoolDomain) return;
+
+  const [result] = await pool.query(
+    'DELETE FROM safety_alert_recipients WHERE id = ? AND school_domain = ?',
+    [req.params.id, schoolDomain]
+  );
+  if (!result.affectedRows) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true });
+});
+
 module.exports = router;

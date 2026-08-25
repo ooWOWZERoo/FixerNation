@@ -2,6 +2,8 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireStudentAuth } = require('../middleware/studentAuth');
 const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/branding');
+const gateway = require('../lib/safety/gateway');
+const { resolveSchoolDomainForClassroom } = require('../lib/safety/school-context');
 
 const router = express.Router();
 router.use(requireStudentAuth);
@@ -222,6 +224,19 @@ router.post('/lesson/:curriculumId/reflect', async (req, res) => {
   const { promptKey, responseText } = req.body;
   if (!promptKey || !responseText) return res.status(400).json({ error: 'promptKey and responseText required' });
 
+  // Content Safety Gateway (STUDENT_REFLECTION) — mandatory, fails closed.
+  const schoolDomain = await resolveSchoolDomainForClassroom(req.student.classroom_id);
+  const screen = await gateway.screenContent({
+    contentContext: 'STUDENT_REFLECTION',
+    text: responseText.trim(),
+    authorStudentId: req.student.id,
+    schoolDomain,
+    classroomId: req.student.classroom_id,
+  });
+  if (!gateway.isPublishable(screen.decision)) {
+    return res.status(422).json({ error: screen.message });
+  }
+
   const [r] = await pool.query(
     'INSERT INTO student_reflections (student_id, curriculum_id, prompt_key, response_text) VALUES (?, ?, ?, ?)',
     [req.student.id, req.params.curriculumId, promptKey, responseText.trim()]
@@ -253,6 +268,20 @@ router.get('/goals', async (req, res) => {
 router.post('/goals', async (req, res) => {
   const { goalText, targetDate } = req.body;
   if (!goalText) return res.status(400).json({ error: 'goalText required' });
+
+  // Content Safety Gateway (STUDENT_GOAL) — mandatory, fails closed.
+  const schoolDomain = await resolveSchoolDomainForClassroom(req.student.classroom_id);
+  const screen = await gateway.screenContent({
+    contentContext: 'STUDENT_GOAL',
+    text: goalText.trim(),
+    authorStudentId: req.student.id,
+    schoolDomain,
+    classroomId: req.student.classroom_id,
+  });
+  if (!gateway.isPublishable(screen.decision)) {
+    return res.status(422).json({ error: screen.message });
+  }
+
   const [r] = await pool.query(
     'INSERT INTO student_goals (student_id, goal_text, target_date) VALUES (?, ?, ?)',
     [req.student.id, goalText.trim(), targetDate || null]

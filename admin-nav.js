@@ -41,6 +41,7 @@
     ]},
     { key: 'community', label: 'Community', links: [
       link('admin-social.html',             '👥', 'Social'),
+      link('admin-content-safety.html',     '🛡️', 'Content Safety'),
     ]},
     { key: 'reports', label: 'Reports', links: [
       link('admin-downloads.html',          '⬇️', 'Downloads'),
