@@ -85,7 +85,11 @@
     </div>
     <div class="sa-form-group">
       <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
-      <input type="email" id="invEmail" placeholder="teacher@school.edu">
+      <input type="email" id="invEmail" placeholder="teacher@school.edu" onblur="checkInviteEmail()">
+      <div id="invEmailWarning" class="sa-alert sa-alert-warn" style="display:none; margin-top:8px; font-size:12.5px;">
+        An account already exists for this email address. Sending this invitation will let them sign in with their
+        existing account to accept it — it will not create a new account or a "set your password" step.
+      </div>
     </div>
     <div class="sa-form-row">
       <div class="sa-form-group"><label>Grade Level</label><input type="text" id="invGrade"></div>
@@ -297,8 +301,19 @@ function openInviteModal() { document.getElementById('inviteModal').style.displa
 function closeInviteModal() {
   document.getElementById('inviteModal').style.display = 'none';
   document.getElementById('inviteErr').style.display = 'none';
+  document.getElementById('invEmailWarning').style.display = 'none';
   ['invEmail','invFirstName','invLastName','invGrade','invDept','invRoleTitle','invSubjectArea','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
 }
+async function checkInviteEmail() {
+  const email = document.getElementById('invEmail').value.trim();
+  const warning = document.getElementById('invEmailWarning');
+  if (!email) { warning.style.display = 'none'; return; }
+  try {
+    const d = await saFetch('/api/school-admin/check-email?email=' + encodeURIComponent(email));
+    warning.style.display = d.exists ? 'block' : 'none';
+  } catch (e) { /* non-critical -- don't block the invite flow on this check failing */ }
+}
+
 async function sendInvite() {
   const btn = document.getElementById('inviteBtn');
   const err = document.getElementById('inviteErr');

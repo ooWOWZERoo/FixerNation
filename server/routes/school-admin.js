@@ -1657,4 +1657,18 @@ router.delete('/safety-alert-recipients/:id', requireSchoolAdmin, async (req, re
   res.json({ ok: true });
 });
 
+// GET /api/school-admin/check-email?email= — lets the invite UI warn BEFORE
+// sending that this email already has an account, so the admin isn't
+// surprised later when the invitee lands on a sign-in screen instead of
+// "create a password" (see the service@vssus.com incident this was built
+// for). Deliberately returns only a boolean — a school admin has no
+// business seeing what OTHER school/role that account is tied to; that
+// full picture is FNE-staff-only (admin-account-lookup.html).
+router.get('/check-email', requireSchoolAdmin, async (req, res) => {
+  const email = (req.query.email || '').trim().toLowerCase();
+  if (!email) return res.json({ exists: false });
+  const [[row]] = await pool.query('SELECT 1 FROM site_users WHERE email = ?', [email]);
+  res.json({ exists: !!row });
+});
+
 module.exports = router;

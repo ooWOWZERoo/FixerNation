@@ -194,6 +194,15 @@ router.post('/branding/reset', requireDistrictAdmin, async (req, res) => {
 // belongs to one of their own districts (schools.district_id).
 // ---------------------------------------------------------------------------
 
+// GET /api/district-admin/check-email?email= — same purpose/scoping as
+// school-admin.js's identical endpoint: warn before sending, boolean only.
+router.get('/check-email', requireDistrictAdmin, async (req, res) => {
+  const email = (req.query.email || '').trim().toLowerCase();
+  if (!email) return res.json({ exists: false });
+  const [[row]] = await pool.query('SELECT 1 FROM site_users WHERE email = ?', [email]);
+  res.json({ exists: !!row });
+});
+
 // GET /api/district-admin/schools — every group_license purchase for a
 // school in this district admin's district(s), with its current active
 // license admins, for the "invite a school license admin" flow.

@@ -56,7 +56,11 @@
     </div>
     <div class="sa-form-group">
       <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
-      <input type="email" id="assignEmail" placeholder="admin@school.edu">
+      <input type="email" id="assignEmail" placeholder="admin@school.edu" onblur="checkAssignEmail()">
+      <div id="assignEmailWarning" class="sa-alert sa-alert-warn" style="display:none; margin-top:8px; font-size:12.5px;">
+        An account already exists for this email address. Sending this invitation will let them sign in with their
+        existing account to accept it — it will not create a new account or a "set your password" step.
+      </div>
     </div>
     <div class="sa-form-group">
       <label>Permission Level</label>
@@ -233,6 +237,7 @@ async function submitEditPermission() {
 function openAssignModal(purchaseId, schoolLabel) {
   currentPurchaseId = purchaseId;
   document.getElementById('assignErr').style.display = 'none';
+  document.getElementById('assignEmailWarning').style.display = 'none';
   document.getElementById('assignSchoolLabel').textContent = 'For: ' + schoolLabel;
   ['assignFirstName', 'assignLastName', 'assignEmail', 'assignNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
   document.getElementById('assignPermission').value = 'primary';
@@ -242,6 +247,16 @@ function openAssignModal(purchaseId, schoolLabel) {
 function closeAssignModal() {
   document.getElementById('assignModal').style.display = 'none';
   currentPurchaseId = null;
+}
+
+async function checkAssignEmail() {
+  const email = document.getElementById('assignEmail').value.trim();
+  const warning = document.getElementById('assignEmailWarning');
+  if (!email) { warning.style.display = 'none'; return; }
+  try {
+    const d = await daFetch('/api/district-admin/check-email?email=' + encodeURIComponent(email));
+    warning.style.display = d.exists ? 'block' : 'none';
+  } catch (e) { /* non-critical -- don't block the invite flow on this check failing */ }
 }
 
 async function submitAssign() {
