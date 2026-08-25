@@ -41,12 +41,17 @@ async function screenContent({ contentContext, text, images, authorSiteUserId, a
     }
 
     // Local image classification is gated behind an explicit env var,
-    // default OFF. @tensorflow/tfjs-node's native thread pool has been
-    // observed to abort the entire Node process (SIGABRT — "pthread_create()
-    // failed") on this host's cPanel/CloudLinux process-limit environment,
-    // which a JS try/catch cannot contain. DO NOT set
-    // CONTENT_SAFETY_LOCAL_IMAGE_SCAN=true in server/.env until that's been
-    // proven safe on THIS host (see CONTENT_SAFETY_IMPLEMENTATION_PLAN.md).
+    // default OFF. @tensorflow/tfjs-node's native thread pool previously
+    // aborted the entire Node process (SIGABRT — "pthread_create() failed")
+    // on this host's cPanel/CloudLinux process-limit environment — a native
+    // crash no JS try/catch can contain. Root-caused and fixed in
+    // lib/safety/image.js (thread-count env vars + a util.isNullOrUndefined
+    // polyfill for an old Node API this tfjs-node build still calls),
+    // verified live via a standalone script against the real
+    // classifyImageBuffer() path. Still opt-in via
+    // CONTENT_SAFETY_LOCAL_IMAGE_SCAN=true in server/.env rather than
+    // default-on, since it's a new dependency on a shared host — see
+    // CONTENT_SAFETY_IMPLEMENTATION_PLAN.md for the full incident writeup.
     if (images && images.length && process.env.CONTENT_SAFETY_LOCAL_IMAGE_SCAN === 'true') {
       for (const img of images) {
         const scores = await classifyImageBuffer(img.buffer);

@@ -15,8 +15,38 @@ let tf = null;
 let nsfwjs = null;
 let modelPromise = null;
 
+// Two host-specific compatibility fixes, applied once, before tfjs-node is
+// ever required — confirmed necessary via a live diagnostic session on this
+// project's actual cPanel/CloudLinux host (see CONTENT_SAFETY_IMPLEMENTATION_PLAN.md):
+//
+// 1. TensorFlow's native runtime sizes its thread pool off the HOST's real
+//    CPU count (32 cores here), not this account's actual CloudLinux LVE
+//    process/thread cap — which is enforced invisibly (ulimit/proc/self/limits
+//    both report "unlimited"). Left unbounded, pthread_create() hits EAGAIN
+//    and the entire Node process aborts with SIGABRT — a native crash no JS
+//    try/catch can contain. Forcing every thread-pool knob TF/oneDNN reads
+//    down to 1 keeps it well under the invisible cap.
+// 2. This @tensorflow/tfjs-node build's core op-dispatch path
+//    (nodejs_kernel_backend.js, used by nearly every op including the TopK
+//    call nsfwjs's classify() makes) still calls Node's util.isNullOrUndefined,
+//    removed from Node itself years ago. The function is pure and its old
+//    behavior is one line, so polyfilling it is a safe, targeted shim rather
+//    than patching a third-party package.
+function applyHostCompatibilityFixes() {
+  process.env.TF_NUM_INTEROP_THREADS = process.env.TF_NUM_INTEROP_THREADS || '1';
+  process.env.TF_NUM_INTRAOP_THREADS = process.env.TF_NUM_INTRAOP_THREADS || '1';
+  process.env.OMP_NUM_THREADS = process.env.OMP_NUM_THREADS || '1';
+  process.env.DNNL_NUM_THREADS = process.env.DNNL_NUM_THREADS || '1';
+
+  const util = require('util');
+  if (typeof util.isNullOrUndefined !== 'function') {
+    util.isNullOrUndefined = (v) => v === null || v === undefined;
+  }
+}
+
 function getModel() {
   if (!modelPromise) {
+    applyHostCompatibilityFixes();
     tf = tf || require('@tensorflow/tfjs-node');
     nsfwjs = nsfwjs || require('nsfwjs');
     modelPromise = nsfwjs.load();
