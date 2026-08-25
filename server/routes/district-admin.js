@@ -15,6 +15,7 @@ const {
   publishBranding,
   resetBranding,
 } = require('../lib/branding-editor');
+const { assignSchoolLicenseAdmin } = require('../lib/school-admin-assignment');
 
 const router = express.Router();
 
@@ -176,6 +177,97 @@ router.post('/branding/reset', requireDistrictAdmin, async (req, res) => {
   );
 
   res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// School License Administrator invitations — the second real capability
+// beyond branding, per explicit product decision: this is ADDITIVE to FNE
+// staff's existing admin-school-admins.html flow (which keeps working
+// unchanged, including for schools with no district), not a replacement.
+// A district admin can only see/act on group_license purchases whose school
+// belongs to one of their own districts (schools.district_id).
+// ---------------------------------------------------------------------------
+
+// GET /api/district-admin/schools — every group_license purchase for a
+// school in this district admin's district(s), with its current active
+// license admins, for the "invite a school license admin" flow.
+router.get('/schools', requireDistrictAdmin, async (req, res) => {
+  const districtIds = req.districtAdmin.districtIds;
+
+  const [purchases] = await pool.query(
+    `SELECT p.id AS purchase_id, p.school_domain, p.seat_count, p.payment_status,
+            s.id AS school_id, s.display_name AS school_display_name, s.district_id,
+            lp.name AS plan_name
+     FROM purchases p
+     JOIN schools s ON (s.id = p.school_id OR s.domain = p.school_domain)
+     LEFT JOIN license_products lp ON lp.id = p.license_product_id
+     WHERE p.product_type = 'group_license' AND s.district_id IN (?)
+     ORDER BY s.domain, p.purchased_at DESC`,
+    [districtIds]
+  );
+
+  const purchaseIds = purchases.map(p => p.purchase_id);
+  let admins = [];
+  if (purchaseIds.length) {
+    [admins] = await pool.query(
+      `SELECT sla.purchase_id, su.first_name, su.last_name, su.email, su.email_verified, sla.permission_level
+       FROM school_license_admins sla
+       JOIN site_users su ON su.id = sla.site_user_id
+       WHERE sla.purchase_id IN (?) AND sla.is_active = 1`,
+      [purchaseIds]
+    );
+  }
+  const adminsByPurchase = {};
+  admins.forEach(a => { (adminsByPurchase[a.purchase_id] = adminsByPurchase[a.purchase_id] || []).push(a); });
+
+  res.json({
+    schools: purchases.map(p => ({ ...p, admins: adminsByPurchase[p.purchase_id] || [] })),
+  });
+});
+
+// POST /api/district-admin/schools/:purchaseId/assign-admin
+// { email, permissionLevel, notes, firstName, lastName }
+router.post('/schools/:purchaseId/assign-admin', requireDistrictAdmin, async (req, res) => {
+  const purchaseId = Number(req.params.purchaseId);
+  const { email, permissionLevel, notes, firstName, lastName } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  // Server-side scope check — this purchase's school must actually belong to
+  // one of this district admin's districts, never trust the client on this.
+  const [[row]] = await pool.query(
+    `SELECT p.id FROM purchases p
+     JOIN schools s ON (s.id = p.school_id OR s.domain = p.school_domain)
+     WHERE p.id = ? AND p.product_type = 'group_license' AND s.district_id IN (?)`,
+    [purchaseId, req.districtAdmin.districtIds]
+  );
+  if (!row) return res.status(403).json({ error: 'Access denied to this school' });
+
+  let result;
+  try {
+    result = await assignSchoolLicenseAdmin({
+      email, purchaseId, permissionLevel: permissionLevel || 'primary',
+      notes: [notes, `Invited by district admin ${req.districtAdmin.email}`].filter(Boolean).join(' — '),
+      createdByAdminId: null, // not an admin_users id — see lib/school-admin-assignment.js comment
+      firstName, lastName,
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+
+  await pool.query(
+    `INSERT INTO school_audit_log (actor_type, actor_id, actor_email, action, entity_type, entity_id, purchase_id, school_domain, ip_address)
+     VALUES ('site_user', ?, ?, 'school_admin_assigned_by_district_admin', 'school_license_admins', ?, ?, ?, ?)`,
+    [req.districtAdmin.siteUserId, req.districtAdmin.email, result.user.id, purchaseId, result.purchase.school_domain, req.ip]
+  );
+
+  res.status(201).json({
+    ok: true,
+    siteUserId: result.user.id,
+    isNewUser: result.isNewUser,
+    purchaseId,
+    schoolDomain: result.purchase.school_domain,
+  });
 });
 
 module.exports = router;

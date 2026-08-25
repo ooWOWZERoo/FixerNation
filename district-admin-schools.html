@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - District Schools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="district-admin-nav.js?v=2"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Schools</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+        <div class="sa-card">
+          <div class="sa-card-head">
+            <h2>Schools in Your District</h2>
+          </div>
+          <div class="sa-note" style="margin:0 0 12px; font-size:13px; color:var(--sa-text-soft);">
+            Invite a School License Administrator for any licensed school below. Fixer Nation Education staff can
+            also do this — this is an additional way in, not a replacement.
+          </div>
+          <div id="schoolsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invite school license admin modal -->
+<div class="sa-modal-overlay" id="assignModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Invite a School License Administrator</h2>
+      <button class="sa-modal-close" onclick="closeAssignModal()">✕</button>
+    </div>
+    <div id="assignErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-note" style="margin-bottom:12px; font-size:13px; color:var(--sa-text-soft);" id="assignSchoolLabel"></div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label>First Name</label><input type="text" id="assignFirstName" placeholder="Jane"></div>
+      <div class="sa-form-group"><label>Last Name</label><input type="text" id="assignLastName" placeholder="Smith"></div>
+    </div>
+    <div class="sa-form-group">
+      <label>Email Address <span style="color:var(--sa-danger)">*</span></label>
+      <input type="email" id="assignEmail" placeholder="admin@school.edu">
+    </div>
+    <div class="sa-form-group">
+      <label>Permission Level</label>
+      <select id="assignPermission">
+        <option value="primary">Primary (full access)</option>
+        <option value="secondary">Secondary (full access)</option>
+        <option value="read_only">Read Only</option>
+      </select>
+    </div>
+    <div class="sa-form-group">
+      <label>Notes <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
+      <textarea id="assignNotes"></textarea>
+    </div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeAssignModal()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" id="assignBtn" onclick="submitAssign()">Send Invitation</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentPurchaseId = null;
+
+document.addEventListener('daReady', function () { loadSchools(); });
+document.addEventListener('daDistrictChanged', function () { loadSchools(); });
+
+async function loadSchools() {
+  try {
+    const d = await daFetch('/api/district-admin/schools');
+    renderSchools(d.schools || []);
+    document.getElementById('pageLoading').style.display = 'none';
+    document.getElementById('pageContent').style.display = 'block';
+  } catch (e) {
+    daToast('Failed to load schools: ' + e.message, 'error');
+  }
+}
+
+function renderSchools(schools) {
+  const el = document.getElementById('schoolsList');
+  if (!schools.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--sa-text-soft);padding:12px 0;">No licensed schools in your district yet.</div>';
+    return;
+  }
+  el.innerHTML = schools.map(function (s) {
+    const adminsHtml = s.admins.length
+      ? s.admins.map(function (a) {
+          const verified = a.email_verified ? '' : ' <span class="sa-badge sa-badge-warn" style="margin-left:6px;">Pending Setup</span>';
+          return '<div style="font-size:13px;padding:4px 0;">' + esc(a.first_name + ' ' + a.last_name) + ' — ' + esc(a.email) + verified + '</div>';
+        }).join('')
+      : '<div style="font-size:13px;color:var(--sa-text-soft);padding:4px 0;">No license administrator assigned yet.</div>';
+
+    return '<div class="sa-card" style="margin-bottom:14px; box-shadow:none; border:1px solid var(--sa-border);">' +
+      '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">' +
+        '<div>' +
+          '<div style="font-weight:700; font-size:15px;">' + esc(s.school_display_name || s.school_domain) + '</div>' +
+          '<div style="font-size:12px; color:var(--sa-text-soft);">' + esc(s.school_domain) + ' · ' + esc(s.plan_name || 'Group License') + ' · ' + (s.seat_count || 0) + ' seats · ' + esc(s.payment_status || '') + '</div>' +
+        '</div>' +
+        '<button class="sa-btn sa-btn-primary sa-btn-sm" onclick="openAssignModal(' + s.purchase_id + ', \'' + esc((s.school_display_name || s.school_domain).replace(/'/g, "\\'")) + '\')">+ Invite Admin</button>' +
+      '</div>' +
+      '<div style="margin-top:10px; border-top:1px solid var(--sa-border); padding-top:10px;">' + adminsHtml + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openAssignModal(purchaseId, schoolLabel) {
+  currentPurchaseId = purchaseId;
+  document.getElementById('assignErr').style.display = 'none';
+  document.getElementById('assignSchoolLabel').textContent = 'For: ' + schoolLabel;
+  ['assignFirstName', 'assignLastName', 'assignEmail', 'assignNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
+  document.getElementById('assignPermission').value = 'primary';
+  document.getElementById('assignModal').style.display = 'flex';
+}
+
+function closeAssignModal() {
+  document.getElementById('assignModal').style.display = 'none';
+  currentPurchaseId = null;
+}
+
+async function submitAssign() {
+  const btn = document.getElementById('assignBtn');
+  const err = document.getElementById('assignErr');
+  err.style.display = 'none';
+  const email = document.getElementById('assignEmail').value.trim();
+  if (!email) { err.textContent = 'Email is required.'; err.style.display = 'block'; return; }
+  if (!currentPurchaseId) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await daFetch('/api/district-admin/schools/' + currentPurchaseId + '/assign-admin', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        firstName: document.getElementById('assignFirstName').value.trim(),
+        lastName: document.getElementById('assignLastName').value.trim(),
+        permissionLevel: document.getElementById('assignPermission').value,
+        notes: document.getElementById('assignNotes').value.trim(),
+      }),
+    });
+    closeAssignModal();
+    daToast('Invitation sent');
+    loadSchools();
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Invitation';
+  }
+}
+
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

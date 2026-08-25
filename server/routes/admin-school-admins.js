@@ -1,12 +1,12 @@
 // Internal Fixer Nation admin routes for managing school license administrators.
 // Protected by requireAuth — school admins cannot access these.
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { createToken } = require('../lib/site-tokens');
 const { sendSchoolAdminWelcomeEmail } = require('../lib/mailer');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
+const { assignSchoolLicenseAdmin } = require('../lib/school-admin-assignment');
 
 const router = express.Router();
 
@@ -61,104 +61,26 @@ router.post('/assign', requireAuth, async (req, res) => {
   if (!email || !purchaseId) {
     return res.status(400).json({ error: 'email and purchaseId are required' });
   }
-  if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
-    return res.status(400).json({ error: 'Invalid permission level' });
-  }
 
-  const normalEmail = email.trim().toLowerCase();
-
-  // Verify purchase exists and is a group_license
-  const [[purchase]] = await pool.query(
-    "SELECT id, school_domain, payment_status FROM purchases WHERE id = ? AND product_type = 'group_license'",
-    [purchaseId]
-  );
-  if (!purchase) return res.status(404).json({ error: 'Group license purchase not found' });
-
-  const conn = await pool.getConnection();
+  let result;
   try {
-    await conn.beginTransaction();
-
-    // Find or create site_user
-    let [userRows] = await conn.query('SELECT id, first_name, email_verified FROM site_users WHERE email = ?', [normalEmail]);
-    let user = userRows[0];
-    let isNewUser = false;
-
-    if (!user) {
-      // Create account with random unusable password; welcome email will prompt password setup
-      const randomHash = await bcrypt.hash(Math.random().toString(36), 12);
-      const nameParts = normalEmail.split('@')[0].split('.');
-      const firstName = (bodyFirstName || '').trim() || (nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'Administrator');
-      const lastName  = (bodyLastName  || '').trim() || (nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : '');
-
-      const [result] = await conn.query(
-        "INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role) VALUES (?, ?, ?, ?, 0, 'school_license_admin')",
-        [firstName, lastName, normalEmail, randomHash]
-      );
-      user = { id: result.insertId, first_name: firstName, email_verified: 0 };
-      isNewUser = true;
-
-      // Also add to CRM contacts
-      const [existingContact] = await conn.query('SELECT id FROM newsletter_contacts WHERE email = ?', [normalEmail]);
-      if (!existingContact[0]) {
-        await conn.query(
-          "INSERT INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, 'School Admin Assignment', 'Subscribed')",
-          [`${firstName} ${lastName}`.trim(), normalEmail]
-        );
-      }
-    } else {
-      // Update role on existing user
-      await conn.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ?", [user.id]);
-    }
-
-    // Create or update the school_license_admins assignment
-    await conn.query(
-      `INSERT INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active, created_by_admin_id, notes)
-       VALUES (?, ?, ?, 1, ?, ?)
-       ON DUPLICATE KEY UPDATE permission_level = VALUES(permission_level), is_active = 1, notes = VALUES(notes), updated_at = NOW()`,
-      [user.id, purchaseId, permissionLevel, req.user.userId, notes || null]
-    );
-
-    await conn.commit();
-    conn.release();
-
-    // Send welcome email with password setup link
-    const siteUrl = process.env.SITE_URL || '';
-    try {
-      const resetToken = await createToken(user.id, 'reset', 7 * 24 * 60 * 60 * 1000); // 7-day link for new admins
-      const loginUrl = `${siteUrl}/school-admin-login.html`;
-      const activateUrl = `${siteUrl}/reset-password.html?token=${resetToken}&next=/school-admin-dashboard.html`;
-
-      // Only frame this as "set your password" when they genuinely don't
-      // have a usable one yet — a brand-new account, or an existing account
-      // that was never verified. An already-verified existing account (e.g.
-      // already a district admin under this email) has a working password
-      // and should be told to sign in, not to "set up" an account they
-      // already have.
-      const needsSetup = isNewUser || !user.email_verified;
-      await sendSchoolAdminWelcomeEmail({
-        to: normalEmail,
-        firstName: user.first_name,
-        schoolDomain: purchase.school_domain,
-        portalUrl: loginUrl,
-        activateUrl: needsSetup ? activateUrl : loginUrl,
-        isNewUser: needsSetup,
-      });
-    } catch (e) {
-      console.error('sendSchoolAdminWelcomeEmail failed:', e.message);
-    }
-
-    res.status(201).json({
-      ok: true,
-      siteUserId: user.id,
-      isNewUser,
-      purchaseId,
-      schoolDomain: purchase.school_domain,
+    result = await assignSchoolLicenseAdmin({
+      email, purchaseId, permissionLevel, notes,
+      createdByAdminId: req.user.userId,
+      firstName: bodyFirstName, lastName: bodyLastName,
     });
   } catch (err) {
-    await conn.rollback();
-    conn.release();
+    if (err.status) return res.status(err.status).json({ error: err.message });
     throw err;
   }
+
+  res.status(201).json({
+    ok: true,
+    siteUserId: result.user.id,
+    isNewUser: result.isNewUser,
+    purchaseId,
+    schoolDomain: result.purchase.school_domain,
+  });
 });
 
 // POST /api/admin/school-admins/:assignmentId/resend-welcome
