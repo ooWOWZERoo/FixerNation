@@ -145,11 +145,17 @@ function renderSchools(schools) {
   }).join('');
 }
 
+const ROLE_LABELS = {
+  school_license_admin: 'School License Admin', teacher: 'Teacher', parent: 'Parent',
+  district_admin: 'District Admin', admin: 'FNE Admin',
+};
+
 function adminRow(a) {
   const verifiedPill = a.email_verified
     ? ''
     : ' <span class="sa-badge sa-badge-orange" style="margin-left:6px;">Pending Setup</span>';
   const permLabel = a.permission_level === 'read_only' ? 'Read Only' : (a.permission_level === 'secondary' ? 'Secondary' : 'Primary');
+  const roleLabel = ROLE_LABELS[a.role] || a.role;
   const escEmail = esc(a.email).replace(/'/g, "\\'");
 
   const resendBtn = !a.email_verified
@@ -158,6 +164,7 @@ function adminRow(a) {
 
   return '<div data-email="' + esc(a.email) + '" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:6px 0;">' +
     '<div style="font-size:13px;">' + esc(a.first_name + ' ' + a.last_name) + ' — ' + esc(a.email) + verifiedPill +
+      ' <span class="sa-badge" style="margin-left:6px;">' + esc(roleLabel) + '</span>' +
       ' <span class="sa-badge" style="margin-left:6px;">' + permLabel + '</span></div>' +
     '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
       resendBtn +

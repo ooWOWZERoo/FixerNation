@@ -20,7 +20,12 @@ router.get('/', requireAuth, async (req, res) => {
   const limit = Math.min(100, Math.max(10, Number(req.query.limit || 25)));
   const offset = (page - 1) * limit;
 
-  let where = 'WHERE sla.is_active = 1';
+  // Excludes anyone who's also an active district admin -- a district admin
+  // overseeing a school shouldn't show up in the "school license admins"
+  // report at all; that's a different tier of authority, even if they
+  // happen to hold both assignments (e.g. the multi-role QA fixture).
+  let where = `WHERE sla.is_active = 1
+    AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)`;
   const params = [];
   if (q) {
     where += ' AND (p.school_domain LIKE ? OR su.email LIKE ?)';

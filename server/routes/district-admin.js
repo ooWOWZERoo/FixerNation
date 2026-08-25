@@ -224,11 +224,18 @@ router.get('/schools', requireDistrictAdmin, async (req, res) => {
   const purchaseIds = purchases.map(p => p.purchase_id);
   let admins = [];
   if (purchaseIds.length) {
+    // Excludes anyone who's also an active district admin -- seeing
+    // yourself (the district admin viewing this page) listed as "the
+    // school's admin" is exactly the confusing case the multi-role QA
+    // fixture surfaced; this is a different tier of authority, not a
+    // school-level assignment worth reporting here even if it technically
+    // exists.
     [admins] = await pool.query(
-      `SELECT sla.id AS assignment_id, sla.purchase_id, su.first_name, su.last_name, su.email, su.email_verified, sla.permission_level
+      `SELECT sla.id AS assignment_id, sla.purchase_id, su.first_name, su.last_name, su.email, su.email_verified, su.role, sla.permission_level
        FROM school_license_admins sla
        JOIN site_users su ON su.id = sla.site_user_id
-       WHERE sla.purchase_id IN (?) AND sla.is_active = 1`,
+       WHERE sla.purchase_id IN (?) AND sla.is_active = 1
+         AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)`,
       [purchaseIds]
     );
   }
