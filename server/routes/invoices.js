@@ -40,8 +40,25 @@ async function fetchInvoiceWithLineItems(id) {
   const [purchaseRows] = await pool.query('SELECT * FROM purchases WHERE invoice_id = ? ORDER BY id', [invoice.id]);
   const lineItems = await attachPurchaseDetails(purchaseRows);
 
+  // Renewal Date is shown on the invoice as Effective Date (the invoice's
+  // own created_at — the date it was sent) plus the longest license length
+  // among this invoice's line items. Most invoices have exactly one license
+  // line; if several carry different lengths, the latest renewal date is
+  // shown since that's the last date by which the invoice as a whole needs
+  // attention. Invoices with no license line (books only) or an
+  // undurationed product get no renewal date at all.
+  const durations = purchaseRows.map(p => p.license_duration_days).filter(Boolean);
+  let renewalDate = null;
+  if (durations.length) {
+    const maxDays = Math.max(...durations);
+    const d = new Date(invoice.created_at);
+    d.setDate(d.getDate() + maxDays);
+    renewalDate = d.toISOString().slice(0, 10);
+  }
+
   return {
     ...serialize(invoice, contactRows[0], purchaseRows[0] && purchaseRows[0].payment_method),
+    renewalDate,
     buyer: contactRows[0] ? {
       name: contactRows[0].name,
       email: contactRows[0].email,
@@ -217,6 +234,16 @@ router.post('/:id/po-received', requireAuth, async (req, res) => {
        SET license_status = 'active',
            effective_date = COALESCE(effective_date, CURDATE())
        WHERE invoice_id = ?`,
+      [req.params.id]
+    );
+    // Compute expiration_date from the license length snapshotted at purchase
+    // time (license_duration_days), anchored to the effective_date just set
+    // above — never overwrites an already-set expiration_date (e.g. one an
+    // admin already hand-entered before PO receipt).
+    await connection.query(
+      `UPDATE purchases
+       SET expiration_date = COALESCE(expiration_date, DATE_ADD(effective_date, INTERVAL license_duration_days DAY))
+       WHERE invoice_id = ? AND license_duration_days IS NOT NULL`,
       [req.params.id]
     );
     await connection.commit();

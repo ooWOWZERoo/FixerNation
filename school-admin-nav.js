@@ -14,6 +14,38 @@
 
   function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  // Persistent license-expiration banner, inserted once at the top of every
+  // portal page's content area (right before .sa-content, inside .sa-main —
+  // both exist consistently across every school-admin-*.html page, unlike
+  // any single page's own topbar markup).
+  var licenseBanner = document.createElement('div');
+  licenseBanner.id = 'saLicenseBanner';
+  var contentEl = document.querySelector('.sa-main .sa-content');
+  if (contentEl && contentEl.parentNode) contentEl.parentNode.insertBefore(licenseBanner, contentEl);
+
+  function formatDate(iso) {
+    var d = new Date(iso + 'T00:00');
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function renderLicenseBanner(school) {
+    if (!school || !school.expirationDate) { licenseBanner.innerHTML = ''; return; }
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var expiry = new Date(school.expirationDate + 'T00:00');
+    var daysLeft = Math.round((expiry - today) / 86400000);
+
+    var variant = 'sa-alert-success', icon = '✅', lead = 'Your license is active through';
+    if (daysLeft < 0) { variant = 'sa-alert-danger'; icon = '🚨'; lead = 'Your license expired on'; }
+    else if (daysLeft <= 30) { variant = 'sa-alert-warn'; icon = '⚠️'; lead = 'Your license expires on'; }
+
+    licenseBanner.innerHTML =
+      '<div class="sa-alert ' + variant + '" style="margin-bottom:20px;">' + icon +
+      ' <div><strong>' + lead + ' ' + esc(formatDate(school.expirationDate)) + '</strong>' +
+      (daysLeft >= 0 ? '<p>' + daysLeft + ' day(s) remaining' + (school.schoolDomain ? ' for ' + esc(school.schoolDomain) : '') + '. Contact Fixer Nation Education to renew before access is interrupted.</p>'
+                     : '<p>Teacher access' + (school.schoolDomain ? ' for ' + esc(school.schoolDomain) : '') + ' has been suspended. Contact Fixer Nation Education to renew and restore access.</p>') +
+      '</div></div>';
+  }
+
   aside.innerHTML =
     '<div class="sa-logo">' +
       '<span class="sa-logo-pill"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="sa-logo-img"></span>' +
@@ -91,6 +123,7 @@
       };
 
       applySchoolBranding(window.saActivePurchaseId());
+      renderLicenseBanner((data.schools || []).find(function (s) { return s.purchaseId === window.saActivePurchaseId(); }));
 
       // Fire a custom event so page JS can react
       document.dispatchEvent(new CustomEvent('saReady', { detail: data }));
@@ -109,7 +142,11 @@
       })
       .catch(function () {});
   }
-  document.addEventListener('saSchoolChanged', function (e) { applySchoolBranding(e.detail.purchaseId); });
+  document.addEventListener('saSchoolChanged', function (e) {
+    applySchoolBranding(e.detail.purchaseId);
+    var data = window.saPortalData;
+    if (data) renderLicenseBanner((data.schools || []).find(function (s) { return s.purchaseId === e.detail.purchaseId; }));
+  });
 
   window.saSelectSchool = function (purchaseId) {
     sessionStorage.setItem('saActivePurchaseId', purchaseId);

@@ -37,6 +37,7 @@ function serialize(row) {
     trialDays: row.trial_days || null,
     trialLessonLimit: row.trial_lesson_limit || null,
     trialLibraryLimit: row.trial_library_limit || null,
+    durationDays: row.duration_days || null,
   };
 }
 
@@ -69,9 +70,10 @@ router.post('/', requireAuth, async (req, res) => {
   const bulletPoints = Array.isArray(b.bulletPoints) ? b.bulletPoints.filter(Boolean).join('\n') : (b.bulletPoints || '');
   const addonRateCents = b.addonRateCents != null ? (Number(b.addonRateCents) || null) : null;
   const trial = trialFieldsFromBody(b);
+  const durationDays = b.durationDays != null ? (Number(b.durationDays) || null) : null;
   const [result] = await pool.query(
-    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, sort_order, active, auto_assign_group_id, bullet_points, footer_note, addon_rate_cents, is_trial, trial_days, trial_lesson_limit, trial_library_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPoints || null, b.footerNote || null, addonRateCents, trial.isTrial, trial.trialDays, trial.trialLessonLimit, trial.trialLibraryLimit]
+    'INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, sort_order, active, auto_assign_group_id, bullet_points, footer_note, addon_rate_cents, is_trial, trial_days, trial_lesson_limit, trial_library_limit, duration_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPoints || null, b.footerNote || null, addonRateCents, trial.isTrial, trial.trialDays, trial.trialLessonLimit, trial.trialLibraryLimit, durationDays]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [result.insertId]);
@@ -92,9 +94,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   const bulletPointsUpd = Array.isArray(b.bulletPoints) ? b.bulletPoints.filter(Boolean).join('\n') : (b.bulletPoints || '');
   const addonRateCentsUpd = b.addonRateCents != null ? (Number(b.addonRateCents) || null) : null;
   const trial = trialFieldsFromBody(b);
+  const durationDaysUpd = b.durationDays != null ? (Number(b.durationDays) || null) : null;
   await pool.query(
-    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, variable_seats=?, sort_order=?, active=?, auto_assign_group_id=?, bullet_points=?, footer_note=?, addon_rate_cents=?, is_trial=?, trial_days=?, trial_lesson_limit=?, trial_library_limit=? WHERE id=?',
-    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPointsUpd || null, b.footerNote || null, addonRateCentsUpd, trial.isTrial, trial.trialDays, trial.trialLessonLimit, trial.trialLibraryLimit, req.params.id]
+    'UPDATE license_products SET name=?, description=?, seat_count=?, price_cents=?, call_for_quote=?, variable_seats=?, sort_order=?, active=?, auto_assign_group_id=?, bullet_points=?, footer_note=?, addon_rate_cents=?, is_trial=?, trial_days=?, trial_lesson_limit=?, trial_library_limit=?, duration_days=? WHERE id=?',
+    [b.name, b.description || '', Number(b.seatCount) || 1, callForQuote ? 0 : Math.round(Number(b.price) * 100), callForQuote ? 1 : 0, b.variableSeats ? 1 : 0, Number(b.sortOrder) || 0, b.active === false ? 0 : 1, groupId, bulletPointsUpd || null, b.footerNote || null, addonRateCentsUpd, trial.isTrial, trial.trialDays, trial.trialLessonLimit, trial.trialLibraryLimit, durationDaysUpd, req.params.id]
   );
 
   const [rows] = await pool.query('SELECT * FROM license_products WHERE id = ?', [req.params.id]);

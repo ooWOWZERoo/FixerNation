@@ -106,9 +106,10 @@ router.post('/accept', async (req, res) => {
   // price on top of what was already paid) — quote-accept never set this.
   let trialFields = {};
   let isTrial = false;
+  let licenseDurationDaysOverride = null;
   if (quote.quoted_product_id) {
     const [[lp]] = await pool.query(
-      'SELECT is_trial, trial_days, trial_lesson_limit, trial_library_limit, price_cents FROM license_products WHERE id = ?',
+      'SELECT is_trial, trial_days, trial_lesson_limit, trial_library_limit, price_cents, duration_days FROM license_products WHERE id = ?',
       [quote.quoted_product_id]
     );
     if (lp && lp.is_trial) {
@@ -121,6 +122,11 @@ router.post('/accept', async (req, res) => {
         trialLibraryLimit: lp.trial_library_limit || Math.max(1, parseInt(await getSetting('teacher_lesson_plan_limit_trial') || '10', 10)),
         conversionCreditCents: lp.price_cents || null,
       };
+    } else if (lp && lp.duration_days) {
+      // A quoted multi-year term (quoted_term_years) scales the product's
+      // base license length — e.g. a 365-day product quoted at a 3-year
+      // term grants 1095 days, not just the catalog default.
+      licenseDurationDaysOverride = lp.duration_days * (quote.quoted_term_years || 1);
     }
   }
 
@@ -139,6 +145,7 @@ router.post('/accept', async (req, res) => {
     // the real domain the admin verifies with the buyer on the quote builder.
     schoolDomain: quote.quoted_school_domain || null,
     quoteId: quote.id,
+    licenseDurationDaysOverride,
     ...trialFields,
   });
 

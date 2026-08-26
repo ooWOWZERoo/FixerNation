@@ -13,7 +13,7 @@ ENTRIES=(
   "0 1 * * * $NODE $SCRIPTS/expire-school-licenses.js >> $LOGS/cron-expire-school.log 2>&1"
   "0 6 * * * $NODE $SCRIPTS/school-license-expiry-reminder.js >> $LOGS/cron-school-reminder.log 2>&1"
   "0 2 * * * $NODE $SCRIPTS/expire-trial-licenses.js >> $LOGS/cron-expire-trial.log 2>&1"
-  "0 7 * * * $NODE $SCRIPTS/send-membership-reminders.js >> $LOGS/cron-membership-reminders.log 2>&1"
+  "0 8 * * * $NODE $SCRIPTS/quote-expiring-reminder.js >> $LOGS/cron-quote-reminder.log 2>&1"
   "*/15 * * * 1-5 $NODE $SCRIPTS/send-morning-boost-email.js >> $LOGS/cron-morning-boost.log 2>&1"
 )
 
@@ -21,6 +21,11 @@ CURRENT=$(crontab -l 2>/dev/null || true)
 
 # Remove any existing morning boost entry so the correct schedule is always applied
 CURRENT=$(echo "$CURRENT" | grep -v "send-morning-boost-email.js" || true)
+
+# send-membership-reminders.js was deleted when the membership system was
+# removed (see CHANGELOG Release 28) but this line was never cleaned up here —
+# it would fail with "file not found" if this script were ever re-run.
+CURRENT=$(echo "$CURRENT" | grep -v "send-membership-reminders.js" || true)
 
 for ENTRY in "${ENTRIES[@]}"; do
   if echo "$CURRENT" | grep -qF "$ENTRY"; then

@@ -79,6 +79,18 @@
       <div class="a-field"><label>Bullet Points (one per line)</label><textarea id="productBulletPoints" rows="4" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Be sure to complete each field on your registration form&#10;You'll receive an onboarding welcome email when submitted"></textarea></div>
       <div class="a-field"><label>Footer Note</label><input type="text" id="productFooterNote" placeholder="e.g. Valid for 12 months"></div>
       <div class="a-field">
+        <label>License Length</label>
+        <select id="productDurationDays" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; background:var(--a-surface);">
+          <option value="">No fixed length</option>
+          <option value="30">30 days</option>
+          <option value="60">60 days</option>
+          <option value="90">90 days</option>
+          <option value="180">180 days</option>
+          <option value="365">1 year</option>
+        </select>
+        <div class="a-note">Drives the auto-computed expiration date on purchases of this product (admins can still hand-override any individual purchase's dates below).</div>
+      </div>
+      <div class="a-field">
         <label>Add-On Rate ($/seat)</label>
         <input type="number" id="productAddonRate" min="0" step="0.01" placeholder="Leave blank if add-ons not available for this tier">
       </div>
@@ -253,6 +265,7 @@ function openProductModal(id) {
   document.getElementById('productDescription').value = p ? p.description : '';
   document.getElementById('productBulletPoints').value = p && p.bulletPoints && p.bulletPoints.length ? p.bulletPoints.join('\n') : '';
   document.getElementById('productFooterNote').value = p ? (p.footerNote || '') : '';
+  document.getElementById('productDurationDays').value = p && p.durationDays ? String(p.durationDays) : '';
   document.getElementById('productSortOrder').value = p ? p.sortOrder : 0;
   document.getElementById('productVariableSeats').checked = p ? p.variableSeats : false;
   document.getElementById('productCallForQuote').checked = p ? p.callForQuote : false;
@@ -284,6 +297,7 @@ async function saveProduct() {
     description: document.getElementById('productDescription').value.trim(),
     bulletPoints: document.getElementById('productBulletPoints').value.trim() || null,
     footerNote: document.getElementById('productFooterNote').value.trim() || null,
+    durationDays: document.getElementById('productDurationDays').value ? Number(document.getElementById('productDurationDays').value) : null,
     sortOrder: Number(document.getElementById('productSortOrder').value) || 0,
     variableSeats,
     callForQuote,

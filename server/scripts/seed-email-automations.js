@@ -65,6 +65,13 @@ const AUTOMATIONS = [
     reminderDaysBefore: null,
   },
   {
+    eventKey: 'quote_expiring_soon',
+    label: 'Quote — Expiring Soon (7-Day Notice)',
+    subject: 'Your Fixer Nation Education quote expires on {{validUntil}}',
+    body: "Hi {{firstName}},\n\nJust a heads up — your quote #{{quoteNumber}} for {{productName}} is valid through {{validUntil}}. Accept it before then to lock in this pricing:\n\n{{acceptUrl}}\n\nQuestions? Just reply to this email and we'll help however we can.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: 7,
+  },
+  {
     eventKey: 'quote_accepted',
     label: 'Quote Accepted — School Onboarding',
     subject: "Welcome to Fixer Nation Education — let's get your school set up",

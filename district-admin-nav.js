@@ -19,6 +19,42 @@
 
   function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  // Unlike the school-admin portal (one school, one expiration date), a
+  // district has many schools each with their own independent license — so
+  // instead of a single date, this is a summary alert that only appears
+  // when at least one school's license needs attention.
+  var licenseBanner = document.createElement('div');
+  licenseBanner.id = 'daLicenseBanner';
+  var contentEl = document.querySelector('.sa-main .sa-content');
+  if (contentEl && contentEl.parentNode) contentEl.parentNode.insertBefore(licenseBanner, contentEl);
+
+  function loadLicenseBanner() {
+    fetch('/api/district-admin/schools', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.schools) return;
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var expired = 0, expiringSoon = 0;
+        data.schools.forEach(function (s) {
+          if (!s.expiration_date) return;
+          var days = Math.round((new Date(s.expiration_date + 'T00:00') - today) / 86400000);
+          if (days < 0) expired++;
+          else if (days <= 30) expiringSoon++;
+        });
+        if (!expired && !expiringSoon) { licenseBanner.innerHTML = ''; return; }
+
+        var parts = [];
+        if (expired) parts.push(expired + ' school license(s) expired');
+        if (expiringSoon) parts.push(expiringSoon + ' school license(s) expiring within 30 days');
+        licenseBanner.innerHTML =
+          '<div class="sa-alert ' + (expired ? 'sa-alert-danger' : 'sa-alert-warn') + '" style="margin-bottom:20px;">' + (expired ? '🚨' : '⚠️') +
+          ' <div><strong>' + esc(parts.join(' · ')) + '</strong>' +
+          '<p><a href="district-admin-schools.html">Review schools →</a></p></div></div>';
+      })
+      .catch(function () {});
+  }
+  loadLicenseBanner();
+
   aside.innerHTML =
     '<div class="sa-logo">' +
       '<span class="sa-logo-pill"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="sa-logo-img"></span>' +

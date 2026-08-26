@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS license_products (
   bullet_points TEXT NULL,   -- newline-separated list items for the registration card (education-schools.html)
   footer_note VARCHAR(255) NULL, -- small footer line, e.g. "Valid for 12 months"
   variable_seats TINYINT(1) NOT NULL DEFAULT 0, -- buyer picks seat count on licenses.html; price_cents is the per-seat rate
+  duration_days INT UNSIGNED NULL, -- license length in days (30/60/90/180/365, admin dropdown); NULL = no fixed length
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -201,6 +202,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   po_number VARCHAR(128) NULL,
   invoice_id INT UNSIGNED NULL, -- set for PO-sourced purchases, grouping them under one invoices row
   amount_cents INT UNSIGNED NULL, -- snapshot of what was actually charged for this line item — prices can change later, so this preserves invoice accuracy
+  license_duration_days INT UNSIGNED NULL, -- snapshot of the intended license length in days, taken from license_products.duration_days at purchase time (scaled by a quote's term-years, if quoted) — never affected by a later catalog change
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
   FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL,
@@ -557,6 +559,8 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   school VARCHAR(255),
   phone VARCHAR(64),
   message TEXT,
+  quote_valid_until DATE NULL,
+  expiring_reminder_sent_at DATETIME NULL, -- dedup flag for quote-expiring-reminder.js, same pattern as purchases.renewal_reminder_sent_at
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

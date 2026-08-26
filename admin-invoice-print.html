@@ -124,7 +124,8 @@ function renderInvoice(inv, branding) {
       <div class="meta-block">
         <h3>Invoice Details</h3>
         <p>
-          Date: ${fnFormatDate(inv.createdAt)}<br>
+          Effective Date: ${fnFormatDate(inv.createdAt)}<br>
+          ${inv.renewalDate ? 'Renewal Date: ' + fnFormatDate(inv.renewalDate) + '<br>' : ''}
           PO Number: ${inv.poNumber || '—'}<br>
           ${inv.paidAt ? 'Paid: ' + fnFormatDate(inv.paidAt) : ''}
         </p>

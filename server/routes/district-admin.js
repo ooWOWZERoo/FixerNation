@@ -211,6 +211,7 @@ router.get('/schools', requireDistrictAdmin, async (req, res) => {
 
   const [purchases] = await pool.query(
     `SELECT p.id AS purchase_id, p.school_domain, p.seat_count, p.payment_status,
+            p.license_status, p.expiration_date,
             s.id AS school_id, s.display_name AS school_display_name, s.district_id,
             lp.name AS plan_name
      FROM purchases p

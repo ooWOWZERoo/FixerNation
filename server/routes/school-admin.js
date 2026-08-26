@@ -71,6 +71,8 @@ router.get('/me', requireSchoolAdmin, (req, res) => {
       planName: p.plan_name || 'Group License',
       seatCount: p.seat_count,
       paymentStatus: p.payment_status,
+      licenseStatus: p.license_status || 'active',
+      expirationDate: p.expiration_date ? new Date(p.expiration_date).toISOString().slice(0, 10) : null,
     })),
   });
 });

@@ -360,6 +360,7 @@ async function attachPurchaseDetails(purchases) {
     licenseStatus: p.license_status || 'active',
     effectiveDate: p.effective_date ? new Date(p.effective_date).toISOString().slice(0, 10) : null,
     expirationDate: p.expiration_date ? new Date(p.expiration_date).toISOString().slice(0, 10) : null,
+    licenseDurationDays: p.license_duration_days || null,
     isTrial: !!(p.trial_lesson_limit),
     trialExpirationDate: p.trial_expiration_date ? new Date(p.trial_expiration_date).toISOString() : null,
     trialLessonLimit: p.trial_lesson_limit || null,
@@ -376,27 +377,54 @@ async function attachPurchaseDetails(purchases) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, skipThankYouAutomation }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const normalizedDomain = productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null;
+  const finalLicenseProductId = (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const schoolId = await findOrCreateSchoolId(normalizedDomain, connection);
+
+    // Snapshot the intended license length at purchase time (never affected
+    // by a later catalog change) — skipped entirely for trial purchases,
+    // which use their own separate trial_expiration_date/trial_days concept.
+    let licenseDurationDays = null;
+    if (!trialExpirationDate && finalLicenseProductId) {
+      if (licenseDurationDaysOverride != null) {
+        licenseDurationDays = Number(licenseDurationDaysOverride) || null;
+      } else {
+        const [[lp]] = await connection.query('SELECT duration_days FROM license_products WHERE id = ?', [finalLicenseProductId]);
+        licenseDurationDays = lp && lp.duration_days ? Number(lp.duration_days) : null;
+      }
+    }
+
+    // A PO purchase stays 'pending' until an admin marks it received (see
+    // server/routes/invoices.js po-received) — effective/expiration dates
+    // are computed there instead, anchored to the real activation date, not
+    // the order-submission date. Every other path (card, manual) is active
+    // immediately, so the license term starts today.
+    let effectiveDate = null, expirationDate = null;
+    if (licenseDurationDays && paymentMethod !== 'po') {
+      effectiveDate = new Date();
+      expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + licenseDurationDays);
+    }
+
     const [result] = await connection.query(
-      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, school_id, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, trial_library_limit, conversion_credit_cents, quote_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO purchases (contact_id, product_type, book_id, license_product_id, seat_count, source, notes, stripe_session_id, stripe_invoice_id, school_domain, school_id, payment_method, payment_status, po_number, invoice_id, amount_cents, trial_expiration_date, trial_lesson_limit, trial_library_limit, conversion_credit_cents, quote_id, license_duration_days, effective_date, expiration_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         contactId, productType, productType === 'book' ? bookId : null,
-        (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null,
+        finalLicenseProductId,
         finalSeatCount, source || 'Manual Entry', notes || '', stripeSessionId || null, stripeInvoiceId || null,
         normalizedDomain, schoolId,
         paymentMethod || 'manual', paymentStatus || 'paid', poNumber || null,
         invoiceId || null, amountCents === undefined ? null : amountCents,
         trialExpirationDate || null, trialLessonLimit || null, trialLibraryLimit || null, conversionCreditCents || null,
-        quoteId || null,
+        quoteId || null, licenseDurationDays, effectiveDate, expirationDate,
       ]
     );
     const purchaseId = result.insertId;

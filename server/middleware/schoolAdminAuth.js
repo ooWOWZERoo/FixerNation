@@ -43,6 +43,7 @@ async function requireSchoolAdmin(req, res, next) {
     `SELECT sla.id AS assignment_id, sla.purchase_id, sla.permission_level,
             p.school_domain, p.seat_count, p.payment_status, p.payment_method,
             p.invoice_id, p.purchased_at, p.notes AS purchase_notes,
+            p.license_status, p.expiration_date,
             lp.name AS plan_name
      FROM school_license_admins sla
      JOIN purchases p ON p.id = sla.purchase_id
