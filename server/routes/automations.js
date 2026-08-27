@@ -25,6 +25,86 @@ router.get('/', requireAuth, async (req, res) => {
   res.json({ automations: rows.map(serialize) });
 });
 
+// GET /api/automations/history?eventKey=&status=&from=&to=
+// Backs admin-automations.html's Execution History tab. Capped at 200 rows —
+// this is a recent-activity view, not a paginated archive.
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+router.get('/history', requireAuth, async (req, res) => {
+  let sql = `
+    SELECT ae.id, ae.event_key, ae.recipient_email, ae.status, ae.error_message,
+           ae.duration_ms, ae.fired_at, ea.label AS automation_label,
+           nc.name AS contact_name
+    FROM automation_executions ae
+    LEFT JOIN email_automations ea ON ea.event_key = ae.event_key
+    LEFT JOIN newsletter_contacts nc ON nc.email = ae.recipient_email
+    WHERE 1=1`;
+  const params = [];
+
+  if (req.query.eventKey) {
+    sql += ' AND ae.event_key = ?';
+    params.push(req.query.eventKey);
+  }
+  if (['success', 'failed', 'skipped'].includes(req.query.status)) {
+    sql += ' AND ae.status = ?';
+    params.push(req.query.status);
+  }
+  if (DATE_PATTERN.test(req.query.from)) {
+    sql += ' AND ae.fired_at >= ?';
+    params.push(req.query.from + ' 00:00:00');
+  }
+  if (DATE_PATTERN.test(req.query.to)) {
+    sql += ' AND ae.fired_at <= ?';
+    params.push(req.query.to + ' 23:59:59');
+  }
+  sql += ' ORDER BY ae.fired_at DESC LIMIT 200';
+
+  const [rows] = await pool.query(sql, params);
+  res.json({
+    executions: rows.map(r => ({
+      id: r.id,
+      eventKey: r.event_key,
+      automationLabel: r.automation_label || r.event_key,
+      recipientEmail: r.recipient_email,
+      contactName: r.contact_name || null,
+      status: r.status,
+      errorMessage: r.error_message,
+      durationMs: r.duration_ms,
+      firedAt: r.fired_at,
+    })),
+  });
+});
+
+// GET /api/automations/stats — per-event_key execution/success-rate counts
+// (Automations tab table) plus today/last-24h aggregates (Overview tab).
+router.get('/stats', requireAuth, async (req, res) => {
+  const [byEvent] = await pool.query(
+    `SELECT event_key,
+            COUNT(*) AS total,
+            SUM(status = 'success') AS successes
+     FROM automation_executions
+     GROUP BY event_key`
+  );
+  const [[today]] = await pool.query(
+    `SELECT
+       SUM(fired_at >= CURDATE()) AS executions_today,
+       SUM(fired_at >= CURDATE() AND status = 'success') AS messages_today,
+       SUM(fired_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) AND status = 'failed') AS failed_24h
+     FROM automation_executions`
+  );
+
+  res.json({
+    byEvent: Object.fromEntries(byEvent.map(r => [
+      r.event_key,
+      { executions: Number(r.total), successRate: r.total > 0 ? Math.round((Number(r.successes) / Number(r.total)) * 100) : null },
+    ])),
+    overview: {
+      executionsToday: Number(today.executions_today || 0),
+      messagesToday: Number(today.messages_today || 0),
+      failed24h: Number(today.failed_24h || 0),
+    },
+  });
+});
+
 router.put('/:eventKey', requireAuth, async (req, res) => {
   const b = req.body || {};
   const subject = (b.subject || '').trim();

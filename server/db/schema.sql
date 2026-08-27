@@ -163,6 +163,24 @@ CREATE TABLE IF NOT EXISTS email_automations (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- One row per fireAutomation() call (server/lib/automations.js) — every
+-- automated-email attempt, whether it actually sent, failed, or was skipped
+-- (automation disabled/missing at fire time). Backs admin-automations.html's
+-- Execution History tab and the Automations-tab Executions/Success Rate
+-- columns. Modeled on campaign_sends' insert-then-report pattern.
+CREATE TABLE IF NOT EXISTS automation_executions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  event_key VARCHAR(64) NOT NULL,
+  recipient_email VARCHAR(255) NOT NULL,
+  status VARCHAR(16) NOT NULL, -- 'success' | 'failed' | 'skipped'
+  error_message VARCHAR(500) NULL,
+  duration_ms INT UNSIGNED NULL,
+  fired_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_event_key (event_key),
+  INDEX idx_fired_at (fired_at),
+  INDEX idx_recipient_email (recipient_email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- One invoice per Purchase Order submission, grouping together the purchase
 -- rows (line items) it created. Generated automatically by
 -- server/routes/checkout.js's create-po-order; viewed/printed from

@@ -297,7 +297,12 @@ function toSqlLike(term) {
   return `%${escaped}%`;
 }
 
-async function attachPurchaseDetails(purchases) {
+// excludeAdminSeats drops any seat registered to someone who's also an
+// active school_license_admins/district_license_admins row — admins don't
+// consume a license and shouldn't appear in admin-facing seat counts/rosters.
+// Left off by default (e.g. a buyer's own self-service my-purchases view
+// should still show their own seat even if they're also an admin).
+async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
   if (purchases.length === 0) return purchases;
   const ids = purchases.map(p => p.id);
   const bookIds = purchases.map(p => p.book_id).filter(Boolean);
@@ -306,7 +311,12 @@ async function attachPurchaseDetails(purchases) {
   const [seatRows] = await pool.query(
     `SELECT s.*, u.first_name, u.last_name FROM license_seats s
      LEFT JOIN site_users u ON u.id = s.registered_site_user_id
-     WHERE s.purchase_id IN (?) ORDER BY s.id`,
+     WHERE s.purchase_id IN (?)
+     ${excludeAdminSeats ? `AND (s.registered_site_user_id IS NULL OR (
+       NOT EXISTS (SELECT 1 FROM school_license_admins sla WHERE sla.site_user_id = s.registered_site_user_id AND sla.is_active = 1)
+       AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = s.registered_site_user_id AND dla.is_active = 1)
+     ))` : ''}
+     ORDER BY s.id`,
     [ids]
   );
   const [bookRows] = bookIds.length ? await pool.query('SELECT id, title FROM books WHERE id IN (?)', [bookIds]) : [[]];
@@ -494,7 +504,7 @@ router.get('/purchases', requireAuth, async (req, res) => {
   sql += ' ORDER BY p.purchased_at DESC';
 
   const [rows] = await pool.query(sql, params);
-  const purchases = await attachPurchaseDetails(rows);
+  const purchases = await attachPurchaseDetails(rows, { excludeAdminSeats: true });
 
   const contactIds = [...new Set(purchases.map(p => p.contactId))];
   const [contactRows] = contactIds.length
@@ -512,7 +522,7 @@ router.get('/purchases', requireAuth, async (req, res) => {
 
 router.get('/contacts/:id/purchases', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM purchases WHERE contact_id = ? ORDER BY purchased_at DESC', [req.params.id]);
-  res.json({ purchases: await attachPurchaseDetails(rows) });
+  res.json({ purchases: await attachPurchaseDetails(rows, { excludeAdminSeats: true }) });
 });
 
 router.post('/contacts/:id/purchases', requireAuth, async (req, res) => {
@@ -564,7 +574,7 @@ router.get('/purchases/by-domain', requireAuth, async (req, res) => {
   const contactById = {};
   contactRows.forEach(c => { contactById[c.id] = { name: c.name, email: c.email }; });
 
-  const purchases = (await attachPurchaseDetails(rows)).map(p => ({
+  const purchases = (await attachPurchaseDetails(rows, { excludeAdminSeats: true })).map(p => ({
     ...p,
     buyer: contactById[p.contactId] || null,
   }));
@@ -678,7 +688,7 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
   }
 
   const [updatedRows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchase.id]);
-  const [purchase2] = await attachPurchaseDetails(updatedRows);
+  const [purchase2] = await attachPurchaseDetails(updatedRows, { excludeAdminSeats: true });
   res.json({ purchase: purchase2 });
 });
 

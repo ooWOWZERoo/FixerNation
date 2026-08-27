@@ -217,21 +217,15 @@
           </select>
           <input type="date" id="histFrom">
           <input type="date" id="histTo">
-          <button class="a-btn a-btn-outline" onclick="fnToast('History API coming in next phase')">Apply</button>
+          <button class="a-btn a-btn-outline" onclick="loadHistory()">Apply</button>
         </div>
         <div class="a-card">
           <table class="a-table">
             <thead>
-              <tr><th>Automation</th><th>Contact</th><th>Trigger Event</th><th>Result</th><th>Duration</th><th>Ran At</th><th></th></tr>
+              <tr><th>Automation</th><th>Contact</th><th>Trigger Event</th><th>Result</th><th>Duration</th><th>Ran At</th></tr>
             </thead>
-            <tbody>
-              <tr><td colspan="7">
-                <div class="coming-soon">
-                  <div class="cs-icon">🕐</div>
-                  <h3>Execution History</h3>
-                  <p>Every automation run will be logged here — contact, trigger, result, timing, and a full step-by-step trace. Coming in the next backend phase.</p>
-                </div>
-              </td></tr>
+            <tbody id="histTbody">
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--a-text-soft);">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -608,6 +602,15 @@ const ACTION_HINTS  = {email:'Click to configure subject and body',inapp:'Click 
 // ─── State ─────────────────────────────────────────────────────────────────────
 let autoCache  = [];
 let editingKey = null;
+let statsCache = { byEvent: {}, overview: {} };
+
+async function loadAutomationStats() {
+  try {
+    const r = await fetch('/api/automations/stats', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    statsCache = await r.json();
+  } catch (e) { /* leave statsCache at its last-known value */ }
+}
 
 // ─── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -621,7 +624,7 @@ function switchTab(tab) {
   if (tab === 'automations') loadAndRenderAutos();
   if (tab === 'templates')   renderTplGrid('all');
   if (tab === 'overview')    loadOverview();
-  if (tab === 'history')     populateHistAutoSel();
+  if (tab === 'history')   { populateHistAutoSel(); loadHistory(); }
 }
 
 // ─── Overview ──────────────────────────────────────────────────────────────────
@@ -636,6 +639,11 @@ async function loadOverview() {
   document.getElementById('statActive').textContent = autoCache.filter(a => a.enabled).length;
   document.getElementById('statPaused').textContent = autoCache.filter(a => !a.enabled).length;
   document.getElementById('statDraft').textContent  = '0';
+
+  await loadAutomationStats();
+  document.getElementById('statFailed').textContent    = statsCache.overview.failed24h || 0;
+  document.getElementById('statExecToday').textContent = statsCache.overview.executionsToday || 0;
+  document.getElementById('statMsgs').textContent      = statsCache.overview.messagesToday || 0;
 
   const ul = document.getElementById('overviewList');
   if (!autoCache.length) {
@@ -664,6 +672,7 @@ async function loadAndRenderAutos() {
       autoCache = data.automations || [];
     } catch(e) {}
   }
+  await loadAutomationStats();
   filterAutomations();
 }
 
@@ -681,15 +690,17 @@ function filterAutomations() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--a-text-soft);">No automations match your filters.</td></tr>';
     return;
   }
-  tbody.innerHTML = rows.map(a => `
+  tbody.innerHTML = rows.map(a => {
+    const stat = statsCache.byEvent[a.eventKey];
+    return `
     <tr>
       <td class="a-cell-title">${a.label}</td>
       <td><span style="font-size:12px;color:var(--a-text-soft);">Email</span></td>
       <td style="font-size:12.5px;">${fmtKey(a.eventKey)}</td>
       <td><span class="a-pill ${a.enabled ? 'a-pill-success' : 'a-pill-neutral'}">${a.enabled ? 'Active' : 'Paused'}</span></td>
       <td style="color:var(--a-text-soft);font-size:13px;">${a.reminderDaysBefore ? a.reminderDaysBefore + ' days before' : '—'}</td>
-      <td style="color:var(--a-text-soft);font-size:13px;">—</td>
-      <td style="color:var(--a-text-soft);font-size:13px;">—</td>
+      <td style="color:var(--a-text-soft);font-size:13px;">${stat ? stat.executions : '—'}</td>
+      <td style="color:var(--a-text-soft);font-size:13px;">${stat && stat.successRate != null ? stat.successRate + '%' : '—'}</td>
       <td>
         <div style="display:flex;gap:6px;">
           <button class="a-icon-btn" title="Edit"   onclick="openEditAuto('${a.eventKey}')">✏️</button>
@@ -697,7 +708,8 @@ function filterAutomations() {
         </div>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function fmtKey(key) {
@@ -947,7 +959,60 @@ function addAction(type) {
   document.getElementById('bActionsWrap').appendChild(wrap);
 }
 
-// ─── Execution history helper ──────────────────────────────────────────────────
+// ─── Execution history ──────────────────────────────────────────────────────────
+const HIST_RESULT_PILL = { success: 'a-pill-success', failed: 'a-pill-danger', skipped: 'a-pill-neutral' };
+
+// Execution rows render recipient emails and SMTP error text — unlike most
+// of this admin-only page's fields (all admin-authored), these two can
+// reflect external input, so they're HTML-escaped before interpolation.
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadHistory() {
+  const tbody = document.getElementById('histTbody');
+  const params = new URLSearchParams();
+  const eventKey = document.getElementById('histAutoSel')?.value;
+  const status   = document.getElementById('histResultSel')?.value;
+  const from     = document.getElementById('histFrom')?.value;
+  const to       = document.getElementById('histTo')?.value;
+  if (eventKey) params.set('eventKey', eventKey);
+  if (status)   params.set('status', status);
+  if (from)     params.set('from', from);
+  if (to)       params.set('to', to);
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--a-text-soft);">Loading…</td></tr>';
+  let executions = [];
+  try {
+    const r = await fetch('/api/automations/history?' + params.toString(), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const data = await r.json();
+    executions = data.executions || [];
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--a-danger);">Could not load execution history.</td></tr>';
+    return;
+  }
+
+  if (!executions.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--a-text-soft);">No executions match your filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = executions.map(e => `
+    <tr>
+      <td class="a-cell-title">${escHtml(e.automationLabel)}</td>
+      <td>${e.contactName ? escHtml(e.contactName) + '<br><span style="color:var(--a-text-soft);font-size:12px;">' + escHtml(e.recipientEmail) + '</span>' : escHtml(e.recipientEmail)}</td>
+      <td style="font-size:12.5px;">${fmtKey(e.eventKey)}</td>
+      <td>
+        <span class="a-pill ${HIST_RESULT_PILL[e.status] || 'a-pill-neutral'}">${e.status}</span>
+        ${e.errorMessage ? '<div style="color:var(--a-danger);font-size:11.5px;margin-top:3px;">' + escHtml(e.errorMessage) + '</div>' : ''}
+      </td>
+      <td style="color:var(--a-text-soft);font-size:13px;">${e.durationMs != null ? e.durationMs + ' ms' : '—'}</td>
+      <td style="color:var(--a-text-soft);font-size:13px;">${new Date(e.firedAt).toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
+
 function populateHistAutoSel() {
   const sel = document.getElementById('histAutoSel');
   if (!sel || !autoCache.length) return;

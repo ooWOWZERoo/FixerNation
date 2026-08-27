@@ -125,12 +125,18 @@ router.get('/lesson/:curriculumId', async (req, res) => {
     'SELECT question_id, selected_option_index, is_correct FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ? ORDER BY question_id ASC',
     [req.student.id, req.params.curriculumId]
   );
+  // Saved-but-not-submitted answers — irrelevant once quizResponses has any
+  // rows (the quiz is already complete), but harmless to always fetch.
+  const [quizDraft] = await pool.query(
+    'SELECT question_id, selected_option_index FROM student_quiz_drafts WHERE student_id = ? AND curriculum_id = ? ORDER BY question_id ASC',
+    [req.student.id, req.params.curriculumId]
+  );
   const [reflections] = await pool.query(
     'SELECT prompt_key, response_text, submitted_at FROM student_reflections WHERE student_id = ? AND curriculum_id = ? ORDER BY submitted_at',
     [req.student.id, req.params.curriculumId]
   );
 
-  res.json({ ...cur, progress: progress || null, quizResponses, reflections });
+  res.json({ ...cur, progress: progress || null, quizResponses, quizDraft, reflections });
 });
 
 router.post('/lesson/:curriculumId/start', async (req, res) => {
@@ -155,6 +161,42 @@ router.post('/lesson/:curriculumId/complete', async (req, res) => {
     [req.student.id, req.params.curriculumId]
   );
   res.json({ ok: true });
+});
+
+// PUT /lesson/:curriculumId/quiz/draft — save partial (or full) progress
+// without submitting. Body: { answers: [{ questionId, selectedOptionIndex }, ...] }
+// Deliberately writes to student_quiz_drafts, never student_quiz_responses —
+// see alter-add-student-quiz-drafts.js for why the two tables must stay separate.
+router.put('/lesson/:curriculumId/quiz/draft', async (req, res) => {
+  const assignment = await getAssignment(req.student, req.params.curriculumId);
+  if (!assignment) return res.status(403).json({ error: 'Lesson not assigned to your classroom' });
+
+  const { answers } = req.body;
+  if (!Array.isArray(answers)) return res.status(400).json({ error: 'answers array required' });
+
+  const [[existing]] = await pool.query(
+    'SELECT id FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ? LIMIT 1',
+    [req.student.id, req.params.curriculumId]
+  );
+  if (existing) return res.status(409).json({ error: 'Quiz already submitted' });
+
+  const qIds = answers.map(a => Number(a.questionId));
+  const [questions] = qIds.length
+    ? await pool.query('SELECT id FROM curriculum_quiz_questions WHERE id IN (?) AND curriculum_id = ?', [qIds, req.params.curriculumId])
+    : [[]];
+  const validIds = new Set(questions.map(q => q.id));
+
+  for (const a of answers) {
+    const qId = Number(a.questionId);
+    if (!validIds.has(qId)) continue;
+    await pool.query(
+      `INSERT INTO student_quiz_drafts (student_id, curriculum_id, question_id, selected_option_index)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE selected_option_index = ?, saved_at = NOW()`,
+      [req.student.id, req.params.curriculumId, qId, a.selectedOptionIndex, a.selectedOptionIndex]
+    );
+  }
+  res.json({ ok: true, savedAt: new Date().toISOString() });
 });
 
 // POST /lesson/:curriculumId/quiz — submit all answers at once
@@ -198,6 +240,10 @@ router.post('/lesson/:curriculumId/quiz', async (req, res) => {
     }
     await conn.commit();
     const correct = results.filter(r => r.isCorrect).length;
+    // Draft answers are no longer needed once a real submission exists —
+    // best-effort, doesn't affect the response if it fails.
+    pool.query('DELETE FROM student_quiz_drafts WHERE student_id = ? AND curriculum_id = ?', [req.student.id, req.params.curriculumId])
+      .catch(err => console.error('student_quiz_drafts cleanup error:', err.message));
     res.json({ results, score: correct, total: results.length });
   } catch (err) {
     await conn.rollback();

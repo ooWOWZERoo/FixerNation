@@ -27,6 +27,18 @@ function makeToken() {
   return crypto.randomBytes(48).toString('hex');
 }
 
+// A seat is excluded from admin-facing seat counts/rosters/reports when its
+// registered site_user also holds an active school or district admin
+// assignment (anywhere, not just this school/district) — administrators
+// don't consume a license and shouldn't inflate "registered teacher" totals.
+// `alias` is the table name or alias the query's license_seats rows use.
+function notAdminSeatClause(alias) {
+  return `(${alias}.registered_site_user_id IS NULL OR (
+    NOT EXISTS (SELECT 1 FROM school_license_admins sla WHERE sla.site_user_id = ${alias}.registered_site_user_id AND sla.is_active = 1)
+    AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = ${alias}.registered_site_user_id AND dla.is_active = 1)
+  ))`;
+}
+
 // Helper: insert audit log entry (fire-and-forget, never throws)
 async function audit(conn, { actorType, actorId, actorEmail, action, entityType, entityId, purchaseId, schoolDomain, prevValue, newValue, reason, ipAddress }) {
   try {
@@ -112,7 +124,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
        SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive,
        SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) AS revoked
-     FROM license_seats WHERE purchase_id = ?`,
+     FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
     [purchaseId]
   );
 
@@ -135,6 +147,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
      JOIN site_users su ON su.id = ls.registered_site_user_id
      WHERE ls.purchase_id = ? AND ls.status = 'registered'
        AND ls.registered_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       AND ${notAdminSeatClause('ls')}
      ORDER BY ls.registered_at DESC
      LIMIT 5`,
     [purchaseId]
@@ -226,7 +239,7 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
        SUM(CASE WHEN status = 'registered' THEN 1 ELSE 0 END) AS registered,
        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
        SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive
-     FROM license_seats WHERE purchase_id = ?`,
+     FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
     [purchaseId]
   );
   const total = row.seat_count || 0;
@@ -793,6 +806,7 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
     const like = `%${q}%`;
     params.push(like, like, like);
   }
+  where += ` AND ${notAdminSeatClause('ls')}`;
 
   const [[{ total }]] = await pool.query(
     `SELECT COUNT(*) AS total
@@ -1037,9 +1051,10 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
     [purchaseId]
   );
 
-  // Unfiltered counts — always reflect the full pool regardless of search/filter
+  // Unfiltered counts (except for admins, excluded everywhere per license-total
+  // reporting rules) — always reflect the full pool regardless of search/filter
   const [allSeats] = await pool.query(
-    'SELECT status FROM license_seats WHERE purchase_id = ?',
+    `SELECT status FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
     [purchaseId]
   );
   const total = purchase ? purchase.seat_count : 0;
@@ -1050,7 +1065,7 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   const available = Math.max(0, total - active - inactive - pending);
 
   // Filtered seat rows for display
-  let where = 'WHERE ls.purchase_id = ?';
+  let where = `WHERE ls.purchase_id = ? AND ${notAdminSeatClause('ls')}`;
   const params = [purchaseId];
   if (statusValues.length === 1) {
     where += ' AND ls.status = ?';
@@ -1178,7 +1193,7 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
     const [[counts]] = await pool.query(
       `SELECT SUM(status='registered') AS active, SUM(status='pending') AS pending,
               SUM(status='inactive') AS inactive, SUM(status='revoked') AS revoked
-       FROM license_seats WHERE purchase_id = ?`,
+       FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
       [purchaseId]
     );
     const registered = Number(counts.active   || 0);
@@ -1202,7 +1217,7 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
        FROM license_seats ls
        JOIN site_users su ON su.id = ls.registered_site_user_id
        LEFT JOIN school_invitations si ON si.seat_id = ls.id
-       WHERE ls.purchase_id = ?
+       WHERE ls.purchase_id = ? AND ${notAdminSeatClause('ls')}
        ORDER BY ls.registered_at`,
       [purchaseId]
     );
@@ -1268,7 +1283,7 @@ router.get('/reports/export', requireSchoolAdmin, async (req, res) => {
        FROM license_seats ls
        JOIN site_users su ON su.id = ls.registered_site_user_id
        LEFT JOIN school_invitations si ON si.seat_id = ls.id
-       WHERE ls.purchase_id = ?
+       WHERE ls.purchase_id = ? AND ${notAdminSeatClause('ls')}
        ORDER BY ls.registered_at`,
       [purchaseId]
     );

@@ -487,6 +487,12 @@ router.delete('/:id/assignments/:cid/quiz/:studentId', requireSiteAuth, async (r
     'DELETE FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ?',
     [req.params.studentId, req.params.cid]
   );
+  // Also clear any saved-but-unsubmitted draft, so a reset student starts
+  // the quiz genuinely fresh rather than seeing stale prior selections.
+  await pool.query(
+    'DELETE FROM student_quiz_drafts WHERE student_id = ? AND curriculum_id = ?',
+    [req.params.studentId, req.params.cid]
+  );
   res.json({ ok: true });
 });
 

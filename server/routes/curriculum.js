@@ -439,14 +439,17 @@ router.get('/:id', async (req, res) => {
 });
 
 // File serving access rules:
-//   Student Handout  — anyone can view; download requires teacher license or parent access
-//   Classroom Poster — anyone can view; download requires teacher license or parent access
-//   Teacher Copy     — requires teacher license or parent access (view + download)
+//   Student Handout  — anyone can view; download requires a teacher license
+//   Classroom Poster — anyone can view; download requires a teacher license
+//   Teacher Copy     — requires teacher license or parent access to VIEW; download requires a teacher license
 //   Quiz + Answer Key — requires teacher license only (no parent access)
 //   Lesson plan docs (?doc=) — requires teacher license only (no parent access)
+// Parents are always view-only — parentCanView never authorizes forceDownload, the
+// per-resource download-limit check, or download logging, even for the 3 resource
+// types they're allowed to view.
 // ?resource=<type>  curriculum_resources file
 // ?doc=<index>      curriculum_documents file
-// &download=1       attachment mode — checked and tracked for licensed teachers and parents
+// &download=1       attachment mode — checked and tracked for licensed teachers only
 const PARENT_ACCESSIBLE_RESOURCES = ['Teacher Copy', 'Student Handout', 'Classroom Poster'];
 
 router.get('/:id/file', async (req, res) => {
@@ -499,8 +502,13 @@ router.get('/:id/file', async (req, res) => {
       }
     }
 
-    // Public resources: downloading requires teacher license or parent access
-    if (forceDownload && !licensed && !parentCanView) {
+    // Downloading always requires a real teacher license — parent access
+    // (parentCanView) only ever grants viewing, never a download, even for
+    // the 3 resource types a parent can otherwise view.
+    if (forceDownload && !licensed) {
+      if (isParent) {
+        return res.status(403).json({ error: 'Parents can view lesson resources but downloading is limited to licensed teachers' });
+      }
       return siteUser
         ? res.status(403).json({ error: 'A teacher license is required to download files' })
         : res.status(401).json({ error: 'Sign in to download files' });
@@ -514,14 +522,14 @@ router.get('/:id/file', async (req, res) => {
     file_path = rows[0].file_path;
     file_name = rows[0].file_name;
 
-    // Per-resource download limit check (teachers and parents)
-    if (forceDownload && !isAdmin && siteUser && (licensed || parentCanView)) {
+    // Per-resource download limit check — reachable only by licensed
+    // teachers now (a parent-only viewer is already rejected above).
+    if (forceDownload && !isAdmin && siteUser && licensed) {
       const resourceLimit = rows[0].download_limit || 0;
       if (resourceLimit > 0) {
-        const userType = isParent ? 'parent' : 'teacher';
         const [existing] = await pool.query(
           'SELECT count FROM curriculum_downloads WHERE curriculum_id = ? AND user_email = ? AND user_type = ? AND resource_type = ?',
-          [id, siteUser.email, userType, resourceType]
+          [id, siteUser.email, 'teacher', resourceType]
         );
         const currentCount = existing[0] ? existing[0].count : 0;
         if (currentCount >= resourceLimit) {
@@ -531,16 +539,16 @@ router.get('/:id/file', async (req, res) => {
     }
   }
 
-  // Record explicit downloads for teachers and parents
-  if (forceDownload && !isAdmin && siteUser && (licensed || parentCanView)) {
-    const userType = isParent ? 'parent' : 'teacher';
+  // Record explicit downloads — parents never reach here (rejected above),
+  // so every logged download is a licensed teacher's.
+  if (forceDownload && !isAdmin && siteUser && licensed) {
     const resolvedResourceType = resourceType || 'lesson_plan_doc';
     try {
       await pool.query(
         `INSERT INTO curriculum_downloads (curriculum_id, user_email, user_type, resource_type, count, last_download)
-         VALUES (?, ?, ?, ?, 1, NOW())
+         VALUES (?, ?, 'teacher', ?, 1, NOW())
          ON DUPLICATE KEY UPDATE count = count + 1, last_download = NOW()`,
-        [id, siteUser.email, userType, resolvedResourceType]
+        [id, siteUser.email, resolvedResourceType]
       );
     } catch (err) {
       console.error('curriculum_downloads insert error:', err.message);

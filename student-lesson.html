@@ -172,6 +172,11 @@ async function load() {
   preReflectSubmitted = (lesson.reflections || []).some(function(r){ return r.prompt_key === 'pre_lesson'; });
   postReflectSubmitted = (lesson.reflections || []).some(function(r){ return r.prompt_key === 'post_lesson'; });
 
+  // Resume any saved-but-unsubmitted quiz progress
+  if (!quizSubmitted) {
+    (lesson.quizDraft || []).forEach(function(d) { selectedAnswers[d.question_id] = d.selected_option_index; });
+  }
+
   renderBody();
   renderInteractive();
 
@@ -277,12 +282,18 @@ function renderInteractive() {
       lesson.quiz.forEach(function(q, qi) {
         html += '<div class="quiz-q" id="qq-' + q.id + '"><div class="q-text">' + (qi+1) + '. ' + esc(q.question) + '</div><div class="quiz-options">';
         q.options.forEach(function(opt, oi) {
-          html += '<div class="quiz-opt" onclick="selectAnswer(' + q.id + ',' + oi + ',this)">' +
+          var isSelected = selectedAnswers[q.id] === oi;
+          html += '<div class="quiz-opt' + (isSelected ? ' selected' : '') + '" onclick="selectAnswer(' + q.id + ',' + oi + ',this)">' +
             '<div class="quiz-letter">' + LETTERS[oi] + '</div>' + esc(opt) + '</div>';
         });
         html += '</div></div>';
       });
-      html += '<div style="margin-top:16px;text-align:right;"><button class="btn btn-primary" id="submitQuizBtn" onclick="submitQuiz()">Submit Quiz →</button></div></div>';
+      var draftCount = (lesson.quizDraft || []).length;
+      html += '<div id="quizDraftNote" style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">' +
+        (draftCount ? 'Progress saved (' + draftCount + ' of ' + lesson.quiz.length + ' answered)' : '') + '</div>' +
+        '<div style="margin-top:16px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button class="btn btn-outline" id="saveQuizDraftBtn" onclick="saveQuizDraft()">💾 Save Progress</button>' +
+        '<button class="btn btn-primary" id="submitQuizBtn" onclick="submitQuiz()">Submit Quiz →</button></div></div>';
     }
     stepNum++;
   }
@@ -329,6 +340,28 @@ function selectAnswer(qId, optIndex, el) {
   var container = document.getElementById('qq-' + qId);
   container.querySelectorAll('.quiz-opt').forEach(function(o){ o.classList.remove('selected'); });
   el.classList.add('selected');
+}
+
+async function saveQuizDraft() {
+  var answers = Object.keys(selectedAnswers).map(function(qId) {
+    return { questionId: Number(qId), selectedOptionIndex: selectedAnswers[qId] };
+  });
+  if (!answers.length) { toast('Answer at least one question before saving.'); return; }
+
+  var btn = document.getElementById('saveQuizDraftBtn');
+  btn.disabled = true;
+  var r = await fetch('/api/student/lesson/' + curriculumId + '/quiz/draft', {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers: answers }),
+  });
+  btn.disabled = false;
+  var data = await r.json().catch(function() { return {}; });
+  if (!r.ok) { toast(data.error || 'Could not save progress'); return; }
+
+  toast('Progress saved — come back anytime to finish.');
+  var note = document.getElementById('quizDraftNote');
+  if (note) note.textContent = 'Progress saved (' + answers.length + ' of ' + lesson.quiz.length + ' answered)';
 }
 
 async function submitQuiz() {

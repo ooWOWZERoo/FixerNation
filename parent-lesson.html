@@ -141,8 +141,6 @@ img{max-width:100%; display:block;}
   </div>
 </div>
 
-<div class="info-toast" id="infoToast"></div>
-
 <!-- Auth modal (site-auth.js) -->
 <div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
   <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
@@ -208,41 +206,6 @@ function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function showInfoToast(msg) {
-  var toast = document.getElementById('infoToast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 3600);
-}
-
-async function fetchAndDownload(url, fallbackName) {
-  try {
-    var r = await fetch(url, { credentials: 'include' });
-    if (r.status === 429) {
-      var data = await r.json().catch(function() { return {}; });
-      showInfoToast('You\'ve reached the download limit for this resource (' + data.count + ' of ' + data.limit + ' used). Contact your child\'s teacher for help.');
-      return;
-    }
-    if (!r.ok) {
-      showInfoToast('This file could not be downloaded. Try again in a moment.');
-      return;
-    }
-    var cd = r.headers.get('Content-Disposition');
-    var match = cd && cd.match(/filename="(.+)"/);
-    var blob = await r.blob();
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = match ? match[1] : fallbackName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  } catch (e) {
-    showInfoToast('Download failed — please check your connection.');
-  }
-}
-
 // ── Render ────────────────────────────────────────────────────
 
 function renderResources(curriculumId, resources) {
@@ -250,18 +213,12 @@ function renderResources(curriculumId, resources) {
   var cards = resources.filter(function(r) { return r.filePath; }).map(function(r) {
     var label = RESOURCE_LABELS[r.resource] || r.resource;
     var icon  = RESOURCE_ICONS[r.resource]  || '&#128196;';
-    var rSafe = r.resource.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    var limitNote = r.downloadLimit > 0
-      ? '<span style="font-size:11.5px;color:var(--ink-soft);display:block;margin-bottom:12px;">' + r.downloadLimit + ' download' + (r.downloadLimit === 1 ? '' : 's') + ' per person</span>'
-      : '';
     return '<div class="resource-card">' +
       '<div class="resource-icon">' + icon + '</div>' +
       '<div class="resource-name">' + esc(label) + '</div>' +
       (r.resource === 'Teacher Copy' ? '<span class="resource-tag">Teacher Reference</span>' : '<br>') +
-      limitNote +
       '<div class="resource-actions">' +
         '<button class="btn btn-outline btn-sm" onclick="openPdfModal(\'/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(r.resource) + '\', \'' + esc(label) + '\')">View</button>' +
-        '<button class="btn btn-primary btn-sm" onclick="fetchAndDownload(\'/api/curricula/' + curriculumId + '/file?resource=' + encodeURIComponent(r.resource) + '&download=1\', \'' + rSafe + '.pdf\')">Download</button>' +
       '</div>' +
       '</div>';
   });
