@@ -529,7 +529,7 @@ function renderSpotlightResources() {
     const loginPrompt = match.access.loggedIn
       ? ''
       : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
-    row.innerHTML = `<div class="locked-panel">🔒 The lesson document and quiz for this plan require an active teacher license.
+    row.innerHTML = `<div class="locked-panel">🔒 The lesson resources and quiz for this plan require an active teacher license.
       <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`;
     return;
   }
@@ -594,7 +594,18 @@ function closeQuizModal() {
 function renderSpotlightVideo() {
   const match = getFeaturedCurriculum();
   const slot = document.getElementById('spotlightVideo');
-  const first = (match && match.videos && match.videos[0]) || null;
+  if (!match) { slot.innerHTML = ''; return; }
+
+  if (match.access && !match.access.licensed) {
+    const loginPrompt = match.access.loggedIn
+      ? ''
+      : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
+    slot.innerHTML = `<div class="locked-panel">🔒 This lesson's video requires an active teacher license.
+      <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`;
+    return;
+  }
+
+  const first = (match.videos && match.videos[0]) || null;
   slot.innerHTML = first && first.url ? fnVideoEmbedHtml(first.url) : '';
 }
 

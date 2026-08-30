@@ -127,6 +127,8 @@ async function gateAccess(curricula, req, opts = {}) {
           ...c,
           documents: [],
           quiz: [],
+          resources: [],
+          videos: [],
           access: {
             licensed: false,
             loggedIn: true,
@@ -160,6 +162,8 @@ async function gateAccess(curricula, req, opts = {}) {
     ...c,
     documents: [],
     quiz: [],
+    resources: [],
+    videos: [],
     access: { licensed: false, loggedIn: !!siteUser, ...(reason ? { reason } : {}) },
   }));
 }
@@ -439,11 +443,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // File serving access rules:
-//   Student Handout  — anyone can view; download requires a teacher license
-//   Classroom Poster — anyone can view; download requires a teacher license
-//   Teacher Copy     — requires teacher license or parent access to VIEW; download requires a teacher license
+//   Student Handout, Classroom Poster, Teacher Copy — require a teacher
+//     license OR parent access to VIEW; download requires a teacher license
 //   Quiz + Answer Key — requires teacher license only (no parent access)
 //   Lesson plan docs (?doc=) — requires teacher license only (no parent access)
+// No resource type is publicly viewable by an anonymous/unlicensed visitor —
+// video and resource data are also stripped from the curriculum list/detail
+// API responses for the same visitors (see gateAccess() above), so the
+// education-portal.html/lesson-detail.html UIs never even receive a
+// clickable link to hit this endpoint with in the first place.
 // Parents are always view-only — parentCanView never authorizes forceDownload, the
 // per-resource download-limit check, or download logging, even for the 3 resource
 // types they're allowed to view.
@@ -491,15 +499,16 @@ router.get('/:id/file', async (req, res) => {
     file_path = doc.file_path;
     file_name = doc.file_name;
   } else {
-    const PUBLIC_VIEW_RESOURCES = ['Student Handout', 'Classroom Poster'];
-
-    // Quiz + Answer Key and non-public resources require teacher license to view (not parents)
-    if (!licensed && (resourceType === 'Quiz + Answer Key' || !PUBLIC_VIEW_RESOURCES.includes(resourceType))) {
-      if (!parentCanView) {
-        return siteUser
-          ? res.status(403).json({ error: 'A teacher license is required to access this resource' })
-          : res.status(401).json({ error: 'Sign in to access this resource' });
-      }
+    // Every resource requires a real teacher license (or, for the 3 parent-
+    // accessible types, an active parent-classroom link) to VIEW — no
+    // resource type is publicly viewable anymore. Previously Student
+    // Handout/Classroom Poster had a PUBLIC_VIEW_RESOURCES carve-out that
+    // let anyone view them regardless of login — a real, URL-guessable
+    // bypass, closed here alongside the matching curriculum-list gating.
+    if (!licensed && !parentCanView) {
+      return siteUser
+        ? res.status(403).json({ error: 'A teacher license is required to access this resource' })
+        : res.status(401).json({ error: 'Sign in to access this resource' });
     }
 
     // Downloading always requires a real teacher license — parent access

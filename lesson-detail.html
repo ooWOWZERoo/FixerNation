@@ -305,10 +305,10 @@ function renderDetailResources(c) {
     });
   }
 
-  // Resource buttons:
-  //   Student Handout, Classroom Poster — view for everyone; download for licensed only
-  //   Everything else (Teacher Copy, Quiz + Answer Key, etc.) — licensed only
-  const PUBLIC_VIEW = ['Student Handout', 'Classroom Poster'];
+  // Resource buttons — every type now requires an active teacher license to
+  // even view (the server already strips `resources` from the API response
+  // entirely for an unlicensed visitor, so this loop naturally renders
+  // nothing for them; the `licensed` check here is belt-and-suspenders).
   resources.forEach(r => {
     if (r.resource === 'Quiz + Answer Key') {
       if (licensed) {
@@ -316,14 +316,9 @@ function renderDetailResources(c) {
       }
       return;
     }
-    if (r.filePath) {
-      const canView = licensed || PUBLIC_VIEW.includes(r.resource);
-      if (canView) {
-        parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
-      }
-      if (licensed) {
-        parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;" title="Download ${r.resource}">↓</a>`);
-      }
+    if (r.filePath && licensed) {
+      parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
+      parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;" title="Download ${r.resource}">↓</a>`);
     }
   });
 
@@ -345,7 +340,7 @@ function renderDetailResources(c) {
     } else if (reason === 'trial_expired') {
       message = `🔒 Your trial has ended. <a href="licenses.html">Upgrade to a full license →</a> to keep access.`;
     } else {
-      message = `🔒 Teacher Copy, lesson plans, and the quiz require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}`;
+      message = `🔒 This lesson's video and resources require an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}`;
     }
     parts.push(`<div class="locked-panel" style="margin-top:${resources.length ? '12px' : '0'}">${message}</div>`);
   }
@@ -359,7 +354,15 @@ function renderDetailResources(c) {
 
 function renderDetailVideo(c) {
   const slot = document.getElementById('detailVideo');
+  const licensed = c.access && c.access.licensed;
   const videos = (c.videos || []).filter(v => v.url);
+  if (!videos.length && !licensed) {
+    const loginPrompt = (c.access && c.access.loggedIn)
+      ? ''
+      : ` Already have a license? <a href="#" onclick="fnAuthOpenModal('login'); return false;">Log in</a>.`;
+    slot.innerHTML = `<div class="locked-panel">🔒 This lesson's video requires an active teacher license. <a href="licenses.html">Get a license →</a>${loginPrompt}</div>`;
+    return;
+  }
   slot.innerHTML = videos.map(v => `<div style="margin-bottom:16px;">${fnVideoEmbedHtml(v.url)}</div>`).join('');
 }
 
