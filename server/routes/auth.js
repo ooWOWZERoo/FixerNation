@@ -28,7 +28,11 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Username and password are required' });
   }
 
-  const [rows] = await pool.query('SELECT id, username, password_hash, email_verified FROM admin_users WHERE username = ?', [username]);
+  // Accepts either the literal username or the account's email — usernames
+  // like "AJP-VSSUS" aren't something an admin reliably remembers, and the
+  // generic "Invalid username or password" error gave no hint that the
+  // identifier itself (not the password) was the actual mismatch.
+  const [rows] = await pool.query('SELECT id, username, password_hash, email_verified FROM admin_users WHERE username = ? OR email = ?', [username, username]);
   const user = rows[0];
   if (!user) {
     return res.status(401).json({ error: 'Invalid username or password' });
