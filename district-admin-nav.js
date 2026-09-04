@@ -22,16 +22,24 @@
   // Unlike the school-admin portal (one school, one expiration date), a
   // district has many schools each with their own independent license — so
   // instead of a single date, this is a summary alert that only appears
-  // when at least one school's license needs attention.
+  // when at least one school's license needs attention. The insertion point
+  // lookup is deferred to inside the fetch's .then() (see school-admin-
+  // nav.js for why: this script tag runs before .sa-main/.sa-content exist
+  // in the DOM, so a top-level querySelector here would always find null).
   var licenseBanner = document.createElement('div');
   licenseBanner.id = 'daLicenseBanner';
-  var contentEl = document.querySelector('.sa-main .sa-content');
-  if (contentEl && contentEl.parentNode) contentEl.parentNode.insertBefore(licenseBanner, contentEl);
+
+  function ensureBannerInserted() {
+    if (licenseBanner.parentNode) return;
+    var contentEl = document.querySelector('.sa-main .sa-content');
+    if (contentEl && contentEl.parentNode) contentEl.parentNode.insertBefore(licenseBanner, contentEl);
+  }
 
   function loadLicenseBanner() {
     fetch('/api/district-admin/schools', { credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
+        ensureBannerInserted();
         if (!data || !data.schools) return;
         var today = new Date(); today.setHours(0, 0, 0, 0);
         var expired = 0, expiringSoon = 0;

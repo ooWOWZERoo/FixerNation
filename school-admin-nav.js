@@ -17,11 +17,21 @@
   // Persistent license-expiration banner, inserted once at the top of every
   // portal page's content area (right before .sa-content, inside .sa-main —
   // both exist consistently across every school-admin-*.html page, unlike
-  // any single page's own topbar markup).
+  // any single page's own topbar markup). The insertion point lookup can't
+  // happen here at top-level script scope — this script tag runs BEFORE
+  // .sa-main/.sa-content are parsed into the DOM (they appear later in each
+  // page's HTML), so document.querySelector would always return null at
+  // this point. Deferred into ensureBannerInserted(), called lazily from
+  // renderLicenseBanner() — which only ever runs inside the /me fetch's
+  // .then(), well after the full DOM has parsed.
   var licenseBanner = document.createElement('div');
   licenseBanner.id = 'saLicenseBanner';
-  var contentEl = document.querySelector('.sa-main .sa-content');
-  if (contentEl && contentEl.parentNode) contentEl.parentNode.insertBefore(licenseBanner, contentEl);
+
+  function ensureBannerInserted() {
+    if (licenseBanner.parentNode) return;
+    var contentEl = document.querySelector('.sa-main .sa-content');
+    if (contentEl && contentEl.parentNode) contentEl.parentNode.insertBefore(licenseBanner, contentEl);
+  }
 
   function formatDate(iso) {
     var d = new Date(iso + 'T00:00');
@@ -29,6 +39,7 @@
   }
 
   function renderLicenseBanner(school) {
+    ensureBannerInserted();
     if (!school || !school.expirationDate) { licenseBanner.innerHTML = ''; return; }
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var expiry = new Date(school.expirationDate + 'T00:00');
