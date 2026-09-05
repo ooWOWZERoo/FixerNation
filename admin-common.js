@@ -142,21 +142,32 @@ function fnParseCsv(text) {
   const idx = {
     name: findCol('name', 'full name', 'contact name'),
     email: findCol('email', 'email address'),
+    phone: findCol('phone', 'phone number'),
+    company: findCol('company', 'organization'),
     street: findCol('address', 'street', 'street address'),
     city: findCol('city'),
     state: findCol('state', 'province'),
     zip: findCol('zip', 'zip code', 'postal code', 'postcode'),
+    signupDate: findCol('signup date', 'signup_date', 'signupdate', 'date signed up'),
     source: findCol('source'),
+    notes: findCol('notes', 'note'),
+    groups: findCol('groups', 'group'),
   };
 
   return rows.slice(1).map(r => ({
     name: idx.name >= 0 ? (r[idx.name] || '').trim() : '',
     email: idx.email >= 0 ? (r[idx.email] || '').trim() : '',
+    phone: idx.phone >= 0 ? (r[idx.phone] || '').trim() : '',
+    company: idx.company >= 0 ? (r[idx.company] || '').trim() : '',
     street: idx.street >= 0 ? (r[idx.street] || '').trim() : '',
     city: idx.city >= 0 ? (r[idx.city] || '').trim() : '',
     state: idx.state >= 0 ? (r[idx.state] || '').trim() : '',
     zip: idx.zip >= 0 ? (r[idx.zip] || '').trim() : '',
+    signupDate: idx.signupDate >= 0 ? (r[idx.signupDate] || '').trim() : '',
     source: idx.source >= 0 ? (r[idx.source] || '').trim() : '',
+    notes: idx.notes >= 0 ? (r[idx.notes] || '').trim() : '',
+    // Pipe-separated: "Group A|Group B" -> ["Group A", "Group B"]
+    groups: idx.groups >= 0 ? (r[idx.groups] || '').split('|').map(g => g.trim()).filter(Boolean) : [],
   }));
 }
 

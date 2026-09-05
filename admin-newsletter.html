@@ -187,20 +187,21 @@
       </div>
       <div style="text-align:center; color:var(--a-text-soft); font-size:12.5px; margin:6px 0 14px;">— or paste CSV text below —</div>
       <div class="a-field">
-        <textarea id="importPasteArea" style="min-height:110px; font-family:monospace; font-size:12.5px;" placeholder="Name,Email,Address,City,State,Zip,Source&#10;Jamie Lee,jamie@example.com,123 Oak St,Denver,CO,80202,Event"></textarea>
+        <textarea id="importPasteArea" style="min-height:110px; font-family:monospace; font-size:12.5px;" placeholder="Name,Email,Phone,Company,Street,City,State,Zip,Signup Date,Source,Notes,Groups&#10;Jamie Lee,jamie@example.com,555-0101,Acme Elementary,123 Oak St,Denver,CO,80202,2026-09-05,Event,Met at conference,Teachers|FNE Suspect"></textarea>
       </div>
       <button type="button" class="a-btn a-btn-outline a-btn-block" onclick="parseImportInput()">Preview Import</button>
-      <div class="a-note">Expected columns (any order, header required): Name, Email, Address/Street, City, State, Zip, Source. Only Email is required per row.</div>
+      <div class="a-note">Expected columns (any order, header required): Name, Email, Phone, Company, Address/Street, City, State, Zip, Signup Date, Source, Notes, Groups. Only Email is required per row. Groups can list more than one, separated by "|". Existing contacts (matched by email) only get blank fields filled in and groups added — nothing already set is ever overwritten or removed.</div>
 
       <div id="importPreviewWrap" style="display:none; margin-top:18px;">
         <div class="a-field"><label>Preview</label></div>
         <div style="max-height:220px; overflow:auto; border:1px solid var(--a-border); border-radius:10px;">
           <table class="a-table" style="font-size:12.5px;">
-            <thead><tr><th>Name</th><th>Email</th><th>City/State</th><th>Source</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>City/State</th><th>Source</th><th>Groups</th></tr></thead>
             <tbody id="importPreviewBody"></tbody>
           </table>
         </div>
         <div class="a-note" id="importSummary"></div>
+        <div class="a-note" id="importMissingGroupsNote" style="display:none; color:var(--a-warning);"></div>
       </div>
     </div>
     <div class="a-modal-foot">
@@ -252,7 +253,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=15"></script>
+<script src="admin-common.js?v=16"></script>
 <script>
 fnRequireAuth();
 
@@ -702,6 +703,7 @@ function exportCsv() {
 
 /* ---- Import ---- */
 let parsedImportRows = [];
+let importMissingGroupNames = [];
 
 /* ---- Groups ---- */
 async function openGroupsModal() {
@@ -762,12 +764,14 @@ async function deleteGroup(id) {
   fnToast('Group deleted');
 }
 
-function openImportModal() {
+async function openImportModal() {
   document.getElementById('importFile').value = '';
   document.getElementById('importPasteArea').value = '';
   document.getElementById('importPreviewWrap').style.display = 'none';
   document.getElementById('importConfirmBtn').disabled = true;
   parsedImportRows = [];
+  importMissingGroupNames = [];
+  groupsCache = await fetchGroups(); // refresh so the missing-groups diff below is accurate
   document.getElementById('importModalOverlay').classList.add('show');
 }
 function closeImportModal() {
@@ -798,7 +802,7 @@ function parseImportInput() {
     const valid = emailPattern.test(r.email || '');
     if (valid) validCount++;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.name || '—'}</td><td style="${valid?'':'color:var(--a-danger);'}">${r.email || '(missing)'}</td><td>${[r.city, r.state].filter(Boolean).join(', ') || '—'}</td><td>${r.source || '—'}</td>`;
+    tr.innerHTML = `<td>${r.name || '—'}</td><td style="${valid?'':'color:var(--a-danger);'}">${r.email || '(missing)'}</td><td>${[r.city, r.state].filter(Boolean).join(', ') || '—'}</td><td>${r.source || '—'}</td><td>${(r.groups || []).join(', ') || '—'}</td>`;
     body.appendChild(tr);
   });
 
@@ -806,22 +810,48 @@ function parseImportInput() {
   document.getElementById('importSummary').textContent =
     `${parsedImportRows.length} row(s) found · ${totalValid} with a valid email` +
     (parsedImportRows.length > 25 ? ' · showing first 25' : '');
+
+  // Diff every group name referenced in the CSV against groups that already
+  // exist, so the admin sees this before clicking Import, not after.
+  const existingNames = new Set(groupsCache.map(g => g.name.toLowerCase()));
+  const allNames = new Set(parsedImportRows.flatMap(r => r.groups || []));
+  importMissingGroupNames = Array.from(allNames).filter(n => !existingNames.has(n.toLowerCase()));
+  const missingNote = document.getElementById('importMissingGroupsNote');
+  if (importMissingGroupNames.length) {
+    missingNote.textContent = `⚠️ These groups don't exist yet: ${importMissingGroupNames.join(', ')}. You'll be asked whether to create them when you click Import.`;
+    missingNote.style.display = 'block';
+  } else {
+    missingNote.style.display = 'none';
+  }
+
   document.getElementById('importPreviewWrap').style.display = 'block';
   document.getElementById('importConfirmBtn').disabled = totalValid === 0;
 }
 
 async function confirmImport() {
+  let createMissingGroups = false;
+  if (importMissingGroupNames.length) {
+    createMissingGroups = confirm(
+      `These groups don't exist yet:\n\n${importMissingGroupNames.join(', ')}\n\n` +
+      `Create them now so imported contacts can be tagged with them? ` +
+      `Choosing Cancel still imports the contacts, just without those specific group tags.`
+    );
+  }
+
   const r = await fetch('/api/newsletter/contacts/import', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rows: parsedImportRows, defaultSource: 'Bulk Import' }),
+    body: JSON.stringify({ rows: parsedImportRows, defaultSource: 'Bulk Import', createMissingGroups }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json();
   closeImportModal();
   fetchAndRenderContacts();
-  fnToast(`Imported ${result.imported} new · updated ${result.updated} existing · skipped ${result.skippedInvalid} invalid`);
+  let msg = `Imported ${result.imported} new · updated ${result.updated} existing · skipped ${result.skippedInvalid} invalid`;
+  if (result.groupsCreated && result.groupsCreated.length) msg += ` · created group(s): ${result.groupsCreated.join(', ')}`;
+  if (result.groupsSkipped && result.groupsSkipped.length) msg += ` · skipped group(s): ${result.groupsSkipped.join(', ')}`;
+  fnToast(msg);
 }
 
 /* ---- Purchases & Licenses ---- */

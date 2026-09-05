@@ -871,43 +871,96 @@ router.put('/seats/:seatId/audiences', requireAuth, async (req, res) => {
 // value it already has is never overwritten, and status/source/signup_date
 // are never touched — a contact may have unsubscribed through our own
 // site, and a bulk import shouldn't silently resubscribe or relabel them.
+// Group membership (row.groups, an array of group names) is always additive
+// for both new and existing contacts — an import never removes a contact
+// from a group it wasn't mentioned for.
 router.post('/contacts/import', requireAuth, async (req, res) => {
   const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
   const defaultSource = (req.body && req.body.defaultSource) || 'Bulk Import';
+  const createMissingGroups = !!(req.body && req.body.createMissingGroups);
 
   const [existingRows] = await pool.query('SELECT id, email FROM newsletter_contacts');
   const existingIdByEmail = new Map(existingRows.map(r => [r.email.toLowerCase(), r.id]));
+
+  // Resolve every group name referenced across all rows up front, so the
+  // per-row loop below is just a lookup, not a create-on-the-fly.
+  const [groupRows] = await pool.query('SELECT id, name FROM contact_groups');
+  const groupIdByName = new Map(groupRows.map(g => [g.name.toLowerCase(), g.id]));
+  const allGroupNames = new Set(rows.flatMap(r => Array.isArray(r.groups) ? r.groups : []));
+  const missingGroupNames = Array.from(allGroupNames).filter(n => !groupIdByName.has(n.toLowerCase()));
+
+  const groupsCreated = [];
+  const groupsSkipped = [];
+  if (missingGroupNames.length) {
+    if (createMissingGroups) {
+      for (const name of missingGroupNames) {
+        try {
+          const [result] = await pool.query('INSERT INTO contact_groups (name) VALUES (?)', [name]);
+          groupIdByName.set(name.toLowerCase(), result.insertId);
+          groupsCreated.push(name);
+        } catch (err) {
+          if (err.code !== 'ER_DUP_ENTRY') throw err;
+          const [[existingGroup]] = await pool.query('SELECT id FROM contact_groups WHERE name = ?', [name]);
+          if (existingGroup) groupIdByName.set(name.toLowerCase(), existingGroup.id);
+        }
+      }
+    } else {
+      groupsSkipped.push(...missingGroupNames);
+    }
+  }
 
   let imported = 0, updated = 0, skippedInvalid = 0;
   for (const row of rows) {
     const email = (row.email || '').trim();
     if (!email || !EMAIL_PATTERN.test(email)) { skippedInvalid++; continue; }
 
+    const groupIds = (Array.isArray(row.groups) ? row.groups : [])
+      .map(name => groupIdByName.get(name.toLowerCase()))
+      .filter(Boolean);
+
     const existingId = existingIdByEmail.get(email.toLowerCase());
     if (existingId) {
       await pool.query(
         `UPDATE newsletter_contacts SET
            name = COALESCE(NULLIF(name, ''), ?),
+           phone = COALESCE(NULLIF(phone, ''), ?),
+           company = COALESCE(NULLIF(company, ''), ?),
            street = COALESCE(NULLIF(street, ''), ?),
            city = COALESCE(NULLIF(city, ''), ?),
            state = COALESCE(NULLIF(state, ''), ?),
-           zip = COALESCE(NULLIF(zip, ''), ?)
+           zip = COALESCE(NULLIF(zip, ''), ?),
+           notes = COALESCE(NULLIF(notes, ''), ?)
          WHERE id = ?`,
-        [row.name || '', row.street || '', row.city || '', row.state || '', row.zip || '', existingId]
+        [row.name || '', row.phone || '', row.company || '', row.street || '', row.city || '', row.state || '', row.zip || '', row.notes || '', existingId]
       );
+      if (groupIds.length) {
+        await pool.query(
+          'INSERT IGNORE INTO contact_group_members (contact_id, group_id) VALUES ?',
+          [groupIds.map(gid => [existingId, gid])]
+        );
+      }
       updated++;
       continue;
     }
 
+    const parsedSignupDate = row.signupDate ? new Date(row.signupDate) : null;
+    const signupDate = parsedSignupDate && !isNaN(parsedSignupDate.getTime()) ? parsedSignupDate : new Date();
+
     const [result] = await pool.query(
-      'INSERT INTO newsletter_contacts (name, email, street, city, state, zip, source, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [row.name || '', email, row.street || '', row.city || '', row.state || '', row.zip || '', row.source || defaultSource, 'Subscribed']
+      'INSERT INTO newsletter_contacts (name, email, phone, company, street, city, state, zip, signup_date, source, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [row.name || '', email, row.phone || '', row.company || '', row.street || '', row.city || '', row.state || '', row.zip || '', signupDate, row.source || defaultSource, 'Subscribed', row.notes || '']
     );
     existingIdByEmail.set(email.toLowerCase(), result.insertId);
+    if (groupIds.length) {
+      await pool.query(
+        'INSERT IGNORE INTO contact_group_members (contact_id, group_id) VALUES ?',
+        [groupIds.map(gid => [result.insertId, gid])]
+      );
+    }
     imported++;
   }
 
-  res.json({ imported, updated, skippedInvalid });
+  res.json({ imported, updated, skippedInvalid, groupsCreated, groupsSkipped });
 });
 
 module.exports = { router, attachPurchaseDetails, createPurchase, assignContactToGroups };
