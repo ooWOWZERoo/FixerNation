@@ -356,6 +356,12 @@ const CAMPAIGN_QUILL_TOOLBAR = [
 // blog/curriculum editors use instead, and inserts the real URL.
 function campaignQuillImageHandler() {
   const quill = this.quill;
+  // Capture the cursor position BEFORE opening the OS file picker — once
+  // that dialog opens, the page loses focus/selection, so reading it back
+  // inside the async onchange callback (after the dialog closes) would
+  // always return a stale/default range instead of where the admin was
+  // actually typing.
+  const range = quill.getSelection(true) || { index: quill.getLength() };
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -365,7 +371,6 @@ function campaignQuillImageHandler() {
     fnToast('Uploading image...');
     const url = await fnUploadFile(file);
     if (!url) return; // fnUploadFile already toasted the error
-    const range = quill.getSelection(true) || { index: quill.getLength() };
     quill.insertEmbed(range.index, 'image', url, 'user');
     quill.setSelection(range.index + 1);
     fnToast('Image uploaded');
