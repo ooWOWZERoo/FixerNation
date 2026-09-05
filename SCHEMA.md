@@ -351,8 +351,17 @@ id 🔑 · event_key varchar(64) ⭐ · label · enabled · subject, body · rem
 ### `automation_executions` — **NEW this session**, real execution log
 id 🔑 · event_key · recipient_email · status (success/failed/skipped) · error_message · duration_ms · fired_at
 
-### `campaigns` — bulk newsletter campaigns
-id 🔑 · subject · from_name/email · audience_status, audience_source, audience_group_id 🔗→contact_groups (SET NULL) · body, body_format · status (default 'Draft') · sent_at · recipient_count · created_at/updated_at
+### `campaigns` — bulk newsletter campaigns (one row per actual send, including each recurring-series occurrence)
+id 🔑 · subject · from_name/email · audience_status, audience_source, audience_group_id (deprecated — see `campaign_audience_groups`) · **scheduled_for** (datetime, NEW) · **series_id** 🔗→campaign_series (SET NULL, NEW) · body, body_format · status (Draft/Scheduled/Sent) · sent_at · recipient_count · created_at/updated_at
+
+### `campaign_audience_groups` — **NEW**, one-or-many groups per campaign (UNION — reaches anyone in any selected group)
+🔑 (campaign_id, group_id) · campaign_id 🔗→campaigns (CASCADE) · group_id 🔗→contact_groups (CASCADE)
+
+### `campaign_series` — **NEW**, recurring campaign definitions (daily/weekly/monthly template)
+id 🔑 · subject · from_name/email · audience_status, audience_source · body, body_format · recurrence_type (daily/weekly/monthly) · recurrence_day_of_week (0-6, weekly) · recurrence_day_of_month (1-31, monthly — clamped to short months) · send_time · send_timezone (IANA) · is_active · next_fire_at · last_fired_at · created_at/updated_at
+
+### `campaign_series_groups` — **NEW**, one-or-many groups per series (copied to the spawned campaign's own `campaign_audience_groups` at fire time)
+🔑 (series_id, group_id) · series_id 🔗→campaign_series (CASCADE) · group_id 🔗→contact_groups (CASCADE)
 
 ### `campaign_sends`
 id 🔑 · campaign_id 🔗→campaigns (CASCADE) · contact_id 🔗→newsletter_contacts (SET NULL) · email · token ⭐ · status (default 'sent') · error_message · sent_at · opened_at, open_count · unsubscribed_at · clicked_at, click_count
@@ -388,3 +397,7 @@ setting_key varchar(64) 🔑 · setting_value text · updated_at
 | `quote_requests` | `expiring_reminder_sent_at` | Dedup flag for the 7-day quote-expiry reminder |
 | *(new table)* `automation_executions` | — | Real execution log for every automated email send |
 | *(new table)* `student_quiz_drafts` | — | Partial quiz-progress save, separate from the write-once `student_quiz_responses` |
+| `campaigns` | `scheduled_for`, `series_id` | Schedule-for-later + link back to the recurring series that spawned this occurrence |
+| *(new table)* `campaign_audience_groups` | — | One-or-many audience groups per campaign (UNION), replacing the single `audience_group_id` |
+| *(new table)* `campaign_series` | — | Recurring campaign definitions (daily/weekly/monthly) |
+| *(new table)* `campaign_series_groups` | — | One-or-many audience groups per recurring series |

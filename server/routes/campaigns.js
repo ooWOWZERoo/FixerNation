@@ -4,22 +4,44 @@ const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { sendCampaignEmail } = require('../lib/mailer');
 const { rewriteLinksForTracking, classifySendError } = require('../lib/campaign-tracking');
+const { computeNextFireAt } = require('../lib/campaign-recurrence');
 
 const router = express.Router();
 
 // 1x1 transparent GIF served by the open-tracking pixel below.
 const TRACKING_PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64');
 
-function serialize(row) {
+async function getGroupIdsForCampaigns(campaignIds) {
+  if (!campaignIds.length) return {};
+  const [rows] = await pool.query('SELECT campaign_id, group_id FROM campaign_audience_groups WHERE campaign_id IN (?)', [campaignIds]);
+  const byId = {};
+  rows.forEach(r => { (byId[r.campaign_id] = byId[r.campaign_id] || []).push(r.group_id); });
+  return byId;
+}
+
+// Replaces a campaign's selected audience groups wholesale — simplest
+// correct semantics for "these are the groups now", no diffing needed.
+async function setGroupIdsForCampaign(connOrPool, campaignId, groupIds) {
+  await connOrPool.query('DELETE FROM campaign_audience_groups WHERE campaign_id = ?', [campaignId]);
+  const ids = Array.isArray(groupIds) ? groupIds.filter(Boolean).map(Number) : [];
+  if (ids.length) {
+    const values = ids.map(gid => [campaignId, gid]);
+    await connOrPool.query('INSERT IGNORE INTO campaign_audience_groups (campaign_id, group_id) VALUES ?', [values]);
+  }
+}
+
+function serialize(row, groupIds) {
   return {
     id: row.id,
     subject: row.subject,
     fromName: row.from_name,
     fromEmail: row.from_email,
-    audienceFilter: { status: row.audience_status, source: row.audience_source, groupId: row.audience_group_id },
+    audienceFilter: { status: row.audience_status, source: row.audience_source, groupIds: groupIds || [] },
     body: row.body,
     bodyFormat: row.body_format,
     status: row.status,
+    scheduledFor: row.scheduled_for,
+    seriesId: row.series_id,
     sentAt: row.sent_at,
     recipientCount: row.recipient_count,
     createdAt: row.created_at,
@@ -28,7 +50,8 @@ function serialize(row) {
 
 router.get('/', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM campaigns ORDER BY created_at DESC');
-  res.json({ campaigns: rows.map(serialize) });
+  const groupIdsById = await getGroupIdsForCampaigns(rows.map(r => r.id));
+  res.json({ campaigns: rows.map(r => serialize(r, groupIdsById[r.id])) });
 });
 
 // Public — hit by the recipient's email client loading the tracking pixel
@@ -69,33 +92,219 @@ router.get('/click', async (req, res) => {
   res.redirect(target.destination_url);
 });
 
+// A scheduledFor value moves the campaign straight to 'Scheduled' instead
+// of 'Draft' — validated as a real future instant, never trusted to already
+// be one just because the browser sent it.
+function resolveScheduledFor(c) {
+  if (!c.scheduledFor) return { status: 'Draft', scheduledFor: null };
+  const d = new Date(c.scheduledFor);
+  if (isNaN(d.getTime())) throw { status: 400, message: 'Invalid scheduledFor date' };
+  if (d <= new Date()) throw { status: 400, message: 'Scheduled time must be in the future' };
+  return { status: 'Scheduled', scheduledFor: d };
+}
+
 router.post('/', requireAuth, async (req, res) => {
   const c = req.body || {};
   if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
 
+  let schedule;
+  try { schedule = resolveScheduledFor(c); } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+
   const [result] = await pool.query(
-    `INSERT INTO campaigns (subject, from_name, from_email, audience_status, audience_source, audience_group_id, body, body_format, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Draft')`,
-    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', (c.audienceFilter && c.audienceFilter.groupId) || null, c.body || '', c.bodyFormat || 'text']
+    `INSERT INTO campaigns (subject, from_name, from_email, audience_status, audience_source, body, body_format, status, scheduled_for)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', c.body || '', c.bodyFormat || 'text', schedule.status, schedule.scheduledFor]
   );
+  await setGroupIdsForCampaign(pool, result.insertId, c.audienceFilter && c.audienceFilter.groupIds);
+
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [result.insertId]);
-  res.status(201).json({ campaign: serialize(rows[0]) });
+  const groupIdsById = await getGroupIdsForCampaigns([result.insertId]);
+  res.status(201).json({ campaign: serialize(rows[0], groupIdsById[result.insertId]) });
+});
+
+// ---------------------------------------------------------------------------
+// Recurring campaign series — a template that spawns an independently-
+// tracked `campaigns` occurrence (its own recipient_count/opens/clicks)
+// every time it fires, rather than one row that resends itself. Declared
+// before the generic /:id routes below so Express never mistakes "series"
+// for a campaign id.
+// ---------------------------------------------------------------------------
+
+const RECURRENCE_TYPES = ['daily', 'weekly', 'monthly'];
+
+function serializeSeries(row, groupIds) {
+  return {
+    id: row.id,
+    subject: row.subject,
+    fromName: row.from_name,
+    fromEmail: row.from_email,
+    audienceFilter: { status: row.audience_status, source: row.audience_source, groupIds: groupIds || [] },
+    body: row.body,
+    bodyFormat: row.body_format,
+    recurrenceType: row.recurrence_type,
+    recurrenceDayOfWeek: row.recurrence_day_of_week,
+    recurrenceDayOfMonth: row.recurrence_day_of_month,
+    sendTime: row.send_time,
+    sendTimezone: row.send_timezone,
+    isActive: !!row.is_active,
+    nextFireAt: row.next_fire_at,
+    lastFiredAt: row.last_fired_at,
+    createdAt: row.created_at,
+  };
+}
+
+async function getGroupIdsForSeriesList(seriesIds) {
+  if (!seriesIds.length) return {};
+  const [rows] = await pool.query('SELECT series_id, group_id FROM campaign_series_groups WHERE series_id IN (?)', [seriesIds]);
+  const byId = {};
+  rows.forEach(r => { (byId[r.series_id] = byId[r.series_id] || []).push(r.group_id); });
+  return byId;
+}
+
+async function setGroupIdsForSeries(seriesId, groupIds) {
+  await pool.query('DELETE FROM campaign_series_groups WHERE series_id = ?', [seriesId]);
+  const ids = Array.isArray(groupIds) ? groupIds.filter(Boolean).map(Number) : [];
+  if (ids.length) {
+    const values = ids.map(gid => [seriesId, gid]);
+    await pool.query('INSERT IGNORE INTO campaign_series_groups (series_id, group_id) VALUES ?', [values]);
+  }
+}
+
+// Validates and normalizes the recurrence fields shared by create/update.
+function parseRecurrenceFields(c) {
+  if (!RECURRENCE_TYPES.includes(c.recurrenceType)) {
+    throw { status: 400, message: 'recurrenceType must be daily, weekly, or monthly' };
+  }
+  let dayOfWeek = null, dayOfMonth = null;
+  if (c.recurrenceType === 'weekly') {
+    dayOfWeek = Number(c.recurrenceDayOfWeek);
+    if (!(dayOfWeek >= 0 && dayOfWeek <= 6)) throw { status: 400, message: 'recurrenceDayOfWeek must be 0-6' };
+  }
+  if (c.recurrenceType === 'monthly') {
+    dayOfMonth = Number(c.recurrenceDayOfMonth);
+    if (!(dayOfMonth >= 1 && dayOfMonth <= 31)) throw { status: 400, message: 'recurrenceDayOfMonth must be 1-31' };
+  }
+  const sendTime = /^\d{2}:\d{2}(:\d{2})?$/.test(c.sendTime || '') ? c.sendTime : '09:00:00';
+  const sendTimezone = (c.sendTimezone || 'America/New_York').trim();
+  try { new Intl.DateTimeFormat('en-US', { timeZone: sendTimezone }); } catch {
+    throw { status: 400, message: `"${sendTimezone}" is not a valid timezone` };
+  }
+  return { recurrence_type: c.recurrenceType, recurrence_day_of_week: dayOfWeek, recurrence_day_of_month: dayOfMonth, send_time: sendTime, send_timezone: sendTimezone };
+}
+
+router.get('/series', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM campaign_series ORDER BY created_at DESC');
+  const groupIdsById = await getGroupIdsForSeriesList(rows.map(r => r.id));
+  res.json({ series: rows.map(r => serializeSeries(r, groupIdsById[r.id])) });
+});
+
+router.post('/series', requireAuth, async (req, res) => {
+  const c = req.body || {};
+  if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
+
+  let rec;
+  try { rec = parseRecurrenceFields(c); } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+
+  const nextFireAt = computeNextFireAt(rec, new Date(), true);
+  const [result] = await pool.query(
+    `INSERT INTO campaign_series
+       (subject, from_name, from_email, audience_status, audience_source, body, body_format,
+        recurrence_type, recurrence_day_of_week, recurrence_day_of_month, send_time, send_timezone, next_fire_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', c.body || '', c.bodyFormat || 'text',
+     rec.recurrence_type, rec.recurrence_day_of_week, rec.recurrence_day_of_month, rec.send_time, rec.send_timezone, nextFireAt]
+  );
+  await setGroupIdsForSeries(result.insertId, c.audienceFilter && c.audienceFilter.groupIds);
+
+  const [rows] = await pool.query('SELECT * FROM campaign_series WHERE id = ?', [result.insertId]);
+  const groupIdsById = await getGroupIdsForSeriesList([result.insertId]);
+  res.status(201).json({ series: serializeSeries(rows[0], groupIdsById[result.insertId]) });
+});
+
+router.put('/series/:id', requireAuth, async (req, res) => {
+  const c = req.body || {};
+  if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
+
+  const [existing] = await pool.query('SELECT id FROM campaign_series WHERE id = ?', [req.params.id]);
+  if (!existing[0]) return res.status(404).json({ error: 'Series not found' });
+
+  let rec;
+  try { rec = parseRecurrenceFields(c); } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+
+  // Recomputed fresh from now — editing a series' schedule always
+  // re-anchors it, rather than trying to preserve a stale next_fire_at
+  // that may no longer even match the new rule.
+  const nextFireAt = computeNextFireAt(rec, new Date(), true);
+  await pool.query(
+    `UPDATE campaign_series SET
+       subject=?, from_name=?, from_email=?, audience_status=?, audience_source=?, body=?, body_format=?,
+       recurrence_type=?, recurrence_day_of_week=?, recurrence_day_of_month=?, send_time=?, send_timezone=?, next_fire_at=?
+     WHERE id=?`,
+    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', c.body || '', c.bodyFormat || 'text',
+     rec.recurrence_type, rec.recurrence_day_of_week, rec.recurrence_day_of_month, rec.send_time, rec.send_timezone, nextFireAt, req.params.id]
+  );
+  await setGroupIdsForSeries(req.params.id, c.audienceFilter && c.audienceFilter.groupIds);
+
+  const [rows] = await pool.query('SELECT * FROM campaign_series WHERE id = ?', [req.params.id]);
+  const groupIdsById = await getGroupIdsForSeriesList([Number(req.params.id)]);
+  res.json({ series: serializeSeries(rows[0], groupIdsById[req.params.id]) });
+});
+
+router.post('/series/:id/pause', requireAuth, async (req, res) => {
+  const [result] = await pool.query('UPDATE campaign_series SET is_active = 0 WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Series not found' });
+  res.json({ ok: true });
+});
+
+router.post('/series/:id/resume', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM campaign_series WHERE id = ?', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Series not found' });
+  // Recompute from now, in case real time has moved well past the
+  // previously-stored next_fire_at while this series sat paused.
+  const nextFireAt = computeNextFireAt(rows[0], new Date(), true);
+  await pool.query('UPDATE campaign_series SET is_active = 1, next_fire_at = ? WHERE id = ?', [nextFireAt, req.params.id]);
+  res.json({ ok: true, nextFireAt });
+});
+
+router.delete('/series/:id', requireAuth, async (req, res) => {
+  const [result] = await pool.query('DELETE FROM campaign_series WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Series not found' });
+  res.json({ ok: true });
 });
 
 router.put('/:id', requireAuth, async (req, res) => {
   const c = req.body || {};
   if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
 
-  const [existing] = await pool.query('SELECT id FROM campaigns WHERE id = ?', [req.params.id]);
+  const [existing] = await pool.query('SELECT id, status FROM campaigns WHERE id = ?', [req.params.id]);
   if (!existing[0]) return res.status(404).json({ error: 'Campaign not found' });
+  if (existing[0].status === 'Sent') return res.status(400).json({ error: 'A sent campaign cannot be edited' });
+
+  let schedule;
+  try { schedule = resolveScheduledFor(c); } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
 
   await pool.query(
-    `UPDATE campaigns SET subject=?, from_name=?, from_email=?, audience_status=?, audience_source=?, audience_group_id=?, body=?, body_format=?
+    `UPDATE campaigns SET subject=?, from_name=?, from_email=?, audience_status=?, audience_source=?, body=?, body_format=?, status=?, scheduled_for=?
      WHERE id=?`,
-    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', (c.audienceFilter && c.audienceFilter.groupId) || null, c.body || '', c.bodyFormat || 'text', req.params.id]
+    [c.subject, c.fromName || 'Fixer Nation', c.fromEmail || '', (c.audienceFilter && c.audienceFilter.status) || 'Subscribed', (c.audienceFilter && c.audienceFilter.source) || 'All', c.body || '', c.bodyFormat || 'text', schedule.status, schedule.scheduledFor, req.params.id]
   );
+  await setGroupIdsForCampaign(pool, req.params.id, c.audienceFilter && c.audienceFilter.groupIds);
+
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
-  res.json({ campaign: serialize(rows[0]) });
+  const groupIdsById = await getGroupIdsForCampaigns([Number(req.params.id)]);
+  res.json({ campaign: serialize(rows[0], groupIdsById[req.params.id]) });
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
@@ -104,17 +313,13 @@ router.delete('/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// Sends the campaign for real via SMTP — one individual email per recipient
-// (each message's "To" header contains only that one address; there is no
-// CC/BCC of the full list, so no recipient ever sees anyone else's address).
-// Regardless of the audience_status filter stored on the campaign, delivery
-// ALWAYS excludes unsubscribed contacts — source/group filters only ever
-// narrow further, they can never be used to reach people who opted out.
-router.post('/:id/send', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
-  if (!rows[0]) return res.status(404).json({ error: 'Campaign not found' });
-  const campaign = rows[0];
-
+// Resolves the real recipient list for a campaign at the moment it's about
+// to send (never at save/schedule time) — one or more audience groups are
+// unioned (anyone in ANY selected group), further narrowed by source if
+// set. Regardless of any filter, delivery ALWAYS excludes unsubscribed
+// contacts — source/group filters only ever narrow further, never reach
+// people who opted out.
+async function resolveCampaignAudience(campaign) {
   const params = ['Subscribed'];
   let joinClause = '';
   let extraClauses = '';
@@ -122,15 +327,33 @@ router.post('/:id/send', requireAuth, async (req, res) => {
     extraClauses += ' AND c.source = ?';
     params.push(campaign.audience_source);
   }
-  if (campaign.audience_group_id) {
+  const [groupRows] = await pool.query('SELECT group_id FROM campaign_audience_groups WHERE campaign_id = ?', [campaign.id]);
+  const groupIds = groupRows.map(r => r.group_id);
+  if (groupIds.length) {
     joinClause = ' JOIN contact_group_members m ON m.contact_id = c.id';
-    extraClauses += ' AND m.group_id = ?';
-    params.push(campaign.audience_group_id);
+    extraClauses += ' AND m.group_id IN (?)';
+    params.push(groupIds);
   }
   const [contacts] = await pool.query(
     `SELECT DISTINCT c.id, c.email FROM newsletter_contacts c${joinClause} WHERE c.status = ?${extraClauses}`,
     params
   );
+  return contacts;
+}
+
+// Sends the campaign for real via SMTP — one individual email per recipient
+// (each message's "To" header contains only that one address; there is no
+// CC/BCC of the full list, so no recipient ever sees anyone else's address).
+// Shared by the manual "Send Now"/"Send" action and the scheduled/recurring
+// cron (server/scripts/send-scheduled-campaigns.js) — the exact same send
+// path either way, just a different trigger.
+async function sendCampaignNow(campaignId) {
+  const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+  if (!rows[0]) throw { status: 404, message: 'Campaign not found' };
+  const campaign = rows[0];
+  if (campaign.status === 'Sent') throw { status: 400, message: 'This campaign has already been sent' };
+
+  const contacts = await resolveCampaignAudience(campaign);
 
   let sent = 0, bounced = 0, undelivered = 0;
   for (const contact of contacts) {
@@ -170,10 +393,22 @@ router.post('/:id/send', requireAuth, async (req, res) => {
 
   await pool.query(
     "UPDATE campaigns SET status = 'Sent', sent_at = NOW(), recipient_count = ? WHERE id = ?",
-    [sent, req.params.id]
+    [sent, campaignId]
   );
+  return { sent, bounced, undelivered };
+}
+
+router.post('/:id/send', requireAuth, async (req, res) => {
+  let result;
+  try {
+    result = await sendCampaignNow(req.params.id);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
   const [updated] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
-  res.json({ campaign: serialize(updated[0]), sent, bounced, undelivered });
+  const groupIdsById = await getGroupIdsForCampaigns([Number(req.params.id)]);
+  res.json({ campaign: serialize(updated[0], groupIdsById[req.params.id]), ...result });
 });
 
 router.get('/:id/stats', requireAuth, async (req, res) => {
@@ -287,12 +522,13 @@ router.post('/:id/follow-up', requireAuth, async (req, res) => {
 
   const newSubject = type === 'clickers' ? `Re: ${campaign.subject}` : campaign.subject;
   const [newRow] = await pool.query(
-    `INSERT INTO campaigns (subject, from_name, from_email, body_format, body, audience_group_id, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'Draft')`,
-    [newSubject, campaign.from_name, campaign.from_email, campaign.body_format, campaign.body, groupId]
+    `INSERT INTO campaigns (subject, from_name, from_email, body_format, body, status)
+     VALUES (?, ?, ?, ?, ?, 'Draft')`,
+    [newSubject, campaign.from_name, campaign.from_email, campaign.body_format, campaign.body]
   );
+  await setGroupIdsForCampaign(pool, newRow.insertId, [groupId]);
 
   res.json({ ok: true, campaignId: newRow.insertId, groupId, recipientCount: contactRows.length });
 });
 
-module.exports = router;
+module.exports = { router, sendCampaignNow, computeNextFireAt };

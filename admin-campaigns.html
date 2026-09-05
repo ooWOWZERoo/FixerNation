@@ -79,6 +79,22 @@
           No campaigns yet — click "New Campaign" to draft your first mass email.
         </div>
       </div>
+
+      <div class="a-card" style="margin-top:22px;">
+        <div class="a-card-head">
+          <h2>Recurring Campaigns</h2>
+          <button class="a-btn a-btn-primary" onclick="openSeriesModal()">+ New Recurring Campaign</button>
+        </div>
+        <div class="a-note" style="margin-bottom:14px;">Each time a recurring campaign fires, it spawns its own independently-tracked send (own recipient count, opens, clicks) — it shows up in the Campaigns list above like any other sent campaign, tagged with which recurring series it came from.</div>
+        <table class="a-table" id="seriesTable">
+          <thead><tr><th>Subject</th><th>Audience</th><th>Recurrence</th><th>Next Send</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="a-empty" id="seriesEmpty" style="display:none;">
+          <div class="big">🔁</div>
+          No recurring campaigns yet.
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -118,14 +134,21 @@
             </select>
           </div>
           <div class="a-field">
-            <label>Audience — Group</label>
-            <select id="audienceGroup">
-              <option value="">All groups</option>
-            </select>
+            <label>Audience — Groups (none checked = all groups)</label>
+            <div id="audienceGroupList" style="max-height:120px; overflow-y:auto; border:1px solid var(--a-border); border-radius:10px; padding:8px 10px;"></div>
           </div>
         </div>
-        <div class="a-note">Real sends always go to subscribed contacts only — unsubscribed contacts can never be included, regardless of source/group.</div>
+        <div class="a-note">Real sends always go to subscribed contacts only — unsubscribed contacts can never be included, regardless of source/group(s). Checking multiple groups reaches anyone in ANY of them.</div>
         <div class="a-audience-preview" id="audiencePreview">Recipients: —</div>
+
+        <div class="a-field" style="margin-top:16px;">
+          <label>When to Send</label>
+          <div style="display:flex; gap:16px; align-items:center;">
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400; text-transform:none;"><input type="radio" name="sendMode" value="now" id="sendModeNow" checked onchange="onSendModeChange()"> Send Now</label>
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400; text-transform:none;"><input type="radio" name="sendMode" value="schedule" id="sendModeSchedule" onchange="onSendModeChange()"> Schedule for later</label>
+          </div>
+          <input type="datetime-local" id="scheduledFor" style="margin-top:10px; display:none;">
+        </div>
 
         <div class="a-field" style="margin-top:16px;">
           <label>Email Body</label>
@@ -155,8 +178,104 @@
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeCampaignModal()">Cancel</button>
-      <button class="a-btn a-btn-outline" onclick="saveCampaign(false)">Save Draft</button>
-      <button class="a-btn a-btn-primary" onclick="saveCampaign(true)">Send Now</button>
+      <button class="a-btn a-btn-outline" onclick="saveCampaign('draft')">Save Draft</button>
+      <button class="a-btn a-btn-primary" id="campaignPrimaryBtn" onclick="saveCampaign(document.getElementById('sendModeSchedule').checked ? 'schedule' : 'send')">Send Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recurring Campaign (Series) Modal -->
+<div class="a-modal-overlay" id="seriesModalOverlay">
+  <div class="a-modal" style="max-width:680px;">
+    <div class="a-modal-head">
+      <h3 id="seriesModalTitle">New Recurring Campaign</h3>
+      <button class="a-modal-close" onclick="closeSeriesModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <form id="seriesForm">
+        <input type="hidden" id="seriesId">
+
+        <div class="a-field">
+          <label>Subject Line *</label>
+          <input type="text" id="seriesSubject" required placeholder="e.g. Your weekly Fixer Nation roundup">
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>From Name</label>
+            <input type="text" id="seriesFromName" value="Fixer Nation">
+          </div>
+          <div class="a-field">
+            <label>From Email</label>
+            <input type="email" id="seriesFromEmail" value="noreply@fixernationeducation.com">
+          </div>
+        </div>
+
+        <div class="a-form-row">
+          <div class="a-field">
+            <label>Audience — Source</label>
+            <select id="seriesAudienceSource">
+              <option value="All">All sources</option>
+            </select>
+          </div>
+          <div class="a-field">
+            <label>Audience — Groups (none checked = all groups)</label>
+            <div id="seriesAudienceGroupList" style="max-height:120px; overflow-y:auto; border:1px solid var(--a-border); border-radius:10px; padding:8px 10px;"></div>
+          </div>
+        </div>
+        <div class="a-audience-preview" id="seriesAudiencePreview">Recipients per send: —</div>
+
+        <div class="a-field" style="margin-top:16px;">
+          <label>Repeats</label>
+          <div style="display:flex; gap:16px; align-items:center; margin-bottom:10px;">
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400; text-transform:none;"><input type="radio" name="recurrenceType" value="daily" checked onchange="onRecurrenceTypeChange()"> Daily</label>
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400; text-transform:none;"><input type="radio" name="recurrenceType" value="weekly" onchange="onRecurrenceTypeChange()"> Weekly</label>
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400; text-transform:none;"><input type="radio" name="recurrenceType" value="monthly" onchange="onRecurrenceTypeChange()"> Monthly</label>
+          </div>
+          <div class="a-form-row">
+            <div class="a-field" id="recurrenceDowField" style="display:none;">
+              <label>Day of Week</label>
+              <select id="recurrenceDayOfWeek">
+                <option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option>
+                <option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option>
+              </select>
+            </div>
+            <div class="a-field" id="recurrenceDomField" style="display:none;">
+              <label>Day of Month</label>
+              <input type="number" id="recurrenceDayOfMonth" min="1" max="31" value="1">
+              <div class="a-note">A day past the end of a shorter month (e.g. 31) sends on that month's last day instead.</div>
+            </div>
+            <div class="a-field">
+              <label>Send Time</label>
+              <input type="time" id="recurrenceSendTime" value="09:00">
+            </div>
+            <div class="a-field">
+              <label>Timezone</label>
+              <select id="recurrenceTimezone">
+                <option value="America/New_York" selected>Eastern (America/New_York)</option>
+                <option value="America/Chicago">Central (America/Chicago)</option>
+                <option value="America/Denver">Mountain (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </div>
+          </div>
+          <div class="a-note">Runs until paused or deleted — no end date needed.</div>
+        </div>
+
+        <div class="a-field" style="margin-top:16px;">
+          <label>Email Body</label>
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <button type="button" class="a-btn a-btn-outline a-format-btn active" id="seriesFormatTextBtn" onclick="setSeriesBodyFormat('text')">Plain Text</button>
+            <button type="button" class="a-btn a-btn-outline a-format-btn" id="seriesFormatHtmlBtn" onclick="setSeriesBodyFormat('html')">HTML</button>
+          </div>
+          <textarea id="seriesBody" style="min-height:160px;" placeholder="Write your recurring campaign email here..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeSeriesModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" onclick="saveSeries()">Save Recurring Campaign</button>
     </div>
   </div>
 </div>
@@ -248,8 +367,8 @@ function insertSnippet(type) {
   updateHtmlPreview();
 }
 
-function populateSourceOptions() {
-  const sel = document.getElementById('audienceSource');
+function populateSourceOptions(selectId) {
+  const sel = document.getElementById(selectId || 'audienceSource');
   const current = sel.value;
   sel.innerHTML = '<option value="All">All sources</option>';
   const sources = Array.from(new Set(subscribedContactsCache.map(c => c.source).filter(Boolean)));
@@ -261,39 +380,56 @@ function populateSourceOptions() {
   if (Array.from(sel.options).some(o => o.value === current)) sel.value = current;
 }
 
-function populateGroupOptions() {
-  const sel = document.getElementById('audienceGroup');
-  const current = sel.value;
-  sel.innerHTML = '<option value="">All groups</option>';
-  groupsCache.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g.id; opt.textContent = g.name;
-    sel.appendChild(opt);
-  });
-  if (Array.from(sel.options).some(o => o.value === current)) sel.value = current;
+// Shared by the campaign modal's #audienceGroupList and the recurring-
+// series modal's #seriesAudienceGroupList — a checkbox per group rather
+// than a single-select, since one or many groups can now be targeted.
+function populateGroupCheckboxes(containerId, checkedIds) {
+  const container = document.getElementById(containerId);
+  const checked = new Set((checkedIds || []).map(Number));
+  if (!groupsCache.length) {
+    container.innerHTML = '<span style="font-size:12.5px;color:var(--a-text-soft);">No groups exist yet.</span>';
+    return;
+  }
+  container.innerHTML = groupsCache.map(g => `
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:400;text-transform:none;font-size:13.5px;cursor:pointer;">
+      <input type="checkbox" value="${g.id}" ${checked.has(g.id) ? 'checked' : ''} onchange="${containerId === 'audienceGroupList' ? 'updateAudiencePreview()' : 'updateSeriesAudiencePreview()'}">
+      ${g.name}
+    </label>
+  `).join('');
+}
+
+function getCheckedGroupIds(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)).map(cb => Number(cb.value));
 }
 
 function describeAudience(filter) {
   const parts = [filter.status];
   if (filter.source && filter.source !== 'All') parts.push(filter.source);
-  if (filter.groupId) {
-    const group = groupsCache.find(g => g.id === filter.groupId);
-    parts.push(group ? group.name : 'Group');
+  const groupIds = filter.groupIds || [];
+  if (groupIds.length) {
+    const names = groupIds.map(id => { const g = groupsCache.find(x => x.id === id); return g ? g.name : 'Group'; });
+    parts.push(names.join(' or '));
   }
   return parts.join(' · ');
 }
 
-function matchesAudience(contact, source, groupId) {
+function matchesAudience(contact, source, groupIds) {
   if (source !== 'All' && contact.source !== source) return false;
-  if (groupId && !(contact.groups || []).some(g => g.id === Number(groupId))) return false;
+  if (groupIds && groupIds.length && !(contact.groups || []).some(g => groupIds.includes(g.id))) return false;
   return true;
 }
 
 function updateAudiencePreview() {
   const source = document.getElementById('audienceSource').value;
-  const groupId = document.getElementById('audienceGroup').value;
-  const count = subscribedContactsCache.filter(c => matchesAudience(c, source, groupId)).length;
+  const groupIds = getCheckedGroupIds('audienceGroupList');
+  const count = subscribedContactsCache.filter(c => matchesAudience(c, source, groupIds)).length;
   document.getElementById('audiencePreview').innerHTML = `Recipients: <b>${count}</b> subscribed contact${count===1?'':'s'} match this audience`;
+}
+
+function onSendModeChange() {
+  const scheduling = document.getElementById('sendModeSchedule').checked;
+  document.getElementById('scheduledFor').style.display = scheduling ? 'block' : 'none';
+  document.getElementById('campaignPrimaryBtn').textContent = scheduling ? 'Schedule' : 'Send Now';
 }
 
 async function fetchCampaigns() {
@@ -334,18 +470,23 @@ async function renderCampaigns() {
       : c.bodyFormat !== 'html' ? '<span title="Plain-text emails have no HTML to embed a tracking pixel in, so opens can never be tracked for this campaign.">N/A (plain text)</span>'
       : stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
     const unsubCell = c.status === 'Sent' && stats ? stats.unsubscribed : '—';
+    const statusPill = c.status === 'Sent' ? 'a-pill-success' : c.status === 'Scheduled' ? 'a-pill-warning' : 'a-pill-neutral';
+    const dateCell = c.status === 'Sent' ? fnFormatDate(c.sentAt)
+      : c.status === 'Scheduled' ? `Scheduled: ${fnFormatDate(c.scheduledFor)}`
+      : '—';
+    const seriesTag = c.seriesId ? ' <span class="a-pill a-pill-neutral" title="Spawned by a recurring campaign">🔁</span>' : '';
     tr.innerHTML = `
-      <td class="a-cell-title" style="cursor:pointer;" onclick="viewCampaign(${c.id})" title="Click to view details">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
+      <td class="a-cell-title" style="cursor:pointer;" onclick="viewCampaign(${c.id})" title="Click to view details">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}${seriesTag}</td>
       <td>${audienceLabel}</td>
-      <td><span class="a-pill ${c.status === 'Sent' ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>
-      <td>${c.sentAt ? fnFormatDate(c.sentAt) : '—'}</td>
+      <td><span class="a-pill ${statusPill}">${c.status}</span></td>
+      <td>${dateCell}</td>
       <td>${c.status === 'Sent' ? c.recipientCount : '—'}</td>
       <td>${openedCell}</td>
       <td>${unsubCell}</td>
       <td>
         <div class="a-row-actions">
           <button class="a-icon-btn" title="View" onclick="viewCampaign(${c.id})">👁️</button>
-          ${c.status === 'Draft' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign(${c.id})">✏️</button>` : ''}
+          ${c.status !== 'Sent' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign(${c.id})">✏️</button>` : ''}
           <button class="a-icon-btn" title="Duplicate" onclick="duplicateCampaign(${c.id})">📄</button>
           <button class="a-icon-btn danger" title="Delete" onclick="deleteCampaign(${c.id})">🗑️</button>
         </div>
@@ -355,6 +496,12 @@ async function renderCampaigns() {
   });
 }
 
+function resetSendMode() {
+  document.getElementById('sendModeNow').checked = true;
+  document.getElementById('scheduledFor').value = '';
+  onSendModeChange();
+}
+
 async function openCampaignModal() {
   editingId = null;
   document.getElementById('campaignModalTitle').textContent = 'New Campaign';
@@ -362,10 +509,10 @@ async function openCampaignModal() {
   document.getElementById('fromName').value = 'Fixer Nation';
   document.getElementById('fromEmail').value = 'noreply@fixernationeducation.com';
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
-  populateSourceOptions();
-  populateGroupOptions();
+  populateSourceOptions('audienceSource');
+  populateGroupCheckboxes('audienceGroupList', []);
   document.getElementById('audienceSource').value = 'All';
-  document.getElementById('audienceGroup').value = '';
+  resetSendMode();
   updateAudiencePreview();
   setBodyFormat('text');
   document.getElementById('campaignModalOverlay').classList.add('show');
@@ -374,20 +521,36 @@ function closeCampaignModal() {
   document.getElementById('campaignModalOverlay').classList.remove('show');
 }
 
+// datetime-local wants "YYYY-MM-DDTHH:MM" in the BROWSER's local time —
+// new Date(isoString) + this formatting gives exactly that, so scheduling
+// round-trips correctly through the browser's own timezone with no server-
+// side timezone logic needed for one-off (non-recurring) scheduling at all.
+function toDatetimeLocalValue(isoOrDate) {
+  const d = new Date(isoOrDate);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 async function editCampaign(id) {
   const c = campaignsCache.find(x => x.id === id);
   if (!c) return;
   editingId = id;
-  document.getElementById('campaignModalTitle').textContent = 'Edit Draft Campaign';
+  document.getElementById('campaignModalTitle').textContent = c.status === 'Scheduled' ? 'Edit Scheduled Campaign' : 'Edit Draft Campaign';
   document.getElementById('subject').value = c.subject;
   document.getElementById('fromName').value = c.fromName;
   document.getElementById('fromEmail').value = c.fromEmail;
   document.getElementById('body').value = c.body;
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
-  populateSourceOptions();
-  populateGroupOptions();
+  populateSourceOptions('audienceSource');
+  populateGroupCheckboxes('audienceGroupList', c.audienceFilter.groupIds);
   document.getElementById('audienceSource').value = c.audienceFilter.source;
-  document.getElementById('audienceGroup').value = c.audienceFilter.groupId || '';
+  if (c.status === 'Scheduled' && c.scheduledFor) {
+    document.getElementById('sendModeSchedule').checked = true;
+    document.getElementById('scheduledFor').value = toDatetimeLocalValue(c.scheduledFor);
+  } else {
+    resetSendMode();
+  }
+  onSendModeChange();
   updateAudiencePreview();
   setBodyFormat(c.bodyFormat === 'html' ? 'html' : 'text');
   document.getElementById('campaignModalOverlay').classList.add('show');
@@ -546,30 +709,42 @@ function closeViewModal() {
   document.getElementById('viewModalOverlay').classList.remove('show');
 }
 
-async function saveCampaign(send) {
+// mode: 'draft' | 'send' | 'schedule'
+async function saveCampaign(mode) {
   const subject = document.getElementById('subject').value.trim();
   if (!subject) { fnToast('Subject line is required'); return; }
 
   const source = document.getElementById('audienceSource').value;
-  const groupIdRaw = document.getElementById('audienceGroup').value;
-  const groupId = groupIdRaw ? Number(groupIdRaw) : null;
-  const recipientCount = subscribedContactsCache.filter(c => matchesAudience(c, source, groupId)).length;
+  const groupIds = getCheckedGroupIds('audienceGroupList');
+  const recipientCount = subscribedContactsCache.filter(c => matchesAudience(c, source, groupIds)).length;
 
-  if (send) {
+  let scheduledForIso = null;
+  if (mode === 'schedule') {
+    const raw = document.getElementById('scheduledFor').value;
+    if (!raw) { fnToast('Pick a date and time to schedule for'); return; }
+    const d = new Date(raw);
+    if (isNaN(d.getTime()) || d <= new Date()) { fnToast('Scheduled time must be in the future'); return; }
+    scheduledForIso = d.toISOString();
+  }
+
+  if (mode === 'send') {
     if (recipientCount === 0) {
       if (!confirm('This audience currently matches 0 subscribed contacts. Send anyway?')) return;
     } else if (!confirm(`Send "${subject}" for real to ${recipientCount} recipient(s)? This cannot be undone.`)) {
       return;
     }
+  } else if (mode === 'schedule') {
+    if (!confirm(`Schedule "${subject}" to send at ${document.getElementById('scheduledFor').value.replace('T', ' ')} to ~${recipientCount} recipient(s) at that time?`)) return;
   }
 
   const data = {
     subject,
     fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('fromEmail').value.trim() || 'noreply@fixernationeducation.com',
-    audienceFilter: { status: 'Subscribed', source, groupId },
+    audienceFilter: { status: 'Subscribed', source, groupIds },
     body: document.getElementById('body').value,
     bodyFormat,
+    scheduledFor: scheduledForIso,
   };
 
   const url = editingId ? `/api/campaigns/${editingId}` : '/api/campaigns';
@@ -588,10 +763,16 @@ async function saveCampaign(send) {
   }
   const saved = (await r.json()).campaign;
 
-  if (!send) {
+  if (mode === 'draft') {
     closeCampaignModal();
     renderCampaigns();
     fnToast('Draft saved');
+    return;
+  }
+  if (mode === 'schedule') {
+    closeCampaignModal();
+    renderCampaigns();
+    fnToast(`Scheduled to send ${document.getElementById('scheduledFor').value.replace('T', ' ')}`);
     return;
   }
 
@@ -615,11 +796,196 @@ async function saveCampaign(send) {
 }
 
 document.getElementById('audienceSource').addEventListener('change', updateAudiencePreview);
-document.getElementById('audienceGroup').addEventListener('change', updateAudiencePreview);
+
+// ---------------------------------------------------------------------------
+// Recurring campaign series
+// ---------------------------------------------------------------------------
+
+let seriesCache = [];
+let editingSeriesId = null;
+let seriesBodyFormat = 'text';
+
+async function fetchSeries() {
+  const r = await fetch('/api/campaigns/series', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return [];
+  return (await r.json()).series || [];
+}
+
+const WEEKDAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function ordinal(n) {
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+function describeRecurrence(s) {
+  const time = new Date(`2000-01-01T${s.sendTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const tz = (s.sendTimezone || '').split('/').pop().replace('_', ' ');
+  if (s.recurrenceType === 'daily') return `Daily at ${time} ${tz}`;
+  if (s.recurrenceType === 'weekly') return `Weekly on ${WEEKDAY_NAMES[s.recurrenceDayOfWeek]} at ${time} ${tz}`;
+  if (s.recurrenceType === 'monthly') return `Monthly on the ${ordinal(s.recurrenceDayOfMonth)} at ${time} ${tz}`;
+  return '—';
+}
+
+async function renderSeries() {
+  const series = seriesCache = await fetchSeries();
+  const tbody = document.querySelector('#seriesTable tbody');
+  tbody.innerHTML = '';
+  if (!series.length) {
+    document.getElementById('seriesTable').style.display = 'none';
+    document.getElementById('seriesEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('seriesTable').style.display = 'table';
+  document.getElementById('seriesEmpty').style.display = 'none';
+
+  series.forEach(s => {
+    const tr = document.createElement('tr');
+    const audienceLabel = describeAudience(s.audienceFilter);
+    tr.innerHTML = `
+      <td class="a-cell-title">${s.subject} ${s.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
+      <td>${audienceLabel}</td>
+      <td>${describeRecurrence(s)}</td>
+      <td>${s.isActive ? fnFormatDate(s.nextFireAt) : '—'}</td>
+      <td><span class="a-pill ${s.isActive ? 'a-pill-success' : 'a-pill-neutral'}">${s.isActive ? 'Active' : 'Paused'}</span></td>
+      <td>
+        <div class="a-row-actions">
+          <button class="a-icon-btn" title="Edit" onclick="editSeries(${s.id})">✏️</button>
+          ${s.isActive
+            ? `<button class="a-icon-btn" title="Pause" onclick="pauseSeries(${s.id})">⏸️</button>`
+            : `<button class="a-icon-btn" title="Resume" onclick="resumeSeries(${s.id})">▶️</button>`}
+          <button class="a-icon-btn danger" title="Delete" onclick="deleteSeries(${s.id})">🗑️</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function setSeriesBodyFormat(fmt) {
+  seriesBodyFormat = fmt;
+  document.getElementById('seriesFormatTextBtn').classList.toggle('active', fmt === 'text');
+  document.getElementById('seriesFormatHtmlBtn').classList.toggle('active', fmt === 'html');
+  document.getElementById('seriesBody').classList.toggle('a-body-html', fmt === 'html');
+}
+
+function onRecurrenceTypeChange() {
+  const type = document.querySelector('input[name="recurrenceType"]:checked').value;
+  document.getElementById('recurrenceDowField').style.display = type === 'weekly' ? 'block' : 'none';
+  document.getElementById('recurrenceDomField').style.display = type === 'monthly' ? 'block' : 'none';
+}
+
+function updateSeriesAudiencePreview() {
+  const source = document.getElementById('seriesAudienceSource').value;
+  const groupIds = getCheckedGroupIds('seriesAudienceGroupList');
+  const count = subscribedContactsCache.filter(c => matchesAudience(c, source, groupIds)).length;
+  document.getElementById('seriesAudiencePreview').innerHTML = `Recipients per send: <b>${count}</b> subscribed contact${count===1?'':'s'} match this audience (recalculated fresh at each send)`;
+}
+
+async function openSeriesModal() {
+  editingSeriesId = null;
+  document.getElementById('seriesModalTitle').textContent = 'New Recurring Campaign';
+  document.getElementById('seriesForm').reset();
+  document.getElementById('seriesFromName').value = 'Fixer Nation';
+  document.getElementById('seriesFromEmail').value = 'noreply@fixernationeducation.com';
+  [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
+  populateSourceOptions('seriesAudienceSource');
+  populateGroupCheckboxes('seriesAudienceGroupList', []);
+  document.getElementById('seriesAudienceSource').value = 'All';
+  document.querySelector('input[name="recurrenceType"][value="daily"]').checked = true;
+  onRecurrenceTypeChange();
+  updateSeriesAudiencePreview();
+  setSeriesBodyFormat('text');
+  document.getElementById('seriesModalOverlay').classList.add('show');
+}
+function closeSeriesModal() {
+  document.getElementById('seriesModalOverlay').classList.remove('show');
+}
+
+async function editSeries(id) {
+  const s = seriesCache.find(x => x.id === id);
+  if (!s) return;
+  editingSeriesId = id;
+  document.getElementById('seriesModalTitle').textContent = 'Edit Recurring Campaign';
+  document.getElementById('seriesSubject').value = s.subject;
+  document.getElementById('seriesFromName').value = s.fromName;
+  document.getElementById('seriesFromEmail').value = s.fromEmail;
+  document.getElementById('seriesBody').value = s.body;
+  [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
+  populateSourceOptions('seriesAudienceSource');
+  populateGroupCheckboxes('seriesAudienceGroupList', s.audienceFilter.groupIds);
+  document.getElementById('seriesAudienceSource').value = s.audienceFilter.source;
+  document.querySelector(`input[name="recurrenceType"][value="${s.recurrenceType}"]`).checked = true;
+  if (s.recurrenceType === 'weekly') document.getElementById('recurrenceDayOfWeek').value = s.recurrenceDayOfWeek;
+  if (s.recurrenceType === 'monthly') document.getElementById('recurrenceDayOfMonth').value = s.recurrenceDayOfMonth;
+  document.getElementById('recurrenceSendTime').value = s.sendTime.slice(0, 5);
+  document.getElementById('recurrenceTimezone').value = s.sendTimezone;
+  onRecurrenceTypeChange();
+  updateSeriesAudiencePreview();
+  setSeriesBodyFormat(s.bodyFormat === 'html' ? 'html' : 'text');
+  document.getElementById('seriesModalOverlay').classList.add('show');
+}
+
+async function saveSeries() {
+  const subject = document.getElementById('seriesSubject').value.trim();
+  if (!subject) { fnToast('Subject line is required'); return; }
+
+  const recurrenceType = document.querySelector('input[name="recurrenceType"]:checked').value;
+  const data = {
+    subject,
+    fromName: document.getElementById('seriesFromName').value.trim() || 'Fixer Nation',
+    fromEmail: document.getElementById('seriesFromEmail').value.trim() || 'noreply@fixernationeducation.com',
+    audienceFilter: { status: 'Subscribed', source: document.getElementById('seriesAudienceSource').value, groupIds: getCheckedGroupIds('seriesAudienceGroupList') },
+    body: document.getElementById('seriesBody').value,
+    bodyFormat: seriesBodyFormat,
+    recurrenceType,
+    recurrenceDayOfWeek: recurrenceType === 'weekly' ? Number(document.getElementById('recurrenceDayOfWeek').value) : undefined,
+    recurrenceDayOfMonth: recurrenceType === 'monthly' ? Number(document.getElementById('recurrenceDayOfMonth').value) : undefined,
+    sendTime: document.getElementById('recurrenceSendTime').value,
+    sendTimezone: document.getElementById('recurrenceTimezone').value,
+  };
+
+  const url = editingSeriesId ? `/api/campaigns/series/${editingSeriesId}` : '/api/campaigns/series';
+  const method = editingSeriesId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not save recurring campaign');
+    return;
+  }
+  closeSeriesModal();
+  renderSeries();
+  fnToast(editingSeriesId ? 'Recurring campaign updated' : 'Recurring campaign created');
+}
+
+async function pauseSeries(id) {
+  const r = await fetch(`/api/campaigns/series/${id}/pause`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  renderSeries();
+  fnToast('Paused');
+}
+async function resumeSeries(id) {
+  const r = await fetch(`/api/campaigns/series/${id}/resume`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  renderSeries();
+  fnToast('Resumed');
+}
+async function deleteSeries(id) {
+  if (!confirm('Delete this recurring campaign? Past occurrences it already sent stay in the Campaigns list.')) return;
+  const r = await fetch(`/api/campaigns/series/${id}`, { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  renderSeries();
+  fnToast('Deleted');
+}
 
 (async function init() {
   groupsCache = await fetchGroups();
   renderCampaigns();
+  renderSeries();
 })();
 </script>
 

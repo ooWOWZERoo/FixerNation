@@ -14,6 +14,7 @@ ENTRIES=(
   "0 6 * * * $NODE $SCRIPTS/school-license-expiry-reminder.js >> $LOGS/cron-school-reminder.log 2>&1"
   "0 2 * * * $NODE $SCRIPTS/expire-trial-licenses.js >> $LOGS/cron-expire-trial.log 2>&1"
   "0 8 * * * $NODE $SCRIPTS/quote-expiring-reminder.js >> $LOGS/cron-quote-reminder.log 2>&1"
+  "*/5 * * * * $NODE $SCRIPTS/send-scheduled-campaigns.js >> $LOGS/cron-scheduled-campaigns.log 2>&1"
   "*/15 * * * 1-5 $NODE $SCRIPTS/send-morning-boost-email.js >> $LOGS/cron-morning-boost.log 2>&1"
 )
 
