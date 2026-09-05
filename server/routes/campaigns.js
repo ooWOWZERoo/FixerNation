@@ -112,6 +112,11 @@ router.post('/', requireAuth, async (req, res) => {
     if (err.status) return res.status(err.status).json({ error: err.message });
     throw err;
   }
+  // Drafts can legitimately have no body yet (still being written), but a
+  // campaign actually being scheduled to send needs real content.
+  if (schedule.status === 'Scheduled' && !(c.body && c.body.trim())) {
+    return res.status(400).json({ error: 'Email body is required to schedule a campaign' });
+  }
 
   const [result] = await pool.query(
     `INSERT INTO campaigns (subject, from_name, from_email, audience_status, audience_source, body, body_format, status, scheduled_for)
@@ -123,6 +128,32 @@ router.post('/', requireAuth, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [result.insertId]);
   const groupIdsById = await getGroupIdsForCampaigns([result.insertId]);
   res.status(201).json({ campaign: serialize(rows[0], groupIdsById[result.insertId]) });
+});
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Sends a one-off test email of whatever's currently in the compose form —
+// works on unsaved content, no campaign row involved. Skips the unsubscribe-
+// footer's tracking token (no real campaign_sends row exists to attach opens/
+// clicks to) but otherwise renders exactly what a real subscriber would get.
+// Declared before the generic /:id routes so Express never mistakes
+// "test-send" for a campaign id.
+router.post('/test-send', requireAuth, async (req, res) => {
+  const c = req.body || {};
+  const to = (c.to || '').trim();
+  if (!to || !EMAIL_PATTERN.test(to)) return res.status(400).json({ error: 'A valid test email address is required' });
+  if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
+  if (!(c.body && c.body.trim())) return res.status(400).json({ error: 'Email body is required' });
+
+  await sendCampaignEmail({
+    to,
+    fromName: c.fromName || 'Fixer Nation',
+    fromEmail: c.fromEmail || '',
+    subject: `[TEST] ${c.subject}`,
+    body: c.body,
+    bodyFormat: c.bodyFormat || 'text',
+  });
+  res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------------------
@@ -204,6 +235,9 @@ router.get('/series', requireAuth, async (req, res) => {
 router.post('/series', requireAuth, async (req, res) => {
   const c = req.body || {};
   if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
+  // Unlike a one-off campaign, a series has no "draft" state — it starts
+  // scheduling real fires the moment it's created, so it always needs body.
+  if (!(c.body && c.body.trim())) return res.status(400).json({ error: 'Email body is required' });
 
   let rec;
   try { rec = parseRecurrenceFields(c); } catch (err) {
@@ -230,6 +264,7 @@ router.post('/series', requireAuth, async (req, res) => {
 router.put('/series/:id', requireAuth, async (req, res) => {
   const c = req.body || {};
   if (!c.subject) return res.status(400).json({ error: 'Subject is required' });
+  if (!(c.body && c.body.trim())) return res.status(400).json({ error: 'Email body is required' });
 
   const [existing] = await pool.query('SELECT id FROM campaign_series WHERE id = ?', [req.params.id]);
   if (!existing[0]) return res.status(404).json({ error: 'Series not found' });
@@ -294,6 +329,9 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (err.status) return res.status(err.status).json({ error: err.message });
     throw err;
   }
+  if (schedule.status === 'Scheduled' && !(c.body && c.body.trim())) {
+    return res.status(400).json({ error: 'Email body is required to schedule a campaign' });
+  }
 
   await pool.query(
     `UPDATE campaigns SET subject=?, from_name=?, from_email=?, audience_status=?, audience_source=?, body=?, body_format=?, status=?, scheduled_for=?
@@ -352,6 +390,7 @@ async function sendCampaignNow(campaignId) {
   if (!rows[0]) throw { status: 404, message: 'Campaign not found' };
   const campaign = rows[0];
   if (campaign.status === 'Sent') throw { status: 400, message: 'This campaign has already been sent' };
+  if (!campaign.body || !campaign.body.trim()) throw { status: 400, message: 'Email body is required to send a campaign' };
 
   const contacts = await resolveCampaignAudience(campaign);
 

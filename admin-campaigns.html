@@ -173,6 +173,11 @@
           <textarea id="body" style="min-height:180px;" placeholder="Write your campaign email here..."></textarea>
           <div class="q-editor-wrap" id="bodyQuillWrap" style="display:none;"><div id="bodyQuill"></div></div>
           <div class="a-note" id="bodyFormatNote">Plain text email — line breaks are preserved, no HTML formatting.</div>
+
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <input type="email" id="testEmailAddress" placeholder="your@email.com" style="flex:1;">
+            <button type="button" class="a-btn a-btn-outline" onclick="sendTestEmail('campaign')">📧 Send Test</button>
+          </div>
         </div>
       </form>
     </div>
@@ -271,6 +276,11 @@
           </div>
           <textarea id="seriesBody" style="min-height:160px;" placeholder="Write your recurring campaign email here..."></textarea>
           <div class="q-editor-wrap" id="seriesBodyQuillWrap" style="display:none;"><div id="seriesBodyQuill"></div></div>
+
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <input type="email" id="seriesTestEmailAddress" placeholder="your@email.com" style="flex:1;">
+            <button type="button" class="a-btn a-btn-outline" onclick="sendTestEmail('series')">📧 Send Test</button>
+          </div>
         </div>
       </form>
     </div>
@@ -588,6 +598,7 @@ async function editCampaign(id) {
   document.getElementById('subject').value = c.subject;
   document.getElementById('fromName').value = c.fromName;
   document.getElementById('fromEmail').value = c.fromEmail;
+  document.getElementById('testEmailAddress').value = '';
   ensureRichEditorsInit();
   if (c.bodyFormat === 'html') {
     document.getElementById('body').value = '';
@@ -765,10 +776,60 @@ function closeViewModal() {
   document.getElementById('viewModalOverlay').classList.remove('show');
 }
 
+// Reads whatever's currently in the composer for either modal, regardless
+// of format — shared by save/send/schedule and the test-send button so
+// there's exactly one place that knows "text mode reads the textarea, html
+// mode reads Quill."
+function getCurrentBody(kind) {
+  const isSeries = kind === 'series';
+  const format = isSeries ? seriesBodyFormat : bodyFormat;
+  return format === 'html' ? getEditorContent(kind) : document.getElementById(isSeries ? 'seriesBody' : 'body').value;
+}
+
+// Sends a one-off test of whatever's currently composed (subject/from/body)
+// to an arbitrary address — works on unsaved content, no need to save a
+// draft first. kind is 'campaign' or 'series', matching the two modals.
+async function sendTestEmail(kind) {
+  const isSeries = kind === 'series';
+  const to = document.getElementById(isSeries ? 'seriesTestEmailAddress' : 'testEmailAddress').value.trim();
+  if (!to) { fnToast('Enter an email address to send the test to'); return; }
+
+  const subject = document.getElementById(isSeries ? 'seriesSubject' : 'subject').value.trim();
+  if (!subject) { fnToast('Subject line is required'); return; }
+  const body = getCurrentBody(kind);
+  if (!body.trim()) { fnToast('Email body is required'); return; }
+
+  const data = {
+    to, subject,
+    fromName: document.getElementById(isSeries ? 'seriesFromName' : 'fromName').value.trim() || 'Fixer Nation',
+    fromEmail: document.getElementById(isSeries ? 'seriesFromEmail' : 'fromEmail').value.trim(),
+    body,
+    bodyFormat: isSeries ? seriesBodyFormat : bodyFormat,
+  };
+  fnToast('Sending test email...');
+  const r = await fetch('/api/campaigns/test-send', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    fnToast(err.error || 'Could not send test email');
+    return;
+  }
+  fnToast(`Test email sent to ${to}`);
+}
+
 // mode: 'draft' | 'send' | 'schedule'
 async function saveCampaign(mode) {
   const subject = document.getElementById('subject').value.trim();
   if (!subject) { fnToast('Subject line is required'); return; }
+  const bodyValue = getCurrentBody('campaign');
+  // A draft can legitimately have no body yet (still being written), but
+  // actually sending/scheduling one needs real content.
+  if (mode !== 'draft' && !bodyValue.trim()) { fnToast('Email body is required'); return; }
 
   const source = document.getElementById('audienceSource').value;
   const groupIds = getCheckedGroupIds('audienceGroupList');
@@ -798,7 +859,7 @@ async function saveCampaign(mode) {
     fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('fromEmail').value.trim() || 'noreply@fixernationeducation.com',
     audienceFilter: { status: 'Subscribed', source, groupIds },
-    body: bodyFormat === 'html' ? getEditorContent('campaign') : document.getElementById('body').value,
+    body: bodyValue,
     bodyFormat,
     scheduledFor: scheduledForIso,
   };
@@ -969,6 +1030,7 @@ async function editSeries(id) {
   document.getElementById('seriesSubject').value = s.subject;
   document.getElementById('seriesFromName').value = s.fromName;
   document.getElementById('seriesFromEmail').value = s.fromEmail;
+  document.getElementById('seriesTestEmailAddress').value = '';
   ensureRichEditorsInit();
   if (s.bodyFormat === 'html') {
     document.getElementById('seriesBody').value = '';
@@ -995,6 +1057,10 @@ async function editSeries(id) {
 async function saveSeries() {
   const subject = document.getElementById('seriesSubject').value.trim();
   if (!subject) { fnToast('Subject line is required'); return; }
+  const bodyValue = getCurrentBody('series');
+  // A series has no "draft" state — it starts scheduling real fires the
+  // moment it's created, so it always needs body content.
+  if (!bodyValue.trim()) { fnToast('Email body is required'); return; }
 
   const recurrenceType = document.querySelector('input[name="recurrenceType"]:checked').value;
   const data = {
@@ -1002,7 +1068,7 @@ async function saveSeries() {
     fromName: document.getElementById('seriesFromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('seriesFromEmail').value.trim() || 'noreply@fixernationeducation.com',
     audienceFilter: { status: 'Subscribed', source: document.getElementById('seriesAudienceSource').value, groupIds: getCheckedGroupIds('seriesAudienceGroupList') },
-    body: seriesBodyFormat === 'html' ? getEditorContent('series') : document.getElementById('seriesBody').value,
+    body: bodyValue,
     bodyFormat: seriesBodyFormat,
     recurrenceType,
     recurrenceDayOfWeek: recurrenceType === 'weekly' ? Number(document.getElementById('recurrenceDayOfWeek').value) : undefined,
