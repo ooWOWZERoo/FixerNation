@@ -162,8 +162,9 @@
             <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('heading')">+ Heading</button>
             <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('paragraph')">+ Paragraph</button>
             <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('button')">+ Button</button>
-            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('image')">+ Image</button>
+            <button type="button" class="a-btn a-btn-outline" onclick="document.getElementById('campaignImageInput').click()">+ Image</button>
             <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('divider')">+ Divider</button>
+            <input type="file" id="campaignImageInput" accept="image/*" style="display:none;" onchange="uploadCampaignImage(event)">
           </div>
 
           <textarea id="body" style="min-height:180px;" placeholder="Write your campaign email here..." oninput="updateHtmlPreview()"></textarea>
@@ -349,22 +350,41 @@ function updateHtmlPreview() {
   iframe.srcdoc = document.getElementById('body').value || '<p style="font-family:sans-serif;color:#888;padding:20px;">Nothing to preview yet.</p>';
 }
 
-function insertSnippet(type) {
-  const textarea = document.getElementById('body');
-  const snippets = {
-    heading: '<h1 style="font-family:Arial,sans-serif; color:#164F4A;">Your Headline Here</h1>\n',
-    paragraph: '<p style="font-family:Arial,sans-serif; color:#2A2420; line-height:1.6;">Write your message here.</p>\n',
-    button: '<a href="https://www.fixernation.org" style="display:inline-block; background:#F26B4D; color:#ffffff; padding:12px 24px; border-radius:999px; text-decoration:none; font-family:Arial,sans-serif; font-weight:bold;">Call to Action</a>\n',
-    image: '<img src="https://www.fixernation.org/path-to-image.jpg" alt="" style="max-width:100%; display:block;">\n',
-    divider: '<hr style="border:none; border-top:1px solid #eee; margin:20px 0;">\n',
-  };
-  const snippet = snippets[type] || '';
+function insertAtCursor(textarea, snippet) {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   textarea.value = textarea.value.slice(0, start) + snippet + textarea.value.slice(end);
   textarea.focus();
   textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
+}
+
+function insertSnippet(type) {
+  const snippets = {
+    heading: '<h1 style="font-family:Arial,sans-serif; color:#164F4A;">Your Headline Here</h1>\n',
+    paragraph: '<p style="font-family:Arial,sans-serif; color:#2A2420; line-height:1.6;">Write your message here.</p>\n',
+    button: '<a href="https://www.fixernation.org" style="display:inline-block; background:#F26B4D; color:#ffffff; padding:12px 24px; border-radius:999px; text-decoration:none; font-family:Arial,sans-serif; font-weight:bold;">Call to Action</a>\n',
+    divider: '<hr style="border:none; border-top:1px solid #eee; margin:20px 0;">\n',
+  };
+  insertAtCursor(document.getElementById('body'), snippets[type] || '');
   updateHtmlPreview();
+}
+
+// Uploads the picked file through the same /api/uploads pipeline the
+// blog/curriculum editors use, then inserts a real <img> tag pointing at
+// the returned URL — replaces the old placeholder-URL snippet.
+async function uploadCampaignImage(event) {
+  const input = event.target;
+  const file = input.files[0];
+  input.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+
+  fnToast('Uploading image...');
+  const url = await fnUploadFile(file);
+  if (!url) return; // fnUploadFile already toasted the error
+
+  insertAtCursor(document.getElementById('body'), `<img src="${url}" alt="" style="max-width:100%; display:block;">\n`);
+  updateHtmlPreview();
+  fnToast('Image uploaded');
 }
 
 function populateSourceOptions(selectId) {
