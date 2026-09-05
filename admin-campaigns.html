@@ -10,13 +10,25 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=17">
+<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
 <style>
   .a-demo-banner{background:var(--a-warning-soft); color:var(--a-warning); border:1px solid var(--a-warning); border-radius:12px; padding:14px 18px; font-size:13px; font-weight:600; margin-bottom:22px; display:flex; align-items:center; gap:10px;}
   .a-audience-preview{background:var(--a-bg); border:1px solid var(--a-border); border-radius:10px; padding:12px 14px; font-size:13.5px; margin-top:6px;}
   .a-audience-preview b{color:var(--a-accent);}
   .a-format-btn{padding:8px 16px; font-size:13px;}
   .a-format-btn.active{background:var(--a-accent-fill); color:#fff; border-color:var(--a-accent-fill);}
-  #body.a-body-html{font-family:'SFMono-Regular', Consolas, 'Courier New', monospace; font-size:12.5px;}
+  /* Same Quill skinning as admin-quotes.html's q-editor-wrap, kept consistent site-wide. */
+  .q-editor-wrap{border:1px solid var(--a-border); border-radius:10px; overflow:hidden;}
+  .q-editor-wrap .ql-toolbar.ql-snow{border:none; border-bottom:1px solid var(--a-border); background:var(--a-bg); padding:6px 10px;}
+  .q-editor-wrap .ql-container.ql-snow{border:none; background:var(--a-card); font-family:inherit; font-size:14px;}
+  .q-editor-wrap .ql-editor{min-height:180px; color:var(--a-text); font-family:inherit; font-size:14px; line-height:1.6; padding:12px 14px;}
+  .q-editor-wrap .ql-editor.ql-blank::before{color:var(--a-text-soft); font-style:normal; left:14px;}
+  .q-editor-wrap .ql-toolbar.ql-snow .ql-stroke{stroke:var(--a-text-soft);}
+  .q-editor-wrap .ql-toolbar.ql-snow .ql-fill{fill:var(--a-text-soft);}
+  .q-editor-wrap .ql-toolbar.ql-snow .ql-picker{color:var(--a-text-soft);}
+  .q-editor-wrap .ql-toolbar.ql-snow button:hover .ql-stroke, .q-editor-wrap .ql-toolbar.ql-snow button.ql-active .ql-stroke{stroke:var(--a-accent);}
+  .q-editor-wrap .ql-toolbar.ql-snow button:hover .ql-fill, .q-editor-wrap .ql-toolbar.ql-snow button.ql-active .ql-fill{fill:var(--a-accent);}
+  #seriesBodyQuillWrap .ql-editor{min-height:160px;}
 </style>
 </head>
 <body>
@@ -158,22 +170,9 @@
           </div>
           <div class="a-note" style="margin-bottom:10px;">📊 Open and click tracking only work for <strong>HTML</strong> campaigns — a plain-text email has no way to carry a tracking pixel or trackable links.</div>
 
-          <div class="a-tag-row" id="htmlToolbar" style="display:none; margin-bottom:10px;">
-            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('heading')">+ Heading</button>
-            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('paragraph')">+ Paragraph</button>
-            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('button')">+ Button</button>
-            <button type="button" class="a-btn a-btn-outline" onclick="document.getElementById('campaignImageInput').click()">+ Image</button>
-            <button type="button" class="a-btn a-btn-outline" onclick="insertSnippet('divider')">+ Divider</button>
-            <input type="file" id="campaignImageInput" accept="image/*" style="display:none;" onchange="uploadCampaignImage(event)">
-          </div>
-
-          <textarea id="body" style="min-height:180px;" placeholder="Write your campaign email here..." oninput="updateHtmlPreview()"></textarea>
+          <textarea id="body" style="min-height:180px;" placeholder="Write your campaign email here..."></textarea>
+          <div class="q-editor-wrap" id="bodyQuillWrap" style="display:none;"><div id="bodyQuill"></div></div>
           <div class="a-note" id="bodyFormatNote">Plain text email — line breaks are preserved, no HTML formatting.</div>
-
-          <div id="htmlPreviewWrap" style="display:none; margin-top:14px;">
-            <div class="a-note" style="margin-bottom:6px;">Live Preview</div>
-            <iframe id="htmlPreview" style="width:100%; height:260px; border:1px solid var(--a-border); border-radius:10px; background:#fff;" sandbox=""></iframe>
-          </div>
         </div>
       </form>
     </div>
@@ -271,6 +270,7 @@
             <button type="button" class="a-btn a-btn-outline a-format-btn" id="seriesFormatHtmlBtn" onclick="setSeriesBodyFormat('html')">HTML</button>
           </div>
           <textarea id="seriesBody" style="min-height:160px;" placeholder="Write your recurring campaign email here..."></textarea>
+          <div class="q-editor-wrap" id="seriesBodyQuillWrap" style="display:none;"><div id="seriesBodyQuill"></div></div>
         </div>
       </form>
     </div>
@@ -300,6 +300,7 @@
   </div>
 </div>
 
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script src="admin-common.js?v=16"></script>
 <script>
 fnRequireAuth();
@@ -331,60 +332,80 @@ async function fetchGroups() {
   return (await r.json()).groups || [];
 }
 
+// ---------------------------------------------------------------------------
+// Rich-text (HTML) body editing — Quill, same setup as admin-quotes.html's
+// quote-content editors. Two independent instances (campaign / series),
+// lazily created on first use since Quill needs its container in the DOM.
+// Plain-text mode stays a plain <textarea> — a WYSIWYG editor doesn't make
+// sense for a body that's deliberately meant to have no markup at all.
+// ---------------------------------------------------------------------------
+let richEditors = {};
+
+const CAMPAIGN_QUILL_TOOLBAR = [
+  [{ header: [1, 2, false] }],
+  ['bold', 'italic', 'underline'],
+  [{ list: 'ordered' }, { list: 'bullet' }],
+  ['link', 'image'],
+  ['clean'],
+];
+
+// Overrides Quill's default image handler, which embeds the file as a
+// base64 data URI directly in the HTML — fine for a UI preview, terrible
+// for an email (bloats every single send, and some mail clients strip
+// data URIs outright). Uploads through the same /api/uploads pipeline the
+// blog/curriculum editors use instead, and inserts the real URL.
+function campaignQuillImageHandler() {
+  const quill = this.quill;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    fnToast('Uploading image...');
+    const url = await fnUploadFile(file);
+    if (!url) return; // fnUploadFile already toasted the error
+    const range = quill.getSelection(true) || { index: quill.getLength() };
+    quill.insertEmbed(range.index, 'image', url, 'user');
+    quill.setSelection(range.index + 1);
+    fnToast('Image uploaded');
+  };
+  input.click();
+}
+
+function ensureRichEditorsInit() {
+  if (richEditors.campaign) return;
+  const opts = { theme: 'snow', placeholder: 'Write your campaign email here...', modules: {
+    toolbar: { container: CAMPAIGN_QUILL_TOOLBAR, handlers: { image: campaignQuillImageHandler } },
+  } };
+  richEditors.campaign = new Quill(document.getElementById('bodyQuill'), opts);
+  richEditors.series = new Quill(document.getElementById('seriesBodyQuill'), { ...opts, placeholder: 'Write your recurring campaign email here...' });
+}
+
+function getEditorContent(key) {
+  const q = richEditors[key];
+  if (!q) return '';
+  const html = q.root.innerHTML;
+  return html === '<p><br></p>' ? '' : html;
+}
+
+function setEditorContent(key, html) {
+  const q = richEditors[key];
+  if (!q) return;
+  q.setText('');
+  if (html) q.clipboard.dangerouslyPasteHTML(html);
+}
+
 function setBodyFormat(fmt) {
   bodyFormat = fmt;
+  ensureRichEditorsInit();
   document.getElementById('formatTextBtn').classList.toggle('active', fmt === 'text');
   document.getElementById('formatHtmlBtn').classList.toggle('active', fmt === 'html');
-  document.getElementById('htmlToolbar').style.display = fmt === 'html' ? 'flex' : 'none';
-  document.getElementById('body').classList.toggle('a-body-html', fmt === 'html');
+  document.getElementById('body').style.display = fmt === 'html' ? 'none' : 'block';
+  document.getElementById('bodyQuillWrap').style.display = fmt === 'html' ? 'block' : 'none';
   document.getElementById('bodyFormatNote').textContent = fmt === 'html'
-    ? "HTML email — write real HTML markup below. Recipients with an HTML-capable email client will see it fully styled; others will see the raw markup, so it's good practice to also offer a plain-text version with a real email provider."
+    ? "HTML email — recipients with an HTML-capable email client will see it fully styled; others will see the raw markup, so it's good practice to also offer a plain-text version with a real email provider."
     : 'Plain text email — line breaks are preserved, no HTML formatting.';
-  document.getElementById('htmlPreviewWrap').style.display = fmt === 'html' ? 'block' : 'none';
-  if (fmt === 'html') updateHtmlPreview();
-}
-
-function updateHtmlPreview() {
-  if (bodyFormat !== 'html') return;
-  const iframe = document.getElementById('htmlPreview');
-  iframe.srcdoc = document.getElementById('body').value || '<p style="font-family:sans-serif;color:#888;padding:20px;">Nothing to preview yet.</p>';
-}
-
-function insertAtCursor(textarea, snippet) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  textarea.value = textarea.value.slice(0, start) + snippet + textarea.value.slice(end);
-  textarea.focus();
-  textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
-}
-
-function insertSnippet(type) {
-  const snippets = {
-    heading: '<h1 style="font-family:Arial,sans-serif; color:#164F4A;">Your Headline Here</h1>\n',
-    paragraph: '<p style="font-family:Arial,sans-serif; color:#2A2420; line-height:1.6;">Write your message here.</p>\n',
-    button: '<a href="https://www.fixernation.org" style="display:inline-block; background:#F26B4D; color:#ffffff; padding:12px 24px; border-radius:999px; text-decoration:none; font-family:Arial,sans-serif; font-weight:bold;">Call to Action</a>\n',
-    divider: '<hr style="border:none; border-top:1px solid #eee; margin:20px 0;">\n',
-  };
-  insertAtCursor(document.getElementById('body'), snippets[type] || '');
-  updateHtmlPreview();
-}
-
-// Uploads the picked file through the same /api/uploads pipeline the
-// blog/curriculum editors use, then inserts a real <img> tag pointing at
-// the returned URL — replaces the old placeholder-URL snippet.
-async function uploadCampaignImage(event) {
-  const input = event.target;
-  const file = input.files[0];
-  input.value = ''; // allow re-selecting the same file later
-  if (!file) return;
-
-  fnToast('Uploading image...');
-  const url = await fnUploadFile(file);
-  if (!url) return; // fnUploadFile already toasted the error
-
-  insertAtCursor(document.getElementById('body'), `<img src="${url}" alt="" style="max-width:100%; display:block;">\n`);
-  updateHtmlPreview();
-  fnToast('Image uploaded');
 }
 
 function populateSourceOptions(selectId) {
@@ -528,6 +549,9 @@ async function openCampaignModal() {
   document.getElementById('campaignForm').reset();
   document.getElementById('fromName').value = 'Fixer Nation';
   document.getElementById('fromEmail').value = 'noreply@fixernationeducation.com';
+  document.getElementById('body').value = '';
+  ensureRichEditorsInit();
+  setEditorContent('campaign', '');
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions('audienceSource');
   populateGroupCheckboxes('audienceGroupList', []);
@@ -559,7 +583,14 @@ async function editCampaign(id) {
   document.getElementById('subject').value = c.subject;
   document.getElementById('fromName').value = c.fromName;
   document.getElementById('fromEmail').value = c.fromEmail;
-  document.getElementById('body').value = c.body;
+  ensureRichEditorsInit();
+  if (c.bodyFormat === 'html') {
+    document.getElementById('body').value = '';
+    setEditorContent('campaign', c.body);
+  } else {
+    document.getElementById('body').value = c.body;
+    setEditorContent('campaign', '');
+  }
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions('audienceSource');
   populateGroupCheckboxes('audienceGroupList', c.audienceFilter.groupIds);
@@ -762,7 +793,7 @@ async function saveCampaign(mode) {
     fromName: document.getElementById('fromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('fromEmail').value.trim() || 'noreply@fixernationeducation.com',
     audienceFilter: { status: 'Subscribed', source, groupIds },
-    body: document.getElementById('body').value,
+    body: bodyFormat === 'html' ? getEditorContent('campaign') : document.getElementById('body').value,
     bodyFormat,
     scheduledFor: scheduledForIso,
   };
@@ -882,9 +913,11 @@ async function renderSeries() {
 
 function setSeriesBodyFormat(fmt) {
   seriesBodyFormat = fmt;
+  ensureRichEditorsInit();
   document.getElementById('seriesFormatTextBtn').classList.toggle('active', fmt === 'text');
   document.getElementById('seriesFormatHtmlBtn').classList.toggle('active', fmt === 'html');
-  document.getElementById('seriesBody').classList.toggle('a-body-html', fmt === 'html');
+  document.getElementById('seriesBody').style.display = fmt === 'html' ? 'none' : 'block';
+  document.getElementById('seriesBodyQuillWrap').style.display = fmt === 'html' ? 'block' : 'none';
 }
 
 function onRecurrenceTypeChange() {
@@ -906,6 +939,9 @@ async function openSeriesModal() {
   document.getElementById('seriesForm').reset();
   document.getElementById('seriesFromName').value = 'Fixer Nation';
   document.getElementById('seriesFromEmail').value = 'noreply@fixernationeducation.com';
+  document.getElementById('seriesBody').value = '';
+  ensureRichEditorsInit();
+  setEditorContent('series', '');
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions('seriesAudienceSource');
   populateGroupCheckboxes('seriesAudienceGroupList', []);
@@ -928,7 +964,14 @@ async function editSeries(id) {
   document.getElementById('seriesSubject').value = s.subject;
   document.getElementById('seriesFromName').value = s.fromName;
   document.getElementById('seriesFromEmail').value = s.fromEmail;
-  document.getElementById('seriesBody').value = s.body;
+  ensureRichEditorsInit();
+  if (s.bodyFormat === 'html') {
+    document.getElementById('seriesBody').value = '';
+    setEditorContent('series', s.body);
+  } else {
+    document.getElementById('seriesBody').value = s.body;
+    setEditorContent('series', '');
+  }
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions('seriesAudienceSource');
   populateGroupCheckboxes('seriesAudienceGroupList', s.audienceFilter.groupIds);
@@ -954,7 +997,7 @@ async function saveSeries() {
     fromName: document.getElementById('seriesFromName').value.trim() || 'Fixer Nation',
     fromEmail: document.getElementById('seriesFromEmail').value.trim() || 'noreply@fixernationeducation.com',
     audienceFilter: { status: 'Subscribed', source: document.getElementById('seriesAudienceSource').value, groupIds: getCheckedGroupIds('seriesAudienceGroupList') },
-    body: document.getElementById('seriesBody').value,
+    body: seriesBodyFormat === 'html' ? getEditorContent('series') : document.getElementById('seriesBody').value,
     bodyFormat: seriesBodyFormat,
     recurrenceType,
     recurrenceDayOfWeek: recurrenceType === 'weekly' ? Number(document.getElementById('recurrenceDayOfWeek').value) : undefined,
