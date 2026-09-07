@@ -20,6 +20,7 @@
       'footer ul li{margin-bottom:9px;}',
       'footer ul a{color:rgba(255,255,255,0.72);text-decoration:none;font-size:14px;transition:color .15s;}',
       'footer ul a:hover{color:#fff;}',
+      '.fn-fsub{font-size:11.5px;color:rgba(255,255,255,0.45);margin-top:2px;line-height:1.3;}',
       '.fn-fb{font-size:12.5px;opacity:0.6;text-align:center;}',
       '@media(max-width:900px){.fn-fg{grid-template-columns:1fr 1fr;}}',
       '@media(max-width:600px){.fn-fg{grid-template-columns:1fr;}.fn-fi{padding:0 20px;}}',
@@ -57,6 +58,9 @@
             '<li><a href="brain-games.html">Brain Games</a></li>' +
             '<li><a href="social.html">Community</a></li>' +
             '<li><a href="research.html">Research &amp; Alignment</a></li>' +
+            '<li><a href="https://fixernation.org/" target="_blank" rel="noopener">The Positivity Network &#8599;</a>' +
+              '<div class="fn-fsub">Health, hope &amp; good news &mdash; from our parent community</div>' +
+            '</li>' +
           '</ul>' +
         '</div>' +
 
