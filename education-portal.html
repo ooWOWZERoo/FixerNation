@@ -182,9 +182,9 @@
     <div class="spotlight">
       <div>
         <span class="eyebrow">Featured Lesson</span>
-        <h3>Take Responsibility for Your Growth</h3>
-        <div class="meta">Lesson Plan 5-21 · #44 · Series: Responsibility &amp; Ownership</div>
-        <p>Students will understand that support from teachers, family, and friends matters, but no one can grow for them. They will learn that personal growth happens when they choose effort, practice, better responses, and steady learning, even when it feels uncomfortable.</p>
+        <h3 id="spotlightTitle"></h3>
+        <div class="meta" id="spotlightMeta"></div>
+        <p id="spotlightDescription"></p>
         <div class="res-row" id="spotlightResources"></div>
         <div id="spotlightVideo" style="margin-top:18px;"></div>
         <div id="spotlightDetailLink" style="margin-top:18px;"></div>
@@ -513,11 +513,21 @@ document.addEventListener('click', (e) => {
 });
 
 function getFeaturedCurriculum() {
-  // This spotlight (and the matching card in the library grid below) represents the
-  // "Take Responsibility for Your Growth" lesson — match it by title so everything on
-  // this page reflects whatever the admin has actually configured for it.
-  return curriculaCache.find(c => c.title && c.title.includes('Take Responsibility for Your Growth'))
-    || curriculaCache[0];
+  // Admin-set via the ⭐ toggle in admin-curriculum.html. Falls back to
+  // whatever sorts first in the catalog if no lesson is currently featured.
+  return curriculaCache.find(c => c.isFeatured) || curriculaCache[0];
+}
+
+function renderSpotlightHeader() {
+  const match = getFeaturedCurriculum();
+  const titleEl = document.getElementById('spotlightTitle');
+  const metaEl = document.getElementById('spotlightMeta');
+  const descEl = document.getElementById('spotlightDescription');
+  if (!match) { titleEl.textContent = ''; metaEl.textContent = ''; descEl.textContent = ''; return; }
+
+  titleEl.textContent = match.title;
+  metaEl.textContent = match.series ? `Series: ${match.series}` : '';
+  descEl.textContent = match.shortDescription || match.overview || '';
 }
 
 function renderSpotlightResources() {
@@ -653,6 +663,7 @@ fetch('/api/curricula', { credentials: 'include' })
   })
   .then(() => {
     renderLessonGrid();
+    renderSpotlightHeader();
     renderSpotlightResources();
     renderSpotlightVideo();
     wireFeaturedLessonLinks();

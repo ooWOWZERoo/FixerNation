@@ -225,6 +225,7 @@ function serialize(row) {
     weeksCount: row.weeks_count,
     downloadLimit: row.download_limit,
     published: !!row.published,
+    isFeatured: !!row.is_featured,
     createdAt: row.created_at,
     audiences: row.audiences,
     objectives: row.objectives,
@@ -725,6 +726,35 @@ router.put('/:id', requireAuth, async (req, res) => {
   } finally {
     connection.release();
   }
+});
+
+// The homepage spotlight only ever shows one lesson, so featuring one always
+// un-features whatever was featured before it — a radio button, not a
+// checkbox. Unfeaturing (isFeatured: false) just clears this one row; the
+// site is then left with no featured lesson at all (education-portal.html
+// falls back to whatever sorts first in the catalog).
+router.put('/:id/featured', requireAuth, async (req, res) => {
+  const isFeatured = !!(req.body && req.body.isFeatured);
+
+  const [existing] = await pool.query('SELECT id FROM curricula WHERE id = ?', [req.params.id]);
+  if (!existing[0]) return res.status(404).json({ error: 'Curriculum not found' });
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    if (isFeatured) {
+      await connection.query('UPDATE curricula SET is_featured = 0 WHERE is_featured = 1');
+    }
+    await connection.query('UPDATE curricula SET is_featured = ? WHERE id = ?', [isFeatured ? 1 : 0, req.params.id]);
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+
+  res.json({ ok: true, isFeatured });
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {

@@ -508,13 +508,14 @@ async function renderCurricula() {
     tr.innerHTML = `
       <td class="drag-handle" title="Drag to reorder">⠿</td>
       <td style="padding-left:14px;"><input type="checkbox" class="row-check" value="${c.id}" onchange="updateBulkBar()"></td>
-      <td><div class="a-cell-title">${c.title}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
+      <td><div class="a-cell-title">${c.title} ${c.isFeatured ? '<span class="a-pill a-pill-success" title="Shown as the homepage spotlight lesson">⭐ Featured</span>' : ''}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
       <td>${audienceBadges || '<span class="a-cell-sub">Not set</span>'}</td>
       <td><div>${contents}</div><div class="a-cell-sub" style="margin-top:3px;">${resLimits}</div></td>
 
       <td><span class="a-pill ${c.published ? 'a-pill-success' : 'a-pill-neutral'}">${c.published ? 'Published' : 'Draft'}</span></td>
       <td>
         <div class="a-row-actions">
+          <button class="a-icon-btn" title="${c.isFeatured ? 'Currently the homepage spotlight — click to remove' : 'Feature on homepage'}" onclick="toggleFeatured(${c.id})">${c.isFeatured ? '⭐' : '☆'}</button>
           <button class="a-icon-btn" title="Download tracking" onclick="openDownloadModal(${c.id})">⬇️</button>
           <button class="a-icon-btn" title="Edit" onclick="editCurriculum(${c.id})">✏️</button>
           <button class="a-icon-btn danger" title="Delete" onclick="deleteCurriculum(${c.id})">🗑️</button>
@@ -768,6 +769,28 @@ function editCurriculum(id) {
 
   setPublishedToggle(!!c.published);
   document.getElementById('curriculumModalOverlay').classList.add('show');
+}
+
+// Only one lesson can be the homepage spotlight at a time — featuring one
+// always replaces whatever was featured before it.
+async function toggleFeatured(id) {
+  const c = curriculaCache.find(x => x.id === id);
+  if (!c) return;
+  const makeFeatured = !c.isFeatured;
+  if (makeFeatured) {
+    const current = curriculaCache.find(x => x.isFeatured);
+    if (current && !confirm(`This will replace "${current.title}" as the homepage featured lesson. Continue?`)) return;
+  }
+  const r = await fetch(`/api/curricula/${id}/featured`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isFeatured: makeFeatured }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not update featured lesson'); return; }
+  await renderCurricula();
+  fnToast(makeFeatured ? 'Set as the homepage featured lesson' : 'Removed as the homepage featured lesson');
 }
 
 async function deleteCurriculum(id) {
