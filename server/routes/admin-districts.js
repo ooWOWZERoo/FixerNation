@@ -13,8 +13,9 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { createToken } = require('../lib/site-tokens');
-const { sendDistrictAdminWelcomeEmail } = require('../lib/mailer');
+const { sendDistrictAdminWelcomeEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
+const { getSetting } = require('../lib/settings');
 
 const router = express.Router();
 
@@ -102,6 +103,22 @@ router.post('/:districtId/admins/assign', requireAuth, async (req, res) => {
       });
     } catch (e) {
       console.error('sendDistrictAdminWelcomeEmail failed:', e.message);
+    }
+
+    try {
+      await sendSalesAlertEmail({
+        to: await getSetting('contact_email_sales_alerts'),
+        subject: `District Administrator assigned — ${district.name}`,
+        fields: {
+          District: district.name,
+          Admin: `${user.first_name} <${normalEmail}>`,
+          'New Account': isNewUser ? 'Yes' : 'No',
+        },
+        linkUrl: `${siteUrl}/admin-districts.html`,
+        linkLabel: 'View Districts',
+      });
+    } catch (e) {
+      console.error('sales alert (district admin assigned) failed:', e.message);
     }
 
     res.status(201).json({ ok: true, siteUserId: user.id, isNewUser, districtId, districtName: district.name });

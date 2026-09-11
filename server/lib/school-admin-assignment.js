@@ -14,8 +14,9 @@
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { createToken } = require('./site-tokens');
-const { sendSchoolAdminWelcomeEmail, sendPasswordResetEmail } = require('./mailer');
+const { sendSchoolAdminWelcomeEmail, sendPasswordResetEmail, sendSalesAlertEmail } = require('./mailer');
 const { syncRoleToAssignments } = require('./school-admin-roles');
+const { getSetting } = require('./settings');
 
 async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = 'primary', notes, createdByAdminId = null, firstName: bodyFirstName, lastName: bodyLastName }) {
   if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
@@ -104,6 +105,23 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
     });
   } catch (e) {
     console.error('sendSchoolAdminWelcomeEmail failed:', e.message);
+  }
+
+  try {
+    await sendSalesAlertEmail({
+      to: await getSetting('contact_email_sales_alerts'),
+      subject: `School License Administrator assigned — ${purchase.school_domain || normalEmail}`,
+      fields: {
+        School: purchase.school_domain,
+        Admin: `${user.first_name} <${normalEmail}>`,
+        'Permission Level': permissionLevel,
+        'New Account': isNewUser ? 'Yes' : 'No',
+      },
+      linkUrl: `${siteUrl}/admin-school-admins.html`,
+      linkLabel: 'View School Admins',
+    });
+  } catch (e) {
+    console.error('sales alert (school admin assigned) failed:', e.message);
   }
 
   return { user, isNewUser, purchase };

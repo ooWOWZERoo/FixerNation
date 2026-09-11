@@ -4,6 +4,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
+const { getSetting } = require('../lib/settings');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
@@ -180,6 +181,20 @@ router.post('/claim', async (req, res) => {
     }
   }).catch(() => {});
 
+  // Alert FNE (fire-and-forget) — separate from the school-admin notification
+  // above, which only reaches the school's own admins, never FNE staff.
+  (async () => {
+    const { sendSalesAlertEmail } = require('../lib/mailer');
+    const teacherName = [loggedInUser.first_name, loggedInUser.last_name].filter(Boolean).join(' ');
+    await sendSalesAlertEmail({
+      to: await getSetting('contact_email_sales_alerts'),
+      subject: `Teacher registered — ${inv.school_domain || loggedInUser.email}`,
+      fields: { School: inv.school_domain, Teacher: `${teacherName} <${loggedInUser.email}>` },
+      linkUrl: `${process.env.SITE_URL || ''}/admin-school-admins.html`,
+      linkLabel: 'View School Admins',
+    });
+  })().catch(e => console.error('sales alert (teacher registered) failed:', e.message));
+
   res.json({ ok: true, schoolDomain: inv.school_domain });
 });
 
@@ -305,6 +320,20 @@ router.post('/register', async (req, res) => {
       }
     }).catch(() => {});
 
+    // Alert FNE (fire-and-forget) — separate from the school-admin
+    // notification above, which only reaches the school's own admins.
+    (async () => {
+      const { sendSalesAlertEmail } = require('../lib/mailer');
+      const teacherName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      await sendSalesAlertEmail({
+        to: await getSetting('contact_email_sales_alerts'),
+        subject: `Teacher registered — ${inv.school_domain || email}`,
+        fields: { School: inv.school_domain, Teacher: `${teacherName} <${email}>` },
+        linkUrl: `${process.env.SITE_URL || ''}/admin-school-admins.html`,
+        linkLabel: 'View School Admins',
+      });
+    })().catch(e => console.error('sales alert (teacher registered) failed:', e.message));
+
     res.json({ ok: true, schoolDomain: inv.school_domain });
   } catch (e) {
     await conn.rollback();
@@ -411,6 +440,20 @@ router.post('/accept-and-verify', async (req, res) => {
       }).catch(e => console.error('teacher-registered notification failed:', e.message));
     }
   }).catch(() => {});
+
+  // Alert FNE (fire-and-forget) — separate from the school-admin
+  // notification above, which only reaches the school's own admins.
+  (async () => {
+    const { sendSalesAlertEmail } = require('../lib/mailer');
+    const teacherName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+    await sendSalesAlertEmail({
+      to: await getSetting('contact_email_sales_alerts'),
+      subject: `Teacher registered — ${inv.school_domain || email}`,
+      fields: { School: inv.school_domain, Teacher: `${teacherName} <${email}>` },
+      linkUrl: `${process.env.SITE_URL || ''}/admin-school-admins.html`,
+      linkLabel: 'View School Admins',
+    });
+  })().catch(e => console.error('sales alert (teacher registered) failed:', e.message));
 
   res.json({ ok: true, schoolDomain: inv.school_domain });
 });
