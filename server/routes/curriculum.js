@@ -72,9 +72,31 @@ async function gateAccess(curricula, req, opts = {}) {
   const siteUser = isAdmin ? null : await getSiteUser(req);
 
   if (isAdmin) {
-    return curricula.map(c => ({ ...c, access: { licensed: true, loggedIn: true } }));
+    return curricula.map(c => ({ ...c, access: { licensed: true, canDownload: true, loggedIn: true } }));
   }
 
+  // The admin-set featured lesson (⭐ toggle) is a deliberate public
+  // preview — full access to its lesson plan, video, resources, and quiz
+  // for every visitor regardless of license/login. Split out of the
+  // license/trial pipeline below entirely (not just given licensed:true
+  // afterward) so a trial teacher viewing it never burns one of their
+  // limited trial lesson slots. Only one row can be featured at a time
+  // (enforced in PUT /:id/featured), but this handles the set generically.
+  // canDownload stays false — viewing is public, downloading still
+  // requires a real teacher license (see GET /:id/file's matching bypass).
+  const featuredResults = curricula
+    .filter(c => c.isFeatured)
+    .map(c => ({ ...c, access: { licensed: true, canDownload: false, loggedIn: !!siteUser } }));
+  const rest = curricula.filter(c => !c.isFeatured);
+  const gatedRest = await gateNonFeaturedAccess(rest, siteUser, opts);
+  if (featuredResults.length) {
+    const byId = new Map([...featuredResults, ...gatedRest].map(c => [c.id, c]));
+    return curricula.map(c => byId.get(c.id));
+  }
+  return gatedRest;
+}
+
+async function gateNonFeaturedAccess(curricula, siteUser, opts = {}) {
   const siteUserId = siteUser && siteUser.id;
   const licensed = await hasActiveLicense(siteUserId);
 
@@ -95,7 +117,7 @@ async function gateAccess(curricula, req, opts = {}) {
     const trial = trialRows[0] || null;
 
     if (!trial) {
-      return curricula.map(c => ({ ...c, access: { licensed: true, loggedIn: true } }));
+      return curricula.map(c => ({ ...c, access: { licensed: true, canDownload: true, loggedIn: true } }));
     }
 
     // Trial license — gate access per curriculum
@@ -112,7 +134,7 @@ async function gateAccess(curricula, req, opts = {}) {
       const usedCount = accessedIds.size;
 
       if (alreadyAccessed) {
-        results.push({ ...c, access: { licensed: true, loggedIn: true, isTrial: true, trialUsed: usedCount, trialLimit: limit } });
+        results.push({ ...c, access: { licensed: true, canDownload: true, loggedIn: true, isTrial: true, trialUsed: usedCount, trialLimit: limit } });
       } else if (opts.recordAccess && usedCount < limit) {
         try {
           await pool.query(
@@ -121,7 +143,7 @@ async function gateAccess(curricula, req, opts = {}) {
           );
           accessedIds.add(c.id);
         } catch (e) { console.error('trial_curriculum_accesses insert:', e.message); }
-        results.push({ ...c, access: { licensed: true, loggedIn: true, isTrial: true, trialUsed: usedCount + 1, trialLimit: limit } });
+        results.push({ ...c, access: { licensed: true, canDownload: true, loggedIn: true, isTrial: true, trialUsed: usedCount + 1, trialLimit: limit } });
       } else {
         results.push({
           ...c,
@@ -131,6 +153,7 @@ async function gateAccess(curricula, req, opts = {}) {
           videos: [],
           access: {
             licensed: false,
+            canDownload: false,
             loggedIn: true,
             isTrial: true,
             trialUsed: usedCount,
@@ -164,7 +187,7 @@ async function gateAccess(curricula, req, opts = {}) {
     quiz: [],
     resources: [],
     videos: [],
-    access: { licensed: false, loggedIn: !!siteUser, ...(reason ? { reason } : {}) },
+    access: { licensed: false, canDownload: false, loggedIn: !!siteUser, ...(reason ? { reason } : {}) },
   }));
 }
 
@@ -479,14 +502,28 @@ router.get('/:id/file', async (req, res) => {
   const parentCanView = isParent && resourceType && PARENT_ACCESSIBLE_RESOURCES.includes(resourceType)
     && await hasParentAccessToCurriculum(siteUser.id, id);
 
+  // The admin-set featured lesson (⭐ toggle) is viewable by everyone,
+  // including anonymous visitors — matches the equivalent bypass in
+  // gateAccess() above. Downloading (forceDownload) is deliberately NOT
+  // included in this bypass, same as the parent-access carve-out: viewing
+  // is public, downloading still requires a real teacher license.
+  const [[curriculumRow]] = await pool.query('SELECT is_featured FROM curricula WHERE id = ?', [id]);
+  const isFeaturedCurriculum = !!(curriculumRow && curriculumRow.is_featured);
+
   let file_path, file_name;
 
   if (docIndex !== null) {
     // Lesson plan documents — teacher license only, no parent access
-    if (!licensed) {
+    // (except the featured-lesson public-preview bypass above).
+    if (!licensed && !isFeaturedCurriculum) {
       return siteUser
         ? res.status(403).json({ error: 'A teacher license is required to access lesson plan documents' })
         : res.status(401).json({ error: 'Sign in to access this file' });
+    }
+    if (forceDownload && !licensed) {
+      return siteUser
+        ? res.status(403).json({ error: 'A teacher license is required to download files' })
+        : res.status(401).json({ error: 'Sign in to download files' });
     }
     let docRows = [];
     try {
@@ -501,12 +538,15 @@ router.get('/:id/file', async (req, res) => {
     file_name = doc.file_name;
   } else {
     // Every resource requires a real teacher license (or, for the 3 parent-
-    // accessible types, an active parent-classroom link) to VIEW — no
-    // resource type is publicly viewable anymore. Previously Student
-    // Handout/Classroom Poster had a PUBLIC_VIEW_RESOURCES carve-out that
-    // let anyone view them regardless of login — a real, URL-guessable
-    // bypass, closed here alongside the matching curriculum-list gating.
-    if (!licensed && !parentCanView) {
+    // accessible types, an active parent-classroom link, or the admin-set
+    // featured lesson) to VIEW — no resource type is publicly viewable
+    // otherwise. Previously Student Handout/Classroom Poster had a
+    // PUBLIC_VIEW_RESOURCES carve-out that let anyone view them regardless
+    // of login — a real, URL-guessable bypass, closed here alongside the
+    // matching curriculum-list gating. The featured-lesson bypass below is
+    // a deliberate, admin-controlled re-introduction of that same idea,
+    // scoped to exactly one lesson at a time instead of two hardcoded types.
+    if (!licensed && !parentCanView && !isFeaturedCurriculum) {
       return siteUser
         ? res.status(403).json({ error: 'A teacher license is required to access this resource' })
         : res.status(401).json({ error: 'Sign in to access this resource' });

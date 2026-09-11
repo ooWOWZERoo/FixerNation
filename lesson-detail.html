@@ -291,17 +291,25 @@ function closeQuizModal() {
 function renderDetailResources(c) {
   const row = document.getElementById('detailResources');
   const licensed = c.access && c.access.licensed;
+  // Distinct from `licensed` — true for a real teacher license, false for
+  // the admin-set featured lesson's public-preview bypass (view yes,
+  // download no). Falls back to `licensed` for any older cached response
+  // shape that predates this flag.
+  const canDownload = c.access ? !!c.access.canDownload : licensed;
   const loggedIn = c.access && c.access.loggedIn;
   const documents = c.documents || [];
   const resources = c.resources || [];
 
   const parts = [];
 
-  // Lesson plan documents — licensed teachers: view + download
+  // Lesson plan documents — licensed teachers: view + download; the
+  // featured-lesson bypass: view only, no download link rendered at all.
   if (licensed && documents.length) {
     documents.forEach((d, i) => {
       parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openDoc(${c.id}, ${i}); return false;">📄 ${d.fileName || 'Lesson Plan'}</a>`);
-      parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadDoc(${c.id}, ${i}); return false;" title="Download">↓</a>`);
+      if (canDownload) {
+        parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadDoc(${c.id}, ${i}); return false;" title="Download">↓</a>`);
+      }
     });
   }
 
@@ -318,7 +326,9 @@ function renderDetailResources(c) {
     }
     if (r.filePath && licensed) {
       parts.push(`<a href="#" class="btn btn-outline btn-sm" onclick="openResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;">${r.resource}</a>`);
-      parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;" title="Download ${r.resource}">↓</a>`);
+      if (canDownload) {
+        parts.push(`<a href="#" class="btn btn-outline btn-sm" style="font-size:11px;" onclick="downloadResource(${c.id}, '${r.resource.replace(/'/g, "\\'")}'); return false;" title="Download ${r.resource}">↓</a>`);
+      }
     }
   });
 
