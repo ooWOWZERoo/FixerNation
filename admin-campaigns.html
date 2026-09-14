@@ -170,8 +170,15 @@
           </div>
           <div class="a-note" style="margin-bottom:10px;">📊 Open and click tracking only work for <strong>HTML</strong> campaigns — a plain-text email has no way to carry a tracking pixel or trackable links.</div>
 
+          <div id="bodySubModeToggle" style="display:none; gap:8px; margin-bottom:10px;">
+            <button type="button" class="a-btn a-btn-outline a-format-btn active" id="bodySubModeVisualBtn" onclick="setBodySubMode('campaign', 'visual')">Visual</button>
+            <button type="button" class="a-btn a-btn-outline a-format-btn" id="bodySubModeSourceBtn" onclick="setBodySubMode('campaign', 'source')">HTML Source</button>
+          </div>
+          <div class="a-note" id="bodySourceNote" style="display:none; margin-bottom:10px;">Pasted/typed here is sent exactly as-is — for a fully custom template (its own full HTML document), not passed through the visual editor's formatting at all.</div>
+
           <textarea id="body" style="min-height:180px;" placeholder="Write your campaign email here..."></textarea>
           <div class="q-editor-wrap" id="bodyQuillWrap" style="display:none;"><div id="bodyQuill"></div></div>
+          <textarea id="bodyHtmlSource" style="display:none; min-height:180px; font-family:'SFMono-Regular', Consolas, 'Courier New', monospace; font-size:12.5px;" placeholder="Paste or write a complete custom HTML email template here..."></textarea>
           <div class="a-note" id="bodyFormatNote">Plain text email — line breaks are preserved, no HTML formatting.</div>
 
           <div style="display:flex; gap:8px; margin-top:12px;">
@@ -274,8 +281,14 @@
             <button type="button" class="a-btn a-btn-outline a-format-btn active" id="seriesFormatTextBtn" onclick="setSeriesBodyFormat('text')">Plain Text</button>
             <button type="button" class="a-btn a-btn-outline a-format-btn" id="seriesFormatHtmlBtn" onclick="setSeriesBodyFormat('html')">HTML</button>
           </div>
+          <div id="seriesBodySubModeToggle" style="display:none; gap:8px; margin-bottom:10px;">
+            <button type="button" class="a-btn a-btn-outline a-format-btn active" id="seriesBodySubModeVisualBtn" onclick="setBodySubMode('series', 'visual')">Visual</button>
+            <button type="button" class="a-btn a-btn-outline a-format-btn" id="seriesBodySubModeSourceBtn" onclick="setBodySubMode('series', 'source')">HTML Source</button>
+          </div>
+          <div class="a-note" id="seriesBodySourceNote" style="display:none; margin-bottom:10px;">Pasted/typed here is sent exactly as-is — for a fully custom template, not passed through the visual editor's formatting at all.</div>
           <textarea id="seriesBody" style="min-height:160px;" placeholder="Write your recurring campaign email here..."></textarea>
           <div class="q-editor-wrap" id="seriesBodyQuillWrap" style="display:none;"><div id="seriesBodyQuill"></div></div>
+          <textarea id="seriesBodyHtmlSource" style="display:none; min-height:160px; font-family:'SFMono-Regular', Consolas, 'Courier New', monospace; font-size:12.5px;" placeholder="Paste or write a complete custom HTML email template here..."></textarea>
 
           <div style="display:flex; gap:8px; margin-top:12px;">
             <input type="email" id="seriesTestEmailAddress" placeholder="your@email.com" style="flex:1;">
@@ -411,16 +424,62 @@ function setEditorContent(key, html) {
   if (html) q.clipboard.dangerouslyPasteHTML(html);
 }
 
+let bodySubMode = 'visual'; // 'visual' (Quill) | 'source' (raw HTML textarea) — only meaningful when format === 'html'
+
 function setBodyFormat(fmt) {
   bodyFormat = fmt;
   ensureRichEditorsInit();
   document.getElementById('formatTextBtn').classList.toggle('active', fmt === 'text');
   document.getElementById('formatHtmlBtn').classList.toggle('active', fmt === 'html');
+  document.getElementById('bodySubModeToggle').style.display = fmt === 'html' ? 'flex' : 'none';
   document.getElementById('body').style.display = fmt === 'html' ? 'none' : 'block';
-  document.getElementById('bodyQuillWrap').style.display = fmt === 'html' ? 'block' : 'none';
+  if (fmt === 'html') {
+    setBodySubMode('campaign', bodySubMode, { skipSync: true });
+  } else {
+    document.getElementById('bodyQuillWrap').style.display = 'none';
+    document.getElementById('bodyHtmlSource').style.display = 'none';
+    document.getElementById('bodySourceNote').style.display = 'none';
+  }
   document.getElementById('bodyFormatNote').textContent = fmt === 'html'
     ? "HTML email — recipients with an HTML-capable email client will see it fully styled; others will see the raw markup, so it's good practice to also offer a plain-text version with a real email provider."
     : 'Plain text email — line breaks are preserved, no HTML formatting.';
+}
+
+// Visual (Quill WYSIWYG) vs. Source (raw HTML textarea, sent byte-for-byte,
+// no re-interpretation). Added after a real bug: an admin pasted a complete
+// custom HTML email template into Quill, which — correctly, for a WYSIWYG
+// editor — treated the pasted "text that looks like code" as literal text
+// and escaped the angle brackets, so recipients saw raw markup as visible
+// text instead of a rendered email. Source mode exists so a full custom
+// template can be pasted/edited without going through Quill's HTML-to-Delta
+// conversion at all (which is lossy for things Quill has no format for
+// anyway — <style> blocks, <table> layouts, etc).
+// skipSync=true is used during initial modal setup (open/edit), where both
+// boxes are already deliberately pre-populated — a normal button click
+// (skipSync omitted) intentionally re-syncs content between the two.
+function setBodySubMode(kind, mode, opts = {}) {
+  const isSeries = kind === 'series';
+  if (isSeries) seriesBodySubMode = mode; else bodySubMode = mode;
+
+  const visualBtn = document.getElementById(isSeries ? 'seriesBodySubModeVisualBtn' : 'bodySubModeVisualBtn');
+  const sourceBtn = document.getElementById(isSeries ? 'seriesBodySubModeSourceBtn' : 'bodySubModeSourceBtn');
+  visualBtn.classList.toggle('active', mode === 'visual');
+  sourceBtn.classList.toggle('active', mode === 'source');
+
+  const quillWrap = document.getElementById(isSeries ? 'seriesBodyQuillWrap' : 'bodyQuillWrap');
+  const sourceTextarea = document.getElementById(isSeries ? 'seriesBodyHtmlSource' : 'bodyHtmlSource');
+  const sourceNote = document.getElementById(isSeries ? 'seriesBodySourceNote' : 'bodySourceNote');
+
+  if (!opts.skipSync) {
+    if (mode === 'source') {
+      sourceTextarea.value = getEditorContent(kind);
+    } else {
+      setEditorContent(kind, sourceTextarea.value);
+    }
+  }
+  quillWrap.style.display = mode === 'visual' ? 'block' : 'none';
+  sourceTextarea.style.display = mode === 'source' ? 'block' : 'none';
+  sourceNote.style.display = mode === 'source' ? 'block' : 'none';
 }
 
 function populateSourceOptions(selectId) {
@@ -565,6 +624,8 @@ async function openCampaignModal() {
   document.getElementById('fromName').value = 'Fixer Nation';
   document.getElementById('fromEmail').value = 'noreply@fixernationeducation.com';
   document.getElementById('body').value = '';
+  document.getElementById('bodyHtmlSource').value = '';
+  bodySubMode = 'visual';
   ensureRichEditorsInit();
   setEditorContent('campaign', '');
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
@@ -600,12 +661,18 @@ async function editCampaign(id) {
   document.getElementById('fromEmail').value = c.fromEmail;
   document.getElementById('testEmailAddress').value = '';
   ensureRichEditorsInit();
+  bodySubMode = 'visual';
   if (c.bodyFormat === 'html') {
     document.getElementById('body').value = '';
+    // Populate both boxes with the exact stored (raw) body — Quill's
+    // rendering may be lossy for anything it has no format for, but the
+    // Source box always holds the true, unmodified stored content.
     setEditorContent('campaign', c.body);
+    document.getElementById('bodyHtmlSource').value = c.body;
   } else {
     document.getElementById('body').value = c.body;
     setEditorContent('campaign', '');
+    document.getElementById('bodyHtmlSource').value = '';
   }
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions('audienceSource');
@@ -783,7 +850,13 @@ function closeViewModal() {
 function getCurrentBody(kind) {
   const isSeries = kind === 'series';
   const format = isSeries ? seriesBodyFormat : bodyFormat;
-  return format === 'html' ? getEditorContent(kind) : document.getElementById(isSeries ? 'seriesBody' : 'body').value;
+  if (format !== 'html') return document.getElementById(isSeries ? 'seriesBody' : 'body').value;
+  const subMode = isSeries ? seriesBodySubMode : bodySubMode;
+  // Source mode is sent exactly as typed/pasted — never round-tripped
+  // through Quill's HTML-to-Delta conversion, which is the whole point.
+  return subMode === 'source'
+    ? document.getElementById(isSeries ? 'seriesBodyHtmlSource' : 'bodyHtmlSource').value
+    : getEditorContent(kind);
 }
 
 // Sends a one-off test of whatever's currently composed (subject/from/body)
@@ -977,13 +1050,22 @@ async function renderSeries() {
   });
 }
 
+let seriesBodySubMode = 'visual';
+
 function setSeriesBodyFormat(fmt) {
   seriesBodyFormat = fmt;
   ensureRichEditorsInit();
   document.getElementById('seriesFormatTextBtn').classList.toggle('active', fmt === 'text');
   document.getElementById('seriesFormatHtmlBtn').classList.toggle('active', fmt === 'html');
+  document.getElementById('seriesBodySubModeToggle').style.display = fmt === 'html' ? 'flex' : 'none';
   document.getElementById('seriesBody').style.display = fmt === 'html' ? 'none' : 'block';
-  document.getElementById('seriesBodyQuillWrap').style.display = fmt === 'html' ? 'block' : 'none';
+  if (fmt === 'html') {
+    setBodySubMode('series', seriesBodySubMode, { skipSync: true });
+  } else {
+    document.getElementById('seriesBodyQuillWrap').style.display = 'none';
+    document.getElementById('seriesBodyHtmlSource').style.display = 'none';
+    document.getElementById('seriesBodySourceNote').style.display = 'none';
+  }
 }
 
 function onRecurrenceTypeChange() {
@@ -1006,6 +1088,8 @@ async function openSeriesModal() {
   document.getElementById('seriesFromName').value = 'Fixer Nation';
   document.getElementById('seriesFromEmail').value = 'noreply@fixernationeducation.com';
   document.getElementById('seriesBody').value = '';
+  document.getElementById('seriesBodyHtmlSource').value = '';
+  seriesBodySubMode = 'visual';
   ensureRichEditorsInit();
   setEditorContent('series', '');
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
@@ -1032,12 +1116,15 @@ async function editSeries(id) {
   document.getElementById('seriesFromEmail').value = s.fromEmail;
   document.getElementById('seriesTestEmailAddress').value = '';
   ensureRichEditorsInit();
+  seriesBodySubMode = 'visual';
   if (s.bodyFormat === 'html') {
     document.getElementById('seriesBody').value = '';
     setEditorContent('series', s.body);
+    document.getElementById('seriesBodyHtmlSource').value = s.body;
   } else {
     document.getElementById('seriesBody').value = s.body;
     setEditorContent('series', '');
+    document.getElementById('seriesBodyHtmlSource').value = '';
   }
   [subscribedContactsCache, groupsCache] = await Promise.all([fetchSubscribedContacts(), fetchGroups()]);
   populateSourceOptions('seriesAudienceSource');
