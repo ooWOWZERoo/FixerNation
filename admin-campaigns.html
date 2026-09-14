@@ -408,6 +408,26 @@ function ensureRichEditorsInit() {
   } };
   richEditors.campaign = new Quill(document.getElementById('bodyQuill'), opts);
   richEditors.series = new Quill(document.getElementById('seriesBodyQuill'), { ...opts, placeholder: 'Write your recurring campaign email here...' });
+
+  // Keep Visual and Source continuously in sync so switching between them
+  // (a view change) never clobbers whichever one actually holds the
+  // freshest / most-authoritative content — the bug this whole HTML
+  // Source mode exists to fix was exactly that: a toggle-click overwriting
+  // already-correct content with a lossy re-derivation.
+  // source === 'user' excludes setEditorContent()'s own dangerouslyPasteHTML
+  // calls (which fire as 'api'), so this can't loop back on itself.
+  richEditors.campaign.on('text-change', (delta, old, source) => {
+    if (source === 'user') document.getElementById('bodyHtmlSource').value = getEditorContent('campaign');
+  });
+  richEditors.series.on('text-change', (delta, old, source) => {
+    if (source === 'user') document.getElementById('seriesBodyHtmlSource').value = getEditorContent('series');
+  });
+  // Typing in Source is pushed to Quill on blur, not per-keystroke — every
+  // keystroke would mean fully re-parsing the HTML string into a Delta,
+  // needlessly expensive while the admin is mid-edit and Quill isn't even
+  // visible in Source mode.
+  document.getElementById('bodyHtmlSource').addEventListener('blur', () => setEditorContent('campaign', document.getElementById('bodyHtmlSource').value));
+  document.getElementById('seriesBodyHtmlSource').addEventListener('blur', () => setEditorContent('series', document.getElementById('seriesBodyHtmlSource').value));
 }
 
 function getEditorContent(key) {
@@ -434,7 +454,7 @@ function setBodyFormat(fmt) {
   document.getElementById('bodySubModeToggle').style.display = fmt === 'html' ? 'flex' : 'none';
   document.getElementById('body').style.display = fmt === 'html' ? 'none' : 'block';
   if (fmt === 'html') {
-    setBodySubMode('campaign', bodySubMode, { skipSync: true });
+    setBodySubMode('campaign', bodySubMode);
   } else {
     document.getElementById('bodyQuillWrap').style.display = 'none';
     document.getElementById('bodyHtmlSource').style.display = 'none';
@@ -454,10 +474,10 @@ function setBodyFormat(fmt) {
 // template can be pasted/edited without going through Quill's HTML-to-Delta
 // conversion at all (which is lossy for things Quill has no format for
 // anyway — <style> blocks, <table> layouts, etc).
-// skipSync=true is used during initial modal setup (open/edit), where both
-// boxes are already deliberately pre-populated — a normal button click
-// (skipSync omitted) intentionally re-syncs content between the two.
-function setBodySubMode(kind, mode, opts = {}) {
+// Pure visibility toggle — no content mutation. The two boxes stay in sync
+// continuously via live edit events (see ensureRichEditorsInit), so
+// switching which one is shown never overwrites either.
+function setBodySubMode(kind, mode) {
   const isSeries = kind === 'series';
   if (isSeries) seriesBodySubMode = mode; else bodySubMode = mode;
 
@@ -466,20 +486,9 @@ function setBodySubMode(kind, mode, opts = {}) {
   visualBtn.classList.toggle('active', mode === 'visual');
   sourceBtn.classList.toggle('active', mode === 'source');
 
-  const quillWrap = document.getElementById(isSeries ? 'seriesBodyQuillWrap' : 'bodyQuillWrap');
-  const sourceTextarea = document.getElementById(isSeries ? 'seriesBodyHtmlSource' : 'bodyHtmlSource');
-  const sourceNote = document.getElementById(isSeries ? 'seriesBodySourceNote' : 'bodySourceNote');
-
-  if (!opts.skipSync) {
-    if (mode === 'source') {
-      sourceTextarea.value = getEditorContent(kind);
-    } else {
-      setEditorContent(kind, sourceTextarea.value);
-    }
-  }
-  quillWrap.style.display = mode === 'visual' ? 'block' : 'none';
-  sourceTextarea.style.display = mode === 'source' ? 'block' : 'none';
-  sourceNote.style.display = mode === 'source' ? 'block' : 'none';
+  document.getElementById(isSeries ? 'seriesBodyQuillWrap' : 'bodyQuillWrap').style.display = mode === 'visual' ? 'block' : 'none';
+  document.getElementById(isSeries ? 'seriesBodyHtmlSource' : 'bodyHtmlSource').style.display = mode === 'source' ? 'block' : 'none';
+  document.getElementById(isSeries ? 'seriesBodySourceNote' : 'bodySourceNote').style.display = mode === 'source' ? 'block' : 'none';
 }
 
 function populateSourceOptions(selectId) {
@@ -1060,7 +1069,7 @@ function setSeriesBodyFormat(fmt) {
   document.getElementById('seriesBodySubModeToggle').style.display = fmt === 'html' ? 'flex' : 'none';
   document.getElementById('seriesBody').style.display = fmt === 'html' ? 'none' : 'block';
   if (fmt === 'html') {
-    setBodySubMode('series', seriesBodySubMode, { skipSync: true });
+    setBodySubMode('series', seriesBodySubMode);
   } else {
     document.getElementById('seriesBodyQuillWrap').style.display = 'none';
     document.getElementById('seriesBodyHtmlSource').style.display = 'none';
