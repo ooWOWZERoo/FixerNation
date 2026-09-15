@@ -594,9 +594,10 @@ async function renderCampaigns() {
       : c.bodyFormat !== 'html' ? '<span title="Plain-text emails have no HTML to embed a tracking pixel in, so opens can never be tracked for this campaign.">N/A (plain text)</span>'
       : stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
     const unsubCell = c.status === 'Sent' && stats ? stats.unsubscribed : '—';
-    const statusPill = c.status === 'Sent' ? 'a-pill-success' : c.status === 'Scheduled' ? 'a-pill-warning' : 'a-pill-neutral';
+    const statusPill = c.status === 'Sent' ? 'a-pill-success' : (c.status === 'Scheduled' || c.status === 'Sending') ? 'a-pill-warning' : 'a-pill-neutral';
     const dateCell = c.status === 'Sent' ? fnFormatDate(c.sentAt)
       : c.status === 'Scheduled' ? `Scheduled: ${fnFormatDate(c.scheduledFor)}`
+      : c.status === 'Sending' ? `${c.recipientCount || 0}/${c.totalRecipientsAtSend != null ? c.totalRecipientsAtSend : '?'} sent · next batch ${fnFormatDate(c.nextBatchAt)}`
       : '—';
     const seriesTag = c.seriesId ? ' <span class="a-pill a-pill-neutral" title="Spawned by a recurring campaign">🔁</span>' : '';
     tr.innerHTML = `
@@ -604,13 +605,13 @@ async function renderCampaigns() {
       <td>${audienceLabel}</td>
       <td><span class="a-pill ${statusPill}">${c.status}</span></td>
       <td>${dateCell}</td>
-      <td>${c.status === 'Sent' ? c.recipientCount : '—'}</td>
+      <td>${(c.status === 'Sent' || c.status === 'Sending') ? c.recipientCount : '—'}</td>
       <td>${openedCell}</td>
       <td>${unsubCell}</td>
       <td>
         <div class="a-row-actions">
           <button class="a-icon-btn" title="View" onclick="viewCampaign(${c.id})">👁️</button>
-          ${c.status !== 'Sent' ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign(${c.id})">✏️</button>` : ''}
+          ${(c.status !== 'Sent' && c.status !== 'Sending') ? `<button class="a-icon-btn" title="Edit" onclick="editCampaign(${c.id})">✏️</button>` : ''}
           <button class="a-icon-btn" title="Duplicate" onclick="duplicateCampaign(${c.id})">📄</button>
           <button class="a-icon-btn danger" title="Delete" onclick="deleteCampaign(${c.id})">🗑️</button>
         </div>
@@ -792,6 +793,7 @@ async function viewCampaign(id) {
   document.getElementById('viewMeta').innerHTML =
     `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '') +
+    (c.status === 'Sending' ? `<br>${c.recipientCount || 0} of ${c.totalRecipientsAtSend != null ? c.totalRecipientsAtSend : '?'} sent so far — next batch ${fnFormatDate(c.nextBatchAt)}` : '') +
     (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'}${c.bodyFormat === 'html' ? ` · Clicked: ${stats.clicked}` : ''} · Bounced: ${stats.bounced} · Undelivered: ${stats.undelivered}` : '');
 
   const activityEl = document.getElementById('viewActivity');
@@ -991,7 +993,10 @@ async function saveCampaign(mode) {
   const result = await sendR.json();
   closeCampaignModal();
   renderCampaigns();
-  fnToast(`Sent to ${result.sent} recipient(s)${result.failed ? `, ${result.failed} failed` : ''}`);
+  const failedNote = (result.bounced || result.undelivered) ? `, ${result.bounced + result.undelivered} failed` : '';
+  fnToast(result.remaining > 0
+    ? `First batch sent (${result.sentSoFar} of ${result.sentSoFar + result.remaining})${failedNote} — remaining recipients will go out automatically over the next few batches`
+    : `Sent to ${result.sentSoFar} recipient(s)${failedNote}`);
 }
 
 document.getElementById('audienceSource').addEventListener('change', updateAudiencePreview);

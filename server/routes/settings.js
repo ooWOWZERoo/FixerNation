@@ -148,6 +148,32 @@ router.put('/teacher-lesson-plan-limit', requireAuth, async (req, res) => {
 // Default library limit for trial teachers — see settings.js's DEFAULTS
 // comment for how this is used (fallback for older trial purchases, and a
 // one-time pre-fill in admin-licenses.html's "Trial?" checkbox).
+// Throttling for real campaign sends — see processCampaignBatch() in
+// server/routes/campaigns.js. Combined into one endpoint since the two
+// values are always edited together.
+router.get('/campaign-batching', requireAuth, async (req, res) => {
+  const [batchSizeRaw, intervalRaw] = await Promise.all([
+    getSetting('campaign_batch_size'),
+    getSetting('campaign_batch_interval_minutes'),
+  ]);
+  res.json({
+    batchSize: Math.max(1, parseInt(batchSizeRaw, 10) || 60),
+    intervalMinutes: Math.max(1, parseInt(intervalRaw, 10) || 60),
+  });
+});
+
+router.put('/campaign-batching', requireAuth, async (req, res) => {
+  const batchSize = parseInt(req.body && req.body.batchSize, 10);
+  const intervalMinutes = parseInt(req.body && req.body.intervalMinutes, 10);
+  if (!batchSize || batchSize < 1) return res.status(400).json({ error: 'Batch size must be at least 1' });
+  if (!intervalMinutes || intervalMinutes < 1) return res.status(400).json({ error: 'Interval must be at least 1 minute' });
+  await Promise.all([
+    setSetting('campaign_batch_size', String(batchSize)),
+    setSetting('campaign_batch_interval_minutes', String(intervalMinutes)),
+  ]);
+  res.json({ ok: true });
+});
+
 router.get('/teacher-lesson-plan-limit-trial', requireAuth, async (req, res) => {
   const raw = await getSetting('teacher_lesson_plan_limit_trial');
   const limit = Math.max(1, parseInt(raw || '10', 10));

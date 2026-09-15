@@ -5,6 +5,7 @@ const { requireAuth } = require('../middleware/auth');
 const { sendCampaignEmail } = require('../lib/mailer');
 const { rewriteLinksForTracking, classifySendError } = require('../lib/campaign-tracking');
 const { computeNextFireAt } = require('../lib/campaign-recurrence');
+const { getSetting } = require('../lib/settings');
 
 const router = express.Router();
 
@@ -44,6 +45,8 @@ function serialize(row, groupIds) {
     seriesId: row.series_id,
     sentAt: row.sent_at,
     recipientCount: row.recipient_count,
+    nextBatchAt: row.next_batch_at,
+    totalRecipientsAtSend: row.total_recipients_at_send,
     createdAt: row.created_at,
   };
 }
@@ -323,6 +326,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   const [existing] = await pool.query('SELECT id, status FROM campaigns WHERE id = ?', [req.params.id]);
   if (!existing[0]) return res.status(404).json({ error: 'Campaign not found' });
   if (existing[0].status === 'Sent') return res.status(400).json({ error: 'A sent campaign cannot be edited' });
+  if (existing[0].status === 'Sending') return res.status(400).json({ error: 'A campaign currently sending cannot be edited' });
 
   let schedule;
   try { schedule = resolveScheduledFor(c); } catch (err) {
@@ -379,21 +383,12 @@ async function resolveCampaignAudience(campaign) {
   return contacts;
 }
 
-// Sends the campaign for real via SMTP — one individual email per recipient
-// (each message's "To" header contains only that one address; there is no
-// CC/BCC of the full list, so no recipient ever sees anyone else's address).
-// Shared by the manual "Send Now"/"Send" action and the scheduled/recurring
-// cron (server/scripts/send-scheduled-campaigns.js) — the exact same send
-// path either way, just a different trigger.
-async function sendCampaignNow(campaignId) {
-  const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
-  if (!rows[0]) throw { status: 404, message: 'Campaign not found' };
-  const campaign = rows[0];
-  if (campaign.status === 'Sent') throw { status: 400, message: 'This campaign has already been sent' };
-  if (!campaign.body || !campaign.body.trim()) throw { status: 400, message: 'Email body is required to send a campaign' };
-
-  const contacts = await resolveCampaignAudience(campaign);
-
+// Sends real emails to exactly this list of contacts — one individual email
+// per recipient (each message's "To" header contains only that one address;
+// no CC/BCC of the full list, so no recipient ever sees anyone else's
+// address). Shared by processCampaignBatch() below; doesn't touch the
+// campaign row itself, just the per-contact campaign_sends rows.
+async function sendToContacts(campaign, contacts) {
   let sent = 0, bounced = 0, undelivered = 0;
   for (const contact of contacts) {
     const token = crypto.randomBytes(24).toString('hex');
@@ -429,18 +424,86 @@ async function sendCampaignNow(campaignId) {
       if (status === 'bounced') bounced++; else undelivered++;
     }
   }
-
-  await pool.query(
-    "UPDATE campaigns SET status = 'Sent', sent_at = NOW(), recipient_count = ? WHERE id = ?",
-    [sent, campaignId]
-  );
   return { sent, bounced, undelivered };
+}
+
+// Sends up to `campaign_batch_size` (setting, default 60) of whatever's
+// left of this campaign's audience, then either marks it Sent (nothing
+// left) or reschedules next_batch_at `campaign_batch_interval_minutes`
+// (setting, default 60) out. "Already sent" is determined by existing
+// campaign_sends rows, not a stored offset — so an audience that shifts
+// between batches (e.g. someone unsubscribes) never double-sends, and
+// naturally excludes anyone processed by an earlier batch on retry.
+// Called both by enqueueCampaignForSending() (the first batch, inline,
+// so a small campaign still goes out immediately like before) and by the
+// cron (server/scripts/send-scheduled-campaigns.js's processDueBatches)
+// for every batch after that.
+async function processCampaignBatch(campaignId) {
+  const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+  if (!rows[0]) throw { status: 404, message: 'Campaign not found' };
+  const campaign = rows[0];
+  if (campaign.status !== 'Sending') throw { status: 400, message: 'Campaign is not currently sending' };
+
+  const audience = await resolveCampaignAudience(campaign);
+  const [processedRows] = await pool.query('SELECT contact_id FROM campaign_sends WHERE campaign_id = ?', [campaignId]);
+  const processedIds = new Set(processedRows.map(r => r.contact_id));
+  const remaining = audience.filter(c => !processedIds.has(c.id));
+
+  const batchSize = Math.max(1, parseInt(await getSetting('campaign_batch_size'), 10) || 60);
+  const batch = remaining.slice(0, batchSize);
+  const result = await sendToContacts(campaign, batch);
+
+  const [[totals]] = await pool.query(
+    "SELECT COUNT(*) AS attempted, SUM(status = 'sent') AS sentCount FROM campaign_sends WHERE campaign_id = ?",
+    [campaignId]
+  );
+  const sentSoFar = Number(totals.sentCount) || 0;
+  const stillRemaining = remaining.length - batch.length;
+
+  if (stillRemaining <= 0) {
+    await pool.query(
+      "UPDATE campaigns SET status = 'Sent', sent_at = NOW(), recipient_count = ?, next_batch_at = NULL WHERE id = ?",
+      [sentSoFar, campaignId]
+    );
+  } else {
+    const intervalMinutes = Math.max(1, parseInt(await getSetting('campaign_batch_interval_minutes'), 10) || 60);
+    await pool.query(
+      'UPDATE campaigns SET recipient_count = ?, next_batch_at = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?',
+      [sentSoFar, intervalMinutes, campaignId]
+    );
+  }
+
+  return { ...result, remaining: Math.max(0, stillRemaining), sentSoFar };
+}
+
+// Moves a Draft/Scheduled campaign into Sending and fires its first batch
+// immediately (so a campaign smaller than one batch still goes out right
+// away, same as before this feature existed) — any remaining batches are
+// picked up by the cron at the configured interval instead of the whole
+// audience firing in one uninterrupted burst, to stay under whatever
+// sending rate the receiving providers (or this host's own SMTP relay)
+// tolerate before flagging it as spam/abuse.
+async function enqueueCampaignForSending(campaignId) {
+  const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+  if (!rows[0]) throw { status: 404, message: 'Campaign not found' };
+  const campaign = rows[0];
+  if (campaign.status === 'Sent') throw { status: 400, message: 'This campaign has already been sent' };
+  if (campaign.status === 'Sending') throw { status: 400, message: 'This campaign is already sending' };
+  if (!campaign.body || !campaign.body.trim()) throw { status: 400, message: 'Email body is required to send a campaign' };
+
+  const audience = await resolveCampaignAudience(campaign);
+  await pool.query(
+    "UPDATE campaigns SET status = 'Sending', next_batch_at = NOW(), total_recipients_at_send = ? WHERE id = ?",
+    [audience.length, campaignId]
+  );
+
+  return processCampaignBatch(campaignId);
 }
 
 router.post('/:id/send', requireAuth, async (req, res) => {
   let result;
   try {
-    result = await sendCampaignNow(req.params.id);
+    result = await enqueueCampaignForSending(req.params.id);
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.message });
     throw err;
@@ -570,4 +633,4 @@ router.post('/:id/follow-up', requireAuth, async (req, res) => {
   res.json({ ok: true, campaignId: newRow.insertId, groupId, recipientCount: contactRows.length });
 });
 
-module.exports = { router, sendCampaignNow, computeNextFireAt };
+module.exports = { router, enqueueCampaignForSending, processCampaignBatch, computeNextFireAt };

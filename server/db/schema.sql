@@ -276,9 +276,11 @@ CREATE TABLE IF NOT EXISTS campaigns (
   audience_group_id INT UNSIGNED NULL,
   body MEDIUMTEXT,
   body_format VARCHAR(16) NOT NULL DEFAULT 'text',
-  status VARCHAR(16) NOT NULL DEFAULT 'Draft',
+  status VARCHAR(16) NOT NULL DEFAULT 'Draft', -- 'Draft' | 'Scheduled' | 'Sending' | 'Sent'
   sent_at DATETIME NULL,
   recipient_count INT UNSIGNED NULL,
+  next_batch_at DATETIME NULL, -- when status='Sending', when the next batch of up to campaign_batch_size contacts is due
+  total_recipients_at_send INT UNSIGNED NULL, -- snapshot of the resolved audience size at the moment sending started, for progress display only
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (audience_group_id) REFERENCES contact_groups(id) ON DELETE SET NULL
