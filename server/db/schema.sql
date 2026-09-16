@@ -1038,3 +1038,77 @@ CREATE TABLE IF NOT EXISTS brain_game_privacy (
   FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tune Your Brain, Phase 1 foundation — added via
+-- server/scripts/alter-add-tune-your-brain-phase1-foundation.js. See that
+-- script's header comment and docs/tune-your-brain/ for full context.
+
+CREATE TABLE IF NOT EXISTS feature_flags (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  flag_key VARCHAR(100) NOT NULL UNIQUE,
+  description VARCHAR(255) NULL,
+  enabled_globally TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS feature_flag_schools (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  flag_id INT UNSIGNED NOT NULL,
+  school_id INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_flag_school (flag_id, school_id),
+  FOREIGN KEY (flag_id) REFERENCES feature_flags(id) ON DELETE CASCADE,
+  FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Empty by design — Phase 4 owns real seeding/standards mapping (D5).
+CREATE TABLE IF NOT EXISTS skills (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  skill_key VARCHAR(64) NOT NULL UNIQUE,
+  label VARCHAR(150) NOT NULL,
+  domain VARCHAR(50) NOT NULL,
+  definition TEXT NULL,
+  version INT UNSIGNED NOT NULL DEFAULT 1,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS skill_prerequisites (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  skill_id INT UNSIGNED NOT NULL,
+  prerequisite_skill_id INT UNSIGNED NOT NULL,
+  UNIQUE KEY uniq_skill_prereq (skill_id, prerequisite_skill_id),
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY (prerequisite_skill_id) REFERENCES skills(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Normalized session/event stream — deliberately separate from
+-- analytics_sessions/analytics_events (anonymous, pre-login, funnel-only).
+-- NEVER free text: metadata_json is for small structured facts only.
+-- Retention governed by settings.learning_events_retention_days, purged by
+-- server/scripts/purge-learning-events.js.
+CREATE TABLE IF NOT EXISTS learning_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  student_id INT UNSIGNED NULL,
+  school_id INT UNSIGNED NULL,
+  session_token VARCHAR(64) NULL,
+  event_type VARCHAR(50) NOT NULL,
+  game_id INT UNSIGNED NULL,
+  skill_id INT UNSIGNED NULL,
+  content_version VARCHAR(50) NULL,
+  metadata_json TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user (user_id),
+  INDEX idx_student (student_id),
+  INDEX idx_school_created (school_id, created_at),
+  INDEX idx_event_type (event_type),
+  INDEX idx_session (session_token),
+  FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE,
+  FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+  FOREIGN KEY (game_id) REFERENCES brain_games(id) ON DELETE SET NULL,
+  FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

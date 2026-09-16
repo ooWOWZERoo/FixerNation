@@ -2,6 +2,8 @@
 
 Only decisions that materially change scope, policy, cost, architecture, data access, or product claims. Repository-answerable questions are resolved in `BLUEPRINT_TRACEABILITY_MATRIX.md` instead of listed here.
 
+**Status update, 2026-09-16:** D2 (site-auth middleware scope), D3 (event retention), and D5 (skill-graph timing) were implemented using this document's own recommended option, as part of continuing Phase 1 — see each item below for what actually shipped. **D1 (ElevenLabs) and D4 (admin-visibility depth) are still open** and still need an actual answer, not a default, before Phase 5 (D1) and Phase 6 (D4) respectively.
+
 ---
 
 ## D1 — Is the ElevenLabs integration actually live?
@@ -22,7 +24,9 @@ Only decisions that materially change scope, policy, cost, architecture, data ac
 
 ---
 
-## D2 — Should `getSiteUser`'s ad hoc per-route pattern finally become a shared `requireSiteAuth` middleware, given Tune Your Brain adds many new site-user-facing routes?
+## D2 — RESOLVED 2026-09-16 — Should `getSiteUser`'s ad hoc per-route pattern finally become a shared `requireSiteAuth` middleware, given Tune Your Brain adds many new site-user-facing routes?
+
+**Resolution: Option 2, implemented.** `server/middleware/siteUserAuth.js` (`requireSiteUser`/`getSiteUser`) exists now, deliberately unwired to any route yet — no existing route file was touched. Ready for Phase 3+ engine routes to use instead of re-implementing the check inline.
 
 **Why it matters:** this codebase has now had **two** separate `requireSiteAuth` implementations fail to become the standard — one was deleted as unused dead code; the live pattern today is `getSiteUser(req)` called individually in every route file. Tune Your Brain's Assignment/Session/Reward/Reporting services will add a large number of new site-user-scoped routes. Continuing the ad hoc pattern is consistent with current convention but propagates a known inconsistency (see `CURRENT_STATE_ARCHITECTURE.md` §2); introducing a real shared middleware now is a bigger one-time refactor but stops the pattern from spreading further.
 
@@ -41,7 +45,9 @@ Only decisions that materially change scope, policy, cost, architecture, data ac
 
 ---
 
-## D3 — What retention window applies to the new learning-event stream?
+## D3 — RESOLVED 2026-09-16 — What retention window applies to the new learning-event stream?
+
+**Resolution: Option 1, implemented with a provisional number.** `learning_events` table shipped with `settings.learning_events_retention_days = 400` (~13 months) and a nightly purge cron (`server/scripts/purge-learning-events.js`). 400 was chosen as a reasonable school-year-plus-buffer default, not a researched figure — change the setting value directly (no schema change needed) if a different number is wanted.
 
 **Why it matters:** §9.8/§10.3 require data minimization and defined retention "by data class," but do not set an actual number. This event volume (session started/item presented/response submitted/hint requested, per §9.8) will be far higher-frequency than anything currently logged in this system — `analytics_events` is the closest precedent and has no retention policy enforced today either (rows simply accumulate). Left undecided, Phase 1's schema ships without a retention plan, and by the time anyone revisits it there could be a large volume of event data with no defined disposal rule — a real FERPA/COPPA-adjacent posture question, not just a storage-cost one.
 
@@ -78,7 +84,9 @@ Only decisions that materially change scope, policy, cost, architecture, data ac
 
 ---
 
-## D5 — Is a real skill-graph/standards-crosswalk needed in Phase 1, or can Phase 1 defer it to pilot-only content per §23's own deferred-decision list?
+## D5 — RESOLVED 2026-09-16 — Is a real skill-graph/standards-crosswalk needed in Phase 1, or can Phase 1 defer it to pilot-only content per §23's own deferred-decision list?
+
+**Resolution: Option 1, implemented.** `skills`/`skill_prerequisites` tables exist now, seeded empty — Phase 4 owns real seeding and standards mapping.
 
 **Why it matters:** the blueprint itself (§23) lists this as a discovery output, not something to decide in advance — but Phase 1's exit gate (§15) requires "no duplicate identity or progression system," which implicitly assumes the skill graph exists in some form by Phase 1's end. If Phase 1 builds a full skill-graph schema and Phase 4 is where it's actually seeded and used, that's a real ordering decision with cost implications either way.
 

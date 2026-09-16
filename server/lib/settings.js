@@ -34,6 +34,11 @@ const DEFAULTS = {
   // smaller than one batch is unaffected — it still goes out immediately.
   campaign_batch_size: '60',
   campaign_batch_interval_minutes: '60',
+  // Tune Your Brain learning-event retention window, in days — provisional
+  // default (~13 months, a school year plus a summer buffer). See D3 in
+  // docs/tune-your-brain/LEADERSHIP_DECISIONS_REQUIRED.md. Adjustable here
+  // with no schema change; enforced by scripts/purge-learning-events.js.
+  learning_events_retention_days: '400',
 };
 
 async function getSetting(key) {

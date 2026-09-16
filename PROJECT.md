@@ -116,6 +116,8 @@ Six public mini-games (`brain-memory-match.html`, `brain-number-sequence.html`, 
 
 **Classroom-PIN-student parity, deployed and confirmed live 2026-09-16** (Release 38). Every Brain Games table only ever had a `NOT NULL` FK to `site_users(id)` — a classroom-PIN student could play but every API call 401'd, so nothing was ever recorded for them. Fixed with a parallel nullable `student_id` column on all 5 tables (`server/scripts/alter-add-brain-games-student-support.js`) and a dual-identity resolver in `brain-games.js` — exactly one of `user_id`/`student_id` is populated per row. This is the first implementation work package of the much larger "Tune Your Brain" platform-expansion blueprint under review — see `docs/tune-your-brain/`.
 
+**Tune Your Brain, Phase 1 foundation, coded and pushed, not yet deployed** (see `CHANGELOG.md`'s Unreleased section): a real feature-flag mechanism (`feature_flags`/`feature_flag_schools`), empty `skills`/`skill_prerequisites` tables for Phase 4 to seed, a new `learning_events` table (separate from the anonymous `analytics_events`) with a provisional retention purge cron, and `server/middleware/siteUserAuth.js` for future Tune Your Brain routes to share instead of each re-implementing site-user auth inline. None of these are wired into any live feature yet — pure additive groundwork.
+
 ## Admin backend
 
 All under a single `fn_session` login (`admin-login.html`; new admins are invited via a 24h single-use token, `admin-accept-invite.html`, shared with password-reset), themed teal/coral/gold with a light/dark toggle persisted in `localStorage`.
