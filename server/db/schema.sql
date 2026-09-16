@@ -511,7 +511,8 @@ CREATE TABLE IF NOT EXISTS morning_boost_email_config (
 CREATE TABLE IF NOT EXISTS morning_boost_email_groups (
   config_id INT UNSIGNED NOT NULL,
   group_id INT UNSIGNED NOT NULL,
-  PRIMARY KEY (config_id, group_id)
+  PRIMARY KEY (config_id, group_id),
+  FOREIGN KEY (group_id) REFERENCES contact_groups(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- One row per daily distribution attempt (automated or manual).

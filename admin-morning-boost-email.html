@@ -146,6 +146,7 @@
         <div class="a-card" style="margin-bottom:20px;">
           <div class="a-card-head"><h2>Recipient Groups</h2></div>
           <p style="font-size:13px;color:var(--a-text-soft);margin-bottom:12px;">Select which contact groups receive the Morning Boost email. Contacts in multiple groups are deduplicated. Unsubscribed and MB-opted-out contacts are always excluded.</p>
+          <div class="a-note" id="groupGridWarning" style="display:none; color:var(--a-warning); border:1px solid var(--a-warning); border-radius:8px; padding:10px 12px; margin-bottom:12px;"></div>
           <div class="group-grid" id="groupGrid"><span style="color:var(--a-text-soft);font-size:13px;">Loading groups…</span></div>
         </div>
 
@@ -343,6 +344,23 @@ async function loadConfig() {
 
 function renderGroupGrid() {
   const grid = document.getElementById('groupGrid');
+  const warningEl = document.getElementById('groupGridWarning');
+
+  // A previously-selected group can vanish out from under this config if
+  // it's later deleted from the CRM — the send query just silently matches
+  // zero rows for that id, no error anywhere, which is exactly how Morning
+  // Boost ended up quietly emailing only a leftover test group for weeks.
+  // Surface it here instead of staying invisible, and drop it from the
+  // in-memory selection so the next Save cleans the config up for real.
+  const missingIds = [..._selectedGroupIds].filter(id => !_groups.some(g => g.id === id));
+  if (missingIds.length) {
+    warningEl.style.display = 'block';
+    warningEl.textContent = `⚠️ ${missingIds.length} previously-selected group${missingIds.length === 1 ? '' : 's'} no longer exist${missingIds.length === 1 ? 's' : ''} (likely deleted from the CRM) and ${missingIds.length === 1 ? 'has' : 'have'} been sending to nobody. Removed from the selection below — click Save to make this permanent.`;
+    missingIds.forEach(id => _selectedGroupIds.delete(id));
+  } else {
+    warningEl.style.display = 'none';
+  }
+
   if (!_groups.length) { grid.innerHTML = '<span style="color:var(--a-text-soft);font-size:13px;">No groups found.</span>'; return; }
   grid.innerHTML = _groups.map(g => `
     <div class="group-chip${_selectedGroupIds.has(g.id) ? ' selected' : ''}" onclick="toggleGroup(${g.id}, this)">
