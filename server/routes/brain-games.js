@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
-const { SITE_COOKIE_NAME } = require('../lib/session');
+const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME } = require('../lib/session');
 
 const router = express.Router();
 
@@ -160,7 +160,13 @@ function validateMetrics(gameSlug, metrics, durationMs) {
   return true;
 }
 
-// ── Auth helper ───────────────────────────────────────────────────────────────
+// ── Auth helper — dual identity ───────────────────────────────────────────────
+// Brain Games is playable by two entirely separate identity types: a
+// site-user (fn_user_session — teachers/members) or a classroom-PIN student
+// (fn_student_session — classroom_students, no site_users row at all). Every
+// brain-games table carries both a nullable user_id and a nullable
+// student_id column; exactly one is populated per row, decided here, once,
+// rather than re-derived at each call site.
 async function getSiteUser(req) {
   const token = req.cookies?.[SITE_COOKIE_NAME];
   if (!token) return null;
@@ -173,13 +179,48 @@ async function getSiteUser(req) {
   } catch { return null; }
 }
 
+async function getStudentPrincipal(req) {
+  const token = req.cookies?.[STUDENT_COOKIE_NAME];
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    // Same gate as requireStudentAuth (middleware/studentAuth.js): active
+    // student, non-archived classroom — archiving a classroom must cut off
+    // Brain Games access the same way it cuts off everything else.
+    const [rows] = await pool.query(
+      `SELECT cs.id, cs.display_name FROM classroom_students cs
+       JOIN classrooms c ON c.id = cs.classroom_id
+       WHERE cs.id = ? AND cs.is_active = 1 AND c.archived_at IS NULL`,
+      [payload.studentId]
+    );
+    if (!rows[0]) return null;
+    return { type: 'student', id: rows[0].id, idCol: 'student_id', displayName: rows[0].display_name };
+  } catch { return null; }
+}
+
+// Resolves whichever identity (if any) the request actually carries. A
+// site-user cookie is checked first, but a request should only ever carry
+// one of the two cookies in practice.
+async function getPrincipal(req) {
+  const user = await getSiteUser(req);
+  if (user) return { type: 'user', id: user.id, idCol: 'user_id', displayName: user.first_name };
+  return getStudentPrincipal(req);
+}
+
+function sessionBelongsTo(session, principal) {
+  return principal.type === 'student'
+    ? session.student_id === principal.id
+    : session.user_id === principal.id;
+}
+
 // ── Badge evaluation ──────────────────────────────────────────────────────────
-async function evaluateBadgeCriteria(type, criteria, userId, gameId, metrics) {
+async function evaluateBadgeCriteria(type, criteria, principal, gameId, metrics) {
+  const idCol = principal.idCol;
   switch (type) {
     case 'sessions_completed': {
       const [r] = await pool.query(
-        "SELECT COUNT(*) AS c FROM brain_game_sessions WHERE user_id=? AND game_id=? AND status='completed'",
-        [userId, gameId]
+        `SELECT COUNT(*) AS c FROM brain_game_sessions WHERE ${idCol}=? AND game_id=? AND status='completed'`,
+        [principal.id, gameId]
       );
       return r[0].c >= criteria.count;
     }
@@ -237,52 +278,52 @@ async function evaluateBadgeCriteria(type, criteria, userId, gameId, metrics) {
     }
     case 'game_level': {
       const [r] = await pool.query(
-        'SELECT level FROM brain_game_user_progress WHERE user_id=? AND game_id=?', [userId, gameId]
+        `SELECT level FROM brain_game_user_progress WHERE ${idCol}=? AND game_id=?`, [principal.id, gameId]
       );
       return r.length > 0 && r[0].level >= criteria.level;
     }
     case 'cross_all_games': {
       const [r] = await pool.query(
-        "SELECT COUNT(DISTINCT game_id) AS c FROM brain_game_sessions WHERE user_id=? AND status='completed'",
-        [userId]
+        `SELECT COUNT(DISTINCT game_id) AS c FROM brain_game_sessions WHERE ${idCol}=? AND status='completed'`,
+        [principal.id]
       );
       return r[0].c >= 6;
     }
     case 'all_games_level_min': {
       const [r] = await pool.query(
-        'SELECT COUNT(*) AS c FROM brain_game_user_progress WHERE user_id=? AND level>=?',
-        [userId, criteria.level]
+        `SELECT COUNT(*) AS c FROM brain_game_user_progress WHERE ${idCol}=? AND level>=?`,
+        [principal.id, criteria.level]
       );
       return r[0].c >= 6;
     }
     case 'streak_days_min': {
       const [r] = await pool.query(
-        'SELECT current_streak FROM brain_user_streaks WHERE user_id=?', [userId]
+        `SELECT current_streak FROM brain_user_streaks WHERE ${idCol}=?`, [principal.id]
       );
       return r.length > 0 && r[0].current_streak >= criteria.days;
     }
     case 'total_sessions_min': {
       const [r] = await pool.query(
-        "SELECT COUNT(*) AS c FROM brain_game_sessions WHERE user_id=? AND status='completed'", [userId]
+        `SELECT COUNT(*) AS c FROM brain_game_sessions WHERE ${idCol}=? AND status='completed'`, [principal.id]
       );
       return r[0].c >= criteria.count;
     }
     case 'personal_best_all_games': {
       const [r] = await pool.query(
-        'SELECT COUNT(*) AS c FROM brain_game_user_progress WHERE user_id=? AND best_raw_score IS NOT NULL', [userId]
+        `SELECT COUNT(*) AS c FROM brain_game_user_progress WHERE ${idCol}=? AND best_raw_score IS NOT NULL`, [principal.id]
       );
       return r[0].c >= 6;
     }
     case 'all_difficulties_all_games': {
       const [r] = await pool.query(
-        "SELECT game_id FROM brain_game_sessions WHERE user_id=? AND status='completed' GROUP BY game_id HAVING COUNT(DISTINCT difficulty) >= 3",
-        [userId]
+        `SELECT game_id FROM brain_game_sessions WHERE ${idCol}=? AND status='completed' GROUP BY game_id HAVING COUNT(DISTINCT difficulty) >= 3`,
+        [principal.id]
       );
       return r.length >= 6;
     }
     case 'all_games_master': {
       const [r] = await pool.query(
-        'SELECT COUNT(*) AS c FROM brain_game_user_progress WHERE user_id=? AND level>=7', [userId]
+        `SELECT COUNT(*) AS c FROM brain_game_user_progress WHERE ${idCol}=? AND level>=7`, [principal.id]
       );
       return r[0].c >= 6;
     }
@@ -290,7 +331,9 @@ async function evaluateBadgeCriteria(type, criteria, userId, gameId, metrics) {
   }
 }
 
-async function awardBadges(userId, gameId, sessionId, metrics) {
+async function awardBadges(principal, gameId, sessionId, metrics) {
+  const idCol = principal.idCol;
+
   // Fetch badges for this game + cross-game badges
   const [allBadges] = await pool.query(
     'SELECT * FROM brain_badges WHERE active=1 AND (game_id=? OR game_id IS NULL)',
@@ -300,7 +343,7 @@ async function awardBadges(userId, gameId, sessionId, metrics) {
 
   // Get already-earned badge IDs
   const [earnedRows] = await pool.query(
-    'SELECT badge_id FROM user_brain_badges WHERE user_id=?', [userId]
+    `SELECT badge_id FROM user_brain_badges WHERE ${idCol}=?`, [principal.id]
   );
   const earned = new Set(earnedRows.map(r => r.badge_id));
 
@@ -310,13 +353,13 @@ async function awardBadges(userId, gameId, sessionId, metrics) {
     const criteria = JSON.parse(badge.criteria_json || '{}');
     let passes = false;
     try {
-      passes = await evaluateBadgeCriteria(badge.criteria_type, criteria, userId, gameId, metrics);
+      passes = await evaluateBadgeCriteria(badge.criteria_type, criteria, principal, gameId, metrics);
     } catch { /* skip on error */ }
 
     if (passes) {
       await pool.query(
-        'INSERT IGNORE INTO user_brain_badges (user_id, badge_id, earned_at, triggering_session_id) VALUES (?, ?, NOW(), ?)',
-        [userId, badge.id, sessionId]
+        `INSERT IGNORE INTO user_brain_badges (${idCol}, badge_id, earned_at, triggering_session_id) VALUES (?, ?, NOW(), ?)`,
+        [principal.id, badge.id, sessionId]
       );
       newBadges.push({
         id: badge.id, name: badge.name, slug: badge.slug,
@@ -329,14 +372,15 @@ async function awardBadges(userId, gameId, sessionId, metrics) {
 }
 
 // ── Streak update ─────────────────────────────────────────────────────────────
-async function updateStreak(userId) {
+async function updateStreak(principal) {
+  const idCol = principal.idCol;
   const today = new Date().toISOString().slice(0, 10);
-  const [rows] = await pool.query('SELECT * FROM brain_user_streaks WHERE user_id=?', [userId]);
+  const [rows] = await pool.query(`SELECT * FROM brain_user_streaks WHERE ${idCol}=?`, [principal.id]);
 
   if (!rows.length) {
     await pool.query(
-      'INSERT INTO brain_user_streaks (user_id, current_streak, longest_streak, last_qualifying_date) VALUES (?, 1, 1, ?)',
-      [userId, today]
+      `INSERT INTO brain_user_streaks (${idCol}, current_streak, longest_streak, last_qualifying_date) VALUES (?, 1, 1, ?)`,
+      [principal.id, today]
     );
     return;
   }
@@ -352,8 +396,8 @@ async function updateStreak(userId) {
   let newStreak = last === yStr ? row.current_streak + 1 : 1;
   const longest = Math.max(row.longest_streak, newStreak);
   await pool.query(
-    'UPDATE brain_user_streaks SET current_streak=?, longest_streak=?, last_qualifying_date=? WHERE user_id=?',
-    [newStreak, longest, today, userId]
+    `UPDATE brain_user_streaks SET current_streak=?, longest_streak=?, last_qualifying_date=? WHERE ${idCol}=?`,
+    [newStreak, longest, today, principal.id]
   );
 }
 
@@ -386,12 +430,12 @@ router.get('/', async (req, res) => {
     const [games] = await pool.query(
       'SELECT * FROM brain_games WHERE active=1 ORDER BY display_order'
     );
-    const user = await getSiteUser(req);
+    const principal = await getPrincipal(req);
     let progressMap = {};
 
-    if (user) {
+    if (principal) {
       const [progress] = await pool.query(
-        'SELECT * FROM brain_game_user_progress WHERE user_id=?', [user.id]
+        `SELECT * FROM brain_game_user_progress WHERE ${principal.idCol}=?`, [principal.id]
       );
       for (const p of progress) progressMap[p.game_id] = progressRow(p);
     }
@@ -412,8 +456,8 @@ router.get('/', async (req, res) => {
 
 // ── POST /api/brain-games/sessions ───────────────────────────────────────────
 router.post('/sessions', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required to save progress' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required to save progress' });
 
   const { gameSlug, difficulty = 'medium' } = req.body || {};
   if (!gameSlug) return res.status(400).json({ error: 'gameSlug is required' });
@@ -422,20 +466,21 @@ router.post('/sessions', async (req, res) => {
   const [[game]] = await pool.query('SELECT * FROM brain_games WHERE slug=? AND active=1', [gameSlug]);
   if (!game) return res.status(404).json({ error: 'Game not found' });
 
+  const idCol = principal.idCol;
   const sessionToken = crypto.randomBytes(32).toString('hex');
   const [result] = await pool.query(
-    'INSERT INTO brain_game_sessions (user_id, game_id, session_token, difficulty) VALUES (?, ?, ?, ?)',
-    [user.id, game.id, sessionToken, difficulty]
+    `INSERT INTO brain_game_sessions (${idCol}, game_id, session_token, difficulty) VALUES (?, ?, ?, ?)`,
+    [principal.id, game.id, sessionToken, difficulty]
   );
 
   // Upsert progress row so it exists
   await pool.query(
-    'INSERT IGNORE INTO brain_game_user_progress (user_id, game_id) VALUES (?, ?)',
-    [user.id, game.id]
+    `INSERT IGNORE INTO brain_game_user_progress (${idCol}, game_id) VALUES (?, ?)`,
+    [principal.id, game.id]
   );
   await pool.query(
-    'UPDATE brain_game_user_progress SET total_sessions=total_sessions+1, last_played_at=NOW() WHERE user_id=? AND game_id=?',
-    [user.id, game.id]
+    `UPDATE brain_game_user_progress SET total_sessions=total_sessions+1, last_played_at=NOW() WHERE ${idCol}=? AND game_id=?`,
+    [principal.id, game.id]
   );
 
   res.status(201).json({ sessionId: result.insertId, sessionToken });
@@ -443,15 +488,15 @@ router.post('/sessions', async (req, res) => {
 
 // ── PUT /api/brain-games/sessions/:token/complete ────────────────────────────
 router.put('/sessions/:token/complete', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
 
   const [[session]] = await pool.query(
     "SELECT s.*, g.slug AS game_slug, g.id AS game_id FROM brain_game_sessions s JOIN brain_games g ON g.id=s.game_id WHERE s.session_token=?",
     [req.params.token]
   );
   if (!session) return res.status(404).json({ error: 'Session not found' });
-  if (session.user_id !== user.id) return res.status(403).json({ error: 'Not your session' });
+  if (!sessionBelongsTo(session, principal)) return res.status(403).json({ error: 'Not your session' });
   if (session.status === 'completed') return res.status(409).json({ error: 'Session already completed' });
 
   const { metrics = {}, durationMs } = req.body || {};
@@ -468,10 +513,12 @@ router.put('/sessions/:token/complete', async (req, res) => {
   const normalizedScore = calcScore(session.game_slug, metrics, session.difficulty);
   const accuracy = getAccuracy(session.game_slug, metrics);
 
+  const idCol = principal.idCol;
+
   // Check personal best
   const [[prog]] = await pool.query(
-    'SELECT best_raw_score, best_normalized_score FROM brain_game_user_progress WHERE user_id=? AND game_id=?',
-    [user.id, session.game_id]
+    `SELECT best_raw_score, best_normalized_score FROM brain_game_user_progress WHERE ${idCol}=? AND game_id=?`,
+    [principal.id, session.game_id]
   );
   const isPersonalBest = !prog?.best_normalized_score || normalizedScore > prog.best_normalized_score;
 
@@ -505,8 +552,8 @@ router.put('/sessions/:token/complete', async (req, res) => {
       updates.push(`best_metrics_json = ${conn.escape(JSON.stringify(metrics))}`);
     }
     await conn.query(
-      `UPDATE brain_game_user_progress SET ${updates.join(', ')} WHERE user_id=? AND game_id=?`,
-      [user.id, session.game_id]
+      `UPDATE brain_game_user_progress SET ${updates.join(', ')} WHERE ${idCol}=? AND game_id=?`,
+      [principal.id, session.game_id]
     );
 
     await conn.commit();
@@ -517,25 +564,25 @@ router.put('/sessions/:token/complete', async (req, res) => {
   }
 
   // Streak (non-blocking)
-  updateStreak(user.id).catch(() => {});
+  updateStreak(principal).catch(() => {});
 
   // Badge evaluation (non-blocking but we await for response)
-  const newBadges = isValid ? await awardBadges(user.id, session.game_id, session.id, metrics) : [];
+  const newBadges = isValid ? await awardBadges(principal, session.game_id, session.id, metrics) : [];
 
   // XP for badges
   if (newBadges.length) {
     const bonusXP = newBadges.reduce((sum, b) => sum + (b.xpReward || 0), 0);
     if (bonusXP > 0) {
       await pool.query(
-        'UPDATE brain_game_user_progress SET xp=xp+? WHERE user_id=? AND game_id=?',
-        [bonusXP, user.id, session.game_id]
+        `UPDATE brain_game_user_progress SET xp=xp+? WHERE ${idCol}=? AND game_id=?`,
+        [bonusXP, principal.id, session.game_id]
       );
     }
   }
 
   const [[updatedProg]] = await pool.query(
-    'SELECT xp, level FROM brain_game_user_progress WHERE user_id=? AND game_id=?',
-    [user.id, session.game_id]
+    `SELECT xp, level FROM brain_game_user_progress WHERE ${idCol}=? AND game_id=?`,
+    [principal.id, session.game_id]
   );
   const finalLevel = getLevelFromXP(updatedProg?.xp || 0);
   const nextLevel = getNextLevel(updatedProg?.xp || 0);
@@ -557,15 +604,16 @@ router.put('/sessions/:token/complete', async (req, res) => {
 
 // ── GET /api/brain-games/me/progress ─────────────────────────────────────────
 router.get('/me/progress', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const idCol = principal.idCol;
 
   const [games] = await pool.query('SELECT * FROM brain_games WHERE active=1 ORDER BY display_order');
   const [progress] = await pool.query(
-    'SELECT * FROM brain_game_user_progress WHERE user_id=?', [user.id]
+    `SELECT * FROM brain_game_user_progress WHERE ${idCol}=?`, [principal.id]
   );
-  const [streakRow] = await pool.query('SELECT * FROM brain_user_streaks WHERE user_id=?', [user.id]);
-  const [badgeCount] = await pool.query('SELECT COUNT(*) AS c FROM user_brain_badges WHERE user_id=?', [user.id]);
+  const [streakRow] = await pool.query(`SELECT * FROM brain_user_streaks WHERE ${idCol}=?`, [principal.id]);
+  const [badgeCount] = await pool.query(`SELECT COUNT(*) AS c FROM user_brain_badges WHERE ${idCol}=?`, [principal.id]);
 
   const progressMap = {};
   for (const p of progress) progressMap[p.game_id] = p;
@@ -599,18 +647,19 @@ router.get('/me/progress', async (req, res) => {
     currentStreak: streakRow[0]?.current_streak || 0,
     longestStreak: streakRow[0]?.longest_streak || 0,
     lastPlayedAt: streakRow[0]?.last_qualifying_date || null,
-    firstName: user.first_name,
+    firstName: principal.displayName,
   });
 });
 
 // ── GET /api/brain-games/me/history ──────────────────────────────────────────
 router.get('/me/history', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const idCol = principal.idCol;
 
   const { gameSlug, limit = 20, offset = 0 } = req.query;
-  let where = "s.user_id=? AND s.status='completed'";
-  const params = [user.id];
+  let where = `s.${idCol}=? AND s.status='completed'`;
+  const params = [principal.id];
 
   if (gameSlug) {
     where += ' AND g.slug=?';
@@ -636,8 +685,9 @@ router.get('/me/history', async (req, res) => {
 
 // ── GET /api/brain-games/me/badges ───────────────────────────────────────────
 router.get('/me/badges', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const idCol = principal.idCol;
 
   const [allBadges] = await pool.query(
     `SELECT b.*, g.name AS game_name, g.slug AS game_slug, g.icon AS game_icon
@@ -645,7 +695,7 @@ router.get('/me/badges', async (req, res) => {
      WHERE b.active=1 ORDER BY b.display_order`
   );
   const [earnedRows] = await pool.query(
-    'SELECT * FROM user_brain_badges WHERE user_id=?', [user.id]
+    `SELECT * FROM user_brain_badges WHERE ${idCol}=?`, [principal.id]
   );
   const earnedMap = {};
   for (const e of earnedRows) earnedMap[e.badge_id] = e;
@@ -671,46 +721,48 @@ router.get('/me/badges', async (req, res) => {
 
 // ── POST /api/brain-games/me/badges/:id/feature ──────────────────────────────
 router.post('/me/badges/:id/feature', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const idCol = principal.idCol;
 
   const badgeId = Number(req.params.id);
   const [[ub]] = await pool.query(
-    'SELECT * FROM user_brain_badges WHERE user_id=? AND badge_id=?', [user.id, badgeId]
+    `SELECT * FROM user_brain_badges WHERE ${idCol}=? AND badge_id=?`, [principal.id, badgeId]
   );
   if (!ub) return res.status(403).json({ error: 'Badge not earned' });
   if (ub.featured) return res.json({ ok: true });
 
   // Max 6 featured
   const [featured] = await pool.query(
-    'SELECT COUNT(*) AS c FROM user_brain_badges WHERE user_id=? AND featured=1', [user.id]
+    `SELECT COUNT(*) AS c FROM user_brain_badges WHERE ${idCol}=? AND featured=1`, [principal.id]
   );
   if (featured[0].c >= 6) return res.status(400).json({ error: 'Maximum 6 featured badges' });
 
   const pos = (featured[0].c || 0) + 1;
   await pool.query(
-    'UPDATE user_brain_badges SET featured=1, featured_position=? WHERE user_id=? AND badge_id=?',
-    [pos, user.id, badgeId]
+    `UPDATE user_brain_badges SET featured=1, featured_position=? WHERE ${idCol}=? AND badge_id=?`,
+    [pos, principal.id, badgeId]
   );
   res.json({ ok: true });
 });
 
 // ── DELETE /api/brain-games/me/badges/:id/feature ────────────────────────────
 router.delete('/me/badges/:id/feature', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
 
   await pool.query(
-    'UPDATE user_brain_badges SET featured=0, featured_position=NULL WHERE user_id=? AND badge_id=?',
-    [user.id, Number(req.params.id)]
+    `UPDATE user_brain_badges SET featured=0, featured_position=NULL WHERE ${principal.idCol}=? AND badge_id=?`,
+    [principal.id, Number(req.params.id)]
   );
   res.json({ ok: true });
 });
 
 // ── PATCH /api/brain-games/me/badges/featured-order ──────────────────────────
 router.patch('/me/badges/featured-order', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const idCol = principal.idCol;
 
   const { order } = req.body || {};
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order array is required' });
@@ -720,8 +772,8 @@ router.patch('/me/badges/featured-order', async (req, res) => {
     await conn.beginTransaction();
     for (let i = 0; i < order.length; i++) {
       await conn.query(
-        'UPDATE user_brain_badges SET featured_position=? WHERE user_id=? AND badge_id=? AND featured=1',
-        [i + 1, user.id, order[i]]
+        `UPDATE user_brain_badges SET featured_position=? WHERE ${idCol}=? AND badge_id=? AND featured=1`,
+        [i + 1, principal.id, order[i]]
       );
     }
     await conn.commit();
@@ -733,10 +785,10 @@ router.patch('/me/badges/featured-order', async (req, res) => {
 
 // ── GET /api/brain-games/me/streak ───────────────────────────────────────────
 router.get('/me/streak', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
 
-  const [rows] = await pool.query('SELECT * FROM brain_user_streaks WHERE user_id=?', [user.id]);
+  const [rows] = await pool.query(`SELECT * FROM brain_user_streaks WHERE ${principal.idCol}=?`, [principal.id]);
   res.json({
     current: rows[0]?.current_streak || 0,
     longest: rows[0]?.longest_streak || 0,
@@ -746,21 +798,22 @@ router.get('/me/streak', async (req, res) => {
 
 // ── GET /api/brain-games/me/privacy ──────────────────────────────────────────
 router.get('/me/privacy', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
-  const [[row]] = await pool.query('SELECT * FROM brain_game_privacy WHERE user_id=?', [user.id]);
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const [[row]] = await pool.query(`SELECT * FROM brain_game_privacy WHERE ${principal.idCol}=?`, [principal.id]);
   res.json({ showBadges: row ? !!row.show_badges : true });
 });
 
 // ── PATCH /api/brain-games/me/privacy ────────────────────────────────────────
 router.patch('/me/privacy', async (req, res) => {
-  const user = await getSiteUser(req);
-  if (!user) return res.status(401).json({ error: 'Login required' });
+  const principal = await getPrincipal(req);
+  if (!principal) return res.status(401).json({ error: 'Login required' });
+  const idCol = principal.idCol;
   const showBadges = (req.body || {}).showBadges !== false ? 1 : 0;
   await pool.query(
-    `INSERT INTO brain_game_privacy (user_id, show_badges) VALUES (?, ?)
+    `INSERT INTO brain_game_privacy (${idCol}, show_badges) VALUES (?, ?)
      ON DUPLICATE KEY UPDATE show_badges = VALUES(show_badges)`,
-    [user.id, showBadges]
+    [principal.id, showBadges]
   );
   res.json({ ok: true });
 });

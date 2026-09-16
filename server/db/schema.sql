@@ -898,3 +898,143 @@ CREATE TABLE IF NOT EXISTS district_license_admins (
   FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
   FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Brain Games ("Tune Your Brain") — added via server/scripts/alter-brain-games.js
+-- and server/scripts/alter-add-brain-games-student-support.js; backfilled here so
+-- a fresh install actually creates them (they were missing from this file for a
+-- long time despite being live in production).
+--
+-- Exactly one of user_id/student_id is populated per row (site-user play vs.
+-- classroom-PIN-student play) — enforced at the application layer
+-- (server/routes/brain-games.js), not by a DB constraint. Both columns are
+-- nullable so a row can reference either parent table; MySQL/MariaDB unique
+-- keys treat NULL as distinct, so uniq_user_* and uniq_student_* can coexist
+-- without colliding.
+CREATE TABLE IF NOT EXISTS brain_games (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(50) NOT NULL UNIQUE,
+  description TEXT NULL,
+  icon VARCHAR(10) NULL,
+  primary_skill VARCHAR(100) NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  display_order INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brain_game_sessions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  student_id INT UNSIGNED NULL,
+  game_id INT UNSIGNED NOT NULL,
+  session_token VARCHAR(64) NOT NULL UNIQUE,
+  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME NULL,
+  duration_ms INT UNSIGNED NULL,
+  difficulty VARCHAR(16) NOT NULL DEFAULT 'medium',
+  raw_score INT UNSIGNED NULL,
+  normalized_score INT UNSIGNED NULL,
+  accuracy DECIMAL(5,2) NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'started',
+  metrics_json TEXT NULL,
+  scoring_version INT UNSIGNED NOT NULL DEFAULT 1,
+  validation_status VARCHAR(16) NOT NULL DEFAULT 'valid',
+  leaderboard_eligible TINYINT(1) NOT NULL DEFAULT 1,
+  xp_earned INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_user_game (user_id, game_id),
+  INDEX idx_user (user_id),
+  INDEX idx_student_game (student_id, game_id),
+  INDEX idx_token (session_token),
+  FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE,
+  FOREIGN KEY (game_id) REFERENCES brain_games(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brain_game_user_progress (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  student_id INT UNSIGNED NULL,
+  game_id INT UNSIGNED NOT NULL,
+  level INT UNSIGNED NOT NULL DEFAULT 1,
+  xp INT UNSIGNED NOT NULL DEFAULT 0,
+  total_sessions INT UNSIGNED NOT NULL DEFAULT 0,
+  total_completed INT UNSIGNED NOT NULL DEFAULT 0,
+  best_raw_score INT UNSIGNED NULL,
+  best_normalized_score INT UNSIGNED NULL,
+  best_metrics_json TEXT NULL,
+  last_played_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_game (user_id, game_id),
+  UNIQUE KEY uniq_student_game (student_id, game_id),
+  FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE,
+  FOREIGN KEY (game_id) REFERENCES brain_games(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brain_badges (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT NULL,
+  game_id INT UNSIGNED NULL,
+  category VARCHAR(32) NOT NULL DEFAULT 'achievement',
+  rarity VARCHAR(16) NOT NULL DEFAULT 'common',
+  criteria_type VARCHAR(50) NOT NULL,
+  criteria_json TEXT NOT NULL,
+  xp_reward INT UNSIGNED NOT NULL DEFAULT 50,
+  emoji VARCHAR(10) NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  publicly_displayable TINYINT(1) NOT NULL DEFAULT 1,
+  display_order INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (game_id) REFERENCES brain_games(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_brain_badges (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  student_id INT UNSIGNED NULL,
+  badge_id INT UNSIGNED NOT NULL,
+  earned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  triggering_session_id INT UNSIGNED NULL,
+  featured TINYINT(1) NOT NULL DEFAULT 0,
+  featured_position INT UNSIGNED NULL,
+  visibility VARCHAR(16) NOT NULL DEFAULT 'public',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_badge (user_id, badge_id),
+  UNIQUE KEY uniq_student_badge (student_id, badge_id),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE,
+  FOREIGN KEY (badge_id) REFERENCES brain_badges(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brain_user_streaks (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL UNIQUE,
+  student_id INT UNSIGNED NULL UNIQUE,
+  current_streak INT UNSIGNED NOT NULL DEFAULT 0,
+  longest_streak INT UNSIGNED NOT NULL DEFAULT 0,
+  last_qualifying_date DATE NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS brain_game_privacy (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL UNIQUE,
+  student_id INT UNSIGNED NULL UNIQUE,
+  show_activity TINYINT(1) NOT NULL DEFAULT 0,
+  show_score TINYINT(1) NOT NULL DEFAULT 0,
+  show_streaks TINYINT(1) NOT NULL DEFAULT 0,
+  show_badges TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
