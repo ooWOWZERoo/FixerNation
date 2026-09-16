@@ -211,10 +211,10 @@ body {
 }
 .game-page-header .game-icon { font-size: 52px; display: block; margin-bottom: 12px; }
 .game-page-header h1 {
-  font-family: 'Fraunces', serif; font-size: 32px;
+  font-family: 'Fraunces', serif; font-size: calc(32px * var(--band-scale, 1));
   color: var(--teal-dark); margin-bottom: 6px;
 }
-.game-page-header p { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+.game-page-header p { font-size: calc(15px * var(--band-scale, 1)); color: var(--ink-soft); line-height: 1.6; }
 
 .game-card-panel {
   background: #fff; border-radius: var(--radius);
@@ -320,3 +320,138 @@ body {
   .difficulty-picker { flex-direction: column; align-items: center; }
   .results-score { font-size: 48px; }
 }
+
+/* ── Tune Your Brain, Phase 2: shared accessibility + experience-band tokens ──
+   Added for the new engine/shell system (docs/tune-your-brain/). Everything
+   above this point is untouched — existing games keep working exactly as
+   before. Nothing here is wired into the 6 legacy game pages yet; that
+   retrofit is explicitly Phase 7/8 scope (see FINAL_BUILD_PLAN_DRAFT.md). */
+
+/* Visible, brand-consistent keyboard focus indicator — this codebase had
+   none before (confirmed absent in the Phase 0 accessibility audit). One
+   rule here covers every element project-wide rather than styling focus
+   per component. */
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Screen-reader-only content — for the shared live region and for labels
+   that should announce to assistive tech without taking up visual space. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* WCAG 2.2 SC 2.5.8 (AA) minimum is 24x24 CSS px; band overrides below push
+   this higher for younger bands per the blueprint's own "large targets"
+   requirement for Discover. Apply to any clickable game control. */
+.tap-target { min-width: 24px; min-height: 24px; }
+
+/* Reduced motion — driven by accessibility-utils.js, which sets this
+   attribute from either the OS `prefers-reduced-motion` setting or an
+   explicit in-app override (a user may want less motion than their OS
+   default, or vice versa — the explicit override always wins). Collapses
+   all animation/transition durations project-wide rather than requiring
+   every new engine to special-case motion itself. */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+}
+
+/* Larger text — driven by accessibility-utils.js's panel toggle. Scoped to
+   the game frame rather than the whole document so admin/marketing pages
+   sharing this stylesheet (there are none today, but future-proofing costs
+   nothing here) aren't affected. */
+html[data-large-text="true"] .game-frame { font-size: 118%; }
+
+/* ── Experience bands ──────────────────────────────────────────────────────────
+   Presentation-only extensions of the existing teal/coral/serif identity —
+   NOT four separate visual brands (per the blueprint's own §7.1 rule). Each
+   band scales type/spacing/target-size/motion-restraint; none of them
+   change the color palette itself. Set via game-shell.js's setBand(),
+   which writes data-band onto <html>. */
+html[data-band="discover"] {
+  --band-scale: 1.15;
+  --band-radius: 28px;
+  --band-target-min: 56px;
+  --band-motion: 1;
+}
+html[data-band="explore"] {
+  --band-scale: 1.08;
+  --band-radius: 22px;
+  --band-target-min: 48px;
+  --band-motion: 0.85;
+}
+html[data-band="challenge"] {
+  --band-scale: 1;
+  --band-radius: var(--radius-sm);
+  --band-target-min: 40px;
+  --band-motion: 0.6;
+}
+html[data-band="advance"] {
+  --band-scale: 0.96;
+  --band-radius: 10px;
+  --band-target-min: 36px;
+  --band-motion: 0.4;
+}
+
+/* Applied by game-shell.js to shell-built elements so they respond to
+   whichever band is active without each engine reimplementing band logic. */
+.band-aware {
+  font-size: calc(1em * var(--band-scale, 1));
+  border-radius: var(--band-radius, var(--radius-sm));
+}
+.band-aware.tap-target {
+  min-width: var(--band-target-min, 24px);
+  min-height: var(--band-target-min, 24px);
+}
+
+/* ── Shared game shell pieces (built by game-shell.js) ─────────────────────── */
+.fn-shell-instructions {
+  background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));
+  padding: 16px 18px; font-size: 14px; color: var(--ink-soft); line-height: 1.6;
+  margin-bottom: 16px;
+}
+.fn-shell-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.fn-shell-progress .fn-shell-progress-bar {
+  flex: 1; height: 8px; background: var(--cream-soft); border-radius: 99px; overflow: hidden;
+}
+.fn-shell-progress .fn-shell-progress-fill {
+  height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--teal), var(--gold));
+  transition: width calc(0.4s * var(--band-motion, 1));
+}
+.fn-shell-feedback {
+  border-radius: var(--band-radius, var(--radius-sm)); padding: 14px 18px;
+  font-size: 14px; font-weight: 600; margin-bottom: 14px;
+}
+.fn-shell-feedback.correct { background: #f0fdf4; color: #15803d; border: 2px solid var(--game-green); }
+.fn-shell-feedback.incorrect { background: #fef2f2; color: #b91c1c; border: 2px solid var(--game-red); }
+.fn-shell-hint-btn {
+  background: transparent; border: 2px dashed var(--border); color: var(--ink-soft);
+  border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.fn-shell-hint-btn:hover { border-color: var(--teal); color: var(--teal); }
+.fn-shell-controls { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
+
+/* ── Accessibility settings panel (floating, shared across all game pages) ── */
+.fn-a11y-toggle {
+  position: fixed; bottom: 20px; right: 20px; z-index: 9100;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--teal-dark); color: #fff; border: none;
+  font-size: 18px; cursor: pointer; box-shadow: var(--shadow-sm);
+}
+.fn-a11y-panel {
+  position: fixed; bottom: 74px; right: 20px; z-index: 9100;
+  background: #fff; border-radius: var(--radius-sm); box-shadow: var(--shadow);
+  padding: 16px; width: 220px; display: none;
+}
+.fn-a11y-panel.open { display: block; }
+.fn-a11y-panel h4 { font-size: 13px; margin-bottom: 10px; color: var(--ink); }
+.fn-a11y-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; color: var(--ink-soft); }

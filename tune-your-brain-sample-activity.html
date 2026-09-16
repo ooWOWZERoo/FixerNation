@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sample Activity — Tune Your Brain Shell Demo</title>
+<link rel="stylesheet" href="brain-games.css?v=1">
+<style>
+  /* Demo-only styling — this page is not part of the real catalog. */
+  .choice-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+  .choice-btn {
+    font-size: calc(40px * var(--band-scale, 1));
+    width: calc(84px * var(--band-scale, 1)); height: calc(84px * var(--band-scale, 1));
+    border-radius: var(--band-radius, var(--radius-sm));
+    border: 2px solid var(--border); background: #fff; cursor: pointer;
+  }
+  .choice-btn:hover { border-color: var(--teal); }
+  .target { font-size: calc(56px * var(--band-scale, 1)); text-align: center; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="game-frame">
+  <div id="header"></div>
+  <div id="instructions"></div>
+  <div id="progress"></div>
+  <div class="game-card-panel band-aware">
+    <div class="target" aria-hidden="true">🍎</div>
+    <p class="sr-only" id="targetLabel">Target: apple</p>
+    <div class="choice-row" id="choices"></div>
+    <div id="feedback"></div>
+    <div id="hintArea"></div>
+  </div>
+  <div id="controls"></div>
+  <div id="summaryArea"></div>
+</div>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const band = FnGameShell.setBand(params.get('band'));
+
+  const bandLabels = { discover: 'Discover (K–2)', explore: 'Explore (3–5)', challenge: 'Challenge (6–8)', advance: 'Advance (9–12)' };
+
+  document.getElementById('header').appendChild(FnGameShell.renderHeader({
+    icon: '🔊',
+    title: 'Sound Match',
+    description: `Shell demo — ${bandLabels[band]} presentation`,
+  }));
+  document.getElementById('instructions').appendChild(
+    FnGameShell.renderInstructions('Choose the picture that matches the target. This is a demo activity proving the shared shell/accessibility system — not a real Tune Your Brain game.')
+  );
+  document.getElementById('progress').appendChild(FnGameShell.renderProgress(1, 1));
+
+  const CHOICES = [
+    { emoji: '🍎', correct: true, name: 'apple' },
+    { emoji: '🍌', correct: false, name: 'banana' },
+    { emoji: '🍇', correct: false, name: 'grapes' },
+  ];
+
+  const choicesEl = document.getElementById('choices');
+  let hintUsed = false;
+  let answered = false;
+
+  CHOICES.forEach((c) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'choice-btn tap-target band-aware';
+    btn.setAttribute('aria-label', c.name);
+    btn.textContent = c.emoji;
+    btn.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const feedbackEl = FnGameShell.renderFeedback(
+        c.correct ? 'correct' : 'incorrect',
+        c.correct ? 'Correct! That\'s the apple.' : 'Not quite — try again next time.'
+      );
+      document.getElementById('feedback').innerHTML = '';
+      document.getElementById('feedback').appendChild(feedbackEl);
+      showSummary();
+    });
+    choicesEl.appendChild(btn);
+  });
+
+  document.getElementById('hintArea').appendChild(
+    FnGameShell.renderHintButton('Need a hint?', () => {
+      hintUsed = true;
+      FnA11y.announce('Hint: it\'s red and grows on trees.');
+      document.getElementById('hintArea').insertAdjacentHTML('beforeend',
+        '<p style="font-size:13px;color:var(--ink-soft);margin-top:8px;">Hint: it\'s red and grows on trees.</p>');
+    })
+  );
+
+  document.getElementById('controls').appendChild(FnGameShell.renderControls({
+    onExit: () => FnA11y.announce('Exit pressed (demo — no real navigation).'),
+  }));
+
+  function showSummary() {
+    document.getElementById('summaryArea').appendChild(FnGameShell.renderSummary({
+      title: 'Demo complete',
+      lines: [
+        { value: hintUsed ? 'Yes' : 'No', label: 'Used hint' },
+        { value: bandLabels[band], label: 'Band shown' },
+      ],
+      continueLabel: 'Reset demo',
+      onContinue: () => location.reload(),
+    }));
+  }
+</script>
+</body>
+</html>
