@@ -73,7 +73,7 @@ async function updateStreak(principal) {
 const CLASSROOM_COMPLETION_XP = 25;
 
 async function awardClassroomCompletion({ studentId, gameId }) {
-  await pool.query(
+  const [upsertResult] = await pool.query(
     `INSERT INTO brain_game_user_progress (student_id, game_id, xp, total_sessions, total_completed, last_played_at)
      VALUES (?, ?, ?, 1, 1, NOW())
      ON DUPLICATE KEY UPDATE
@@ -83,11 +83,17 @@ async function awardClassroomCompletion({ studentId, gameId }) {
        last_played_at = NOW()`,
     [studentId, gameId, CLASSROOM_COMPLETION_XP, CLASSROOM_COMPLETION_XP]
   );
+  // mysql2/MariaDB report affectedRows=1 for a genuine INSERT and 2 for a
+  // row updated via ON DUPLICATE KEY — a reliable, race-free way to know
+  // this was the student's very first completion of this game, unlike a
+  // separate SELECT of total_completed afterward (which two concurrent
+  // completions of the same game could both read past 1).
+  const isFirstCompletion = upsertResult.affectedRows === 1;
 
   const principal = { idCol: 'student_id', id: studentId };
   updateStreak(principal).catch(() => {});
 
-  const newBadges = await awardFirstCompletionBadge(principal, gameId);
+  const newBadges = isFirstCompletion ? await awardFirstCompletionBadge(principal, gameId) : [];
 
   const [[prog]] = await pool.query(
     'SELECT xp FROM brain_game_user_progress WHERE student_id=? AND game_id=?',
@@ -100,9 +106,10 @@ async function awardClassroomCompletion({ studentId, gameId }) {
 }
 
 // Awards a badge whose criteria_type='first_classroom_completion' for this
-// game, the first time (and only the first time) this student completes it
-// via a classroom assignment. Simple existence check rather than a generic
-// criteria evaluator, since this slice only has the one criteria type.
+// game, on the student's very first completion of it via a classroom
+// assignment (isFirstCompletion, decided by the caller from the upsert
+// result). Simple existence check rather than a generic criteria
+// evaluator, since this slice only has the one criteria type.
 async function awardFirstCompletionBadge(principal, gameId) {
   const idCol = principal.idCol;
   const [badges] = await pool.query(
@@ -110,12 +117,6 @@ async function awardFirstCompletionBadge(principal, gameId) {
     [gameId]
   );
   if (!badges.length) return [];
-
-  const [[prog]] = await pool.query(
-    'SELECT total_completed FROM brain_game_user_progress WHERE student_id=? AND game_id=?',
-    [principal.id, gameId]
-  );
-  if ((prog?.total_completed || 0) !== 1) return []; // only on the very first completion
 
   const newBadges = [];
   for (const badge of badges) {
