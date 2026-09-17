@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Critical Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-evidence-hunt.js"></script>
+<script>
+  // Critical Read - catalog scaling slice (Advance band). Same Evidence
+  // Hunt engine as Headline/Reading Detective, but content targets
+  // distinguishing fact/inference/opinion/uncertainty and source
+  // reasoning per roadmap section 14.4 ("does not reduce credibility to
+  // a simplistic single signal").
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'advance';
+
+  const contentPack = {
+    title: 'Critical Read',
+    items: [
+      {
+        passage: [
+          'A recent school survey found that 62% of students reported getting less than 7 hours of sleep on school nights.',
+          'Many students said they stay up late finishing homework or using their phones.',
+          'Some researchers argue that later school start times could help, though the school has not proposed any schedule change.',
+        ],
+        question: 'Which statement is a factual claim actually supported by the passage, rather than an opinion or an unstated assumption?',
+        choices: [
+          { id: 'survey-fact', text: '62% of surveyed students reported sleeping less than 7 hours on school nights.' },
+          { id: 'schedule-fact', text: 'The school is planning to change its start time this year.' },
+          { id: 'phones-cause', text: 'Phones are the main reason students are not getting enough sleep.' },
+        ],
+        correctChoiceId: 'survey-fact',
+        correctEvidenceIndex: 0,
+        explanation: 'The 62% figure is the one number the passage actually reports. The school has not proposed a schedule change, and the passage only says "many students said," not that phones are definitely the main reason.',
+      },
+      {
+        passage: [
+          'A local news article claimed that a new community center "has been a total failure since it opened."',
+          'City records show the center hosted 40 events in its first three months, more than any other public building in town.',
+          'The article did not mention attendance numbers or resident feedback.',
+        ],
+        question: 'What is the most reasonable conclusion about the article\'s claim?',
+        choices: [
+          { id: 'unsupported', text: 'The claim is not well supported. The article gives no evidence like attendance or feedback to back up "total failure."' },
+          { id: 'well-supported', text: 'The claim is well supported, since city records confirm the center exists.' },
+          { id: 'proven-false', text: 'The claim is completely proven false, since the center hosted the most events in town.' },
+        ],
+        correctChoiceId: 'unsupported',
+        correctEvidenceIndex: 1,
+        explanation: 'Hosting the most events does not automatically disprove "failure," since attendance and feedback are unknown, but the article also gives no real evidence for its own claim. The honest answer is "not well supported," not proven true or false either way.',
+      },
+      {
+        passage: [
+          'An online post claims a new snack bar "cures fatigue instantly."',
+          'The post is written by the company that sells the snack bar.',
+          'No independent studies are cited or linked in the post.',
+        ],
+        question: 'What should a careful reader notice about this source?',
+        choices: [
+          { id: 'conflict', text: 'The source has a financial interest in the claim, and no independent evidence is provided.' },
+          { id: 'trustworthy', text: 'The claim is trustworthy because it appears in a public post online.' },
+          { id: 'irrelevant', text: 'Who wrote the post does not matter as long as the claim sounds believable.' },
+        ],
+        correctChoiceId: 'conflict',
+        correctEvidenceIndex: 1,
+        explanation: 'A company promoting its own product, with no independent evidence cited, is exactly the kind of source that deserves a second look before believing an extreme claim like "instantly."',
+      },
+      {
+        passage: [
+          'A columnist wrote that a proposed park renovation is "a waste of taxpayer money."',
+          'The city\'s budget document lists the renovation cost at $200,000, funded by a grant that cannot be used for anything else.',
+          'The columnist\'s article did not mention the grant restriction.',
+        ],
+        question: 'What is the most accurate way to describe the columnist\'s statement?',
+        choices: [
+          { id: 'opinion-missing-context', text: 'It is an opinion that leaves out relevant context, like the grant restriction.' },
+          { id: 'objective-fact', text: 'It is an objective fact, since the dollar amount is correct.' },
+          { id: 'fully-informed', text: 'It is a fully informed judgment, since it is based on the real budget figure.' },
+        ],
+        correctChoiceId: 'opinion-missing-context',
+        correctEvidenceIndex: 2,
+        explanation: 'A dollar figure can be accurate while the judgment built on top of it, "a waste," is still an opinion, especially one missing a key fact: this money could not have gone anywhere else anyway.',
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'evidenceHunt',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'critical-read-claims-evidence',
+    header: {
+      icon: '🧐',
+      title: 'Critical Read',
+      description: 'Read closely, judge the claim, then find the sentence that actually supports your judgment.',
+    },
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Money Moves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-simulation.js"></script>
+<script>
+  // Money Moves - catalog scaling slice (Challenge band). Same Simulation
+  // engine as Money Matters, but a simpler resource set appropriate for
+  // grades 6-8 (no credit-score concept) per roadmap section 14.3. Amounts
+  // are chosen so every path stays non-negative regardless of earlier
+  // choices (min possible Savings before the last event is 65, and the
+  // used-bike option costs 60).
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+
+  const contentPack = {
+    title: 'Money Moves',
+    goal: 'Save $120 total for the bike you want, while keeping enough spending money for things you enjoy along the way.',
+    startingResources: { Savings: 30, 'Spending Money': 20 },
+    events: [
+      {
+        prompt: 'Your $40 monthly allowance arrives. How much goes toward the bike?',
+        options: [
+          { id: 'save-all', label: 'Save the full $40 toward the bike.', delta: { Savings: 40 } },
+          { id: 'save-half', label: 'Save $20 and keep $20 as spending money.', delta: { Savings: 20, 'Spending Money': 20 } },
+        ],
+      },
+      {
+        prompt: 'A friend invites you to a $20 movie night. Do you go?',
+        options: [
+          { id: 'go-movie', label: 'Go to the movie ($20 from spending money).', delta: { 'Spending Money': -20 } },
+          { id: 'skip-movie', label: 'Skip it and add $20 more to savings instead.', delta: { Savings: 20 } },
+        ],
+      },
+      {
+        prompt: 'You take on extra chores and earn a $30 bonus. Where does it go?',
+        options: [
+          { id: 'bonus-save', label: 'Put the whole $30 toward the bike.', delta: { Savings: 30 } },
+          { id: 'bonus-split', label: 'Split it: $15 to savings, $15 to spending money.', delta: { Savings: 15, 'Spending Money': 15 } },
+        ],
+      },
+      {
+        prompt: 'You are getting close. A good used bike is available right now for $60, or you can keep saving for the $120 bike you really want.',
+        options: [
+          { id: 'buy-used', label: 'Buy the $60 used bike now with your savings.', delta: { Savings: -60 } },
+          { id: 'keep-saving', label: 'Keep saving for the bike you really want.', delta: {} },
+        ],
+      },
+    ],
+    debrief(final) {
+      if (final.Savings >= 120) {
+        return 'You saved enough for the exact bike you wanted. Steady saving got you all the way there.';
+      }
+      if (final.Savings < 65) {
+        return 'You got a good bike sooner by choosing the more affordable one. Getting what you need now is its own kind of smart choice.';
+      }
+      return 'You are building real savings toward the bike you want. There is more than one smart way to get there, and steady saving is one of them.';
+    },
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'simulation',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'money-moves-savings-goal',
+    header: {
+      icon: '🚲',
+      title: 'Money Moves',
+      description: 'Manage your allowance and chore money toward a savings goal. There is more than one way to do it well.',
+    },
+  });
+</script>
+</body>
+</html>

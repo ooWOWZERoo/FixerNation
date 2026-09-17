@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Choice Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script>
+  // Choice Quest - catalog scaling slice (Explore band). The same
+  // Issues-to-Answers 5-step cycle as Decision Point, adventure-framed
+  // per the Explore band's developmental design (friendship repair,
+  // inclusion, cooperation - roadmap section 6.5) rather than Decision
+  // Point's older-band peer/digital scenario.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'explore';
+
+  const contentPack = {
+    title: 'Choice Quest',
+    steps: [
+      {
+        key: 'recognize',
+        prompt: 'Your team is building a diorama for the class project. Mia has not finished her part, and the project is due tomorrow.',
+        choices: [
+          { id: 'notice-mia', text: 'Notice that Mia might need help or might be stuck, not just "not trying."', type: 'responsible',
+            feedback: 'Good noticing. There could be more going on than it first looks like.' },
+          { id: 'assume-lazy', text: 'Mia is just being lazy and does not care about the project.', type: 'plausible_incomplete',
+            feedback: 'Maybe, but that is a guess. It is worth finding out what is really going on first.' },
+        ],
+      },
+      {
+        key: 'impact',
+        prompt: 'If Mia\'s part is not finished, what happens?',
+        choices: [
+          { id: 'team-and-mia', text: 'The whole team\'s project could be incomplete, and Mia might feel embarrassed or stressed too.', type: 'responsible',
+            feedback: 'Right. This affects the whole team, including Mia.' },
+          { id: 'only-mia', text: 'Only Mia will get in trouble, so it is not really the team\'s problem.', type: 'plausible_incomplete',
+            feedback: 'A team project usually means a team result. It is everyone\'s problem, not just Mia\'s.' },
+        ],
+      },
+      {
+        key: 'consider',
+        prompt: 'What are some ways your team could handle this?',
+        choices: [
+          { id: 'ask-and-plan', text: 'Ask Mia if she needs help, and figure out a plan together.', type: 'responsible',
+            feedback: 'Having a real plan, made together, beats guessing what to do.' },
+          { id: 'do-it-quietly', text: 'Just finish her part without telling her.', type: 'plausible_incomplete',
+            feedback: 'This solves the deadline, but it skips Mia entirely and does not find out what she actually needs.' },
+        ],
+      },
+      {
+        key: 'choose',
+        prompt: 'What is the most constructive next step right now?',
+        choices: [
+          { id: 'check-in-privately', text: 'Ask Mia privately if everything is okay and offer to help with her part.', type: 'responsible',
+            feedback: 'A private check-in respects Mia and gets you real information before anyone decides anything.' },
+          { id: 'team-redivide', text: 'Suggest to the whole team that you divide up Mia\'s remaining work fairly, with her input.', type: 'multiple_defensible',
+            feedback: 'Also a solid move. Fair redivision, with Mia included, keeps this from feeling like a punishment.' },
+          { id: 'blame-to-teacher', text: 'Tell the teacher Mia is ruining the project without talking to her first.', type: 'unsafe',
+            feedback: 'Going straight to blame, without ever asking Mia what is going on, could embarrass her for something that might not even be her fault.' },
+          { id: 'flag-if-overwhelmed', text: 'If Mia seems really overwhelmed or upset, let the teacher know so an adult can help find a plan.', type: 'seek_help',
+            feedback: 'Asking a trusted adult for help is a reasonable choice, especially if something bigger than a school project seems to be going on.' },
+        ],
+      },
+      {
+        key: 'reflect',
+        prompt: 'What is one way you could check in with a teammate who seems stuck, next time it happens?',
+        freeReflection: true,
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'choice-quest-team-project',
+    header: {
+      icon: '🗺️',
+      title: 'Choice Quest',
+      description: 'Work through what is happening with your team, who it affects, and what to do about it.',
+    },
+  });
+</script>
+</body>
+</html>

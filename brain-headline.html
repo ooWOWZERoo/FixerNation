@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Headline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-evidence-hunt.js"></script>
+<script>
+  // Headline - catalog scaling slice (Challenge band). Same Evidence Hunt
+  // engine as Reading Detective. Content is deliberately non-partisan
+  // school-news style items per roadmap section 14.3's acceptance rule
+  // ("avoids partisan persuasion and presents sources/context fairly").
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+
+  const contentPack = {
+    title: 'Headline',
+    items: [
+      {
+        passage: [
+          'The school\'s recycling program collected 200 pounds of paper this month.',
+          'That is about 20 pounds more than last month.',
+          'Ms. Rivera said the increase came from the new classroom bins.',
+        ],
+        question: 'Which headline best matches what actually happened?',
+        choices: [
+          { id: 'steady', text: 'Recycling Program Sees Small, Steady Increase' },
+          { id: 'exploding', text: 'Recycling Numbers Are Exploding School-Wide' },
+          { id: 'failing', text: 'School Recycling Program Is Failing Students' },
+        ],
+        correctChoiceId: 'steady',
+        correctEvidenceIndex: 1,
+        explanation: '20 pounds more is a real increase, but it is a small, steady one, not an explosion and not a failure.',
+      },
+      {
+        passage: [
+          'The chess club\'s bake sale raised $85 for new chess sets.',
+          'That is less than the $150 goal the club had hoped for.',
+          'Club president Adam said they plan to try again next month.',
+        ],
+        question: 'Which headline best matches what actually happened?',
+        choices: [
+          { id: 'short', text: 'Bake Sale Falls Short of Goal, Club Plans Another Try' },
+          { id: 'disaster', text: 'Chess Club Bake Sale a Total Disaster' },
+          { id: 'success', text: 'Chess Club Reaches Fundraising Goal' },
+        ],
+        correctChoiceId: 'short',
+        correctEvidenceIndex: 1,
+        explanation: '$85 is real progress toward $150, not a disaster, and it is not the full goal either, so "reached the goal" is not accurate.',
+      },
+      {
+        passage: [
+          'The cafeteria tried a new vegetarian lunch option this week.',
+          'About a third of students who tried it said they would order it again.',
+          'The cafeteria manager said they will keep testing new options each month.',
+        ],
+        question: 'Which headline best matches what actually happened?',
+        choices: [
+          { id: 'mixed', text: 'New Lunch Option Gets Mixed Reactions, More Tests Ahead' },
+          { id: 'hated', text: 'Students Hate New Cafeteria Food' },
+          { id: 'loved', text: 'New Lunch Option Is an Instant Hit' },
+        ],
+        correctChoiceId: 'mixed',
+        correctEvidenceIndex: 1,
+        explanation: 'A third of students wanting it again is a mixed result, not universal hate and not an instant hit.',
+      },
+      {
+        passage: [
+          'Spirit Week had more students dress up than last year.',
+          'Tuesday\'s theme had the highest turnout of the week.',
+          'Teachers said hallway noise was also louder than usual.',
+        ],
+        question: 'Which headline best matches what actually happened?',
+        choices: [
+          { id: 'grew', text: 'Spirit Week Participation Grows From Last Year' },
+          { id: 'record', text: 'Spirit Week Sets All-Time School Record' },
+          { id: 'chaos', text: 'Spirit Week Turns Into Total Chaos' },
+        ],
+        correctChoiceId: 'grew',
+        correctEvidenceIndex: 0,
+        explanation: 'More than last year is real growth. There is no evidence here about an all-time record, and louder hallways is not the same as chaos.',
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'evidenceHunt',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'headline-accurate-summary',
+    header: {
+      icon: '📰',
+      title: 'Headline',
+      description: 'Read the story, pick the most accurate headline, then find the sentence that proves it.',
+    },
+  });
+</script>
+</body>
+</html>

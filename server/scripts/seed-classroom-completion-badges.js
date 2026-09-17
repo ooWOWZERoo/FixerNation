@@ -1,9 +1,13 @@
-// Tune Your Brain, Phase 6 — adds one "first classroom completion" badge
-// per pilot game, using the exact names the blueprint itself proposes
-// (roadmap §12.3): Sound Explorer, Context Detective, Responsible
-// Responder, Budget Builder. Awarded by
-// server/lib/rewards.js's awardClassroomCompletion() the first time a
-// student completes that game through a real classroom assignment.
+// Tune Your Brain, Phase 6 (extended in the Phase 7/8 catalog-scaling
+// slice) — adds one "first classroom completion" badge per catalog game,
+// using the blueprint's own proposed names (roadmap §12.3) where one
+// fits: Sound Explorer, Context Detective, Responsible Responder,
+// Budget Builder, Perspective Builder, Digital Citizen, Problem Solver.
+// Source Sleuth (Critical Read) isn't one of the blueprint's 8 examples —
+// none of the remaining ones fit that content — but is kept in the same
+// naming voice. Awarded by server/lib/rewards.js's
+// awardClassroomCompletion() the first time a student completes that
+// game through a real classroom assignment.
 //
 // Requires server/scripts/alter-add-reward-pipeline.js to have run first
 // (this script only inserts brain_badges rows, it doesn't touch the
@@ -22,6 +26,14 @@ const BADGES = [
     description: 'Completed Decision Point through a classroom assignment.' },
   { gameSlug: 'money-matters', slug: 'budget-builder', name: 'Budget Builder', emoji: '💰',
     description: 'Completed Money Matters through a classroom assignment.' },
+  { gameSlug: 'choice-quest', slug: 'perspective-builder', name: 'Perspective Builder', emoji: '🗺️',
+    description: 'Completed Choice Quest through a classroom assignment.' },
+  { gameSlug: 'headline', slug: 'digital-citizen', name: 'Digital Citizen', emoji: '📰',
+    description: 'Completed Headline through a classroom assignment.' },
+  { gameSlug: 'money-moves', slug: 'problem-solver', name: 'Problem Solver', emoji: '🚲',
+    description: 'Completed Money Moves through a classroom assignment.' },
+  { gameSlug: 'critical-read', slug: 'source-sleuth', name: 'Source Sleuth', emoji: '🧐',
+    description: 'Completed Critical Read through a classroom assignment.' },
 ];
 
 async function main() {
