@@ -28,10 +28,7 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). `domain`/`casel_competencies` tagging + real filters on `brain-games.html` (plus the dead-link and stale-copy fixes it surfaced) is also deployed and confirmed live (Release 48). The band-filter bug fix, the Discover-band visual prototype (rounds 1-2), and the first Discover-band SEL game (**Calm Down Corner**) are also deployed and confirmed live (Release 49). A follow-up pass — a permanent fix for the dead-link bug class, plus the first 2 Advance-band SEL games (**First Shift**, **The Post**) — is coded and pushed, **not yet deployed**, see Deploy queue.
-
-## Deploy queue
-- Dead-link bug-class fix + First Shift + The Post: `server/scripts/seed-first-shift-catalog-entry.js`, then `server/scripts/seed-the-post-catalog-entry.js`, then `server/scripts/seed-classroom-completion-badges.js` again (idempotent — only inserts the 2 new badges), then rsync. No schema change, no server-route change, **no app restart needed**.
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). `domain`/`casel_competencies` tagging + real filters on `brain-games.html` (plus the dead-link and stale-copy fixes it surfaced) is also deployed and confirmed live (Release 48). The band-filter bug fix, the Discover-band visual prototype (rounds 1-2), and the first Discover-band SEL game (**Calm Down Corner**) are also deployed and confirmed live (Release 49). A follow-up pass — a permanent fix for the dead-link bug class, plus the first 2 Advance-band SEL games (**First Shift**, **The Post**) — is deployed and confirmed live by the user. The newest pass — Explore's and Challenge's second SEL games (**Team Pick**, **Group Chat Meltdown**) — is coded and pushed, **not yet deployed**, see Deploy queue below.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -163,7 +160,23 @@ New badge **Calm Explorer** (🐢), added to `seed-classroom-completion-badges.j
 
 Both verified locally (screenshotted) before committing — the 5-step cycle, feedback, and choice-type coverage (unsafe/plausible-incomplete/responsible/multiple-defensible/seek-help) all render and progress correctly.
 
-**Not yet deployed** — needs the 2 new catalog-seed scripts run, the badge-seed script re-run (idempotent), and rsync. No schema change, no server-route change, no app restart.
+**Deployed and confirmed live by the user this session** — the dead-link-class fix, First Shift, and The Post are all live in production.
+
+## Explore + Challenge's second SEL games written — Team Pick, Group Chat Meltdown
+
+Closes the last two open items from the SEL-games-per-band scoped list (`GAP_ANALYSIS_2026-09-17.md`): Explore's and Challenge's own second SEL & Character game, both targeting **Self-management** (the competency with zero coverage anywhere before this pass). Both reuse `engine-branching-scenario.js` (now proven a 5th time) and follow the identical pattern as First Shift/The Post (5-step Issues-to-Answers cycle, `choose` step spanning unsafe/plausible-incomplete/responsible/multiple-defensible/seek-help, non-graphic, always offers a trusted-adult option):
+
+- **Team Pick** (`brain-team-pick.html`, Explore band) — picked last for a team in gym class, managing the frustration of feeling left out. CASEL: Self-management, Relationship skills. New badge **Steady Player** 🙋.
+- **Group Chat Meltdown** (`brain-group-chat-meltdown.html`, Challenge band) — friends joke about an embarrassing video in a group chat, managing the urge to fire back. CASEL: Self-management, Responsible decision-making. New badge **Clear Head** 💬.
+
+Both verified locally (loaded via the static-preview trick, clicked through the full 5-step cycle including all 4 `choose`-step choice types) before committing — same verification standard as every prior game this session.
+
+Every experience band now has at least one real SEL & Character game, and Self-management (previously the single biggest CASEL gap) now has coverage in all 4 bands. Remaining SEL gap: genuine Self-awareness content anywhere, still blocked on the not-yet-built multi-select `Scenario Choice` engine.
+
+**Not yet deployed** — needs 2 new catalog-seed scripts run, the badge-seed script re-run (idempotent), and rsync. No schema change, no server-route change, no app restart.
+
+## Deploy queue
+- Team Pick + Group Chat Meltdown: `server/scripts/seed-team-pick-catalog-entry.js`, then `server/scripts/seed-group-chat-meltdown-catalog-entry.js`, then `server/scripts/seed-classroom-completion-badges.js` again (idempotent — only inserts the 2 new badges), then rsync. No schema change, no server-route change, **no app restart needed**.
 
 ## Next recommended step
-Deploy this slice, then decide: Explore/Challenge's second SEL game each, genuine Self-awareness content (still blocked on the multi-select engine), keep extending the Discover CSS direction further or move to sourcing real illustration, or pivot to admin-facing Tune Your Brain visibility / accessibility test tooling (both still zero). Worth deciding explicitly rather than defaulting.
+Deploy this slice, then decide: genuine Self-awareness content (still blocked on the multi-select engine — the one remaining CASEL gap), keep extending the Discover CSS direction further or move to sourcing real illustration, or pivot to admin-facing Tune Your Brain visibility / accessibility test tooling (both still zero). Worth deciding explicitly rather than defaulting.

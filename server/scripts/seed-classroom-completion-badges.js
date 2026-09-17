@@ -16,6 +16,11 @@
 // (this script only inserts brain_badges rows, it doesn't touch the
 // reward_pipeline column).
 //
+// Team Pick (Explore) and Group Chat Meltdown (Challenge) also aren't
+// among the blueprint's §12.3 examples — same as Source Sleuth/Calm
+// Explorer/Digital Ally before them — but are kept in the same naming
+// voice, themed around the self-management competency both games cover.
+//
 // Safe to re-run: each badge is skipped if its slug already exists.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mysql = require('mysql2/promise');
@@ -43,6 +48,10 @@ const BADGES = [
     description: 'Completed First Shift through a classroom assignment.' },
   { gameSlug: 'the-post', slug: 'digital-ally', name: 'Digital Ally', emoji: '📱',
     description: 'Completed The Post through a classroom assignment.' },
+  { gameSlug: 'team-pick', slug: 'steady-player', name: 'Steady Player', emoji: '🙋',
+    description: 'Completed Team Pick through a classroom assignment.' },
+  { gameSlug: 'group-chat-meltdown', slug: 'clear-head', name: 'Clear Head', emoji: '💬',
+    description: 'Completed Group Chat Meltdown through a classroom assignment.' },
 ];
 
 async function main() {

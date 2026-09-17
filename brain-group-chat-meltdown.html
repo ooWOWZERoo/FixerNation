@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Group Chat Meltdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script>
+  // Group Chat Meltdown - Tune Your Brain SEL scaling slice (Challenge
+  // band). Real Issues-to-Answers 5-step cycle (section 6.6) on a group-chat
+  // embarrassment situation, per section 6.5's Challenge progression
+  // (peer pressure, group dynamics, online behavior, boundaries,
+  // conflict, consequences). Challenge's second SEL & Character game
+  // (already had Decision Point) and its first to cover Self-management -
+  // see docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's SEL x band
+  // table, which flagged Self-management as having zero coverage in any
+  // band. Per the scenario-scoring rule, the "choose" step's options
+  // span unsafe / plausible-incomplete / responsible / multiple-defensible
+  // / seek-help, never scored as trivia. Per the sensitive-scenario
+  // rules, this stays non-graphic, offers a trusted-adult option, and
+  // never puts the student solely on the hook for fixing it.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+
+  const contentPack = {
+    title: 'Group Chat Meltdown',
+    steps: [
+      {
+        key: 'recognize',
+        prompt: 'You are in a group chat with friends after gym class. Someone posts a video of you tripping during a game, with laughing emojis. A few friends are joking along.',
+        choices: [
+          { id: 'notice-embarrassed', text: 'Notice that you are starting to feel embarrassed and a little angry, and want to respond right away.', type: 'responsible',
+            feedback: 'That is a completely normal reaction - recognizing it is the first step.' },
+          { id: 'just-a-joke', text: 'It is just a joke, so there is nothing to think about.', type: 'plausible_incomplete',
+            feedback: 'It might be meant as a joke, but that does not mean it is fine to ignore how it actually makes you feel.' },
+        ],
+      },
+      {
+        key: 'impact',
+        prompt: 'If you fire back an angry reply right now, what could happen?',
+        choices: [
+          { id: 'escalate-public', text: 'The joke could turn into a bigger argument in front of everyone in the chat, and it might be hard to walk back what you said.', type: 'responsible',
+            feedback: 'Group chats make things public fast - an angry reply can escalate quickly and stick around.' },
+          { id: 'forget-quickly', text: 'Nothing, everyone will just forget about it in a few minutes.', type: 'plausible_incomplete',
+            feedback: 'Maybe, but a heated reply can also get screenshotted or genuinely escalate - "they will forget" is not guaranteed.' },
+        ],
+      },
+      {
+        key: 'consider',
+        prompt: 'Before responding, what are some ways to handle how you are feeling?',
+        choices: [
+          { id: 'put-phone-down', text: 'Put your phone down for a few minutes and let the urge to respond right away pass.', type: 'responsible',
+            feedback: 'Creating a little space before responding is a real self-management strategy.' },
+          { id: 'reread-comeback', text: 'Keep re-reading the messages until you think of the perfect comeback.', type: 'plausible_incomplete',
+            feedback: 'That tends to keep the frustration going instead of giving it a chance to settle.' },
+        ],
+      },
+      {
+        key: 'choose',
+        prompt: 'What is the most constructive thing to do right now?',
+        choices: [
+          { id: 'embarrass-back', text: 'Send back a message calling them out and posting something embarrassing about one of them in return.', type: 'unsafe',
+            feedback: 'Escalating with something meant to embarrass someone else can turn a joke into a real conflict, and it does not undo how you feel.' },
+          { id: 'step-away-then-reply', text: 'Leave the chat for a while, then respond calmly once you are not upset anymore.', type: 'multiple_defensible',
+            feedback: 'Reasonable. Stepping back first, then addressing it once you are calmer, is a solid approach.' },
+          { id: 'message-one-friend', text: 'Message one friend directly, not the whole group, and let them know the video actually bothered you.', type: 'responsible',
+            feedback: 'Talking to one person directly, instead of the whole group, is a constructive way to address it without more public escalation.' },
+          { id: 'tell-trusted-adult', text: 'If messages like this keep happening or start to feel like more than a joke, tell a trusted adult, like a parent or school counselor.', type: 'seek_help',
+            feedback: 'Getting help from a trusted adult is a reasonable step, especially if this becomes a pattern.' },
+        ],
+      },
+      {
+        key: 'reflect',
+        prompt: 'What is one strategy that helps you pause before reacting when something online makes you upset?',
+        freeReflection: true,
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'group-chat-meltdown-online-conflict',
+    header: {
+      icon: '💬',
+      title: 'Group Chat Meltdown',
+      description: 'Work through what happened in the chat, how you are feeling, and what to do about it.',
+    },
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Team Pick</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script>
+  // Team Pick - Tune Your Brain SEL scaling slice (Explore band). Real
+  // Issues-to-Answers 5-step cycle (section 6.6) on a being-picked-last
+  // situation, per section 6.5's Explore progression (friendship repair,
+  // inclusion, cooperation, separating intention from impact). Explore's
+  // second SEL & Character game (already had Choice Quest) and its first
+  // to cover Self-management - see docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's
+  // SEL x band table, which flagged Self-management as having zero
+  // coverage in any band. Per the scenario-scoring rule, the "choose"
+  // step's options span unsafe / plausible-incomplete / responsible /
+  // multiple-defensible / seek-help, never scored as trivia. Per the
+  // sensitive-scenario rules, this stays non-graphic, offers a
+  // trusted-adult option, and never puts the student solely on the hook
+  // for fixing it.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'explore';
+
+  const contentPack = {
+    title: 'Team Pick',
+    steps: [
+      {
+        key: 'recognize',
+        prompt: 'In gym class, your two best friends are picking teams for four-square. They pick almost everyone else first, and you are the last one left standing.',
+        choices: [
+          { id: 'notice-feeling', text: 'Notice that you are starting to feel hurt and frustrated, and that is a normal reaction to have.', type: 'responsible',
+            feedback: 'Naming what you are feeling is the first step to handling it well.' },
+          { id: 'not-a-big-deal', text: 'It is just a game, so there is no real reason to feel anything about it.', type: 'plausible_incomplete',
+            feedback: 'It is okay to feel something even about "just a game" - pretending you do not feel anything does not make the feeling go away.' },
+        ],
+      },
+      {
+        key: 'impact',
+        prompt: 'If you let the frustration build up without doing anything about it, what might happen?',
+        choices: [
+          { id: 'snap-later', text: 'The rest of gym class could feel worse than it needs to, and your friends might not even realize how you feel unless you find a way to tell them.', type: 'responsible',
+            feedback: 'Both are true: the feeling can grow, and your friends may never know unless you find a way to say something.' },
+          { id: 'goes-away', text: 'Nothing really, feelings like that just go away on their own in a few minutes.', type: 'plausible_incomplete',
+            feedback: 'Sometimes they fade fast, but sometimes they do not - assuming it will always just disappear is not really a plan.' },
+        ],
+      },
+      {
+        key: 'consider',
+        prompt: 'What are some ways you could handle feeling left out?',
+        choices: [
+          { id: 'breathe-reframe', text: 'Take a few slow breaths and remind yourself that this one moment does not mean your friends do not like you.', type: 'responsible',
+            feedback: 'A calming strategy like this helps you think clearly before you react.' },
+          { id: 'stay-quiet-hope', text: 'Just stay quiet and hope the feeling passes on its own by lunch.', type: 'plausible_incomplete',
+            feedback: 'That might work sometimes, but it does not give you a real plan if the feeling sticks around or happens again.' },
+        ],
+      },
+      {
+        key: 'choose',
+        prompt: 'What is the most constructive thing to do right now?',
+        choices: [
+          { id: 'never-play-again', text: 'Loudly tell your friends you are never playing with them again.', type: 'unsafe',
+            feedback: 'Reacting in the heat of the moment like this could hurt a friendship over something that might not have even been personal.' },
+          { id: 'play-then-mention', text: 'Take a breath, join the game anyway, and bring it up with your friends later when everyone is calm.', type: 'multiple_defensible',
+            feedback: 'Reasonable. You manage the moment now and still address it later, when it is easier to talk about.' },
+          { id: 'calm-honest', text: 'Take a breath, then tell your friends calmly that it felt bad being picked last, without blaming them.', type: 'responsible',
+            feedback: 'This manages your own reaction and still opens the door for your friends to understand your side.' },
+          { id: 'ask-trusted-adult', text: 'If the feeling does not go away, talk to a trusted adult, like a teacher or family member, about how to handle it.', type: 'seek_help',
+            feedback: 'Getting another perspective is always a reasonable option, especially if this keeps happening.' },
+        ],
+      },
+      {
+        key: 'reflect',
+        prompt: 'What is one thing that helps you calm down when you are feeling left out or frustrated?',
+        freeReflection: true,
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'team-pick-left-out',
+    header: {
+      icon: '🙋',
+      title: 'Team Pick',
+      description: 'Work through how it feels to be picked last, and what to do about it.',
+    },
+  });
+</script>
+</body>
+</html>
