@@ -28,10 +28,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring, prompted by `GAP_ANALYSIS_2026-09-17.md`, is also deployed and confirmed live (Release 47).
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). A follow-up pass — `domain`/`casel_competencies` tagging, real filters on `brain-games.html`, and fixing a real dead-link bug on that page — is coded and pushed, **not yet deployed**, see Deploy queue.
 
 ## Deploy queue
-Empty — everything through Release 47 is confirmed live as of 2026-09-17.
+- `brain_games.domain`/`casel_competencies` tagging + `brain-games.html` filters: `server/scripts/alter-add-brain-games-domain.js`, then `server/scripts/seed-brain-games-domain-values.js`, then rsync, then **a Node app restart** (`server/routes/brain-games.js` changed).
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -121,5 +121,13 @@ Prompted by asking whether "deepening Phase 6" covers age/grade-based game filte
 
 **Confirmed live 2026-09-17** (Release 47): a direct API check confirmed all 14 games still return with correct `band` values post-deploy (no visibility regression from the flag going live), plus 9 Playwright specs run together against production — all passed clean.
 
+## SEL × band coverage made explicit, plus real filters on `brain-games.html` (coded, not yet deployed)
+
+Direct follow-up to the SEL finding above. **See `GAP_ANALYSIS_2026-09-17.md`'s "Update" section for the full CASEL × band matrix** — summary: Self-awareness and Self-management have zero coverage in any band, and Discover/Advance have zero SEL & Character games at all. Most of this is closeable with the existing `engine-branching-scenario.js` (no new engine) — only real Self-awareness content needs the not-yet-built multi-select engine. Recommended phased sequence (content not started, no sign-off yet on specific scenarios): (1) a Self-management game reusing Branching Scenario, (2) an Advance-band SEL game reusing Branching Scenario, (3) the `Scenario Choice` engine + a real Self-awareness game, (4) revisit self-awareness/self-management for every band, not just one each.
+
+Also, while inspecting `brain-games.html` to design the filters: **found and fixed 2 real bugs** — `GAME_URLS` only mapped the 6 legacy slugs, so all 8 new games were dead "Play Now" links from this page (missed until now since every e2e test plays through the classroom-assignment path instead); and the hero copy/badges still described the original 6-game "brain-training" product with zero mention of literacy, SEL, or life skills. New `brain_games.domain` (one of the 5 §6.1 domains per game) and `brain_games.casel_competencies` (`SET`, populated for the 2 SEL games only) back two new client-side chip filters, Band and Focus, reusing the existing `.lesson-chip` pattern from `teacher-classroom.html`.
+
+**Not yet deployed** — needs the alter script, then the seed script, then rsync, then a Node app restart.
+
 ## Next recommended step
-Read `GAP_ANALYSIS_2026-09-17.md`'s "Explicitly not started" list and decide what's next — the strongest candidates given the stated goal (SEL-competitive, shippable to clients) are: (1) scoping a real Self-Awareness/Self-Management SEL game, (2) admin-facing Tune Your Brain visibility (currently zero at every level), or (3) accessibility test tooling (currently zero, repo-wide). Each is a distinct, substantial decision — worth choosing explicitly rather than defaulting to "more catalog games."
+Deploy this slice (see Deploy queue above), verify the filters and the dead-link fix in the browser, then decide: build the Self-management/Advance-band SEL content (steps 1-2 of the phased sequence above, no new engine needed), invest in admin-facing Tune Your Brain visibility (currently zero at every level), or accessibility test tooling (currently zero, repo-wide). Each is a distinct, substantial decision — worth choosing explicitly rather than defaulting to "more catalog games."

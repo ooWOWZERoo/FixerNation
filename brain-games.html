@@ -24,6 +24,13 @@
   .section-header a { font-size: 13px; font-weight: 600; color: var(--teal); text-decoration: none; }
   .section-header a:hover { text-decoration: underline; }
   .no-progress { background: var(--cream-soft); border-radius: 12px; padding: 14px 18px; font-size: 14px; color: var(--ink-soft); margin-bottom: 8px; }
+  .filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .filter-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; min-width: 78px; }
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .filter-chip { padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--cream-soft); border: 1.5px solid transparent; color: var(--teal-dark); transition: background .15s, color .15s; }
+  .filter-chip:hover { background: #d4e5e3; }
+  .filter-chip.active { background: var(--teal); color: #fff; border-color: var(--teal-dark); }
+  .no-results { background: var(--cream-soft); border-radius: 12px; padding: 24px; text-align: center; font-size: 14px; color: var(--ink-soft); grid-column: 1 / -1; }
 </style>
 </head>
 <body>
@@ -33,14 +40,13 @@
   <div class="wrap">
     <span style="font-size:56px;display:block;margin-bottom:16px;">🧠</span>
     <h1>Tune Your Brain</h1>
-    <p>Play quick, engaging games designed to challenge memory, attention, reaction speed, logic, and mental flexibility. Track your progress, earn badges, and improve your personal bests.</p>
+    <p>Play games that build reading, math, thinking skills, decision-making, and everyday life skills. Track your progress and earn badges along the way.</p>
     <div class="hero-badges">
-      <div class="hero-badge">🃏 Memory</div>
-      <div class="hero-badge">⚡ Reaction</div>
-      <div class="hero-badge">🎵 Sequences</div>
-      <div class="hero-badge">🎨 Focus</div>
+      <div class="hero-badge">📖 Literacy</div>
       <div class="hero-badge">➕ Math</div>
-      <div class="hero-badge">🔢 Patterns</div>
+      <div class="hero-badge">🧩 Thinking Skills</div>
+      <div class="hero-badge">🤝 SEL &amp; Character</div>
+      <div class="hero-badge">🌱 Wellness &amp; Life Skills</div>
     </div>
     <div class="user-bar" id="userBar">
       <div>
@@ -68,7 +74,15 @@
   <!-- Game cards -->
   <div class="section-header">
     <h2 class="section-title" style="margin:0;">Choose a Game</h2>
-    <span style="font-size:13px;color:var(--ink-soft);" id="gamesSubtitle">Six brain-training challenges</span>
+    <span style="font-size:13px;color:var(--ink-soft);" id="gamesSubtitle">Loading games…</span>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Grade band:</span>
+    <div class="filter-chips" id="bandChips"></div>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Focus:</span>
+    <div class="filter-chips" id="domainChips"></div>
   </div>
   <div class="game-grid" id="gameGrid">
     <!-- Skeleton -->
@@ -107,7 +121,21 @@ const GAME_URLS = {
   'stroop-challenge':'brain-stroop-challenge.html',
   'quick-math':      'brain-quick-math.html',
   'number-sequence': 'brain-number-sequence.html',
+  'sound-safari':       'brain-sound-safari.html',
+  'reading-detective':  'brain-reading-detective.html',
+  'decision-point':     'brain-decision-point.html',
+  'money-matters':      'brain-money-matters.html',
+  'choice-quest':       'brain-choice-quest.html',
+  'headline':           'brain-headline.html',
+  'money-moves':        'brain-money-moves.html',
+  'critical-read':      'brain-critical-read.html',
 };
+
+var BAND_LABELS = { discover: 'Discover', explore: 'Explore', challenge: 'Challenge', advance: 'Advance' };
+var DOMAIN_LABELS = { literacy: 'Literacy', math: 'Math', executive: 'Thinking Skills', sel: 'SEL & Character', wellness: 'Wellness & Life Skills' };
+var allGames = [];
+var activeBand = '';
+var activeDomain = '';
 
 const LEVEL_NAMES = ['','Beginner','Learner','Challenger','Skilled','Advanced','Expert','Master'];
 
@@ -157,15 +185,43 @@ function renderGameCard(g) {
     </div>`;
 }
 
+function renderChips(containerId, values, labels, activeValue, onPick) {
+  const chips = ['<span class="filter-chip' + (activeValue === '' ? ' active' : '') + '" data-value="">All</span>']
+    .concat(values.map(v => '<span class="filter-chip' + (activeValue === v ? ' active' : '') + '" data-value="' + esc(v) + '">' + esc(labels[v]) + '</span>'));
+  const el = document.getElementById(containerId);
+  el.innerHTML = chips.join('');
+  el.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => onPick(chip.dataset.value));
+  });
+}
+
+function renderFilteredGrid() {
+  if (!allGames.length) {
+    document.getElementById('gameGrid').innerHTML = '<p style="color:var(--ink-soft);">Games unavailable. Please try again shortly.</p>';
+    document.getElementById('gamesSubtitle').textContent = '';
+    return;
+  }
+  const filtered = allGames.filter(g =>
+    (!activeBand || g.band === activeBand) && (!activeDomain || g.domain === activeDomain)
+  );
+  document.getElementById('gameGrid').innerHTML = filtered.map(renderGameCard).join('') ||
+    '<div class="no-results">No games match these filters. Try clearing one.</div>';
+  document.getElementById('gamesSubtitle').textContent =
+    `${filtered.length} of ${allGames.length} game${allGames.length === 1 ? '' : 's'}`;
+}
+
+function pickBand(value) { activeBand = value; renderChips('bandChips', ['discover', 'explore', 'challenge', 'advance'], BAND_LABELS, activeBand, pickBand); renderFilteredGrid(); }
+function pickDomain(value) { activeDomain = value; renderChips('domainChips', ['literacy', 'math', 'executive', 'sel', 'wellness'], DOMAIN_LABELS, activeDomain, pickDomain); renderFilteredGrid(); }
+
 async function loadPage() {
   // Load games
   const gRes = await fetch('/api/brain-games').catch(() => null);
   const gData = gRes?.ok ? await gRes.json() : null;
-  const games = gData?.games || [];
+  allGames = gData?.games || [];
 
-  document.getElementById('gameGrid').innerHTML = games.map(renderGameCard).join('') ||
-    '<p style="color:var(--ink-soft);">Games unavailable. Please try again shortly.</p>';
-  document.getElementById('gamesSubtitle').textContent = `${games.length} brain-training challenges`;
+  renderChips('bandChips', ['discover', 'explore', 'challenge', 'advance'], BAND_LABELS, activeBand, pickBand);
+  renderChips('domainChips', ['literacy', 'math', 'executive', 'sel', 'wellness'], DOMAIN_LABELS, activeDomain, pickDomain);
+  renderFilteredGrid();
 
   // Load user progress
   const pRes = await fetch('/api/brain-games/me/progress').catch(() => null);

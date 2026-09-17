@@ -407,7 +407,7 @@ router.get('/', async (req, res) => {
       .map(g => ({
         id: g.id, name: g.name, slug: g.slug,
         description: g.description, icon: g.icon,
-        primarySkill: g.primary_skill, band: g.band,
+        primarySkill: g.primary_skill, band: g.band, domain: g.domain,
         progress: progressMap[g.id] || null,
       }));
 

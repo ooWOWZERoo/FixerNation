@@ -921,6 +921,11 @@ CREATE TABLE IF NOT EXISTS brain_games (
   display_order INT UNSIGNED NOT NULL DEFAULT 0,
   reward_pipeline ENUM('legacy','classroom_generic') NOT NULL DEFAULT 'classroom_generic',
   band ENUM('discover','explore','challenge','advance') NULL,
+  domain ENUM('literacy','math','executive','sel','wellness') NULL,
+  casel_competencies SET(
+    'self_awareness','self_management','social_awareness',
+    'relationship_skills','responsible_decision_making'
+  ) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

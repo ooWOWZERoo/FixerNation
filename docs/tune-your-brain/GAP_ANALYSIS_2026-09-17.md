@@ -64,3 +64,34 @@ These aren't "more content" gaps — they're the difference between a working de
 - Full `BLUEPRINT_TRACEABILITY_MATRIX.md` refresh.
 - Cooperative classroom-wide SEL milestones (§12.4).
 - The 4 remaining catalog games needing new engines (Word Builder, Number Garden, Feelings Detective, Fraction Kitchen) and the 6-game legacy migration (§14.5).
+
+---
+
+## Update, 2026-09-17 (later same day) — SEL × band coverage, made explicit, plus filters
+
+Follow-up after re-raising the SEL gap directly: is Finding 1 above concrete enough to act on? Mapping the 5 CASEL competencies (§6.4) against the 4 experience bands, using only what's actually built:
+
+| | Discover | Explore | Challenge | Advance |
+|---|---|---|---|---|
+| Self-awareness | none | none | none | none |
+| Self-management | none | none | none | none |
+| Social awareness | none | Choice Quest | Decision Point | none |
+| Relationship skills | none | Choice Quest | Decision Point | none |
+| Responsible decision-making | none | Choice Quest | Decision Point | none |
+
+Two things stand out: **Self-awareness and Self-management have zero coverage in any band**, and **Discover and Advance have zero SEL & Character games at all** — only Explore and Challenge have one each, and even those only cover 3 of 5 competencies.
+
+**Most of this doesn't need a new engine.** `engine-branching-scenario.js` (already proven twice, in Decision Point and Choice Quest) is a 5-step decision cycle — it fits Self-management scenarios (recognizing frustration or stress, considering coping strategies, choosing one, reflecting) and an Advance-band SEL scenario (workplace/relationship/digital-life decisions per §6.5's own Advance progression) just as well as it fits peer/social scenarios. **Only genuine Self-awareness content** — naming or recognizing emotions from ambiguous cues, where more than one feeling can be valid — **actually needs the not-yet-built multi-select engine** (`Scenario Choice`, the blueprint's own "Feelings Detective" design).
+
+### Recommended phased path forward (not started — sequence proposed, not building content blind)
+
+1. **Self-management, reusing Branching Scenario.** No new engine needed. Fills the single biggest gap (zero coverage in any band) with the least engineering risk.
+2. **Advance-band SEL, reusing Branching Scenario.** No new engine needed. Fills the other completely-empty band.
+3. **The `Scenario Choice` engine + a real Self-awareness game** (the Feelings Detective concept). The one gap that genuinely needs new engine work, since it requires multi-select that no current engine supports.
+4. **Revisit Self-awareness and Self-management for the other bands too.** CASEL competencies apply at every grade level, not just once each — the end state is meaningful coverage across all 4 bands, not "5 competencies × 1 band each."
+
+Content design for 1-2 still needs a real conversation (what's the scenario, what band specifics) before building — same reasoning as Finding 1's original recommendation.
+
+### Filters added to `brain-games.html`
+
+The catalog page had zero filtering and two real bugs, found while designing the filter UI: (a) `GAME_URLS` only mapped the 6 legacy slugs, so all 8 new games were dead "Play Now" links from this page (never caught before, since every e2e test plays games through the classroom-assignment path instead); (b) the hero copy and badge chips still described the original 6-game "brain-training" product with no mention of literacy, SEL, or life skills, despite the catalog having tripled in scope. Both fixed. New `brain_games.domain` column (one of the 5 §6.1 domains per game) and `brain_games.casel_competencies` (a `SET`, populated only for the 2 SEL games) back two new client-side chip filters — Band and Focus — reusing the existing `.lesson-chip` pattern from `teacher-classroom.html`. `casel_competencies` is stored now but not yet exposed as its own filter; with only 2 SEL games sharing near-identical competency tags today, a competency-level filter would be closer to decoration than a real feature — revisit once items 1-3 above land.
