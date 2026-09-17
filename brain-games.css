@@ -429,7 +429,7 @@ html[data-band="advance"] {
 }
 .fn-shell-feedback {
   border-radius: var(--band-radius, var(--radius-sm)); padding: 14px 18px;
-  font-size: 14px; font-weight: 600; margin-bottom: 14px;
+  font-size: calc(14px * var(--band-scale, 1)); font-weight: 600; margin-bottom: 14px;
 }
 .fn-shell-feedback.correct { background: #f0fdf4; color: #15803d; border: 2px solid var(--game-green); }
 .fn-shell-feedback.incorrect { background: #fef2f2; color: #b91c1c; border: 2px solid var(--game-red); }
@@ -569,6 +569,36 @@ html[data-band="discover"] .fn-choice-btn {
 }
 html[data-band="discover"] .fn-choice-btn:hover:not(:disabled) { transform: translateY(-2px); }
 html[data-band="discover"] .fn-choice-btn .choice-tag { display: none; }
+
+/* Round 2 of the prototype: extend the illustrated feel past the header
+   into the panel background, and make the progress bar, replay button,
+   and feedback banner read as "big and friendly" rather than compact UI
+   chrome borrowed from the other 3 bands. */
+html[data-band="discover"] .game-card-panel {
+  border-radius: 28px;
+  background: linear-gradient(180deg, #FDFBF6 0%, var(--cream-soft) 100%);
+  box-shadow: 0 10px 30px -12px rgba(22, 79, 74, 0.18);
+}
+html[data-band="discover"] .fn-shell-progress-bar { height: 14px; }
+html[data-band="discover"] .fn-shell-progress-fill { border-radius: 99px; }
+html[data-band="discover"] .fn-shell-feedback {
+  font-size: 22px; text-align: center; padding: 16px 20px;
+  border-width: 3px; display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+html[data-band="discover"] .fn-shell-feedback.correct::before { content: '⭐'; font-size: 28px; }
+html[data-band="discover"] .fn-shell-feedback.incorrect::before { content: '💭'; font-size: 28px; }
+html[data-band="discover"] .btn-outline.btn-sm.tap-target {
+  font-size: 20px; padding: 12px 26px; border-radius: 999px; border-width: 3px;
+  min-height: var(--band-target-min, 56px);
+}
+/* A second, smaller decorative cloud so the sky doesn't feel empty on
+   wider screens, without competing with the game icon for attention. */
+html[data-band="discover"] .game-page-header .game-icon::after {
+  content: ''; position: absolute; top: -10px; left: 10%;
+  width: 42px; height: 20px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 16px 6px 0 -2px rgba(255, 255, 255, 0.75);
+}
 
 /* ── Accessibility settings panel (floating, shared across all game pages) ── */
 .fn-a11y-toggle {

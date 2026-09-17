@@ -3,9 +3,10 @@
 // using the blueprint's own proposed names (roadmap §12.3) where one
 // fits: Sound Explorer, Context Detective, Responsible Responder,
 // Budget Builder, Perspective Builder, Digital Citizen, Problem Solver.
-// Source Sleuth (Critical Read) isn't one of the blueprint's 8 examples —
-// none of the remaining ones fit that content — but is kept in the same
-// naming voice. Awarded by server/lib/rewards.js's
+// Source Sleuth (Critical Read) and Calm Explorer (Calm Down Corner)
+// aren't among the blueprint's 8 examples — none of the remaining ones
+// fit that content — but are kept in the same naming voice. Awarded by
+// server/lib/rewards.js's
 // awardClassroomCompletion() the first time a student completes that
 // game through a real classroom assignment.
 //
@@ -34,6 +35,8 @@ const BADGES = [
     description: 'Completed Money Moves through a classroom assignment.' },
   { gameSlug: 'critical-read', slug: 'source-sleuth', name: 'Source Sleuth', emoji: '🧐',
     description: 'Completed Critical Read through a classroom assignment.' },
+  { gameSlug: 'calm-down-corner', slug: 'calm-explorer', name: 'Calm Explorer', emoji: '🐢',
+    description: 'Completed Calm Down Corner through a classroom assignment.' },
 ];
 
 async function main() {

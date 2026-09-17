@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Calm Down Corner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-audio-choice.js"></script>
+<script>
+  // Calm Down Corner - first Tune Your Brain game targeting the
+  // Self-management CASEL competency (roadmap section 6.4), and the
+  // first SEL & Character game for the Discover band, which had zero
+  // SEL coverage before this (see
+  // docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's SEL x band table).
+  // Uses engine-audio-choice.js rather than engine-branching-scenario.js
+  // because Discover requires no reading and spoken support (section
+  // 7.2) - Branching Scenario's 5-step cycle is text-only. Placeholder
+  // browser-TTS narration pending the ElevenLabs decision (D1), same as
+  // Sound Safari.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'discover';
+
+  const contentPack = {
+    title: 'Calm Down Corner',
+    items: [
+      {
+        stimulusType: 'audio',
+        stimulusText: 'Your tower just fell down and you feel frustrated.',
+        transcript: 'Your tower just fell down and you feel frustrated. Which one would help you feel calm?',
+        choices: [
+          { id: 'breathe', label: '😮‍💨', aria: 'take slow deep breaths' },
+          { id: 'yell', label: '😠', aria: 'yell about it' },
+          { id: 'knock-more', label: '🧱', aria: 'knock down more blocks' },
+        ],
+        correctId: 'breathe',
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: 'A puzzle piece will not fit and you feel annoyed.',
+        transcript: 'A puzzle piece will not fit and you feel annoyed. Which one would help you feel calm?',
+        choices: [
+          { id: 'count', label: '🔢', aria: 'count slowly to five' },
+          { id: 'throw', label: '😤', aria: 'throw the puzzle' },
+          { id: 'give-up', label: '🙅', aria: 'give up and stop trying' },
+        ],
+        correctId: 'count',
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: 'Someone took your turn on the swing and you feel upset.',
+        transcript: 'Someone took your turn on the swing and you feel upset. Which one would help you feel calm?',
+        choices: [
+          { id: 'ask-help', label: '🙋', aria: 'ask a grown-up for help' },
+          { id: 'push', label: '😢', aria: 'push and cry loudly' },
+          { id: 'keep-inside', label: '🤐', aria: 'keep the feeling inside' },
+        ],
+        correctId: 'ask-help',
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: 'You spilled your juice by accident and you feel embarrassed.',
+        transcript: 'You spilled your juice by accident and you feel embarrassed. Which one would help you feel calm?',
+        choices: [
+          { id: 'calm-spot', label: '🪴', aria: 'take a break in a calm spot' },
+          { id: 'yell-unfair', label: '😭', aria: 'yell that it is not fair' },
+          { id: 'kick', label: '💥', aria: 'kick something' },
+        ],
+        correctId: 'calm-spot',
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'audioChoice',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'calm-down-corner-strategies',
+    header: {
+      icon: '🐢',
+      title: 'Calm Down Corner',
+      description: 'Listen to what happened, then pick what would help you feel calm.',
+    },
+  });
+</script>
+</body>
+</html>
