@@ -9,10 +9,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 | 0 | Repository forensics & baseline verification | ✅ Done (`docs/tune-your-brain/BLUEPRINT_VERIFICATION_REPORT.md` etc.) |
 | 1 | Architectural foundation — PIN-student reward fix | ✅ Done & deployed, confirmed live 2026-09-16 (Release 38) |
 | 1 | Architectural foundation — feature flags, skill-graph tables, `learning_events`, shared site-auth helper | ✅ Done & deployed, confirmed live 2026-09-16 |
-| 2 | Shared design system + 4 experience-band tokens + accessibility utilities | 🟡 Coded & pushed 2026-09-16 — **needs deploy** (static files only, no restart) |
-| 3 | Game Engine SDK + normalized session runtime | 🟡 Coded & pushed 2026-09-16 — **needs deploy** (new API route + static files, restart needed) |
+| 2 | Shared design system + 4 experience-band tokens + accessibility utilities | ✅ Done & deployed, confirmed live 2026-09-16 (Release 40) |
+| 3 | Game Engine SDK + normalized session runtime, all 6 engines | ✅ Done & deployed, confirmed live 2026-09-16/17 (Releases 41-42) |
 | 4 | Skill graph seeding + content governance workflow | ⬜ Not started (empty tables exist from Phase 1) |
-| 5 | Vertical slice pilot — first 4 real playable games (1 per band) | 🟡 1 of 4 built (Sound Safari, Discover band) — coded & pushed, needs deploy |
+| 5 | Vertical slice pilot — first 4 real playable games (1 per band) | 🟡 1 of 4 built & deployed (Sound Safari, Discover band), confirmed live 2026-09-17 via full Playwright regression (Release 43). 3 to go. |
 | 6 | Assignments/progression/goals/rewards/reporting | ⬜ Not started |
 | 7 | Catalog Wave A — Discover/Explore new games + legacy migration | ⬜ Not started |
 | 8 | Catalog Wave B — Challenge/Advance new games + legacy migration | ⬜ Not started |
@@ -25,12 +25,11 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 ## Still-open leadership decisions
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
-## What "done" does NOT mean yet
-No new game exists. No student, teacher, or admin can see or play anything different from before this work started. Phases 1–2 are exclusively backend/frontend plumbing — the first actually-playable new thing arrives in Phase 5.
+## What "done" means as of 2026-09-17
+Phases 1–3 were pure plumbing — but Phase 5 shipped one real, playable game (Sound Safari) that a teacher can assign and a student can actually play today, confirmed via a full Playwright run against production, not just a manual check. 3 of the 4 vertical-slice games still don't exist (Reading Detective, Decision Point, Money Matters).
 
-## Deploy queue (not yet run on production)
-1. Phase 2 static files (`git pull` + rsync — no restart needed).
-2. Phase 3: `git pull` + rsync + **Node restart** (new `/api/learning-events` route added to `server/app.js`).
+## Deploy queue
+Empty — everything through Release 43 is confirmed live as of 2026-09-17.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -59,7 +58,7 @@ All 6 verified via a throwaway Playwright script (screenshotted, then deleted): 
 
 **Real research error caught and fixed in the same pass:** the original Phase 0/1 verification claimed no shared site-user auth middleware existed anywhere. Wrong — `server/routes/site-auth.js` has a real, already-used `requireSiteAuth` (imported by `classrooms.js`/`parent.js`/`social.js`/`teacher-lesson-plans.js`), just not in `server/middleware/` where the search looked. This had already led to building a redundant third implementation for D2 — now fixed: the real one's internals are extracted into `server/lib/site-user.js`, shared by both. See `LEADERSHIP_DECISIONS_REQUIRED.md` D2's corrected entry.
 
-New regression test `tests/e2e/sound-safari-assignment.spec.ts` — teacher assigns via the real API, student plays via the real UI, confirms a real (non-null) score lands in `student_game_completions`. **Not yet run against production** — needs this batch deployed first.
+**Confirmed live 2026-09-17**: `tests/e2e/sound-safari-assignment.spec.ts` run against production — teacher assigns via the real API, student plays via the real UI, a real (non-null) score lands in `student_game_completions`. Test passed clean on the first fully-deployed attempt (an earlier attempt caught a real deploy gap: `rsync` hadn't actually copied new files into `public_html` — see the deploy-troubleshooting thread earlier in this session for the diagnostic pattern if this recurs).
 
 ## Next recommended step
 Build the remaining 3 vertical-slice games (Reading Detective/Explore, Decision Point/Challenge, Money Matters/Advance) the same way — through the real assignment flow, not as demos — or move to Phase 4's content-governance workflow if hand-coding 3 more content packs directly in HTML feels like the wrong direction before that tooling exists. Worth deciding explicitly rather than defaulting.
