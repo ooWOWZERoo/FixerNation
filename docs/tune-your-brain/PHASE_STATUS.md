@@ -12,7 +12,7 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 | 2 | Shared design system + 4 experience-band tokens + accessibility utilities | ✅ Done & deployed, confirmed live 2026-09-16 (Release 40) |
 | 3 | Game Engine SDK + normalized session runtime, all 6 engines | ✅ Done & deployed, confirmed live 2026-09-16/17 (Releases 41-42) |
 | 4 | Skill graph seeding + content governance workflow | ⬜ Not started (empty tables exist from Phase 1) |
-| 5 | Vertical slice pilot — first 4 real playable games (1 per band) | 🟡 1 of 4 built & deployed (Sound Safari, Discover band), confirmed live 2026-09-17 via full Playwright regression (Release 43). 3 to go. |
+| 5 | Vertical slice pilot — first 4 real playable games (1 per band) | 🟡 4 of 4 built (Sound Safari confirmed live, Release 43; Reading Detective/Decision Point/Money Matters coded and pushed, not yet deployed). |
 | 6 | Assignments/progression/goals/rewards/reporting | ⬜ Not started |
 | 7 | Catalog Wave A — Discover/Explore new games + legacy migration | ⬜ Not started |
 | 8 | Catalog Wave B — Challenge/Advance new games + legacy migration | ⬜ Not started |
@@ -26,10 +26,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing — but Phase 5 shipped one real, playable game (Sound Safari) that a teacher can assign and a student can actually play today, confirmed via a full Playwright run against production, not just a manual check. 3 of the 4 vertical-slice games still don't exist (Reading Detective, Decision Point, Money Matters).
+Phases 1–3 were pure plumbing. Phase 5 now has all 4 vertical-slice games coded: Sound Safari is confirmed live (Release 43); Reading Detective, Decision Point, and Money Matters are coded and pushed but **not yet deployed** — see Deploy queue.
 
 ## Deploy queue
-Empty — everything through Release 43 is confirmed live as of 2026-09-17.
+- Reading Detective, Decision Point, Money Matters (Phase 5, the remaining 3 vertical-slice games). Needs: `node scripts/seed-reading-detective-catalog-entry.js`, `node scripts/seed-decision-point-catalog-entry.js`, `node scripts/seed-money-matters-catalog-entry.js` (each idempotent), plus rsync of the 3 new `brain-*.html` pages. No schema change, no `server/` route change, no app restart required — static pages + 3 catalog-row inserts only.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -60,5 +60,17 @@ All 6 verified via a throwaway Playwright script (screenshotted, then deleted): 
 
 **Confirmed live 2026-09-17**: `tests/e2e/sound-safari-assignment.spec.ts` run against production — teacher assigns via the real API, student plays via the real UI, a real (non-null) score lands in `student_game_completions`. Test passed clean on the first fully-deployed attempt (an earlier attempt caught a real deploy gap: `rsync` hadn't actually copied new files into `public_html` — see the deploy-troubleshooting thread earlier in this session for the diagnostic pattern if this recurs).
 
+## Phase 5 progress — Reading Detective, Decision Point, Money Matters (coded, not yet deployed)
+
+**Same real-assignment pattern as Sound Safari, hand-coded per explicit user decision** (not deferred to Phase 4 tooling). Each is a `brain-{slug}.html` page + an idempotent `server/scripts/seed-{slug}-catalog-entry.js` + an e2e test mirroring `sound-safari-assignment.spec.ts`:
+
+- **Reading Detective** (`brain-reading-detective.html`, Explore band, `engine-evidence-hunt.js`) — 4 short mystery/inference passages, two-stage answer-then-evidence per item per §14.2's acceptance rule.
+- **Decision Point** (`brain-decision-point.html`, Challenge band, `engine-branching-scenario.js`) — the real 5-step Issues-to-Answers cycle on a peer group-chat-exclusion scenario, choices spanning unsafe/plausible-incomplete/responsible/multiple-defensible/seek-help per §6.6's scoring rule, a trusted-adult option present per the sensitive-scenario rules, and a `freeReflection` step (never transmitted, per the engine's existing design).
+- **Money Matters** (`brain-money-matters.html`, Advance band, `engine-simulation.js`) — a fictional persona's first-apartment budget across 4 events (repair emergency, subscription audit, bonus allocation, savings-vs-credit tradeoff); `debrief()` treats multiple end states as valid successes per §14.4's "don't moralize" acceptance rule.
+
+**One real, pre-existing gap found and fixed while wiring this up:** `engine-evidence-hunt.js`'s `onComplete()` never passed the optional `scoreInfo` second argument, unlike `engine-audio-choice.js` — so despite having a clear countable score (`evidenceSupported` out of `items.length`), Evidence Hunt would have reported `raw_score: null` for every completion, same as the legitimately-scoreless Branching Scenario/Simulation engines. Fixed with a one-line addition (`{ score: evidenceSupported, maxScore: items.length }`), matching Audio Choice's existing contract. `engine-memory.js`/`engine-pattern.js` have the identical gap on the 2 legacy games they're mapped to migrate — deliberately left alone here since those aren't part of this work package; flagged separately for a future pass.
+
+**Not yet deployed** — needs the 3 seed scripts run against production and the 3 new HTML pages (plus the one-line `engine-evidence-hunt.js` fix) rsynced. No schema change, no server-route change, no app restart.
+
 ## Next recommended step
-Build the remaining 3 vertical-slice games (Reading Detective/Explore, Decision Point/Challenge, Money Matters/Advance) the same way — through the real assignment flow, not as demos — or move to Phase 4's content-governance workflow if hand-coding 3 more content packs directly in HTML feels like the wrong direction before that tooling exists. Worth deciding explicitly rather than defaulting.
+Deploy the 3 new games (see Deploy queue above), then run the 3 new Playwright specs against production to confirm live, matching Sound Safari's verification bar. After that, Phase 5's vertical slice is complete and the next real decision is Phase 6 (assignments/progression/goals/rewards/reporting) vs. Phase 4 (content-governance tooling) before scaling the catalog further — worth deciding explicitly rather than defaulting.

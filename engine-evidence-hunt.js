@@ -119,7 +119,7 @@
             { value: evidenceSupported, label: 'Evidence-supported' },
             { value: correctNoEvidence, label: 'Right answer, weak evidence' },
             { value: incorrectCount, label: 'Missed' },
-          ]);
+          ], { score: evidenceSupported, maxScore: items.length });
         } else {
           renderItem();
         }

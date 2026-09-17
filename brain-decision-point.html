@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Decision Point</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script>
+  // Decision Point — Tune Your Brain, Phase 5 pilot slice (Challenge band).
+  // The real Issues-to-Answers 5-step cycle (§6.6) on a peer/digital
+  // exclusion scenario. Per the scenario-scoring rule (§6.6), the "choose"
+  // step's options span unsafe / plausible-but-incomplete / responsible /
+  // multiple-defensible / seek-help — never scored as trivia. Per the
+  // sensitive-scenario rules, this stays non-graphic, offers a trusted-adult
+  // option, and never puts the student solely on the hook for fixing it.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+
+  const contentPack = {
+    title: 'Decision Point',
+    steps: [
+      {
+        key: 'recognize',
+        prompt: 'You notice a classmate, Sam, has quietly been left out of the group chat where your class project team plans everything. No one said anything mean — Sam just isn’t in the chat anymore, and hasn’t been added to the last two planning messages.',
+        choices: [
+          { id: 'notice-pattern', text: 'That’s worth paying attention to — Sam is being left out of something that affects the whole team.', type: 'responsible',
+            feedback: 'Right — noticing the pattern, not just one moment, is the first step before deciding what to do.' },
+          { id: 'not-my-business', text: 'It’s probably nothing — not really my business.', type: 'plausible_incomplete',
+            feedback: 'It’s true you don’t know the full story yet — but a teammate being quietly cut out of planning is worth understanding before deciding it’s nothing.' },
+        ],
+      },
+      {
+        key: 'impact',
+        prompt: 'If this continues, what’s the likely impact on Sam and on the project?',
+        choices: [
+          { id: 'sam-and-project', text: 'Sam could feel excluded and left behind, and the project could suffer from missing Sam’s input.', type: 'responsible',
+            feedback: 'Both are real — this isn’t just about feelings or just about the grade, it’s both.' },
+          { id: 'just-feelings', text: 'Sam might feel bad, but the project itself will probably be fine either way.', type: 'plausible_incomplete',
+            feedback: 'Sam’s feelings matter, but a missing teammate usually does affect the work too — that part is easy to miss.' },
+        ],
+      },
+      {
+        key: 'consider',
+        prompt: 'What are some possible ways to respond?',
+        choices: [
+          { id: 'options-adult', text: 'Talk to Sam directly, and also loop in a teacher if it keeps happening.', type: 'responsible',
+            feedback: 'Having more than one option ready — talking to Sam, and knowing when to ask an adult — is exactly the kind of planning that helps.' },
+          { id: 'options-ignore', text: 'There’s not really anything to do — it’ll probably sort itself out.', type: 'plausible_incomplete',
+            feedback: 'Sometimes things do sort themselves out — but "wait and see" isn’t the same as having an actual plan if it doesn’t.' },
+        ],
+      },
+      {
+        key: 'choose',
+        prompt: 'What’s the most constructive next step right now?',
+        choices: [
+          { id: 'add-back-quietly', text: 'Add Sam back into the chat yourself and quietly mention the last two updates.', type: 'responsible',
+            feedback: 'This fixes the immediate problem without making it a big public deal — a solid, low-drama first move.' },
+          { id: 'ask-sam-directly', text: 'Ask Sam directly: "Hey, I noticed you’re not in the chat — want me to add you back?"', type: 'multiple_defensible',
+            feedback: 'Also a good move — asking directly respects Sam’s side of the story instead of assuming you already know it.' },
+          { id: 'call-out-publicly', text: 'Call it out loudly in front of the whole team so everyone knows what happened.', type: 'unsafe',
+            feedback: 'This could embarrass Sam even more and put them on the spot — a quieter, direct approach protects Sam better while still fixing the problem.' },
+          { id: 'tell-teacher-now', text: 'This feels bigger than you can fix alone — tell a teacher what you’ve noticed and let them help.', type: 'seek_help',
+            feedback: 'Asking a trusted adult for help is always a reasonable choice, especially if you’re not sure the situation is fully accidental.' },
+        ],
+      },
+      {
+        key: 'reflect',
+        prompt: 'What’s one thing you’d remember from this the next time you notice someone being left out, even by accident?',
+        freeReflection: true,
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login — progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'decision-point-group-chat',
+    header: {
+      icon: '🧭',
+      title: 'Decision Point',
+      description: 'Work through what’s happening, who it affects, and what to do about it.',
+    },
+  });
+</script>
+</body>
+</html>

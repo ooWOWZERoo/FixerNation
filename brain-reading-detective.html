@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Reading Detective</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-evidence-hunt.js"></script>
+<script>
+  // Reading Detective — Tune Your Brain, Phase 5 pilot slice (Explore band).
+  // Main idea / inference / evidence via short mystery-style passages, per
+  // roadmap §14.2. Each item is answer-then-evidence (Evidence Hunt engine),
+  // so a correct guess without supporting evidence is recorded differently
+  // from evidence-supported success.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'explore';
+
+  const contentPack = {
+    title: 'Reading Detective',
+    items: [
+      {
+        passage: [
+          'Mia looked everywhere for her lunchbox before the bell rang.',
+          'She remembered eating outside at the picnic tables that morning.',
+          'When she checked her backpack, it smelled like fresh-cut grass.',
+        ],
+        question: 'What most likely happened to Mia’s lunchbox?',
+        choices: [
+          { id: 'left-outside', text: 'She probably left it at the picnic tables outside.' },
+          { id: 'stolen', text: 'Someone must have taken it from her locker.' },
+          { id: 'never-brought', text: 'She never brought a lunchbox that day.' },
+        ],
+        correctChoiceId: 'left-outside',
+        correctEvidenceIndex: 2,
+        explanation: 'The grass smell on her backpack is the clue that points back outside, not to her locker.',
+      },
+      {
+        passage: [
+          'A new student, Jordan, sat alone at the end of the lunch table.',
+          'Jordan kept looking around at the other tables without saying anything.',
+          'When a classmate waved, Jordan smiled and waved back right away.',
+        ],
+        question: 'How does Jordan most likely feel?',
+        choices: [
+          { id: 'hopeful-nervous', text: 'A little nervous, but hopeful about making friends.' },
+          { id: 'uninterested', text: 'Not interested in meeting anyone.' },
+          { id: 'angry', text: 'Upset with the other students.' },
+        ],
+        correctChoiceId: 'hopeful-nervous',
+        correctEvidenceIndex: 2,
+        explanation: 'Waving right back when noticed shows Jordan wanted to connect — that’s hopeful, not uninterested or angry.',
+      },
+      {
+        passage: [
+          'Ms. Patel found chalk dust footprints leading from the art room to the library.',
+          'The footprints stopped right at the librarian’s desk.',
+          'A half-finished chalk drawing sat on the art room table, still wet.',
+        ],
+        question: 'What is the main idea of this passage?',
+        choices: [
+          { id: 'trail-leads', text: 'A trail of clues can show where someone went, even if you didn’t see them leave.' },
+          { id: 'art-messy', text: 'Chalk drawings are always messy.' },
+          { id: 'library-quiet', text: 'The library is usually a quiet place.' },
+        ],
+        correctChoiceId: 'trail-leads',
+        correctEvidenceIndex: 0,
+        explanation: 'The footprints themselves are the clue that lets you follow someone’s path — that’s the passage’s main idea.',
+      },
+      {
+        passage: [
+          'The class had planned a picnic for recess all week.',
+          'By lunchtime, thick gray clouds had rolled in and the wind picked up.',
+          'The teacher checked the weather app and frowned.',
+        ],
+        question: 'What will most likely happen next?',
+        choices: [
+          { id: 'moved-inside', text: 'The picnic will probably be moved inside or rescheduled.' },
+          { id: 'picnic-anyway', text: 'The picnic will happen exactly as planned.' },
+          { id: 'school-closed', text: 'School will be canceled for the day.' },
+        ],
+        correctChoiceId: 'moved-inside',
+        correctEvidenceIndex: 1,
+        explanation: 'Gray clouds, rising wind, and a frown at the weather app all point to the picnic plan changing — not staying the same.',
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login — progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'evidenceHunt',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'reading-detective-clues',
+    header: {
+      icon: '🔍',
+      title: 'Reading Detective',
+      description: 'Read the clues, pick your answer, then find the sentence that proves it.',
+    },
+  });
+</script>
+</body>
+</html>

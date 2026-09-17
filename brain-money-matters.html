@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Money Matters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-simulation.js"></script>
+<script>
+  // Money Matters — Tune Your Brain, Phase 5 pilot slice (Advance band).
+  // Budgeting/interest/credit/tradeoffs via a fictional persona, per
+  // roadmap §14.4. Per the acceptance rule, more than one financial path
+  // must read as a real success — the debrief() below never treats a
+  // lower cash balance or higher debt as a moral failing, only as a
+  // tradeoff, and never collects or references any real family finances.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'advance';
+
+  const contentPack = {
+    title: 'Money Matters',
+    goal: 'Jordan just moved into a first apartment. Help Jordan get through the next few months without losing sight of the bigger financial picture.',
+    startingResources: { Cash: 800, Savings: 200, 'Credit Score': 650 },
+    events: [
+      {
+        prompt: 'Jordan’s car needs a $300 repair to keep getting to work. Pay from savings, or put it on a credit card that charges interest?',
+        options: [
+          { id: 'pay-savings', label: 'Pay the $300 from savings.', delta: { Savings: -300 } },
+          { id: 'pay-credit', label: 'Put the $300 on a credit card (adds interest later).', delta: { 'Credit Score': -10 } },
+        ],
+      },
+      {
+        prompt: 'Jordan is paying $45/month for three streaming subscriptions but only really watches one. Cancel the two unused ones, or keep all three "just in case"?',
+        options: [
+          { id: 'cancel-two', label: 'Cancel the two unused subscriptions, save $30/month.', delta: { Cash: 30 } },
+          { id: 'keep-all', label: 'Keep all three for now.', delta: {} },
+        ],
+      },
+      {
+        prompt: 'A $150 work bonus shows up unexpectedly. Put it toward savings, or toward paying down the credit card balance?',
+        options: [
+          { id: 'bonus-savings', label: 'Add the $150 to savings.', delta: { Savings: 150 } },
+          { id: 'bonus-credit', label: 'Use the $150 to pay down the credit card.', delta: { 'Credit Score': 15 } },
+        ],
+      },
+      {
+        prompt: 'Jordan’s savings account earns a little interest each month, and any credit card balance costs more the longer it sits unpaid. What’s the smartest move heading into next month?',
+        options: [
+          { id: 'keep-saving', label: 'Keep building the savings cushion steadily.', delta: { Savings: 40 } },
+          { id: 'focus-credit', label: 'Focus on protecting the credit score by keeping balances low.', delta: { 'Credit Score': 20 } },
+        ],
+      },
+    ],
+    debrief(final) {
+      const savingsStrong = final.Savings >= 350;
+      const creditStrong = final['Credit Score'] >= 660;
+      if (savingsStrong && creditStrong) {
+        return 'Jordan built a real savings cushion while keeping credit healthy — a strong, balanced result.';
+      }
+      if (savingsStrong) {
+        return 'Jordan leaned into building savings. That’s a real strength — keeping an eye on credit health next is a reasonable next step, not a failure.';
+      }
+      if (creditStrong) {
+        return 'Jordan prioritized protecting credit health. That’s a real strength — building up a savings cushion next would round out the plan, not fix a mistake.';
+      }
+      return 'Jordan made it through some real tradeoffs. Every choice here had a reasonable case for it — the goal now is just noticing which one to lean into next.';
+    },
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login — progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'simulation',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'money-matters-first-budget',
+    header: {
+      icon: '💰',
+      title: 'Money Matters',
+      description: 'Manage Jordan’s first few months on a budget — there’s more than one way to do it well.',
+    },
+  });
+</script>
+</body>
+</html>
