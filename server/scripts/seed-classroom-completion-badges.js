@@ -20,6 +20,9 @@
 // among the blueprint's §12.3 examples — same as Source Sleuth/Calm
 // Explorer/Digital Ally before them — but are kept in the same naming
 // voice, themed around the self-management competency both games cover.
+// Cue Spotter (Feelings Detective) follows the same pattern, themed
+// around the cue-noticing mechanic rather than repeating the game's own
+// "detective" name.
 //
 // Safe to re-run: each badge is skipped if its slug already exists.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
@@ -52,6 +55,8 @@ const BADGES = [
     description: 'Completed Team Pick through a classroom assignment.' },
   { gameSlug: 'group-chat-meltdown', slug: 'clear-head', name: 'Clear Head', emoji: '💬',
     description: 'Completed Group Chat Meltdown through a classroom assignment.' },
+  { gameSlug: 'feelings-detective', slug: 'cue-spotter', name: 'Cue Spotter', emoji: '🔍',
+    description: 'Completed Feelings Detective through a classroom assignment.' },
 ];
 
 async function main() {

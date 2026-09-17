@@ -570,6 +570,20 @@ html[data-band="discover"] .fn-choice-btn {
 html[data-band="discover"] .fn-choice-btn:hover:not(:disabled) { transform: translateY(-2px); }
 html[data-band="discover"] .fn-choice-btn .choice-tag { display: none; }
 
+/* Opt-out for Discover-band choices that are genuinely short phrases/
+   sentences, not a single emoji glyph — e.g. Scenario Choice's cue and
+   feeling picks (§14.1's Feelings Detective can't reduce "she's looking
+   down at her tray" to one emoji without misleading simplification, the
+   exact thing the game's own developmental-design rule prohibits).
+   Reverts to the default block/left-aligned/band-scaled text button. */
+html[data-band="discover"] .fn-choice-btn.long-text {
+  display: block; width: 100%; text-align: left; min-height: 0;
+  font-size: calc(15px * var(--band-scale, 1)); box-shadow: none;
+}
+html[data-band="discover"] .fn-choice-list.long-text-list {
+  display: flex; flex-direction: column;
+}
+
 /* Round 2 of the prototype: extend the illustrated feel past the header
    into the panel background, and make the progress bar, replay button,
    and feedback banner read as "big and friendly" rather than compact UI

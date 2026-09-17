@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Feelings Detective</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-scenario-choice.js"></script>
+<script>
+  // Feelings Detective - Tune Your Brain SEL scaling slice (Discover band).
+  // Closes the last CASEL gap: the first genuine Self-awareness game in
+  // any band, using the new Scenario Choice engine (multi-select, two
+  // stages per scenario: notice cues, then pick feeling(s)). See
+  // docs/tune-your-brain/SCENARIO_CHOICE_ENGINE_SPIKE.md for the design
+  // rationale. Per the acceptance rule, more than one feeling is often
+  // plausible per scenario - the content below deliberately tags 2
+  // plausible feelings in every scenario, never just 1. Per the
+  // developmental-design rule, facial expression alone never proves a
+  // feeling - every scenario's cues mix body/situation cues, not just a
+  // face description.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'discover';
+
+  const contentPack = {
+    title: 'Feelings Detective',
+    scenarios: [
+      {
+        context: "Maya's friend didn't save her a seat at lunch.",
+        illustration: '🍽️',
+        cues: [
+          { id: 'looking-down', text: "She's looking down at her tray.", present: true },
+          { id: 'laughing', text: "She's laughing loudly.", present: false },
+          { id: 'sat-alone', text: 'She sat by herself at the end of the table.', present: true },
+        ],
+        feelings: [
+          { id: 'sad', text: 'Sad', tag: 'plausible' },
+          { id: 'left-out', text: 'Left out', tag: 'plausible' },
+          { id: 'excited', text: 'Excited', tag: 'less_fitting',
+            note: 'Excited usually looks and sounds different, like smiling or moving around a lot.' },
+        ],
+        reinforcement: "Sad and left out can both be true at the same time - there's often more than one right answer.",
+        seekHelp: {
+          prompt: 'If a friend leaves you out and it keeps happening, what could you do?',
+          text: 'Telling a trusted grown-up, like a teacher or family member, is always a good option.',
+        },
+      },
+      {
+        context: "Sam just found out his family is getting a new puppy this weekend.",
+        illustration: '🐶',
+        cues: [
+          { id: 'jumping', text: "He's jumping up and down.", present: true },
+          { id: 'covering-ears', text: "He's covering his ears.", present: false },
+          { id: 'talking-fast', text: "He's talking really fast and smiling big.", present: true },
+        ],
+        feelings: [
+          { id: 'excited', text: 'Excited', tag: 'plausible' },
+          { id: 'happy', text: 'Happy', tag: 'plausible' },
+          { id: 'nervous', text: 'Nervous', tag: 'less_fitting',
+            note: "Nervous often looks quieter or more still - Sam's whole body is full of energy here." },
+        ],
+        reinforcement: 'Excited and happy often go together - noticing more than one feeling is normal.',
+      },
+      {
+        context: "Jordan's team lost the game in the last few seconds.",
+        illustration: '🏀',
+        cues: [
+          { id: 'slumped', text: 'His shoulders are slumped.', present: true },
+          { id: 'kicked-ground', text: 'He kicked the ground.', present: true },
+          { id: 'high-fives', text: "He's giving high-fives to the other team.", present: false },
+        ],
+        feelings: [
+          { id: 'frustrated', text: 'Frustrated', tag: 'plausible' },
+          { id: 'disappointed', text: 'Disappointed', tag: 'plausible' },
+          { id: 'proud', text: 'Proud', tag: 'less_fitting',
+            note: "Proud usually shows up after doing something well - right now Jordan's body looks more frustrated than proud." },
+        ],
+        reinforcement: 'Frustrated and disappointed can both show up after losing - that is normal, and it usually fades.',
+        seekHelp: {
+          prompt: 'If losing a game makes you feel like giving up on trying, what could help?',
+          text: 'Talking to a coach, teacher, or family member about how you are feeling is a good next step.',
+        },
+      },
+      {
+        context: 'Priya is starting at a brand new school today.',
+        illustration: '🎒',
+        cues: [
+          { id: 'holding-hand', text: "She's holding her mom's hand tightly.", present: true },
+          { id: 'looking-around', text: 'She keeps looking around at everything.', present: true },
+          { id: 'running-ahead', text: "She's running ahead by herself.", present: false },
+        ],
+        feelings: [
+          { id: 'nervous', text: 'Nervous', tag: 'plausible' },
+          { id: 'curious', text: 'Curious', tag: 'plausible' },
+          { id: 'bored', text: 'Bored', tag: 'less_fitting',
+            note: 'Bored usually looks less alert - Priya is paying close attention to everything around her.' },
+        ],
+        reinforcement: 'Nervous and curious can both be true on a first day somewhere new - feelings are not always just one thing.',
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'scenarioChoice',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'feelings-detective-emotion-recognition',
+    header: {
+      icon: '🕵️',
+      title: 'Feelings Detective',
+      description: 'Notice what is happening, then think about how someone might be feeling.',
+    },
+  });
+</script>
+</body>
+</html>
