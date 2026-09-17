@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - The Post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script>
+  // The Post - Tune Your Brain SEL scaling slice (Advance band). The real
+  // Issues-to-Answers 5-step cycle (section 6.6) on a digital-citizenship
+  // and peer-reputation scenario, per section 6.5's Advance progression.
+  // Second SEL & Character game for the Advance band, alongside First
+  // Shift - see docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's SEL x
+  // band table. Per the sensitive-scenario rules, this stays non-graphic,
+  // never treats the game choice as evidence of real online behavior, and
+  // offers a trusted-adult/escalation option without promising
+  // confidentiality the platform cannot provide.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'advance';
+
+  const contentPack = {
+    title: 'The Post',
+    steps: [
+      {
+        key: 'recognize',
+        prompt: 'A friend in your group chat wants to repost an embarrassing video of a classmate that has already started spreading around school.',
+        choices: [
+          { id: 'notice-spread', text: 'Notice that reposting it would spread it further and could really hurt that classmate, even if it feels like a joke.', type: 'responsible',
+            feedback: 'Right. Every repost is a real choice, not a neutral one.' },
+          { id: 'already-out', text: 'It is already out there anyway, so reposting it does not really change anything.', type: 'plausible_incomplete',
+            feedback: 'It is already circulating, but each repost still adds to how far and how fast it spreads.' },
+        ],
+      },
+      {
+        key: 'impact',
+        prompt: 'If the video keeps spreading, what could happen?',
+        choices: [
+          { id: 'lasting-harm', text: 'The classmate could feel humiliated for a long time, and it could affect how new friends, teachers, or schools see them later.', type: 'responsible',
+            feedback: 'Online moments can follow someone much longer than the moment itself lasted.' },
+          { id: 'blows-over', text: 'It will probably just blow over in a day or two like everything else online.', type: 'plausible_incomplete',
+            feedback: 'Some things do fade fast, but assuming that in advance is a guess, not something you actually know.' },
+        ],
+      },
+      {
+        key: 'consider',
+        prompt: 'What are some ways you could respond?',
+        choices: [
+          { id: 'decide-and-talk', text: 'Decide not to repost it, and think about whether to say something to your friend about it.', type: 'responsible',
+            feedback: 'Having a real plan, not just reacting in the moment, makes it easier to follow through.' },
+          { id: 'stay-quiet', text: 'Just stay quiet and let everyone else decide what to do.', type: 'plausible_incomplete',
+            feedback: 'Staying quiet still shapes what happens. Not reposting is itself a real choice worth making on purpose.' },
+        ],
+      },
+      {
+        key: 'choose',
+        prompt: 'What is the most constructive next step right now?',
+        choices: [
+          { id: 'ask-friend-stop', text: 'Tell your friend you are not comfortable reposting it, and ask them not to send it to you again.', type: 'responsible',
+            feedback: 'A clear, direct boundary, without needing to make a bigger scene out of it.' },
+          { id: 'quiet-support', text: 'Do not repost it, and privately let the classmate know you are on their side without turning it into a bigger public moment.', type: 'multiple_defensible',
+            feedback: 'Also a solid option. Quiet support can matter as much as a public statement.' },
+          { id: 'repost-anyway', text: 'Repost it anyway since everyone else already has.', type: 'unsafe',
+            feedback: 'Following the crowd here still adds real harm, even if it feels like it does not matter individually.' },
+          { id: 'escalate-if-harassment', text: 'If the video starts turning into real harassment, tell a trusted adult, like a counselor or teacher, so they can help.', type: 'seek_help',
+            feedback: 'Once something crosses into ongoing harassment, bringing in an adult who can actually act is a reasonable, responsible move.' },
+        ],
+      },
+      {
+        key: 'reflect',
+        prompt: 'What is one thing you could say to a friend who wants you to share something that might hurt someone else?',
+        freeReflection: true,
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'the-post-digital-reputation',
+    header: {
+      icon: '📱',
+      title: 'The Post',
+      description: 'Work through what is happening online, who it affects, and what to do about it.',
+    },
+  });
+</script>
+</body>
+</html>

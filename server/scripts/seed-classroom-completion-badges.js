@@ -2,10 +2,12 @@
 // slice) — adds one "first classroom completion" badge per catalog game,
 // using the blueprint's own proposed names (roadmap §12.3) where one
 // fits: Sound Explorer, Context Detective, Responsible Responder,
-// Budget Builder, Perspective Builder, Digital Citizen, Problem Solver.
-// Source Sleuth (Critical Read) and Calm Explorer (Calm Down Corner)
-// aren't among the blueprint's 8 examples — none of the remaining ones
-// fit that content — but are kept in the same naming voice. Awarded by
+// Budget Builder, Perspective Builder, Digital Citizen, Problem Solver,
+// and now Leadership Builder (First Shift) — the 8th and last of the
+// blueprint's own example names. Source Sleuth (Critical Read),
+// Calm Explorer (Calm Down Corner), and Digital Ally (The Post) aren't
+// among the blueprint's 8 examples — none of the remaining ones fit
+// that content — but are kept in the same naming voice. Awarded by
 // server/lib/rewards.js's
 // awardClassroomCompletion() the first time a student completes that
 // game through a real classroom assignment.
@@ -37,6 +39,10 @@ const BADGES = [
     description: 'Completed Critical Read through a classroom assignment.' },
   { gameSlug: 'calm-down-corner', slug: 'calm-explorer', name: 'Calm Explorer', emoji: '🐢',
     description: 'Completed Calm Down Corner through a classroom assignment.' },
+  { gameSlug: 'first-shift', slug: 'leadership-builder', name: 'Leadership Builder', emoji: '🧑‍💼',
+    description: 'Completed First Shift through a classroom assignment.' },
+  { gameSlug: 'the-post', slug: 'digital-ally', name: 'Digital Ally', emoji: '📱',
+    description: 'Completed The Post through a classroom assignment.' },
 ];
 
 async function main() {

@@ -114,23 +114,6 @@
 <script src="site-auth.js?v=6"></script>
 <script src="footer.js?v=3"></script>
 <script>
-const GAME_URLS = {
-  'memory-match':    'brain-memory-match.html',
-  'reaction-time':   'brain-reaction-time.html',
-  'simon-sequence':  'brain-simon-sequence.html',
-  'stroop-challenge':'brain-stroop-challenge.html',
-  'quick-math':      'brain-quick-math.html',
-  'number-sequence': 'brain-number-sequence.html',
-  'sound-safari':       'brain-sound-safari.html',
-  'reading-detective':  'brain-reading-detective.html',
-  'decision-point':     'brain-decision-point.html',
-  'money-matters':      'brain-money-matters.html',
-  'choice-quest':       'brain-choice-quest.html',
-  'headline':           'brain-headline.html',
-  'money-moves':        'brain-money-moves.html',
-  'critical-read':      'brain-critical-read.html',
-};
-
 var BAND_LABELS = { discover: 'Discover', explore: 'Explore', challenge: 'Challenge', advance: 'Advance' };
 var DOMAIN_LABELS = { literacy: 'Literacy', math: 'Math', executive: 'Thinking Skills', sel: 'SEL & Character', wellness: 'Wellness & Life Skills' };
 var allGames = [];
@@ -147,7 +130,7 @@ function renderRarityBadge(rarity, emoji, name) {
 
 function renderGameCard(g) {
   const p = g.progress;
-  const url = GAME_URLS[g.slug] || '#';
+  const url = 'brain-' + g.slug + '.html';
   const level = p?.level || 1;
   const levelName = LEVEL_NAMES[level] || 'Beginner';
   const xp = p?.xp || 0;

@@ -28,10 +28,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). `domain`/`casel_competencies` tagging + real filters on `brain-games.html` (plus the dead-link and stale-copy fixes it surfaced) is also deployed and confirmed live (Release 48). The band-filter bug fix, the Discover-band visual prototype (rounds 1-2), and the first Discover-band SEL game (**Calm Down Corner**) are also deployed and confirmed live (Release 49).
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). `domain`/`casel_competencies` tagging + real filters on `brain-games.html` (plus the dead-link and stale-copy fixes it surfaced) is also deployed and confirmed live (Release 48). The band-filter bug fix, the Discover-band visual prototype (rounds 1-2), and the first Discover-band SEL game (**Calm Down Corner**) are also deployed and confirmed live (Release 49). A follow-up pass — a permanent fix for the dead-link bug class, plus the first 2 Advance-band SEL games (**First Shift**, **The Post**) — is coded and pushed, **not yet deployed**, see Deploy queue.
 
 ## Deploy queue
-Empty — everything through Release 49 is confirmed live as of 2026-09-17.
+- Dead-link bug-class fix + First Shift + The Post: `server/scripts/seed-first-shift-catalog-entry.js`, then `server/scripts/seed-the-post-catalog-entry.js`, then `server/scripts/seed-classroom-completion-badges.js` again (idempotent — only inserts the 2 new badges), then rsync. No schema change, no server-route change, **no app restart needed**.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -153,5 +153,17 @@ New badge **Calm Explorer** (🐢), added to `seed-classroom-completion-badges.j
 
 **Confirmed live 2026-09-17** (Release 49): direct API check (catalog row present with correct `band`/`domain`), `calm-down-corner-assignment.spec.ts` plus `sound-safari-assignment.spec.ts` (regression check on the shared Audio Choice engine) both passed clean, and a direct reward-wiring check confirmed 40 XP + the Calm Explorer badge (`earned: true`) on first completion.
 
+## Dead-link bug class fixed permanently; First Shift + The Post written
+
+`brain-games.html`'s "Play Now" link for **Calm Down Corner** was dead — the exact same bug class as the original 8-game dead-link fix (Release 48), recurring because `GAME_URLS` is a hand-maintained map that has to be remembered every time a new game ships. **Fixed permanently, not just patched**: removed the map entirely, since every game without exception already follows the `brain-{slug}.html` convention — the URL is now always computed, so this bug class can't recur for any future game.
+
+**First Shift** and **The Post** (both `engine-branching-scenario.js`, Advance band) are written and close Advance's previously-zero SEL & Character coverage:
+- **First Shift** — a new part-time job, a coworker asks the student to cover for a mistake. CASEL: Responsible decision-making, Relationship skills. New badge **Leadership Builder** 🧑‍💼 — the 8th and last of the blueprint's own §12.3 example badge names.
+- **The Post** — a friend wants to repost something that could hurt a classmate's reputation. CASEL: Social awareness, Relationship skills, Self-management (peer pressure). New badge **Digital Ally** 📱.
+
+Both verified locally (screenshotted) before committing — the 5-step cycle, feedback, and choice-type coverage (unsafe/plausible-incomplete/responsible/multiple-defensible/seek-help) all render and progress correctly.
+
+**Not yet deployed** — needs the 2 new catalog-seed scripts run, the badge-seed script re-run (idempotent), and rsync. No schema change, no server-route change, no app restart.
+
 ## Next recommended step
-Decide: write **First Shift** and/or **The Post** (closing Advance's zero-SEL gap, same Branching Scenario pattern already proven twice), keep extending the Discover CSS direction further or move to sourcing real illustration, or pivot to admin-facing Tune Your Brain visibility / accessibility test tooling (both still zero). Worth deciding explicitly rather than defaulting.
+Deploy this slice, then decide: Explore/Challenge's second SEL game each, genuine Self-awareness content (still blocked on the multi-select engine), keep extending the Discover CSS direction further or move to sourcing real illustration, or pivot to admin-facing Tune Your Brain visibility / accessibility test tooling (both still zero). Worth deciding explicitly rather than defaulting.

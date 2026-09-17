@@ -104,13 +104,15 @@ The band filter itself had a real bug of its own — see `USABILITY_REVIEW_2026-
 
 **Scoped list, prioritizing the two bands with zero SEL & Character games today** (Discover, Advance) over adding a second game to bands that already have one (Explore has Choice Quest, Challenge has Decision Point):
 
-| Band | Concept | Engine | CASEL competencies | Buildable now? |
+| Band | Concept | Engine | CASEL competencies | Status |
 |---|---|---|---|---|
-| Discover | **Calm Down Corner** — a frustrating moment (a block tower falls), pick the best calming strategy | Audio Choice (narrated, single-select) | Self-management | Yes |
-| Discover | A true emotion-recognition game (the "Feelings Detective" concept — more than one feeling can be valid) | needs the not-yet-built multi-select `Scenario Choice` engine | Self-awareness | No |
-| Advance | **First Shift** — a new part-time job, a coworker asks you to cover for their mistake | Branching Scenario | Responsible decision-making, Relationship skills | Yes |
-| Advance | **The Post** — a friend wants to repost something that could hurt a classmate's reputation | Branching Scenario | Social awareness, Relationship skills, Self-management (peer pressure) | Yes |
+| Discover | **Calm Down Corner** — a frustrating moment (a block tower falls), pick the best calming strategy | Audio Choice (narrated, single-select) | Self-management | **Written and live** |
+| Discover | A true emotion-recognition game (the "Feelings Detective" concept — more than one feeling can be valid) | needs the not-yet-built multi-select `Scenario Choice` engine | Self-awareness | Blocked, no engine |
+| Advance | **First Shift** — a new part-time job, a coworker asks you to cover for their mistake | Branching Scenario | Responsible decision-making, Relationship skills | **Written and live** |
+| Advance | **The Post** — a friend wants to repost something that could hurt a classmate's reputation | Branching Scenario | Social awareness, Relationship skills, Self-management (peer pressure) | **Written and live** |
 | Explore | (later batch — already has Choice Quest) | Branching Scenario | Self-management or similar | Deferred |
 | Challenge | (later batch — already has Decision Point) | Branching Scenario | Self-management | Deferred |
 
-3 of these 6 are buildable now with existing engines; the actual scenario content for each is a real decision each time (tone, specifics) and hasn't been written yet — flag which one to write first, same as every prior SEL game this session.
+**Update:** all 3 buildable-now games have since been written — Calm Down Corner, First Shift, and The Post are live. Discover and Advance now each have real SEL & Character coverage (previously zero in both). Remaining open items: Explore/Challenge's second SEL game each (deferred), and genuine Self-awareness content anywhere, still blocked on the multi-select engine.
+
+**A repeat of the dead-link bug, found and fixed permanently this time:** `brain-games.html`'s `GAME_URLS` map didn't get Calm Down Corner's entry added when that game was created — the exact same bug class as the original 8-game dead-link fix, just recurring on a 9th game because a hand-maintained map has to be remembered every time. Fixed by removing the map entirely: every game's URL is now computed as `'brain-' + slug + '.html'`, which every game without exception already follows. This closes the whole bug class permanently, not just this one instance.

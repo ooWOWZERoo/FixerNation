@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - First Shift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script>
+  // First Shift - Tune Your Brain SEL scaling slice (Advance band). The
+  // real Issues-to-Answers 5-step cycle (section 6.6) on a workplace
+  // integrity scenario, per section 6.5's Advance progression (school,
+  // work, relationship, financial, leadership, digital-life decisions).
+  // First SEL & Character game for the Advance band, which had zero
+  // coverage before this - see docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's
+  // SEL x band table. Per the scenario-scoring rule, the "choose" step's
+  // options span unsafe / plausible-incomplete / responsible /
+  // multiple-defensible / seek-help, never scored as trivia. Per the
+  // sensitive-scenario rules, this stays non-graphic, offers a
+  // trusted-adult option, and never puts the student solely on the hook
+  // for fixing it.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'advance';
+
+  const contentPack = {
+    title: 'First Shift',
+    steps: [
+      {
+        key: 'recognize',
+        prompt: 'It is your second week at your new part-time job. A coworker, Jordan, quietly broke a piece of equipment and asks you to tell the manager you did not see anything, or say it was already broken before your shift.',
+        choices: [
+          { id: 'notice-coverup', text: 'Notice that Jordan is asking you to cover up something that could affect the whole team, not just do a small favor.', type: 'responsible',
+            feedback: 'Right. This is bigger than one favor between coworkers.' },
+          { id: 'small-favor', text: 'Jordan is just asking for a small favor between coworkers, it is not a big deal.', type: 'plausible_incomplete',
+            feedback: 'It might feel small, but being asked to give false information to a manager is more than a casual favor.' },
+        ],
+      },
+      {
+        key: 'impact',
+        prompt: 'If you go along with it, what could happen?',
+        choices: [
+          { id: 'wrong-info-credibility', text: 'The manager could make decisions based on wrong information, and your own credibility could suffer if the truth comes out later.', type: 'responsible',
+            feedback: 'Both are real risks, for the workplace and for you personally.' },
+          { id: 'nothing-happens', text: 'Nothing really. Equipment breaks all the time and nobody will ever know.', type: 'plausible_incomplete',
+            feedback: 'Maybe nobody finds out, but "probably fine" is not the same as actually fine if it does come out.' },
+        ],
+      },
+      {
+        key: 'consider',
+        prompt: 'What are some ways you could handle this?',
+        choices: [
+          { id: 'talk-to-jordan', text: 'Talk to Jordan directly about telling the manager together, or decide what you will say if asked.', type: 'responsible',
+            feedback: 'Having a real plan, instead of just hoping it does not come up, is a much stronger position.' },
+          { id: 'avoid-manager', text: 'Just avoid the manager for the rest of the shift and hope nobody asks.', type: 'plausible_incomplete',
+            feedback: 'Avoiding the situation does not actually resolve anything, it just delays it.' },
+        ],
+      },
+      {
+        key: 'choose',
+        prompt: 'What is the most constructive next step right now?',
+        choices: [
+          { id: 'no-lie-support', text: 'Tell Jordan you cannot lie for them, but offer to be there if they want to tell the manager together.', type: 'responsible',
+            feedback: 'This protects your own integrity while still supporting Jordan as a person.' },
+          { id: 'honest-no-extra', text: 'Tell the manager honestly what you saw, without volunteering extra detail if not asked.', type: 'multiple_defensible',
+            feedback: 'Also reasonable. Being honest does not require offering more than what you are actually asked.' },
+          { id: 'lie-for-jordan', text: 'Tell the manager it was already broken before your shift, exactly like Jordan asked.', type: 'unsafe',
+            feedback: 'This puts your own job and trustworthiness at risk to cover for someone else\'s mistake.' },
+          { id: 'ask-trusted-adult', text: 'If you feel pressured or unsure, talk to a trusted adult, like a family member or a former teacher, about how to handle it before your next shift.', type: 'seek_help',
+            feedback: 'Getting an outside perspective before you decide is a reasonable choice, especially in a new job.' },
+        ],
+      },
+      {
+        key: 'reflect',
+        prompt: 'What is one thing you would want a coworker to do for you if you made a mistake at work?',
+        freeReflection: true,
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'first-shift-workplace-integrity',
+    header: {
+      icon: '🧑‍💼',
+      title: 'First Shift',
+      description: 'Work through what is happening at your new job, who it affects, and what to do about it.',
+    },
+  });
+</script>
+</body>
+</html>
