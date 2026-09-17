@@ -239,6 +239,12 @@ table.data-table tr:hover td{background:#fafaf9;}
   <div class="modal">
     <h2>Assign Brain Game</h2>
     <div class="field"><select id="gameSelect"><option value="">Loading games…</option></select></div>
+    <div class="field" style="font-size:13px;">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:500;">
+        <input type="checkbox" id="gameBandFilter" onchange="renderGameSelect()">
+        Show games for all grade bands
+      </label>
+    </div>
     <div class="field"><label>Due Date (optional)</label><input type="date" id="gameDue"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('assignGameModal')">Cancel</button>
@@ -684,15 +690,38 @@ async function removeAssignment(cid) {
   await load();
 }
 
+// Roadmap §6.3: "Grade bands are defaults, not ability labels. Teachers
+// may override presentation when appropriate" — the assign list defaults
+// to the classroom's grade-level band but a teacher can always see
+// everything via the "Show games for all grade bands" checkbox. This is a
+// UX guardrail, not a security boundary — the API itself is unfiltered.
+var GRADE_TO_BAND = {
+  'Pre-K': 'discover', 'Kindergarten': 'discover', '1st Grade': 'discover', '2nd Grade': 'discover',
+  '3rd Grade': 'explore', '4th Grade': 'explore', '5th Grade': 'explore',
+  '6th Grade': 'challenge', '7th Grade': 'challenge', '8th Grade': 'challenge',
+  '9th Grade': 'advance', '10th Grade': 'advance', '11th Grade': 'advance', '12th Grade': 'advance', 'College': 'advance',
+};
+var assignGamePool = [];
+
 async function openAssignGame() {
   var r = await fetch('/api/brain-games', { credentials: 'include' });
   var data = r.ok ? await r.json() : [];
-  var games = Array.isArray(data) ? data : (data.items || data.games || []);
+  assignGamePool = Array.isArray(data) ? data : (data.items || data.games || []);
+  document.getElementById('gameBandFilter').checked = false;
+  renderGameSelect();
+  document.getElementById('assignGameModal').classList.add('open');
+}
+
+function renderGameSelect() {
   var sel = document.getElementById('gameSelect');
+  var showAll = document.getElementById('gameBandFilter').checked;
+  var band = GRADE_TO_BAND[classroom.grade_level];
+  var games = (showAll || !band)
+    ? assignGamePool
+    : assignGamePool.filter(function(g){ return !g.band || g.band === band; });
   sel.innerHTML = games.length
     ? '<option value="">Choose a game…</option>' + games.map(function(g){ return '<option value="' + g.id + '">' + esc(g.name) + '</option>'; }).join('')
-    : '<option value="">No games available</option>';
-  document.getElementById('assignGameModal').classList.add('open');
+    : '<option value="">No games match this classroom\'s grade level</option>';
 }
 
 async function assignGame() {

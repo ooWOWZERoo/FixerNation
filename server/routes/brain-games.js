@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME } = require('../lib/session');
 const { getLevelFromXP, getNextLevel, updateStreak } = require('../lib/rewards');
+const { isFeatureEnabled } = require('../lib/feature-flags');
+const { resolveSchoolIdForTeacher, resolveSchoolIdForStudent } = require('../lib/branding');
 
 const router = express.Router();
 
@@ -390,12 +392,24 @@ router.get('/', async (req, res) => {
       for (const p of progress) progressMap[p.game_id] = progressRow(p);
     }
 
-    const result = games.map(g => ({
-      id: g.id, name: g.name, slug: g.slug,
-      description: g.description, icon: g.icon,
-      primarySkill: g.primary_skill,
-      progress: progressMap[g.id] || null,
-    }));
+    // Tune Your Brain pilot games (reward_pipeline='classroom_generic') are
+    // gated by the tune_your_brain_pilot_enabled feature flag, scoped per
+    // school — the pre-existing legacy games are always visible. The flag
+    // is seeded enabled_globally so this is a no-op today; it exists so a
+    // future rollout can be scoped to specific pilot schools.
+    let schoolId = null;
+    if (principal?.type === 'user') schoolId = await resolveSchoolIdForTeacher(principal.id);
+    else if (principal?.type === 'student') schoolId = await resolveSchoolIdForStudent(principal.id);
+    const pilotEnabled = await isFeatureEnabled('tune_your_brain_pilot_enabled', { schoolId });
+
+    const result = games
+      .filter(g => pilotEnabled || g.reward_pipeline !== 'classroom_generic')
+      .map(g => ({
+        id: g.id, name: g.name, slug: g.slug,
+        description: g.description, icon: g.icon,
+        primarySkill: g.primary_skill, band: g.band,
+        progress: progressMap[g.id] || null,
+      }));
 
     res.json({ games: result });
   } catch {
