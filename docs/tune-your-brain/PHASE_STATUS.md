@@ -2,7 +2,7 @@
 
 **Read this first in any new session before doing more Tune Your Brain work.** Updated at the end of every work package — if it's stale, something was skipped.
 
-**Also read `GAP_ANALYSIS_2026-09-17.md` first** — a full reconciliation between the master blueprint and everything actually built, prompted by a real concern that the games capability isn't yet shippable to clients or competitive with dedicated SEL vendors. It has a prioritized list of what's flagged but not started; several items there (admin visibility, accessibility test tooling, a real SEL self-awareness/self-management game, skill-graph seeding) are bigger and more consequential than anything in this file's own "Not started" rows suggest.
+**Also read `GAP_ANALYSIS_2026-09-17.md` and `USABILITY_REVIEW_2026-09-17.md` first** — the first is a full reconciliation between the master blueprint and everything actually built, prompted by a real concern that the games capability isn't yet shippable to clients or competitive with dedicated SEL vendors. It has a prioritized list of what's flagged but not started; several items there (admin visibility, accessibility test tooling, a real SEL self-awareness/self-management game, skill-graph seeding) are bigger and more consequential than anything in this file's own "Not started" rows suggest. The second documents a real filter bug and a Discover-band graphics gap found by loading the actual pages, not just reading the CSS — read it before assuming any band-aware CSS mechanism works as documented.
 
 Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not started
 
@@ -28,10 +28,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). `domain`/`casel_competencies` tagging + real filters on `brain-games.html` (plus the dead-link and stale-copy fixes it surfaced) is also deployed and confirmed live (Release 48).
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring is also deployed and confirmed live (Release 47). `domain`/`casel_competencies` tagging + real filters on `brain-games.html` (plus the dead-link and stale-copy fixes it surfaced) is also deployed and confirmed live (Release 48). A follow-up pass — the band-filter bug fix, the Discover-band visual prototype, and a usability review — is coded and pushed, **not yet deployed**, see Deploy queue.
 
 ## Deploy queue
-Empty — everything through Release 48 is confirmed live as of 2026-09-17.
+- Band-filter bug fix + Discover-band visual prototype: pure CSS/JS changes to `brain-games.html`/`brain-games.css`, no schema change, no server-route change. rsync only, **no app restart needed**.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -129,5 +129,27 @@ Also, while inspecting `brain-games.html` to design the filters: **found and fix
 
 **Confirmed live 2026-09-17** (Release 48): a direct API check confirmed all 14 games return correct `domain` values, plus a Playwright check of the actual UI — Focus→SEL correctly shows exactly Decision Point/Choice Quest, Band→Discover correctly shows exactly Sound Safari, and all 14 "Play Now" links (including the 8 previously-dead ones) resolve to a real game page.
 
+## Band-filter bug fix + Discover-band visual prototype + usability review (coded, not yet deployed)
+
+The band filter added in Release 48 had a real bug of its own: `g.band === activeBand` excludes every legacy game (`band: NULL`) the instant any specific band chip is active, so cycling through band chips without ever picking "All" only ever surfaced the 8 new games — exactly what got reported. Fixed to match `teacher-classroom.html`'s already-correct predicate (`!g.band || g.band === activeBand`).
+
+**Loaded Sound Safari locally (not just read the CSS) to investigate the Discover-graphics report — found a real, precise bug, not a missing feature.** `.band-aware`'s `calc(1em * var(--band-scale))` font-scaling was being silently overridden by later, equal-specificity rules with fixed pixel values (`.fn-choice-btn { font-size: 15px }`, `.game-page-header .game-icon { font-size: 52px }`) — the band-aware mechanism itself is real and correctly wired (tap-target height genuinely does scale to 56px for Discover), it just never reached the two elements that most needed it. Both fixed to scale with `--band-scale`, which helps every band a little, not just Discover.
+
+**Built a Discover-band visual prototype**, per the user's direction (prototype one band now, decide after seeing it, given 4 reference images showing real illustrated worlds per band rather than a shared skin with size tweaks). CSS-only, scoped to `html[data-band="discover"]`: an illustrated backdrop (sky gradient, sun, hills — all CSS, no image assets) behind a much larger header icon, and the choice list changed from thin list rows to a grid of large square picture cards. **This is a direction prototype, not production art** — full findings, screenshots, and the still-emoji-based caveat are in `USABILITY_REVIEW_2026-09-17.md`.
+
+**Also surfaced:** 3 of the 4 engines (Branching Scenario, Simulation, Evidence Hunt) have zero audio support — only Audio Choice narrates. This directly shapes the SEL-games-per-band list below: genuine Discover-band SEL content needs Audio Choice's narration (simpler, single-select), not Branching Scenario's text-heavy 5-step cycle.
+
+**Not yet deployed** — pure CSS/JS, no schema change, no server-route change, no app restart needed, just rsync.
+
+## SEL games-per-band, scoped (not built)
+
+Per the user's ask for several SEL games per band. **Full table in `GAP_ANALYSIS_2026-09-17.md`'s newest update.** Prioritizes the two bands with zero SEL & Character games today (Discover, Advance) over adding a second game to Explore/Challenge, which already have one each:
+
+- Discover: **Calm Down Corner** (Audio Choice, Self-management) — buildable now. A true Self-awareness game (Feelings Detective) still needs the not-yet-built multi-select `Scenario Choice` engine.
+- Advance: **First Shift** and **The Post** (both Branching Scenario) — buildable now, closing Advance's current zero-SEL-coverage gap.
+- Explore/Challenge: a second game each, deferred to a later batch.
+
+None of these 3 buildable-now games have been written yet — content design is a real decision each time, same as every prior SEL game.
+
 ## Next recommended step
-Decide: build the Self-management/Advance-band SEL content (steps 1-2 of the phased sequence above, reusing `engine-branching-scenario.js`, no new engine needed), invest in admin-facing Tune Your Brain visibility (currently zero at every level), or accessibility test tooling (currently zero, repo-wide). Each is a distinct, substantial decision — worth choosing explicitly rather than defaulting to "more catalog games."
+Deploy the bug fix + prototype (see Deploy queue), then decide which of the 3 buildable-now SEL games to write first, whether the Discover visual direction is worth continuing (vs. sourcing real illustration, per `GAP_ANALYSIS_2026-09-17.md`'s original art-direction fork), or pivot to admin-facing Tune Your Brain visibility / accessibility test tooling (both still zero). Worth deciding explicitly rather than defaulting.

@@ -202,7 +202,7 @@ function renderFilteredGrid() {
     return;
   }
   const filtered = allGames.filter(g =>
-    (!activeBand || g.band === activeBand) && (!activeDomain || g.domain === activeDomain)
+    (!activeBand || !g.band || g.band === activeBand) && (!activeDomain || g.domain === activeDomain)
   );
   document.getElementById('gameGrid').innerHTML = filtered.map(renderGameCard).join('') ||
     '<div class="no-results">No games match these filters. Try clearing one.</div>';

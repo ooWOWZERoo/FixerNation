@@ -95,3 +95,22 @@ Content design for 1-2 still needs a real conversation (what's the scenario, wha
 ### Filters added to `brain-games.html`
 
 The catalog page had zero filtering and two real bugs, found while designing the filter UI: (a) `GAME_URLS` only mapped the 6 legacy slugs, so all 8 new games were dead "Play Now" links from this page (never caught before, since every e2e test plays games through the classroom-assignment path instead); (b) the hero copy and badge chips still described the original 6-game "brain-training" product with no mention of literacy, SEL, or life skills, despite the catalog having tripled in scope. Both fixed. New `brain_games.domain` column (one of the 5 §6.1 domains per game) and `brain_games.casel_competencies` (a `SET`, populated only for the 2 SEL games) back two new client-side chip filters — Band and Focus — reusing the existing `.lesson-chip` pattern from `teacher-classroom.html`. `casel_competencies` is stored now but not yet exposed as its own filter; with only 2 SEL games sharing near-identical competency tags today, a competency-level filter would be closer to decoration than a real feature — revisit once items 1-3 above land.
+
+---
+
+## Update, 2026-09-17 (later same day) — SEL games-per-band, scoped
+
+The band filter itself had a real bug of its own — see `USABILITY_REVIEW_2026-09-17.md` for the fix — reported alongside two asks: several SEL games per band (not just one gap-filler each), and a full usability review. That review, done by loading Sound Safari locally rather than just reading the CSS, also surfaced that 3 of the 4 game engines (`engine-branching-scenario.js`, `engine-simulation.js`, `engine-evidence-hunt.js`) have zero audio support — which matters directly here, since Branching Scenario's text-based 5-step cycle conflicts with Discover's own "no reading required, spoken support" rule (§7.2). It's the right engine for Explore/Challenge/Advance SEL content; a genuine Discover-band SEL game needs `engine-audio-choice.js`'s existing narration instead (a simpler, single-select mechanic), or a future audio extension to Branching Scenario.
+
+**Scoped list, prioritizing the two bands with zero SEL & Character games today** (Discover, Advance) over adding a second game to bands that already have one (Explore has Choice Quest, Challenge has Decision Point):
+
+| Band | Concept | Engine | CASEL competencies | Buildable now? |
+|---|---|---|---|---|
+| Discover | **Calm Down Corner** — a frustrating moment (a block tower falls), pick the best calming strategy | Audio Choice (narrated, single-select) | Self-management | Yes |
+| Discover | A true emotion-recognition game (the "Feelings Detective" concept — more than one feeling can be valid) | needs the not-yet-built multi-select `Scenario Choice` engine | Self-awareness | No |
+| Advance | **First Shift** — a new part-time job, a coworker asks you to cover for their mistake | Branching Scenario | Responsible decision-making, Relationship skills | Yes |
+| Advance | **The Post** — a friend wants to repost something that could hurt a classmate's reputation | Branching Scenario | Social awareness, Relationship skills, Self-management (peer pressure) | Yes |
+| Explore | (later batch — already has Choice Quest) | Branching Scenario | Self-management or similar | Deferred |
+| Challenge | (later batch — already has Decision Point) | Branching Scenario | Self-management | Deferred |
+
+3 of these 6 are buildable now with existing engines; the actual scenario content for each is a real decision each time (tone, specifics) and hasn't been written yet — flag which one to write first, same as every prior SEL game this session.

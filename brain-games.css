@@ -209,7 +209,7 @@ body {
 .game-page-header {
   text-align: center; margin-bottom: 32px;
 }
-.game-page-header .game-icon { font-size: 52px; display: block; margin-bottom: 12px; }
+.game-page-header .game-icon { font-size: calc(52px * var(--band-scale, 1)); display: block; margin-bottom: 12px; }
 .game-page-header h1 {
   font-family: 'Fraunces', serif; font-size: calc(32px * var(--band-scale, 1));
   color: var(--teal-dark); margin-bottom: 6px;
@@ -492,7 +492,7 @@ html[data-band="advance"] {
   display: block; width: 100%; text-align: left;
   padding: 14px 18px; border-radius: var(--band-radius, var(--radius-sm));
   border: 2px solid var(--border); background: #fff; color: var(--ink);
-  font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  font-family: inherit; font-size: calc(15px * var(--band-scale, 1)); font-weight: 600; cursor: pointer;
   transition: border-color .15s, background .15s;
 }
 .fn-choice-btn:hover:not(:disabled) { border-color: var(--teal); }
@@ -524,6 +524,51 @@ html[data-band="advance"] {
 .fn-sim-resource .val { font-size: 20px; font-weight: 800; color: var(--teal-dark); }
 .fn-sim-log { font-size: 12px; color: var(--ink-soft); margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 .fn-sim-log div { margin-bottom: 4px; }
+
+/* ── Discover-band visual prototype (2026-09-17) ─────────────────────────────
+   A direction check, not final art: docs/tune-your-brain/USABILITY_REVIEW_2026-09-17.md
+   found the actual K-2 experience was a single small emoji on white with
+   thin, mostly-empty choice rows — not the "interactive children's world"
+   the band is supposed to feel like. Scoped entirely to
+   html[data-band="discover"] so it never touches Explore/Challenge/Advance,
+   and only changes CSS the engines already emit (no engine/JS changes). */
+html[data-band="discover"] .game-page-header {
+  position: relative; overflow: hidden;
+  padding: 36px 20px 32px; margin-bottom: 28px;
+  background: linear-gradient(180deg, #BFE6F0 0%, #EAF6E6 65%, #D9EEC4 100%);
+}
+html[data-band="discover"] .game-page-header::before {
+  content: ''; position: absolute; top: 16px; right: 28px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #FFD873; box-shadow: 0 0 0 10px rgba(255, 216, 115, 0.35);
+}
+html[data-band="discover"] .game-page-header::after {
+  content: ''; position: absolute; left: -10%; right: -10%; bottom: -34px;
+  height: 70px; border-radius: 50%; background: #AEE09C;
+}
+html[data-band="discover"] .game-page-header .game-icon {
+  position: relative; z-index: 1;
+  font-size: 100px; margin-bottom: 2px;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.18));
+}
+html[data-band="discover"] .game-page-header h1,
+html[data-band="discover"] .game-page-header p { position: relative; z-index: 1; }
+
+html[data-band="discover"] .fn-stimulus-box {
+  font-size: 56px; padding: 32px 16px;
+  background: linear-gradient(180deg, #fff 0%, var(--cream-soft) 100%);
+}
+
+html[data-band="discover"] .fn-choice-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px;
+}
+html[data-band="discover"] .fn-choice-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: auto; min-height: 130px; text-align: center;
+  font-size: 60px; border-width: 3px; box-shadow: var(--shadow-sm);
+}
+html[data-band="discover"] .fn-choice-btn:hover:not(:disabled) { transform: translateY(-2px); }
+html[data-band="discover"] .fn-choice-btn .choice-tag { display: none; }
 
 /* ── Accessibility settings panel (floating, shared across all game pages) ── */
 .fn-a11y-toggle {
