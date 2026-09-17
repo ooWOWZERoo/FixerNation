@@ -99,7 +99,7 @@
             { value: correctCount, label: 'Correct' },
             { value: items.length - correctCount, label: 'Missed' },
             { value: `${Math.round((correctCount / items.length) * 100)}%`, label: 'Accuracy' },
-          ]);
+          ], { score: correctCount, maxScore: items.length });
         } else {
           renderItem();
         }

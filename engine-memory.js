@@ -77,7 +77,7 @@
             { value: moves, label: 'Moves' },
             { value: mismatches, label: 'Mismatches' },
             { value: matched, label: 'Pairs found' },
-          ]), 500);
+          ], { score: matched, maxScore: pairCount }), 500);
         }
       } else {
         mismatches++;
