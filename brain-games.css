@@ -484,6 +484,47 @@ html[data-band="advance"] {
 .flip-back { background: #fff; border: 2px solid var(--border); transform: rotateY(180deg); }
 .flip-card.matched .flip-back { background: #f0fdf4; border-color: var(--game-green); }
 
+/* ── Shared choice-list primitive — used by the Pattern, Audio Choice,
+   Evidence Hunt, and Branching Scenario engines (Phase 3). One shared
+   pattern instead of five near-identical per-engine copies. */
+.fn-choice-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.fn-choice-btn {
+  display: block; width: 100%; text-align: left;
+  padding: 14px 18px; border-radius: var(--band-radius, var(--radius-sm));
+  border: 2px solid var(--border); background: #fff; color: var(--ink);
+  font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.fn-choice-btn:hover:not(:disabled) { border-color: var(--teal); }
+.fn-choice-btn:disabled { cursor: default; }
+.fn-choice-btn.selected { border-color: var(--teal-dark); background: var(--cream-soft); }
+.fn-choice-btn.correct-choice { border-color: var(--game-green); background: #f0fdf4; }
+.fn-choice-btn.incorrect-choice { border-color: var(--game-red); background: #fef2f2; }
+.fn-choice-btn .choice-tag {
+  display: inline-block; font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--ink-soft); background: var(--cream-soft);
+  padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: middle;
+}
+.fn-stimulus-box {
+  text-align: center; padding: 28px 16px; margin: 16px 0;
+  background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));
+  font-size: calc(32px * var(--band-scale, 1)); font-weight: 800;
+}
+.fn-passage-box {
+  background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));
+  padding: 16px 18px; font-size: 14px; line-height: 1.7; color: var(--ink);
+  margin: 16px 0;
+}
+.fn-passage-box .evidence-line { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.fn-passage-box .evidence-line:hover { background: rgba(22,79,74,0.08); }
+.fn-passage-box .evidence-line.selected { background: var(--gold); color: var(--ink); }
+.fn-sim-resource-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.fn-sim-resource { background: #fff; border-radius: var(--band-radius, var(--radius-sm)); box-shadow: var(--shadow-sm); padding: 12px 18px; }
+.fn-sim-resource .lbl { font-size: 12px; color: var(--ink-soft); }
+.fn-sim-resource .val { font-size: 20px; font-weight: 800; color: var(--teal-dark); }
+.fn-sim-log { font-size: 12px; color: var(--ink-soft); margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+.fn-sim-log div { margin-bottom: 4px; }
+
 /* ── Accessibility settings panel (floating, shared across all game pages) ── */
 .fn-a11y-toggle {
   position: fixed; bottom: 20px; right: 20px; z-index: 9100;

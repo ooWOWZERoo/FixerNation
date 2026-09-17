@@ -14,45 +14,121 @@
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js"></script>
 <script src="engine-memory.js"></script>
+<script src="engine-pattern.js"></script>
+<script src="engine-audio-choice.js"></script>
+<script src="engine-evidence-hunt.js"></script>
+<script src="engine-branching-scenario.js"></script>
+<script src="engine-simulation.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'challenge';
-  const packKey = params.get('pack') || 'shapes';
+  const engineName = params.get('engine') || 'memory';
+  const packKey = params.get('pack') || 'default';
 
-  // Two distinct content packs on the SAME engine, zero engine-code
-  // changes between them — this is the Phase 3 exit-gate proof.
-  const PACKS = {
-    shapes: {
-      title: 'Shape Match',
-      pairCount: 4,
-      items: [
+  const CONTENT = {
+    memory: {
+      shapes: { title: 'Shape Match', pairCount: 4, items: [
         { id: 'circle', display: '⚫' }, { id: 'square', display: '⬛' },
         { id: 'triangle', display: '🔺' }, { id: 'star', display: '⭐' },
         { id: 'heart', display: '❤️' }, { id: 'diamond', display: '🔶' },
-      ],
-    },
-    numbers: {
-      title: 'Number Match',
-      pairCount: 5,
-      items: [
+      ] },
+      numbers: { title: 'Number Match', pairCount: 5, items: [
         { id: '1', display: '1️⃣' }, { id: '2', display: '2️⃣' }, { id: '3', display: '3️⃣' },
         { id: '4', display: '4️⃣' }, { id: '5', display: '5️⃣' }, { id: '6', display: '6️⃣' },
-      ],
+      ] },
+    },
+    pattern: {
+      default: { title: 'Number Sequence', items: [
+        { display: ['2', '4', '6', '?', '10'], answer: '8', label: 'Arithmetic pattern', choices: ['7', '8', '9'] },
+        { display: ['3', '6', '12', '?', '48'], answer: '24', label: 'Geometric pattern' },
+        { display: ['1', '1', '2', '3', '?'], answer: '5', label: 'Fibonacci pattern', choices: ['4', '5', '6'] },
+      ] },
+    },
+    audioChoice: {
+      default: { title: 'Ink Color Match', items: [
+        { stimulusType: 'text', stimulusText: 'RED', stimulusColor: '#3b82f6', transcript: 'the word RED shown in blue ink',
+          choices: [{ id: 'RED', label: 'RED' }, { id: 'BLUE', label: 'BLUE' }, { id: 'GREEN', label: 'GREEN' }], correctId: 'BLUE' },
+        { stimulusType: 'text', stimulusText: 'GREEN', stimulusColor: '#ef4444', transcript: 'the word GREEN shown in red ink',
+          choices: [{ id: 'RED', label: 'RED' }, { id: 'BLUE', label: 'BLUE' }, { id: 'GREEN', label: 'GREEN' }], correctId: 'RED' },
+      ] },
+    },
+    evidenceHunt: {
+      default: { title: 'Reading Detective', items: [
+        { passage: [
+            'Maria noticed a new student sitting alone at lunch.',
+            'She remembered how nervous she felt on her first day.',
+            'Maria walked over and asked if she could sit with her.',
+          ],
+          question: 'What is the main idea of this passage?',
+          choices: [
+            { id: 'a', text: 'Maria was hungry and wanted a seat.' },
+            { id: 'b', text: 'Maria showed empathy by including someone new.' },
+            { id: 'c', text: 'Maria remembered her first day of school.' },
+          ],
+          correctChoiceId: 'b',
+          correctEvidenceIndex: 2,
+          explanation: 'The strongest evidence is the action Maria actually took — sitting with the new student.',
+        },
+      ] },
+    },
+    branchingScenario: {
+      default: { title: 'Decision Point', steps: [
+        { key: 'recognize', prompt: 'A group chat is making fun of a classmate\'s photo. What is happening?', choices: [
+          { id: 'a', text: 'Some classmates are mocking someone online.', type: 'responsible', feedback: 'Right — naming what\'s happening clearly is the first step.' },
+          { id: 'b', text: 'Nothing serious, it\'s just a joke.', type: 'plausible_incomplete', feedback: 'It might feel minor to some, but the person being mocked may feel very differently.' },
+        ] },
+        { key: 'impact', prompt: 'Who might be affected, and how?', choices: [
+          { id: 'a', text: 'Just the classmate in the photo.', type: 'plausible_incomplete', feedback: 'True, but others in the chat are affected too — by what they choose to do next.' },
+          { id: 'b', text: 'The classmate, and everyone deciding whether to join in.', type: 'responsible', feedback: 'Exactly — everyone watching has a choice too.' },
+        ] },
+        { key: 'consider', prompt: 'What options exist?', choices: [
+          { id: 'a', text: 'Report it to a trusted adult.', type: 'seek_help', feedback: 'A solid option — trusted adults can help in ways a student alone can\'t.' },
+          { id: 'b', text: 'Say something supportive in the chat.', type: 'responsible', feedback: 'This can help, though it may not always feel safe to do publicly — both this and asking for help are reasonable.' },
+          { id: 'c', text: 'Join in so you don\'t seem uncool.', type: 'unsafe', feedback: 'This adds to the harm, even if it feels like the easier social choice in the moment.' },
+        ] },
+        { key: 'choose', prompt: 'Which response would you choose here?', choices: [
+          { id: 'a', text: 'Message the classmate privately to check on them, and tell a trusted adult.', type: 'multiple_defensible', feedback: 'A strong, realistic choice that supports the person and brings in help.' },
+          { id: 'b', text: 'Ignore it completely.', type: 'plausible_incomplete', feedback: 'Understandable if it feels safer, but it doesn\'t change what\'s happening for the classmate.' },
+        ] },
+        { key: 'reflect', prompt: 'What\'s one thing you\'d remember from this next time you see something like this?', freeReflection: true },
+      ] },
+    },
+    simulation: {
+      default: { title: 'Weekend Budget', goal: 'You have $50 for the weekend. Make it through without going negative.',
+        startingResources: { 'Money ($)': 50 },
+        events: [
+          { prompt: 'A friend invites you to the movies ($12). Go?', options: [
+            { id: 'go', label: 'Go ($12)', delta: { 'Money ($)': -12 } },
+            { id: 'skip', label: 'Skip this time', delta: { 'Money ($)': 0 } },
+          ] },
+          { prompt: 'Your favorite snack is on sale for $5. Buy it?', options: [
+            { id: 'buy', label: 'Buy it ($5)', delta: { 'Money ($)': -5 } },
+            { id: 'save', label: 'Save the money', delta: { 'Money ($)': 0 } },
+          ] },
+          { prompt: 'You do extra chores and earn $10. ', options: [
+            { id: 'take', label: 'Great, add it to savings', delta: { 'Money ($)': 10 } },
+          ] },
+        ],
+        debrief: (r) => r['Money ($)'] >= 0
+          ? `You finished the weekend with $${r['Money ($)']} — you stayed within budget.`
+          : `You finished at $${r['Money ($)']} — a few different choices earlier would have kept this positive.`,
+      },
     },
   };
-  const pack = PACKS[packKey] || PACKS.shapes;
+
+  const pack = (CONTENT[engineName] && CONTENT[engineName][packKey]) || CONTENT[engineName].default || Object.values(CONTENT[engineName])[0];
 
   FnEngineSDK.run({
     container: document.getElementById('mount'),
-    engineName: 'memory',
+    engineName,
     engineVersion: 1,
     contentPack: pack,
     band,
-    activityId: `memory-${packKey}`,
+    activityId: `${engineName}-${packKey}`,
     header: {
       icon: '🧠',
       title: pack.title,
-      description: `Engine SDK demo — content pack "${packKey}", ${band} band presentation`,
+      description: `Engine SDK demo — "${engineName}" engine, content pack "${packKey}", ${band} band`,
     },
   });
 </script>

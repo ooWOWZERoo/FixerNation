@@ -10,16 +10,20 @@
   .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 20px; }
   .panel { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px -10px rgba(22,79,74,0.2); }
   .panel h2 { font-size: 14px; padding: 10px 16px; background: #164F4A; color: #fff; margin: 0; }
-  .panel iframe { width: 100%; height: 600px; border: none; display: block; }
+  .panel iframe { width: 100%; height: 640px; border: none; display: block; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
   <h1>Tune Your Brain — Engine SDK Showcase</h1>
-  <p>Phase 3 exit-gate proof: the SAME "memory" engine (<code>engine-memory.js</code>), two different content packs, two different age bands — zero engine-code changes between panels.</p>
+  <p>All 6 Phase 3 engines, each driven by the same <code>engine-sdk.js</code> runner. Not linked from any public nav — reachable only by direct URL.</p>
   <div class="grid">
-    <div class="panel"><h2>Pack: Shapes — Discover band</h2><iframe src="tune-your-brain-engine-activity.html?pack=shapes&band=discover" title="Shapes pack, Discover band"></iframe></div>
-    <div class="panel"><h2>Pack: Numbers — Advance band</h2><iframe src="tune-your-brain-engine-activity.html?pack=numbers&band=advance" title="Numbers pack, Advance band"></iframe></div>
+    <div class="panel"><h2>Memory — Shapes pack, Discover band</h2><iframe src="tune-your-brain-engine-activity.html?engine=memory&pack=shapes&band=discover" title="Memory engine demo"></iframe></div>
+    <div class="panel"><h2>Pattern — Challenge band</h2><iframe src="tune-your-brain-engine-activity.html?engine=pattern&band=challenge" title="Pattern engine demo"></iframe></div>
+    <div class="panel"><h2>Audio Choice (generalized) — Explore band</h2><iframe src="tune-your-brain-engine-activity.html?engine=audioChoice&band=explore" title="Audio Choice engine demo"></iframe></div>
+    <div class="panel"><h2>Evidence Hunt — Explore band</h2><iframe src="tune-your-brain-engine-activity.html?engine=evidenceHunt&band=explore" title="Evidence Hunt engine demo"></iframe></div>
+    <div class="panel"><h2>Branching Scenario — Challenge band</h2><iframe src="tune-your-brain-engine-activity.html?engine=branchingScenario&band=challenge" title="Branching Scenario engine demo"></iframe></div>
+    <div class="panel"><h2>Simulation — Advance band</h2><iframe src="tune-your-brain-engine-activity.html?engine=simulation&band=advance" title="Simulation engine demo"></iframe></div>
   </div>
 </body>
 </html>
