@@ -28,10 +28,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). A follow-up pass (band/grade filtering + pilot feature-flag wiring, prompted by `GAP_ANALYSIS_2026-09-17.md`) is coded and pushed, **not yet deployed** — see Deploy queue.
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46). Band/grade filtering + pilot feature-flag wiring, prompted by `GAP_ANALYSIS_2026-09-17.md`, is also deployed and confirmed live (Release 47).
 
 ## Deploy queue
-- Band/grade filtering + pilot flag wiring: `server/scripts/alter-add-brain-games-band.js`, then `server/scripts/seed-brain-games-band-values.js`, then `server/scripts/enable-tune-your-brain-pilot-flag.js` (order matters — the flag script is independent but grouped here since it's part of the same deploy), then rsync, then **a Node app restart** (`server/routes/brain-games.js` changed).
+Empty — everything through Release 47 is confirmed live as of 2026-09-17.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -111,7 +111,7 @@ All 6 verified via a throwaway Playwright script (screenshotted, then deleted): 
 
 **Confirmed live 2026-09-17** (Release 46): 6 Playwright specs run together against production — the 4 new game specs plus `decision-point-assignment.spec.ts`/`reading-detective-assignment.spec.ts` to confirm no regression on the shared engines — all passed clean. The reward wiring was also spot-checked directly (a throwaway script, deleted after): all 4 new games correctly awarded 40 XP (25 base + 15 badge) and the exact right badge with `earned: true` on first completion.
 
-## Full spec reconciliation, band/grade filtering + pilot flag wiring (coded, not yet deployed)
+## Full spec reconciliation, band/grade filtering + pilot flag wiring
 
 Prompted by asking whether "deepening Phase 6" covers age/grade-based game filtering — it didn't, which led to a full reconciliation between the master blueprint and everything built through Release 46. **See `GAP_ANALYSIS_2026-09-17.md` for the full writeup** — summary here:
 
@@ -119,7 +119,7 @@ Prompted by asking whether "deepening Phase 6" covers age/grade-based game filte
 - **The `tune_your_brain_pilot_enabled` feature flag now actually does something** — it existed since Phase 1 with a real checker function but nothing ever called it, so every new game has been visible to every school with no way to pilot a cohort or kill-switch a problem. `GET /api/brain-games` now checks it per-school (via the existing `reward_pipeline='classroom_generic'` marker as the "is this a pilot game" proxy). **Set to enabled globally in the same deploy** so today's visibility doesn't change — this delivers the rollout mechanism without pulling games out from under anyone; scoping it down to specific pilot schools later is a separate decision.
 - **The sharpest finding**: of the 8 games built, only 2 (Decision Point, Choice Quest) are genuinely SEL & Character, and neither touches the CASEL Self-Awareness or Self-Management competencies — a gap baked into the blueprint's own Phase 1 catalog, not just a build-order artifact. Flagged as needing its own content/product decision, not started.
 
-**Not yet deployed** — needs the alter script, then 2 seed/enable scripts, then rsync, then a Node app restart.
+**Confirmed live 2026-09-17** (Release 47): a direct API check confirmed all 14 games still return with correct `band` values post-deploy (no visibility regression from the flag going live), plus 9 Playwright specs run together against production — all passed clean.
 
 ## Next recommended step
 Read `GAP_ANALYSIS_2026-09-17.md`'s "Explicitly not started" list and decide what's next — the strongest candidates given the stated goal (SEL-competitive, shippable to clients) are: (1) scoping a real Self-Awareness/Self-Management SEL game, (2) admin-facing Tune Your Brain visibility (currently zero at every level), or (3) accessibility test tooling (currently zero, repo-wide). Each is a distinct, substantial decision — worth choosing explicitly rather than defaulting to "more catalog games."
