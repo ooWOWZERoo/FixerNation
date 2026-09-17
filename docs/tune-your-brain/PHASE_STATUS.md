@@ -12,7 +12,7 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 | 2 | Shared design system + 4 experience-band tokens + accessibility utilities | 🟡 Coded & pushed 2026-09-16 — **needs deploy** (static files only, no restart) |
 | 3 | Game Engine SDK + normalized session runtime | 🟡 Coded & pushed 2026-09-16 — **needs deploy** (new API route + static files, restart needed) |
 | 4 | Skill graph seeding + content governance workflow | ⬜ Not started (empty tables exist from Phase 1) |
-| 5 | Vertical slice pilot — first 4 real playable games (1 per band) | ⬜ Not started |
+| 5 | Vertical slice pilot — first 4 real playable games (1 per band) | 🟡 1 of 4 built (Sound Safari, Discover band) — coded & pushed, needs deploy |
 | 6 | Assignments/progression/goals/rewards/reporting | ⬜ Not started |
 | 7 | Catalog Wave A — Discover/Explore new games + legacy migration | ⬜ Not started |
 | 8 | Catalog Wave B — Challenge/Advance new games + legacy migration | ⬜ Not started |
@@ -49,5 +49,17 @@ Built and verified (via a throwaway Playwright script — screenshots + interact
 
 All 6 verified via a throwaway Playwright script (screenshotted, then deleted): full playthroughs completed correctly end-to-end (Branching Scenario's all 5 steps, Simulation's all 3 events with correct resource math, Evidence Hunt's two-stage scoring), zero console/page errors, keyboard-operable throughout.
 
+## Phase 5 progress — Sound Safari (Discover band)
+
+**Built through the REAL classroom-assignment flow, not another internal-only demo.** `brain-sound-safari.html` uses `engine-audio-choice.js` with placeholder phonics content (4 initial-sound rounds, browser-TTS narrated pending D1). It's a real, assignable catalog entry: `server/scripts/seed-sound-safari-catalog-entry.js` adds a `brain_games` row (reusing the existing catalog table per the blueprint's own "extend, don't duplicate" rule — its actual gameplay logs through `/api/learning-events`, not the legacy XP/badge tables that table is normally paired with). A teacher assigns it exactly like any of the 6 existing games (`teacher-classroom.html`'s Assign Game modal); a student opens it from `student-home.html` exactly like today.
+
+**Two real, pre-existing gaps found and fixed while wiring this up:**
+1. `teacher-classroom.html`'s assign-game dropdown read `g.title`, but `GET /api/brain-games` returns `g.name` — every game's label in that dropdown has been blank/undefined since it shipped. One-line fix.
+2. `student-game.html`'s "Mark as Done" button has always sent an empty body (`{}`) to `/api/student/games/:id/complete` — `student_game_completions.raw_score`/`duration_ms` have never once been populated by any game, ever, despite the column existing. Fixed generically: `engine-sdk.js` now `postMessage`s real score/duration to the parent frame on completion, and `student-game.html` listens for it and auto-reports — purely additive (the manual button still works exactly as before for the 6 legacy games, which never post this message).
+
+**Real research error caught and fixed in the same pass:** the original Phase 0/1 verification claimed no shared site-user auth middleware existed anywhere. Wrong — `server/routes/site-auth.js` has a real, already-used `requireSiteAuth` (imported by `classrooms.js`/`parent.js`/`social.js`/`teacher-lesson-plans.js`), just not in `server/middleware/` where the search looked. This had already led to building a redundant third implementation for D2 — now fixed: the real one's internals are extracted into `server/lib/site-user.js`, shared by both. See `LEADERSHIP_DECISIONS_REQUIRED.md` D2's corrected entry.
+
+New regression test `tests/e2e/sound-safari-assignment.spec.ts` — teacher assigns via the real API, student plays via the real UI, confirms a real (non-null) score lands in `student_game_completions`. **Not yet run against production** — needs this batch deployed first.
+
 ## Next recommended step
-Phase 3's exit gate is now fully met (multiple engines proven, not just one). Move to Phase 4: skill graph seeding + content governance workflow — the empty `skills`/`skill_prerequisites` tables from Phase 1 need real content and a draft/review/publish workflow before Phase 5's actual pilot content can be authored against them.
+Build the remaining 3 vertical-slice games (Reading Detective/Explore, Decision Point/Challenge, Money Matters/Advance) the same way — through the real assignment flow, not as demos — or move to Phase 4's content-governance workflow if hand-coding 3 more content packs directly in HTML feels like the wrong direction before that tooling exists. Worth deciding explicitly rather than defaulting.

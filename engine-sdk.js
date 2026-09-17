@@ -75,8 +75,12 @@
         onEvidence: (eventType, payload) => logEvent(eventType, {
           engineName, sessionToken: sessionMeta.sessionToken, activityId, ...payload,
         }),
-        onComplete: (summaryLines) => {
-          logEvent('session_completed', { engineName, sessionToken: sessionMeta.sessionToken, activityId });
+        // scoreInfo is optional — engines that don't have a single
+        // meaningful numeric score (Branching Scenario, Simulation) just
+        // omit it; completion/duration still gets reported either way.
+        onComplete: (summaryLines, scoreInfo) => {
+          const durationMs = Date.now() - sessionMeta.startedAt;
+          logEvent('session_completed', { engineName, sessionToken: sessionMeta.sessionToken, activityId, durationMs });
           sessionStorage.removeItem(storeKey);
           container.appendChild(FnGameShell.renderSummary({
             title: 'Nice work!',
@@ -84,6 +88,21 @@
             continueLabel: 'Play again',
             onContinue: () => location.reload(),
           }));
+
+          // If this engine is running inside student-game.html's iframe
+          // (the real classroom-assignment flow), report real completion
+          // data instead of leaving the parent to fall back on a
+          // student-clicked "Mark as Done" button with no score attached.
+          if (window.parent && window.parent !== window) {
+            try {
+              window.parent.postMessage({
+                type: 'fn-game-complete',
+                rawScore: scoreInfo && typeof scoreInfo.score === 'number' ? scoreInfo.score : null,
+                durationMs,
+              }, location.origin);
+            } catch { /* not embedded under this origin — ignore */ }
+          }
+
           resolve(summaryLines);
         },
       });

@@ -14,6 +14,7 @@ const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdmin
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
+const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
@@ -37,25 +38,14 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Site-user session check for the self-service "My License" endpoints below —
 // mirrors /me's cookie/JWT verification but rejects with 401 instead of a
-// { loggedIn: false } body, and resolves the full user row.
+// { loggedIn: false } body, and resolves the full user row. Delegates to
+// lib/site-user.js so this exact check (including the session-revocation
+// look-up) has one implementation, reusable by dual-identity routes too.
 async function requireSiteAuth(req, res, next) {
-  const token = req.cookies[SITE_COOKIE_NAME];
-  if (!token) return res.status(401).json({ error: 'Not logged in' });
-  try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
-    const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
-    if (!rows[0]) return res.status(401).json({ error: 'Not logged in' });
-    if (rows[0].session_invalidated_at) {
-      const invalidatedMs = new Date(rows[0].session_invalidated_at).getTime();
-      if (payload.iat * 1000 < invalidatedMs) {
-        return res.status(401).json({ error: 'Not logged in', reason: 'revoked' });
-      }
-    }
-    req.siteUser = rows[0];
-    next();
-  } catch {
-    res.status(401).json({ error: 'Not logged in' });
-  }
+  const user = await resolveSiteUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  req.siteUser = user;
+  next();
 }
 
 function setSiteSessionCookie(res, user) {

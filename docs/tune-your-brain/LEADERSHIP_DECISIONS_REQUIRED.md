@@ -24,9 +24,13 @@ Only decisions that materially change scope, policy, cost, architecture, data ac
 
 ---
 
-## D2 — RESOLVED 2026-09-16 — Should `getSiteUser`'s ad hoc per-route pattern finally become a shared `requireSiteAuth` middleware, given Tune Your Brain adds many new site-user-facing routes?
+## D2 — RESOLVED 2026-09-16, CORRECTED 2026-09-17 — Should `getSiteUser`'s ad hoc per-route pattern finally become a shared `requireSiteAuth` middleware, given Tune Your Brain adds many new site-user-facing routes?
 
-**Resolution: Option 2, implemented.** `server/middleware/siteUserAuth.js` (`requireSiteUser`/`getSiteUser`) exists now, deliberately unwired to any route yet — no existing route file was touched. Ready for Phase 3+ engine routes to use instead of re-implementing the check inline.
+**The 2026-09-16 resolution was based on a research error and has been corrected.** It built a new `server/middleware/siteUserAuth.js`, believing no shared site-user middleware existed anywhere. That was wrong — a real, actively-used `requireSiteAuth` already exists in `server/routes/site-auth.js`, imported by `classrooms.js`, `parent.js`, `social.js`, and `teacher-lesson-plans.js`. The new file was a third, redundant implementation of the exact thing this decision was trying to avoid creating.
+
+**Actual resolution, implemented 2026-09-17:** `requireSiteAuth`'s internals (JWT verify + user lookup + `session_invalidated_at` revocation check) are extracted into `server/lib/site-user.js` (`getSiteUser`) — the existing middleware now delegates to it (identical external behavior, zero change for its 4 existing callers), and `server/routes/learning-events.js` imports it directly for its dual-identity check. `server/middleware/siteUserAuth.js` has been deleted. This is genuinely Option 2 from below (a real shared check, reusable by new dual-identity routes, existing routes untouched) — just correctly built on top of the implementation that already existed, not a fourth one.
+
+**Lesson for future sessions:** before concluding "no shared X exists anywhere," grep for the concept's usual EXPORTED name across the whole `server/routes/` tree, not just the obvious `server/middleware/` directory — this codebase keeps at least one real piece of shared auth logic inside a routes file (`site-auth.js`) rather than `middleware/`, which doesn't match the naming assumption a first pass makes.
 
 **Why it matters:** this codebase has now had **two** separate `requireSiteAuth` implementations fail to become the standard — one was deleted as unused dead code; the live pattern today is `getSiteUser(req)` called individually in every route file. Tune Your Brain's Assignment/Session/Reward/Reporting services will add a large number of new site-user-scoped routes. Continuing the ad hoc pattern is consistent with current convention but propagates a known inconsistency (see `CURRENT_STATE_ARCHITECTURE.md` §2); introducing a real shared middleware now is a bigger one-time refactor but stops the pattern from spreading further.
 

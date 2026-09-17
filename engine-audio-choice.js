@@ -29,7 +29,7 @@
 
   function mount(container, { contentPack, onEvidence, onComplete }) {
     const items = contentPack.items;
-    let index = 0, correct = 0, incorrect = 0, answered = false, qStart = null;
+    let index = 0, correct = 0, incorrect = 0, answered = false, qStart = null, replayCount = 0;
 
     const progressHolder = document.createElement('div');
     const stimulusBox = document.createElement('div');
@@ -61,6 +61,7 @@
 
       const item = items[index];
       qStart = Date.now();
+      replayCount = 0;
       onEvidence('item_presented', { index, stimulusType: item.stimulusType });
 
       if (item.stimulusType === 'audio') {
@@ -70,7 +71,16 @@
         replayBtn.type = 'button';
         replayBtn.className = 'btn btn-outline btn-sm tap-target';
         replayBtn.textContent = '▶ Replay sound';
-        replayBtn.addEventListener('click', () => playStimulus(item));
+        // Replaying is a real support the learner used — recorded as
+        // evidence (§14.1's "replay count" acceptance criterion), never
+        // penalized in scoring. Recording it here, once, in the shared
+        // engine, means every future audio-stimulus content pack gets this
+        // for free instead of each one having to remember to add it.
+        replayBtn.addEventListener('click', () => {
+          replayCount++;
+          onEvidence('hint_requested', { index, kind: 'audio_replay', replayCount });
+          playStimulus(item);
+        });
         replayRow.appendChild(replayBtn);
         playStimulus(item);
       } else {
@@ -88,6 +98,11 @@
         btn.className = 'fn-choice-btn band-aware tap-target';
         if (choice.color) btn.style.borderLeftColor = choice.color;
         btn.textContent = choice.label;
+        // choice.aria lets a content pack give an emoji-only choice (no
+        // reading required, per the Discover band's own design rule, §7.2)
+        // a real text alternative instead of relying on the emoji glyph's
+        // own accessible name, which screen readers render inconsistently.
+        if (choice.aria) btn.setAttribute('aria-label', choice.aria);
         btn.addEventListener('click', () => submit(choice, btn, list));
         list.appendChild(btn);
       });
@@ -101,8 +116,10 @@
       const isCorrect = choice.id === item.correctId;
       const rt = Date.now() - qStart;
       if (isCorrect) correct++; else incorrect++;
-      onEvidence('response_submitted', { index, responseMs: rt });
-      onEvidence(isCorrect ? 'item_correct' : 'item_incorrect', { index, responseMs: rt });
+      // supported:true distinguishes a response that used the replay hint
+      // from a fully independent one, per §14.1's evidence requirement.
+      onEvidence('response_submitted', { index, responseMs: rt, supported: replayCount > 0 });
+      onEvidence(isCorrect ? 'item_correct' : 'item_incorrect', { index, responseMs: rt, supported: replayCount > 0 });
 
       [...listEl.children].forEach((c, i) => {
         c.disabled = true;
@@ -124,7 +141,7 @@
             { value: correct, label: 'Correct' },
             { value: incorrect, label: 'Incorrect' },
             { value: `${Math.round((correct / total) * 100)}%`, label: 'Accuracy' },
-          ]);
+          ], { score: correct, maxScore: total });
         } else {
           renderItem();
         }

@@ -689,7 +689,7 @@ async function openAssignGame() {
   var games = Array.isArray(data) ? data : (data.items || data.games || []);
   var sel = document.getElementById('gameSelect');
   sel.innerHTML = games.length
-    ? '<option value="">Choose a game…</option>' + games.map(function(g){ return '<option value="' + g.id + '">' + esc(g.title) + '</option>'; }).join('')
+    ? '<option value="">Choose a game…</option>' + games.map(function(g){ return '<option value="' + g.id + '">' + esc(g.name) + '</option>'; }).join('')
     : '<option value="">No games available</option>';
   document.getElementById('assignGameModal').classList.add('open');
 }

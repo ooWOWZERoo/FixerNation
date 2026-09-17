@@ -6,14 +6,19 @@
 //
 // Dual-identity, same principle as brain-games.js: either a site-user
 // (fn_user_session) or a classroom-PIN student (fn_student_session) may
-// log events. Uses the new shared getSiteUser (server/middleware/siteUserAuth.js,
-// D2) for the site-user side; the student-session check is written locally
-// here rather than extracted into a shared helper yet — brain-games.js's
-// own copy is separate, working, production code that stays untouched.
+// log events. Uses lib/site-user.js's getSiteUser for the site-user side —
+// the SAME check routes/site-auth.js's requireSiteAuth uses internally
+// (corrected 2026-09-17: an earlier pass here built a second, redundant
+// server/middleware/siteUserAuth.js without realizing routes/site-auth.js
+// already had a real, actively-used requireSiteAuth; that file has been
+// removed and this now points at the one real implementation). The
+// student-session check is written locally here rather than extracted
+// into a shared helper yet — brain-games.js's own copy is separate,
+// working, production code that stays untouched.
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
-const { getSiteUser } = require('../middleware/siteUserAuth');
+const { getSiteUser } = require('../lib/site-user');
 const { STUDENT_COOKIE_NAME } = require('../lib/session');
 
 const router = express.Router();

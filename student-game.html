@@ -61,7 +61,18 @@ frame.addEventListener('load', function() {
 fetch('/api/classroom-auth/me', { credentials: 'include' })
   .then(function(r) { if (!r.ok) location.href = 'student-login.html'; });
 
-async function markDone() {
+// New Tune Your Brain (engine-sdk.js) games report real completion data
+// automatically via postMessage instead of requiring the student to
+// remember to click "Mark as Done" with no score attached (every legacy
+// brain-*.html game still relies on the manual button below — this is
+// purely additive, nothing here changes for a game that never posts).
+window.addEventListener('message', function(e) {
+  if (e.origin !== location.origin) return;
+  if (!e.data || e.data.type !== 'fn-game-complete') return;
+  markDone({ rawScore: e.data.rawScore, durationMs: e.data.durationMs });
+});
+
+async function markDone(realData) {
   var btn = document.getElementById('doneBtn');
   btn.disabled = true;
   try {
@@ -69,12 +80,12 @@ async function markDone() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}',
+      body: JSON.stringify(realData || {}),
     });
     if (r.ok) {
       btn.textContent = 'Played! ✓';
       btn.classList.add('played');
-      setTimeout(function() { location.href = 'student-home.html'; }, 800);
+      if (!realData) setTimeout(function() { location.href = 'student-home.html'; }, 800);
     } else {
       btn.disabled = false;
     }
