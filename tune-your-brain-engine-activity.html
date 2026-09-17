@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engine SDK Demo — Tune Your Brain</title>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<div class="game-frame">
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-memory.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+  const packKey = params.get('pack') || 'shapes';
+
+  // Two distinct content packs on the SAME engine, zero engine-code
+  // changes between them — this is the Phase 3 exit-gate proof.
+  const PACKS = {
+    shapes: {
+      title: 'Shape Match',
+      pairCount: 4,
+      items: [
+        { id: 'circle', display: '⚫' }, { id: 'square', display: '⬛' },
+        { id: 'triangle', display: '🔺' }, { id: 'star', display: '⭐' },
+        { id: 'heart', display: '❤️' }, { id: 'diamond', display: '🔶' },
+      ],
+    },
+    numbers: {
+      title: 'Number Match',
+      pairCount: 5,
+      items: [
+        { id: '1', display: '1️⃣' }, { id: '2', display: '2️⃣' }, { id: '3', display: '3️⃣' },
+        { id: '4', display: '4️⃣' }, { id: '5', display: '5️⃣' }, { id: '6', display: '6️⃣' },
+      ],
+    },
+  };
+  const pack = PACKS[packKey] || PACKS.shapes;
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'memory',
+    engineVersion: 1,
+    contentPack: pack,
+    band,
+    activityId: `memory-${packKey}`,
+    header: {
+      icon: '🧠',
+      title: pack.title,
+      description: `Engine SDK demo — content pack "${packKey}", ${band} band presentation`,
+    },
+  });
+</script>
+</body>
+</html>

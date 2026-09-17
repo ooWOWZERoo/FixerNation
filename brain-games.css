@@ -440,6 +440,50 @@ html[data-band="advance"] {
 .fn-shell-hint-btn:hover { border-color: var(--teal); color: var(--teal); }
 .fn-shell-controls { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
 
+/* ── Shared flip-card primitive (engine-memory.js) ────────────────────────────
+   NOTE: brain-memory-match.html (the legacy game) defines its OWN copy of
+   these same class names, including .card-grid, in a page-local <style>
+   block — that page is untouched, per Phase 7/8 scoping. This is the
+   shared version any new engine/content pack uses via engine-memory.js. */
+.card-grid {
+  display: grid; gap: 10px;
+  justify-content: center; margin: 20px 0;
+}
+.card-grid.easy   { grid-template-columns: repeat(4, 1fr); }
+.card-grid.medium { grid-template-columns: repeat(5, 1fr); }
+.card-grid.hard   { grid-template-columns: repeat(6, 1fr); }
+@media (max-width: 500px) {
+  .card-grid.medium { grid-template-columns: repeat(4, 1fr); }
+  .card-grid.hard   { grid-template-columns: repeat(5, 1fr); }
+}
+.flip-card {
+  display: block; width: 100%; aspect-ratio: 1; max-width: 84px;
+  perspective: 600px; cursor: pointer; border: none; background: none; padding: 0;
+  font-family: inherit;
+}
+.flip-inner {
+  display: block; width: 100%; height: 100%; position: relative;
+  transition: transform calc(.35s * var(--band-motion, 1));
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-inner, .flip-card.matched .flip-inner { transform: rotateY(180deg); }
+.flip-face {
+  /* display:flex already makes this a block-level box, so width/height
+     percentages apply regardless of whether the element is a <div> or a
+     <span> in markup — width/height on an inline element are otherwise
+     ignored, which is what broke this the first time it was built. */
+  position: absolute; inset: 0;
+  border-radius: var(--band-radius, var(--radius-sm)); backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(20px, 4vw, 30px);
+}
+.flip-front {
+  background: linear-gradient(135deg, var(--teal-dark), #256b60);
+  border: 2px solid rgba(255,255,255,0.1); color: #fff; font-size: 16px; font-weight: 800;
+}
+.flip-back { background: #fff; border: 2px solid var(--border); transform: rotateY(180deg); }
+.flip-card.matched .flip-back { background: #f0fdf4; border-color: var(--game-green); }
+
 /* ── Accessibility settings panel (floating, shared across all game pages) ── */
 .fn-a11y-toggle {
   position: fixed; bottom: 20px; right: 20px; z-index: 9100;
