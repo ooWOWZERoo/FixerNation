@@ -584,6 +584,7 @@ function renderAssignments() {
       ghtml += '<div class="assign-card">' +
         '<div class="assign-card-info"><div class="assign-card-title">' + esc(g.game_title) + '</div><div class="assign-card-meta">' + (g.due_date ? 'Due ' + g.due_date : 'No due date') + '</div></div>' +
         '<div class="assign-card-progress"><span class="big">' + (g.completion_count || 0) + '</span>plays</div>' +
+        '<a class="btn btn-outline btn-sm" href="teacher-game-report.html?classroom=' + classroomId + '&assignment=' + g.id + '">Results ↗</a>' +
         '<button class="btn btn-danger btn-xs" onclick="removeGame(' + g.id + ')">Remove</button>' +
       '</div>';
     });

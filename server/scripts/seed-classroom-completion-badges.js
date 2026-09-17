@@ -1,0 +1,58 @@
+// Tune Your Brain, Phase 6 — adds one "first classroom completion" badge
+// per pilot game, using the exact names the blueprint itself proposes
+// (roadmap §12.3): Sound Explorer, Context Detective, Responsible
+// Responder, Budget Builder. Awarded by
+// server/lib/rewards.js's awardClassroomCompletion() the first time a
+// student completes that game through a real classroom assignment.
+//
+// Requires server/scripts/alter-add-reward-pipeline.js to have run first
+// (this script only inserts brain_badges rows, it doesn't touch the
+// reward_pipeline column).
+//
+// Safe to re-run: each badge is skipped if its slug already exists.
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const mysql = require('mysql2/promise');
+
+const BADGES = [
+  { gameSlug: 'sound-safari', slug: 'sound-explorer', name: 'Sound Explorer', emoji: '🦁',
+    description: 'Completed Sound Safari through a classroom assignment.' },
+  { gameSlug: 'reading-detective', slug: 'context-detective', name: 'Context Detective', emoji: '🔍',
+    description: 'Completed Reading Detective through a classroom assignment.' },
+  { gameSlug: 'decision-point', slug: 'responsible-responder', name: 'Responsible Responder', emoji: '🧭',
+    description: 'Completed Decision Point through a classroom assignment.' },
+  { gameSlug: 'money-matters', slug: 'budget-builder', name: 'Budget Builder', emoji: '💰',
+    description: 'Completed Money Matters through a classroom assignment.' },
+];
+
+async function main() {
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
+  });
+
+  for (const b of BADGES) {
+    const [[game]] = await conn.query('SELECT id FROM brain_games WHERE slug = ?', [b.gameSlug]);
+    if (!game) {
+      console.warn(`Skipped ${b.slug}: no brain_games row for slug '${b.gameSlug}' (run its catalog seed script first)`);
+      continue;
+    }
+
+    const [[existing]] = await conn.query('SELECT id FROM brain_badges WHERE slug = ?', [b.slug]);
+    if (existing) {
+      console.log(`Skipped: ${b.slug} already exists (id=${existing.id})`);
+      continue;
+    }
+
+    await conn.query(
+      `INSERT INTO brain_badges (name, slug, description, game_id, category, rarity, criteria_type, criteria_json, xp_reward, emoji)
+       VALUES (?, ?, ?, ?, 'achievement', 'common', 'first_classroom_completion', '{}', 15, ?)`,
+      [b.name, b.slug, b.description, game.id, b.emoji]
+    );
+    console.log(`Added: ${b.slug}`);
+  }
+
+  await conn.end();
+  console.log('Done.');
+}
+
+main().catch(err => { console.error(err); process.exit(1); });

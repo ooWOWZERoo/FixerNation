@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME } = require('../lib/session');
+const { getLevelFromXP, getNextLevel, updateStreak } = require('../lib/rewards');
 
 const router = express.Router();
 
@@ -24,31 +25,10 @@ function describeBadgeCriteria(type, criteriaJson) {
       case 'number_level':  return `Reach level ${c.level} in Number Sequence`;
       case 'login_streak':  return `Log in ${c.days} day${c.days !== 1 ? 's' : ''} in a row`;
       case 'cross_game':    return `Play ${c.count} different brain games`;
+      case 'first_classroom_completion': return 'Complete this game once through a classroom assignment';
       default:              return null;
     }
   } catch { return null; }
-}
-
-// ── XP / Level system ─────────────────────────────────────────────────────────
-const XP_LEVELS = [
-  { level: 1, name: 'Beginner',   xpRequired: 0 },
-  { level: 2, name: 'Learner',    xpRequired: 150 },
-  { level: 3, name: 'Challenger', xpRequired: 400 },
-  { level: 4, name: 'Skilled',    xpRequired: 800 },
-  { level: 5, name: 'Advanced',   xpRequired: 1500 },
-  { level: 6, name: 'Expert',     xpRequired: 2500 },
-  { level: 7, name: 'Master',     xpRequired: 4000 },
-];
-
-function getLevelFromXP(xp) {
-  let lvl = XP_LEVELS[0];
-  for (const l of XP_LEVELS) { if (xp >= l.xpRequired) lvl = l; else break; }
-  return lvl;
-}
-
-function getNextLevel(xp) {
-  for (const l of XP_LEVELS) { if (xp < l.xpRequired) return l; }
-  return null;
 }
 
 function calcXPForSession(difficulty, isPersonalBest, accuracy) {
@@ -369,36 +349,6 @@ async function awardBadges(principal, gameId, sessionId, metrics) {
     }
   }
   return newBadges;
-}
-
-// ── Streak update ─────────────────────────────────────────────────────────────
-async function updateStreak(principal) {
-  const idCol = principal.idCol;
-  const today = new Date().toISOString().slice(0, 10);
-  const [rows] = await pool.query(`SELECT * FROM brain_user_streaks WHERE ${idCol}=?`, [principal.id]);
-
-  if (!rows.length) {
-    await pool.query(
-      `INSERT INTO brain_user_streaks (${idCol}, current_streak, longest_streak, last_qualifying_date) VALUES (?, 1, 1, ?)`,
-      [principal.id, today]
-    );
-    return;
-  }
-
-  const row = rows[0];
-  const last = row.last_qualifying_date;
-  if (last === today) return; // already played today
-
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yStr = yesterday.toISOString().slice(0, 10);
-
-  let newStreak = last === yStr ? row.current_streak + 1 : 1;
-  const longest = Math.max(row.longest_streak, newStreak);
-  await pool.query(
-    `UPDATE brain_user_streaks SET current_streak=?, longest_streak=?, last_qualifying_date=? WHERE ${idCol}=?`,
-    [newStreak, longest, today, principal.id]
-  );
 }
 
 // ── Route helpers ─────────────────────────────────────────────────────────────

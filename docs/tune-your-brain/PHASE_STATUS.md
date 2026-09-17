@@ -13,7 +13,7 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 | 3 | Game Engine SDK + normalized session runtime, all 6 engines | ✅ Done & deployed, confirmed live 2026-09-16/17 (Releases 41-42) |
 | 4 | Skill graph seeding + content governance workflow | ⬜ Not started (empty tables exist from Phase 1) |
 | 5 | Vertical slice pilot — first 4 real playable games (1 per band) | ✅ Done & deployed, confirmed live 2026-09-17 via Playwright regression against production (Releases 43-44). All 4 games built. |
-| 6 | Assignments/progression/goals/rewards/reporting | ⬜ Not started |
+| 6 | Assignments/progression/goals/rewards/reporting | 🟡 First slice coded and pushed, not yet deployed: classroom-generic Reward Service + teacher game report. Rest of the phase (assignment targeting, adaptive controls, cooperative milestones, admin aggregate reports, reset/audit tooling) not started. |
 | 7 | Catalog Wave A — Discover/Explore new games + legacy migration | ⬜ Not started |
 | 8 | Catalog Wave B — Challenge/Advance new games + legacy migration | ⬜ Not started |
 | 9 | Content administration / scaled authoring tools | ⬜ Not started |
@@ -26,10 +26,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is now fully done: all 4 vertical-slice games (Sound Safari, Reading Detective, Decision Point, Money Matters) are deployed and confirmed live via Playwright regression against production.
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is coded and pushed but **not yet deployed** — see Deploy queue.
 
 ## Deploy queue
-Empty — everything through Release 44 is confirmed live as of 2026-09-17.
+- Phase 6 first slice: `server/lib/rewards.js`, edits to `server/routes/brain-games.js`/`server/routes/student.js`, `teacher-game-report.html`, and the results link in `teacher-classroom.html`. Needs, in order: `node scripts/alter-add-reward-pipeline.js`, `node scripts/seed-classroom-completion-badges.js`, then rsync the new/changed HTML/JS, then **a Node app restart** (unlike the Phase 5 slice, `server/routes/` files changed here).
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -72,5 +72,25 @@ All 6 verified via a throwaway Playwright script (screenshotted, then deleted): 
 
 **Confirmed live 2026-09-17**: `tests/e2e/reading-detective-assignment.spec.ts`, `decision-point-assignment.spec.ts`, and `money-matters-assignment.spec.ts` all ran clean against production on the first attempt after deploy (rsync + the 3 catalog-seed scripts, no app restart needed). Reading Detective's completion carries a real non-null `raw_score` (the Evidence Hunt fix); Decision Point and Money Matters correctly show a null `raw_score` with a real non-null `duration_ms`, since Branching Scenario and Simulation are intentionally scoreless by design (SEL/financial outcomes aren't reduced to right/wrong).
 
+## Phase 6 progress — first slice: Reward Service + teacher report (coded, not yet deployed)
+
+**Chosen over Phase 4** (see prior entry) because the 4 pilot games gave students zero XP/badges and teachers no report at all — a gap Phase 5's own stated goal called for but never delivered. Full Phase 6 (§15) is large; this is a deliberately bounded first slice, same pacing as Phase 3 (2 releases) and Phase 5 (2 releases). See "Out of scope" below for what's deliberately deferred.
+
+**Research finding that shaped the design:** the legacy reward pipeline (`brain-games.js`'s `PUT /sessions/:token/complete`) is deeply tied to legacy-mechanic-specific scoring and a `brain_game_sessions` lifecycle the 4 new games never create — retrofitting them into it would mean awkward special-casing. Instead: a new, engine-agnostic reward path, triggered from the one place both legacy and new games already converge when played via a classroom assignment (`student.js`'s `POST /games/:gaid/complete`), writing to the **same** `brain_game_user_progress`/`user_brain_badges`/`brain_user_streaks` tables the legacy pipeline uses — which means the existing student pages (`brain-games-progress.html`, `brain-badges.html`) show the new games' rewards with **zero frontend changes**, confirmed by reading their actual query code (`/me/progress`/`/me/badges` read those tables directly, no `brain_game_sessions` dependency).
+
+**Part A — Reward Service:**
+- New `server/lib/rewards.js`: `XP_LEVELS`/`getLevelFromXP`/`getNextLevel`/`updateStreak` extracted verbatim from `brain-games.js` (zero behavior change there), plus new `awardClassroomCompletion()` — flat 25 XP per completion (no accuracy bonus yet, see "Out of scope"), reuses the existing streak system, and awards a "first completion of this game" badge via a new `first_classroom_completion` criteria type.
+- New `brain_games.reward_pipeline` column (`server/scripts/alter-add-reward-pipeline.js`) — `'legacy'` for the 6 existing games (so they're never double-rewarded), `'classroom_generic'` by default for everything else, including any future game with zero extra wiring.
+- New badges (`server/scripts/seed-classroom-completion-badges.js`), using the exact names the blueprint proposes in §12.3: **Sound Explorer**, **Context Detective**, **Responsible Responder**, **Budget Builder** — one per pilot game.
+- `student.js`'s completion route now looks up `reward_pipeline` and calls the new function when it's `'classroom_generic'`.
+
+**Part B — Teacher report:** `GET /:id/game-assignments/:gaid/completions` (`classrooms.js`) already existed server-side with **zero frontend caller** — confirmed via grep. New `teacher-game-report.html` (mirrors `teacher-classroom-progress.html`'s existing stat-boxes + data-table pattern) is pure presentation on top of it: per-student play count, first/latest score, last-played time, plus CSV export. New "Results ↗" link added per assigned game in `teacher-classroom.html`, mirroring the existing lesson "Progress ↗" link.
+
+**PIN-student parity is already inherent, not something to build:** `classroom_game_assignments`/`student_game_completions` are PIN-classroom-only end to end (confirmed via code search — no site-user-student path exists there at all), so there's no dual-identity gap to close for this slice, unlike `brain-games.js`'s own `getPrincipal()` resolver.
+
+**Out of scope for this slice (flagged, not started):** assignment targeting by skill/range/domain/duration/scenario and individual/group assignment; adaptive lock/override controls (§11.3); cooperative classroom milestones (§12.4); admin aggregate reporting (blocked on unresolved decision **D4**, `LEADERSHIP_DECISIONS_REQUIRED.md`); full reset/audit tooling (§13.4); wiring Decision Point's `freeReflection` step into the existing `student_reflections` table (a real, separate content-safety-gateway decision — deliberately not bundled in here); forwarding `maxScore` through the postMessage chain to unlock accuracy-weighted bonus XP later.
+
+**Not yet deployed** — needs the alter + seed scripts run against production, the changed/new files rsynced, **and a Node app restart** (this slice touches `server/routes/`, unlike the Phase 5 slice).
+
 ## Next recommended step
-Phase 5's vertical slice is complete. The next real decision is Phase 6 (assignments/progression/goals/rewards/reporting) vs. Phase 4 (content-governance tooling) before scaling the catalog further — worth deciding explicitly rather than defaulting.
+Deploy this Phase 6 first slice (see Deploy queue above), then run the new `tests/e2e/classroom-generic-reward.spec.ts` against production, plus re-run the 4 pilot-game specs to confirm no regression from the `student.js` route change. After that, decide whether to continue Phase 6 (assignment targeting / adaptive controls / cooperative milestones — D4 still blocks admin reporting) or move to Phase 4/7/8 to scale the catalog.

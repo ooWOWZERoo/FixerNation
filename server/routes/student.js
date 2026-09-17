@@ -4,6 +4,7 @@ const { requireStudentAuth } = require('../middleware/studentAuth');
 const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/branding');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForClassroom } = require('../lib/safety/school-context');
+const { awardClassroomCompletion } = require('../lib/rewards');
 
 const router = express.Router();
 router.use(requireStudentAuth);
@@ -387,7 +388,10 @@ router.get('/games', async (req, res) => {
 
 router.post('/games/:gaid/complete', async (req, res) => {
   const [[assignment]] = await pool.query(
-    'SELECT cga.* FROM classroom_game_assignments cga WHERE cga.id = ? AND cga.classroom_id = ?',
+    `SELECT cga.*, bg.reward_pipeline
+     FROM classroom_game_assignments cga
+     JOIN brain_games bg ON bg.id = cga.game_id
+     WHERE cga.id = ? AND cga.classroom_id = ?`,
     [req.params.gaid, req.student.classroom_id]
   );
   if (!assignment) return res.status(404).json({ error: 'Game assignment not found' });
@@ -398,7 +402,13 @@ router.post('/games/:gaid/complete', async (req, res) => {
     [req.student.id, req.params.gaid, rawScore ?? null, durationMs ?? null]
   );
   const [[row]] = await pool.query('SELECT * FROM student_game_completions WHERE id = ?', [r.insertId]);
-  res.status(201).json(row);
+
+  let reward = null;
+  if (assignment.reward_pipeline === 'classroom_generic') {
+    reward = await awardClassroomCompletion({ studentId: req.student.id, gameId: assignment.game_id });
+  }
+
+  res.status(201).json({ ...row, reward });
 });
 
 // GET /api/student/branding — the student's classroom's school's published

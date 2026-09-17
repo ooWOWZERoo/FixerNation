@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Game Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:0;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 60px;}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--teal-dark);text-decoration:none;margin-bottom:16px;}
+.back-link:hover{text-decoration:none;}
+h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:26px;margin-bottom:4px;}
+.subtitle{font-size:14px;color:var(--ink-soft);margin-bottom:28px;}
+.btn{padding:9px 16px;border-radius:9px;border:none;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;}
+.btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal-dark);}
+.btn-outline:hover{background:rgba(22,79,74,0.06);}
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;}
+.stat-box{background:#fff;border-radius:14px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:16px 22px;min-width:110px;flex:1;}
+.stat-box .val{font-size:28px;font-weight:800;color:var(--teal-dark);}
+.stat-box .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+table.data-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);}
+table.data-table th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);}
+table.data-table td{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:top;}
+table.data-table tr:last-child td{border-bottom:none;}
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.toolbar-title{font-size:14px;font-weight:700;color:var(--teal-dark);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" id="backLink" href="#">← Back to Classroom</a>
+
+  <h1 id="gameTitle">Loading…</h1>
+  <div class="subtitle" id="gameSubtitle"></div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="val" id="statStudents">—</div><div class="lbl">Students completed</div></div>
+    <div class="stat-box"><div class="val" id="statPlays">—</div><div class="lbl">Total plays</div></div>
+    <div class="stat-box"><div class="val" id="statScore">—</div><div class="lbl">Average score</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-title">Student Results</div>
+    <button class="btn btn-outline" onclick="exportCsv()">Export CSV</button>
+  </div>
+
+  <div id="resultsTable"></div>
+</div>
+
+<script src="cart.js"></script>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script>
+fnRequireSiteAuth();
+
+var params = new URLSearchParams(location.search);
+var classroomId = params.get('classroom');
+var assignmentId = params.get('assignment');
+
+if (!classroomId || !assignmentId) location.href = 'teacher-classrooms.html';
+
+document.getElementById('backLink').href = 'teacher-classroom.html?id=' + classroomId;
+
+var completions = [];
+
+function esc(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+async function load() {
+  var [classroomRes, completionsRes] = await Promise.all([
+    fetch('/api/classrooms/' + classroomId, { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : null; }),
+    fetch('/api/classrooms/' + classroomId + '/game-assignments/' + assignmentId + '/completions', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : []; }),
+  ]);
+
+  completions = completionsRes || [];
+
+  var assignment = classroomRes && (classroomRes.gameAssignments || []).find(function (g) { return String(g.id) === String(assignmentId); });
+  var title = assignment ? assignment.game_title : 'Game';
+  document.title = title + ' Results — Fixer Nation Education';
+  document.getElementById('gameTitle').textContent = title;
+  document.getElementById('gameSubtitle').textContent = assignment && assignment.due_date ? 'Due ' + assignment.due_date : '';
+
+  renderStats();
+  renderTable();
+}
+
+function byStudent() {
+  var groups = {};
+  completions.forEach(function (c) {
+    if (!groups[c.student_id]) groups[c.student_id] = [];
+    groups[c.student_id].push(c);
+  });
+  // completions arrive newest-first from the API; sort each group oldest-first
+  // so "first attempt" and "latest attempt" are easy to read off the ends.
+  Object.keys(groups).forEach(function (id) {
+    groups[id].sort(function (a, b) { return new Date(a.completed_at) - new Date(b.completed_at); });
+  });
+  return groups;
+}
+
+function renderStats() {
+  var groups = byStudent();
+  var studentCount = Object.keys(groups).length;
+  var scored = completions.filter(function (c) { return c.raw_score !== null && c.raw_score !== undefined; });
+  var avgScore = scored.length
+    ? Math.round(scored.reduce(function (sum, c) { return sum + c.raw_score; }, 0) / scored.length)
+    : null;
+
+  document.getElementById('statStudents').textContent = studentCount;
+  document.getElementById('statPlays').textContent = completions.length;
+  document.getElementById('statScore').textContent = avgScore !== null ? avgScore : '—';
+}
+
+function renderTable() {
+  var groups = byStudent();
+  var studentIds = Object.keys(groups);
+
+  if (!studentIds.length) {
+    document.getElementById('resultsTable').innerHTML =
+      '<div style="text-align:center;padding:40px;color:var(--ink-soft);background:#fff;border-radius:14px;">No completions yet.</div>';
+    return;
+  }
+
+  var html = '<table class="data-table"><thead><tr>' +
+    '<th>Student</th><th>Plays</th><th>First Score</th><th>Latest Score</th><th>Last Played</th>' +
+    '</tr></thead><tbody>';
+
+  studentIds.forEach(function (id) {
+    var rows = groups[id];
+    var first = rows[0];
+    var latest = rows[rows.length - 1];
+    html += '<tr>' +
+      '<td style="font-weight:600;">' + esc(first.display_name) + '</td>' +
+      '<td>' + rows.length + '</td>' +
+      '<td>' + (first.raw_score !== null && first.raw_score !== undefined ? first.raw_score : '—') + '</td>' +
+      '<td>' + (latest.raw_score !== null && latest.raw_score !== undefined ? latest.raw_score : '—') + '</td>' +
+      '<td>' + fmtDateTime(latest.completed_at) + '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('resultsTable').innerHTML = html;
+}
+
+function exportCsv() {
+  var groups = byStudent();
+  var rows = [['Student', 'Plays', 'First Score', 'Latest Score', 'Last Played']];
+  Object.keys(groups).forEach(function (id) {
+    var group = groups[id];
+    var first = group[0];
+    var latest = group[group.length - 1];
+    rows.push([
+      first.display_name,
+      group.length,
+      first.raw_score ?? '',
+      latest.raw_score ?? '',
+      latest.completed_at || '',
+    ]);
+  });
+  var csv = rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'game-results.csv';
+  a.click();
+}
+
+load();
+</script>
+</body>
+</html>

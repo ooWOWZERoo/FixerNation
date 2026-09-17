@@ -919,6 +919,7 @@ CREATE TABLE IF NOT EXISTS brain_games (
   primary_skill VARCHAR(100) NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
   display_order INT UNSIGNED NOT NULL DEFAULT 0,
+  reward_pipeline ENUM('legacy','classroom_generic') NOT NULL DEFAULT 'classroom_generic',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
