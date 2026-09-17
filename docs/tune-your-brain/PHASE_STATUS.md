@@ -14,8 +14,8 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 | 4 | Skill graph seeding + content governance workflow | ⬜ Not started (empty tables exist from Phase 1) |
 | 5 | Vertical slice pilot — first 4 real playable games (1 per band) | ✅ Done & deployed, confirmed live 2026-09-17 via Playwright regression against production (Releases 43-44). All 4 games built. |
 | 6 | Assignments/progression/goals/rewards/reporting | ✅ First slice done & deployed, confirmed live 2026-09-17 via Playwright regression against production (Release 45): classroom-generic Reward Service + teacher game report. Rest of the phase (assignment targeting, adaptive controls, cooperative milestones, admin aggregate reports, reset/audit tooling) not started. |
-| 7 | Catalog Wave A — Discover/Explore new games + legacy migration | 🟡 Explore's Choice Quest coded and pushed, not yet deployed. Word Builder/Number Garden/Feelings Detective (Discover) and Fraction Kitchen (Explore) not started — each needs a new engine (`Build`, `Manipulative`, multi-select `Scenario Choice`) that doesn't exist yet. Legacy migration (Memory Lab/Sequence Lab/Pattern Lab) not started. |
-| 8 | Catalog Wave B — Challenge/Advance new games + legacy migration | 🟡 Headline, Money Moves (Challenge) and Critical Read (Advance) coded and pushed, not yet deployed — all 3 reuse existing engines. Legacy migration (Reaction Challenge/Focus Lab) not started. |
+| 7 | Catalog Wave A — Discover/Explore new games + legacy migration | 🟡 Explore's Choice Quest done & deployed, confirmed live 2026-09-17 (Release 46). Word Builder/Number Garden/Feelings Detective (Discover) and Fraction Kitchen (Explore) not started — each needs a new engine (`Build`, `Manipulative`, multi-select `Scenario Choice`) that doesn't exist yet. Legacy migration (Memory Lab/Sequence Lab/Pattern Lab) not started. |
+| 8 | Catalog Wave B — Challenge/Advance new games + legacy migration | 🟡 Headline, Money Moves (Challenge) and Critical Read (Advance) done & deployed, confirmed live 2026-09-17 (Release 46) — all 3 reuse existing engines. Legacy migration (Reaction Challenge/Focus Lab) not started. |
 | 9 | Content administration / scaled authoring tools | ⬜ Not started |
 | 10 | Phase 2 curriculum expansion (14 more games) | ⬜ Not started |
 | 11 | District/enterprise readiness | ⬜ Not started |
@@ -26,10 +26,10 @@ Legend: ✅ done & deployed · 🟡 coded & pushed, not yet deployed · ⬜ not 
 See `LEADERSHIP_DECISIONS_REQUIRED.md`. D1 (is ElevenLabs actually live — blocks Phase 5 audio content) and D4 (how aggregate is school-admin visibility — blocks Phase 6 reporting) are the only two still genuinely unanswered.
 
 ## What "done" means as of 2026-09-17
-Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is coded and pushed but **not yet deployed**, see Deploy queue.
+Phases 1–3 were pure plumbing. Phase 5 is fully done: all 4 vertical-slice games are deployed and confirmed live. Phase 6's first slice (Reward Service + teacher report) is also deployed and confirmed live (Release 45). Phases 7/8's first slice — 4 more catalog games (Choice Quest, Headline, Money Moves, Critical Read) — is also deployed and confirmed live (Release 46).
 
 ## Deploy queue
-- Catalog-scaling slice: 4 new `brain-*.html` pages, 4 new catalog-seed scripts, and 4 new badges appended to the existing `seed-classroom-completion-badges.js`. Needs, in order: `node scripts/seed-choice-quest-catalog-entry.js`, `node scripts/seed-headline-catalog-entry.js`, `node scripts/seed-money-moves-catalog-entry.js`, `node scripts/seed-critical-read-catalog-entry.js`, then `node scripts/seed-classroom-completion-badges.js` again (idempotent — only inserts the 4 new rows), then rsync. No schema change, no `server/routes/` change, **no app restart needed** (same as the original Phase 5 slice).
+Empty — everything through Release 46 is confirmed live as of 2026-09-17.
 
 ## Engine mapping spike (done)
 See `ENGINE_MAPPING_SPIKE.md`. Key finding: the blueprint's own suggested Phase 3 starter engines (Audio Choice, Build, Manipulative, Evidence Hunt, Branching Scenario, Simulation) missed the two cleanest-fitting engines for the 6 legacy games (**Memory**, **Pattern**) entirely, and included one (Manipulative) nothing needs yet. Corrected list: Memory, Pattern, Audio Choice (generalized to any stimulus), Evidence Hunt, Branching Scenario, Simulation.
@@ -96,7 +96,7 @@ All 6 verified via a throwaway Playwright script (screenshotted, then deleted): 
 
 **Confirmed live 2026-09-17** (Release 45): `tests/e2e/classroom-generic-reward.spec.ts` plus all 4 pilot-game specs run together against production — all 5 passed clean, no regression from the `student.js` route change.
 
-## Phases 7/8 progress — first slice: Choice Quest, Headline, Money Moves, Critical Read (coded, not yet deployed)
+## Phases 7/8 progress — first slice: Choice Quest, Headline, Money Moves, Critical Read
 
 **User chose to scale the catalog over continuing deeper into Phase 6, then chose hand-coding over Phase 4 tooling — same call as the Phase 5 vertical slice.** Of the 8 remaining flagship games (§14), only 4 reuse engines that already exist: **Choice Quest** (Explore, `engine-branching-scenario.js`), **Headline** and **Money Moves** (Challenge, `engine-evidence-hunt.js`/`engine-simulation.js`), **Critical Read** (Advance, `engine-evidence-hunt.js`). The other 4 (Word Builder, Number Garden, Feelings Detective — Discover; Fraction Kitchen — Explore) each need a genuinely new engine (`Build`, `Manipulative`, a multi-select `Scenario Choice` variant) that doesn't exist yet — real engine-design work, a different and bigger decision than "hand-code more content." Legacy migration (Memory Lab/Sequence Lab/Pattern Lab/Reaction Challenge/Focus Lab, §14.5) is also a separate, different-shaped task (retrofitting *existing* live games, with its own "don't lose earned progress" regression requirement) and isn't started.
 
@@ -107,7 +107,7 @@ All 6 verified via a throwaway Playwright script (screenshotted, then deleted): 
 
 **A nice side effect of the Phase 6 Reward Service:** `brain_games.reward_pipeline` defaults to `'classroom_generic'` for any new game with zero extra wiring, so all 4 of these get real XP/streaks the moment they're seeded — only new badge rows were needed (appended to the existing `seed-classroom-completion-badges.js`, not a new script): **Perspective Builder** (Choice Quest), **Digital Citizen** (Headline), **Problem Solver** (Money Moves), and **Source Sleuth** (Critical Read, not one of the blueprint's §12.3 example names — none of the remaining ones fit this content — but kept in the same voice).
 
-**Not yet deployed** — needs the 4 catalog-seed scripts run, the badge-seed script re-run (idempotent, only inserts the 4 new rows), and the changed/new files rsynced. No schema change, no `server/routes/` change, no app restart.
+**Confirmed live 2026-09-17** (Release 46): 6 Playwright specs run together against production — the 4 new game specs plus `decision-point-assignment.spec.ts`/`reading-detective-assignment.spec.ts` to confirm no regression on the shared engines — all passed clean. The reward wiring was also spot-checked directly (a throwaway script, deleted after): all 4 new games correctly awarded 40 XP (25 base + 15 badge) and the exact right badge with `earned: true` on first completion.
 
 ## Next recommended step
-Deploy this catalog-scaling slice (see Deploy queue above), then run the 4 new Playwright specs against production, plus re-run `decision-point-assignment.spec.ts` and `reading-detective-assignment.spec.ts` to confirm no regression on the shared engines. After that: the next real decision is whether to invest in the 3 new engines needed for the remaining Discover/Explore games, tackle legacy-game migration, or return to deepening Phase 6 — worth deciding explicitly rather than defaulting.
+The next real decision is whether to invest in the 3 new engines needed for the remaining Discover/Explore games (Word Builder, Number Garden, Feelings Detective, Fraction Kitchen), tackle legacy-game migration, or return to deepening Phase 6 — worth deciding explicitly rather than defaulting.
