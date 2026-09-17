@@ -203,6 +203,7 @@ Securing the API endpoint (who can call it) is not the same as preventing the us
 - **Watch for circular `require()`s** between route files that both need something from each other — extract the shared function into `server/lib/` instead.
 - **`admin-common.js`/`admin-common.css` are cache-busted as `?v=N`** — bump `N` in every HTML file referencing them whenever either file changes (grep `admin-common.js?v=`).
 - Don't let a new commit assume an intentionally undeployed prior commit's schema is already live — `git pull` always catches the server up to HEAD, so if two commits land together, code written against commit B's schema can break if B ships before A's migration runs.
+- **`brain-games.js`'s `getPrincipal()` (dual site-user/PIN-student resolver) tries a site-user (`fn_user_session`) cookie before a student (`fn_student_session`) one.** If a browser context (or Playwright test) has signed in as both a teacher and a PIN student, `GET /api/brain-games/me/*` silently returns the teacher's own progress/badges, not the student's — no error, just the wrong identity. When a test needs to check a PIN-student's brain-games state, drive that part from an isolated `browser.newContext()`, not the same context/page used for teacher setup calls.
 
 ## Working with this codebase in an AI-assisted session
 
