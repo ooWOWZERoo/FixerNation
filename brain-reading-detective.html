@@ -68,7 +68,7 @@
         ],
         correctChoiceId: 'hopeful-nervous',
         correctEvidenceIndex: 2,
-        explanation: 'Waving right back when noticed shows Jordan wanted to connect — that’s hopeful, not uninterested or angry.',
+        explanation: 'Waving right back the moment Jordan was noticed is the clue. That’s what hopeful looks like, not uninterested or angry.',
       },
       {
         passage: [
@@ -84,7 +84,7 @@
         ],
         correctChoiceId: 'trail-leads',
         correctEvidenceIndex: 0,
-        explanation: 'The footprints themselves are the clue that lets you follow someone’s path — that’s the passage’s main idea.',
+        explanation: 'That’s the main idea right there: a trail of footprints lets you follow someone’s path even when you didn’t see them walk it.',
       },
       {
         passage: [
@@ -100,7 +100,7 @@
         ],
         correctChoiceId: 'moved-inside',
         correctEvidenceIndex: 1,
-        explanation: 'Gray clouds, rising wind, and a frown at the weather app all point to the picnic plan changing — not staying the same.',
+        explanation: 'Gray clouds, rising wind, and that frown at the weather app are all pointing the same direction. The plan is about to change.',
       },
     ],
   };
@@ -108,7 +108,7 @@
   fetch('/api/brain-games/me/progress').then((r) => {
     if (!r.ok) {
       document.getElementById('loginHint').textContent =
-        'Playing without an account or classroom login — progress won\'t be saved.';
+        'Playing without an account or classroom login, so progress won\'t be saved.';
     }
   }).catch(() => {});
 

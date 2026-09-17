@@ -74,22 +74,22 @@
       const savingsStrong = final.Savings >= 350;
       const creditStrong = final['Credit Score'] >= 660;
       if (savingsStrong && creditStrong) {
-        return 'Jordan built a real savings cushion while keeping credit healthy — a strong, balanced result.';
+        return 'Jordan built a real savings cushion while keeping credit healthy. A strong, balanced result.';
       }
       if (savingsStrong) {
-        return 'Jordan leaned into building savings. That’s a real strength — keeping an eye on credit health next is a reasonable next step, not a failure.';
+        return 'Jordan leaned into building savings. That’s a real strength, and keeping an eye on credit health next is a reasonable next step, not a failure.';
       }
       if (creditStrong) {
-        return 'Jordan prioritized protecting credit health. That’s a real strength — building up a savings cushion next would round out the plan, not fix a mistake.';
+        return 'Jordan prioritized protecting credit health. That’s a real strength, and building up a savings cushion next would round out the plan, not fix a mistake.';
       }
-      return 'Jordan made it through some real tradeoffs. Every choice here had a reasonable case for it — the goal now is just noticing which one to lean into next.';
+      return 'Jordan made it through some real tradeoffs. Every choice here had a reasonable case for it. The goal now is just noticing which one to lean into next.';
     },
   };
 
   fetch('/api/brain-games/me/progress').then((r) => {
     if (!r.ok) {
       document.getElementById('loginHint').textContent =
-        'Playing without an account or classroom login — progress won\'t be saved.';
+        'Playing without an account or classroom login, so progress won\'t be saved.';
     }
   }).catch(() => {});
 
@@ -103,7 +103,7 @@
     header: {
       icon: '💰',
       title: 'Money Matters',
-      description: 'Manage Jordan’s first few months on a budget — there’s more than one way to do it well.',
+      description: 'Manage Jordan’s first few months on a budget. There’s more than one way to do it well.',
     },
   });
 </script>
