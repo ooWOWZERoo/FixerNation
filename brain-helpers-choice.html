@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Helper's Choice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="footer.js?v=3"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js"></script>
+<script src="engine-audio-choice.js"></script>
+<script>
+  // Helper's Choice - Tune Your Brain SEL scaling slice (Discover band).
+  // Targets Responsible decision-making, which had ZERO Discover-band
+  // coverage before this (see the corrected CASEL x band matrix,
+  // 2026-09-21, in docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md) -
+  // together with Sharing Circle (Social awareness, Relationship
+  // skills), this closes Discover's 3-competency gap. Uses
+  // engine-audio-choice.js, same as Calm Down Corner/Sharing Circle,
+  // since Discover requires no reading and spoken support (section 7.2).
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'discover';
+
+  const contentPack = {
+    title: "Helper's Choice",
+    items: [
+      {
+        stimulusType: 'audio',
+        stimulusText: 'You find a dollar bill on the classroom floor.',
+        transcript: 'You find a dollar bill on the classroom floor. What is the responsible thing to do?',
+        choices: [
+          { id: 'give-teacher', label: '🙋', aria: 'give it to the teacher' },
+          { id: 'keep-quiet', label: '🤫', aria: 'keep it quietly' },
+          { id: 'pocket', label: '🎒', aria: 'put it in your own backpack' },
+        ],
+        correctId: 'give-teacher',
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: 'You accidentally knock over a cup of paint and it spills on the table.',
+        transcript: 'You accidentally knock over a cup of paint and it spills on the table. What is the responsible thing to do?',
+        choices: [
+          { id: 'tell-clean', label: '🧽', aria: 'tell the teacher and help clean it up' },
+          { id: 'hide', label: '🙈', aria: 'hide it and walk away' },
+          { id: 'blame', label: '👉', aria: 'blame someone else' },
+        ],
+        correctId: 'tell-clean',
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: 'You promised to feed the class fish, but you are busy playing.',
+        transcript: 'You promised to feed the class fish, but you are busy playing. What is the responsible thing to do?',
+        choices: [
+          { id: 'pause-feed', label: '⏸️', aria: 'pause and feed the fish first' },
+          { id: 'skip', label: '🙅', aria: 'skip it, someone else will do it' },
+          { id: 'upset', label: '😤', aria: 'get upset that you have to' },
+        ],
+        correctId: 'pause-feed',
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: 'Your friend wants you to say you both finished your worksheet, but you did not finish yours.',
+        transcript: 'Your friend wants you to say you both finished your worksheet, but you did not finish yours. What is the responsible thing to do?',
+        choices: [
+          { id: 'tell-truth', label: '✋', aria: 'tell the truth that you are not done yet' },
+          { id: 'go-along', label: '🤐', aria: 'go along with it' },
+          { id: 'get-mad', label: '😠', aria: 'get mad at your friend' },
+        ],
+        correctId: 'tell-truth',
+      },
+    ],
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'audioChoice',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'helpers-choice-responsibility',
+    header: {
+      icon: '✋',
+      title: "Helper's Choice",
+      description: 'Listen to what happened, then pick the responsible thing to do.',
+    },
+  });
+</script>
+</body>
+</html>

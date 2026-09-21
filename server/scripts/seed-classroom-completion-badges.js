@@ -22,7 +22,8 @@
 // voice, themed around the self-management competency both games cover.
 // Cue Spotter (Feelings Detective) follows the same pattern, themed
 // around the cue-noticing mechanic rather than repeating the game's own
-// "detective" name.
+// "detective" name. Caring Friend (Sharing Circle) and Honest Helper
+// (Helper's Choice) follow the same voice.
 //
 // Safe to re-run: each badge is skipped if its slug already exists.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
@@ -57,6 +58,10 @@ const BADGES = [
     description: 'Completed Group Chat Meltdown through a classroom assignment.' },
   { gameSlug: 'feelings-detective', slug: 'cue-spotter', name: 'Cue Spotter', emoji: '🔍',
     description: 'Completed Feelings Detective through a classroom assignment.' },
+  { gameSlug: 'sharing-circle', slug: 'caring-friend', name: 'Caring Friend', emoji: '🤗',
+    description: 'Completed Sharing Circle through a classroom assignment.' },
+  { gameSlug: 'helpers-choice', slug: 'honest-helper', name: 'Honest Helper', emoji: '✋',
+    description: "Completed Helper's Choice through a classroom assignment." },
 ];
 
 async function main() {

@@ -190,5 +190,18 @@ See `SCENARIO_CHOICE_ENGINE_SPIKE.md` for the full spike and what was decided. S
 
 **Deployed and confirmed live 2026-09-21** — catalog entry + `cue-spotter` badge seeded, rsync'd, and the full teacher-assigns → student-plays → real-completion-recorded flow verified via `feelings-detective-assignment.spec.ts` against production.
 
+## Sharing Circle + Helper's Choice — Discover's 3-competency gap closed
+
+User picked 4 directions to pursue (2026-09-21): Discover's SEL gap first, then admin visibility, site-wide a11y tooling, and pausing CSS work in favor of scoping real illustration. This is the first of the four.
+
+Re-derived the real CASEL × band matrix from every seed script's actual `casel_competencies` value (not from a stale summary) — see `GAP_ANALYSIS_2026-09-17.md`'s 2026-09-21 update. Found Discover was missing 3 of 5 competencies entirely, not just Self-awareness/Self-management's "1 band each" framing from the prior session's notes.
+
+**Sharing Circle** (`brain-sharing-circle.html`) — Social awareness + Relationship skills, 4 rounds (comforting a crying classmate, inviting a new kid to play, helping after a lunch-tray spill, comforting a scared sibling). New badge **Caring Friend** 🤗.
+**Helper's Choice** (`brain-helpers-choice.html`) — Responsible decision-making, 4 rounds (a found dollar, a paint spill, a forgotten class-fish promise, a friend asking to fudge a worksheet). New badge **Honest Helper** ✋.
+
+Both reuse `engine-audio-choice.js` unchanged (proven a 3rd time at Discover band) — no new engine, no CSS changes. Verified locally: header/narration/replay render correctly, choice grid sizing correct (short single-emoji choices, no repeat of the Feelings Detective long-text issue), both correct- and incorrect-choice feedback paths confirmed, round-to-round advancement confirmed.
+
+**Not yet deployed** — needs `seed-sharing-circle-catalog-entry.js`, `seed-helpers-choice-catalog-entry.js`, then `seed-classroom-completion-badges.js` again (idempotent), then rsync. No schema change, no server-route change, no app restart.
+
 ## Next recommended step
-Decide: keep extending the Discover CSS direction further or move to sourcing real illustration, revisit Self-awareness/Self-management for the other 3 bands (per the gap analysis's own item 4), or pivot to admin-facing Tune Your Brain visibility / accessibility test tooling (both still zero). Worth deciding explicitly rather than defaulting.
+Deploy this slice and verify live, then move to the next of the 4 chosen directions: admin-facing visibility (blocked on confirming D4's scope, now resolved as Option 3 — permission-gated, both classroom and school-wide), site-wide accessibility test tooling (axe-core, chosen scope), or the Discover illustration-sourcing scoping doc (CSS work itself is now paused per the user's own call).
