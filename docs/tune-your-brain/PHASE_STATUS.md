@@ -211,5 +211,15 @@ See `ADMIN_VISIBILITY_SPIKE.md` for the full design and access matrix (confirmat
 
 `@axe-core/playwright` added to `tests/`, new `tests/e2e/accessibility-scan.spec.ts` scanning 11 representative pages (public, admin, teacher, 2 Tune Your Brain games). Deliberately informational (logs violations, doesn't fail CI) — see `GAP_ANALYSIS_2026-09-17.md`'s updated Finding 2 for the real first-run results: cross-cutting `color-contrast`/landmark/heading-order issues on every page scanned (flagged, not fixed — a real remediation plan is separate work), plus **one real bug found and fixed**: `game-shell.js`'s shared `renderProgress()` had no accessible name on any game's progress bar, site-wide, across every engine. Fixed with `aria-labelledby`, verified locally. Also spawned a separate background task for an unrelated pre-existing issue hit while writing this: the school-admin QA test account failed to log in.
 
+## Discover illustration sourcing — scoped, a real business decision pending
+
+See `DISCOVER_ILLUSTRATION_SOURCING_SPIKE.md`. Confirmed zero illustrated art assets exist anywhere in the repo (matches the usability review's earlier finding). Real ballpark costs found for commissioned illustration ($500-$1,500 budget tier up to $5,000-$12,000+ premium, per a quick web search — not vendor quotes). Recommends a hybrid path: prototype cheap (AI-generated or stock) to validate the direction before committing commission-tier budget, since nothing here has been user-tested yet. This is a real budget/timeline decision only the user can make — not something to default on.
+
+## All 4 chosen directions now addressed (2026-09-21) — status recap
+1. Discover's 3-competency SEL gap — **built**, pending deploy (Sharing Circle, Helper's Choice).
+2. Admin-facing visibility — **scoped** (`ADMIN_VISIBILITY_SPIKE.md`), access matrix needs confirmation before code.
+3. Site-wide accessibility tooling — **built and deployed-pending** (one real bug already fixed: `game-shell.js` progress bars had no accessible name).
+4. Discover illustration sourcing — **scoped** (`DISCOVER_ILLUSTRATION_SOURCING_SPIKE.md`), a real budget decision pending.
+
 ## Next recommended step
-Deploy the Sharing Circle/Helper's Choice slice (still pending) and the progressbar accessibility fix, then decide: confirm the admin-visibility access matrix so that can move to code, or move to the Discover illustration-sourcing scoping doc (the 4th and last of the chosen directions, CSS work itself paused per the user's own call).
+Deploy the pending slice (Sharing Circle/Helper's Choice + the progressbar a11y fix — both already pushed, same rsync). Then get answers on the two real open decisions: confirm the admin-visibility access matrix (so that can move to code), and pick a sourcing path for Discover illustration (or explicitly decide to keep deferring it).
