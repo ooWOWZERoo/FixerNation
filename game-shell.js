@@ -47,15 +47,22 @@
 
   // current/total are 1-indexed for the visible label ("Item 2 of 5") but
   // the fill percentage is computed from the raw values.
+  // aria-labelledby (not a duplicated aria-label) so the visible-if-CSS-
+  // fails sr-only text stays the single source of truth for the name —
+  // found by the new site-wide accessibility scan (accessibility-scan.spec.ts,
+  // 2026-09-21): every game's progress bar had role="progressbar" with no
+  // accessible name at all, since the sr-only text next to it was never
+  // actually associated with it.
   function renderProgress(current, total) {
     const el = document.createElement('div');
     el.className = 'fn-shell-progress';
     const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+    const labelId = `fn-progress-label-${Math.random().toString(36).slice(2, 9)}`;
     el.innerHTML = `
-      <span class="fn-shell-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${current}">
+      <span class="fn-shell-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${current}" aria-labelledby="${labelId}">
         <span class="fn-shell-progress-fill" style="width:${pct}%"></span>
       </span>
-      <span class="sr-only">Item ${current} of ${total}</span>
+      <span class="sr-only" id="${labelId}">Item ${current} of ${total}</span>
     `;
     return el;
   }

@@ -203,5 +203,13 @@ Both reuse `engine-audio-choice.js` unchanged (proven a 3rd time at Discover ban
 
 **Not yet deployed** — needs `seed-sharing-circle-catalog-entry.js`, `seed-helpers-choice-catalog-entry.js`, then `seed-classroom-completion-badges.js` again (idempotent), then rsync. No schema change, no server-route change, no app restart.
 
+## Admin visibility — scoped, not built
+
+See `ADMIN_VISIBILITY_SPIKE.md` for the full design and access matrix (confirmation still needed before any code — per `CLAUDE.md`'s own rule for access-gating features). Real gap found while researching this: `learning_events.school_id` is never populated on write, despite the schema having a dedicated index built for exactly this query — every Tune Your Brain event since Phase 3 has `school_id = NULL`. No admin aggregate view can work until that write-path gap is fixed (plus a historical-backfill decision). Design proposes reusing the existing `GET /api/school-admin/reports?type=` pattern (a new `tune-your-brain` type) rather than a new route/auth pattern, and a UI card on `admin-licenses.html`/`school-admin-dashboard.html` rather than new pages.
+
+## Site-wide accessibility test tooling — built, one real bug fixed
+
+`@axe-core/playwright` added to `tests/`, new `tests/e2e/accessibility-scan.spec.ts` scanning 11 representative pages (public, admin, teacher, 2 Tune Your Brain games). Deliberately informational (logs violations, doesn't fail CI) — see `GAP_ANALYSIS_2026-09-17.md`'s updated Finding 2 for the real first-run results: cross-cutting `color-contrast`/landmark/heading-order issues on every page scanned (flagged, not fixed — a real remediation plan is separate work), plus **one real bug found and fixed**: `game-shell.js`'s shared `renderProgress()` had no accessible name on any game's progress bar, site-wide, across every engine. Fixed with `aria-labelledby`, verified locally. Also spawned a separate background task for an unrelated pre-existing issue hit while writing this: the school-admin QA test account failed to log in.
+
 ## Next recommended step
-Deploy this slice and verify live, then move to the next of the 4 chosen directions: admin-facing visibility (blocked on confirming D4's scope, now resolved as Option 3 — permission-gated, both classroom and school-wide), site-wide accessibility test tooling (axe-core, chosen scope), or the Discover illustration-sourcing scoping doc (CSS work itself is now paused per the user's own call).
+Deploy the Sharing Circle/Helper's Choice slice (still pending) and the progressbar accessibility fix, then decide: confirm the admin-visibility access matrix so that can move to code, or move to the Discover illustration-sourcing scoping doc (the 4th and last of the chosen directions, CSS work itself paused per the user's own call).
