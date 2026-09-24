@@ -72,6 +72,20 @@ const AUTOMATIONS = [
     reminderDaysBefore: 7,
   },
   {
+    eventKey: 'affiliate_application_approved',
+    label: 'Affiliate — Application Approved',
+    subject: "You're in — welcome to the Fixer Nation Education affiliate program",
+    body: "Hi {{firstName}},\n\nGood news: your affiliate application is approved.\n\nYour referral code is {{referralCode}}, and your commission rate is {{commissionRate}}%. Territory: {{territory}}.\n\nShare this link and any sale that comes through it in the next 90 days is credited to you:\n{{referralLink}}\n\nSet your account password here to get in:\n{{setPasswordUrl}}\n\nQuestions about the program, your territory, or how commission is paid? Just reply to this email.\n\nWelcome aboard,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
+    eventKey: 'affiliate_application_rejected',
+    label: 'Affiliate — Application Not Approved',
+    subject: 'About your Fixer Nation Education affiliate application',
+    body: "Hi {{firstName}},\n\nThank you for your interest in the Fixer Nation Education affiliate program. We're not able to move forward with your application right now.\n\n{{reason}}\n\nThis isn't permanent — if something changes on your end, you're welcome to apply again.\n\nWith appreciation,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
     eventKey: 'quote_accepted',
     label: 'Quote Accepted — School Onboarding',
     subject: "Welcome to Fixer Nation Education — let's get your school set up",

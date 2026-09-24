@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Affiliates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=17">
+<style>
+  .aff-tab-bar{display:flex;gap:0;border-bottom:1px solid var(--a-border);margin-bottom:24px;overflow-x:auto;}
+  .aff-tab{background:none;border:none;padding:11px 18px;font-size:13.5px;font-weight:600;color:var(--a-text-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s,border-color .15s;font-family:inherit;}
+  .aff-tab:hover{color:var(--a-text);}
+  .aff-tab.active{color:var(--a-accent);border-bottom-color:var(--a-accent);}
+  .a-hint { font-size: 12px; color: var(--a-text-soft); margin-top: 4px; }
+  .err-inline { color: var(--a-danger); font-size: 13px; margin-bottom: 12px; display: none; }
+  .pitch-box { background: var(--a-bg); border: 1px solid var(--a-border); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
+  .code-cell { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 700; }
+  .meta-line { font-size: 12px; color: var(--a-text-soft); }
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+  <script src="admin-nav.js?v=20"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Affiliates</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div class="aff-tab-bar">
+        <button class="aff-tab active" data-tab="applications" onclick="switchTab('applications')">Applications <span id="pendingBadge"></span></button>
+        <button class="aff-tab" data-tab="affiliates" onclick="switchTab('affiliates')">Affiliates</button>
+      </div>
+
+      <!-- Applications tab -->
+      <div id="tab-applications">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+          <input type="search" id="appSearch" placeholder="Filter by name, email or company…"
+            oninput="debounceApps()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);flex:1;max-width:320px;">
+          <select id="appStatus" onchange="loadApplications()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);">
+            <option value="pending">Pending review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="">All</option>
+          </select>
+        </div>
+        <div class="a-card">
+          <div id="appTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- Affiliates tab -->
+      <div id="tab-affiliates" style="display:none;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+          <input type="search" id="affSearch" placeholder="Filter by name, email, code or territory…"
+            oninput="debounceAffs()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);flex:1;max-width:340px;">
+        </div>
+        <div class="a-card">
+          <div id="affTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Approve modal -->
+<div class="a-modal-overlay" id="approveModal">
+  <div class="a-modal" style="max-width:560px;">
+    <div class="a-modal-head">
+      <h3>Approve application</h3>
+      <button class="a-modal-close" onclick="closeModal('approveModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="approveErr"></div>
+      <div id="approveWho" style="font-size:14px;font-weight:600;margin-bottom:4px;"></div>
+      <div class="meta-line" id="approveMeta" style="margin-bottom:18px;"></div>
+
+      <div class="a-field">
+        <label>Commission Rate (%) *</label>
+        <input type="number" id="approveRate" min="0.01" max="100" step="0.25" placeholder="10">
+        <div class="a-hint">Each sale snapshots this rate when it happens, so changing it later never rewrites past commission.</div>
+      </div>
+      <div class="a-field">
+        <label>Territory</label>
+        <input type="text" id="approveTerritory" placeholder="e.g. Central Florida">
+        <div class="a-hint">Organizational only. Two active affiliates can't hold the same territory, but territory never decides who earns a commission — the referral code does.</div>
+      </div>
+      <div class="a-field">
+        <label>Referral Code</label>
+        <input type="text" id="approveCode" placeholder="Leave blank to generate one">
+        <div class="a-hint">4–32 characters, letters, numbers and dashes. Generated from their last name if you leave this empty.</div>
+      </div>
+      <div id="approvePitchWrap" style="display:none;">
+        <label style="display:block;font-size:12.5px;font-weight:700;color:var(--a-text-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Their background</label>
+        <div class="pitch-box" id="approvePitch"></div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('approveModal')">Cancel</button>
+      <button class="a-btn a-btn-primary" id="approveBtn" onclick="doApprove()">Approve &amp; send welcome</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reject modal -->
+<div class="a-modal-overlay" id="rejectModal">
+  <div class="a-modal" style="max-width:480px;">
+    <div class="a-modal-head">
+      <h3>Reject application</h3>
+      <button class="a-modal-close" onclick="closeModal('rejectModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="rejectErr"></div>
+      <div id="rejectWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+      <div class="a-field">
+        <label>Reason *</label>
+        <textarea id="rejectReason" placeholder="Territory is already covered, no K-12 sales history, etc."></textarea>
+        <div class="a-hint">This text goes into the email they receive, so write it as something you'd want them to read. They can reapply at any time.</div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('rejectModal')">Cancel</button>
+      <button class="a-btn a-btn-danger" id="rejectBtn" onclick="doReject()">Reject &amp; send email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit affiliate modal -->
+<div class="a-modal-overlay" id="editModal">
+  <div class="a-modal" style="max-width:480px;">
+    <div class="a-modal-head">
+      <h3>Edit affiliate</h3>
+      <button class="a-modal-close" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="editErr"></div>
+      <div id="editWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+      <div class="a-field">
+        <label>Commission Rate (%)</label>
+        <input type="number" id="editRate" min="0.01" max="100" step="0.25">
+        <div class="a-hint">Applies to sales from here on. Commission already recorded on a past sale stays exactly as it was.</div>
+      </div>
+      <div class="a-field">
+        <label>Territory</label>
+        <input type="text" id="editTerritory" placeholder="Unassigned">
+      </div>
+      <div class="a-field">
+        <label>Status</label>
+        <select id="editStatus">
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+        </select>
+        <div class="a-hint">Suspending frees their territory for someone else. Their past sales and commission history stay on record.</div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('editModal')">Cancel</button>
+      <button class="a-btn a-btn-primary" id="editBtn" onclick="doEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Application detail modal -->
+<div class="a-modal-overlay" id="detailModal">
+  <div class="a-modal" style="max-width:560px;">
+    <div class="a-modal-head">
+      <h3>Application</h3>
+      <button class="a-modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="a-modal-body" id="detailBody"></div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('detailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sales modal -->
+<div class="a-modal-overlay" id="salesModal">
+  <div class="a-modal" style="max-width:820px;">
+    <div class="a-modal-head">
+      <h3 id="salesTitle">Attributed sales</h3>
+      <button class="a-modal-close" onclick="closeModal('salesModal')">✕</button>
+    </div>
+    <div class="a-modal-body" id="salesBody"></div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('salesModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=16"></script>
+<script>
+fnRequireAuth();
+
+var applications = [], affiliates = [], appDebounce = null, affDebounce = null;
+var approveId = null, rejectId = null, editId = null;
+
+document.addEventListener('DOMContentLoaded', function () {
+  loadApplications();
+  loadAffiliates();
+});
+
+function switchTab(tab) {
+  document.querySelectorAll('.aff-tab').forEach(function (btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+  });
+  document.getElementById('tab-applications').style.display = tab === 'applications' ? '' : 'none';
+  document.getElementById('tab-affiliates').style.display = tab === 'affiliates' ? '' : 'none';
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function debounceApps() { clearTimeout(appDebounce); appDebounce = setTimeout(loadApplications, 300); }
+function debounceAffs() { clearTimeout(affDebounce); affDebounce = setTimeout(loadAffiliates, 300); }
+
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function money(cents) { return '$' + (Number(cents || 0) / 100).toFixed(2); }
+function shortDate(v) { return v ? String(v).slice(0, 10) : '—'; }
+
+// --- Applications -----------------------------------------------------------
+
+async function loadApplications() {
+  var q = document.getElementById('appSearch').value.trim();
+  var status = document.getElementById('appStatus').value;
+  var params = [];
+  if (q) params.push('q=' + encodeURIComponent(q));
+  if (status) params.push('status=' + encodeURIComponent(status));
+  var wrap = document.getElementById('appTableWrap');
+  try {
+    const r = await fetch('/api/affiliates/applications' + (params.length ? '?' + params.join('&') : ''), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    applications = d.applications || [];
+    renderBadge(d.counts);
+    renderApplications();
+  } catch (e) {
+    wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderBadge(counts) {
+  var el = document.getElementById('pendingBadge');
+  var pending = counts && counts.pending;
+  el.innerHTML = pending ? '<span class="a-pill a-pill-warn" style="margin-left:6px;">' + pending + '</span>' : '';
+}
+
+function renderApplications() {
+  var wrap = document.getElementById('appTableWrap');
+  if (!applications.length) {
+    wrap.innerHTML = '<div class="a-empty"><div class="big">🤝</div>No applications here yet.</div>';
+    return;
+  }
+  wrap.innerHTML =
+    '<table class="a-table"><thead><tr><th>Applicant</th><th>Company</th><th>Requested territory</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    applications.map(function (a) {
+      var name = [a.first_name, a.last_name].filter(Boolean).join(' ');
+      var statusPill = a.status === 'approved'
+        ? '<span class="a-pill a-pill-success">Approved</span>'
+        : a.status === 'rejected'
+          ? '<span class="a-pill a-pill-danger">Rejected</span>'
+          : '<span class="a-pill a-pill-warn">Pending</span>';
+      var repeat = Number(a.prior_decisions || 0) > 0
+        ? ' <span class="a-pill a-pill-neutral" title="This email has applied before">Reapplied</span>'
+        : '';
+      var actions = a.status === 'pending'
+        ? '<button class="a-btn a-btn-primary a-btn-sm" onclick="openApprove(' + a.id + ')">Approve</button> ' +
+          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openReject(' + a.id + ')">Reject</button> '
+        : '';
+      return '<tr>' +
+        '<td><div style="font-weight:600;">' + esc(name) + repeat + '</div><div class="meta-line">' + esc(a.email) + '</div></td>' +
+        '<td style="font-size:13px;">' + esc(a.company || '—') + '</td>' +
+        '<td style="font-size:13px;">' + esc(a.requested_territory || '—') + '</td>' +
+        '<td style="font-size:13px;">' + shortDate(a.created_at) + '</td>' +
+        '<td>' + statusPill + '</td>' +
+        '<td style="white-space:nowrap;">' + actions +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openDetail(' + a.id + ')">Details</button>' +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function openDetail(id) {
+  var a = applications.find(function (x) { return x.id === id; });
+  if (!a) return;
+  var rows = [
+    ['Name', [a.first_name, a.last_name].filter(Boolean).join(' ')],
+    ['Email', a.email],
+    ['Company', a.company || '—'],
+    ['Phone', a.phone || '—'],
+    ['Requested territory', a.requested_territory || '—'],
+    ['Submitted', shortDate(a.created_at)],
+    ['Status', a.status],
+  ];
+  if (a.reviewed_at) rows.push(['Reviewed', shortDate(a.reviewed_at) + (a.reviewed_by_username ? ' by ' + a.reviewed_by_username : '')]);
+  if (a.rejection_reason) rows.push(['Reason given', a.rejection_reason]);
+  if (Number(a.prior_decisions || 0) > 0) rows.push(['Earlier applications', String(a.prior_decisions)]);
+
+  document.getElementById('detailBody').innerHTML =
+    rows.map(function (r) {
+      return '<div style="display:flex;gap:12px;margin-bottom:10px;font-size:13.5px;">' +
+        '<div style="width:170px;flex-shrink:0;color:var(--a-text-soft);font-weight:600;">' + esc(r[0]) + '</div>' +
+        '<div>' + esc(r[1]) + '</div></div>';
+    }).join('') +
+    (a.pitch
+      ? '<div style="margin-top:16px;"><div style="font-size:12.5px;font-weight:700;color:var(--a-text-soft);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Their background</div><div class="pitch-box">' + esc(a.pitch) + '</div></div>'
+      : '');
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function openApprove(id) {
+  var a = applications.find(function (x) { return x.id === id; });
+  if (!a) return;
+  approveId = id;
+  document.getElementById('approveErr').style.display = 'none';
+  document.getElementById('approveWho').textContent = [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.email;
+  document.getElementById('approveMeta').textContent =
+    (a.company ? a.company + ' · ' : '') + 'Asked for: ' + (a.requested_territory || 'no territory in particular');
+  document.getElementById('approveRate').value = '';
+  document.getElementById('approveTerritory').value = a.requested_territory || '';
+  document.getElementById('approveCode').value = '';
+  document.getElementById('approvePitchWrap').style.display = a.pitch ? '' : 'none';
+  document.getElementById('approvePitch').textContent = a.pitch || '';
+  document.getElementById('approveModal').classList.add('show');
+}
+
+async function doApprove() {
+  var btn = document.getElementById('approveBtn');
+  var err = document.getElementById('approveErr');
+  err.style.display = 'none';
+  var rate = document.getElementById('approveRate').value;
+  if (!rate) { err.textContent = 'A commission rate is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Approving…';
+  try {
+    const r = await fetch('/api/affiliates/applications/' + approveId + '/approve', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        commissionRate: Number(rate),
+        territory: document.getElementById('approveTerritory').value.trim(),
+        referralCode: document.getElementById('approveCode').value.trim(),
+      }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeModal('approveModal');
+    fnToast('Approved. Referral code ' + d.referralCode + ', welcome email sent.');
+    loadApplications();
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Approve & send welcome'; }
+}
+
+function openReject(id) {
+  var a = applications.find(function (x) { return x.id === id; });
+  if (!a) return;
+  rejectId = id;
+  document.getElementById('rejectErr').style.display = 'none';
+  document.getElementById('rejectWho').textContent = [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.email;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectModal').classList.add('show');
+}
+
+async function doReject() {
+  var btn = document.getElementById('rejectBtn');
+  var err = document.getElementById('rejectErr');
+  err.style.display = 'none';
+  var reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { err.textContent = 'A reason is required — it goes into their email.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/affiliates/applications/' + rejectId + '/reject', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeModal('rejectModal');
+    fnToast('Application rejected and the applicant emailed.');
+    loadApplications();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Reject & send email'; }
+}
+
+// --- Affiliates -------------------------------------------------------------
+
+async function loadAffiliates() {
+  var q = document.getElementById('affSearch').value.trim();
+  var wrap = document.getElementById('affTableWrap');
+  try {
+    const r = await fetch('/api/affiliates' + (q ? '?q=' + encodeURIComponent(q) : ''), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    affiliates = d.affiliates || [];
+    renderAffiliates();
+  } catch (e) {
+    wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderAffiliates() {
+  var wrap = document.getElementById('affTableWrap');
+  if (!affiliates.length) {
+    wrap.innerHTML = '<div class="a-empty"><div class="big">🤝</div>No affiliates yet. Approve an application to create the first one.</div>';
+    return;
+  }
+  wrap.innerHTML =
+    '<table class="a-table"><thead><tr><th>Affiliate</th><th>Referral code</th><th>Rate</th><th>Territory</th><th>Status</th><th>Sales</th><th>Commission</th><th>Actions</th></tr></thead><tbody>' +
+    affiliates.map(function (a) {
+      var name = [a.first_name, a.last_name].filter(Boolean).join(' ');
+      var unverified = a.email_verified ? '' : ' <span class="a-pill a-pill-warn" title="Has not set a password yet">Setup pending</span>';
+      var statusPill = a.status === 'active'
+        ? '<span class="a-pill a-pill-success">Active</span>'
+        : '<span class="a-pill a-pill-danger">Suspended</span>';
+      return '<tr>' +
+        '<td><div style="font-weight:600;">' + esc(name) + unverified + '</div><div class="meta-line">' + esc(a.email) + '</div></td>' +
+        '<td><span class="code-cell">' + esc(a.referral_code) + '</span> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="copyLink(\'' + esc(a.referral_code) + '\',this)" title="Copy their referral link">Copy link</button></td>' +
+        '<td style="font-size:13px;">' + esc(Number(a.commission_rate).toFixed(2).replace(/\.00$/, '')) + '%</td>' +
+        '<td style="font-size:13px;">' + esc(a.territory || '—') + '</td>' +
+        '<td>' + statusPill + '</td>' +
+        '<td style="font-size:13px;">' + Number(a.sale_count || 0) + '</td>' +
+        '<td style="font-size:13px;font-weight:600;">' + money(a.commission_cents) + '</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openSales(' + a.id + ')">Sales</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEdit(' + a.id + ')">Edit</button>' +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function copyLink(code, btn) {
+  var link = window.location.origin + '/school-licensing.html?ref=' + code;
+  var done = function () {
+    if (!btn) return;
+    var label = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(function () { btn.textContent = label; }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(done, function () { window.prompt('Copy this referral link:', link); });
+  } else {
+    window.prompt('Copy this referral link:', link);
+  }
+}
+
+function openEdit(id) {
+  var a = affiliates.find(function (x) { return x.id === id; });
+  if (!a) return;
+  editId = id;
+  document.getElementById('editErr').style.display = 'none';
+  document.getElementById('editWho').textContent =
+    [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.referral_code;
+  document.getElementById('editRate').value = Number(a.commission_rate);
+  document.getElementById('editTerritory').value = a.territory || '';
+  document.getElementById('editStatus').value = a.status;
+  document.getElementById('editModal').classList.add('show');
+}
+
+async function doEdit() {
+  var btn = document.getElementById('editBtn');
+  var err = document.getElementById('editErr');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/affiliates/' + editId, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        commissionRate: Number(document.getElementById('editRate').value),
+        territory: document.getElementById('editTerritory').value.trim(),
+        status: document.getElementById('editStatus').value,
+      }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeModal('editModal');
+    fnToast('Affiliate updated.');
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save changes'; }
+}
+
+async function openSales(id) {
+  var a = affiliates.find(function (x) { return x.id === id; });
+  if (!a) return;
+  document.getElementById('salesTitle').textContent =
+    'Sales for ' + [a.first_name, a.last_name].filter(Boolean).join(' ') + ' (' + a.referral_code + ')';
+  document.getElementById('salesBody').innerHTML = '<div class="a-empty">⏳ Loading…</div>';
+  document.getElementById('salesModal').classList.add('show');
+  try {
+    const r = await fetch('/api/affiliates/' + id + '/sales', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    var sales = d.sales || [];
+    if (!sales.length) {
+      document.getElementById('salesBody').innerHTML =
+        '<div class="a-empty"><div class="big">📭</div>No sales credited to this affiliate yet.</div>';
+      return;
+    }
+    var total = sales.reduce(function (sum, s) { return sum + Number(s.affiliate_commission_cents || 0); }, 0);
+    document.getElementById('salesBody').innerHTML =
+      '<table class="a-table"><thead><tr><th>Date</th><th>Buyer</th><th>Product</th><th>Payment</th><th>Sale</th><th>Commission</th></tr></thead><tbody>' +
+      sales.map(function (s) {
+        return '<tr>' +
+          '<td style="font-size:13px;">' + shortDate(s.purchased_at) + '</td>' +
+          '<td style="font-size:13px;">' + esc(s.buyer_name || s.buyer_email || '—') + '</td>' +
+          '<td style="font-size:13px;">' + esc(s.plan_name || s.product_type) + '</td>' +
+          '<td style="font-size:13px;">' + esc(s.payment_method) + ' · ' + esc(s.payment_status) + '</td>' +
+          '<td style="font-size:13px;">' + money(s.amount_cents) + '</td>' +
+          '<td style="font-size:13px;font-weight:600;">' + money(s.affiliate_commission_cents) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table>' +
+      '<div style="text-align:right;margin-top:14px;font-size:14px;font-weight:700;">Total commission: ' + money(total) + '</div>';
+  } catch (e) {
+    document.getElementById('salesBody').innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+</script>
+</body>
+</html>

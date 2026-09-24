@@ -56,6 +56,17 @@ PO is explicitly the designed fallback so "a school isn't blocked waiting on the
 
 A school can legitimately have full content access while its invoice is still `unpaid` (admin still chasing the check) or vice versa — this is intentional, documented business logic ("give access on receipt of signed PO paperwork; track money owed separately"), not a bug. Every `invoices` row is inherently PO-sourced — Stripe/card checkouts never create one. Deleting an invoice un-links (not deletes) its purchases.
 
+## Affiliate program
+
+A B2B sales-affiliate program, being built in four stages (`docs/AFFILIATE_PROGRAM_SPIKE.md` holds the design and the confirmed decisions). **Stages 1 and 2 are coded but not yet deployed; stages 3 and 4 are not built.** Not related to the dead `brand_ambassador` membership type below, which was a consumer loyalty idea from a different project.
+
+An affiliate is a role on the existing `site_users` system (`role = 'affiliate'`), with the detail in a joined `affiliates` row — the same split as `district_license_admins`, not a third auth system. What exists today:
+
+- `become-an-affiliate.html` → `POST /api/affiliates/apply` (public, no auth, honeypot field + per-IP throttle) creates an `affiliate_applications` row and emails the sales-alert address. Deliberately **not linked from the nav or footer yet** — the page works by direct URL so the program can be announced when the business is ready.
+- `admin-affiliates.html` → `/api/affiliates/*` (all `requireAuth`) for review and management. Approving creates or promotes the `site_users` account, generates a referral code, records rate + territory, and fires the `affiliate_application_approved` email with a password-setup link; rejecting emails the reason. An approval refuses to overwrite an `admin`/`district_admin`/`school_license_admin` account, since `site_users.role` is a single column and that would be a silent demotion.
+- **Territory** is organizational only and never decides who earns a commission. Exclusivity (one *active* affiliate per label) is enforced at the query level, not by a `UNIQUE` key, so a suspended affiliate's territory becomes assignable again.
+- **Attribution** is 90-day last-touch on a referral code, and commission is snapshotted onto `purchases.affiliate_commission_cents` when the sale happens, so a later rate change never rewrites past earnings. The code that writes those columns is stage 3, so every sales/commission figure in the admin UI reads zero until then.
+
 ## Memberships
 
 Three member types (`consumer`, `service_provider`, `brand_ambassador`), each with admin-editable plans (`membership_plans` — price, billing interval, trial days, Stripe sync when keys are configured). **Confirmed effectively dead as a public checkout path**: the three public signup pages `join.html`/`service-providers.html`/`brand-ambassador.html` do not exist anywhere in the current codebase (removed in the 2026-08-22 scope cleanup, see Known limitations), so `POST /api/checkout/create-membership-session` and its full Stripe subscription/webhook machinery are unreachable from any live page today. **The only live path onto a membership is the admin manual grant** (`admin-memberships.html` → `POST /api/memberships/contacts/:contactId`), which creates a `purchases` + `contact_memberships` row with zero Stripe involvement by design. `contact_memberships.status` (trialing/active/past_due/cancelled/expired) persists across the whole lifecycle; every real charge (first or renewal) creates its own new `purchases` row, which is why membership revenue shows up in Orders/Financial Insights alongside book/license purchases.
@@ -144,6 +155,7 @@ All under a single `fn_session` login (`admin-login.html`; new admins are invite
 - `admin-memberships.html` — membership plan CRUD (Stripe-synced when keys exist) and per-contact membership management (manual grant, status transitions, renewal reminder trigger).
 - `admin-school-admins.html` — the only way a school-admin account/permission-level gets created or changed.
 - `admin-districts.html` — create/rename/delete districts, assign/unassign schools to a district, and invite/manage district admins (see School-Level Branding & District Hierarchy above).
+- `admin-affiliates.html` — the sales-affiliate program (see Affiliate program above). Two tabs: an application review queue (approve, which sets rate + territory and creates the account, or reject with a reason) and the affiliate directory (edit rate/territory, suspend/reactivate, per-affiliate attributed sales).
 
 **System:**
 - `admin-dashboard.html` — financial summary, sales-over-time chart, six computed insight metrics (MoM growth, quote-to-sale conversion, DSO, LTV, cancellation rate, revenue-by-category), content counts.
@@ -154,9 +166,9 @@ All under a single `fn_session` login (`admin-login.html`; new admins are invite
 
 ## Automations
 
-**10 fixed system-triggered email types** (verified directly against `server/scripts/seed-email-automations.js` — a prior version of this doc listed 13, including several membership-era events that no longer exist post membership-removal), each admin-editable (subject/body/on-off, and for the two reminder types, days-before) from `admin-automations.html`, fired through the single call site `fireAutomation()` (`server/lib/automations.js`), which swallows its own errors so a broken template/SMTP outage never blocks the purchase/invoice/seat action that triggered it:
+**12 fixed system-triggered email types** (verified directly against `server/scripts/seed-email-automations.js` — a prior version of this doc listed 13, including several membership-era events that no longer exist post membership-removal), each admin-editable (subject/body/on-off, and for the two reminder types, days-before) from `admin-automations.html`, fired through the single call site `fireAutomation()` (`server/lib/automations.js`), which swallows its own errors so a broken template/SMTP outage never blocks the purchase/invoice/seat action that triggered it:
 
-`book_purchase_thank_you`, `invoice_paid`, `license_seat_invite`, `school_license_expiring_soon`, `school_license_expired`, `trial_purchase_thank_you`, `trial_expired`, `trial_converted`, `quote_accepted`, `quote_expiring_soon`.
+`book_purchase_thank_you`, `invoice_paid`, `license_seat_invite`, `school_license_expiring_soon`, `school_license_expired`, `trial_purchase_thank_you`, `trial_expired`, `trial_converted`, `quote_accepted`, `quote_expiring_soon`, `affiliate_application_approved`, `affiliate_application_rejected`.
 
 Three of these (`trial_expired`, `school_license_expiring_soon`, `school_license_expired`) plus `quote_expiring_soon` and the daily Morning Boost email are driven by cPanel cron jobs, not live HTTP requests — the expiry crons also handle session invalidation for revoked access, not just the email.
 
@@ -174,6 +186,7 @@ Three of these (`trial_expired`, `school_license_expiring_soon`, `school_license
 - **Renewal-reminder/expiry crons depend on the cPanel Cron Job staying configured**, with no alerting on a missed run. Verify manually with `node scripts/send-membership-reminders.js` if reminders seem to have stopped.
 - **Email open-tracking is pixel-based and imprecise** (plain SMTP relay, not an ESP with delivery webhooks) — treat campaign/Morning-Boost open numbers as directional, not exact.
 - **`-v2` pages are frozen** by original decision, not neglected.
+- **The affiliate program is half-built.** Stages 1–2 (schema, application form, admin review) are coded and awaiting deploy; stage 3 (referral capture at checkout) and stage 4 (the affiliate's own portal) are not written. Two consequences worth knowing before anyone approves a real applicant: no sale can be credited to anyone yet, and an approved affiliate has no portal to log into, so their welcome email points at `my-profile.html` instead (one constant, `AFFILIATE_LANDING_PATH` in `server/routes/affiliates.js`, switches it to the dashboard in stage 4).
 - **Content Safety System is coded but not yet deployed** — needs `npm install --prefix server`, two new scripts run in order (`alter-add-content-safety.js`, `seed-content-safety-default-rules.js`), and a restart. Until then every UGC surface remains completely unmoderated, exactly as it was before. See the Content Safety System section above.
 - **Playwright e2e suite** (own `tests/` package, 51+ spec files, runs against live production) covers every admin page, all public flows, and all 4 site portals — see `tests/README.md`/repo memory for the QA-account seeding script and run pattern. Not wired into CI; run manually.
 

@@ -98,7 +98,15 @@ An affiliate shares a link like `licenses.html?ref=ABC123`. Any page load carryi
 
 Confirmed 2026-09-24. Building and deploying in four stages rather than all at once, so each piece is verified live before the next depends on it:
 
-1. **Schema** — the two new tables plus the two `purchases` columns.
-2. **Application form + admin review UI** — public `become-an-affiliate.html`, `admin-affiliates.html`, approve/reject with emails.
-3. **Referral capture + checkout attribution** — the `?ref=` cookie and the commission snapshot at purchase time.
-4. **Affiliate portal** — `affiliate-dashboard.html`.
+1. ~~**Schema**~~ — *built, awaiting deploy.* `affiliate_applications`, `affiliates`, and the two `purchases` columns (`server/scripts/alter-add-affiliate-program.js`). Two changes from the draft SQL above: `VARCHAR` status columns instead of `ENUM`, matching the rest of this codebase, and a real FK on `purchases.affiliate_id` so a recycled `AUTO_INCREMENT` id can't re-attribute an old sale to a new affiliate.
+2. ~~**Application form + admin review UI**~~ — *built, awaiting deploy.* `become-an-affiliate.html` (honeypot + per-IP throttle), `admin-affiliates.html` (Applications and Affiliates tabs), `server/routes/affiliates.js`, and the two new `email_automations` templates.
+3. **Referral capture + checkout attribution** — the `?ref=` cookie and the commission snapshot at purchase time. Not started.
+4. **Affiliate portal** — `affiliate-dashboard.html`. Not started.
+
+### Known consequences of the staging
+
+Until stage 3 ships, no sale can be credited to anyone, so every sales and commission figure on the admin page reads zero. That's expected, not a bug.
+
+Until stage 4 ships, there's no affiliate portal to land in, so an approved affiliate's welcome email sends them to `my-profile.html` (which every `site_user` already has) rather than a 404. One constant, `AFFILIATE_LANDING_PATH` in `server/routes/affiliates.js`, switches that over when the dashboard exists.
+
+The public page is **not linked from the nav or footer** — reachable by direct URL only. Announcing an affiliate program publicly is a business call, not a deploy step, so that link is left for whenever the program is ready to be visible.

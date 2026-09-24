@@ -108,7 +108,15 @@ ELEVENLABS_API_KEY=      # not yet live; blocks Morning Boost voice-over
 
 ## Admin nav ordering
 
-The icon nav in every `admin-*.html` sidebar is **strictly alphabetical** within the cluster below the divider. Dashboard always stays alone above the divider; Settings/View Site/Log Out always stay in the footer unordered. Insert new nav links alphabetically by label — not at the end, not next to the conceptually related page. Also add the link to **every other** `admin-*.html` file (grep `admin-morning-boost.html` to see the pattern).
+The sidebar is no longer hand-written per page. Every `admin-*.html` file holds an empty `<aside class="a-sidebar"></aside>` followed by `<script src="admin-nav.js?v=N"></script>`, and `admin-nav.js` builds the whole nav from one `SECTIONS` array — so a new admin page means **one** edit there, not 30.
+
+Links sit in a labelled, collapsible section (Sales & Schools, Content, Marketing & CRM, Community, Reports) and are ordered by workflow within it, not alphabetically. Dashboard stays alone above the divider; Settings/View Site/Log Out stay in the footer.
+
+`admin-nav.js` is cache-busted, so **bump `?v=N` in all 22 admin HTML files whenever you touch it** — they're expected to stay on one version, so set them together:
+```bash
+sed -i '' -E 's/"admin-nav\.js\?v=[0-9]+"/"admin-nav.js?v=NEW"/g' admin-*.html
+```
+Keep the leading `"` in that pattern and scope it to `admin-*.html`. `school-admin-nav.js` and `district-admin-nav.js` are separate files on their own independent versions, and an unanchored `admin-nav\.js` matches both of them as a substring.
 
 ## Deploy workflow
 

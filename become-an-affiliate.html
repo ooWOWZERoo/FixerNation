@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Become an Affiliate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 28px; border-radius:999px; font-weight:700; font-size:15px; cursor:pointer; border:none; transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn[disabled]{opacity:0.6; cursor:default; transform:none;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 32px;}
+  .brand{display:flex; align-items:center; gap:12px; font-family:'Fraunces',serif; font-weight:700; font-size:21px; color:var(--teal-dark);}
+  .nav-links{display:flex; align-items:center; gap:26px; font-size:14.5px; font-weight:600; color:var(--ink);}
+  .nav-links a{opacity:0.8;}
+  .nav-links a.active, .nav-links a:hover{opacity:1; color:var(--coral-dark);}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+
+  .aff-hero{padding:64px 0 10px; text-align:center;}
+  .aff-hero h1{font-size:44px; margin:16px 0 16px;}
+  .aff-hero p.lead{font-size:17px; color:var(--ink-soft); max-width:600px; margin:0 auto;}
+
+  .aff-cols{display:grid; grid-template-columns:1fr 1fr; gap:40px; max-width:960px; margin:56px auto 0; padding:0 32px;}
+  .aff-cols h2{font-size:24px; margin-bottom:18px;}
+  .step{display:flex; gap:14px; margin-bottom:18px;}
+  .step-num{flex-shrink:0; width:28px; height:28px; border-radius:50%; background:var(--teal); color:#fff; font-size:13.5px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans',sans-serif;}
+  .step-body{font-size:14.5px; color:var(--ink-soft);}
+  .step-body strong{color:var(--ink); font-weight:700;}
+  .looks li{font-size:14.5px; color:var(--ink-soft); padding-left:24px; position:relative; margin-bottom:12px;}
+  .looks li:before{content:'✓'; position:absolute; left:0; color:var(--coral-dark); font-weight:700;}
+
+  .form-wrap{max-width:660px; margin:56px auto 0; padding:0 32px 90px;}
+  .form-card{background:#fff; border-radius:var(--radius-md); padding:34px; box-shadow:var(--shadow);}
+  .form-card h2{font-size:23px; margin-bottom:6px;}
+  .form-card p.form-intro{font-size:14px; color:var(--ink-soft); margin-bottom:24px;}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .form-field label{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;}
+  .form-field input, .form-field textarea{width:100%; border:2px solid rgba(22,79,74,0.15); border-radius:10px; padding:12px 14px; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; background:var(--cream); color:var(--ink);}
+  .form-field textarea{min-height:130px; resize:vertical;}
+  .form-field input:focus, .form-field textarea:focus{outline:none; border-color:var(--coral);}
+  .form-field{margin-bottom:16px;}
+  .field-hint{font-size:12.5px; color:var(--ink-soft); margin-top:6px;}
+  .form-actions{display:flex; justify-content:flex-end; margin-top:8px;}
+  .success-msg{display:none; background:#E4F3EE; color:var(--teal-dark); border-radius:12px; padding:16px 20px; margin-top:16px; font-weight:600; font-size:14.5px;}
+  .error-msg{display:none; color:#B3261E; font-size:13.5px; margin-top:12px; font-weight:600;}
+  /* Honeypot: never visible to a person, and never announced to a screen
+     reader either, so only a form-filling bot can put anything in it. */
+  .hp-field{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;}
+
+  @media (max-width:960px){
+    .nav-links{display:none;}
+    .aff-cols{grid-template-columns:1fr; gap:32px;}
+  }
+  @media (max-width:600px){
+    .aff-hero h1{font-size:34px;}
+    .form-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<section class="aff-hero wrap">
+  <span class="eyebrow">Partner Program</span>
+  <h1>Become an FNE affiliate</h1>
+  <p class="lead">You already know which schools need this. Bring Fixer Nation Education to them and earn commission on every license that comes through your referral link.</p>
+</section>
+
+<div class="aff-cols">
+  <div>
+    <h2>How it works</h2>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body"><strong>Apply.</strong> Tell us where you sell and who you know. It takes about five minutes.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body"><strong>We read it.</strong> A real person here reviews every application, not a filter.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body"><strong>You get set up.</strong> If it's a fit, we agree on a commission rate and a territory, then send you your own referral link.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body"><strong>You earn.</strong> Any purchase made through your link in the next 90 days is credited to you. Your dashboard shows each sale and what it paid.</div>
+    </div>
+  </div>
+  <div>
+    <h2>What we look for</h2>
+    <ul class="looks">
+      <li>Real relationships with schools, districts, or education service agencies</li>
+      <li>Time spent selling or consulting in K-12</li>
+      <li>The belief that kids deserve better tools for handling hard feelings</li>
+      <li>Patience with school budget cycles, because they move slowly</li>
+    </ul>
+  </div>
+</div>
+
+<div class="form-wrap">
+  <div class="form-card">
+    <h2>Apply to the program</h2>
+    <p class="form-intro">Everything marked with * is required. The rest helps us place you.</p>
+    <form id="affiliateForm">
+      <div class="form-row">
+        <div class="form-field"><label>First name *</label><input type="text" id="affFirst" required placeholder="Jane"></div>
+        <div class="form-field"><label>Last name *</label><input type="text" id="affLast" required placeholder="Doe"></div>
+      </div>
+      <div class="form-field"><label>Email *</label><input type="email" id="affEmail" required placeholder="jane@email.com"></div>
+      <div class="form-row">
+        <div class="form-field"><label>Company or organization</label><input type="text" id="affCompany" placeholder="Doe Education Group"></div>
+        <div class="form-field"><label>Phone</label><input type="tel" id="affPhone" placeholder="(555) 123-4567"></div>
+      </div>
+      <div class="form-field">
+        <label>Territory you'd like to cover</label>
+        <input type="text" id="affTerritory" placeholder="e.g. Central Florida">
+        <div class="field-hint">One active affiliate per territory, no overlap. Tell us the region you want and we'll either confirm it or suggest one that's open.</div>
+      </div>
+      <div class="form-field">
+        <label>Tell us about you</label>
+        <textarea id="affPitch" placeholder="Where you sell, who you know, what you've sold before. Anything that helps us see the fit."></textarea>
+      </div>
+      <div class="hp-field" aria-hidden="true">
+        <label for="affWebsite">Website</label>
+        <input type="text" id="affWebsite" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="affSubmit">Submit application</button>
+      </div>
+      <div class="success-msg" id="affSuccess">Your application is in. We read every one, and you'll hear back by email either way.</div>
+      <div class="error-msg" id="affError"></div>
+    </form>
+  </div>
+</div>
+
+<footer></footer>
+
+<script>
+document.getElementById('affiliateForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var btn = document.getElementById('affSubmit');
+  var errEl = document.getElementById('affError');
+  var okEl = document.getElementById('affSuccess');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/affiliates/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: document.getElementById('affFirst').value,
+        lastName: document.getElementById('affLast').value,
+        email: document.getElementById('affEmail').value,
+        company: document.getElementById('affCompany').value,
+        phone: document.getElementById('affPhone').value,
+        requestedTerritory: document.getElementById('affTerritory').value,
+        pitch: document.getElementById('affPitch').value,
+        website: document.getElementById('affWebsite').value,
+      }),
+    });
+    let d = {};
+    try { d = await r.json(); } catch (_) {}
+    if (r.status === 429) throw new Error("That's a lot of applications from one connection. Give it an hour and try again.");
+    if (!r.ok) throw new Error(d.error || 'Something went wrong sending that. Try again, or email us at admin@fixernationeducation.com.');
+    if (typeof fnTrackEvent === 'function') fnTrackEvent('affiliate_application');
+    this.reset();
+    okEl.style.display = 'block';
+    btn.style.display = 'none';
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit application';
+  }
+});
+</script>
+
+<script src="admin-common.js?v=16"></script>
+<script>fnTrackPageview();</script>
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=6"></script>
+<script src="cart.js"></script>
+
+<script src="footer.js?v=3"></script>
+</body>
+</html>
