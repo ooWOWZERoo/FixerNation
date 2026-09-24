@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS site_users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
-  role VARCHAR(32) NOT NULL DEFAULT 'teacher', -- 'teacher' | 'school_license_admin' | 'district_admin' | 'admin' | 'parent' — added by scripts/alter-school-admin.js on existing installs
+  role VARCHAR(32) NOT NULL DEFAULT 'teacher', -- 'teacher' | 'school_license_admin' | 'district_admin' | 'admin' | 'parent' | 'affiliate' — added by scripts/alter-school-admin.js on existing installs
   session_invalidated_at DATETIME NULL, -- added by scripts/alter-add-session-invalidated-at.js on existing installs; JWTs issued before this timestamp are rejected
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -48,6 +48,65 @@ CREATE TABLE IF NOT EXISTS site_user_tokens (
   expires_at DATETIME NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Sales affiliates — see docs/AFFILIATE_PROGRAM_SPIKE.md
+--
+-- Declared here, above `purchases`, only because purchases.affiliate_id has a
+-- foreign key into `affiliates` and a fresh install runs this file top to
+-- bottom. Added by scripts/alter-add-affiliate-program.js on existing installs.
+-- ---------------------------------------------------------------------------
+
+-- A prospect's application to join the program. Anyone can submit; no login
+-- exists yet at this stage. A rejected applicant may apply again at any time,
+-- so one email can own several rows — the newest by created_at is the live one.
+CREATE TABLE IF NOT EXISTS affiliate_applications (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  company VARCHAR(255) NULL,
+  phone VARCHAR(30) NULL,
+  requested_territory VARCHAR(100) NULL,
+  pitch TEXT NULL, -- "why you, relevant experience"
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
+  reviewed_by_admin_id INT UNSIGNED NULL,
+  reviewed_at DATETIME NULL,
+  rejection_reason VARCHAR(500) NULL,
+  resulting_site_user_id INT UNSIGNED NULL, -- set once approved and the account exists
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_status_created (status, created_at),
+  INDEX idx_email (email),
+  FOREIGN KEY (reviewed_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (resulting_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- An approved affiliate. Role lives on site_users.role = 'affiliate'; the
+-- detail lives here, the same split as district_license_admins.
+--
+-- territory is organizational only — it never drives commission attribution,
+-- which comes entirely from referral_code. Its exclusivity (no two ACTIVE
+-- affiliates holding the same label) is checked in the app layer, not by a
+-- UNIQUE key: MariaDB can't express "unique only among active rows" without a
+-- partial-index workaround this codebase doesn't use, and a real UNIQUE would
+-- wrongly keep a suspended affiliate's old territory locked forever.
+CREATE TABLE IF NOT EXISTS affiliates (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  site_user_id INT UNSIGNED NOT NULL UNIQUE,
+  application_id INT UNSIGNED NULL,
+  referral_code VARCHAR(32) NOT NULL UNIQUE, -- shared as ?ref=CODE
+  commission_rate DECIMAL(5,2) NOT NULL, -- 10.00 = 10%
+  territory VARCHAR(100) NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'active' | 'suspended'
+  approved_by_admin_id INT UNSIGNED NULL,
+  approved_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_territory_status (territory, status),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (application_id) REFERENCES affiliate_applications(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
@@ -221,10 +280,13 @@ CREATE TABLE IF NOT EXISTS purchases (
   invoice_id INT UNSIGNED NULL, -- set for PO-sourced purchases, grouping them under one invoices row
   amount_cents INT UNSIGNED NULL, -- snapshot of what was actually charged for this line item — prices can change later, so this preserves invoice accuracy
   license_duration_days INT UNSIGNED NULL, -- snapshot of the intended license length in days, taken from license_products.duration_days at purchase time (scaled by a quote's term-years, if quoted) — never affected by a later catalog change
+  affiliate_id INT UNSIGNED NULL, -- set only when a valid ?ref= code was in play at checkout (90-day last-touch); added by scripts/alter-add-affiliate-program.js
+  affiliate_commission_cents INT UNSIGNED NULL, -- snapshot of amount_cents * commission_rate at attribution time, same principle as amount_cents itself — a later rate change never rewrites a past commission
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
   FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL,
-  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+  FOREIGN KEY (affiliate_id) REFERENCES affiliates(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- One row per license seat (single_license purchases always have exactly one,

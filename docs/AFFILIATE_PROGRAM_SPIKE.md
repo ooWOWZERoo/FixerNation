@@ -10,6 +10,10 @@ Scoping pass for a new sales-affiliate program: a prospect applies → admin rev
 2. **Attribution**: a referral code/link the affiliate shares — not territory-based, not manual-per-sale.
 3. **Payout**: calculate and report only. No real money movement (Stripe Connect, ACH, etc.) — actual payment happens outside the system, same way PO invoices work today. I would never execute a live transfer myself regardless of scope.
 4. **Territory**: enforced exclusivity (no two active affiliates can hold the same territory label), but **purely organizational** — it does not drive commission attribution. An uncoded sale earns no one commission; territory just prevents assigning the same region to two people.
+5. **Attribution window**: **90-day last-touch**. The code is stored in a cookie for 90 days, and the most recently clicked `?ref=` link wins. The longer window reflects how slowly school purchasing actually moves — a demo in September can become a PO in November, and a 30-day window would have expired before the money arrived.
+6. **Commissionable sale**: any `purchases` row with a valid code attached — Stripe card, PO, and group license all count. No distinction between first sale and later sales by the same buyer.
+7. **Decision emails**: both automatic. Approval sends a welcome email with credentials; rejection sends the reason. Both go through `lib/automations.js`, the same path as the existing 6 auto-email events.
+8. **Reapplication**: a rejected applicant can apply again at any time, with no cooldown and no blocked-email list. Each attempt is a new `affiliate_applications` row; the admin review queue shows prior decisions on the same email so a repeat applicant is never a surprise.
 
 ## Data model
 
@@ -61,7 +65,7 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS affiliate_commission_cents INT UN
 
 ## Referral capture mechanism (new, not previously designed)
 
-An affiliate shares a link like `licenses.html?ref=ABC123`. Proposed: any page load with a `?ref=` param stores the code in a cookie (recommend **30 days, last-touch** — i.e. the most recent `?ref=` link clicked wins if someone clicks two different affiliates' links; 30 days is a common industry default, **flagging as a real business decision, not defaulting silently** — happy to use a different window/model if you want first-touch or a different length). At actual checkout (Stripe session creation in `checkout.js`, or PO submission), the stored code is looked up against `affiliates.referral_code`, and if valid + the affiliate is `active`, `purchases.affiliate_id` + the commission snapshot get set.
+An affiliate shares a link like `licenses.html?ref=ABC123`. Any page load carrying a `?ref=` param stores the code in a cookie for **90 days, last-touch** — the most recent link clicked wins if someone arrives through two different affiliates' links. At actual checkout (Stripe session creation in `checkout.js`, or PO submission), the stored code is looked up against `affiliates.referral_code`, and if the code is valid and its affiliate is `active`, `purchases.affiliate_id` and the commission snapshot get written.
 
 ## Access matrix (per `CLAUDE.md`'s required format)
 
@@ -83,14 +87,18 @@ An affiliate shares a link like `licenses.html?ref=ABC123`. Proposed: any page l
 
 **Affiliate portal** (`requireSiteAuth` + role check, mirrors existing teacher/school-admin portal pattern): new `affiliate-dashboard.html` — referral link (copy button), territory, commission rate, a table of attributed purchases with per-sale commission and running total.
 
-## Explicitly not decided yet — flagging, not defaulting
+## Still open, but not blocking
 
-1. **Attribution window/model** (30-day last-touch proposed above) — real business call.
-2. **Exact application form fields** — proposed set above is a starting point, not final.
-3. **Can a rejected applicant reapply?** — no re-application logic proposed yet either way.
-4. **Notification emails on approve/reject** — proposed as automatic (matches the existing automations pattern used for 6 other events) but not confirmed.
-5. **What counts as a commissionable "sale"?** — proposed: any `purchases` row (Stripe card, PO, group license) with a valid referral code attached. Renewals aren't a distinct concept in this codebase today (`license_status`/`expiration_date` track lifecycle, not a renewal-purchase-event) — flagging that "commission on renewals" isn't something this data model currently distinguishes from a first sale, in case that distinction matters to you.
+1. **Exact application form fields** — building the proposed set (name, email, company, phone, requested territory, pitch). Easy to add or drop a field later; nothing downstream depends on the exact list.
+2. **Applicant status-lookup link** — a token-based "check your status" email link (same pattern as password reset) stays a nice-to-have, not part of v1.
+3. **Renewals** — not a distinct concept in this codebase at all. `license_status`/`expiration_date` track lifecycle, not a renewal-purchase-event, so "commission on renewals" isn't something the data model can currently tell apart from a first sale. Worth knowing before anyone promises an affiliate recurring commission.
+4. **Spam safeguard on the public form** — needed, and `contact.js` has none to copy from. Building a honeypot field plus an IP rate-limit on the new endpoint; the gap in `contact.js` stays open.
 
-## Not started — this spike is a design to confirm, not working code
+## Build order
 
-Once the matrix and open items above are confirmed, next steps in order: (1) the 3 new/altered tables, (2) the application form + admin review UI, (3) referral capture + checkout attribution, (4) the affiliate portal. Recommend building and deploying in that order rather than all at once, so each piece is verified live before the next depends on it.
+Confirmed 2026-09-24. Building and deploying in four stages rather than all at once, so each piece is verified live before the next depends on it:
+
+1. **Schema** — the two new tables plus the two `purchases` columns.
+2. **Application form + admin review UI** — public `become-an-affiliate.html`, `admin-affiliates.html`, approve/reject with emails.
+3. **Referral capture + checkout attribution** — the `?ref=` cookie and the commission snapshot at purchase time.
+4. **Affiliate portal** — `affiliate-dashboard.html`.
