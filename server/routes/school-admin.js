@@ -16,6 +16,7 @@ const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
 } = require('../lib/mailer');
+const { audit } = require('../lib/audit');
 
 const router = express.Router();
 
@@ -39,28 +40,9 @@ function notAdminSeatClause(alias) {
   ))`;
 }
 
-// Helper: insert audit log entry (fire-and-forget, never throws)
-async function audit(conn, { actorType, actorId, actorEmail, action, entityType, entityId, purchaseId, schoolDomain, prevValue, newValue, reason, ipAddress }) {
-  try {
-    await conn.query(
-      `INSERT INTO school_audit_log
-         (actor_type, actor_id, actor_email, action, entity_type, entity_id,
-          purchase_id, school_domain, prev_value, new_value, reason, ip_address)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        actorType, actorId || null, actorEmail || null,
-        action, entityType || null, entityId || null,
-        purchaseId || null, schoolDomain || null,
-        prevValue ? JSON.stringify(prevValue) : null,
-        newValue ? JSON.stringify(newValue) : null,
-        reason || null,
-        ipAddress || null,
-      ]
-    );
-  } catch (e) {
-    console.error('audit log error:', e.message);
-  }
-}
+// audit() moved to lib/audit.js (stage 3.5c) so the affiliate program could
+// reuse school_audit_log instead of duplicating it. Same function, same
+// behavior — imported below.
 
 // ---------------------------------------------------------------------------
 // Session / Me

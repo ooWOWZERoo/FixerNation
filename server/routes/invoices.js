@@ -5,6 +5,7 @@ const { attachPurchaseDetails } = require('./newsletter');
 const { sendInvoiceEmail } = require('../lib/mailer');
 const { fireAutomation } = require('../lib/automations');
 const { approveForInvoice, reverseForInvoice } = require('../lib/affiliate-attribution');
+const { audit } = require('../lib/audit');
 
 const router = express.Router();
 
@@ -199,6 +200,21 @@ router.put('/:id', requireAuth, async (req, res) => {
   // is gone. Surfaced to the admin rather than swallowed.
   if (affiliateEffect && affiliateEffect.alreadyPaid) {
     console.warn(`[affiliate] Invoice ${req.params.id} cancelled with ${affiliateEffect.alreadyPaid} already-paid commission entr${affiliateEffect.alreadyPaid === 1 ? 'y' : 'ies'} — not reversed, needs manual follow-up.`);
+  }
+
+  // This bulk effect (potentially several commission rows, all belonging to
+  // this one invoice) gets one audit entry rather than one per row — it's a
+  // single admin action (a status change) with a single cause, and per-row
+  // entries would just be noise at this granularity. entityId is left null
+  // since there's no single row this describes.
+  if (affiliateEffect) {
+    await audit(pool, {
+      actorType: 'admin', actorId: req.user && req.user.userId, actorEmail: req.user && req.user.username,
+      action: status === 'paid' ? 'commission.approved' : 'commission.reversed',
+      entityType: 'affiliate_commission', entityId: null, purchaseId: null,
+      newValue: { invoiceId: Number(req.params.id), ...affiliateEffect },
+      ipAddress: req.ip,
+    });
   }
 
   // Only fire on a fresh transition to paid — flipping it paid→paid (e.g. a

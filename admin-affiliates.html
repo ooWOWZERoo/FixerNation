@@ -45,6 +45,7 @@
         <button class="aff-tab active" data-tab="applications" onclick="switchTab('applications')">Applications <span id="pendingBadge"></span></button>
         <button class="aff-tab" data-tab="affiliates" onclick="switchTab('affiliates')">Affiliates</button>
         <button class="aff-tab" data-tab="commissions" onclick="switchTab('commissions')">Commissions <span id="commBadge"></span></button>
+        <button class="aff-tab" data-tab="activity" onclick="switchTab('activity')">Activity Log</button>
       </div>
 
       <!-- Applications tab -->
@@ -98,6 +99,30 @@
         <p class="meta-line" style="margin-top:14px;">
           A card sale is approved the moment it's paid. A purchase-order sale stays pending until you mark its
           invoice paid, and cancelling an invoice reverses whatever hasn't been paid out yet.
+        </p>
+      </div>
+
+      <!-- Activity Log tab -->
+      <div id="tab-activity" style="display:none;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+          <input type="search" id="activitySearch" placeholder="Filter by admin, action or reason…"
+            oninput="debounceActivity()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);flex:1;max-width:340px;">
+          <select id="activityEntityType" onchange="loadActivity()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);">
+            <option value="">Everything</option>
+            <option value="affiliate">Affiliates</option>
+            <option value="affiliate_application">Applications</option>
+            <option value="affiliate_commission">Commissions</option>
+            <option value="affiliate_territory">Territories</option>
+          </select>
+        </div>
+        <div class="a-card">
+          <div id="activityTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+        </div>
+        <p class="meta-line" style="margin-top:14px;">
+          Every approve, reject, rate change, suspension, territory change, and commission action is recorded here
+          with who did it and when — most recent 300 entries.
         </p>
       </div>
     </div>
@@ -359,9 +384,12 @@ document.addEventListener('DOMContentLoaded', function () {
   loadApplications();
   loadAffiliates();
   loadCommissions();
+  loadActivity();
 });
 
-var TABS = ['applications', 'affiliates', 'commissions'];
+var TABS = ['applications', 'affiliates', 'commissions', 'activity'];
+var activityDebounce = null;
+function debounceActivity() { clearTimeout(activityDebounce); activityDebounce = setTimeout(loadActivity, 300); }
 
 function switchTab(tab) {
   document.querySelectorAll('.aff-tab').forEach(function (btn) {
@@ -966,6 +994,68 @@ async function doRevokeTerritory(assignmentId) {
     await loadTerritoryList();
     loadAffiliates();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+// --- Activity Log (stage 3.5c) -----------------------------------------------
+
+var ACTIVITY_ACTION_LABEL = {
+  'affiliate.approved': 'Application approved',
+  'affiliate.rejected': 'Application rejected',
+  'affiliate.active': 'Reactivated',
+  'affiliate.suspended': 'Suspended',
+  'affiliate.rate_changed': 'Rate changed',
+  'affiliate.territory_assigned': 'Territory assigned',
+  'affiliate.territory_revoked': 'Territory revoked',
+  'commission.approved': 'Commission approved',
+  'commission.held': 'Commission held',
+  'commission.released': 'Commission released',
+  'commission.paid': 'Commission paid',
+  'commission.reversed': 'Commission reversed',
+  'commission.manual_added': 'Manual adjustment added',
+  'commission.bonus_added': 'Bonus added',
+};
+
+async function loadActivity() {
+  var q = document.getElementById('activitySearch').value.trim();
+  var entityType = document.getElementById('activityEntityType').value;
+  var params = [];
+  if (q) params.push('q=' + encodeURIComponent(q));
+  if (entityType) params.push('entityType=' + encodeURIComponent(entityType));
+  var wrap = document.getElementById('activityTableWrap');
+  try {
+    const r = await fetch('/api/affiliates/audit-log' + (params.length ? '?' + params.join('&') : ''), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    renderActivity(d.entries || []);
+  } catch (e) {
+    wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderActivity(rows) {
+  var wrap = document.getElementById('activityTableWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="a-empty"><div class="big">📋</div>Nothing recorded yet.</div>';
+    return;
+  }
+  wrap.innerHTML =
+    '<table class="a-table"><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Detail</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      var label = ACTIVITY_ACTION_LABEL[r.action] || r.action;
+      var detailParts = [];
+      if (r.reason) detailParts.push(esc(r.reason));
+      if (r.new_value) {
+        try { detailParts.push(Object.entries(r.new_value).filter(function (e) { return e[1] !== null && e[1] !== undefined; }).map(function (e) { return e[0] + ': ' + e[1]; }).join(', ')); } catch (e) {}
+      }
+      return '<tr>' +
+        '<td style="font-size:13px;white-space:nowrap;">' + esc(String(r.created_at).slice(0, 16).replace('T', ' ')) + '</td>' +
+        '<td style="font-size:13px;">' + esc(r.actor_email || '—') + '</td>' +
+        '<td style="font-size:13px;font-weight:600;">' + esc(label) + '</td>' +
+        '<td style="font-size:13px;color:var(--a-text-soft);">' + (detailParts.filter(Boolean).join(' — ') || '—') + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
 }
 </script>
 </body>

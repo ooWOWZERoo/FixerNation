@@ -23,6 +23,7 @@ const {
   US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder,
   assignTerritory, revokeTerritoryAssignment, territoriesForAffiliate, listTerritories,
 } = require('../lib/territories');
+const { audit } = require('../lib/audit');
 
 const router = express.Router();
 
@@ -359,6 +360,13 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
       [req.user.userId || null, user.id, app.id]
     );
 
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: 'affiliate.approved', entityType: 'affiliate', entityId: affiliateId,
+      newValue: { email: app.email, referralCode: finalCode, commissionRate: rate, territory: assignedTerritoryName },
+      ipAddress: req.ip,
+    });
+
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -434,6 +442,12 @@ router.post('/applications/:id/reject', requireAuth, async (req, res) => {
     mergeFields: { firstName: app.first_name, reason },
   });
 
+  await audit(pool, {
+    actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+    action: 'affiliate.rejected', entityType: 'affiliate_application', entityId: app.id,
+    reason, ipAddress: req.ip,
+  });
+
   res.json({ ok: true });
 });
 
@@ -452,6 +466,12 @@ const TRANSITIONS = {
   pay: { from: ['approved'], to: 'paid' },
   reverse: { from: ['pending', 'approved', 'on_hold'], to: 'reversed' },
 };
+
+// Past tense of each action, for the error message and the audit log.
+// `${action}d` reads correctly for approve/release/reverse but produces
+// "holdd" for hold — this map exists because that naive concatenation was
+// already wrong once.
+const TRANSITION_PAST_TENSE = { approve: 'approved', hold: 'held', release: 'released', pay: 'paid', reverse: 'reversed' };
 
 // GET /api/affiliates/commissions?status=&affiliateId=
 router.get('/commissions', requireAuth, async (req, res) => {
@@ -527,7 +547,7 @@ router.post('/commissions/:id/:action', requireAuth, async (req, res) => {
     if (!rule.from.includes(entry.status)) {
       await conn.rollback();
       return res.status(409).json({
-        error: `A ${entry.status} entry can't be ${action === 'pay' ? 'marked paid' : `${action}d`}. Allowed from: ${rule.from.join(', ')}.`,
+        error: `A ${entry.status} entry can't be ${action === 'pay' ? 'marked paid' : TRANSITION_PAST_TENSE[action]}. Allowed from: ${rule.from.join(', ')}.`,
       });
     }
 
@@ -550,6 +570,17 @@ router.post('/commissions/:id/:action', requireAuth, async (req, res) => {
     }
 
     await conn.query(`UPDATE affiliate_commissions SET ${sets.join(', ')} WHERE id = ?`, [...params, entry.id]);
+
+    await audit(conn, {
+      actorType: 'admin', actorId: adminId, actorEmail: req.user.username,
+      action: `commission.${TRANSITION_PAST_TENSE[action]}`,
+      entityType: 'affiliate_commission', entityId: entry.id, purchaseId: entry.purchase_id,
+      prevValue: { status: entry.status },
+      newValue: { status: rule.to, payoutReference: action === 'pay' ? (payoutReference || null) : undefined },
+      reason: reason || null,
+      ipAddress: req.ip,
+    });
+
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -591,7 +622,62 @@ router.post('/:id/commissions', requireAuth, async (req, res) => {
     [affiliate.id, sourceType, description, cents, (req.user && req.user.userId) || null, (b.notes || '').trim() || null]
   );
 
+  await audit(pool, {
+    actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+    action: `commission.${sourceType}_added`, entityType: 'affiliate_commission', entityId: result.insertId,
+    newValue: { amountCents: cents, description }, ipAddress: req.ip,
+  });
+
   res.status(201).json({ ok: true, id: result.insertId, commissionCents: cents });
+});
+
+// ---------------------------------------------------------------------------
+// Admin — activity log (stage 3.5c)
+//
+// school_audit_log is the same table school-admin.js's audit() (now
+// lib/audit.js) has written to since before this program existed — reused
+// rather than duplicated into a second near-identical table, since its
+// actor/action/entity columns are already generic. Filtered to the affiliate
+// program's own entity_type values so this program's log doesn't pull in
+// unrelated school-admin rows, and vice versa: nothing here is visible from
+// admin-school-admins.html or any other consumer of that table.
+// ---------------------------------------------------------------------------
+
+const AFFILIATE_AUDIT_ENTITY_TYPES = ['affiliate', 'affiliate_application', 'affiliate_commission', 'affiliate_territory'];
+
+// GET /api/affiliates/audit-log?entityType=&q=
+router.get('/audit-log', requireAuth, async (req, res) => {
+  const entityType = (req.query.entityType || '').trim();
+  const q = (req.query.q || '').trim();
+  const where = [`entity_type IN (${AFFILIATE_AUDIT_ENTITY_TYPES.map(() => '?').join(', ')})`];
+  const params = [...AFFILIATE_AUDIT_ENTITY_TYPES];
+
+  if (entityType && AFFILIATE_AUDIT_ENTITY_TYPES.includes(entityType)) {
+    where.push('entity_type = ?');
+    params.push(entityType);
+  }
+  if (q) {
+    where.push('(actor_email LIKE ? OR action LIKE ? OR reason LIKE ? OR new_value LIKE ? OR prev_value LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
+
+  const [rows] = await pool.query(
+    `SELECT id, actor_type, actor_id, actor_email, action, entity_type, entity_id,
+            purchase_id, prev_value, new_value, reason, ip_address, created_at
+     FROM school_audit_log
+     WHERE ${where.join(' AND ')}
+     ORDER BY created_at DESC
+     LIMIT 300`,
+    params
+  );
+
+  res.json({
+    entries: rows.map(r => ({
+      ...r,
+      prev_value: r.prev_value ? JSON.parse(r.prev_value) : null,
+      new_value: r.new_value ? JSON.parse(r.new_value) : null,
+    })),
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -735,6 +821,15 @@ router.put('/:id', requireAuth, async (req, res) => {
       }
     }
 
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: status ? `affiliate.${status}` : 'affiliate.rate_changed',
+      entityType: 'affiliate', entityId: affiliate.id,
+      prevValue: { commissionRate: affiliate.commission_rate, status: affiliate.status },
+      newValue: b,
+      ipAddress: req.ip,
+    });
+
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -796,6 +891,13 @@ router.post('/:id/territories', requireAuth, async (req, res) => {
       throw err;
     }
 
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: 'affiliate.territory_assigned', entityType: 'affiliate_territory', entityId: result.assignmentId,
+      newValue: { territory: result.territory.name, affiliateId: affiliate.id },
+      ipAddress: req.ip,
+    });
+
     await conn.commit();
     res.status(201).json({ ok: true, assignmentId: result.assignmentId, territory: result.territory });
   } catch (err) {
@@ -828,6 +930,13 @@ router.post('/:id/territories/:assignmentId/revoke', requireAuth, async (req, re
       if (err.status) return res.status(err.status).json({ error: err.message });
       throw err;
     }
+
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: 'affiliate.territory_revoked', entityType: 'affiliate_territory', entityId: assignment.id,
+      prevValue: { affiliateId: assignment.affiliate_id, territoryId: assignment.territory_id },
+      ipAddress: req.ip,
+    });
 
     await conn.commit();
     res.json({ ok: true });

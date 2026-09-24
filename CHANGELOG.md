@@ -12,6 +12,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ## Unreleased / Known pending work
 
+- **Every affiliate action now leaves a trail — who did what, and when. Coded and pushed, not yet deployed.** Approving or rejecting an application, changing a rate, suspending someone (and the territory it frees up along the way), assigning or revoking a territory, and every commission decision (approve, hold, release, mark paid, reverse, or a manual bonus/correction) now writes a record naming the admin who did it.
+
+  This didn't need a new table. FNE already had one general-purpose audit log, built for the school-admin portal, sitting mostly unused outside that one context — this reuses it rather than building a near-duplicate. A new **Activity Log** tab on the admin page shows the affiliate program's own history, filterable by what kind of thing changed, without pulling in anything from the school-admin side of the house (and nothing written here shows up over there either).
+
+  One real bug turned up and got fixed along the way: the commission screen's error message for a held entry (and the new log entry describing that same action) both mis-spelled it as "holdd" — the past-tense wording was being built by just appending a "d," which happens to work for every other action but that one. Fixed everywhere it appeared.
+
+  Needs the broad `rsync` for the rebuilt admin page and a Node app restart (four files under `server/` changed: a new shared helper plus three routes that now call it). No schema change, no new migration script, no new npm dependencies.
+
 - **Affiliate territories are now real geography, not a free-text field that let two affiliates hold "the same" region under slightly different spellings. Coded and pushed, not yet deployed.** The old `affiliates.territory` string is gone. In its place: two new tables, fixed to real US states and counties — an admin picks from all 50 states plus DC (always available) or types a specific county, and that county becomes a real record the first time anyone assigns it. (Every one of the roughly 3,143 US counties isn't pre-loaded — that's a lot of reference data with names that repeat across states, and there isn't a single live affiliate to need any of it yet.)
 
   An affiliate can now hold more than one territory, and every assignment keeps a real history — who assigned it, when, and if it was later revoked and by whom. The admin page's Affiliates tab gets a **Territories** button per affiliate: see everything they currently hold, revoke one, or add another from a state dropdown plus an optional county field. The approve-application flow can still set a first territory on the spot, or leave it for later.

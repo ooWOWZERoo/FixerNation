@@ -10,7 +10,9 @@ Written after reviewing how fixernation.org (FNO) handles the same problem — i
 
 **2. Nothing can be reversed.** A refunded or cancelled purchase keeps its commission for good. `PUT /api/invoices/:id/status` can already move an invoice to `cancelled`, and nothing downstream reacts.
 
-**3. No audit trail on anything touching money.** Approve, reject, rate change, suspend, and attribution all happen with no record of who did it or when. FNE has no `audit_log` table at all to piggyback on. FNO logs every commission transition with actor and IP.
+**3. No audit trail on anything touching money.** Approve, reject, rate change, suspend, and attribution all happen with no record of who did it or when. FNO logs every commission transition with actor and IP.
+
+*(Correction, made while building 3.5c: this section originally claimed "FNE has no `audit_log` table at all to piggyback on." That was wrong — `school_audit_log` already exists, written by `school-admin.js`'s local `audit()` helper and by raw inserts in `invoices.js`/`admin-account-lookup.js`. Its columns — actor type/id/email, action, entity type/id, prev/new value, reason, IP — are already generic, not school-specific in practice. 3.5c reuses that table rather than adding a second near-identical one; see the addendum below.)*
 
 **4. Territory is a free-text string, so exclusivity is weaker than it looks.** `affiliates.territory` is `VARCHAR(100)` and the exclusivity check is an exact match, so "Central Florida" and "central florida" can both be held by active affiliates at once. There is also no history — reassigning a region overwrites the old value with no record that it ever belonged to anyone else.
 
@@ -122,25 +124,9 @@ A real `UNIQUE` on `territories.name` fixes problem 4 at the database level. Exc
 
 `affiliates.territory` gets backfilled into these tables and then kept read-only as a display label, or dropped — see open decisions.
 
-### `affiliate_audit_log`
+### `affiliate_audit_log` — superseded before it was built
 
-```sql
-CREATE TABLE IF NOT EXISTS affiliate_audit_log (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  admin_id INT UNSIGNED NULL,
-  action VARCHAR(64) NOT NULL,          -- 'application.approved', 'commission.paid', 'territory.revoked', ...
-  entity_type VARCHAR(32) NOT NULL,
-  entity_id INT UNSIGNED NULL,
-  metadata TEXT NULL,                    -- JSON blob, same shape as FNO's audit metadata
-  ip_address VARCHAR(45) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_entity (entity_type, entity_id),
-  INDEX idx_created (created_at),
-  FOREIGN KEY (admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
-);
-```
-
-Deliberately scoped to the affiliate program rather than introducing a site-wide audit log, which would be a much larger argument about what else should be audited.
+The table above was drafted before checking whether FNE already had something to reuse. It didn't — `school_audit_log` does. **3.5c does not create this table.** See the 3.5c addendum below for what actually shipped: the existing `school_audit_log` table, reused, filtered to the affiliate program's own `entity_type` values.
 
 ## Access matrix
 
@@ -177,7 +163,7 @@ Both steps are no-ops today, because nothing has been sold through an affiliate 
 
 - ~~**3.5a**~~ — *built, awaiting deploy.* Ledger table, attribution writes to it, approval on invoice paid, reversal on cancel, admin queue.
 - ~~**3.5b**~~ — *built, awaiting deploy.* Territory tables, backfill, multi-territory assignment with history. See the addendum below — the vocabulary/backfill decisions were confirmed after this doc's first draft, and one detail (a suspended affiliate's territories auto-revoke rather than merely being ignored by a status filter) was decided during implementation.
-- **3.5c** — audit log, wired into every affiliate and commission mutation. Not started.
+- ~~**3.5c**~~ — *built, awaiting deploy.* Audit trail wired into every affiliate and commission mutation — reusing `school_audit_log` rather than the new table originally drafted above. See the addendum below.
 - **Stage 4** — the affiliate portal, reading the ledger. Not started.
 
 ## Decisions confirmed 2026-09-24
@@ -203,3 +189,17 @@ Both steps are no-ops today, because nothing has been sold through an affiliate 
 **Exclusivity now lives on the assignment, not a status join.** `activeHolder()` (`server/lib/territories.js`) checks `affiliate_territories.status = 'active'` directly, with no reference to whether the parent affiliate itself is active or suspended. This means suspending an affiliate must explicitly revoke their territory assignments — leaving them "active" and relying on a join filter elsewhere would have silently broken the original confirmed decision that a suspended affiliate's territory becomes assignable again. `PUT /api/affiliates/:id` now does this revoke in the same transaction as the status change, and reactivating never restores them automatically — the territory may already belong to someone else by then, so re-assignment after reactivating is a deliberate act, not a side effect.
 
 **The backfill never guesses.** It matches an existing `affiliates.territory` free-text value against a real state name or 2-letter code, exact match only (trimmed, case-insensitive). Anything that doesn't match — "Central Florida", a typo, a made-up region — is left without a territory and printed clearly in the migration's console output for an admin to reassign by hand. A money-adjacent table is the wrong place for a fuzzy match to invent an answer.
+
+## 3.5c addendum — built by reusing an existing table, not the drafted one
+
+The `affiliate_audit_log` table drafted earlier in this doc was never built. Checking the codebase before writing it turned up `school_audit_log`, already live, already generic in every column that matters (`actor_type`/`actor_id`/`actor_email`/`action`/`entity_type`/`entity_id`/`prev_value`/`new_value`/`reason`/`ip_address`) — only `purchase_id` and `school_domain` are extras that simply go unused outside their original context. Building a second table with the same shape for one program would have been duplication for no real gain, so 3.5c reuses it instead.
+
+Its insertion logic — previously a private function inside `routes/school-admin.js`, and separately duplicated as raw inserts in `routes/invoices.js` and `routes/admin-account-lookup.js` — is now `lib/audit.js`, a shared helper per `CLAUDE.md`'s own extraction rule ("always extract there when two route files would otherwise need to require each other"). `school-admin.js` was updated to import it; the two raw-insert call sites elsewhere were left as-is, since touching working, unrelated code for a cosmetic dedup wasn't this stage's job.
+
+Every affiliate-program mutation now writes one entry: application approve and reject, rate/status change (including the territory revocation a suspension triggers), territory assign and revoke, and every commission transition (approve/hold/release/pay/reverse, plus manual/bonus additions). An invoice being marked paid or cancelled can affect several commission rows in one bulk update (`approveForInvoice`/`reverseForInvoice`) — that gets **one** audit entry per invoice action, not one per affected row, since it's a single admin action with a single cause and per-row entries would just be noise at that granularity.
+
+The admin page's new **Activity Log** tab reads it back through `GET /api/affiliates/audit-log`, filtered to the affiliate program's own `entity_type` values (`affiliate`, `affiliate_application`, `affiliate_commission`, `affiliate_territory`) so it never surfaces an unrelated school-admin row, and — just as importantly — nothing written here ever appears on `school-admin.js`'s own audit views either.
+
+**A real bug found and fixed while wiring this in, unrelated to the audit log itself:** the commission-transition error message and the new audit action string both built a past-tense verb by string concatenation (`` `${action}d` ``), which is correct for approve/release/reverse but produces "holdd" for hold. This was already live in 3.5a's shipped code. Fixed with an explicit `TRANSITION_PAST_TENSE` map in `routes/affiliates.js`, used in both places.
+
+**Known, pre-existing, and deliberately not touched:** `audit()`'s parameter coercion (`actorId || null`, `entityId || null`) would turn a legitimate `0` into `null`. This is inherited unchanged from the original `school-admin.js` code and can't actually fire here — every id involved is an `AUTO_INCREMENT` primary key starting at 1. Documented in the test that found it rather than "fixed" in a shared helper 11 other call sites already depend on.
