@@ -72,6 +72,7 @@
             '<li><a href="for-schools.html">For Schools</a></li>' +
             '<li><a href="school-licensing.html">Pricing &amp; Licensing</a></li>' +
             '<li><a href="education-schools.html">Teacher Registration</a></li>' +
+            '<li><a href="become-an-affiliate.html">Become an Affiliate</a></li>' +
           '</ul>' +
         '</div>' +
 

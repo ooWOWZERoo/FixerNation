@@ -123,4 +123,6 @@ This wasn't one of the four confirmed decisions, and it's a real policy choice r
 
 Until stage 4 ships, there's no affiliate portal to land in, so an approved affiliate's welcome email sends them to `my-profile.html` (which every `site_user` already has) rather than a 404. One constant, `AFFILIATE_LANDING_PATH` in `server/routes/affiliates.js`, switches that over when the dashboard exists.
 
-The public page is **not linked from the nav or footer** — reachable by direct URL only. Announcing an affiliate program publicly is a business call, not a deploy step, so that link is left for whenever the program is ready to be visible.
+The public page **is linked from the footer** (Schools column, after Teacher Registration), added on request once stages 1–3 were live. Before that it was reachable by direct URL only, since announcing the program publicly was a business call rather than a deploy step.
+
+Worth keeping in mind while stage 4 is still outstanding: the page is now discoverable by any visitor, so applications can arrive from anyone, and an approved affiliate still has no portal to land in.
