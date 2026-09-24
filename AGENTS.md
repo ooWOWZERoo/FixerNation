@@ -18,7 +18,11 @@ npm run db:seed    # node scripts/seed.js     — seed reference data (run after
 
 On **cPanel Terminal** (production), `node`/`npm` are not on PATH. Every Node command must activate the nodevenv first — see "Deploy workflow" for the exact prefix.
 
-No local dev environment exists — no local MySQL/MariaDB, and the sandbox blocks outbound DB connections. All verification is done against production via `curl` with a cookie jar. Use `@example.com` emails and obviously-fake school domains for test data and clean them up after.
+**Where the database actually lives.** `fixernat_fixernation` (MariaDB, ~66 MB, app user `fixernat_fixernation_app`) runs on the same Hosting.com/cPanel account as the site itself, alongside the domain — see cPanel → MySQL Databases. That's why `server/.env` has `DB_HOST=127.0.0.1`: localhost *from the app server's point of view*, not from anyone's laptop. Calling it "no local DB" was misleading and has been fixed here: there is a real, live database, it just isn't on a dev machine. `SCHEMA.md` documents its current shape.
+
+What that means in practice: a dev machine has no copy of the schema to try changes against (verified 2026-09-24 — no MySQL/MariaDB client installed, nothing listening on 3306, no database container), so migrations and queries are not exercised before they reach the server. All verification is done against production via `curl` with a cookie jar. Use `@example.com` emails and obviously-fake school domains for test data and clean them up after.
+
+If a migration is ever worth dry-running first, Docker is available on the dev machine (it's already running containers for other projects), so a throwaway `mariadb` container is a reasonable way to prove `schema.sql` and an `alter-*.js` script before deploying. Nothing like that is set up today.
 
 ## Architecture
 
@@ -206,7 +210,7 @@ Securing the API endpoint (who can call it) is not the same as preventing the us
 
 ## Working with this codebase in an AI-assisted session
 
-**Give a constraint inventory at the start of any new session.** This codebase runs on Hosting.com/cPanel shared hosting with no SSH, no pm2, no local DB, and no Docker. The AI will suggest those tools unless told not to. The relevant constraints are all documented in this file — point a new session here first.
+**Give a constraint inventory at the start of any new session.** The real constraints are on the *host*: Hosting.com/cPanel shared hosting, no SSH (browser Terminal only), no pm2, and the MariaDB database sits on that same server rather than on any dev machine. Docker is **not** a constraint — it's installed and running on the dev machine, so don't repeat the old "no Docker" line that used to be here. The relevant constraints are all documented in this file — point a new session here first.
 
 **Requirements before code, always.** For any feature touching access control, billing, or user-facing auth behavior: write the requirement explicitly, get it confirmed, then ask for implementation. Both the file protection endpoint and the download counter were rebuilt because this step was skipped.
 
