@@ -446,8 +446,10 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
     // deliberately doesn't, since the cookie in that request is a staff
     // member's browsing history, not a referral. An unknown or suspended
     // code is a silent no-op — the sale simply goes unattributed.
+    // paymentStatus decides whether the ledger entry opens approved (card —
+    // already paid) or pending (PO — awaiting the school's business office).
     if (affiliateRefCode) {
-      await attributePurchase(connection, purchaseId, affiliateRefCode, amountCents);
+      await attributePurchase(connection, purchaseId, affiliateRefCode, amountCents, paymentStatus || 'paid');
     }
 
     if (productType === 'single_license') {

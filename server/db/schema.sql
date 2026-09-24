@@ -1181,3 +1181,54 @@ CREATE TABLE IF NOT EXISTS learning_events (
   FOREIGN KEY (game_id) REFERENCES brain_games(id) ON DELETE SET NULL,
   FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Affiliate commission ledger — see docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md
+--
+-- Declared at the end of this file because it has foreign keys into both
+-- `affiliates` (near the top, above `purchases`) and `purchases` itself, and a
+-- fresh install runs top to bottom. Added by
+-- scripts/alter-add-affiliate-commission-ledger.js on existing installs.
+--
+-- One row per earning. This, not purchases.affiliate_commission_cents, is the
+-- authoritative record of money owed — that column stays as a snapshot of what
+-- was calculated at attribution time.
+--
+-- status follows the money rather than the sale: a card purchase is already
+-- paid when its webhook fires, so its row opens 'approved'; a PO purchase
+-- opens 'pending' and is approved when an admin marks the invoice paid.
+-- Cancelling an invoice reverses whatever hasn't been paid out.
+--
+-- A reversal flips the row to 'reversed' and never writes a compensating
+-- negative row, so every balance MUST be filtered by status — see
+-- ledgerTotals() in server/lib/affiliate-attribution.js, the single place that
+-- rule is expressed. commission_cents is still signed so an admin can enter a
+-- negative manual adjustment, which is a different thing from a reversal.
+CREATE TABLE IF NOT EXISTS affiliate_commissions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  affiliate_id INT UNSIGNED NOT NULL,
+  purchase_id INT UNSIGNED NULL, -- NULL for a manual adjustment or a bonus
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'paid' | 'on_hold' | 'reversed' | 'cancelled'
+  source_type VARCHAR(16) NOT NULL DEFAULT 'referral', -- 'referral' | 'manual' | 'bonus'
+  description VARCHAR(300) NULL, -- required for manual/bonus rows, which have no purchase to explain them
+  gross_amount_cents INT UNSIGNED NULL, -- the sale this was calculated from
+  commission_rate DECIMAL(5,2) NULL, -- snapshot of the rate actually used
+  commission_cents INT NOT NULL, -- signed: a negative manual adjustment is a correction
+  approved_at DATETIME NULL,
+  approved_by_admin_id INT UNSIGNED NULL, -- NULL when approved automatically at attribution time
+  paid_at DATETIME NULL,
+  payout_reference VARCHAR(64) NULL, -- check number, transfer id, batch name — payment itself happens outside the system
+  reversed_at DATETIME NULL,
+  reversed_by_admin_id INT UNSIGNED NULL,
+  reversal_reason VARCHAR(500) NULL,
+  notes VARCHAR(1000) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_affiliate_status (affiliate_id, status),
+  INDEX idx_status_created (status, created_at),
+  INDEX idx_purchase (purchase_id),
+  FOREIGN KEY (affiliate_id) REFERENCES affiliates(id) ON DELETE CASCADE,
+  FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (reversed_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

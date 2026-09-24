@@ -18,6 +18,7 @@ const { createToken } = require('../lib/site-tokens');
 const { fireAutomation } = require('../lib/automations');
 const { sendSalesAlertEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
+const { LEDGER_TOTALS_SQL } = require('../lib/affiliate-attribution');
 
 const router = express.Router();
 
@@ -431,6 +432,163 @@ router.post('/applications/:id/reject', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Admin — commission ledger (stage 3.5a)
+//
+// Declared before the bare /:id routes below, same reason as /applications.
+// ---------------------------------------------------------------------------
+
+// Which statuses a transition is allowed to act on. 'paid' and 'reversed' are
+// terminal: once money has moved or been clawed back, the row is history.
+const TRANSITIONS = {
+  approve: { from: ['pending', 'on_hold'], to: 'approved' },
+  hold: { from: ['pending', 'approved'], to: 'on_hold' },
+  release: { from: ['on_hold'], to: 'pending' },
+  pay: { from: ['approved'], to: 'paid' },
+  reverse: { from: ['pending', 'approved', 'on_hold'], to: 'reversed' },
+};
+
+// GET /api/affiliates/commissions?status=&affiliateId=
+router.get('/commissions', requireAuth, async (req, res) => {
+  const status = (req.query.status || '').trim();
+  const affiliateId = Number(req.query.affiliateId) || null;
+  const where = [];
+  const params = [];
+
+  if (['pending', 'approved', 'paid', 'on_hold', 'reversed'].includes(status)) {
+    where.push('ac.status = ?');
+    params.push(status);
+  }
+  if (affiliateId) {
+    where.push('ac.affiliate_id = ?');
+    params.push(affiliateId);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [rows] = await pool.query(
+    `SELECT ac.*,
+            su.first_name, su.last_name, su.email,
+            a.referral_code,
+            p.product_type, p.purchased_at, p.payment_method, p.payment_status, p.school_domain, p.invoice_id,
+            lp.name AS plan_name,
+            nc.name AS buyer_name, nc.email AS buyer_email,
+            i.invoice_number, i.status AS invoice_status
+     FROM affiliate_commissions ac
+     JOIN affiliates a ON a.id = ac.affiliate_id
+     JOIN site_users su ON su.id = a.site_user_id
+     LEFT JOIN purchases p ON p.id = ac.purchase_id
+     LEFT JOIN license_products lp ON lp.id = p.license_product_id
+     LEFT JOIN newsletter_contacts nc ON nc.id = p.contact_id
+     LEFT JOIN invoices i ON i.id = p.invoice_id
+     ${whereSql}
+     ORDER BY FIELD(ac.status, 'pending', 'approved', 'on_hold', 'paid', 'reversed'), ac.created_at DESC
+     LIMIT 500`,
+    params
+  );
+
+  // Program-wide totals, deliberately unfiltered by the status/affiliate
+  // filters above — the header numbers shouldn't change as you filter the list.
+  const [[totals]] = await pool.query(LEDGER_TOTALS_SQL);
+
+  res.json({ commissions: rows, totals });
+});
+
+// POST /api/affiliates/commissions/:id/:action
+// action: approve | hold | release | pay | reverse
+router.post('/commissions/:id/:action', requireAuth, async (req, res) => {
+  const action = req.params.action;
+  const rule = TRANSITIONS[action];
+  if (!rule) return res.status(400).json({ error: 'Unknown action' });
+
+  const b = req.body || {};
+  const reason = (b.reason || '').trim();
+  const payoutReference = (b.payoutReference || '').trim();
+
+  if (action === 'reverse' && !reason) {
+    return res.status(400).json({ error: 'A reason is required to reverse a commission' });
+  }
+  if (reason.length > 500) return res.status(400).json({ error: 'Reason is too long' });
+  if (payoutReference.length > 64) return res.status(400).json({ error: 'Payout reference is too long' });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[entry]] = await conn.query('SELECT * FROM affiliate_commissions WHERE id = ? FOR UPDATE', [req.params.id]);
+    if (!entry) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Commission entry not found' });
+    }
+    if (!rule.from.includes(entry.status)) {
+      await conn.rollback();
+      return res.status(409).json({
+        error: `A ${entry.status} entry can't be ${action === 'pay' ? 'marked paid' : `${action}d`}. Allowed from: ${rule.from.join(', ')}.`,
+      });
+    }
+
+    const sets = ['status = ?'];
+    const params = [rule.to];
+    const adminId = (req.user && req.user.userId) || null;
+
+    if (action === 'approve') {
+      sets.push('approved_at = NOW()', 'approved_by_admin_id = ?');
+      params.push(adminId);
+    } else if (action === 'pay') {
+      sets.push('paid_at = NOW()', 'payout_reference = ?');
+      params.push(payoutReference || null);
+    } else if (action === 'reverse') {
+      sets.push('reversed_at = NOW()', 'reversed_by_admin_id = ?', 'reversal_reason = ?');
+      params.push(adminId, reason);
+    } else if (action === 'hold' && reason) {
+      sets.push('notes = ?');
+      params.push(reason);
+    }
+
+    await conn.query(`UPDATE affiliate_commissions SET ${sets.join(', ')} WHERE id = ?`, [...params, entry.id]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  res.json({ ok: true, status: rule.to });
+});
+
+// POST /api/affiliates/:id/commissions — a manual adjustment or a bonus, with
+// no purchase behind it. A negative amount is allowed on purpose: correcting an
+// over-credit is a different act from reversing a specific sale, which is what
+// the reverse transition is for.
+router.post('/:id/commissions', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const sourceType = ['manual', 'bonus'].includes(b.sourceType) ? b.sourceType : null;
+  if (!sourceType) return res.status(400).json({ error: 'sourceType must be manual or bonus' });
+
+  const description = (b.description || '').trim();
+  if (!description) return res.status(400).json({ error: 'A description is required — nothing else explains this entry' });
+  if (description.length > 300) return res.status(400).json({ error: 'Description is too long' });
+
+  const dollars = Number(b.amount);
+  if (!Number.isFinite(dollars) || dollars === 0) return res.status(400).json({ error: 'Amount must be a non-zero dollar figure' });
+  const cents = Math.round(dollars * 100);
+  if (Math.abs(cents) > 100000000) return res.status(400).json({ error: 'Amount is implausibly large' });
+
+  const [[affiliate]] = await pool.query('SELECT id FROM affiliates WHERE id = ?', [req.params.id]);
+  if (!affiliate) return res.status(404).json({ error: 'Affiliate not found' });
+
+  // A manual entry has no payment to wait on, so it's approved on creation —
+  // the admin typing it in *is* the approval.
+  const [result] = await pool.query(
+    `INSERT INTO affiliate_commissions
+       (affiliate_id, purchase_id, status, source_type, description, commission_cents, approved_at, approved_by_admin_id, notes)
+     VALUES (?, NULL, 'approved', ?, ?, ?, NOW(), ?, ?)`,
+    [affiliate.id, sourceType, description, cents, (req.user && req.user.userId) || null, (b.notes || '').trim() || null]
+  );
+
+  res.status(201).json({ ok: true, id: result.insertId, commissionCents: cents });
+});
+
+// ---------------------------------------------------------------------------
 // Admin — affiliate directory
 // ---------------------------------------------------------------------------
 
@@ -445,12 +603,21 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
 
+  // Totals come from the ledger, filtered by status — never a bare SUM over
+  // the table, which would fold reversed entries back into what's owed. See
+  // docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md.
   const [rows] = await pool.query(
     `SELECT a.id, a.referral_code, a.commission_rate, a.territory, a.status, a.approved_at, a.created_at,
             a.site_user_id, a.application_id,
             su.first_name, su.last_name, su.email, su.email_verified,
-            (SELECT COUNT(*) FROM purchases p WHERE p.affiliate_id = a.id) AS sale_count,
-            (SELECT COALESCE(SUM(p.affiliate_commission_cents), 0) FROM purchases p WHERE p.affiliate_id = a.id) AS commission_cents
+            (SELECT COUNT(*) FROM affiliate_commissions ac
+              WHERE ac.affiliate_id = a.id AND ac.source_type = 'referral' AND ac.status <> 'reversed') AS sale_count,
+            (SELECT COALESCE(SUM(ac.commission_cents), 0) FROM affiliate_commissions ac
+              WHERE ac.affiliate_id = a.id AND ac.status = 'pending') AS pending_cents,
+            (SELECT COALESCE(SUM(ac.commission_cents), 0) FROM affiliate_commissions ac
+              WHERE ac.affiliate_id = a.id AND ac.status = 'approved') AS approved_cents,
+            (SELECT COALESCE(SUM(ac.commission_cents), 0) FROM affiliate_commissions ac
+              WHERE ac.affiliate_id = a.id AND ac.status = 'paid') AS paid_cents
      FROM affiliates a
      JOIN site_users su ON su.id = a.site_user_id
      ${where}
@@ -532,27 +699,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// GET /api/affiliates/:id/sales — the purchases attributed to one affiliate.
-// Empty for every affiliate until stage 3 ships.
-router.get('/:id/sales', requireAuth, async (req, res) => {
-  const [[affiliate]] = await pool.query('SELECT id FROM affiliates WHERE id = ?', [req.params.id]);
-  if (!affiliate) return res.status(404).json({ error: 'Affiliate not found' });
-
-  const [rows] = await pool.query(
-    `SELECT p.id, p.product_type, p.purchased_at, p.amount_cents, p.affiliate_commission_cents,
-            p.payment_method, p.payment_status, p.school_domain,
-            nc.name AS buyer_name, nc.email AS buyer_email,
-            lp.name AS plan_name
-     FROM purchases p
-     LEFT JOIN newsletter_contacts nc ON nc.id = p.contact_id
-     LEFT JOIN license_products lp ON lp.id = p.license_product_id
-     WHERE p.affiliate_id = ?
-     ORDER BY p.purchased_at DESC
-     LIMIT 500`,
-    [req.params.id]
-  );
-
-  res.json({ sales: rows });
-});
+// A GET /:id/sales endpoint lived here in stage 3, listing the purchases
+// attributed to one affiliate. It was removed in 3.5a rather than left live
+// and orphaned: GET /commissions?affiliateId=N answers the same question and
+// more, since the ledger knows what's owed and what's already been paid, and
+// purchases alone never did. Stage 4's portal reads the ledger too.
 
 module.exports = router;

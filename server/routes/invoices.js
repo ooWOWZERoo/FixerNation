@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { attachPurchaseDetails } = require('./newsletter');
 const { sendInvoiceEmail } = require('../lib/mailer');
 const { fireAutomation } = require('../lib/automations');
+const { approveForInvoice, reverseForInvoice } = require('../lib/affiliate-attribution');
 
 const router = express.Router();
 
@@ -159,6 +160,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   const wasAlreadyPaid = rows[0].status === 'paid';
 
   const connection = await pool.getConnection();
+  let affiliateEffect = null;
   try {
     await connection.beginTransaction();
     await connection.query(
@@ -172,12 +174,31 @@ router.put('/:id', requireAuth, async (req, res) => {
       // purchases.payment_status uses 'paid'|'pending' (not 'unpaid') — map accordingly.
       await connection.query('UPDATE purchases SET payment_status = ? WHERE invoice_id = ?', [status === 'paid' ? 'paid' : 'pending', req.params.id]);
     }
+
+    // Affiliate commission settles off the invoice transition, in the same
+    // transaction as the status change — see docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md.
+    // A PO's commission is only payable once the money is confirmed, and a
+    // cancelled invoice claws back whatever hasn't been paid out yet.
+    if (status === 'paid') {
+      const approved = await approveForInvoice(connection, req.params.id, req.user && req.user.userId);
+      if (approved) affiliateEffect = { approved };
+    } else if (status === 'cancelled') {
+      const reversed = await reverseForInvoice(connection, req.params.id, req.user && req.user.userId, 'Invoice cancelled');
+      if (reversed.reversed || reversed.alreadyPaid) affiliateEffect = reversed;
+    }
+
     await connection.commit();
   } catch (err) {
     await connection.rollback();
     throw err;
   } finally {
     connection.release();
+  }
+
+  // An already-paid-out commission can't be clawed back silently — the money
+  // is gone. Surfaced to the admin rather than swallowed.
+  if (affiliateEffect && affiliateEffect.alreadyPaid) {
+    console.warn(`[affiliate] Invoice ${req.params.id} cancelled with ${affiliateEffect.alreadyPaid} already-paid commission entr${affiliateEffect.alreadyPaid === 1 ? 'y' : 'ies'} — not reversed, needs manual follow-up.`);
   }
 
   // Only fire on a fresh transition to paid — flipping it paid→paid (e.g. a
@@ -196,7 +217,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
   }
 
-  res.json({ ok: true });
+  res.json({ ok: true, affiliateCommission: affiliateEffect });
 });
 
 // Mark hard-copy PO as received — activates the associated school license.

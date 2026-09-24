@@ -20,6 +20,11 @@
   .pitch-box { background: var(--a-bg); border: 1px solid var(--a-border); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
   .code-cell { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 700; }
   .meta-line { font-size: 12px; color: var(--a-text-soft); }
+  .comm-totals { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+  .comm-tile { background: var(--a-card); border: 1px solid var(--a-border); border-radius: 12px; padding: 14px 18px; min-width: 150px; }
+  .comm-tile .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--a-text-soft); font-weight: 700; }
+  .comm-tile .value { font-size: 21px; font-weight: 700; margin-top: 4px; }
+  .comm-tile .sub { font-size: 11.5px; color: var(--a-text-soft); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -39,6 +44,7 @@
       <div class="aff-tab-bar">
         <button class="aff-tab active" data-tab="applications" onclick="switchTab('applications')">Applications <span id="pendingBadge"></span></button>
         <button class="aff-tab" data-tab="affiliates" onclick="switchTab('affiliates')">Affiliates</button>
+        <button class="aff-tab" data-tab="commissions" onclick="switchTab('commissions')">Commissions <span id="commBadge"></span></button>
       </div>
 
       <!-- Applications tab -->
@@ -70,6 +76,29 @@
         <div class="a-card">
           <div id="affTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
         </div>
+      </div>
+
+      <!-- Commissions tab -->
+      <div id="tab-commissions" style="display:none;">
+        <div class="comm-totals" id="commTotals"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+          <select id="commStatus" onchange="loadCommissions()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);">
+            <option value="">All entries</option>
+            <option value="pending">Pending — money not confirmed</option>
+            <option value="approved">Approved — owed, awaiting payout</option>
+            <option value="paid">Paid</option>
+            <option value="on_hold">On hold</option>
+            <option value="reversed">Reversed</option>
+          </select>
+        </div>
+        <div class="a-card">
+          <div id="commTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+        </div>
+        <p class="meta-line" style="margin-top:14px;">
+          A card sale is approved the moment it's paid. A purchase-order sale stays pending until you mark its
+          invoice paid, and cancelling an invoice reverses whatever hasn't been paid out yet.
+        </p>
       </div>
     </div>
   </div>
@@ -186,16 +215,83 @@
   </div>
 </div>
 
-<!-- Sales modal -->
-<div class="a-modal-overlay" id="salesModal">
-  <div class="a-modal" style="max-width:820px;">
+<!-- Mark paid modal -->
+<div class="a-modal-overlay" id="payModal">
+  <div class="a-modal" style="max-width:460px;">
     <div class="a-modal-head">
-      <h3 id="salesTitle">Attributed sales</h3>
-      <button class="a-modal-close" onclick="closeModal('salesModal')">✕</button>
+      <h3>Record a payout</h3>
+      <button class="a-modal-close" onclick="closeModal('payModal')">✕</button>
     </div>
-    <div class="a-modal-body" id="salesBody"></div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="payErr"></div>
+      <div id="payWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+      <div class="a-field">
+        <label>Payment reference</label>
+        <input type="text" id="payRef" placeholder="Check 1042, transfer id, batch name…">
+        <div class="a-hint">Payment happens outside the system, the same as PO invoices. This only records that you sent it.</div>
+      </div>
+    </div>
     <div class="a-modal-foot">
-      <button class="a-btn a-btn-outline" onclick="closeModal('salesModal')">Close</button>
+      <button class="a-btn a-btn-outline" onclick="closeModal('payModal')">Cancel</button>
+      <button class="a-btn a-btn-primary" id="payBtn" onclick="doPay()">Mark paid</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reverse modal -->
+<div class="a-modal-overlay" id="reverseModal">
+  <div class="a-modal" style="max-width:460px;">
+    <div class="a-modal-head">
+      <h3>Reverse a commission</h3>
+      <button class="a-modal-close" onclick="closeModal('reverseModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="reverseErr"></div>
+      <div id="reverseWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+      <div class="a-field">
+        <label>Reason *</label>
+        <textarea id="reverseReason" placeholder="Refunded, order cancelled, duplicate entry…"></textarea>
+        <div class="a-hint">Kept on the entry permanently. The entry stays on record as reversed rather than disappearing.</div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('reverseModal')">Cancel</button>
+      <button class="a-btn a-btn-danger" id="reverseBtn" onclick="doReverse()">Reverse</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manual adjustment modal -->
+<div class="a-modal-overlay" id="adjustModal">
+  <div class="a-modal" style="max-width:480px;">
+    <div class="a-modal-head">
+      <h3>Add an adjustment</h3>
+      <button class="a-modal-close" onclick="closeModal('adjustModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="adjustErr"></div>
+      <div id="adjustWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+      <div class="a-field">
+        <label>Type</label>
+        <select id="adjustType">
+          <option value="bonus">Bonus — something extra you're granting</option>
+          <option value="manual">Manual adjustment — a correction</option>
+        </select>
+      </div>
+      <div class="a-field">
+        <label>Amount ($) *</label>
+        <input type="number" id="adjustAmount" step="0.01" placeholder="250.00">
+        <div class="a-hint">A negative amount corrects an over-credit. To claw back a specific sale, reverse that entry instead.</div>
+      </div>
+      <div class="a-field">
+        <label>Description *</label>
+        <input type="text" id="adjustDesc" placeholder="Q3 performance bonus">
+        <div class="a-hint">Nothing else explains this entry — there's no sale behind it.</div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('adjustModal')">Cancel</button>
+      <button class="a-btn a-btn-primary" id="adjustBtn" onclick="doAdjust()">Add entry</button>
     </div>
   </div>
 </div>
@@ -210,14 +306,18 @@ var approveId = null, rejectId = null, editId = null;
 document.addEventListener('DOMContentLoaded', function () {
   loadApplications();
   loadAffiliates();
+  loadCommissions();
 });
+
+var TABS = ['applications', 'affiliates', 'commissions'];
 
 function switchTab(tab) {
   document.querySelectorAll('.aff-tab').forEach(function (btn) {
     btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
   });
-  document.getElementById('tab-applications').style.display = tab === 'applications' ? '' : 'none';
-  document.getElementById('tab-affiliates').style.display = tab === 'affiliates' ? '' : 'none';
+  TABS.forEach(function (t) {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  });
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -420,7 +520,7 @@ function renderAffiliates() {
     return;
   }
   wrap.innerHTML =
-    '<table class="a-table"><thead><tr><th>Affiliate</th><th>Referral code</th><th>Rate</th><th>Territory</th><th>Status</th><th>Sales</th><th>Commission</th><th>Actions</th></tr></thead><tbody>' +
+    '<table class="a-table"><thead><tr><th>Affiliate</th><th>Referral code</th><th>Rate</th><th>Territory</th><th>Status</th><th>Sales</th><th title="Earned, money not yet confirmed">Pending</th><th title="Confirmed and owed, not yet paid out">Owed</th><th>Paid</th><th>Actions</th></tr></thead><tbody>' +
     affiliates.map(function (a) {
       var name = [a.first_name, a.last_name].filter(Boolean).join(' ');
       var unverified = a.email_verified ? '' : ' <span class="a-pill a-pill-warn" title="Has not set a password yet">Setup pending</span>';
@@ -435,9 +535,12 @@ function renderAffiliates() {
         '<td style="font-size:13px;">' + esc(a.territory || '—') + '</td>' +
         '<td>' + statusPill + '</td>' +
         '<td style="font-size:13px;">' + Number(a.sale_count || 0) + '</td>' +
-        '<td style="font-size:13px;font-weight:600;">' + money(a.commission_cents) + '</td>' +
+        '<td style="font-size:13px;color:var(--a-text-soft);">' + money(a.pending_cents) + '</td>' +
+        '<td style="font-size:13px;font-weight:700;">' + money(a.approved_cents) + '</td>' +
+        '<td style="font-size:13px;">' + money(a.paid_cents) + '</td>' +
         '<td style="white-space:nowrap;">' +
-          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openSales(' + a.id + ')">Sales</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openAffiliateLedger(' + a.id + ')">Ledger</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openAdjust(' + a.id + ')">Adjust</button> ' +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEdit(' + a.id + ')">Edit</button>' +
         '</td></tr>';
     }).join('') +
@@ -497,42 +600,221 @@ async function doEdit() {
   finally { btn.disabled = false; btn.textContent = 'Save changes'; }
 }
 
-async function openSales(id) {
-  var a = affiliates.find(function (x) { return x.id === id; });
-  if (!a) return;
-  document.getElementById('salesTitle').textContent =
-    'Sales for ' + [a.first_name, a.last_name].filter(Boolean).join(' ') + ' (' + a.referral_code + ')';
-  document.getElementById('salesBody').innerHTML = '<div class="a-empty">⏳ Loading…</div>';
-  document.getElementById('salesModal').classList.add('show');
+// --- Commission ledger -----------------------------------------------------
+
+var commissions = [], commFilterAffiliate = null, payId = null, reverseId = null, adjustId = null;
+
+var COMM_PILL = {
+  pending:  '<span class="a-pill a-pill-warn" title="Earned, but the money has not been confirmed yet">Pending</span>',
+  approved: '<span class="a-pill a-pill-success" title="Confirmed and owed, not yet paid out">Approved</span>',
+  paid:     '<span class="a-pill a-pill-neutral">Paid</span>',
+  on_hold:  '<span class="a-pill a-pill-neutral">On hold</span>',
+  reversed: '<span class="a-pill a-pill-danger">Reversed</span>',
+};
+
+async function loadCommissions() {
+  var status = document.getElementById('commStatus').value;
+  var params = [];
+  if (status) params.push('status=' + encodeURIComponent(status));
+  if (commFilterAffiliate) params.push('affiliateId=' + commFilterAffiliate);
+  var wrap = document.getElementById('commTableWrap');
   try {
-    const r = await fetch('/api/affiliates/' + id + '/sales', { credentials: 'include' });
+    const r = await fetch('/api/affiliates/commissions' + (params.length ? '?' + params.join('&') : ''), { credentials: 'include' });
     if (fnHandleUnauthorized(r)) return;
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed to load');
-    var sales = d.sales || [];
-    if (!sales.length) {
-      document.getElementById('salesBody').innerHTML =
-        '<div class="a-empty"><div class="big">📭</div>No sales credited to this affiliate yet.</div>';
-      return;
-    }
-    var total = sales.reduce(function (sum, s) { return sum + Number(s.affiliate_commission_cents || 0); }, 0);
-    document.getElementById('salesBody').innerHTML =
-      '<table class="a-table"><thead><tr><th>Date</th><th>Buyer</th><th>Product</th><th>Payment</th><th>Sale</th><th>Commission</th></tr></thead><tbody>' +
-      sales.map(function (s) {
-        return '<tr>' +
-          '<td style="font-size:13px;">' + shortDate(s.purchased_at) + '</td>' +
-          '<td style="font-size:13px;">' + esc(s.buyer_name || s.buyer_email || '—') + '</td>' +
-          '<td style="font-size:13px;">' + esc(s.plan_name || s.product_type) + '</td>' +
-          '<td style="font-size:13px;">' + esc(s.payment_method) + ' · ' + esc(s.payment_status) + '</td>' +
-          '<td style="font-size:13px;">' + money(s.amount_cents) + '</td>' +
-          '<td style="font-size:13px;font-weight:600;">' + money(s.affiliate_commission_cents) + '</td>' +
-          '</tr>';
-      }).join('') +
-      '</tbody></table>' +
-      '<div style="text-align:right;margin-top:14px;font-size:14px;font-weight:700;">Total commission: ' + money(total) + '</div>';
+    commissions = d.commissions || [];
+    renderCommTotals(d.totals || {});
+    renderCommissions();
   } catch (e) {
-    document.getElementById('salesBody').innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+    wrap.innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
   }
+}
+
+function renderCommTotals(t) {
+  var tiles = [
+    ['Pending', t.pending_cents, 'money not yet confirmed'],
+    ['Owed', t.approved_cents, 'approved, awaiting payout'],
+    ['Paid', t.paid_cents, 'recorded as sent'],
+  ];
+  if (Number(t.on_hold_cents || 0)) tiles.push(['On hold', t.on_hold_cents, 'held by an admin']);
+  if (Number(t.reversed_cents || 0)) tiles.push(['Reversed', t.reversed_cents, 'clawed back, not owed']);
+
+  document.getElementById('commTotals').innerHTML = tiles.map(function (x) {
+    return '<div class="comm-tile"><div class="label">' + x[0] + '</div>' +
+      '<div class="value">' + money(x[1]) + '</div>' +
+      '<div class="sub">' + x[2] + '</div></div>';
+  }).join('');
+
+  var owed = Number(t.approved_cents || 0);
+  document.getElementById('commBadge').innerHTML = owed
+    ? '<span class="a-pill a-pill-success" style="margin-left:6px;">' + money(owed) + '</span>'
+    : '';
+}
+
+function renderCommissions() {
+  var wrap = document.getElementById('commTableWrap');
+  var banner = commFilterAffiliate
+    ? '<div style="padding:12px 14px;border-bottom:1px solid var(--a-border);font-size:13px;">' +
+      'Filtered to one affiliate. <a href="#" onclick="clearCommFilter();return false;" style="color:var(--a-accent);font-weight:600;">Show everyone</a></div>'
+    : '';
+
+  if (!commissions.length) {
+    wrap.innerHTML = banner + '<div class="a-empty"><div class="big">💸</div>No commission entries yet. They appear here the moment a referred sale lands.</div>';
+    return;
+  }
+
+  wrap.innerHTML = banner +
+    '<table class="a-table"><thead><tr><th>Affiliate</th><th>Source</th><th>Sale</th><th>Commission</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    commissions.map(function (c) {
+      var name = [c.first_name, c.last_name].filter(Boolean).join(' ');
+      var source = c.source_type === 'referral'
+        ? esc(c.plan_name || c.product_type || 'Sale') +
+          (c.buyer_name || c.buyer_email ? '<div class="meta-line">' + esc(c.buyer_name || c.buyer_email) + '</div>' : '') +
+          (c.invoice_number ? '<div class="meta-line">Invoice ' + esc(c.invoice_number) + ' · ' + esc(c.invoice_status) + '</div>' : '')
+        : '<span class="a-pill a-pill-neutral">' + esc(c.source_type) + '</span>' +
+          (c.description ? '<div class="meta-line">' + esc(c.description) + '</div>' : '');
+      var reversal = c.status === 'reversed' && c.reversal_reason
+        ? '<div class="meta-line">' + esc(c.reversal_reason) + '</div>' : '';
+      var payRef = c.status === 'paid' && c.payout_reference
+        ? '<div class="meta-line">' + esc(c.payout_reference) + '</div>' : '';
+
+      var actions = '';
+      if (c.status === 'pending' || c.status === 'on_hold') actions += '<button class="a-btn a-btn-primary a-btn-sm" onclick="doTransition(' + c.id + ',\'approve\')">Approve</button> ';
+      if (c.status === 'approved') actions += '<button class="a-btn a-btn-primary a-btn-sm" onclick="openPay(' + c.id + ')">Mark paid</button> ';
+      if (c.status === 'pending' || c.status === 'approved') actions += '<button class="a-btn a-btn-outline a-btn-sm" onclick="doTransition(' + c.id + ',\'hold\')">Hold</button> ';
+      if (c.status === 'on_hold') actions += '<button class="a-btn a-btn-outline a-btn-sm" onclick="doTransition(' + c.id + ',\'release\')">Release</button> ';
+      if (['pending', 'approved', 'on_hold'].indexOf(c.status) !== -1) actions += '<button class="a-btn a-btn-danger a-btn-sm" onclick="openReverse(' + c.id + ')">Reverse</button>';
+
+      return '<tr>' +
+        '<td><div style="font-weight:600;">' + esc(name) + '</div><div class="meta-line code-cell">' + esc(c.referral_code) + '</div></td>' +
+        '<td style="font-size:13px;">' + source + '</td>' +
+        '<td style="font-size:13px;">' + (c.gross_amount_cents == null ? '—' : money(c.gross_amount_cents)) +
+          (c.commission_rate != null && c.source_type === 'referral'
+            ? '<div class="meta-line">at ' + esc(Number(c.commission_rate).toFixed(2).replace(/\.00$/, '')) + '%</div>' : '') + '</td>' +
+        '<td style="font-size:13px;font-weight:700;">' + money(c.commission_cents) + '</td>' +
+        '<td>' + (COMM_PILL[c.status] || esc(c.status)) + reversal + payRef + '</td>' +
+        '<td style="white-space:nowrap;">' + (actions || '<span class="meta-line">—</span>') + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function openAffiliateLedger(id) {
+  commFilterAffiliate = id;
+  document.getElementById('commStatus').value = '';
+  switchTab('commissions');
+  loadCommissions();
+}
+
+function clearCommFilter() {
+  commFilterAffiliate = null;
+  loadCommissions();
+}
+
+async function doTransition(id, action, body) {
+  try {
+    const r = await fetch('/api/affiliates/commissions/' + id + '/' + action, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    if (fnHandleUnauthorized(r)) return false;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Commission ' + d.status + '.');
+    loadCommissions();
+    loadAffiliates();
+    return true;
+  } catch (e) {
+    fnToast(e.message);
+    return false;
+  }
+}
+
+function commLabel(id) {
+  var c = commissions.find(function (x) { return x.id === id; });
+  if (!c) return '';
+  return [c.first_name, c.last_name].filter(Boolean).join(' ') + ' · ' + money(c.commission_cents);
+}
+
+function openPay(id) {
+  payId = id;
+  document.getElementById('payErr').style.display = 'none';
+  document.getElementById('payRef').value = '';
+  document.getElementById('payWho').textContent = commLabel(id);
+  document.getElementById('payModal').classList.add('show');
+}
+
+async function doPay() {
+  var btn = document.getElementById('payBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  var ok = await doTransition(payId, 'pay', { payoutReference: document.getElementById('payRef').value.trim() });
+  btn.disabled = false; btn.textContent = 'Mark paid';
+  if (ok) closeModal('payModal');
+}
+
+function openReverse(id) {
+  reverseId = id;
+  document.getElementById('reverseErr').style.display = 'none';
+  document.getElementById('reverseReason').value = '';
+  document.getElementById('reverseWho').textContent = commLabel(id);
+  document.getElementById('reverseModal').classList.add('show');
+}
+
+async function doReverse() {
+  var err = document.getElementById('reverseErr');
+  var reason = document.getElementById('reverseReason').value.trim();
+  err.style.display = 'none';
+  if (!reason) { err.textContent = 'A reason is required.'; err.style.display = 'block'; return; }
+  var btn = document.getElementById('reverseBtn');
+  btn.disabled = true; btn.textContent = 'Reversing…';
+  var ok = await doTransition(reverseId, 'reverse', { reason: reason });
+  btn.disabled = false; btn.textContent = 'Reverse';
+  if (ok) closeModal('reverseModal');
+}
+
+function openAdjust(id) {
+  var a = affiliates.find(function (x) { return x.id === id; });
+  if (!a) return;
+  adjustId = id;
+  document.getElementById('adjustErr').style.display = 'none';
+  document.getElementById('adjustAmount').value = '';
+  document.getElementById('adjustDesc').value = '';
+  document.getElementById('adjustType').value = 'bonus';
+  document.getElementById('adjustWho').textContent =
+    [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.referral_code;
+  document.getElementById('adjustModal').classList.add('show');
+}
+
+async function doAdjust() {
+  var btn = document.getElementById('adjustBtn');
+  var err = document.getElementById('adjustErr');
+  err.style.display = 'none';
+  var amount = document.getElementById('adjustAmount').value;
+  var desc = document.getElementById('adjustDesc').value.trim();
+  if (!amount || Number(amount) === 0) { err.textContent = 'Enter a non-zero amount.'; err.style.display = 'block'; return; }
+  if (!desc) { err.textContent = 'A description is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    const r = await fetch('/api/affiliates/' + adjustId + '/commissions', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sourceType: document.getElementById('adjustType').value,
+        amount: Number(amount),
+        description: desc,
+      }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeModal('adjustModal');
+    fnToast('Adjustment added.');
+    loadCommissions();
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Add entry'; }
 }
 </script>
 </body>
