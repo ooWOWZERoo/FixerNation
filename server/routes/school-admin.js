@@ -16,7 +16,17 @@ const {
   sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
 } = require('../lib/mailer');
-const { audit } = require('../lib/audit');
+const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
+
+// school_audit_log is shared with the affiliate program (server/lib/audit.js).
+// Every purchase-scoped view below must exclude those rows explicitly — a
+// commission's payout_reference or status is real, sensitive data (someone's
+// payment reference), and a school license admin viewing "activity for this
+// purchase" must never see it just because the purchase happened to be
+// referred by an affiliate. Without this, a purchase that's both a
+// group_license sale AND an affiliate-attributed sale would leak commission
+// detail into a completely unrelated admin's view.
+const NOT_AFFILIATE_ENTITY = `entity_type NOT IN (${AFFILIATE_ENTITY_TYPES.map(() => '?').join(', ')})`;
 
 const router = express.Router();
 
@@ -139,10 +149,10 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
   const [recentActivity] = await pool.query(
     `SELECT action, entity_type, actor_email, created_at, reason
      FROM school_audit_log
-     WHERE purchase_id = ?
+     WHERE purchase_id = ? AND ${NOT_AFFILIATE_ENTITY}
      ORDER BY created_at DESC
      LIMIT 10`,
-    [purchaseId]
+    [purchaseId, ...AFFILIATE_ENTITY_TYPES]
   );
 
   const totalSeats = purchase.seat_count;
@@ -1234,10 +1244,10 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
     const [rows] = await pool.query(
       `SELECT action, entity_type, entity_id, actor_email, reason, created_at, new_value
        FROM school_audit_log
-       WHERE purchase_id = ?
+       WHERE purchase_id = ? AND ${NOT_AFFILIATE_ENTITY}
        ORDER BY created_at DESC
        LIMIT 500`,
-      [purchaseId]
+      [purchaseId, ...AFFILIATE_ENTITY_TYPES]
     );
     return res.json({ activity: rows });
   }
@@ -1326,8 +1336,8 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
   const offset = (page - 1) * limit;
 
   const [[{ total }]] = await pool.query(
-    'SELECT COUNT(*) AS total FROM school_audit_log WHERE purchase_id = ?',
-    [purchaseId]
+    `SELECT COUNT(*) AS total FROM school_audit_log WHERE purchase_id = ? AND ${NOT_AFFILIATE_ENTITY}`,
+    [purchaseId, ...AFFILIATE_ENTITY_TYPES]
   );
 
   const [rows] = await pool.query(
@@ -1337,10 +1347,10 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
      FROM school_audit_log sal
      LEFT JOIN site_users su ON su.id = sal.entity_id AND sal.entity_type = 'site_user'
      LEFT JOIN license_seats ls ON ls.id = sal.entity_id AND sal.entity_type = 'seat'
-     WHERE sal.purchase_id = ?
+     WHERE sal.purchase_id = ? AND sal.${NOT_AFFILIATE_ENTITY}
      ORDER BY sal.created_at DESC
      LIMIT ? OFFSET ?`,
-    [purchaseId, limit, offset]
+    [purchaseId, ...AFFILIATE_ENTITY_TYPES, limit, offset]
   );
 
   res.json({ entries: rows, total: Number(total), page, limit });

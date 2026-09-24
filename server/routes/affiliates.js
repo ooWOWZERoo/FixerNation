@@ -23,7 +23,7 @@ const {
   US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder,
   assignTerritory, revokeTerritoryAssignment, territoriesForAffiliate, listTerritories,
 } = require('../lib/territories');
-const { audit } = require('../lib/audit');
+const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
 
 const router = express.Router();
 
@@ -639,20 +639,23 @@ router.post('/:id/commissions', requireAuth, async (req, res) => {
 // rather than duplicated into a second near-identical table, since its
 // actor/action/entity columns are already generic. Filtered to the affiliate
 // program's own entity_type values so this program's log doesn't pull in
-// unrelated school-admin rows, and vice versa: nothing here is visible from
-// admin-school-admins.html or any other consumer of that table.
+// unrelated school-admin rows. The reverse direction — a purchase-scoped
+// school-admin view accidentally surfacing a commission action, including a
+// payout_reference, just because that purchase happened to be
+// affiliate-attributed — is real and was found and closed separately: every
+// purchase-scoped school_audit_log query in school-admin.js now excludes
+// AFFILIATE_ENTITY_TYPES explicitly (see the NOT_AFFILIATE_ENTITY constant
+// there). Both directions share this one list, from lib/audit.js.
 // ---------------------------------------------------------------------------
-
-const AFFILIATE_AUDIT_ENTITY_TYPES = ['affiliate', 'affiliate_application', 'affiliate_commission', 'affiliate_territory'];
 
 // GET /api/affiliates/audit-log?entityType=&q=
 router.get('/audit-log', requireAuth, async (req, res) => {
   const entityType = (req.query.entityType || '').trim();
   const q = (req.query.q || '').trim();
-  const where = [`entity_type IN (${AFFILIATE_AUDIT_ENTITY_TYPES.map(() => '?').join(', ')})`];
-  const params = [...AFFILIATE_AUDIT_ENTITY_TYPES];
+  const where = [`entity_type IN (${AFFILIATE_ENTITY_TYPES.map(() => '?').join(', ')})`];
+  const params = [...AFFILIATE_ENTITY_TYPES];
 
-  if (entityType && AFFILIATE_AUDIT_ENTITY_TYPES.includes(entityType)) {
+  if (entityType && AFFILIATE_ENTITY_TYPES.includes(entityType)) {
     where.push('entity_type = ?');
     params.push(entityType);
   }

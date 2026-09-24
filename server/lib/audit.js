@@ -33,4 +33,14 @@ async function audit(conn, { actorType, actorId, actorEmail, action, entityType,
   }
 }
 
-module.exports = { audit };
+// entity_type values the affiliate program writes into school_audit_log.
+// Shared in both directions: routes/affiliates.js's own audit-log view
+// filters TO these values (GET /api/affiliates/audit-log); school-admin.js's
+// purchase-scoped audit views filter them OUT. Both need the same list kept
+// in exactly one place — a commission's payout_reference is real, sensitive
+// data (someone's payment reference), and a school license admin viewing
+// "activity for this purchase" must never see it just because the purchase
+// happened to be referred by an affiliate.
+const AFFILIATE_ENTITY_TYPES = ['affiliate', 'affiliate_application', 'affiliate_commission', 'affiliate_territory'];
+
+module.exports = { audit, AFFILIATE_ENTITY_TYPES };
