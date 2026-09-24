@@ -100,12 +100,26 @@ Confirmed 2026-09-24. Building and deploying in four stages rather than all at o
 
 1. ~~**Schema**~~ — *built, awaiting deploy.* `affiliate_applications`, `affiliates`, and the two `purchases` columns (`server/scripts/alter-add-affiliate-program.js`). Two changes from the draft SQL above: `VARCHAR` status columns instead of `ENUM`, matching the rest of this codebase, and a real FK on `purchases.affiliate_id` so a recycled `AUTO_INCREMENT` id can't re-attribute an old sale to a new affiliate.
 2. ~~**Application form + admin review UI**~~ — *built, awaiting deploy.* `become-an-affiliate.html` (honeypot + per-IP throttle), `admin-affiliates.html` (Applications and Affiliates tabs), `server/routes/affiliates.js`, and the two new `email_automations` templates.
-3. **Referral capture + checkout attribution** — the `?ref=` cookie and the commission snapshot at purchase time. Not started.
+3. ~~**Referral capture + checkout attribution**~~ — *built, awaiting deploy.* `referral.js` on all 58 public pages writes the `fn_ref` cookie; `server/lib/affiliate-attribution.js` resolves it and snapshots the commission; every purchase path credits the sale through the single `createPurchase()` choke point in `routes/newsletter.js`.
 4. **Affiliate portal** — `affiliate-dashboard.html`. Not started.
 
-### Known consequences of the staging
+### How attribution actually reaches the purchase
 
-Until stage 3 ships, no sale can be credited to anyone, so every sales and commission figure on the admin page reads zero. That's expected, not a bug.
+`fn_ref` is an ordinary same-origin cookie, so it rides along on every later `/api` call without any page code passing it around. Checkout pages needed no changes at all.
+
+The one exception is the Stripe webhook, which is a request from Stripe with none of the buyer's cookies on it. For card checkouts the code is written into the Stripe session's `metadata.ref` at session-creation time (where the cookie is present) and read back out in the webhook. PO checkout and quote acceptance are both real browser requests, so they read the cookie directly.
+
+Everything converges on `createPurchase()`, which calls `attributePurchase()` inside its own transaction — a purchase row is never briefly visible as attributed-but-uncommissioned. An unknown or suspended code is a silent no-op: the sale is simply unattributed, not an error.
+
+The admin's manual "add a purchase" form deliberately passes no code. The cookie on that request belongs to a staff member's browser and has nothing to do with how the sale happened.
+
+### One judgment call worth reviewing
+
+**A trial converting to an annual license inherits the trial's affiliate** when the converting checkout carries no fresh code. A newer code still wins (last-touch is unchanged), and the inherited code is re-checked, so a since-suspended affiliate earns nothing.
+
+This wasn't one of the four confirmed decisions, and it's a real policy choice rather than an obvious default. The reasoning: the conversion is where the actual money is, it happens up to 30 days after the trial and often from a different browser with no cookie left, and crediting only the $74.50 trial would make a trial-sourced affiliate sale close to worthless. If the intent is stricter — commission only where a live cookie exists at the moment of purchase — deleting the `conversionRef` fallback in `handleTrialConversionCompleted()` (`server/routes/checkout.js`) is the whole change.
+
+### Known consequences of the staging
 
 Until stage 4 ships, there's no affiliate portal to land in, so an approved affiliate's welcome email sends them to `my-profile.html` (which every `site_user` already has) rather than a 404. One constant, `AFFILIATE_LANDING_PATH` in `server/routes/affiliates.js`, switches that over when the dashboard exists.
 

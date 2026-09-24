@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { unsubscribeToken, sendVerificationEmail } = require('../lib/mailer');
 const { createToken } = require('../lib/site-tokens');
 const { fireAutomation } = require('../lib/automations');
+const { attributePurchase } = require('../lib/affiliate-attribution');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -387,7 +388,7 @@ async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation, affiliateRefCode }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const normalizedDomain = productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null;
@@ -438,6 +439,16 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
       ]
     );
     const purchaseId = result.insertId;
+
+    // Affiliate attribution, inside the same transaction as the purchase it
+    // belongs to. Only the buyer-facing paths pass a code (card checkout, PO
+    // checkout, quote acceptance); the admin's manual "add a purchase" form
+    // deliberately doesn't, since the cookie in that request is a staff
+    // member's browsing history, not a referral. An unknown or suspended
+    // code is a silent no-op — the sale simply goes unattributed.
+    if (affiliateRefCode) {
+      await attributePurchase(connection, purchaseId, affiliateRefCode, amountCents);
+    }
 
     if (productType === 'single_license') {
       const [contactRows] = await connection.query('SELECT email FROM newsletter_contacts WHERE id = ?', [contactId]);

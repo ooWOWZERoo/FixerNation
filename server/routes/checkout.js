@@ -10,6 +10,7 @@ const { createToken } = require('../lib/site-tokens');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail } = require('../lib/mailer');
+const { refCodeFromRequest, codeForAffiliateId } = require('../lib/affiliate-attribution');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,6 +18,13 @@ const MAX_CART_ITEMS = 10;
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+// Stripe metadata values have to be strings, and an absent referral is better
+// left out of the object than written as an empty one.
+function refMetadata(req) {
+  const code = refCodeFromRequest(req);
+  return code ? { ref: code } : {};
 }
 
 // Creates a shell site_users account (email pre-verified via Stripe payment)
@@ -91,6 +99,10 @@ router.post('/create-session', async (req, res) => {
   }
 
   const siteUrl = process.env.SITE_URL || '';
+  // Carried through Stripe's metadata because the webhook that actually
+  // creates the purchase is a request from Stripe, with none of the buyer's
+  // cookies on it. See lib/affiliate-attribution.js.
+  const refMeta = refMetadata(req);
 
   // New path: productId from license_products (variable-seat, admin-controlled price)
   if (b.productId) {
@@ -125,7 +137,7 @@ router.post('/create-session', async (req, res) => {
         },
         quantity: resolvedSeatCount,
       }],
-      metadata: { productId: String(productId), seatCount: String(resolvedSeatCount), email },
+      metadata: { productId: String(productId), seatCount: String(resolvedSeatCount), email, ...refMeta },
       success_url: `${siteUrl}/licenses.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/licenses.html?checkout=cancelled`,
     });
@@ -157,7 +169,7 @@ router.post('/create-session', async (req, res) => {
       },
       quantity,
     }],
-    metadata: { productType, seatCount: String(quantity), email },
+    metadata: { productType, seatCount: String(quantity), email, ...refMeta },
     success_url: `${siteUrl}/licenses.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteUrl}/licenses.html?checkout=cancelled`,
   });
@@ -268,7 +280,7 @@ router.post('/create-cart-session', async (req, res) => {
     payment_method_types: ['card'],
     customer_email: email,
     line_items: lineItems,
-    metadata: { cart: cartJson, email },
+    metadata: { cart: cartJson, email, ...refMetadata(req) },
     success_url: `${siteUrl}/cart.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteUrl}/cart.html?checkout=cancelled`,
   });
@@ -326,6 +338,9 @@ router.post('/create-po-order', async (req, res) => {
     paymentStatus: 'pending',
     poNumber,
     invoiceId,
+    // This one is a real browser request, so the fn_ref cookie is right here
+    // and needs no detour through Stripe.
+    affiliateRefCode: refCodeFromRequest(req),
   });
 
   // PO orders do not grant immediate CONTENT access — license activates
@@ -381,6 +396,15 @@ async function handleTrialConversionCompleted(session, metadata) {
   const [existing] = await pool.query('SELECT id FROM purchases WHERE stripe_session_id = ? LIMIT 1', [session.id]);
   if (existing.length) return;
 
+  // A trial converting to an annual license is where the real money is, and
+  // the affiliate who brought the trial in did the work that produced it. A
+  // fresh code on this checkout still wins (last-touch), but with none
+  // present the conversion inherits the trial's affiliate rather than
+  // silently going unattributed — a conversion can easily happen weeks later
+  // from a different browser with no cookie left. The inherited code is
+  // re-checked like any other, so a since-suspended affiliate earns nothing.
+  const conversionRef = metadata.ref || await codeForAffiliateId(trial.affiliate_id);
+
   const newPurchaseId = await createPurchase(trial.contact_id, {
     productType: 'group_license',
     licenseProductId: targetProductId,
@@ -390,6 +414,7 @@ async function handleTrialConversionCompleted(session, metadata) {
     paymentMethod: 'stripe',
     paymentStatus: 'paid',
     amountCents: session.amount_total,
+    affiliateRefCode: conversionRef,
   });
 
   await pool.query(
@@ -618,6 +643,7 @@ async function webhookHandler(req, res) {
           stripeSessionId: session.id,
           paymentMethod: 'stripe',
           paymentStatus: 'paid',
+          affiliateRefCode: metadata.ref,
         });
         const licenseItems = resolved.filter(r => r.type === 'license_product');
         if (licenseItems.length) {
@@ -651,6 +677,7 @@ async function webhookHandler(req, res) {
             trialLessonLimit: lp.trial_lesson_limit || 4,
             trialLibraryLimit,
             conversionCreditCents: lp.price_cents,
+            affiliateRefCode: metadata.ref,
           });
           const firstName = (metadata.email || '').split('@')[0].split('.')[0] || 'there';
           let setPasswordUrl = '';
@@ -669,6 +696,7 @@ async function webhookHandler(req, res) {
             paymentMethod: 'stripe',
             paymentStatus: 'paid',
             amountCents: session.amount_total,
+            affiliateRefCode: metadata.ref,
           });
           await setupSchoolAdmin(metadata.email, [purchaseId]);
         }
@@ -681,6 +709,10 @@ async function webhookHandler(req, res) {
           stripeSessionId: session.id,
           paymentMethod: 'stripe',
           paymentStatus: 'paid',
+          // This legacy path never passed an amountCents, so an attributed
+          // sale here records the affiliate but leaves commission NULL
+          // instead of claiming it earned $0.
+          affiliateRefCode: metadata.ref,
         });
       }
 

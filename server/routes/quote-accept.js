@@ -7,6 +7,7 @@ const { createSetPasswordUrl } = require('./checkout');
 const { sendAutomationEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
+const { refCodeFromRequest } = require('../lib/affiliate-attribution');
 
 const router = express.Router();
 
@@ -146,6 +147,11 @@ router.post('/accept', async (req, res) => {
     schoolDomain: quote.quoted_school_domain || null,
     quoteId: quote.id,
     licenseDurationDaysOverride,
+    // The buyer accepts from their own browser, so their fn_ref cookie (if
+    // any) is on this request. A quote an affiliate walked a school through
+    // still counts as their sale, as long as the school reached the site
+    // through their link within the 90-day window.
+    affiliateRefCode: refCodeFromRequest(req),
     ...trialFields,
   });
 
