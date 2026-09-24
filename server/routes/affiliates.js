@@ -28,10 +28,10 @@ const { audit } = require('../lib/audit');
 const router = express.Router();
 
 // Where a newly approved affiliate lands after setting their password.
-// Stage 4 changes this one line to '/affiliate-dashboard.html'; until that
-// page exists, sending them there would be a 404, so they go to the profile
-// page every site_user already has.
-const AFFILIATE_LANDING_PATH = '/my-profile.html';
+// Was '/my-profile.html' through stages 2–3.5c, since affiliate-dashboard.html
+// didn't exist yet and sending them there would have been a 404. Now that
+// stage 4 has built it, this points there.
+const AFFILIATE_LANDING_PATH = '/affiliate-dashboard.html';
 
 // A role we refuse to overwrite when approving an application. site_users.role
 // is a single column, so approving an email that already belongs to staff or a

@@ -12,6 +12,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ## Unreleased / Known pending work
 
+- **Affiliates now have somewhere to actually see their own account. Coded and pushed, not yet deployed.** Since the program launched, an approved affiliate could set a password and log in, but there was nowhere for them to land — their welcome email was the only place they'd ever see their own referral code, rate, and territory. That's fixed: a new **Affiliate Dashboard** shows their referral link with a one-click copy button, their commission rate, whatever territories they hold, three running totals (pending, owed, paid), and a table of their own commission history with each entry's status.
+
+  It's read-only by design — only an admin changes a rate, a territory, or a commission's status. It's reachable from the same logged-in account menu every other portal (Parent, School Admin, District Admin) already uses, so an affiliate logging in from any public page finds their way there the same way anyone else finds their own portal. A newly approved affiliate's welcome email now sends them here directly instead of to the generic profile page.
+
+  Needs the broad `rsync` (one new page, one new server route, plus the `site-auth.js` `?v=6`→`?v=7` bump across all 58 pages that load it), and a Node app restart (a new route file, wired into `app.js`). No schema change, no new migration script, no new npm dependencies.
+
 - **Every affiliate action now leaves a trail — who did what, and when. Coded and pushed, not yet deployed.** Approving or rejecting an application, changing a rate, suspending someone (and the territory it frees up along the way), assigning or revoking a territory, and every commission decision (approve, hold, release, mark paid, reverse, or a manual bonus/correction) now writes a record naming the admin who did it.
 
   This didn't need a new table. FNE already had one general-purpose audit log, built for the school-admin portal, sitting mostly unused outside that one context — this reuses it rather than building a near-duplicate. A new **Activity Log** tab on the admin page shows the affiliate program's own history, filterable by what kind of thing changed, without pulling in anything from the school-admin side of the house (and nothing written here shows up over there either).

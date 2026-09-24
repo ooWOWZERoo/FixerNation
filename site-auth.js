@@ -131,6 +131,7 @@ function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isScho
           ${isParent ? li('parent-portal.html', 'Parent Portal') : ''}
           ${isSchoolAdmin ? li('school-admin-dashboard.html', 'School Admin Portal') : ''}
           ${isDistrictAdmin ? li('district-admin-dashboard.html', 'District Admin Portal') : ''}
+          ${role === 'affiliate' ? li('affiliate-dashboard.html', 'Affiliate Dashboard') : ''}
           ${isAdmin ? li('admin-dashboard.html', 'FNE Admin Dashboard') : ''}
           ${li('my-purchases.html', 'Purchase History')}
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>

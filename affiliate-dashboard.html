@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Affiliate Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --border:rgba(22,79,74,0.15);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; padding:0;}
+  .wrap{max-width:960px; margin:0 auto; padding:24px 20px 60px;}
+  h1{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:28px; margin-bottom:6px;}
+  p.sub{font-size:14.5px; color:var(--ink-soft); margin-bottom:28px;}
+  h2.section-heading{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:18px; margin:0 0 14px;}
+  .card{background:#fff; border-radius:18px; box-shadow:0 16px 40px -20px rgba(22,79,74,0.25); padding:26px 28px; margin-bottom:20px;}
+  .banner{border-radius:14px; padding:14px 18px; margin-bottom:20px; font-size:14px; font-weight:600;}
+  .banner-warn{background:#FDF2E4; color:#8A5A17;}
+
+  .link-row{display:flex; gap:10px; align-items:stretch; flex-wrap:wrap;}
+  .link-box{flex:1; min-width:220px; background:var(--cream); border:1.5px solid var(--border); border-radius:10px; padding:12px 14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px; color:var(--ink); overflow-x:auto; white-space:nowrap; display:flex; align-items:center;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:11px 20px; border-radius:999px; font-weight:700; font-size:13.5px; cursor:pointer; border:none; transition:background .15s; font-family:inherit; white-space:nowrap;}
+  .btn-primary{background:var(--coral); color:#fff;}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .code-pill{display:inline-block; background:var(--teal); color:#fff; font-weight:700; font-size:15px; padding:6px 16px; border-radius:999px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:0.02em; margin-bottom:14px;}
+
+  .stat-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:8px;}
+  .stat-tile{flex:1; min-width:140px; background:var(--cream); border-radius:12px; padding:16px 18px;}
+  .stat-tile .label{font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); font-weight:700;}
+  .stat-tile .value{font-size:23px; font-weight:700; color:var(--teal-dark); margin-top:4px;}
+  .stat-tile .sub{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+
+  .meta-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  .meta-item .label{font-size:11.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); font-weight:700; margin-bottom:4px;}
+  .meta-item .value{font-size:15px; font-weight:600;}
+  .territory-chip{display:inline-block; background:var(--cream); border:1px solid var(--border); border-radius:999px; padding:4px 12px; font-size:12.5px; font-weight:600; margin:2px 4px 2px 0;}
+
+  table.ledger{width:100%; border-collapse:collapse; font-size:13.5px;}
+  table.ledger th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft); font-weight:700; padding:8px 10px; border-bottom:1.5px solid var(--border);}
+  table.ledger td{padding:11px 10px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  table.ledger tr:last-child td{border-bottom:none;}
+  .pill{display:inline-block; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;}
+  .pill-pending{background:#FDF2E4; color:#8A5A17;}
+  .pill-approved{background:#E4F3EE; color:var(--teal-dark);}
+  .pill-paid{background:#EDEDED; color:var(--ink-soft);}
+  .pill-hold{background:#EDEDED; color:var(--ink-soft);}
+  .pill-reversed{background:#FDECEA; color:#B3261E;}
+  .empty{text-align:center; color:var(--ink-soft); font-size:14px; padding:30px 20px;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:640px){ .meta-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<header></header>
+<div class="wrap">
+
+  <h1 id="greeting">Affiliate Dashboard</h1>
+  <p class="sub">Your referral link, territory, and commission history.</p>
+
+  <div class="banner banner-warn" id="suspendedBanner" style="display:none;">
+    Your affiliate account is currently suspended — sales through your link are no longer credited to you until it's reactivated. Contact us if you think this is a mistake.
+  </div>
+
+  <div class="card">
+    <h2 class="section-heading">Your referral link</h2>
+    <div class="code-pill" id="codePill">—</div>
+    <div class="link-row">
+      <div class="link-box" id="linkBox">—</div>
+      <button class="btn btn-primary" id="copyBtn" onclick="copyLink()">Copy link</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:12px;">
+      Anyone who visits through this link has 90 days to buy before the credit expires — the most recent link they click always wins.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 class="section-heading">Commission earned</h2>
+    <div class="stat-row">
+      <div class="stat-tile"><div class="label">Pending</div><div class="value" id="statPending">$0.00</div><div class="sub">money not yet confirmed</div></div>
+      <div class="stat-tile"><div class="label">Owed</div><div class="value" id="statApproved">$0.00</div><div class="sub">confirmed, awaiting payout</div></div>
+      <div class="stat-tile"><div class="label">Paid</div><div class="value" id="statPaid">$0.00</div><div class="sub">already sent to you</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-heading">Your account</h2>
+    <div class="meta-grid">
+      <div class="meta-item"><div class="label">Commission rate</div><div class="value" id="metaRate">—</div></div>
+      <div class="meta-item"><div class="label">Territory</div><div class="value" id="metaTerritory">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-heading">Commission history</h2>
+    <div id="ledgerWrap"><div class="empty">Loading…</div></div>
+  </div>
+
+  <p style="font-size:13px;color:var(--ink-soft);">
+    Need to change your password? Visit <a href="my-profile.html" style="color:var(--teal-dark);font-weight:600;">My Profile</a>.
+  </p>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=7"></script>
+<script src="admin-common.js?v=16"></script>
+<script>fnTrackPageview();</script>
+<script>
+var currentReferralLink = '';
+
+var STATUS_PILL = {
+  pending: 'pill-pending', approved: 'pill-approved', paid: 'pill-paid',
+  on_hold: 'pill-hold', reversed: 'pill-reversed',
+};
+var STATUS_LABEL = {
+  pending: 'Pending', approved: 'Approved', paid: 'Paid', on_hold: 'On hold', reversed: 'Reversed',
+};
+
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function money(cents) { return '$' + (Number(cents || 0) / 100).toFixed(2); }
+function shortDate(v) { return v ? String(v).slice(0, 10) : '—'; }
+
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2400);
+}
+
+function copyLink() {
+  if (!currentReferralLink) return;
+  var done = function () { toast('Link copied.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(currentReferralLink).then(done, function () { window.prompt('Copy this referral link:', currentReferralLink); });
+  } else {
+    window.prompt('Copy this referral link:', currentReferralLink);
+  }
+}
+
+async function loadMe() {
+  const r = await fetch('/api/affiliate-portal/me', { credentials: 'include' });
+  if (r.status === 401) { window.location.href = 'index.html'; return; }
+  if (r.status === 403 || r.status === 404) {
+    document.querySelector('.wrap').innerHTML =
+      '<div class="card"><p>This page is for approved affiliates. If you think you should have access, contact us.</p></div>';
+    return;
+  }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return;
+
+  document.getElementById('greeting').textContent = 'Welcome back, ' + (data.firstName || 'there');
+  document.getElementById('codePill').textContent = data.referralCode;
+  document.getElementById('linkBox').textContent = data.referralLink;
+  currentReferralLink = data.referralLink;
+
+  document.getElementById('suspendedBanner').style.display = data.status === 'suspended' ? '' : 'none';
+
+  document.getElementById('statPending').textContent = money(data.totals && data.totals.pending_cents);
+  document.getElementById('statApproved').textContent = money(data.totals && data.totals.approved_cents);
+  document.getElementById('statPaid').textContent = money(data.totals && data.totals.paid_cents);
+
+  var ratePct = Number(data.commissionRate).toFixed(2).replace(/\.00$/, '');
+  document.getElementById('metaRate').textContent = ratePct + '%';
+
+  var territories = data.territories || [];
+  document.getElementById('metaTerritory').innerHTML = territories.length
+    ? territories.map(function (t) { return '<span class="territory-chip">' + esc(t.name) + '</span>'; }).join('')
+    : 'Not assigned yet';
+
+  loadLedger();
+}
+
+async function loadLedger() {
+  var wrap = document.getElementById('ledgerWrap');
+  try {
+    const r = await fetch('/api/affiliate-portal/commissions', { credentials: 'include' });
+    if (r.status === 401) { window.location.href = 'index.html'; return; }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Failed to load');
+    renderLedger(data.commissions || []);
+  } catch (e) {
+    wrap.innerHTML = '<div class="empty">Could not load your commission history.</div>';
+  }
+}
+
+function renderLedger(rows) {
+  var wrap = document.getElementById('ledgerWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty">No commission activity yet — it appears here the moment a referred sale lands.</div>';
+    return;
+  }
+  wrap.innerHTML =
+    '<table class="ledger"><thead><tr><th>Date</th><th>Source</th><th>Amount</th><th>Status</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      var source = r.plan_name || r.product_type || r.description || (r.source_type === 'bonus' ? 'Bonus' : 'Adjustment');
+      var pillClass = STATUS_PILL[r.status] || 'pill-hold';
+      var pillLabel = STATUS_LABEL[r.status] || r.status;
+      return '<tr>' +
+        '<td>' + shortDate(r.created_at) + '</td>' +
+        '<td>' + esc(source) + '</td>' +
+        '<td style="font-weight:700;">' + money(r.commission_cents) + '</td>' +
+        '<td><span class="pill ' + pillClass + '">' + esc(pillLabel) + '</span></td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+loadMe();
+</script>
+
+<footer></footer>
+<script src="footer.js?v=4"></script>
+</body>
+</html>

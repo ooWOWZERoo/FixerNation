@@ -89,6 +89,8 @@ An affiliate shares a link like `licenses.html?ref=ABC123`. Any page load carryi
 
 **Affiliate portal** (`requireSiteAuth` + role check, mirrors existing teacher/school-admin portal pattern): new `affiliate-dashboard.html` — referral link (copy button), territory, commission rate, a table of attributed purchases with per-sale commission and running total.
 
+**Built as described, with one upgrade the ledger made possible:** the table is the affiliate's own commission ledger (pending/approved/paid status per entry), not a raw purchases list — a running total across mixed payment states would have been misleading once "pending" and "owed" became different things. New `server/routes/affiliate-portal.js`, mounted at `/api/affiliate-portal` — a separate mount and auth system from the admin-facing `/api/affiliates/*`, per `CLAUDE.md`'s "never mix them" rule, with no `:id` in any of its paths since an affiliate can only ever see their own row.
+
 ## Still open, but not blocking
 
 1. **Exact application form fields** — building the proposed set (name, email, company, phone, requested territory, pitch). Easy to add or drop a field later; nothing downstream depends on the exact list.
@@ -103,7 +105,7 @@ Confirmed 2026-09-24. Building and deploying in four stages rather than all at o
 1. ~~**Schema**~~ — *built, awaiting deploy.* `affiliate_applications`, `affiliates`, and the two `purchases` columns (`server/scripts/alter-add-affiliate-program.js`). Two changes from the draft SQL above: `VARCHAR` status columns instead of `ENUM`, matching the rest of this codebase, and a real FK on `purchases.affiliate_id` so a recycled `AUTO_INCREMENT` id can't re-attribute an old sale to a new affiliate.
 2. ~~**Application form + admin review UI**~~ — *built, awaiting deploy.* `become-an-affiliate.html` (honeypot + per-IP throttle), `admin-affiliates.html` (Applications and Affiliates tabs), `server/routes/affiliates.js`, and the two new `email_automations` templates.
 3. ~~**Referral capture + checkout attribution**~~ — *built, awaiting deploy.* `referral.js` on all 58 public pages writes the `fn_ref` cookie; `server/lib/affiliate-attribution.js` resolves it and snapshots the commission; every purchase path credits the sale through the single `createPurchase()` choke point in `routes/newsletter.js`.
-4. **Affiliate portal** — `affiliate-dashboard.html`. Not started.
+4. ~~**Affiliate portal**~~ — *built, awaiting deploy.* `affiliate-dashboard.html` + `server/routes/affiliate-portal.js`.
 
 ### How attribution actually reaches the purchase
 
@@ -123,8 +125,8 @@ This wasn't one of the four confirmed decisions, and it's a real policy choice r
 
 ### Known consequences of the staging
 
-Until stage 4 ships, there's no affiliate portal to land in, so an approved affiliate's welcome email sends them to `my-profile.html` (which every `site_user` already has) rather than a 404. One constant, `AFFILIATE_LANDING_PATH` in `server/routes/affiliates.js`, switches that over when the dashboard exists.
+For the window between shipping stage 2 and shipping stage 4, there was no affiliate portal to land in, so an approved affiliate's welcome email sent them to `my-profile.html` (which every `site_user` already had) rather than a 404. `AFFILIATE_LANDING_PATH` in `server/routes/affiliates.js` now points at `/affiliate-dashboard.html`, since that page exists.
 
 The public page **is linked from the footer** (Schools column, after Teacher Registration), added on request once stages 1–3 were live. Before that it was reachable by direct URL only, since announcing the program publicly was a business call rather than a deploy step.
 
-Worth keeping in mind while stage 4 is still outstanding: the page is now discoverable by any visitor, so applications can arrive from anyone, and an approved affiliate still has no portal to land in.
+The site-wide "logged in" account dropdown (`site-auth.js`'s `fnAuthRenderNav()`) now shows an **Affiliate Dashboard** link for `role === 'affiliate'`, same mechanism already used for the Parent/School Admin/District Admin/FNE Admin portal links. Bumped that file to `?v=7` across all 58 pages that load it, per the cache-bust convention.
