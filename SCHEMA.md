@@ -4,7 +4,7 @@ Pulled directly from the production database (`fixernat_fixernation`) via `SHOW 
 
 > **Maintenance convention:** whenever a schema change ships to production (new table, new column, any `alter-*.js`/`backfill-*.js` script), update the relevant section below in the same session — don't let this drift the way `schema.sql` did. `server/scripts/dump-schema.js` (read-only, `SHOW CREATE TABLE` for every table) is the fastest way to re-verify against the live database if this doc is ever in doubt.
 
-**Generated:** 2026-09-04 · **89 tables total** · Grouped by subsystem for readability. Legend: 🔑 = primary key, 🔗 = foreign key, ⭐ = unique key.
+**Generated:** 2026-09-04, affiliate program section added 2026-09-24 after `alter-add-affiliate-program.js`, `alter-add-affiliate-commission-ledger.js`, and `alter-add-affiliate-territories.js` were confirmed run in production. That confirmation was indirect — the app restarted cleanly and `GET /api/affiliate-portal/me` returned 401 rather than 404 — not a fresh `SHOW CREATE TABLE` dump; re-run `node scripts/dump-schema.js` if this section is ever in doubt. · **94 tables total** · Grouped by subsystem for readability. Legend: 🔑 = primary key, 🔗 = foreign key, ⭐ = unique key.
 
 ---
 
@@ -31,7 +31,7 @@ id 🔑 · admin_id 🔗→admin_users (CASCADE) · token varchar(128) ⭐ · ex
 | email | varchar(255) | ⭐ NOT NULL |
 | password_hash | varchar(255) | NOT NULL |
 | email_verified | tinyint(1) | default 0 |
-| role | varchar(32) | default 'teacher' — 'parent'/'school_license_admin'/'district_admin' etc. (not exclusive; entitlements checked independently) |
+| role | varchar(32) | default 'teacher' — 'parent'/'school_license_admin'/'district_admin'/**'affiliate' (NEW)** etc. (not exclusive; entitlements checked independently) |
 | created_at | datetime | |
 | session_invalidated_at | datetime | nullable — set on password reset/seat revoke to force-logout other sessions |
 
@@ -100,6 +100,8 @@ id 🔑 · name varchar(128) ⭐ · created_at · system_key varchar(50) ⭐ nul
 | po_number | varchar(128) | nullable |
 | invoice_id | int unsigned | 🔗→invoices, nullable |
 | amount_cents | int unsigned | snapshotted charge amount |
+| **affiliate_id** | int unsigned | **NEW** — 🔗→affiliates (SET NULL), set only when a valid `?ref=` code was in play at checkout |
+| **affiliate_commission_cents** | int unsigned | **NEW** — snapshot of the commission calculated at attribution time; the ledger (`affiliate_commissions`) is authoritative for what's actually owed, this is a display cache |
 
 ### `license_seats` — one row per seat
 id 🔑 · purchase_id 🔗→purchases (CASCADE) · invited_email · status (pending/registered/inactive/revoked/available) · registered_site_user_id 🔗→site_users (SET NULL) · registered_at · invitation_id · revoked_at/by/reason · notes
@@ -133,6 +135,8 @@ PK is `school_id`/`district_id` 🔗 (CASCADE) · draft_logo_original_url/displa
 
 ### `school_audit_log` — append-only action log
 id 🔑 · actor_type/id/email · action · entity_type/id · purchase_id · school_domain · prev_value/new_value (JSON-as-text) · reason · ip_address · created_at
+
+**NEW consumer (2026-09-24):** the affiliate program (§15) also writes here via the shared `lib/audit.js` helper, tagged with its own `entity_type` values (`affiliate`, `affiliate_application`, `affiliate_commission`, `affiliate_territory`) rather than a second table. Every purchase-scoped query in `school-admin.js` explicitly excludes those values (`AFFILIATE_ENTITY_TYPES`, also from `lib/audit.js`) — this was NOT true on first ship and leaked a commission's `payout_reference` into a school admin's own activity view before it was caught and fixed.
 
 ### `school_admin_notifications` — dedup log for school-admin alert emails
 id 🔑 · school_domain · reason · teacher_email · admin_contact_id · sent_at
@@ -388,6 +392,37 @@ setting_key varchar(64) 🔑 · setting_value text · updated_at
 
 ---
 
+## 15. Affiliates *(new subsystem, 2026-09-24)*
+
+B2B sales-affiliate program. Design: `docs/AFFILIATE_PROGRAM_SPIKE.md`, `docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md`. An affiliate is a role on `site_users` (`role = 'affiliate'`), same split as `district_license_admins` — no separate auth system.
+
+### `affiliate_applications` — a prospect's application
+id 🔑 · first_name/last_name · email · company · phone · requested_territory (free text, what the applicant asked for) · pitch text · status varchar(16) (pending/approved/rejected) · reviewed_by_admin_id 🔗→admin_users (SET NULL) · reviewed_at · rejection_reason · resulting_site_user_id 🔗→site_users (SET NULL) · created_at
+
+A rejected applicant may reapply at any time — no re-application block, no cooldown. Each attempt is a new row; the admin review queue shows prior decisions on the same email.
+
+### `affiliates` — an approved affiliate
+id 🔑 · site_user_id 🔗→site_users (CASCADE) ⭐ · application_id 🔗→affiliate_applications (SET NULL) · referral_code varchar(32) ⭐ (shared as `?ref=CODE`) · commission_rate decimal(5,2) · status varchar(16) (active/suspended) · approved_by_admin_id 🔗→admin_users (SET NULL) · approved_at · created_at · updated_at
+
+Had a `territory varchar(100)` column through 2026-09-24; dropped the same day once real territory records (below) existed. Commission rate is snapshotted onto each sale at attribution time — changing it here never rewrites a past commission.
+
+### `affiliate_commissions` — the commission ledger (authoritative for money owed)
+id 🔑 · affiliate_id 🔗→affiliates (CASCADE) · purchase_id 🔗→purchases (SET NULL, nullable — NULL for a manual/bonus entry) · status varchar(16) (pending/approved/paid/on_hold/reversed) · source_type varchar(16) (referral/manual/bonus) · description · gross_amount_cents · commission_rate decimal(5,2) (snapshot) · commission_cents int **signed** (a manual correction can be negative; a reversal flips status, never writes a negative row) · approved_at/by_admin_id · paid_at · payout_reference varchar(64) (check number, transfer id — payment itself happens outside the system) · reversed_at/by_admin_id · reversal_reason · notes · created_at · updated_at
+
+Status follows the money: a card sale opens `approved` (Stripe already took payment); a PO sale opens `pending` and is approved when the invoice is marked paid; cancelling an invoice reverses whatever hasn't been paid out. Every balance is a `SUM()` filtered by status — never a bare sum over the table.
+
+### `territories` — real US states/counties (not free text)
+id 🔑 · scope varchar(16) (state/county) · state char(2) (USPS code) · county varchar(100) default `''` (empty for a state-scope row — lets `UNIQUE(state, county)` enforce one row per state) · name varchar(150) (display label) · status varchar(16) (active/retired) · created_at · ⭐ (state, county)
+
+The 50 states + DC are seeded once and always exist. A county-scope row is created the first time an admin actually assigns "this county, in this state" — the ~3,143 real US counties are deliberately not pre-loaded.
+
+### `affiliate_territories` — assignment history (many-per-affiliate)
+id 🔑 · affiliate_id 🔗→affiliates (CASCADE) · territory_id 🔗→territories (CASCADE) · status varchar(16) (active/revoked) · assigned_by_admin_id 🔗→admin_users (SET NULL) · revoked_at/by_admin_id · notes · created_at
+
+Exclusivity (one active affiliate per territory) is an app-level check against this table's own `status`, not a DB constraint and not a join against the parent affiliate's active/suspended status — suspending an affiliate explicitly revokes their rows here in the same transaction, rather than relying on a filter elsewhere.
+
+---
+
 ## Columns added this session (2026-08-27 – 2026-09-04)
 
 | Table | Column | Purpose |
@@ -401,3 +436,16 @@ setting_key varchar(64) 🔑 · setting_value text · updated_at
 | *(new table)* `campaign_audience_groups` | — | One-or-many audience groups per campaign (UNION), replacing the single `audience_group_id` |
 | *(new table)* `campaign_series` | — | Recurring campaign definitions (daily/weekly/monthly) |
 | *(new table)* `campaign_series_groups` | — | One-or-many audience groups per recurring series |
+
+## Columns added this session (2026-09-24) — sales-affiliate program
+
+| Table | Column | Purpose |
+|---|---|---|
+| *(new table)* `affiliate_applications` | — | A prospect's application, reviewable and re-appliable |
+| *(new table)* `affiliates` | — | An approved affiliate: referral code, commission rate, status |
+| `site_users` | `role` gains `'affiliate'` | No new column — an existing enum-like value, not a schema change |
+| `purchases` | `affiliate_id`, `affiliate_commission_cents` | Which affiliate earned this sale, and the commission snapshot at attribution time |
+| *(new table)* `affiliate_commissions` | — | The commission ledger — authoritative for money owed, status follows the money |
+| *(new table)* `territories` | — | Real US states/counties, fixed vocabulary |
+| *(new table)* `affiliate_territories` | — | Assignment history, many territories per affiliate |
+| `affiliates` | `territory` **dropped** | Superseded by `territories`/`affiliate_territories` same day, after backfill |
