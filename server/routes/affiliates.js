@@ -249,7 +249,7 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
   }
 
   const conn = await pool.getConnection();
-  let application, user, isNewUser = false, finalCode;
+  let application, user, isNewUser = false, finalCode, assignedTerritoryName = null;
   try {
     await conn.beginTransaction();
 
@@ -332,7 +332,6 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
       });
     }
 
-    let assignedTerritoryName = null;
     if (territoryState) {
       try {
         const { territory } = await assignTerritory(conn, {
