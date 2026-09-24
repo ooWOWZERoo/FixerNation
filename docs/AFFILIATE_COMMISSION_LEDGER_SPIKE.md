@@ -175,10 +175,10 @@ Both steps are no-ops today, because nothing has been sold through an affiliate 
 
 ## Staging
 
-- **3.5a** — ledger table, attribution writes to it, approval on invoice paid, reversal on cancel, admin queue. *This is the part that fixes real money being wrong.*
-- **3.5b** — territory tables, backfill, multi-territory assignment with history.
-- **3.5c** — audit log, wired into every affiliate and commission mutation.
-- **Stage 4** — the affiliate portal, reading the ledger.
+- ~~**3.5a**~~ — *built, awaiting deploy.* Ledger table, attribution writes to it, approval on invoice paid, reversal on cancel, admin queue.
+- ~~**3.5b**~~ — *built, awaiting deploy.* Territory tables, backfill, multi-territory assignment with history. See the addendum below — the vocabulary/backfill decisions were confirmed after this doc's first draft, and one detail (a suspended affiliate's territories auto-revoke rather than merely being ignored by a status filter) was decided during implementation.
+- **3.5c** — audit log, wired into every affiliate and commission mutation. Not started.
+- **Stage 4** — the affiliate portal, reading the ledger. Not started.
 
 ## Decisions confirmed 2026-09-24
 
@@ -192,3 +192,14 @@ Both steps are no-ops today, because nothing has been sold through an affiliate 
 
 1. **Territory vocabulary.** Who defines the list and at what granularity — states, counties, metro regions? An admin-managed table answers "who defines it"; the granularity is a sales call.
 2. **`affiliates.territory`.** Drop it after backfill, or keep it as a denormalized display label? Keeping it means two places can disagree.
+
+## 3.5b addendum — decisions confirmed 2026-09-24
+
+1. **Vocabulary is fixed to real US states and counties.** Not free text, not a metro-region list.
+2. **`affiliates.territory` is dropped after backfill.** No denormalized copy kept.
+
+**Scoping call made during implementation, not asked as a business question:** pre-seeding every US county (~3,143 of them, with names that collide across states — "Washington County" exists in dozens) isn't practical for a program with zero live affiliates. Only the 50 states + DC are pre-seeded and always available; a county-level territory is created the first time an admin actually assigns "this county, in this state." The *vocabulary* is still fixed to real geography — nobody can type "Central Florida" — it just isn't all loaded up front.
+
+**Exclusivity now lives on the assignment, not a status join.** `activeHolder()` (`server/lib/territories.js`) checks `affiliate_territories.status = 'active'` directly, with no reference to whether the parent affiliate itself is active or suspended. This means suspending an affiliate must explicitly revoke their territory assignments — leaving them "active" and relying on a join filter elsewhere would have silently broken the original confirmed decision that a suspended affiliate's territory becomes assignable again. `PUT /api/affiliates/:id` now does this revoke in the same transaction as the status change, and reactivating never restores them automatically — the territory may already belong to someone else by then, so re-assignment after reactivating is a deliberate act, not a side effect.
+
+**The backfill never guesses.** It matches an existing `affiliates.territory` free-text value against a real state name or 2-letter code, exact match only (trimmed, case-insensitive). Anything that doesn't match — "Central Florida", a typo, a made-up region — is left without a territory and printed clearly in the migration's console output for an admin to reassign by hand. A money-adjacent table is the wrong place for a fuzzy match to invent an answer.

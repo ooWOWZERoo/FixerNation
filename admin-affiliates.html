@@ -122,8 +122,11 @@
         <div class="a-hint">Each sale snapshots this rate when it happens, so changing it later never rewrites past commission.</div>
       </div>
       <div class="a-field">
-        <label>Territory</label>
-        <input type="text" id="approveTerritory" placeholder="e.g. Central Florida">
+        <label>Territory (optional — can add later)</label>
+        <div class="a-form-row">
+          <select id="approveTerritoryState"><option value="">No territory yet</option></select>
+          <input type="text" id="approveTerritoryCounty" placeholder="County (optional — leave blank for the whole state)">
+        </div>
         <div class="a-hint">Organizational only. Two active affiliates can't hold the same territory, but territory never decides who earns a commission — the referral code does.</div>
       </div>
       <div class="a-field">
@@ -182,21 +185,46 @@
         <div class="a-hint">Applies to sales from here on. Commission already recorded on a past sale stays exactly as it was.</div>
       </div>
       <div class="a-field">
-        <label>Territory</label>
-        <input type="text" id="editTerritory" placeholder="Unassigned">
-      </div>
-      <div class="a-field">
         <label>Status</label>
         <select id="editStatus">
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
         </select>
-        <div class="a-hint">Suspending frees their territory for someone else. Their past sales and commission history stay on record.</div>
+        <div class="a-hint">Suspending revokes every territory this affiliate holds, freeing each one for someone else. Reactivating does not restore them — reassign from the Territories button. Past sales and commission history stay on record either way.</div>
       </div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeModal('editModal')">Cancel</button>
       <button class="a-btn a-btn-primary" id="editBtn" onclick="doEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Territories modal -->
+<div class="a-modal-overlay" id="territoryModal">
+  <div class="a-modal" style="max-width:560px;">
+    <div class="a-modal-head">
+      <h3>Territories</h3>
+      <button class="a-modal-close" onclick="closeModal('territoryModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="territoryErr"></div>
+      <div id="territoryWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+
+      <div id="territoryList" style="margin-bottom:18px;"></div>
+
+      <div class="a-field">
+        <label>Assign a new territory</label>
+        <div class="a-form-row">
+          <select id="territoryAddState"><option value="">Select a state…</option></select>
+          <input type="text" id="territoryAddCounty" placeholder="County (optional)">
+        </div>
+        <div class="a-hint">Fixed to real US states and counties. Leave county blank to assign the whole state. Only one active affiliate can hold a given territory at a time.</div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('territoryModal')">Close</button>
+      <button class="a-btn a-btn-primary" id="territoryAddBtn" onclick="doAssignTerritory()">Assign</button>
     </div>
   </div>
 </div>
@@ -303,7 +331,31 @@ fnRequireAuth();
 var applications = [], affiliates = [], appDebounce = null, affDebounce = null;
 var approveId = null, rejectId = null, editId = null;
 
+// Mirrors server/lib/territories.js's US_STATES — static reference data, kept
+// here rather than fetched, since it never changes. If it's ever edited,
+// update both.
+var US_STATES = [
+  ['AL','Alabama'],['AK','Alaska'],['AZ','Arizona'],['AR','Arkansas'],['CA','California'],
+  ['CO','Colorado'],['CT','Connecticut'],['DE','Delaware'],['DC','District of Columbia'],
+  ['FL','Florida'],['GA','Georgia'],['HI','Hawaii'],['ID','Idaho'],['IL','Illinois'],
+  ['IN','Indiana'],['IA','Iowa'],['KS','Kansas'],['KY','Kentucky'],['LA','Louisiana'],
+  ['ME','Maine'],['MD','Maryland'],['MA','Massachusetts'],['MI','Michigan'],['MN','Minnesota'],
+  ['MS','Mississippi'],['MO','Missouri'],['MT','Montana'],['NE','Nebraska'],['NV','Nevada'],
+  ['NH','New Hampshire'],['NJ','New Jersey'],['NM','New Mexico'],['NY','New York'],
+  ['NC','North Carolina'],['ND','North Dakota'],['OH','Ohio'],['OK','Oklahoma'],['OR','Oregon'],
+  ['PA','Pennsylvania'],['RI','Rhode Island'],['SC','South Carolina'],['SD','South Dakota'],
+  ['TN','Tennessee'],['TX','Texas'],['UT','Utah'],['VT','Vermont'],['VA','Virginia'],
+  ['WA','Washington'],['WV','West Virginia'],['WI','Wisconsin'],['WY','Wyoming'],
+];
+
+function populateStateSelect(sel, placeholder) {
+  sel.innerHTML = '<option value="">' + placeholder + '</option>' +
+    US_STATES.map(function (s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('');
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+  populateStateSelect(document.getElementById('approveTerritoryState'), 'No territory yet');
+  populateStateSelect(document.getElementById('territoryAddState'), 'Select a state…');
   loadApplications();
   loadAffiliates();
   loadCommissions();
@@ -428,7 +480,8 @@ function openApprove(id) {
   document.getElementById('approveMeta').textContent =
     (a.company ? a.company + ' · ' : '') + 'Asked for: ' + (a.requested_territory || 'no territory in particular');
   document.getElementById('approveRate').value = '';
-  document.getElementById('approveTerritory').value = a.requested_territory || '';
+  document.getElementById('approveTerritoryState').value = '';
+  document.getElementById('approveTerritoryCounty').value = '';
   document.getElementById('approveCode').value = '';
   document.getElementById('approvePitchWrap').style.display = a.pitch ? '' : 'none';
   document.getElementById('approvePitch').textContent = a.pitch || '';
@@ -448,7 +501,8 @@ async function doApprove() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         commissionRate: Number(rate),
-        territory: document.getElementById('approveTerritory').value.trim(),
+        territoryState: document.getElementById('approveTerritoryState').value,
+        territoryCounty: document.getElementById('approveTerritoryCounty').value.trim(),
         referralCode: document.getElementById('approveCode').value.trim(),
       }),
     });
@@ -456,7 +510,7 @@ async function doApprove() {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed');
     closeModal('approveModal');
-    fnToast('Approved. Referral code ' + d.referralCode + ', welcome email sent.');
+    fnToast('Approved. Referral code ' + d.referralCode + ', welcome email sent.' + (d.territory ? ' Territory: ' + d.territory + '.' : ''));
     loadApplications();
     loadAffiliates();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
@@ -532,7 +586,7 @@ function renderAffiliates() {
         '<td><span class="code-cell">' + esc(a.referral_code) + '</span> ' +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="copyLink(\'' + esc(a.referral_code) + '\',this)" title="Copy their referral link">Copy link</button></td>' +
         '<td style="font-size:13px;">' + esc(Number(a.commission_rate).toFixed(2).replace(/\.00$/, '')) + '%</td>' +
-        '<td style="font-size:13px;">' + esc(a.territory || '—') + '</td>' +
+        '<td style="font-size:13px;">' + (a.territories ? esc(a.territories) : '<span class="meta-line">None assigned</span>') + '</td>' +
         '<td>' + statusPill + '</td>' +
         '<td style="font-size:13px;">' + Number(a.sale_count || 0) + '</td>' +
         '<td style="font-size:13px;color:var(--a-text-soft);">' + money(a.pending_cents) + '</td>' +
@@ -540,6 +594,7 @@ function renderAffiliates() {
         '<td style="font-size:13px;">' + money(a.paid_cents) + '</td>' +
         '<td style="white-space:nowrap;">' +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openAffiliateLedger(' + a.id + ')">Ledger</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openTerritories(' + a.id + ')">Territories</button> ' +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openAdjust(' + a.id + ')">Adjust</button> ' +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEdit(' + a.id + ')">Edit</button>' +
         '</td></tr>';
@@ -570,7 +625,6 @@ function openEdit(id) {
   document.getElementById('editWho').textContent =
     [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.referral_code;
   document.getElementById('editRate').value = Number(a.commission_rate);
-  document.getElementById('editTerritory').value = a.territory || '';
   document.getElementById('editStatus').value = a.status;
   document.getElementById('editModal').classList.add('show');
 }
@@ -586,7 +640,6 @@ async function doEdit() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         commissionRate: Number(document.getElementById('editRate').value),
-        territory: document.getElementById('editTerritory').value.trim(),
         status: document.getElementById('editStatus').value,
       }),
     });
@@ -815,6 +868,104 @@ async function doAdjust() {
     loadAffiliates();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
   finally { btn.disabled = false; btn.textContent = 'Add entry'; }
+}
+
+// --- Territories (stage 3.5b) -----------------------------------------------
+
+var territoryAffiliateId = null;
+
+async function openTerritories(id) {
+  var a = affiliates.find(function (x) { return x.id === id; });
+  if (!a) return;
+  territoryAffiliateId = id;
+  document.getElementById('territoryErr').style.display = 'none';
+  document.getElementById('territoryWho').textContent =
+    [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.referral_code;
+  document.getElementById('territoryAddState').value = '';
+  document.getElementById('territoryAddCounty').value = '';
+  document.getElementById('territoryList').innerHTML = '<div class="a-empty">⏳ Loading…</div>';
+  document.getElementById('territoryModal').classList.add('show');
+  await loadTerritoryList();
+}
+
+async function loadTerritoryList() {
+  try {
+    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    renderTerritoryList(d.territories || []);
+  } catch (e) {
+    document.getElementById('territoryList').innerHTML = '<div class="a-empty" style="color:var(--a-danger);">' + esc(e.message) + '</div>';
+  }
+}
+
+function renderTerritoryList(rows) {
+  var el = document.getElementById('territoryList');
+  if (!rows.length) {
+    el.innerHTML = '<div class="a-empty" style="padding:16px;"><div class="big">🗺️</div>No territory assigned yet.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(function (t) {
+    var pill = t.status === 'active'
+      ? '<span class="a-pill a-pill-success">Active</span>'
+      : '<span class="a-pill a-pill-neutral">Revoked ' + shortDate(t.revoked_at) + '</span>';
+    var revokeBtn = t.status === 'active'
+      ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="doRevokeTerritory(' + t.assignment_id + ')">Revoke</button>'
+      : '';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--a-border);">' +
+      '<div><div style="font-weight:600;font-size:14px;">' + esc(t.name) + '</div>' +
+        (t.notes ? '<div class="meta-line">' + esc(t.notes) + '</div>' : '') + '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;">' + pill + revokeBtn + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function doAssignTerritory() {
+  var btn = document.getElementById('territoryAddBtn');
+  var err = document.getElementById('territoryErr');
+  err.style.display = 'none';
+  var state = document.getElementById('territoryAddState').value;
+  if (!state) { err.textContent = 'Pick a state.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Assigning…';
+  try {
+    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        state: state,
+        county: document.getElementById('territoryAddCounty').value.trim(),
+      }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    document.getElementById('territoryAddState').value = '';
+    document.getElementById('territoryAddCounty').value = '';
+    fnToast('Assigned ' + d.territory.name + '.');
+    await loadTerritoryList();
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Assign'; }
+}
+
+async function doRevokeTerritory(assignmentId) {
+  if (!confirm('Revoke this territory? It becomes assignable to someone else immediately.')) return;
+  var err = document.getElementById('territoryErr');
+  err.style.display = 'none';
+  try {
+    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories/' + assignmentId + '/revoke', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Territory revoked.');
+    await loadTerritoryList();
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
 }
 </script>
 </body>

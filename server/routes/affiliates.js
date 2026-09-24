@@ -19,6 +19,10 @@ const { fireAutomation } = require('../lib/automations');
 const { sendSalesAlertEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { LEDGER_TOTALS_SQL } = require('../lib/affiliate-attribution');
+const {
+  US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder,
+  assignTerritory, revokeTerritoryAssignment, territoriesForAffiliate, listTerritories,
+} = require('../lib/territories');
 
 const router = express.Router();
 
@@ -145,23 +149,9 @@ router.post('/apply', async (req, res) => {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-// Territory exclusivity is checked here rather than by a UNIQUE key, because
-// the rule is "unique among ACTIVE affiliates only" — a suspended affiliate's
-// territory has to become assignable again. Same query-level shape as the
-// existing admin-seat exclusion in school-admin.js.
-async function territoryHolder(conn, territory, excludeAffiliateId) {
-  if (!territory) return null;
-  const params = [territory];
-  let sql = `SELECT a.id, su.first_name, su.last_name, su.email
-             FROM affiliates a JOIN site_users su ON su.id = a.site_user_id
-             WHERE a.territory = ? AND a.status = 'active'`;
-  if (excludeAffiliateId) {
-    sql += ' AND a.id != ?';
-    params.push(excludeAffiliateId);
-  }
-  const [rows] = await conn.query(`${sql} LIMIT 1`, params);
-  return rows[0] || null;
-}
+// Territory assignment and exclusivity now live in lib/territories.js
+// (stage 3.5b) — territoryHolder() used to do this against a free-text
+// column that no longer exists on `affiliates`.
 
 function normalizeRate(raw) {
   const rate = Number(raw);
@@ -248,8 +238,16 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
   const rate = normalizeRate(b.commissionRate);
   if (rate === null) return res.status(400).json({ error: 'Commission rate must be a percentage between 0 and 100' });
 
-  const territory = (b.territory || '').trim();
-  if (territory.length > 100) return res.status(400).json({ error: 'Territory is too long' });
+  // Territory assignment at approval is optional — an admin can always add
+  // one afterward from the Affiliates tab. When given, it must be a real US
+  // state (fixed vocabulary, stage 3.5b); territoryCounty narrows it to a
+  // county within that state.
+  const territoryState = (b.territoryState || '').trim().toUpperCase();
+  const territoryCounty = (b.territoryCounty || '').trim();
+  if (territoryState && !isValidStateCode(territoryState)) {
+    return res.status(400).json({ error: `"${territoryState}" is not a US state or DC` });
+  }
+  if (territoryCounty.length > 100) return res.status(400).json({ error: 'County name is too long' });
 
   let code = (b.referralCode || '').trim().toUpperCase();
   if (code && !CODE_RE.test(code)) {
@@ -274,15 +272,6 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
       return res.status(409).json({ error: `This application was already ${app.status}` });
     }
     application = app;
-
-    if (territory) {
-      const holder = await territoryHolder(conn, territory, null);
-      if (holder) {
-        await conn.rollback();
-        const name = [holder.first_name, holder.last_name].filter(Boolean).join(' ') || holder.email;
-        return res.status(409).json({ error: `${territory} is already held by ${name}. Suspend them first, or pick a different territory.` });
-      }
-    }
 
     const [userRows] = await conn.query('SELECT id, first_name, role, email_verified FROM site_users WHERE email = ?', [app.email]);
     user = userRows[0];
@@ -321,20 +310,19 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
     // An admin-supplied code is used as given (and fails loudly if taken); a
     // generated one retries, since its collision is our problem, not theirs.
     const attempts = code ? [code] : Array.from({ length: 5 }, () => generateCode(app.last_name));
-    let lastErr = null;
+    let affiliateId = null;
     for (const candidate of attempts) {
       try {
-        await conn.query(
-          `INSERT INTO affiliates (site_user_id, application_id, referral_code, commission_rate, territory, status, approved_by_admin_id, approved_at)
-           VALUES (?, ?, ?, ?, ?, 'active', ?, NOW())`,
-          [user.id, app.id, candidate, rate, territory || null, req.user.userId || null]
+        const [inserted] = await conn.query(
+          `INSERT INTO affiliates (site_user_id, application_id, referral_code, commission_rate, status, approved_by_admin_id, approved_at)
+           VALUES (?, ?, ?, ?, 'active', ?, NOW())`,
+          [user.id, app.id, candidate, rate, req.user.userId || null]
         );
         finalCode = candidate;
-        lastErr = null;
+        affiliateId = inserted.insertId;
         break;
       } catch (err) {
         if (err.code !== 'ER_DUP_ENTRY') throw err;
-        lastErr = err;
       }
     }
     if (!finalCode) {
@@ -344,6 +332,24 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
           ? `Referral code ${code} is already in use.`
           : 'Could not generate a unique referral code. Please try again.',
       });
+    }
+
+    let assignedTerritoryName = null;
+    if (territoryState) {
+      try {
+        const { territory } = await assignTerritory(conn, {
+          affiliateId,
+          scope: territoryCounty ? 'county' : 'state',
+          state: territoryState,
+          county: territoryCounty || undefined,
+          adminId: req.user.userId,
+        });
+        assignedTerritoryName = territory.name;
+      } catch (err) {
+        await conn.rollback();
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        throw err;
+      }
     }
 
     await conn.query(
@@ -380,7 +386,7 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
       referralCode: finalCode,
       referralLink,
       commissionRate: rate.toFixed(2).replace(/\.00$/, ''),
-      territory: territory || 'Not assigned',
+      territory: assignedTerritoryName || 'Not assigned yet',
       setPasswordUrl,
     },
   });
@@ -393,7 +399,7 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
         Affiliate: `${application.first_name} ${application.last_name} <${application.email}>`,
         'Referral Code': finalCode,
         'Commission Rate': `${rate}%`,
-        Territory: territory || '—',
+        Territory: assignedTerritoryName || '—',
         'New Account': isNewUser ? 'Yes' : 'No',
       },
       linkUrl: `${siteUrl}/admin-affiliates.html`,
@@ -403,7 +409,7 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
     console.error('sales alert (affiliate approved) failed:', e.message);
   }
 
-  res.status(201).json({ ok: true, referralCode: finalCode, siteUserId: user.id, isNewUser });
+  res.status(201).json({ ok: true, referralCode: finalCode, siteUserId: user.id, isNewUser, territory: assignedTerritoryName });
 });
 
 // POST /api/affiliates/applications/:id/reject
@@ -589,17 +595,57 @@ router.post('/:id/commissions', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Admin — territories (stage 3.5b)
+//
+// Declared before the /:id routes below, same reason as everywhere else in
+// this file: a literal path has to come first or Express reads it as an :id.
+// ---------------------------------------------------------------------------
+
+// GET /api/affiliates/states — the fixed dropdown list. A tiny, static
+// payload; kept as a real endpoint rather than duplicated in every admin page
+// that needs it, even though today only admin-affiliates.html does.
+router.get('/states', requireAuth, (req, res) => {
+  res.json({ states: US_STATES.map(([code, name]) => ({ code, name })) });
+});
+
+// GET /api/affiliates/territories?state=&q= — browse territory records and
+// who (if anyone) currently holds each. Backs the assign picker, so it can
+// show "already held by X" before the admin even tries.
+router.get('/territories', requireAuth, async (req, res) => {
+  const rows = await listTerritories({ state: req.query.state, q: req.query.q });
+  res.json({
+    territories: rows.map(r => ({
+      id: r.id,
+      scope: r.scope,
+      state: r.state,
+      county: r.county,
+      name: r.name,
+      status: r.status,
+      holder: r.holder_affiliate_id
+        ? { affiliateId: r.holder_affiliate_id, name: [r.holder_first_name, r.holder_last_name].filter(Boolean).join(' ') }
+        : null,
+    })),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Admin — affiliate directory
 // ---------------------------------------------------------------------------
 
-// GET /api/affiliates — directory with attributed-sales totals. Those totals
-// read zero until stage 3 starts writing purchases.affiliate_id.
+// GET /api/affiliates — directory with commission totals and active territories.
 router.get('/', requireAuth, async (req, res) => {
   const q = (req.query.q || '').trim();
   const params = [];
   let where = '';
   if (q) {
-    where = 'WHERE (su.email LIKE ? OR su.first_name LIKE ? OR su.last_name LIKE ? OR a.referral_code LIKE ? OR a.territory LIKE ?)';
+    // Searching territory now means searching the joined territory names,
+    // not a column on `affiliates` — matches "Florida" or "Orange County, FL"
+    // for any affiliate currently holding that territory.
+    where = `WHERE (su.email LIKE ? OR su.first_name LIKE ? OR su.last_name LIKE ? OR a.referral_code LIKE ?
+              OR EXISTS (
+                SELECT 1 FROM affiliate_territories at2 JOIN territories t2 ON t2.id = at2.territory_id
+                WHERE at2.affiliate_id = a.id AND at2.status = 'active' AND t2.name LIKE ?
+              ))`;
     params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
 
@@ -607,9 +653,12 @@ router.get('/', requireAuth, async (req, res) => {
   // the table, which would fold reversed entries back into what's owed. See
   // docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md.
   const [rows] = await pool.query(
-    `SELECT a.id, a.referral_code, a.commission_rate, a.territory, a.status, a.approved_at, a.created_at,
+    `SELECT a.id, a.referral_code, a.commission_rate, a.status, a.approved_at, a.created_at,
             a.site_user_id, a.application_id,
             su.first_name, su.last_name, su.email, su.email_verified,
+            (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ', ') FROM affiliate_territories at
+              JOIN territories t ON t.id = at.territory_id
+              WHERE at.affiliate_id = a.id AND at.status = 'active') AS territories,
             (SELECT COUNT(*) FROM affiliate_commissions ac
               WHERE ac.affiliate_id = a.id AND ac.source_type = 'referral' AND ac.status <> 'reversed') AS sale_count,
             (SELECT COALESCE(SUM(ac.commission_cents), 0) FROM affiliate_commissions ac
@@ -628,9 +677,12 @@ router.get('/', requireAuth, async (req, res) => {
   res.json({ affiliates: rows });
 });
 
-// PUT /api/affiliates/:id — rate, territory, suspend/reactivate.
-// Changing the rate never touches commission already recorded on a purchase:
-// that number is snapshotted at attribution time by design.
+// PUT /api/affiliates/:id — rate and suspend/reactivate. Territory moves
+// through the dedicated /:id/territories endpoints below (stage 3.5b) —
+// there's no single "territory" field to set here anymore.
+//
+// Changing the rate never touches commission already recorded on a
+// purchase: that number is snapshotted at attribution time by design.
 router.put('/:id', requireAuth, async (req, res) => {
   const b = req.body || {};
   const updates = [];
@@ -651,14 +703,6 @@ router.put('/:id', requireAuth, async (req, res) => {
     params.push(status);
   }
 
-  let territory;
-  if (b.territory !== undefined) {
-    territory = String(b.territory).trim();
-    if (territory.length > 100) return res.status(400).json({ error: 'Territory is too long' });
-    updates.push('territory = ?');
-    params.push(territory || null);
-  }
-
   if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
 
   const conn = await pool.getConnection();
@@ -671,23 +715,26 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Affiliate not found' });
     }
 
-    // Re-check exclusivity whenever the result would be an active affiliate
-    // holding a territory — that covers both "change the territory" and
-    // "reactivate someone whose old territory was reassigned while they were
-    // suspended", which is exactly the case a UNIQUE key would have blocked
-    // at suspension time instead.
-    const nextTerritory = territory !== undefined ? territory : affiliate.territory;
-    const nextStatus = status !== undefined ? status : affiliate.status;
-    if (nextTerritory && nextStatus === 'active') {
-      const holder = await territoryHolder(conn, nextTerritory, affiliate.id);
-      if (holder) {
-        await conn.rollback();
-        const name = [holder.first_name, holder.last_name].filter(Boolean).join(' ') || holder.email;
-        return res.status(409).json({ error: `${nextTerritory} is already held by ${name}.` });
+    await conn.query(`UPDATE affiliates SET ${updates.join(', ')} WHERE id = ?`, [...params, affiliate.id]);
+
+    // Suspending frees every territory this affiliate holds — a real,
+    // auditable revoke (not a silent join-filter exception), matching the
+    // original confirmed decision that a suspended affiliate's territory
+    // becomes assignable again. Reactivating does NOT restore them
+    // automatically: the territory may already belong to someone else by
+    // then, so re-assignment after reactivating is a deliberate act.
+    if (status === 'suspended') {
+      const [revoked] = await conn.query(
+        `UPDATE affiliate_territories
+           SET status = 'revoked', revoked_at = NOW(), revoked_by_admin_id = ?, notes = 'Affiliate suspended'
+         WHERE affiliate_id = ? AND status = 'active'`,
+        [req.user.userId || null, affiliate.id]
+      );
+      if (revoked.affectedRows) {
+        console.log(`[affiliate] Suspended affiliate ${affiliate.id} — freed ${revoked.affectedRows} territory assignment(s).`);
       }
     }
 
-    await conn.query(`UPDATE affiliates SET ${updates.join(', ')} WHERE id = ?`, [...params, affiliate.id]);
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -704,5 +751,92 @@ router.put('/:id', requireAuth, async (req, res) => {
 // and orphaned: GET /commissions?affiliateId=N answers the same question and
 // more, since the ledger knows what's owed and what's already been paid, and
 // purchases alone never did. Stage 4's portal reads the ledger too.
+
+// GET /api/affiliates/:id/territories — one affiliate's full territory
+// history, active and revoked.
+router.get('/:id/territories', requireAuth, async (req, res) => {
+  const [[affiliate]] = await pool.query('SELECT id FROM affiliates WHERE id = ?', [req.params.id]);
+  if (!affiliate) return res.status(404).json({ error: 'Affiliate not found' });
+  const rows = await territoriesForAffiliate(affiliate.id);
+  res.json({ territories: rows });
+});
+
+// POST /api/affiliates/:id/territories — assign a territory. Body:
+// { state, county? }. county is omitted for a state-level assignment.
+router.post('/:id/territories', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const state = (b.state || '').trim().toUpperCase();
+  const county = (b.county || '').trim();
+  if (!isValidStateCode(state)) return res.status(400).json({ error: `"${b.state}" is not a US state or DC` });
+  if (county.length > 100) return res.status(400).json({ error: 'County name is too long' });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[affiliate]] = await conn.query('SELECT id FROM affiliates WHERE id = ? FOR UPDATE', [req.params.id]);
+    if (!affiliate) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Affiliate not found' });
+    }
+
+    let result;
+    try {
+      result = await assignTerritory(conn, {
+        affiliateId: affiliate.id,
+        scope: county ? 'county' : 'state',
+        state,
+        county: county || undefined,
+        adminId: req.user.userId,
+        notes: (b.notes || '').trim() || null,
+      });
+    } catch (err) {
+      await conn.rollback();
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+
+    await conn.commit();
+    res.status(201).json({ ok: true, assignmentId: result.assignmentId, territory: result.territory });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
+
+// POST /api/affiliates/:id/territories/:assignmentId/revoke
+router.post('/:id/territories/:assignmentId/revoke', requireAuth, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[assignment]] = await conn.query(
+      'SELECT * FROM affiliate_territories WHERE id = ? AND affiliate_id = ? FOR UPDATE',
+      [req.params.assignmentId, req.params.id]
+    );
+    if (!assignment) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Territory assignment not found for this affiliate' });
+    }
+
+    try {
+      await revokeTerritoryAssignment(conn, assignment.id, req.user.userId, (req.body && req.body.notes || '').trim() || null);
+    } catch (err) {
+      await conn.rollback();
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+
+    await conn.commit();
+    res.json({ ok: true });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
 
 module.exports = router;

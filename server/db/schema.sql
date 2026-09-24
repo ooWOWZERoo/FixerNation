@@ -85,25 +85,22 @@ CREATE TABLE IF NOT EXISTS affiliate_applications (
 -- An approved affiliate. Role lives on site_users.role = 'affiliate'; the
 -- detail lives here, the same split as district_license_admins.
 --
--- territory is organizational only — it never drives commission attribution,
--- which comes entirely from referral_code. Its exclusivity (no two ACTIVE
--- affiliates holding the same label) is checked in the app layer, not by a
--- UNIQUE key: MariaDB can't express "unique only among active rows" without a
--- partial-index workaround this codebase doesn't use, and a real UNIQUE would
--- wrongly keep a suspended affiliate's old territory locked forever.
+-- Territory used to be a free-text VARCHAR here (organizational only, never
+-- driving commission attribution — that comes entirely from referral_code).
+-- Stage 3.5b replaced it with real geography: see `territories` and
+-- `affiliate_territories` below, near the bottom of this file for FK-ordering
+-- reasons. This table no longer has a territory column at all.
 CREATE TABLE IF NOT EXISTS affiliates (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   site_user_id INT UNSIGNED NOT NULL UNIQUE,
   application_id INT UNSIGNED NULL,
   referral_code VARCHAR(32) NOT NULL UNIQUE, -- shared as ?ref=CODE
   commission_rate DECIMAL(5,2) NOT NULL, -- 10.00 = 10%
-  territory VARCHAR(100) NULL,
   status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'active' | 'suspended'
   approved_by_admin_id INT UNSIGNED NULL,
   approved_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_territory_status (territory, status),
   FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
   FOREIGN KEY (application_id) REFERENCES affiliate_applications(id) ON DELETE SET NULL,
   FOREIGN KEY (approved_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
@@ -1231,4 +1228,58 @@ CREATE TABLE IF NOT EXISTS affiliate_commissions (
   FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE SET NULL,
   FOREIGN KEY (approved_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL,
   FOREIGN KEY (reversed_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Affiliate territories — see docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md (3.5b)
+--
+-- Declared at the end of this file for the same FK-ordering reason as
+-- affiliate_commissions above. Added by
+-- scripts/alter-add-affiliate-territories.js on existing installs, which also
+-- backfills the old affiliates.territory free-text column and drops it.
+--
+-- Vocabulary is fixed to real US states and counties (confirmed decision),
+-- but county rows are NOT pre-seeded — there are ~3,143 of them and county
+-- names collide across states. Only the 50 states + DC are pre-seeded and
+-- always present; a county-scope row is created the first time an admin
+-- assigns "this county, in this state" (see findOrCreateTerritory() in
+-- server/lib/territories.js).
+--
+-- county is '' (not NULL) for a state-scope row, so UNIQUE(state, county)
+-- can enforce "one row per state" at the database level — MariaDB treats two
+-- NULLs as distinct, which would let duplicate state rows slip through.
+CREATE TABLE IF NOT EXISTS territories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  scope VARCHAR(16) NOT NULL, -- 'state' | 'county'
+  state CHAR(2) NOT NULL, -- USPS code
+  county VARCHAR(100) NOT NULL DEFAULT '', -- '' for a state-scope row
+  name VARCHAR(150) NOT NULL, -- display label, e.g. 'Florida' or 'Orange County, FL'
+  status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'active' | 'retired'
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_geo (state, county)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per affiliate holding one territory. An affiliate can hold several
+-- (multiple rows); a territory can be actively held by at most one affiliate
+-- at a time — that exclusivity is checked in the app layer (activeHolder() in
+-- server/lib/territories.js), the same convention the rest of this program
+-- uses, not a DB constraint: "unique only among active rows" can't be
+-- expressed by a plain UNIQUE key, and a real one would keep a revoked
+-- affiliate's territory locked forever.
+CREATE TABLE IF NOT EXISTS affiliate_territories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  affiliate_id INT UNSIGNED NOT NULL,
+  territory_id INT UNSIGNED NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'active' | 'revoked'
+  assigned_by_admin_id INT UNSIGNED NULL,
+  revoked_at DATETIME NULL,
+  revoked_by_admin_id INT UNSIGNED NULL,
+  notes VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_affiliate_status (affiliate_id, status),
+  INDEX idx_territory_status (territory_id, status),
+  FOREIGN KEY (affiliate_id) REFERENCES affiliates(id) ON DELETE CASCADE,
+  FOREIGN KEY (territory_id) REFERENCES territories(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (revoked_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
