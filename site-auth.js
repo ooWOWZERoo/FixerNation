@@ -74,17 +74,19 @@ const FN_AUTH_HAS_LICENSE_KEY = 'fnUserHasLicense';
 const FN_AUTH_IS_PARENT_KEY = 'fnUserIsParent';
 const FN_AUTH_IS_SCHOOL_ADMIN_KEY = 'fnUserIsSchoolAdmin';
 const FN_AUTH_IS_DISTRICT_ADMIN_KEY = 'fnUserIsDistrictAdmin';
+const FN_AUTH_IS_AFFILIATE_KEY = 'fnUserIsAffiliate';
 
 // hasLicense/isParent/isSchoolAdmin/isDistrictAdmin are real, independent
 // entitlement checks (does this account have a registered license seat? is
 // it linked to any classroom as a parent? does it have an active
-// school_license_admins/district_license_admins row?) — NOT mutually
-// exclusive the way a single role string is. An account can hold any
-// combination of these (e.g. a parent later invited and registered as a
-// teacher, or a district admin who is also a school admin, under the same
+// school_license_admins/district_license_admins/affiliates row?) — NOT
+// mutually exclusive the way a single role string is. An account can hold
+// any combination of these (e.g. a parent later invited and registered as a
+// teacher, a district admin who is also a school admin, or a district admin
+// who's also an affiliate covering a different territory, under the same
 // email), and the nav needs to show every section that applies, not pick
 // just one.
-function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isSchoolAdmin, isDistrictAdmin) {
+function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isSchoolAdmin, isDistrictAdmin, isAffiliate) {
   const nav = document.getElementById('fnAuthNav');
   if (loggedIn) {
     localStorage.setItem(FN_AUTH_HINT_KEY, firstName);
@@ -93,6 +95,7 @@ function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isScho
     localStorage.setItem(FN_AUTH_IS_PARENT_KEY, isParent ? '1' : '0');
     localStorage.setItem(FN_AUTH_IS_SCHOOL_ADMIN_KEY, isSchoolAdmin ? '1' : '0');
     localStorage.setItem(FN_AUTH_IS_DISTRICT_ADMIN_KEY, isDistrictAdmin ? '1' : '0');
+    localStorage.setItem(FN_AUTH_IS_AFFILIATE_KEY, isAffiliate ? '1' : '0');
   } else {
     localStorage.removeItem(FN_AUTH_HINT_KEY);
     localStorage.removeItem(FN_AUTH_ROLE_KEY);
@@ -100,6 +103,7 @@ function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isScho
     localStorage.removeItem(FN_AUTH_IS_PARENT_KEY);
     localStorage.removeItem(FN_AUTH_IS_SCHOOL_ADMIN_KEY);
     localStorage.removeItem(FN_AUTH_IS_DISTRICT_ADMIN_KEY);
+    localStorage.removeItem(FN_AUTH_IS_AFFILIATE_KEY);
   }
   document.body.classList.toggle('fn-user-authed', !!loggedIn);
   if (!nav) return;
@@ -131,7 +135,7 @@ function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isScho
           ${isParent ? li('parent-portal.html', 'Parent Portal') : ''}
           ${isSchoolAdmin ? li('school-admin-dashboard.html', 'School Admin Portal') : ''}
           ${isDistrictAdmin ? li('district-admin-dashboard.html', 'District Admin Portal') : ''}
-          ${role === 'affiliate' ? li('affiliate-dashboard.html', 'Affiliate Dashboard') : ''}
+          ${isAffiliate ? li('affiliate-dashboard.html', 'Affiliate Dashboard') : ''}
           ${isAdmin ? li('admin-dashboard.html', 'FNE Admin Dashboard') : ''}
           ${li('my-purchases.html', 'Purchase History')}
           <div style="height:1px; background:rgba(22,79,74,0.1); margin:4px 8px;"></div>
@@ -154,7 +158,8 @@ function fnAuthRenderNavOptimistic() {
   const isParent = localStorage.getItem(FN_AUTH_IS_PARENT_KEY) === '1';
   const isSchoolAdmin = localStorage.getItem(FN_AUTH_IS_SCHOOL_ADMIN_KEY) === '1';
   const isDistrictAdmin = localStorage.getItem(FN_AUTH_IS_DISTRICT_ADMIN_KEY) === '1';
-  fnAuthRenderNav(!!hint, hint || null, role, hasLicense, isParent, isSchoolAdmin, isDistrictAdmin);
+  const isAffiliate = localStorage.getItem(FN_AUTH_IS_AFFILIATE_KEY) === '1';
+  fnAuthRenderNav(!!hint, hint || null, role, hasLicense, isParent, isSchoolAdmin, isDistrictAdmin, isAffiliate);
 }
 fnAuthRenderNavOptimistic();
 
@@ -193,7 +198,7 @@ function fnAuthCheckSession() {
   fetch('/api/site-auth/me', { credentials: 'include' })
     .then(r => r.json())
     .then(function(data) {
-      fnAuthRenderNav(data.loggedIn, data.firstName, data.role, data.hasLicense, data.isParent, data.isSchoolAdmin, data.isDistrictAdmin);
+      fnAuthRenderNav(data.loggedIn, data.firstName, data.role, data.hasLicense, data.isParent, data.isSchoolAdmin, data.isDistrictAdmin, data.isAffiliate);
       if (data.loggedIn) fnFetchCommunityBadge();
     })
     .catch(function() { fnAuthRenderNav(false); });

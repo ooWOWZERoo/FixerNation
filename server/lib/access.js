@@ -59,6 +59,24 @@ async function hasActiveDistrictAdminAssignment(siteUserId) {
   return rows.length > 0;
 }
 
+// True if this site_user has an active affiliates row. The affiliate
+// program's first cut gated on site_users.role === 'affiliate' directly,
+// which is exactly the mistake the two comments above already warn about —
+// a district admin (or a teacher, or anyone) covering a different territory
+// as a side business is a completely ordinary case, and role is a single
+// column that can't represent it. approve/reject in routes/affiliates.js no
+// longer touches role for an existing account; this table's own row is what
+// makes someone an affiliate, same as school_license_admins/
+// district_license_admins for those roles.
+async function hasActiveAffiliateAccount(siteUserId) {
+  if (!siteUserId) return false;
+  const [rows] = await pool.query(
+    "SELECT 1 FROM affiliates WHERE site_user_id = ? AND status = 'active' LIMIT 1",
+    [siteUserId]
+  );
+  return rows.length > 0;
+}
+
 // Returns all classroom+child links a parent has — one row per linked
 // student, not per classroom, so a parent with two children in the same
 // classroom gets two distinct rows. student_id is only NULL for a link
@@ -91,4 +109,4 @@ async function hasParentAccessToCurriculum(siteUserId, curriculumId) {
   return rows.length > 0;
 }
 
-module.exports = { getSiteUser, hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, getParentClassrooms, hasParentAccessToCurriculum };
+module.exports = { getSiteUser, hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms, hasParentAccessToCurriculum };

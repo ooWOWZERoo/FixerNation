@@ -75,7 +75,7 @@ const AUTOMATIONS = [
     eventKey: 'affiliate_application_approved',
     label: 'Affiliate — Application Approved',
     subject: "You're in — welcome to the Fixer Nation Education affiliate program",
-    body: "Hi {{firstName}},\n\nGood news: your affiliate application is approved.\n\nYour referral code is {{referralCode}}, and your commission rate is {{commissionRate}}%. Territory: {{territory}}.\n\nShare this link and any sale that comes through it in the next 90 days is credited to you:\n{{referralLink}}\n\nSet your account password here to get in:\n{{setPasswordUrl}}\n\nQuestions about the program, your territory, or how commission is paid? Just reply to this email.\n\nWelcome aboard,\nThe Fixer Nation Education Team",
+    body: "Hi {{firstName}},\n\nGood news: your affiliate application is approved.\n\nYour referral code is {{referralCode}}, and your commission rate is {{commissionRate}}%. Territory: {{territory}}.\n\nShare this link and any sale that comes through it in the next 90 days is credited to you:\n{{referralLink}}\n\nGet started here:\n{{setPasswordUrl}}\n\nQuestions about the program, your territory, or how commission is paid? Just reply to this email.\n\nWelcome aboard,\nThe Fixer Nation Education Team",
     reminderDaysBefore: null,
   },
   {
@@ -127,6 +127,21 @@ async function main() {
     [newQuoteAcceptedBody]
   );
   if (patchResult.affectedRows) console.log('Patched body: quote_accepted');
+
+  // Patch existing affiliate_application_approved body: "Set your account
+  // password here to get in" is wrong once an approval can attach to an
+  // existing, already-verified account (a district admin also becoming an
+  // affiliate keeps their working password and just logs in normally — see
+  // routes/affiliates.js, which stopped overwriting site_users.role on
+  // approval for exactly this reason). "Get started here" reads correctly
+  // whether the link is a real password-setup flow or a direct link to the
+  // dashboard.
+  const newAffiliateApprovedBody = AUTOMATIONS.find(a => a.eventKey === 'affiliate_application_approved').body;
+  const [affiliatePatchResult] = await connection.query(
+    "UPDATE email_automations SET body = ? WHERE event_key = 'affiliate_application_approved' AND body LIKE '%Set your account password here to get in%'",
+    [newAffiliateApprovedBody]
+  );
+  if (affiliatePatchResult.affectedRows) console.log('Patched body: affiliate_application_approved');
 
   console.log(`\nDone. Created ${created}, skipped ${skipped}.`);
   await connection.end();

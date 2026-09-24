@@ -10,7 +10,7 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer
 const { createToken, consumeToken } = require('../lib/site-tokens');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
-const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, getParentClassrooms } = require('../lib/access');
+const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms } = require('../lib/access');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
@@ -172,17 +172,19 @@ router.post('/login', async (req, res) => {
   }
 
   setSiteSessionCookie(res, user);
-  // isSchoolAdmin/isDistrictAdmin are real entitlement checks (an active
-  // school_license_admins/district_license_admins row), independent of the
-  // single site_users.role string — school-admin-login.html and
-  // district-admin-login.html gate on these instead of role so an account
+  // isSchoolAdmin/isDistrictAdmin/isAffiliate are real entitlement checks (an
+  // active school_license_admins/district_license_admins/affiliates row),
+  // independent of the single site_users.role string — school-admin-login.html
+  // and district-admin-login.html gate on these instead of role so an account
   // holding one role doesn't get locked out of a different one it also
-  // legitimately holds.
-  const [isSchoolAdmin, isDistrictAdmin] = await Promise.all([
+  // legitimately holds. A district admin covering a territory as an
+  // affiliate on the side is exactly this case.
+  const [isSchoolAdmin, isDistrictAdmin, isAffiliate] = await Promise.all([
     hasActiveSchoolAdminAssignment(user.id),
     hasActiveDistrictAdminAssignment(user.id),
+    hasActiveAffiliateAccount(user.id),
   ]);
-  res.json({ ok: true, firstName: user.first_name, role: user.role || 'teacher', isSchoolAdmin, isDistrictAdmin });
+  res.json({ ok: true, firstName: user.first_name, role: user.role || 'teacher', isSchoolAdmin, isDistrictAdmin, isAffiliate });
 });
 
 router.post('/logout', (req, res) => {
@@ -197,18 +199,20 @@ router.get('/me', async (req, res) => {
     const payload = jwt.verify(token, process.env.SESSION_SECRET);
     const [rows] = await pool.query('SELECT email FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return res.json({ loggedIn: false });
-    // hasLicense/isParent/isSchoolAdmin/isDistrictAdmin are real entitlement
-    // checks, independent of site_users.role — an account can hold any
-    // combination of these (e.g. a parent later invited and registered as a
-    // teacher, or a district admin who is also a school admin under the
-    // same email), and role alone can't represent that. The nav uses these
-    // to show every applicable section rather than one exclusive
-    // role-based branch.
-    const [hasLicense, parentClassrooms, isSchoolAdmin, isDistrictAdmin] = await Promise.all([
+    // hasLicense/isParent/isSchoolAdmin/isDistrictAdmin/isAffiliate are real
+    // entitlement checks, independent of site_users.role — an account can
+    // hold any combination of these (e.g. a parent later invited and
+    // registered as a teacher, a district admin who is also a school admin
+    // under the same email, or a district admin who's also an affiliate
+    // covering a different territory), and role alone can't represent that.
+    // The nav uses these to show every applicable section rather than one
+    // exclusive role-based branch.
+    const [hasLicense, parentClassrooms, isSchoolAdmin, isDistrictAdmin, isAffiliate] = await Promise.all([
       hasActiveLicense(payload.userId),
       getParentClassrooms(payload.userId),
       hasActiveSchoolAdminAssignment(payload.userId),
       hasActiveDistrictAdminAssignment(payload.userId),
+      hasActiveAffiliateAccount(payload.userId),
     ]);
     res.json({
       loggedIn: true,
@@ -219,6 +223,7 @@ router.get('/me', async (req, res) => {
       isParent: parentClassrooms.length > 0,
       isSchoolAdmin,
       isDistrictAdmin,
+      isAffiliate,
     });
   } catch {
     res.json({ loggedIn: false });

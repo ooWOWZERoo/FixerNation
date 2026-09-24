@@ -19,14 +19,16 @@ const router = express.Router();
 
 // Every route below needs the caller's own `affiliates` row. Looked up once
 // and attached to the request rather than repeating the same query in every
-// handler. 404s (not 403s) when the affiliate row is missing — role is
-// 'affiliate' but somehow no matching row exists — which shouldn't happen
-// given approval creates both atomically, but a defensive dashboard says so
-// plainly instead of a confusing empty page.
+// handler.
+//
+// Deliberately does NOT gate on req.siteUser.role === 'affiliate'. A first
+// cut did, and that was a real bug: role is a single column on site_users,
+// and someone can be a district admin, a teacher, or a parent AND an
+// affiliate at the same time — the same reason hasActiveSchoolAdminAssignment()
+// checks school_license_admins directly instead of role (see its comment in
+// lib/access.js). The affiliates row's existence is the actual entitlement,
+// same as that table.
 async function loadOwnAffiliate(req, res, next) {
-  if (req.siteUser.role !== 'affiliate') {
-    return res.status(403).json({ error: 'Affiliate access required' });
-  }
   const [[affiliate]] = await pool.query('SELECT * FROM affiliates WHERE site_user_id = ?', [req.siteUser.id]);
   if (!affiliate) {
     return res.status(404).json({ error: 'No affiliate account found for this login.' });

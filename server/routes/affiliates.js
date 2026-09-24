@@ -33,13 +33,6 @@ const router = express.Router();
 // stage 4 has built it, this points there.
 const AFFILIATE_LANDING_PATH = '/affiliate-dashboard.html';
 
-// A role we refuse to overwrite when approving an application. site_users.role
-// is a single column, so approving an email that already belongs to staff or a
-// school/district admin would quietly demote a privileged account — the same
-// overwrite school-admin-assignment.js performs, but in that direction it's an
-// upgrade. Better to make the admin use a different address.
-const PROTECTED_ROLES = ['admin', 'district_admin', 'school_license_admin'];
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ---------------------------------------------------------------------------
@@ -278,16 +271,20 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
     user = userRows[0];
 
     if (user) {
-      if (PROTECTED_ROLES.includes(user.role)) {
-        await conn.rollback();
-        return res.status(409).json({ error: `${app.email} already has a "${user.role}" account. Approving would replace that role — ask the applicant for a different email address.` });
-      }
       const [[existingAffiliate]] = await conn.query('SELECT id FROM affiliates WHERE site_user_id = ? LIMIT 1', [user.id]);
       if (existingAffiliate) {
         await conn.rollback();
         return res.status(409).json({ error: `${app.email} is already an affiliate.` });
       }
-      await conn.query("UPDATE site_users SET role = 'affiliate' WHERE id = ?", [user.id]);
+      // Deliberately does NOT touch site_users.role. A district admin, a
+      // school license admin, a teacher, a parent — any of them can also be
+      // an affiliate; role is a single column that was never meant to be an
+      // exclusive gate (see hasActiveSchoolAdminAssignment()'s own comment
+      // in lib/access.js, which says exactly this). Being an affiliate is
+      // determined by the existence of the affiliates row created below,
+      // the same way school_license_admins/district_license_admins already
+      // work — never by overwriting whatever role already labels this
+      // account.
     } else {
       // Unusable random password: the account exists so the affiliate can be
       // attached to it, but the only way in is the setup link below.
