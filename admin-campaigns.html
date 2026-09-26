@@ -993,10 +993,7 @@ async function saveCampaign(mode) {
   const result = await sendR.json();
   closeCampaignModal();
   renderCampaigns();
-  const failedNote = (result.bounced || result.undelivered) ? `, ${result.bounced + result.undelivered} failed` : '';
-  fnToast(result.remaining > 0
-    ? `First batch sent (${result.sentSoFar} of ${result.sentSoFar + result.remaining})${failedNote} — remaining recipients will go out automatically over the next few batches`
-    : `Sent to ${result.sentSoFar} recipient(s)${failedNote}`);
+  fnToast(`Sending started — ${result.recipientCount} recipient(s) will go out in batches over the next few minutes`);
 }
 
 document.getElementById('audienceSource').addEventListener('change', updateAudiencePreview);

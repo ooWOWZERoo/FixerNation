@@ -476,14 +476,13 @@ async function processCampaignBatch(campaignId) {
   return { ...result, remaining: Math.max(0, stillRemaining), sentSoFar };
 }
 
-// Moves a Draft/Scheduled campaign into Sending and fires its first batch
-// immediately (so a campaign smaller than one batch still goes out right
-// away, same as before this feature existed) — any remaining batches are
-// picked up by the cron at the configured interval instead of the whole
-// audience firing in one uninterrupted burst, to stay under whatever
-// sending rate the receiving providers (or this host's own SMTP relay)
-// tolerate before flagging it as spam/abuse.
-async function enqueueCampaignForSending(campaignId) {
+// Moves a Draft/Scheduled campaign into Sending, due for its first batch
+// immediately — does not send anything itself. Split out from
+// enqueueCampaignForSending() so the manual "Send Now" HTTP route can return
+// as soon as the campaign is marked Sending, instead of blocking the
+// request/response cycle on real SMTP sends (see processCampaignBatch's
+// comment below for why that was a problem on this host).
+async function startCampaignSending(campaignId) {
   const [rows] = await pool.query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
   if (!rows[0]) throw { status: 404, message: 'Campaign not found' };
   const campaign = rows[0];
@@ -496,14 +495,34 @@ async function enqueueCampaignForSending(campaignId) {
     "UPDATE campaigns SET status = 'Sending', next_batch_at = NOW(), total_recipients_at_send = ? WHERE id = ?",
     [audience.length, campaignId]
   );
+  return { recipientCount: audience.length };
+}
 
+// Used only by the cron script (sendDueScheduledCampaigns/spawnAndSendOccurrence
+// in send-scheduled-campaigns.js), which has no HTTP request to time out —
+// starts sending and fires the first batch inline, same as before this was
+// split. The manual "Send Now" HTTP route below calls startCampaignSending()
+// directly instead and lets the cron's own processDueBatches() fire the
+// first batch within the next 5 minutes, exactly like every batch after it.
+async function enqueueCampaignForSending(campaignId) {
+  await startCampaignSending(campaignId);
   return processCampaignBatch(campaignId);
 }
 
+// Sending real emails synchronously inside an HTTP request risked a hard
+// timeout on this shared host: a full batch (default 60) each opening its
+// own SMTP connection (mailer.js's transporter isn't pooled) can take well
+// over a minute, long enough to hit Passenger/LiteSpeed's request timeout or
+// this host's CloudLinux LVE execution-time cap — surfacing as a bare 500
+// with no application-level error to explain it (suspected root cause of
+// the campaign-send 500, never confirmed via a log). So this route only
+// starts the campaign; the first batch (like every batch after it) goes out
+// from processDueBatches() on the next 5-minute cron tick, never from a web
+// request.
 router.post('/:id/send', requireAuth, async (req, res) => {
   let result;
   try {
-    result = await enqueueCampaignForSending(req.params.id);
+    result = await startCampaignSending(req.params.id);
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.message });
     throw err;
