@@ -397,7 +397,7 @@ setting_key varchar(64) 🔑 · setting_value text · updated_at
 B2B sales-affiliate program. Design: `docs/AFFILIATE_PROGRAM_SPIKE.md`, `docs/AFFILIATE_COMMISSION_LEDGER_SPIKE.md`. An affiliate is a role on `site_users` (`role = 'affiliate'`), same split as `district_license_admins` — no separate auth system.
 
 ### `affiliate_applications` — a prospect's application
-id 🔑 · first_name/last_name · email · company · phone · requested_territory (free text, what the applicant asked for) · pitch text · status varchar(16) (pending/approved/rejected) · reviewed_by_admin_id 🔗→admin_users (SET NULL) · reviewed_at · rejection_reason · resulting_site_user_id 🔗→site_users (SET NULL) · created_at
+id 🔑 · first_name/last_name · email · company · phone · requested_territory (legacy free text, superseded 2026-09-26) · requested_territory_state char(2) · requested_territory_county varchar(100) (structured state+county ask, dropdown-backed) · pitch text · status varchar(16) (pending/approved/rejected) · reviewed_by_admin_id 🔗→admin_users (SET NULL) · reviewed_at · rejection_reason · resulting_site_user_id 🔗→site_users (SET NULL) · created_at
 
 A rejected applicant may reapply at any time — no re-application block, no cooldown. Each attempt is a new row; the admin review queue shows prior decisions on the same email.
 
@@ -412,14 +412,19 @@ id 🔑 · affiliate_id 🔗→affiliates (CASCADE) · purchase_id 🔗→purcha
 Status follows the money: a card sale opens `approved` (Stripe already took payment); a PO sale opens `pending` and is approved when the invoice is marked paid; cancelling an invoice reverses whatever hasn't been paid out. Every balance is a `SUM()` filtered by status — never a bare sum over the table.
 
 ### `territories` — real US states/counties (not free text)
-id 🔑 · scope varchar(16) (state/county) · state char(2) (USPS code) · county varchar(100) default `''` (empty for a state-scope row — lets `UNIQUE(state, county)` enforce one row per state) · name varchar(150) (display label) · status varchar(16) (active/retired) · created_at · ⭐ (state, county)
+id 🔑 · scope varchar(16) (state/county — `state` is legacy-only as of 2026-09-26, see below) · state char(2) (USPS code) · county varchar(100) default `''` (empty only in a legacy state-scope row — `UNIQUE(state, county)` enforces one row per state/county) · name varchar(150) (display label) · status varchar(16) (active/retired) · created_at · ⭐ (state, county)
 
-The 50 states + DC are seeded once and always exist. A county-scope row is created the first time an admin actually assigns "this county, in this state" — the ~3,143 real US counties are deliberately not pre-loaded.
+The 50 states + DC are seeded once and always exist as `scope='state'` reference rows. **As of 2026-09-26, a county is mandatory for every NEW territory** — `findOrCreateTerritory()` rejects an empty county, so a whole-state assignment can no longer be created going forward. A county-scope row is still created the first time anyone actually requests/assigns "this county, in this state" — the ~3,143 real US counties are pre-loaded as names-only reference data (`server/lib/us-counties.js`, sourced from the public-domain Census FIPS list), but a `territories` row for one still isn't created until first use. DC has exactly one county-equivalent ("District of Columbia" itself, from the same FIPS data), which satisfies the mandatory-county rule without a real subdivision.
 
 ### `affiliate_territories` — assignment history (many-per-affiliate)
 id 🔑 · affiliate_id 🔗→affiliates (CASCADE) · territory_id 🔗→territories (CASCADE) · status varchar(16) (active/revoked) · assigned_by_admin_id 🔗→admin_users (SET NULL) · revoked_at/by_admin_id · notes · created_at
 
-Exclusivity (one active affiliate per territory) is an app-level check against this table's own `status`, not a DB constraint and not a join against the parent affiliate's active/suspended status — suspending an affiliate explicitly revokes their rows here in the same transaction, rather than relying on a filter elsewhere.
+Exclusivity (one active affiliate per territory) is an app-level check against this table's own `status`, not a DB constraint and not a join against the parent affiliate's active/suspended status — suspending an affiliate explicitly revokes their rows here in the same transaction, rather than relying on a filter elsewhere. This check is per exact `territory_id` — a legacy whole-state row and a county-within-it are different rows with no cross-check between them (unchanged, deliberately preserved; moot for new data now that county is mandatory).
+
+### `territory_requests` — an affiliate's own request for a territory *(new, 2026-09-26)*
+id 🔑 · affiliate_id 🔗→affiliates (CASCADE) · request_type varchar(16) (initial/addition/change) · requested_state char(2) · requested_county varchar(100) (always required) · previous_assignment_id 🔗→affiliate_territories (SET NULL, `change` only — the assignment being replaced) · status varchar(16) (pending/approved/rejected) · reviewed_by_admin_id 🔗→admin_users (SET NULL) · reviewed_at · rejection_reason · created_at
+
+Mirrors the `affiliate_applications` pattern one level down: a request row never touches `affiliate_territories` by itself. Approving one calls the same `assignTerritory()` every direct admin action uses (for `change`, `revokeTerritoryAssignment()` on `previous_assignment_id` runs first, in the same transaction — a true swap, not an addition). Rejecting one leaves `affiliate_territories` completely untouched. Only one `pending` row per affiliate is allowed, enforced in the app layer (same convention as territory exclusivity above), not a DB constraint.
 
 ---
 
@@ -449,3 +454,11 @@ Exclusivity (one active affiliate per territory) is an app-level check against t
 | *(new table)* `territories` | — | Real US states/counties, fixed vocabulary |
 | *(new table)* `affiliate_territories` | — | Assignment history, many territories per affiliate |
 | `affiliates` | `territory` **dropped** | Superseded by `territories`/`affiliate_territories` same day, after backfill |
+
+## Columns added this session (2026-09-26) — territory requests + mandatory county
+
+| Table | Column | Purpose |
+|---|---|---|
+| *(new table)* `territory_requests` | — | An affiliate's own pending request for a territory (initial/addition/change), always admin-reviewed before `affiliate_territories` changes |
+| `affiliate_applications` | `requested_territory_state`, `requested_territory_county` | Structured state+county ask, replacing the free-text `requested_territory` (kept, unused going forward) |
+| `territories` | *(no new column)* | `scope='state'` (county='') rows can no longer be newly created — enforced in `findOrCreateTerritory()`, not a schema change |

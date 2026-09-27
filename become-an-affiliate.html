@@ -132,8 +132,11 @@
       </div>
       <div class="form-field">
         <label>Territory you'd like to cover</label>
-        <input type="text" id="affTerritory" placeholder="e.g. Central Florida">
-        <div class="field-hint">One active affiliate per territory, no overlap. Tell us the region you want and we'll either confirm it or suggest one that's open.</div>
+        <div class="form-row">
+          <select id="affTerritoryState"><option value="">No territory in particular</option></select>
+          <select id="affTerritoryCounty" disabled><option value="">Select a state first</option></select>
+        </div>
+        <div class="field-hint">One active affiliate per territory (state + county), no overlap. Territory requests — including this one — always require admin approval before they take effect; we'll confirm it or suggest one that's open.</div>
       </div>
       <div class="form-field">
         <label>Tell us about you</label>
@@ -155,6 +158,36 @@
 <footer></footer>
 
 <script>
+(async function () {
+  const stateSel = document.getElementById('affTerritoryState');
+  const countySel = document.getElementById('affTerritoryCounty');
+  try {
+    const r = await fetch('/api/affiliates/states');
+    const d = await r.json();
+    stateSel.innerHTML = '<option value="">No territory in particular</option>' +
+      d.states.map(function (s) { return '<option value="' + s.code + '">' + s.name + '</option>'; }).join('');
+  } catch (e) { /* leave the placeholder-only select in place */ }
+
+  stateSel.addEventListener('change', async function () {
+    countySel.value = '';
+    if (!stateSel.value) {
+      countySel.disabled = true;
+      countySel.innerHTML = '<option value="">Select a state first</option>';
+      return;
+    }
+    countySel.disabled = false;
+    countySel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const r = await fetch('/api/affiliates/counties?state=' + encodeURIComponent(stateSel.value));
+      const d = await r.json();
+      countySel.innerHTML = '<option value="">Select a county…</option>' +
+        d.counties.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+    } catch (e) {
+      countySel.innerHTML = '<option value="">Could not load counties</option>';
+    }
+  });
+})();
+
 document.getElementById('affiliateForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   var btn = document.getElementById('affSubmit');
@@ -173,7 +206,8 @@ document.getElementById('affiliateForm').addEventListener('submit', async functi
         email: document.getElementById('affEmail').value,
         company: document.getElementById('affCompany').value,
         phone: document.getElementById('affPhone').value,
-        requestedTerritory: document.getElementById('affTerritory').value,
+        requestedTerritoryState: document.getElementById('affTerritoryState').value,
+        requestedTerritoryCounty: document.getElementById('affTerritoryCounty').value,
         pitch: document.getElementById('affPitch').value,
         website: document.getElementById('affWebsite').value,
       }),

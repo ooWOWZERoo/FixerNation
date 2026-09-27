@@ -20,8 +20,9 @@ const { sendSalesAlertEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { LEDGER_TOTALS_SQL } = require('../lib/affiliate-attribution');
 const {
-  US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder,
-  assignTerritory, revokeTerritoryAssignment, territoriesForAffiliate, listTerritories,
+  US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder, countiesForState,
+  canonicalCountyName, stateName, assignTerritory, revokeTerritoryAssignment,
+  territoriesForAffiliate, listTerritories,
 } = require('../lib/territories');
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
 
@@ -99,7 +100,7 @@ router.post('/apply', async (req, res) => {
   const email = (b.email || '').trim().toLowerCase();
   const company = (b.company || '').trim();
   const phone = (b.phone || '').trim();
-  const requestedTerritory = (b.requestedTerritory || '').trim();
+  const territoryState = (b.requestedTerritoryState || '').trim().toUpperCase();
   const pitch = (b.pitch || '').trim();
 
   if (!firstName || !lastName) return res.status(400).json({ error: 'First and last name are required' });
@@ -107,14 +108,24 @@ router.post('/apply', async (req, res) => {
   if (firstName.length > 100 || lastName.length > 100) return res.status(400).json({ error: 'Name is too long' });
   if (company.length > 255) return res.status(400).json({ error: 'Company name is too long' });
   if (phone.length > 30) return res.status(400).json({ error: 'Phone number is too long' });
-  if (requestedTerritory.length > 100) return res.status(400).json({ error: 'Territory is too long' });
   if (pitch.length > 4000) return res.status(400).json({ error: 'Please keep your background under 4,000 characters' });
+
+  // Territory is optional at application time — the applicant may leave it
+  // blank and have the admin set one at approval. When a state IS given, the
+  // county is required and validated against the real reference list, same
+  // as everywhere else a territory is chosen (see lib/territories.js).
+  let territoryCounty = null;
+  if (territoryState) {
+    if (!isValidStateCode(territoryState)) return res.status(400).json({ error: `"${b.requestedTerritoryState}" is not a US state or DC` });
+    territoryCounty = canonicalCountyName(territoryState, b.requestedTerritoryCounty);
+    if (!territoryCounty) return res.status(400).json({ error: `"${b.requestedTerritoryCounty}" is not a real county in ${stateName(territoryState) || territoryState}` });
+  }
 
   const [result] = await pool.query(
     `INSERT INTO affiliate_applications
-       (first_name, last_name, email, company, phone, requested_territory, pitch)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [firstName, lastName, email, company || null, phone || null, requestedTerritory || null, pitch || null]
+       (first_name, last_name, email, company, phone, requested_territory_state, requested_territory_county, pitch)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [firstName, lastName, email, company || null, phone || null, territoryState || null, territoryCounty, pitch || null]
   );
 
   try {
@@ -126,7 +137,7 @@ router.post('/apply', async (req, res) => {
         Email: email,
         Company: company || '—',
         Phone: phone || '—',
-        'Requested Territory': requestedTerritory || '—',
+        'Requested Territory': territoryState ? `${territoryCounty}, ${territoryState}` : '—',
         Background: pitch || '—',
       },
       linkUrl: `${process.env.SITE_URL || ''}/admin-affiliates.html`,
@@ -234,14 +245,16 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
 
   // Territory assignment at approval is optional — an admin can always add
   // one afterward from the Affiliates tab. When given, it must be a real US
-  // state (fixed vocabulary, stage 3.5b); territoryCounty narrows it to a
-  // county within that state.
+  // state plus a real county in that state (county is mandatory for every
+  // territory, no whole-state assignment — see findOrCreateTerritory()).
   const territoryState = (b.territoryState || '').trim().toUpperCase();
   const territoryCounty = (b.territoryCounty || '').trim();
   if (territoryState && !isValidStateCode(territoryState)) {
     return res.status(400).json({ error: `"${territoryState}" is not a US state or DC` });
   }
-  if (territoryCounty.length > 100) return res.status(400).json({ error: 'County name is too long' });
+  if (territoryState && !territoryCounty) {
+    return res.status(400).json({ error: 'A county is required to assign a territory' });
+  }
 
   let code = (b.referralCode || '').trim().toUpperCase();
   if (code && !CODE_RE.test(code)) {
@@ -336,9 +349,8 @@ router.post('/applications/:id/approve', requireAuth, async (req, res) => {
       try {
         const { territory } = await assignTerritory(conn, {
           affiliateId,
-          scope: territoryCounty ? 'county' : 'state',
           state: territoryState,
-          county: territoryCounty || undefined,
+          county: territoryCounty,
           adminId: req.user.userId,
         });
         assignedTerritoryName = territory.name;
@@ -686,11 +698,22 @@ router.get('/audit-log', requireAuth, async (req, res) => {
 // this file: a literal path has to come first or Express reads it as an :id.
 // ---------------------------------------------------------------------------
 
-// GET /api/affiliates/states — the fixed dropdown list. A tiny, static
-// payload; kept as a real endpoint rather than duplicated in every admin page
-// that needs it, even though today only admin-affiliates.html does.
-router.get('/states', requireAuth, (req, res) => {
+// GET /api/affiliates/states — the fixed dropdown list. Public (no auth) —
+// it's non-sensitive reference data, needed by become-an-affiliate.html
+// (no login exists at that stage) as well as every admin page.
+router.get('/states', (req, res) => {
   res.json({ states: US_STATES.map(([code, name]) => ({ code, name })) });
+});
+
+// GET /api/affiliates/counties?state=XX — real county names for a state,
+// already sorted. Public for the same reason as /states — backs every
+// state->county cascading dropdown (become-an-affiliate.html, the admin
+// Territories modal, the application-approval modal, and the self-service
+// request form on affiliate-dashboard.html) from one shared source.
+router.get('/counties', (req, res) => {
+  const state = (req.query.state || '').trim().toUpperCase();
+  if (!isValidStateCode(state)) return res.status(400).json({ error: `"${req.query.state}" is not a US state or DC` });
+  res.json({ counties: countiesForState(state) });
 });
 
 // GET /api/affiliates/territories?state=&q= — browse territory records and
@@ -711,6 +734,220 @@ router.get('/territories', requireAuth, async (req, res) => {
         : null,
     })),
   });
+});
+
+// GET /api/affiliates/territory-map — one row per state with at least one
+// active affiliate, for the admin dashboard's choropleth. "Active affiliate"
+// = affiliates.status = 'active' (the only status column that exists — no
+// separate "qualifying" concept anywhere in this program). Pending/rejected
+// territory_requests never touch affiliate_territories, so they're excluded
+// automatically here, not via extra filtering. COUNT(DISTINCT ...) is what
+// makes an affiliate holding several counties in the same state count once.
+router.get('/territory-map', requireAuth, async (req, res) => {
+  const [rows] = await pool.query(`
+    SELECT t.state, COUNT(DISTINCT at.affiliate_id) AS affiliateCount
+    FROM affiliate_territories at
+    JOIN territories t ON t.id = at.territory_id
+    JOIN affiliates a ON a.id = at.affiliate_id
+    WHERE at.status = 'active' AND a.status = 'active'
+    GROUP BY t.state
+  `);
+  res.json({ counts: rows.map(r => ({ state: r.state, affiliateCount: Number(r.affiliateCount) })) });
+});
+
+// GET /api/affiliates/territory-map/:state — drill-down for one state: every
+// active affiliate holding a territory there, and which county/counties.
+// Never public — same requireAuth as every other endpoint in this file.
+router.get('/territory-map/:state', requireAuth, async (req, res) => {
+  const state = (req.params.state || '').trim().toUpperCase();
+  if (!isValidStateCode(state)) return res.status(400).json({ error: `"${req.params.state}" is not a US state or DC` });
+
+  const [rows] = await pool.query(`
+    SELECT a.id AS affiliateId, a.status AS affiliateStatus,
+           su.first_name, su.last_name, su.email,
+           GROUP_CONCAT(t.county ORDER BY t.county SEPARATOR ', ') AS counties
+    FROM affiliate_territories at
+    JOIN territories t ON t.id = at.territory_id
+    JOIN affiliates a ON a.id = at.affiliate_id
+    JOIN site_users su ON su.id = a.site_user_id
+    WHERE at.status = 'active' AND a.status = 'active' AND t.state = ?
+    GROUP BY a.id, a.status, su.first_name, su.last_name, su.email
+    ORDER BY su.last_name, su.first_name
+  `, [state]);
+
+  res.json({
+    state,
+    affiliates: rows.map(r => ({
+      affiliateId: r.affiliateId,
+      name: [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email,
+      status: r.affiliateStatus,
+      counties: r.counties,
+    })),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Admin — territory requests (an affiliate's own request for a territory
+// change, always reviewed before affiliate_territories is touched).
+//
+// Declared before the bare /:id routes below, same reason as /applications.
+// ---------------------------------------------------------------------------
+
+// GET /api/affiliates/territory-requests?status=pending — defaults to
+// pending (the admin's review queue); pass status=all for the full history.
+router.get('/territory-requests', requireAuth, async (req, res) => {
+  const status = (req.query.status || 'pending').trim();
+  const where = status === 'all' ? '' : 'WHERE tr.status = ?';
+  const params = status === 'all' ? [] : [status];
+  const [rows] = await pool.query(`
+    SELECT tr.*, a.id AS affiliateId, su.first_name, su.last_name, su.email
+    FROM territory_requests tr
+    JOIN affiliates a ON a.id = tr.affiliate_id
+    JOIN site_users su ON su.id = a.site_user_id
+    ${where}
+    ORDER BY tr.status = 'pending' DESC, tr.created_at DESC
+  `, params);
+
+  const requests = [];
+  for (const r of rows) {
+    const currentTerritories = await territoriesForAffiliate(r.affiliateId);
+    requests.push({
+      id: r.id,
+      affiliateId: r.affiliateId,
+      affiliateName: [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email,
+      requestType: r.request_type,
+      requestedState: r.requested_state,
+      requestedCounty: r.requested_county,
+      previousAssignmentId: r.previous_assignment_id,
+      status: r.status,
+      rejectionReason: r.rejection_reason,
+      createdAt: r.created_at,
+      currentTerritories: currentTerritories
+        .filter(t => t.status === 'active')
+        .map(t => ({ assignmentId: t.assignment_id, name: t.name })),
+    });
+  }
+  res.json({ requests });
+});
+
+// POST /api/affiliates/territory-requests/:id/approve — applies the request
+// via the same assignTerritory()/revokeTerritoryAssignment() every direct
+// admin action already goes through, so the untouched exclusivity check
+// applies identically here.
+router.post('/territory-requests/:id/approve', requireAuth, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[request]] = await conn.query(
+      `SELECT tr.*, a.id AS affiliateId, su.first_name, su.email
+       FROM territory_requests tr
+       JOIN affiliates a ON a.id = tr.affiliate_id
+       JOIN site_users su ON su.id = a.site_user_id
+       WHERE tr.id = ? FOR UPDATE`,
+      [req.params.id]
+    );
+    if (!request) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Territory request not found' });
+    }
+    if (request.status !== 'pending') {
+      await conn.rollback();
+      return res.status(409).json({ error: `This request was already ${request.status}` });
+    }
+
+    if (request.request_type === 'change' && request.previous_assignment_id) {
+      try {
+        await revokeTerritoryAssignment(conn, request.previous_assignment_id, req.user.userId, 'Replaced via an approved territory-change request');
+      } catch (err) {
+        await conn.rollback();
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        throw err;
+      }
+    }
+
+    let result;
+    try {
+      result = await assignTerritory(conn, {
+        affiliateId: request.affiliateId,
+        state: request.requested_state,
+        county: request.requested_county,
+        adminId: req.user.userId,
+        notes: `Approved territory request #${request.id}`,
+      });
+    } catch (err) {
+      await conn.rollback();
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+
+    await conn.query(
+      `UPDATE territory_requests SET status = 'approved', reviewed_by_admin_id = ?, reviewed_at = NOW() WHERE id = ?`,
+      [req.user.userId || null, request.id]
+    );
+
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: 'affiliate.territory_request_approved', entityType: 'affiliate_territory', entityId: result.assignmentId,
+      newValue: { requestId: request.id, territory: result.territory.name },
+      ipAddress: req.ip,
+    });
+
+    await conn.commit();
+
+    await fireAutomation('affiliate_territory_request_approved', {
+      to: request.email,
+      mergeFields: { firstName: request.first_name, territory: result.territory.name },
+    });
+
+    res.json({ ok: true, assignmentId: result.assignmentId, territory: result.territory });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
+
+// POST /api/affiliates/territory-requests/:id/reject — exact structural
+// mirror of /applications/:id/reject. Nothing to undo: a pending request
+// never touched affiliate_territories, so the affiliate's existing approved
+// territories are simply untouched.
+router.post('/territory-requests/:id/reject', requireAuth, async (req, res) => {
+  const reason = ((req.body || {}).reason || '').trim();
+  if (!reason) return res.status(400).json({ error: 'A reason is required — it goes into the email the affiliate receives' });
+  if (reason.length > 500) return res.status(400).json({ error: 'Please keep the reason under 500 characters' });
+
+  const [[request]] = await pool.query(
+    `SELECT tr.*, su.first_name, su.email
+     FROM territory_requests tr
+     JOIN affiliates a ON a.id = tr.affiliate_id
+     JOIN site_users su ON su.id = a.site_user_id
+     WHERE tr.id = ?`,
+    [req.params.id]
+  );
+  if (!request) return res.status(404).json({ error: 'Territory request not found' });
+  if (request.status !== 'pending') return res.status(409).json({ error: `This request was already ${request.status}` });
+
+  await pool.query(
+    `UPDATE territory_requests
+       SET status = 'rejected', rejection_reason = ?, reviewed_by_admin_id = ?, reviewed_at = NOW()
+     WHERE id = ? AND status = 'pending'`,
+    [reason, req.user.userId || null, request.id]
+  );
+
+  await fireAutomation('affiliate_territory_request_rejected', {
+    to: request.email,
+    mergeFields: { firstName: request.first_name, reason },
+  });
+
+  await audit(pool, {
+    actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+    action: 'affiliate.territory_request_rejected', entityType: 'affiliate_territory', entityId: request.id,
+    reason, ipAddress: req.ip,
+  });
+
+  res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------------------
@@ -856,13 +1093,13 @@ router.get('/:id/territories', requireAuth, async (req, res) => {
 });
 
 // POST /api/affiliates/:id/territories — assign a territory. Body:
-// { state, county? }. county is omitted for a state-level assignment.
+// { state, county }. A county is required for every territory.
 router.post('/:id/territories', requireAuth, async (req, res) => {
   const b = req.body || {};
   const state = (b.state || '').trim().toUpperCase();
   const county = (b.county || '').trim();
   if (!isValidStateCode(state)) return res.status(400).json({ error: `"${b.state}" is not a US state or DC` });
-  if (county.length > 100) return res.status(400).json({ error: 'County name is too long' });
+  if (!county) return res.status(400).json({ error: 'A county is required' });
 
   const conn = await pool.getConnection();
   try {
@@ -878,9 +1115,8 @@ router.post('/:id/territories', requireAuth, async (req, res) => {
     try {
       result = await assignTerritory(conn, {
         affiliateId: affiliate.id,
-        scope: county ? 'county' : 'state',
         state,
-        county: county || undefined,
+        county,
         adminId: req.user.userId,
         notes: (b.notes || '').trim() || null,
       });

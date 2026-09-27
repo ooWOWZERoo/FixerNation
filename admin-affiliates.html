@@ -25,6 +25,17 @@
   .comm-tile .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--a-text-soft); font-weight: 700; }
   .comm-tile .value { font-size: 21px; font-weight: 700; margin-top: 4px; }
   .comm-tile .sub { font-size: 11.5px; color: var(--a-text-soft); margin-top: 2px; }
+
+  #mapSvgContainer svg { width: 100%; max-width: 720px; height: auto; display: block; margin: 0 auto; }
+  #mapSvgContainer path { stroke: var(--a-card); stroke-width: 1.25; cursor: pointer; transition: opacity .1s; }
+  #mapSvgContainer path:hover, #mapSvgContainer path:focus { opacity: 0.75; outline: none; }
+  #mapSvgContainer path:focus { stroke: var(--a-accent); stroke-width: 2.5; }
+  #mapSvgContainer path.selected { stroke: var(--a-coral); stroke-width: 3; }
+  .map-legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .map-legend-item { display: flex; align-items: center; color: var(--a-text-soft); font-weight: 600; }
+  @media (max-width: 600px) {
+    #mapSvgContainer svg { max-width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -44,8 +55,10 @@
       <div class="aff-tab-bar">
         <button class="aff-tab active" data-tab="applications" onclick="switchTab('applications')">Applications <span id="pendingBadge"></span></button>
         <button class="aff-tab" data-tab="affiliates" onclick="switchTab('affiliates')">Affiliates</button>
+        <button class="aff-tab" data-tab="requests" onclick="switchTab('requests')">Territory Requests <span id="reqBadge"></span></button>
         <button class="aff-tab" data-tab="commissions" onclick="switchTab('commissions')">Commissions <span id="commBadge"></span></button>
         <button class="aff-tab" data-tab="activity" onclick="switchTab('activity')">Activity Log</button>
+        <button class="aff-tab" data-tab="map" onclick="switchTab('map')">Map</button>
       </div>
 
       <!-- Applications tab -->
@@ -77,6 +90,24 @@
         <div class="a-card">
           <div id="affTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
         </div>
+      </div>
+
+      <!-- Territory Requests tab -->
+      <div id="tab-requests" style="display:none;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+          <select id="reqStatus" onchange="loadTerritoryRequests()"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);">
+            <option value="pending">Pending review</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="a-card">
+          <div id="reqTableWrap"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+        </div>
+        <p class="meta-line" style="margin-top:14px;">
+          Every territory request — an affiliate's own ask for a new or replaced territory — needs a decision here
+          before it changes anything. An affiliate's existing approved territories are untouched until you approve.
+        </p>
       </div>
 
       <!-- Commissions tab -->
@@ -125,6 +156,37 @@
           with who did it and when — most recent 300 entries.
         </p>
       </div>
+
+      <!-- Map tab -->
+      <div id="tab-map" style="display:none;">
+        <div class="a-card">
+          <div style="margin-bottom:16px;">
+            <label for="mapStateSelect" style="display:block;font-size:12.5px;font-weight:700;color:var(--a-text-soft);margin-bottom:6px;">Jump to a state</label>
+            <select id="mapStateSelect" onchange="selectMapState(this.value)"
+              style="width:100%;max-width:320px;padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);">
+              <option value="">Select a state…</option>
+            </select>
+          </div>
+
+          <div id="mapStatusBox"><div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading…</div></div>
+
+          <div id="mapWrap" style="display:none;">
+            <div id="mapSvgContainer" role="group" aria-label="United States, colored by number of distinct active affiliates per state"></div>
+
+            <div id="mapLegend" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:14px;font-size:12.5px;"></div>
+
+            <div id="mapTooltip" style="display:none;position:fixed;background:var(--a-text);color:var(--a-bg);padding:6px 10px;border-radius:8px;font-size:12.5px;pointer-events:none;z-index:50;white-space:nowrap;"></div>
+          </div>
+        </div>
+
+        <div class="a-card" id="mapDetailCard" style="margin-top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+            <h3 id="mapDetailHeading" style="font-family:inherit;font-size:16px;margin:0;">Select a state to see its affiliates</h3>
+            <button class="a-btn a-btn-outline a-btn-sm" id="mapClearBtn" onclick="clearMapSelection()" style="display:none;">Clear selection</button>
+          </div>
+          <div id="mapDetailBody"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -150,9 +212,9 @@
         <label>Territory (optional — can add later)</label>
         <div class="a-form-row">
           <select id="approveTerritoryState"><option value="">No territory yet</option></select>
-          <input type="text" id="approveTerritoryCounty" placeholder="County (optional — leave blank for the whole state)">
+          <select id="approveTerritoryCounty" disabled><option value="">Select a state first</option></select>
         </div>
-        <div class="a-hint">Organizational only. Two active affiliates can't hold the same territory, but territory never decides who earns a commission — the referral code does.</div>
+        <div class="a-hint">Fixed to real US states and counties — a county is required for any territory. Two active affiliates can't hold the same territory, but territory never decides who earns a commission — the referral code does.</div>
       </div>
       <div class="a-field">
         <label>Referral Code</label>
@@ -242,14 +304,37 @@
         <label>Assign a new territory</label>
         <div class="a-form-row">
           <select id="territoryAddState"><option value="">Select a state…</option></select>
-          <input type="text" id="territoryAddCounty" placeholder="County (optional)">
+          <select id="territoryAddCounty" disabled><option value="">Select a state first</option></select>
         </div>
-        <div class="a-hint">Fixed to real US states and counties. Leave county blank to assign the whole state. Only one active affiliate can hold a given territory at a time.</div>
+        <div class="a-hint">Fixed to real US states and counties — a county is required. Only one active affiliate can hold a given territory at a time.</div>
       </div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeModal('territoryModal')">Close</button>
       <button class="a-btn a-btn-primary" id="territoryAddBtn" onclick="doAssignTerritory()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reject territory request modal -->
+<div class="a-modal-overlay" id="reqRejectModal">
+  <div class="a-modal" style="max-width:480px;">
+    <div class="a-modal-head">
+      <h3>Reject territory request</h3>
+      <button class="a-modal-close" onclick="closeModal('reqRejectModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="reqRejectErr"></div>
+      <div id="reqRejectWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
+      <div class="a-field">
+        <label>Reason *</label>
+        <textarea id="reqRejectReason" placeholder="Territory already covered, out of scope, etc."></textarea>
+        <div class="a-hint">This text goes into the email they receive. Their existing approved territories are unaffected.</div>
+      </div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('reqRejectModal')">Cancel</button>
+      <button class="a-btn a-btn-danger" id="reqRejectBtn" onclick="doRejectRequest()">Reject &amp; send email</button>
     </div>
   </div>
 </div>
@@ -378,19 +463,58 @@ function populateStateSelect(sel, placeholder) {
     US_STATES.map(function (s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('');
 }
 
+// County lists never change during a session — fetched once per state and
+// reused by every dropdown on the page, not just the one that first asked.
+var countiesCache = {};
+async function fetchCounties(state) {
+  if (!state) return [];
+  if (countiesCache[state]) return countiesCache[state];
+  const r = await fetch('/api/affiliates/counties?state=' + encodeURIComponent(state));
+  const d = await r.json();
+  countiesCache[state] = d.counties || [];
+  return countiesCache[state];
+}
+
+function populateCountySelect(sel, counties, placeholder) {
+  sel.disabled = !counties.length;
+  sel.innerHTML = '<option value="">' + placeholder + '</option>' +
+    counties.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+}
+
+// Shared behavior everywhere a state select drives a county select: clear
+// and repopulate the county list when the state changes, disabled until a
+// state is actually picked. Used by the Territories modal, the Approve
+// modal, and (if this page's help text is ever asked why) matches the exact
+// pattern affiliate-dashboard.html's own request form uses.
+function wireCountyDropdown(stateSelId, countySelId, placeholder) {
+  var stateSel = document.getElementById(stateSelId);
+  var countySel = document.getElementById(countySelId);
+  populateCountySelect(countySel, [], placeholder);
+  stateSel.addEventListener('change', async function () {
+    countySel.value = '';
+    populateCountySelect(countySel, [], 'Loading…');
+    const counties = await fetchCounties(stateSel.value);
+    populateCountySelect(countySel, counties, placeholder);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   populateStateSelect(document.getElementById('approveTerritoryState'), 'No territory yet');
   populateStateSelect(document.getElementById('territoryAddState'), 'Select a state…');
+  wireCountyDropdown('approveTerritoryState', 'approveTerritoryCounty', 'Select a state first');
+  wireCountyDropdown('territoryAddState', 'territoryAddCounty', 'Select a state first');
   loadApplications();
   loadAffiliates();
   loadCommissions();
   loadActivity();
+  loadTerritoryRequests();
 });
 
-var TABS = ['applications', 'affiliates', 'commissions', 'activity'];
+var TABS = ['applications', 'affiliates', 'requests', 'commissions', 'activity', 'map'];
 var activityDebounce = null;
 function debounceActivity() { clearTimeout(activityDebounce); activityDebounce = setTimeout(loadActivity, 300); }
 
+var mapLoadedOnce = false;
 function switchTab(tab) {
   document.querySelectorAll('.aff-tab').forEach(function (btn) {
     btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
@@ -398,6 +522,10 @@ function switchTab(tab) {
   TABS.forEach(function (t) {
     document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
   });
+  if (tab === 'map' && !mapLoadedOnce) {
+    mapLoadedOnce = true;
+    loadMap();
+  }
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -461,7 +589,7 @@ function renderApplications() {
       return '<tr>' +
         '<td><div style="font-weight:600;">' + esc(name) + repeat + '</div><div class="meta-line">' + esc(a.email) + '</div></td>' +
         '<td style="font-size:13px;">' + esc(a.company || '—') + '</td>' +
-        '<td style="font-size:13px;">' + esc(a.requested_territory || '—') + '</td>' +
+        '<td style="font-size:13px;">' + esc(formatRequestedTerritory(a)) + '</td>' +
         '<td style="font-size:13px;">' + shortDate(a.created_at) + '</td>' +
         '<td>' + statusPill + '</td>' +
         '<td style="white-space:nowrap;">' + actions +
@@ -479,7 +607,7 @@ function openDetail(id) {
     ['Email', a.email],
     ['Company', a.company || '—'],
     ['Phone', a.phone || '—'],
-    ['Requested territory', a.requested_territory || '—'],
+    ['Requested territory', formatRequestedTerritory(a)],
     ['Submitted', shortDate(a.created_at)],
     ['Status', a.status],
   ];
@@ -499,20 +627,32 @@ function openDetail(id) {
   document.getElementById('detailModal').classList.add('show');
 }
 
-function openApprove(id) {
+function formatRequestedTerritory(a) {
+  return a.requested_territory_state ? (a.requested_territory_county + ', ' + a.requested_territory_state) : '—';
+}
+
+async function openApprove(id) {
   var a = applications.find(function (x) { return x.id === id; });
   if (!a) return;
   approveId = id;
   document.getElementById('approveErr').style.display = 'none';
   document.getElementById('approveWho').textContent = [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.email;
   document.getElementById('approveMeta').textContent =
-    (a.company ? a.company + ' · ' : '') + 'Asked for: ' + (a.requested_territory || 'no territory in particular');
+    (a.company ? a.company + ' · ' : '') + 'Asked for: ' + (a.requested_territory_state ? formatRequestedTerritory(a) : 'no territory in particular');
   document.getElementById('approveRate').value = '';
-  document.getElementById('approveTerritoryState').value = '';
-  document.getElementById('approveTerritoryCounty').value = '';
   document.getElementById('approveCode').value = '';
   document.getElementById('approvePitchWrap').style.display = a.pitch ? '' : 'none';
   document.getElementById('approvePitch').textContent = a.pitch || '';
+
+  var stateSel = document.getElementById('approveTerritoryState');
+  var countySel = document.getElementById('approveTerritoryCounty');
+  stateSel.value = a.requested_territory_state || '';
+  if (a.requested_territory_state) {
+    populateCountySelect(countySel, await fetchCounties(a.requested_territory_state), 'Select a state first');
+    countySel.value = a.requested_territory_county || '';
+  } else {
+    populateCountySelect(countySel, [], 'Select a state first');
+  }
   document.getElementById('approveModal').classList.add('show');
 }
 
@@ -996,6 +1136,113 @@ async function doRevokeTerritory(assignmentId) {
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
 }
 
+// --- Territory Requests -------------------------------------------------
+
+var territoryRequests = [];
+
+async function loadTerritoryRequests() {
+  var wrap = document.getElementById('reqTableWrap');
+  var status = document.getElementById('reqStatus') ? document.getElementById('reqStatus').value : 'pending';
+  try {
+    const r = await fetch('/api/affiliates/territory-requests?status=' + encodeURIComponent(status), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    territoryRequests = d.requests || [];
+    renderTerritoryRequests();
+  } catch (e) {
+    wrap.innerHTML = '<div class="a-empty">Could not load territory requests.</div>';
+  }
+}
+
+function renderTerritoryRequests() {
+  var wrap = document.getElementById('reqTableWrap');
+  var badge = document.getElementById('reqBadge');
+  var pendingCount = territoryRequests.filter(function (r) { return r.status === 'pending'; }).length;
+  badge.innerHTML = pendingCount ? '<span class="a-pill a-pill-warn">' + pendingCount + '</span>' : '';
+
+  if (!territoryRequests.length) {
+    wrap.innerHTML = '<div class="a-empty"><div class="big">🗺️</div>No territory requests here.</div>';
+    return;
+  }
+
+  var REQUEST_TYPE_LABEL = { initial: 'First territory', addition: 'Additional territory', change: 'Replace a territory' };
+
+  wrap.innerHTML =
+    '<table class="a-table"><thead><tr><th>Affiliate</th><th>Current territories</th><th>Requested</th><th>Type</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    territoryRequests.map(function (req) {
+      var statusPill = req.status === 'approved'
+        ? '<span class="a-pill a-pill-success">Approved</span>'
+        : req.status === 'rejected'
+          ? '<span class="a-pill a-pill-danger">Rejected</span>'
+          : '<span class="a-pill a-pill-warn">Pending</span>';
+      var currentNames = req.currentTerritories.map(function (t) { return esc(t.name); }).join(', ') || '—';
+      var actions = req.status === 'pending'
+        ? '<button class="a-btn a-btn-primary a-btn-sm" onclick="doApproveRequest(' + req.id + ')">Approve</button> ' +
+          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openRejectRequest(' + req.id + ')">Reject</button>'
+        : '';
+      return '<tr>' +
+        '<td><div style="font-weight:600;">' + esc(req.affiliateName) + '</div></td>' +
+        '<td style="font-size:13px;">' + currentNames + '</td>' +
+        '<td style="font-size:13px;">' + esc(req.requestedCounty) + ', ' + esc(req.requestedState) + '</td>' +
+        '<td style="font-size:13px;">' + esc(REQUEST_TYPE_LABEL[req.requestType] || req.requestType) + '</td>' +
+        '<td style="font-size:13px;">' + shortDate(req.createdAt) + '</td>' +
+        '<td>' + statusPill + '</td>' +
+        '<td style="white-space:nowrap;">' + actions + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+async function doApproveRequest(id) {
+  if (!confirm('Approve this territory request? It takes effect immediately.')) return;
+  try {
+    const r = await fetch('/api/affiliates/territory-requests/' + id + '/approve', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Approved. ' + d.territory.name + ' is now assigned.');
+    loadTerritoryRequests();
+    loadAffiliates();
+    mapLoadedOnce = false;
+  } catch (e) { alert(e.message); }
+}
+
+var reqRejectId = null;
+function openRejectRequest(id) {
+  var req = territoryRequests.find(function (x) { return x.id === id; });
+  if (!req) return;
+  reqRejectId = id;
+  document.getElementById('reqRejectErr').style.display = 'none';
+  document.getElementById('reqRejectWho').textContent = req.affiliateName + ' — ' + req.requestedCounty + ', ' + req.requestedState;
+  document.getElementById('reqRejectReason').value = '';
+  document.getElementById('reqRejectModal').classList.add('show');
+}
+
+async function doRejectRequest() {
+  var btn = document.getElementById('reqRejectBtn');
+  var err = document.getElementById('reqRejectErr');
+  err.style.display = 'none';
+  var reason = document.getElementById('reqRejectReason').value.trim();
+  if (!reason) { err.textContent = 'A reason is required.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Rejecting…';
+  try {
+    const r = await fetch('/api/affiliates/territory-requests/' + reqRejectId + '/reject', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeModal('reqRejectModal');
+    fnToast('Request rejected.');
+    loadTerritoryRequests();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Reject & send email'; }
+}
+
 // --- Activity Log (stage 3.5c) -----------------------------------------------
 
 var ACTIVITY_ACTION_LABEL = {
@@ -1006,6 +1253,9 @@ var ACTIVITY_ACTION_LABEL = {
   'affiliate.rate_changed': 'Rate changed',
   'affiliate.territory_assigned': 'Territory assigned',
   'affiliate.territory_revoked': 'Territory revoked',
+  'affiliate.territory_requested': 'Territory requested',
+  'affiliate.territory_request_approved': 'Territory request approved',
+  'affiliate.territory_request_rejected': 'Territory request rejected',
   'commission.approved': 'Commission approved',
   'commission.held': 'Commission held',
   'commission.released': 'Commission released',
@@ -1056,6 +1306,216 @@ function renderActivity(rows) {
         '</tr>';
     }).join('') +
     '</tbody></table>';
+}
+
+// --- Map --------------------------------------------------------------
+
+var mapCounts = {};       // state code -> affiliateCount
+var mapMax = 0;
+var mapBoundaries = [];   // ascending non-zero band upper bounds
+var mapColors = [];       // one color per band, same length as mapBoundaries
+var mapNeutralColor = '#E8E4DA';
+var mapSelectedState = null;
+
+function hexToRgb(hex) {
+  var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+}
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(function (v) { return Math.round(v).toString(16).padStart(2, '0'); }).join('');
+}
+function blend(hexA, hexB, t) {
+  var a = hexToRgb(hexA), b = hexToRgb(hexB);
+  return rgbToHex(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
+}
+
+// Buckets computed from the ACTUAL current max count, not a fixed scale —
+// so a handful of real affiliates still shows visibly different colors
+// instead of every occupied state looking identical. Up to 4 non-zero bands.
+function computeMapBuckets(counts) {
+  var nonZero = counts.filter(function (n) { return n > 0; });
+  var max = nonZero.length ? Math.max.apply(null, nonZero) : 0;
+  if (max === 0) return { boundaries: [], max: 0 };
+  var numBands = Math.min(max, 4);
+  var boundaries = [];
+  for (var i = 1; i <= numBands; i++) {
+    var b = Math.round((max * i) / numBands);
+    if (!boundaries.length || b > boundaries[boundaries.length - 1]) boundaries.push(b);
+  }
+  return { boundaries: boundaries, max: max };
+}
+
+function bandColorForCount(count) {
+  if (count <= 0) return mapNeutralColor;
+  for (var i = 0; i < mapBoundaries.length; i++) {
+    if (count <= mapBoundaries[i]) return mapColors[i];
+  }
+  return mapColors[mapColors.length - 1];
+}
+
+function bandLabelForIndex(i) {
+  var lo = i === 0 ? 1 : mapBoundaries[i - 1] + 1;
+  var hi = mapBoundaries[i];
+  return lo === hi ? String(lo) : (lo + '–' + hi);
+}
+
+async function loadMap() {
+  var statusBox = document.getElementById('mapStatusBox');
+  var mapWrap = document.getElementById('mapWrap');
+  statusBox.style.display = '';
+  statusBox.innerHTML = '<div class="a-empty"><div class="big" style="font-size:20px;">⏳</div> Loading map…</div>';
+  mapWrap.style.display = 'none';
+
+  try {
+    const [svgText, countsRes] = await Promise.all([
+      fetch('us-states-map.svg').then(function (r) { return r.text(); }),
+      fetch('/api/affiliates/territory-map', { credentials: 'include' }),
+    ]);
+    if (fnHandleUnauthorized(countsRes)) return;
+    const countsData = await countsRes.json();
+    if (!countsRes.ok) throw new Error(countsData.error || 'Could not load the map data');
+
+    mapCounts = {};
+    countsData.counts.forEach(function (c) { mapCounts[c.state] = c.affiliateCount; });
+
+    var bucket = computeMapBuckets(Object.values(mapCounts));
+    mapBoundaries = bucket.boundaries;
+    mapMax = bucket.max;
+    var accent = getComputedStyle(document.documentElement).getPropertyValue('--a-accent').trim() || '#164F4A';
+    var lightestTint = blend(getComputedStyle(document.documentElement).getPropertyValue('--a-card').trim() || '#FFFFFF', accent, 0.22);
+    mapColors = mapBoundaries.map(function (_, i) {
+      var t = mapBoundaries.length === 1 ? 1 : i / (mapBoundaries.length - 1);
+      return blend(lightestTint, accent, t);
+    });
+
+    document.getElementById('mapSvgContainer').innerHTML = svgText;
+    var svgEl = document.getElementById('mapSvgContainer').querySelector('svg');
+    var stateSelect = document.getElementById('mapStateSelect');
+    stateSelect.innerHTML = '<option value="">Select a state…</option>' +
+      US_STATES.map(function (s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('');
+
+    svgEl.querySelectorAll('path').forEach(function (path) {
+      var code = path.id;
+      var count = mapCounts[code] || 0;
+      var name = path.getAttribute('data-name') || code;
+      path.setAttribute('fill', bandColorForCount(count));
+      path.setAttribute('tabindex', '0');
+      path.setAttribute('role', 'button');
+      var bandLabel = count === 0 ? 'zero affiliates' : (count + ' affiliate' + (count === 1 ? '' : 's'));
+      path.setAttribute('aria-label', name + ': ' + bandLabel);
+      path.addEventListener('click', function () { selectMapState(code); });
+      path.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectMapState(code); }
+      });
+      path.addEventListener('mouseenter', function (e) { showMapTooltip(e, name, count); });
+      path.addEventListener('mousemove', function (e) { positionMapTooltip(e); });
+      path.addEventListener('mouseleave', hideMapTooltip);
+      path.addEventListener('focus', function (e) { showMapTooltip(e, name, count, true); });
+      path.addEventListener('blur', hideMapTooltip);
+    });
+
+    renderMapLegend();
+    statusBox.style.display = 'none';
+    mapWrap.style.display = '';
+  } catch (e) {
+    statusBox.innerHTML = '<div class="a-empty">Could not load the map: ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderMapLegend() {
+  var legend = document.getElementById('mapLegend');
+  var items = ['<div class="map-legend-item"><span class="map-legend-swatch" style="background:' + mapNeutralColor + ';"></span>0 affiliates</div>'];
+  mapBoundaries.forEach(function (_, i) {
+    items.push('<div class="map-legend-item"><span class="map-legend-swatch" style="background:' + mapColors[i] + ';"></span>' + bandLabelForIndex(i) + ' affiliate' + (bandLabelForIndex(i) === '1' ? '' : 's') + '</div>');
+  });
+  legend.innerHTML = items.join('');
+}
+
+function showMapTooltip(e, name, count, fromFocus) {
+  var tip = document.getElementById('mapTooltip');
+  var bandLabel = count === 0 ? 'zero affiliates' : (count + ' affiliate' + (count === 1 ? '' : 's'));
+  var bandIndex = -1;
+  for (var i = 0; i < mapBoundaries.length; i++) { if (count > 0 && count <= mapBoundaries[i]) { bandIndex = i; break; } }
+  var bandRangeLabel = count === 0 ? '0' : (bandIndex >= 0 ? bandLabelForIndex(bandIndex) : String(count));
+  tip.textContent = name + ': ' + bandLabel + ' (band ' + bandRangeLabel + ')';
+  tip.style.display = '';
+  if (fromFocus) {
+    var rect = e.target.getBoundingClientRect();
+    tip.style.left = (rect.left + rect.width / 2) + 'px';
+    tip.style.top = (rect.top - 28) + 'px';
+  } else {
+    positionMapTooltip(e);
+  }
+}
+function positionMapTooltip(e) {
+  var tip = document.getElementById('mapTooltip');
+  tip.style.left = (e.clientX + 12) + 'px';
+  tip.style.top = (e.clientY - 12) + 'px';
+}
+function hideMapTooltip() {
+  document.getElementById('mapTooltip').style.display = 'none';
+}
+
+async function selectMapState(code) {
+  if (!code) { clearMapSelection(); return; }
+  mapSelectedState = code;
+  document.getElementById('mapStateSelect').value = code;
+  document.getElementById('mapClearBtn').style.display = '';
+
+  var svgEl = document.getElementById('mapSvgContainer').querySelector('svg');
+  if (svgEl) {
+    svgEl.querySelectorAll('path.selected').forEach(function (p) { p.classList.remove('selected'); });
+    var pathEl = svgEl.querySelector('path[id="' + code + '"]');
+    if (pathEl) pathEl.classList.add('selected');
+  }
+
+  var stateName = (US_STATES.find(function (s) { return s[0] === code; }) || [code, code])[1];
+  var heading = document.getElementById('mapDetailHeading');
+  var body = document.getElementById('mapDetailBody');
+  heading.textContent = stateName;
+  body.innerHTML = '<div class="a-empty"><div class="big" style="font-size:18px;">⏳</div> Loading…</div>';
+
+  try {
+    const r = await fetch('/api/affiliates/territory-map/' + code, { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Could not load this state');
+    renderMapDetail(d.affiliates);
+  } catch (e) {
+    body.innerHTML = '<div class="a-empty">Could not load affiliates for ' + esc(stateName) + '.</div>';
+  }
+}
+
+function renderMapDetail(rows) {
+  var body = document.getElementById('mapDetailBody');
+  if (!rows.length) {
+    body.innerHTML = '<div class="a-empty">No affiliates hold a territory here yet.</div>';
+    return;
+  }
+  body.innerHTML =
+    '<table class="a-table"><thead><tr><th>Affiliate</th><th>County/counties</th><th>Status</th><th></th></tr></thead><tbody>' +
+    rows.map(function (a) {
+      var statusPill = a.status === 'active'
+        ? '<span class="a-pill a-pill-success">Active</span>'
+        : '<span class="a-pill a-pill-neutral">' + esc(a.status) + '</span>';
+      return '<tr>' +
+        '<td style="font-weight:600;">' + esc(a.name) + '</td>' +
+        '<td style="font-size:13px;">' + esc(a.counties) + '</td>' +
+        '<td>' + statusPill + '</td>' +
+        '<td><a href="#" onclick="switchTab(\'affiliates\');document.getElementById(\'affSearch\').value=' + JSON.stringify(a.name) + ';debounceAffs();return false;" class="a-btn a-btn-outline a-btn-sm">View record</a></td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function clearMapSelection() {
+  mapSelectedState = null;
+  document.getElementById('mapStateSelect').value = '';
+  document.getElementById('mapClearBtn').style.display = 'none';
+  document.getElementById('mapDetailHeading').textContent = 'Select a state to see its affiliates';
+  document.getElementById('mapDetailBody').innerHTML = '';
+  var svgEl = document.getElementById('mapSvgContainer').querySelector('svg');
+  if (svgEl) svgEl.querySelectorAll('path.selected').forEach(function (p) { p.classList.remove('selected'); });
 }
 </script>
 </body>

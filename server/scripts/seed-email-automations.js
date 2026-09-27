@@ -86,6 +86,27 @@ const AUTOMATIONS = [
     reminderDaysBefore: null,
   },
   {
+    eventKey: 'affiliate_territory_request_submitted',
+    label: 'Affiliate — Territory Request Submitted',
+    subject: 'Your territory request has been submitted',
+    body: "Hi {{firstName}},\n\nYour territory request ({{territory}}) has been submitted for admin review and approval. We'll notify you when a decision is made.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
+    eventKey: 'affiliate_territory_request_approved',
+    label: 'Affiliate — Territory Request Approved',
+    subject: 'Your territory request was approved',
+    body: "Hi {{firstName}},\n\nGood news — your territory request has been approved. {{territory}} is now yours.\n\nWarmly,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
+    eventKey: 'affiliate_territory_request_rejected',
+    label: 'Affiliate — Territory Request Not Approved',
+    subject: 'About your territory request',
+    body: "Hi {{firstName}},\n\nYour recent territory request was not approved.\n\n{{reason}}\n\nYour existing approved territories are unaffected. If you'd like to try a different territory, you're welcome to submit a new request any time.\n\nWith appreciation,\nThe Fixer Nation Education Team",
+    reminderDaysBefore: null,
+  },
+  {
     eventKey: 'quote_accepted',
     label: 'Quote Accepted — School Onboarding',
     subject: "Welcome to Fixer Nation Education — let's get your school set up",

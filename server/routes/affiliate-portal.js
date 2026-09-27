@@ -13,7 +13,9 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
 const { LEDGER_TOTALS_SQL } = require('../lib/affiliate-attribution');
-const { territoriesForAffiliate } = require('../lib/territories');
+const { territoriesForAffiliate, isValidStateCode, canonicalCountyName, stateName } = require('../lib/territories');
+const { audit } = require('../lib/audit');
+const { fireAutomation } = require('../lib/automations');
 
 const router = express.Router();
 
@@ -42,10 +44,12 @@ router.get('/me', requireSiteAuth, loadOwnAffiliate, async (req, res) => {
   const affiliate = req.affiliate;
   const siteUrl = process.env.SITE_URL || '';
 
-  const [territories, [totalsRows]] = await Promise.all([
+  const [territories, [totalsRows], [pendingRows]] = await Promise.all([
     territoriesForAffiliate(affiliate.id),
     pool.query(`${LEDGER_TOTALS_SQL} WHERE affiliate_id = ?`, [affiliate.id]),
+    pool.query(`SELECT * FROM territory_requests WHERE affiliate_id = ? AND status = 'pending' LIMIT 1`, [affiliate.id]),
   ]);
+  const pending = pendingRows[0];
 
   res.json({
     firstName: req.siteUser.first_name,
@@ -58,9 +62,104 @@ router.get('/me', requireSiteAuth, loadOwnAffiliate, async (req, res) => {
     approvedAt: affiliate.approved_at,
     territories: territories
       .filter(t => t.status === 'active')
-      .map(t => ({ id: t.territory_id, name: t.name })),
+      .map(t => ({ id: t.territory_id, assignmentId: t.assignment_id, name: t.name })),
     totals: totalsRows[0],
+    pendingTerritoryRequest: pending ? {
+      id: pending.id,
+      requestType: pending.request_type,
+      requestedState: pending.requested_state,
+      requestedCounty: pending.requested_county,
+    } : null,
   });
+});
+
+// GET /api/affiliate-portal/territories/requests — the affiliate's own
+// request history (not just the pending one — includes past approvals and
+// rejections, so they can see what happened to a decided request).
+router.get('/territories/requests', requireSiteAuth, loadOwnAffiliate, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT * FROM territory_requests WHERE affiliate_id = ? ORDER BY created_at DESC`,
+    [req.affiliate.id]
+  );
+  res.json({
+    requests: rows.map(r => ({
+      id: r.id,
+      requestType: r.request_type,
+      requestedState: r.requested_state,
+      requestedCounty: r.requested_county,
+      status: r.status,
+      rejectionReason: r.rejection_reason,
+      createdAt: r.created_at,
+    })),
+  });
+});
+
+// POST /api/affiliate-portal/territories/request — submit a new territory
+// request. Never touches affiliate_territories itself; every request needs
+// admin approval (POST /api/affiliates/territory-requests/:id/approve),
+// including a first-ever ("initial") territory.
+router.post('/territories/request', requireSiteAuth, loadOwnAffiliate, async (req, res) => {
+  // Not an explicit business rule from the spec — a suspended affiliate
+  // already has every territory revoked (see the suspend cascade in
+  // affiliates.js), so blocking a new request here is the conservative
+  // default rather than letting one gain a fresh territory while suspended.
+  if (req.affiliate.status !== 'active') {
+    return res.status(403).json({ error: 'Your affiliate account is currently suspended.' });
+  }
+
+  const b = req.body || {};
+  const state = (b.state || '').trim().toUpperCase();
+  const requestedType = (b.requestType || '').trim();
+
+  if (!isValidStateCode(state)) return res.status(400).json({ error: `"${b.state}" is not a US state or DC` });
+  const county = canonicalCountyName(state, b.county);
+  if (!county) return res.status(400).json({ error: `"${b.county}" is not a real county in ${stateName(state) || state}` });
+
+  const [[pending]] = await pool.query(
+    `SELECT id FROM territory_requests WHERE affiliate_id = ? AND status = 'pending' LIMIT 1`,
+    [req.affiliate.id]
+  );
+  if (pending) {
+    return res.status(409).json({ error: 'You already have a territory request pending review. Wait for a decision on that one before submitting another.' });
+  }
+
+  const currentTerritories = (await territoriesForAffiliate(req.affiliate.id)).filter(t => t.status === 'active');
+
+  let requestType, previousAssignmentId = null;
+  if (requestedType === 'change') {
+    const assignmentId = Number(b.previousAssignmentId);
+    const target = currentTerritories.find(t => t.assignment_id === assignmentId);
+    if (!target) {
+      return res.status(400).json({ error: 'That is not one of your current approved territories.' });
+    }
+    requestType = 'change';
+    previousAssignmentId = assignmentId;
+  } else {
+    // "initial" vs "addition" is computed here, not trusted from the
+    // client — it reflects a fact about the affiliate's own record, not a
+    // choice the request form needs to get right.
+    requestType = currentTerritories.length === 0 ? 'initial' : 'addition';
+  }
+
+  const [result] = await pool.query(
+    `INSERT INTO territory_requests (affiliate_id, request_type, requested_state, requested_county, previous_assignment_id)
+     VALUES (?, ?, ?, ?, ?)`,
+    [req.affiliate.id, requestType, state, county, previousAssignmentId]
+  );
+
+  await audit(pool, {
+    actorType: 'affiliate', actorId: req.affiliate.id, actorEmail: req.siteUser.email,
+    action: 'affiliate.territory_requested', entityType: 'affiliate_territory', entityId: result.insertId,
+    newValue: { requestType, state, county },
+    ipAddress: req.ip,
+  });
+
+  await fireAutomation('affiliate_territory_request_submitted', {
+    to: req.siteUser.email,
+    mergeFields: { firstName: req.siteUser.first_name, territory: `${county}, ${state}`, requestType },
+  });
+
+  res.status(201).json({ ok: true, requestId: result.insertId, requestType });
 });
 
 // GET /api/affiliate-portal/commissions?status= — the affiliate's own ledger,

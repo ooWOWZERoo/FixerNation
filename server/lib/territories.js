@@ -17,6 +17,7 @@
 // is where that happens. This is a scoping call, not a business one, and is
 // flagged here rather than buried.
 const pool = require('../db/pool');
+const { US_COUNTIES_BY_STATE } = require('./us-counties');
 
 // Static reference data — 50 states + DC. This does not change; if it's ever
 // duplicated in admin-affiliates.html for the dropdown, keep both in sync.
@@ -61,20 +62,30 @@ function matchStateLoose(text) {
   return STATE_LOOKUP.get(key) || null;
 }
 
+// Real county names for a state, already sorted alphabetically (baked into
+// us-counties.js at generation time — see that file's header). Returns []
+// for an invalid state code rather than throwing, since this backs a
+// dropdown's options list, not a validating write path.
+function countiesForState(stateCode) {
+  return US_COUNTIES_BY_STATE[String(stateCode || '').toUpperCase()] || [];
+}
+
+// Matches `county` against the real county list for `stateCode`
+// (case-insensitive, trimmed) and returns the reference list's own
+// canonical spelling, or null if it isn't a real county — the server-side
+// validation the spec asks for wherever a territory is requested or
+// assigned, not just a client-side dropdown. Callers store the canonical
+// return value, not the caller's raw input, so "autauga county" and
+// "Autauga County" can never end up as two different territories.
+function canonicalCountyName(stateCode, county) {
+  const list = countiesForState(stateCode);
+  const needle = String(county || '').trim().toLowerCase();
+  return list.find(c => c.toLowerCase() === needle) || null;
+}
+
 function territoryDisplayName(scope, state, county) {
   const name = stateName(state) || state;
   return scope === 'county' && county ? `${county} County, ${state}` : name;
-}
-
-// county is stored as '' (not NULL) for a state-scope row, so a plain
-// UNIQUE(state, county) index on `territories` can enforce "one row per
-// state" and "one row per county within a state" at the database level —
-// MariaDB treats two NULLs as distinct, which would have let duplicate
-// state rows slip through silently.
-function normalizeCounty(scope, county) {
-  if (scope === 'state') return '';
-  const trimmed = String(county || '').trim();
-  return trimmed;
 }
 
 // Finds the territory row for a (state, county) pair, creating it if this is
@@ -82,20 +93,25 @@ function normalizeCounty(scope, county) {
 // transaction, so a concurrent double-create can't slip through — the second
 // caller's INSERT hits the UNIQUE(state, county) index and the conflict is
 // handled by re-reading rather than surfacing as an error.
-async function findOrCreateTerritory(conn, { scope, state, county }) {
+//
+// A county is always required as of the territory-request feature — a
+// whole-state (county='') territory can no longer be newly created. Any
+// state-scope row already in the table from before this guard existed
+// (seeded by alter-add-affiliate-territories.js, or an active assignment
+// against one — see alter-add-territory-requests.js) is untouched; this
+// function just never creates another one. DC's own single county-equivalent
+// ("District of Columbia") satisfies this the same way any real county does.
+async function findOrCreateTerritory(conn, { state, county }) {
   const stateCode = String(state || '').toUpperCase();
   if (!isValidStateCode(stateCode)) {
     throw Object.assign(new Error(`"${state}" is not a US state or DC`), { status: 400 });
   }
-  if (scope !== 'state' && scope !== 'county') {
-    throw Object.assign(new Error('scope must be "state" or "county"'), { status: 400 });
+  if (!String(county || '').trim()) {
+    throw Object.assign(new Error('A county is required for every territory'), { status: 400 });
   }
-  const countyValue = normalizeCounty(scope, county);
-  if (scope === 'county' && !countyValue) {
-    throw Object.assign(new Error('A county name is required for a county-level territory'), { status: 400 });
-  }
-  if (countyValue.length > 100) {
-    throw Object.assign(new Error('County name is too long'), { status: 400 });
+  const countyValue = canonicalCountyName(stateCode, county);
+  if (!countyValue) {
+    throw Object.assign(new Error(`"${county}" is not a real county in ${stateName(stateCode) || stateCode}`), { status: 400 });
   }
 
   const [existing] = await conn.query(
@@ -104,13 +120,13 @@ async function findOrCreateTerritory(conn, { scope, state, county }) {
   );
   if (existing[0]) return existing[0];
 
-  const name = territoryDisplayName(scope, stateCode, countyValue);
+  const name = territoryDisplayName('county', stateCode, countyValue);
   try {
     const [result] = await conn.query(
       'INSERT INTO territories (scope, state, county, name) VALUES (?, ?, ?, ?)',
-      [scope, stateCode, countyValue, name]
+      ['county', stateCode, countyValue, name]
     );
-    return { id: result.insertId, scope, state: stateCode, county: countyValue, name, status: 'active' };
+    return { id: result.insertId, scope: 'county', state: stateCode, county: countyValue, name, status: 'active' };
   } catch (err) {
     if (err.code !== 'ER_DUP_ENTRY') throw err;
     // Lost the race to another request creating the same territory in the
@@ -144,8 +160,8 @@ async function activeHolder(conn, territoryId, excludeAffiliateId) {
 // held by someone else, or already held by this same affiliate (a no-op
 // re-assign is refused rather than silently accepted, so it's obvious in the
 // UI when nothing changed).
-async function assignTerritory(conn, { affiliateId, scope, state, county, adminId, notes }) {
-  const territory = await findOrCreateTerritory(conn, { scope, state, county });
+async function assignTerritory(conn, { affiliateId, state, county, adminId, notes }) {
+  const territory = await findOrCreateTerritory(conn, { state, county });
 
   const holder = await activeHolder(conn, territory.id, null);
   if (holder) {
@@ -237,6 +253,8 @@ module.exports = {
   isValidStateCode,
   stateName,
   matchStateLoose,
+  countiesForState,
+  canonicalCountyName,
   territoryDisplayName,
   findOrCreateTerritory,
   activeHolder,

@@ -68,7 +68,9 @@ CREATE TABLE IF NOT EXISTS affiliate_applications (
   email VARCHAR(255) NOT NULL,
   company VARCHAR(255) NULL,
   phone VARCHAR(30) NULL,
-  requested_territory VARCHAR(100) NULL,
+  requested_territory VARCHAR(100) NULL, -- legacy free-text; superseded by the two columns below
+  requested_territory_state CHAR(2) NULL,
+  requested_territory_county VARCHAR(100) NULL,
   pitch TEXT NULL, -- "why you, relevant experience"
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
   reviewed_by_admin_id INT UNSIGNED NULL,
@@ -1245,14 +1247,20 @@ CREATE TABLE IF NOT EXISTS affiliate_commissions (
 -- assigns "this county, in this state" (see findOrCreateTerritory() in
 -- server/lib/territories.js).
 --
--- county is '' (not NULL) for a state-scope row, so UNIQUE(state, county)
+-- county is '' (not NULL) for a legacy state-scope row, so UNIQUE(state, county)
 -- can enforce "one row per state" at the database level — MariaDB treats two
 -- NULLs as distinct, which would let duplicate state rows slip through.
+-- A state-scope (county='') row can no longer be newly created as of the
+-- territory-request feature — every territory now requires a real county,
+-- including DC's own single county-equivalent ("District of Columbia") —
+-- see the mandatory-county guard in findOrCreateTerritory() in
+-- server/lib/territories.js. Any state-scope row already in the table from
+-- before that guard existed is left alone (see alter-add-territory-requests.js).
 CREATE TABLE IF NOT EXISTS territories (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  scope VARCHAR(16) NOT NULL, -- 'state' | 'county'
+  scope VARCHAR(16) NOT NULL, -- 'state' | 'county' -- 'state' is legacy-only, see above
   state CHAR(2) NOT NULL, -- USPS code
-  county VARCHAR(100) NOT NULL DEFAULT '', -- '' for a state-scope row
+  county VARCHAR(100) NOT NULL DEFAULT '', -- '' only ever appears in legacy state-scope rows
   name VARCHAR(150) NOT NULL, -- display label, e.g. 'Florida' or 'Orange County, FL'
   status VARCHAR(16) NOT NULL DEFAULT 'active', -- 'active' | 'retired'
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1282,4 +1290,30 @@ CREATE TABLE IF NOT EXISTS affiliate_territories (
   FOREIGN KEY (territory_id) REFERENCES territories(id) ON DELETE CASCADE,
   FOREIGN KEY (assigned_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL,
   FOREIGN KEY (revoked_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- An affiliate's own request for a territory change — always reviewed by an
+-- admin before anything in affiliate_territories is touched. Distinct from
+-- affiliate_territories the same way affiliate_applications is distinct from
+-- affiliates: a request row records what was asked for; approval is what
+-- actually calls assignTerritory()/revokes the prior row. Only one 'pending'
+-- row is allowed per affiliate at a time (enforced in the app layer, not a
+-- DB constraint — same convention as territory exclusivity above).
+CREATE TABLE IF NOT EXISTS territory_requests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  affiliate_id INT UNSIGNED NOT NULL,
+  request_type VARCHAR(16) NOT NULL, -- 'initial' | 'addition' | 'change'
+  requested_state CHAR(2) NOT NULL,
+  requested_county VARCHAR(100) NOT NULL, -- always required, incl. DC's single pseudo-county
+  previous_assignment_id INT UNSIGNED NULL, -- 'change' only: the affiliate_territories row being replaced
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
+  reviewed_by_admin_id INT UNSIGNED NULL,
+  reviewed_at DATETIME NULL,
+  rejection_reason VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_affiliate_status (affiliate_id, status),
+  INDEX idx_status_created (status, created_at),
+  FOREIGN KEY (affiliate_id) REFERENCES affiliates(id) ON DELETE CASCADE,
+  FOREIGN KEY (previous_assignment_id) REFERENCES affiliate_territories(id) ON DELETE SET NULL,
+  FOREIGN KEY (reviewed_by_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

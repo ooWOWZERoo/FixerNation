@@ -100,6 +100,34 @@
   </div>
 
   <div class="card">
+    <h2 class="section-heading">Request a territory</h2>
+    <div id="territoryPendingBox" style="display:none;"></div>
+    <div id="territoryRequestForm">
+      <div id="requestTypeField" style="display:none;margin-bottom:14px;">
+        <div class="label" style="font-size:11.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);font-weight:700;margin-bottom:6px;">What kind of request is this?</div>
+        <select id="reqType" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;">
+          <option value="addition">Add another territory</option>
+          <option value="change">Replace one of my current territories</option>
+        </select>
+      </div>
+      <div id="replaceField" style="display:none;margin-bottom:14px;">
+        <div class="label" style="font-size:11.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);font-weight:700;margin-bottom:6px;">Which territory does this replace?</div>
+        <select id="reqPreviousAssignment" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"></select>
+      </div>
+      <div class="link-row" style="margin-bottom:10px;">
+        <select id="reqState" style="flex:1;min-width:160px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"><option value="">Select a state…</option></select>
+        <select id="reqCounty" disabled style="flex:1;min-width:160px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"><option value="">Select a state first</option></select>
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">
+        Territory additions or changes require admin approval before they take effect.
+        <span id="changeNotice" style="display:none;">If this replaces an existing territory, that territory stays in effect while your request is under review.</span>
+      </p>
+      <div id="reqErr" style="display:none;color:#B3261E;font-size:13px;margin-bottom:10px;"></div>
+      <button class="btn btn-primary" id="reqSubmitBtn" onclick="submitTerritoryRequest()">Submit request</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2 class="section-heading">Commission history</h2>
     <div id="ledgerWrap"><div class="empty">Loading…</div></div>
   </div>
@@ -180,7 +208,122 @@ async function loadMe() {
     ? territories.map(function (t) { return '<span class="territory-chip">' + esc(t.name) + '</span>'; }).join('')
     : 'Not assigned yet';
 
+  currentTerritories = territories;
+  renderTerritoryRequestCard(data.pendingTerritoryRequest);
+
   loadLedger();
+}
+
+// ---------------------------------------------------------------------------
+// Request a territory
+// ---------------------------------------------------------------------------
+var currentTerritories = [];
+var statesLoaded = false;
+
+async function ensureStatesLoaded() {
+  if (statesLoaded) return;
+  const r = await fetch('/api/affiliates/states');
+  const d = await r.json();
+  var sel = document.getElementById('reqState');
+  sel.innerHTML = '<option value="">Select a state…</option>' +
+    d.states.map(function (s) { return '<option value="' + s.code + '">' + s.name + '</option>'; }).join('');
+  statesLoaded = true;
+}
+
+document.getElementById('reqState').addEventListener('change', async function () {
+  var countySel = document.getElementById('reqCounty');
+  countySel.value = '';
+  if (!this.value) {
+    countySel.disabled = true;
+    countySel.innerHTML = '<option value="">Select a state first</option>';
+    return;
+  }
+  countySel.disabled = false;
+  countySel.innerHTML = '<option value="">Loading…</option>';
+  const r = await fetch('/api/affiliates/counties?state=' + encodeURIComponent(this.value));
+  const d = await r.json();
+  countySel.innerHTML = '<option value="">Select a county…</option>' +
+    d.counties.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+});
+
+document.getElementById('reqType').addEventListener('change', function () {
+  var isChange = this.value === 'change';
+  document.getElementById('replaceField').style.display = isChange ? '' : 'none';
+  document.getElementById('changeNotice').style.display = isChange ? '' : 'none';
+});
+
+function renderTerritoryRequestCard(pending) {
+  var pendingBox = document.getElementById('territoryPendingBox');
+  var form = document.getElementById('territoryRequestForm');
+
+  if (pending) {
+    pendingBox.style.display = '';
+    form.style.display = 'none';
+    pendingBox.innerHTML =
+      '<div class="banner" style="background:#FDF2E4;color:#8A5A17;">' +
+      'Pending review: <strong>' + esc(pending.requestedCounty) + ', ' + esc(pending.requestedState) + '</strong>' +
+      ' (' + esc(pending.requestType) + ').' +
+      (pending.requestType === 'change' ? ' Your current approved territory remains in effect while this is under review.' : '') +
+      ' We’ll notify you when a decision is made.</div>';
+    return;
+  }
+
+  pendingBox.style.display = 'none';
+  form.style.display = '';
+  ensureStatesLoaded();
+
+  var typeField = document.getElementById('requestTypeField');
+  var replaceSel = document.getElementById('reqPreviousAssignment');
+  if (currentTerritories.length > 0) {
+    typeField.style.display = '';
+    replaceSel.innerHTML = currentTerritories.map(function (t) {
+      return '<option value="' + t.assignmentId + '">' + esc(t.name) + '</option>';
+    }).join('');
+  } else {
+    typeField.style.display = 'none';
+    document.getElementById('replaceField').style.display = 'none';
+    document.getElementById('changeNotice').style.display = 'none';
+  }
+}
+
+async function submitTerritoryRequest() {
+  var btn = document.getElementById('reqSubmitBtn');
+  var err = document.getElementById('reqErr');
+  err.style.display = 'none';
+
+  var state = document.getElementById('reqState').value;
+  var county = document.getElementById('reqCounty').value;
+  if (!state || !county) {
+    err.textContent = 'Pick a state and a county.';
+    err.style.display = 'block';
+    return;
+  }
+
+  var hasExisting = currentTerritories.length > 0;
+  var requestType = hasExisting ? document.getElementById('reqType').value : 'addition';
+  var previousAssignmentId = requestType === 'change' ? document.getElementById('reqPreviousAssignment').value : undefined;
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  try {
+    const r = await fetch('/api/affiliate-portal/territories/request', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestType: requestType, state: state, county: county, previousAssignmentId: previousAssignmentId }),
+    });
+    const d = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(d.error || 'Could not submit that request');
+    var msg = 'Your territory request has been submitted for admin review and approval. We’ll notify you when a decision is made.';
+    if (requestType === 'change') msg += ' Your current approved territory remains in effect during review.';
+    toast(msg);
+    loadMe();
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit request';
+  }
 }
 
 async function loadLedger() {
