@@ -126,6 +126,8 @@ Keep the leading `"` in that pattern and scope it to `admin-*.html`. `school-adm
 
 Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → user runs the following in cPanel's browser Terminal.
 
+**Every command block given to the user for manual execution must start with an explicit `cd /full/absolute/path` — never a bare relative command, never `~` shorthand, never an assumption that the shell is already in the right directory.** The user has asked for this repeatedly. This applies to every step below, including `rsync` (both the source and destination paths) — write out `/home/fixernat/...` in full, not `~/...`, even though `~` happens to resolve the same way on this account.
+
 **Git credentials:** `credential.helper osxkeychain` is now configured globally (`~/.gitconfig`). On first push after a new macOS session, the terminal will prompt for GitHub username (`ooWOWZERoo`) and a personal access token (PAT) as the password — macOS Keychain caches it from then on. **Claude's Bash tool cannot push to GitHub directly** (non-interactive, can't authenticate) — always commit from the Bash tool, then instruct the user to complete step 1 below before any cPanel step.
 
 1. **Push to GitHub** (run on your local Mac terminal — not cPanel):
@@ -141,6 +143,7 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
 
 3. **Sync static files to `public_html`:**
    ```bash
+   cd /home/fixernat/repositories/fixernation && \
    rsync -av --delete \
      --exclude='.git' \
      --exclude='.gitignore' \
@@ -148,7 +151,7 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
      --exclude='server' \
      --exclude='api' \
      --exclude='uploads' \
-     ~/repositories/fixernation/ ~/public_html/
+     /home/fixernat/repositories/fixernation/ /home/fixernat/public_html/
    ```
    `api/` is cPanel-generated proxy glue (not in git). `uploads/` holds real uploaded files (not in git). Excluding both from `--delete` is intentional — they must never be wiped. **Never add `--delete-excluded`** — it deletes every excluded path found on the destination, including `api/` and `uploads/`. This has happened once and took down all API routes until the Node app was restarted to regenerate `api/`.
 
