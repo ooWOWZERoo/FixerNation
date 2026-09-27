@@ -83,9 +83,13 @@ function canonicalCountyName(stateCode, county) {
   return list.find(c => c.toLowerCase() === needle) || null;
 }
 
+// `county` is already a full canonical name from the real reference list
+// (e.g. "Autauga County", "Aleutians East Borough", "St. Bernard Parish") —
+// never append "County" here, that produced a real "Albany County County,
+// WY" bug the first time this was exercised against real reference data.
 function territoryDisplayName(scope, state, county) {
   const name = stateName(state) || state;
-  return scope === 'county' && county ? `${county} County, ${state}` : name;
+  return scope === 'county' && county ? `${county}, ${state}` : name;
 }
 
 // Finds the territory row for a (state, county) pair, creating it if this is
