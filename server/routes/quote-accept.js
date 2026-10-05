@@ -144,12 +144,19 @@ async function createPurchaseFromQuote(quote, paymentMethod, req) {
 // buyer up as a school_license_admin, and fires the same quote_accepted
 // email/sales-alert a self-service acceptance would. `req` is optional —
 // only used to read an affiliate referral cookie off a real browser request.
+//
+// A $0 quote (a free trial, typically) has nothing to invoice or collect —
+// a PO number doesn't apply, and there's no real payment to wait on, so the
+// license activates immediately instead of sitting 'pending' with no PO
+// ever going to arrive to mark "received."
 async function acceptQuoteViaPO(quoteId, poNumber, req) {
-  if (!poNumber) throw Object.assign(new Error('A Purchase Order number is required'), { status: 400 });
-
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quoteId]);
   const status = quoteStatus(quote);
   if (status !== 'valid') throw Object.assign(new Error(status), { status: 400 });
+
+  const amountCents = quote.quoted_amount_cents || 0;
+  const requiresPO = amountCents > 0;
+  if (requiresPO && !poNumber) throw Object.assign(new Error('A Purchase Order number is required'), { status: 400 });
 
   // Claim the quote atomically BEFORE creating anything — the read-then-
   // write above has no lock between them, so two near-simultaneous requests
@@ -169,8 +176,8 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   try {
     await connection.beginTransaction();
     const [result] = await connection.query(
-      'INSERT INTO invoices (contact_id, po_number, total_cents, status) VALUES (?, ?, ?, ?)',
-      [contactId, poNumber, quote.quoted_amount_cents || 0, 'unpaid']
+      'INSERT INTO invoices (contact_id, po_number, total_cents, status, paid_at) VALUES (?, ?, ?, ?, ?)',
+      [contactId, poNumber || null, amountCents, requiresPO ? 'unpaid' : 'paid', requiresPO ? null : new Date()]
     );
     invoiceId = result.insertId;
     await generateInvoiceNumber(connection, invoiceId);
@@ -184,11 +191,20 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
 
   // Quote-accepted PO purchases go through the same gate as the cart PO
   // flow: license stays pending until an admin marks the PO received
-  // (POST /api/invoices/:id/po-received).
-  await pool.query(
-    "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
-    [invoiceId, poNumber, purchaseId]
-  );
+  // (POST /api/invoices/:id/po-received). A $0 quote skips that gate
+  // entirely — createPurchaseFromQuote already left license_status at its
+  // default 'active', so there's nothing to flip here.
+  if (requiresPO) {
+    await pool.query(
+      "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
+      [invoiceId, poNumber, purchaseId]
+    );
+  } else {
+    await pool.query(
+      'UPDATE purchases SET invoice_id = ?, po_number = ? WHERE id = ?',
+      [invoiceId, poNumber || null, purchaseId]
+    );
+  }
 
   let setupUrl = '';
   try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name, '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
@@ -226,9 +242,9 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
         School: quote.school || null,
         Buyer: quote.email,
         Product: quote.quoted_product_name || null,
-        'PO Number': poNumber,
+        'PO Number': poNumber || null,
         Amount: quote.quoted_amount_cents != null ? `$${(quote.quoted_amount_cents / 100).toFixed(2)}` : null,
-        Note: invoiceId ? 'Mark this invoice "Received" once the actual PO payment arrives.' : null,
+        Note: requiresPO ? 'Mark this invoice "Received" once the actual PO payment arrives.' : 'Free trial — license is already active, no PO to collect on.',
       },
       linkUrl: `${process.env.SITE_URL || ''}/admin-quotes.html`,
       linkLabel: 'View Quote',

@@ -137,10 +137,16 @@ function renderStep1() {
       '</div>';
   } else {
     num.classList.remove('done'); num.textContent = '1';
+    // A $0 quote (a free trial, typically) has nothing to invoice or
+    // collect -- no PO number applies, and the license activates
+    // immediately instead of waiting on a PO that will never arrive.
+    var requiresPO = state.quote.amountCents > 0;
     body.innerHTML =
-      '<div class="cc-row">' +
-        '<div class="cc-field"><label>PO Number</label><input type="text" id="poNumberInput" placeholder="e.g. PO-2026-0417"></div>' +
-      '</div>' +
+      (requiresPO
+        ? '<div class="cc-row">' +
+            '<div class="cc-field"><label>PO Number</label><input type="text" id="poNumberInput" placeholder="e.g. PO-2026-0417"></div>' +
+          '</div>'
+        : '<div class="meta-line" style="margin-bottom:10px;">This quote is $0 — no PO needed. Accepting activates the license immediately.</div>') +
       '<button class="a-btn a-btn-primary" id="acceptBtn" onclick="doAccept()">Accept on behalf of customer</button>';
   }
 }
@@ -148,8 +154,9 @@ function renderStep1() {
 async function doAccept() {
   clearErr();
   var btn = document.getElementById('acceptBtn');
-  var poNumber = document.getElementById('poNumberInput').value.trim();
-  if (!poNumber) { showErr('A PO number is required.'); return; }
+  var poInput = document.getElementById('poNumberInput');
+  var poNumber = poInput ? poInput.value.trim() : '';
+  if (poInput && !poNumber) { showErr('A PO number is required.'); return; }
   btn.disabled = true; btn.textContent = 'Accepting…';
   try {
     const r = await fetch('/api/admin/concierge/quotes/' + quoteId + '/accept', {
