@@ -212,7 +212,7 @@ async function doAccept() {
 // --- Step 2: School admin ---
 function renderStep2() {
   var p = state.purchase;
-  var sa = state.schoolAdmin;
+  var admins = state.schoolAdmins || [];
   var num = document.getElementById('step2Num');
   var body = document.getElementById('step2Body');
   if (!p) {
@@ -220,20 +220,24 @@ function renderStep2() {
     body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
     return;
   }
-  if (sa) {
-    num.classList.add('done'); num.textContent = '✓';
-    body.innerHTML = '<div class="cc-done-box">' + esc([sa.first_name, sa.last_name].filter(Boolean).join(' ')) + ' (' + esc(sa.email) + ') — ' + esc(sa.permission_level) + '</div>';
-  } else {
-    num.classList.remove('done'); num.textContent = '2';
-    var q = state.quote;
-    body.innerHTML =
-      '<div class="cc-row">' +
-        '<div class="cc-field"><label>First name</label><input type="text" id="saFirst" value="' + esc(q.firstName || '') + '"></div>' +
-        '<div class="cc-field"><label>Last name</label><input type="text" id="saLast" value="' + esc(q.lastName || '') + '"></div>' +
-        '<div class="cc-field"><label>Email</label><input type="text" id="saEmail" value="' + esc(q.email || '') + '"></div>' +
-      '</div>' +
-      '<button class="a-btn a-btn-primary" id="saBtn" onclick="doAssignSchoolAdmin()">Assign</button>';
-  }
+  num.classList.toggle('done', admins.length > 0);
+  num.textContent = admins.length > 0 ? '✓' : '2';
+
+  var q = state.quote;
+  var list = admins.map(function (sa) {
+    return '<div class="cc-done-box" style="margin-bottom:8px;">' + esc([sa.first_name, sa.last_name].filter(Boolean).join(' ')) + ' (' + esc(sa.email) + ') — ' + esc(sa.permission_level) + '</div>';
+  }).join('');
+  // First admin defaults to the quote's own contact (the common case); a
+  // second/third admin is a distinct co-admin, so the fields start blank.
+  var prefill = admins.length === 0 ? q : {};
+  body.innerHTML = list +
+    '<div class="cc-row">' +
+      '<div class="cc-field"><label>First name</label><input type="text" id="saFirst" value="' + esc(prefill.firstName || '') + '"></div>' +
+      '<div class="cc-field"><label>Last name</label><input type="text" id="saLast" value="' + esc(prefill.lastName || '') + '"></div>' +
+      '<div class="cc-field"><label>Email</label><input type="text" id="saEmail" value="' + esc(prefill.email || '') + '"></div>' +
+    '</div>' +
+    '<button class="a-btn ' + (admins.length ? 'a-btn-outline' : 'a-btn-primary') + '" id="saBtn" onclick="doAssignSchoolAdmin()">' +
+      (admins.length ? '+ Add another School License Administrator' : 'Assign') + '</button>';
 }
 
 async function doAssignSchoolAdmin() {
@@ -243,6 +247,7 @@ async function doAssignSchoolAdmin() {
   var lastName = document.getElementById('saLast').value.trim();
   var email = document.getElementById('saEmail').value.trim();
   if (!firstName || !lastName || !email) { showErr('First name, last name, and email are all required.'); return; }
+  var origLabel = btn.textContent;
   btn.disabled = true; btn.textContent = 'Assigning…';
   try {
     const r = await fetch('/api/admin/school-admins/assign', {
@@ -254,36 +259,50 @@ async function doAssignSchoolAdmin() {
     if (!r.ok) throw new Error(d.error || 'Failed');
     fnToast('School License Administrator assigned — welcome email sent.');
     await loadState();
-  } catch (e) { showErr(e.message); }
-  finally { btn.disabled = false; btn.textContent = 'Assign'; }
+  } catch (e) { showErr(e.message); btn.disabled = false; btn.textContent = origLabel; }
 }
 
 // --- Step 3: District admin (optional) ---
 var districtsLoaded = false;
 async function renderStep3() {
-  var da = state.districtAdmin;
+  var p = state.purchase;
+  var districtId = state.districtId;
+  var admins = state.districtAdmins || [];
   var num = document.getElementById('step3Num');
   var body = document.getElementById('step3Body');
-  if (da) {
-    num.classList.add('done'); num.textContent = '✓';
-    body.innerHTML = '<div class="cc-done-box">District Administrator for <strong>' + esc(da.district_name) + '</strong>.</div>';
+  if (!p) {
+    num.classList.remove('done'); num.textContent = '3';
+    body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
     return;
   }
-  num.classList.remove('done'); num.textContent = '3';
+  num.classList.toggle('done', admins.length > 0);
+  num.textContent = admins.length > 0 ? '✓' : '3';
+
   var q = state.quote;
-  body.innerHTML =
+  var list = admins.map(function (da) {
+    return '<div class="cc-done-box" style="margin-bottom:8px;">' + esc([da.first_name, da.last_name].filter(Boolean).join(' ')) + ' (' + esc(da.email) + ') — District Administrator for <strong>' + esc(state.districtName) + '</strong></div>';
+  }).join('');
+
+  // Once this purchase's school is actually linked to a district (set the
+  // first time an admin is assigned, below), there's no district to
+  // pick/create again -- only ever show that picker before the first link.
+  var pickerHtml = districtId ? '' :
     '<div class="cc-row">' +
       '<div class="cc-field"><label>Existing district</label><select id="daDistrictSelect"><option value="">Select…</option></select></div>' +
       '<div class="cc-field"><label>or create new</label><input type="text" id="daNewDistrict" placeholder="District name"></div>' +
-    '</div>' +
-    '<div class="cc-row">' +
-      '<div class="cc-field"><label>First name</label><input type="text" id="daFirst" value="' + esc(q.firstName || '') + '"></div>' +
-      '<div class="cc-field"><label>Last name</label><input type="text" id="daLast" value="' + esc(q.lastName || '') + '"></div>' +
-      '<div class="cc-field"><label>Email</label><input type="text" id="daEmail" value="' + esc(q.email || '') + '"></div>' +
-    '</div>' +
-    '<button class="a-btn a-btn-outline" id="daBtn" onclick="doAssignDistrictAdmin()">Assign district admin</button>';
+    '</div>';
+  var prefill = admins.length === 0 ? q : {};
 
-  if (!districtsLoaded) {
+  body.innerHTML = list + pickerHtml +
+    '<div class="cc-row">' +
+      '<div class="cc-field"><label>First name</label><input type="text" id="daFirst" value="' + esc(prefill.firstName || '') + '"></div>' +
+      '<div class="cc-field"><label>Last name</label><input type="text" id="daLast" value="' + esc(prefill.lastName || '') + '"></div>' +
+      '<div class="cc-field"><label>Email</label><input type="text" id="daEmail" value="' + esc(prefill.email || '') + '"></div>' +
+    '</div>' +
+    '<button class="a-btn a-btn-outline" id="daBtn" onclick="doAssignDistrictAdmin()">' +
+      (admins.length ? '+ Add another District Administrator' : 'Assign district admin') + '</button>';
+
+  if (!districtId && !districtsLoaded) {
     districtsLoaded = true;
     try {
       const r = await fetch('/api/admin/districts?limit=100', { credentials: 'include' });
@@ -297,25 +316,48 @@ async function renderStep3() {
 async function doAssignDistrictAdmin() {
   clearErr();
   var btn = document.getElementById('daBtn');
-  var existingId = document.getElementById('daDistrictSelect').value;
-  var newName = document.getElementById('daNewDistrict').value.trim();
   var firstName = document.getElementById('daFirst').value.trim();
   var lastName = document.getElementById('daLast').value.trim();
   var email = document.getElementById('daEmail').value.trim();
-  if (!existingId && !newName) { showErr('Pick an existing district or type a new district name.'); return; }
+  var districtId = state.districtId;
+  var existingId, newName;
+  if (!districtId) {
+    existingId = document.getElementById('daDistrictSelect').value;
+    newName = document.getElementById('daNewDistrict').value.trim();
+    if (!existingId && !newName) { showErr('Pick an existing district or type a new district name.'); return; }
+  }
   if (!firstName || !lastName || !email) { showErr('First name, last name, and email are all required.'); return; }
 
+  var origLabel = btn.textContent;
   btn.disabled = true; btn.textContent = 'Assigning…';
   try {
-    var districtId = existingId;
     if (!districtId) {
-      const cr = await fetch('/api/admin/districts', {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName }),
-      });
-      const cd = await cr.json();
-      if (!cr.ok) throw new Error(cd.error || 'Could not create district');
-      districtId = cd.id;
+      districtId = existingId;
+      if (!districtId) {
+        const cr = await fetch('/api/admin/districts', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName }),
+        });
+        const cd = await cr.json();
+        if (!cr.ok) throw new Error(cd.error || 'Could not create district');
+        districtId = cd.id;
+      }
+
+      // Actually link this purchase's school to the district -- previously
+      // this step only ever assigned a PERSON as district admin and never
+      // associated the school itself, so the district's own school list/
+      // count and the branding inheritance chain never picked it up. No
+      // school to link for a trial purchase (deliberately has no
+      // school_id -- see quote-accept.js) -- the district admin still
+      // gets created, just with nothing to inherit branding into yet.
+      if (state.purchase.school_id) {
+        const lr = await fetch('/api/admin/districts/' + districtId + '/schools', {
+          method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolId: state.purchase.school_id, assign: true }),
+        });
+        const ld = await lr.json();
+        if (!lr.ok) throw new Error(ld.error || 'Could not link this school to the district');
+      }
     }
 
     const r = await fetch('/api/admin/districts/' + districtId + '/admins/assign', {
@@ -328,8 +370,7 @@ async function doAssignDistrictAdmin() {
     fnToast('District Administrator assigned — welcome email sent.');
     districtsLoaded = false;
     await loadState();
-  } catch (e) { showErr(e.message); }
-  finally { btn.disabled = false; btn.textContent = 'Assign district admin'; }
+  } catch (e) { showErr(e.message); btn.disabled = false; btn.textContent = origLabel; }
 }
 
 // --- Step 4: Invite teachers ---
@@ -459,14 +500,13 @@ function colorRow(key, label, hex) {
 async function renderStep5() {
   var num = document.getElementById('step5Num');
   var body = document.getElementById('step5Body');
-  var da = state.districtAdmin;
-  if (!da) {
+  var districtId = state.districtId;
+  if (!districtId) {
     num.classList.remove('done'); num.textContent = '5';
     body.innerHTML = '<div class="meta-line">Assign a District Administrator first.</div>';
     return;
   }
 
-  var districtId = da.district_id;
   try {
     const r = await fetch('/api/admin/concierge/districts/' + districtId + '/branding', { credentials: 'include' });
     if (fnHandleUnauthorized(r)) return;

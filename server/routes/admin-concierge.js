@@ -42,16 +42,24 @@ const router = express.Router();
 
 // GET /api/admin/concierge/quotes/:quoteId — everything the concierge page
 // needs to render current state in one call: the quote itself, whether it's
-// been accepted (and the resulting purchase/invoice), whether a School
-// License Administrator is already assigned, whether the contact holds any
-// active District Administrator assignment, and the current teacher roster
-// for the purchase (so invited/registered teachers show immediately).
+// been accepted (and the resulting purchase/invoice), every active School
+// License Administrator, the district this purchase's school actually
+// belongs to (if any) and every active District Administrator for it, and
+// the current teacher roster for the purchase (so invited/registered
+// teachers show immediately).
+//
+// District resolution is keyed off purchase.school_id -> schools.district_id
+// -- NOT off whether the quote's own contact happens to be a district admin
+// somewhere. An earlier version checked the latter, which only ever
+// detected a district admin when it happened to be the buyer themselves;
+// assigning anyone else as district admin left this endpoint reporting
+// "no district admin yet" forever, even though the assignment was real.
 router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.quoteId]);
   if (!quote) return res.status(404).json({ error: 'Quote not found' });
 
   const [[purchase]] = await pool.query(
-    `SELECT p.id, p.invoice_id, p.license_status, p.payment_status, p.po_number, p.school_domain, p.seat_count,
+    `SELECT p.id, p.invoice_id, p.license_status, p.payment_status, p.po_number, p.school_domain, p.school_id, p.seat_count,
             i.invoice_number, i.status AS invoice_status
      FROM purchases p
      LEFT JOIN invoices i ON i.id = p.invoice_id
@@ -59,27 +67,38 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
     [quote.id]
   );
 
-  let schoolAdmin = null;
-  let districtAdmin = null;
+  let schoolAdmins = [];
+  let districtId = null;
+  let districtName = null;
+  let districtAdmins = [];
   let seats = [];
   if (purchase) {
-    const [[sla]] = await pool.query(
+    const [slaRows] = await pool.query(
       `SELECT sla.id, sla.permission_level, su.first_name, su.last_name, su.email
        FROM school_license_admins sla JOIN site_users su ON su.id = sla.site_user_id
-       WHERE sla.purchase_id = ? AND sla.is_active = 1 LIMIT 1`,
+       WHERE sla.purchase_id = ? AND sla.is_active = 1 ORDER BY sla.created_at`,
       [purchase.id]
     );
-    schoolAdmin = sla || null;
+    schoolAdmins = slaRows;
 
-    const [[site]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [(quote.email || '').toLowerCase()]);
-    if (site) {
-      const [[dla]] = await pool.query(
-        `SELECT dla.id, d.id AS district_id, d.name AS district_name
-         FROM district_license_admins dla JOIN districts d ON d.id = dla.district_id
-         WHERE dla.site_user_id = ? AND dla.is_active = 1 LIMIT 1`,
-        [site.id]
+    if (purchase.school_id) {
+      const [[school]] = await pool.query(
+        `SELECT s.district_id, d.name AS district_name
+         FROM schools s LEFT JOIN districts d ON d.id = s.district_id
+         WHERE s.id = ?`,
+        [purchase.school_id]
       );
-      districtAdmin = dla || null;
+      if (school && school.district_id) {
+        districtId = school.district_id;
+        districtName = school.district_name;
+        const [dlaRows] = await pool.query(
+          `SELECT dla.id, su.first_name, su.last_name, su.email
+           FROM district_license_admins dla JOIN site_users su ON su.id = dla.site_user_id
+           WHERE dla.district_id = ? AND dla.is_active = 1 ORDER BY dla.created_at`,
+          [districtId]
+        );
+        districtAdmins = dlaRows;
+      }
     }
 
     const [seatRows] = await pool.query(
@@ -108,8 +127,10 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
       acceptedAt: quote.accepted_at,
     },
     purchase: purchase || null,
-    schoolAdmin,
-    districtAdmin,
+    schoolAdmins,
+    districtId,
+    districtName,
+    districtAdmins,
     seats,
   });
 });
