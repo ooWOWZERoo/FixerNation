@@ -52,7 +52,15 @@ router.get('/accept', async (req, res) => {
 // itself. Pulled out so the PO path (below) and an admin acting on a
 // customer's behalf (server/routes/admin-concierge.js) can both reach it
 // without duplicating this logic a third time.
-async function createPurchaseFromQuote(quote, paymentMethod, req) {
+//
+// paymentStatus defaults to 'pending' (the card path's webhook flips it to
+// 'paid' only once Stripe actually confirms payment — see checkout.js's
+// metadata.type === 'quote_acceptance' handler). The PO path overrides it
+// to 'paid' for a $0 quote specifically, since acceptQuoteViaPO creates
+// that invoice already paid and nothing else would ever flip this purchase
+// row to match -- leaving it stuck at 'pending' forever despite a genuinely
+// paid invoice, which silently blocks inviteTeacherToSeat()'s payment gate.
+async function createPurchaseFromQuote(quote, paymentMethod, req, paymentStatus = 'pending') {
   const [existingContact] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [quote.email]);
   let contactId;
   if (existingContact[0]) {
@@ -115,7 +123,7 @@ async function createPurchaseFromQuote(quote, paymentMethod, req) {
     autoClaimEmail: isTrial ? quote.email : null,
     amountCents: quote.quoted_amount_cents != null ? quote.quoted_amount_cents : null,
     paymentMethod,
-    paymentStatus: 'pending',
+    paymentStatus,
     source: 'quote',
     // quote.school is a free-text display name ("Lincoln Elementary"), not a
     // real domain — using it here used to break self-service teacher
@@ -180,7 +188,7 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   );
   if (claimResult.affectedRows === 0) throw Object.assign(new Error('already_accepted'), { status: 400 });
 
-  const { contactId, purchaseId } = await createPurchaseFromQuote(quote, 'po', req);
+  const { contactId, purchaseId } = await createPurchaseFromQuote(quote, 'po', req, requiresPO ? 'pending' : 'paid');
 
   const connection = await pool.getConnection();
   let invoiceId;
