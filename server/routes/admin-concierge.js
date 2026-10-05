@@ -51,7 +51,7 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
   if (!quote) return res.status(404).json({ error: 'Quote not found' });
 
   const [[purchase]] = await pool.query(
-    `SELECT p.id, p.invoice_id, p.license_status, p.payment_status, p.po_number, p.school_domain,
+    `SELECT p.id, p.invoice_id, p.license_status, p.payment_status, p.po_number, p.school_domain, p.seat_count,
             i.invoice_number, i.status AS invoice_status
      FROM purchases p
      LEFT JOIN invoices i ON i.id = p.invoice_id
