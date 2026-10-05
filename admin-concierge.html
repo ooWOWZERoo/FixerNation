@@ -98,7 +98,7 @@
         <div class="cc-step-head">
           <div class="cc-step-num" id="step4Num">4</div>
           <div><div class="cc-step-title">Invite teachers</div><div class="cc-step-sub">Each invited teacher gets the same email they'd get from their own school admin.</div></div>
-          <span id="step4SeatCounter" class="a-pill a-pill-neutral" style="margin-left:auto;display:none;"></span>
+          <span id="step4SeatCounter" style="margin-left:auto;display:none;font-size:12.5px;color:var(--a-text-soft);text-align:right;"></span>
         </div>
         <div id="step4Body"></div>
       </div>
@@ -358,12 +358,18 @@ function renderStep4() {
   num.classList.toggle('done', state.seats.length > 0);
   num.textContent = state.seats.length > 0 ? '✓' : '4';
 
-  // "Issued" = seats already invited or registered (state.seats only ever
-  // holds non-'available' rows -- see GET /quotes/:quoteId's seats query in
-  // admin-concierge.js), out of the license's total purchased seat count.
+  // Active = registered; invited = issued but not yet registered
+  // (state.seats only ever holds non-'available' rows -- see GET
+  // /quotes/:quoteId's seats query in admin-concierge.js); available = still
+  // unissued against the license's total purchased seat count.
   if (p.seat_count) {
-    counter.textContent = state.seats.length + ' / ' + p.seat_count + ' issued';
-    counter.className = 'a-pill ' + (state.seats.length >= p.seat_count ? 'a-pill-warning' : 'a-pill-neutral');
+    var invitedCount = state.seats.length - registeredCount;
+    var availableCount = Math.max(0, p.seat_count - state.seats.length);
+    counter.innerHTML =
+      '<strong style="color:var(--a-success);">' + registeredCount + '</strong> active &middot; ' +
+      '<strong style="color:var(--a-warning);">' + invitedCount + '</strong> invited &middot; ' +
+      '<strong>' + availableCount + '</strong> available to issue ' +
+      '(' + p.seat_count + ' total license count)';
     counter.style.display = '';
   } else {
     counter.style.display = 'none';
