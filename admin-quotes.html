@@ -471,7 +471,9 @@ function renderTable(quotes) {
   quotes.forEach(q => {
     const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || '—';
     const pill     = `<span class="a-pill ${STATUS_CLASSES[q.status] || 'a-pill-neutral'}">${STATUS_LABELS[q.status] || q.status}</span>`;
-    const quoted   = q.quoted_amount_cents
+    // quoted_amount_cents can legitimately be 0 (a free trial) — check
+    // presence, not truthiness, so a $0.00 quote still renders its amount.
+    const quoted   = q.quoted_amount_cents != null
       ? `<span style="font-weight:600;">$${(q.quoted_amount_cents / 100).toFixed(2)}</span>${q.quote_sent_at ? '<br><span style="font-size:11px;color:var(--a-text-soft);">Sent</span>' : ''}`
       : '—';
     const tr = document.createElement('tr');
@@ -485,7 +487,7 @@ function renderTable(quotes) {
       <td>${pill}</td>
       <td style="white-space:nowrap;">
         <button class="a-btn a-btn-outline" onclick="openModal(${q.id})">View</button>
-        ${q.quoted_amount_cents ? `<a class="a-btn a-btn-outline" href="admin-concierge.html?quoteId=${q.id}" title="Accept this quote and set up licensing on the customer's behalf">Concierge</a>` : ''}
+        ${q.quoted_amount_cents != null ? `<a class="a-btn a-btn-outline" href="admin-concierge.html?quoteId=${q.id}" title="Accept this quote and set up licensing on the customer's behalf">Concierge</a>` : ''}
       </td>
     `;
     if (q.school) {
@@ -512,7 +514,7 @@ function openModal(id) {
     document.getElementById('modalTitle').textContent = titleLabel + titleSuffix;
   }
 
-  const savedAmount = q.quoted_amount_cents ? (q.quoted_amount_cents / 100).toFixed(2) : '';
+  const savedAmount = q.quoted_amount_cents != null ? (q.quoted_amount_cents / 100).toFixed(2) : '';
 
   const sentBadge = q.quote_sent_at
     ? `<div class="q-sent-badge">✓ Quote emailed on ${fnFormatDate(q.quote_sent_at)}</div>`
@@ -690,7 +692,8 @@ function openModal(id) {
             foundInAnnual = true;
             onTierChange();
             // onTierChange() resets modalAmount to catalog price; restore saved amount as annual base
-            if (q.quoted_amount_cents) {
+            // (checking presence, not truthiness, so a saved $0 quote restores as 0.00 instead of the catalog default)
+            if (q.quoted_amount_cents != null) {
               const savedTermYears = q.quoted_term_years || 1;
               const savedDiscPct = savedTermYears === 2 ? (quoteSettings.twoYrPct || 0) : (savedTermYears === 3 ? (quoteSettings.threeYrPct || 0) : 0);
               const annualBase = savedDiscPct > 0
