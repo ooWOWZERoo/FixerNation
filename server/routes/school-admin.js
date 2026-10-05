@@ -13,10 +13,10 @@ const {
   resetBranding,
 } = require('../lib/branding-editor');
 const {
-  sendTeacherInvitationEmail,
   sendInvitationReminderEmail,
 } = require('../lib/mailer');
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
+const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
 
 // school_audit_log is shared with the affiliate program (server/lib/audit.js).
 // Every purchase-scoped view below must exclude those rows explicitly — a
@@ -362,119 +362,21 @@ router.post('/invitations', requireSchoolAdmin, async (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
   if (blockIfReadOnly(req, res, purchaseId)) return;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'A valid email is required' });
-  }
-  // Guardrail: a real name is required for every invitation -- an invite
-  // sent without one used to leave a permanent NULL/NULL gap on the
-  // resulting school_invitations row, with no way to backfill it later.
-  if (!firstName || !firstName.trim() || !lastName || !lastName.trim()) {
-    return res.status(400).json({ error: 'First and last name are required' });
-  }
 
-  const normalEmail = email.trim().toLowerCase();
-
-  // Payment gate — license allocation must be active (invoice paid)
-  const [[purchase]] = await pool.query(
-    'SELECT id, seat_count, payment_status, school_domain FROM purchases WHERE id = ?',
-    [purchaseId]
-  );
-  if (!purchase || purchase.payment_status !== 'paid') {
-    return res.status(422).json({ error: 'School license is not yet active. The associated invoice must be marked as paid before invitations can be sent.' });
-  }
-
-  // Duplicate invitation check
-  const [[existing]] = await pool.query(
-    "SELECT id, status FROM school_invitations WHERE purchase_id = ? AND invited_email = ? AND status NOT IN ('revoked', 'expired', 'registered')",
-    [purchaseId, normalEmail]
-  );
-  if (existing) {
-    return res.status(409).json({ error: 'An active invitation already exists for this email.', invitationId: existing.id });
-  }
-
-  // Existing teacher already registered?
-  const [[alreadySeated]] = await pool.query(
-    "SELECT ls.id FROM license_seats ls WHERE ls.purchase_id = ? AND ls.invited_email = ? AND ls.status = 'registered'",
-    [purchaseId, normalEmail]
-  );
-  if (alreadySeated) {
-    return res.status(409).json({ error: 'This teacher is already registered under this license.' });
-  }
-
-  // Available seat check (atomic)
-  const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
-
-    const [[locked]] = await conn.query(
-      'SELECT seat_count FROM purchases WHERE id = ? FOR UPDATE',
-      [purchaseId]
-    );
-    const [[{ used }]] = await conn.query(
-      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
-      [purchaseId]
-    );
-
-    if (used >= locked.seat_count) {
-      await conn.rollback();
-      return res.status(422).json({ error: 'No available licenses. All seats are assigned or invited.' });
-    }
-
-    // Create license seat (reserved for this invitation)
-    const [seatResult] = await conn.query(
-      "INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, 'pending')",
-      [purchaseId, normalEmail]
-    );
-    const seatId = seatResult.insertId;
-
-    // Create invitation
-    const token = makeToken();
-    const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-    const [invResult] = await conn.query(
-      `INSERT INTO school_invitations
-         (purchase_id, seat_id, invited_email, first_name, last_name, token, status,
-          grade_level, role_title, department, subject_area, personal_message,
-          invited_by_site_user_id, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
-      [purchaseId, seatId, normalEmail, firstName || null, lastName || null, token,
-       gradeLevel || null, roleName || null, department || null, subjectArea || null,
-       personalMessage || null, req.schoolAdmin.siteUserId, expiresAt]
-    );
-
-    await conn.commit();
-
-    await audit(conn, {
-      actorType: 'site_user',
-      actorId: req.schoolAdmin.siteUserId,
-      actorEmail: req.schoolAdmin.email,
-      action: 'invitation_sent',
-      entityType: 'invitation',
-      entityId: invResult.insertId,
-      purchaseId,
-      schoolDomain: purchase.school_domain,
-      newValue: { email: normalEmail, firstName, lastName },
+    const result = await inviteTeacherToSeat({
+      purchaseId, email, firstName, lastName, gradeLevel, roleName, department, subjectArea, personalMessage,
+      invitedBy: {
+        siteUserId: req.schoolAdmin.siteUserId,
+        email: req.schoolAdmin.email,
+        name: `${req.schoolAdmin.firstName} ${req.schoolAdmin.lastName}`.trim(),
+        actorType: 'site_user',
+      },
       ipAddress: req.ip,
     });
-
-    conn.release();
-
-    // Send email (non-blocking)
-    const siteUrl = process.env.SITE_URL || '';
-    const inviteUrl = `${siteUrl}/school-invite-accept.html?token=${token}`;
-    sendTeacherInvitationEmail({
-      to: normalEmail,
-      firstName: firstName || 'Teacher',
-      inviteUrl,
-      schoolDomain: purchase.school_domain,
-      adminName: `${req.schoolAdmin.firstName} ${req.schoolAdmin.lastName}`.trim(),
-      personalMessage: personalMessage || null,
-      expiresAt,
-    }).catch(e => console.error('sendTeacherInvitationEmail failed:', e.message));
-
-    res.status(201).json({ ok: true, invitationId: invResult.insertId, seatId });
+    res.status(201).json({ ok: true, ...result });
   } catch (err) {
-    await conn.rollback();
-    conn.release();
+    if (err.status) return res.status(err.status).json({ error: err.message, invitationId: err.invitationId });
     throw err;
   }
 });
@@ -504,102 +406,41 @@ router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
   }
 
   const results = { sent: [], skipped: [], errors: [] };
-  const siteUrl = process.env.SITE_URL || '';
+  const invitedBy = {
+    siteUserId: req.schoolAdmin.siteUserId,
+    email: req.schoolAdmin.email,
+    name: `${req.schoolAdmin.firstName} ${req.schoolAdmin.lastName}`.trim(),
+    actorType: 'site_user',
+  };
 
   for (const inv of invitations) {
     const email = (inv.email || '').trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      results.errors.push({ email: inv.email, reason: 'Invalid email' });
-      continue;
-    }
-    // Guardrail: a real name is required for every invitation -- the CSV
-    // upload UI already filters these out client-side, but the server
-    // must not trust that alone.
+    // CSV rows key by the lowercased column header (snake_case); JSON-body
+    // rows (single invite, or a future non-CSV bulk source) key camelCase --
+    // accept either so a name/field typed into the CSV never silently gets
+    // dropped (this is exactly how invitation #4's NULL/NULL name happened).
     const rowFirstName = (inv.firstName || inv.first_name || '').trim();
     const rowLastName = (inv.lastName || inv.last_name || '').trim();
-    if (!rowFirstName || !rowLastName) {
-      results.errors.push({ email, reason: 'First and last name are required' });
-      continue;
-    }
-
-    // Check for existing active invitation or registered seat
-    const [[dup]] = await pool.query(
-      "SELECT id FROM school_invitations WHERE purchase_id = ? AND invited_email = ? AND status NOT IN ('revoked','expired','registered')",
-      [purchaseId, email]
-    );
-    if (dup) { results.skipped.push({ email, reason: 'Already invited' }); continue; }
-
-    const [[seated]] = await pool.query(
-      "SELECT id FROM license_seats WHERE purchase_id = ? AND invited_email = ? AND status = 'registered'",
-      [purchaseId, email]
-    );
-    if (seated) { results.skipped.push({ email, reason: 'Already registered' }); continue; }
-
-    // Seat availability check
-    const [[{ used }]] = await pool.query(
-      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
-      [purchaseId]
-    );
-    if (used >= purchase.seat_count) {
-      results.errors.push({ email, reason: 'No available seats' });
-      continue;
-    }
 
     try {
-      const conn = await pool.getConnection();
-      await conn.beginTransaction();
-
-      const [[locked]] = await conn.query('SELECT seat_count FROM purchases WHERE id = ? FOR UPDATE', [purchaseId]);
-      const [[{ used: usedNow }]] = await conn.query(
-        "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
-        [purchaseId]
-      );
-
-      if (usedNow >= locked.seat_count) {
-        await conn.rollback();
-        conn.release();
-        results.errors.push({ email, reason: 'No available seats' });
-        continue;
+      const result = await inviteTeacherToSeat({
+        purchaseId, email, firstName: rowFirstName, lastName: rowLastName,
+        gradeLevel: inv.gradeLevel || inv.grade_level || null,
+        roleName: inv.role || inv.role_title || null,
+        department: inv.department || null,
+        subjectArea: inv.subjectArea || inv.subject_area || null,
+        invitedBy,
+        ipAddress: req.ip,
+      });
+      results.sent.push({ email, invitationId: result.invitationId });
+    } catch (err) {
+      // 409 (already invited / already registered) is a skip, not a real
+      // error — matches the original route's distinction between the two.
+      if (err.status === 409) {
+        results.skipped.push({ email, reason: err.message });
+      } else {
+        results.errors.push({ email: email || inv.email, reason: err.message || 'Server error' });
       }
-
-      const [seatResult] = await conn.query(
-        "INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, 'pending')",
-        [purchaseId, email]
-      );
-      const token = makeToken();
-      const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-      const [invResult] = await conn.query(
-        `INSERT INTO school_invitations
-           (purchase_id, seat_id, invited_email, first_name, last_name, token, status,
-            grade_level, role_title, department, subject_area, invited_by_site_user_id, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
-        // CSV rows key by the lowercased column header (snake_case);
-        // JSON-body rows (single invite, or a future non-CSV bulk source)
-        // key camelCase -- accept either so a name/field typed into the CSV
-        // never silently gets dropped again (this is exactly how invitation
-        // #4's NULL/NULL name happened).
-        [purchaseId, seatResult.insertId, email, rowFirstName, rowLastName,
-         token, inv.gradeLevel || inv.grade_level || null, inv.role || inv.role_title || null, inv.department || null,
-         inv.subjectArea || inv.subject_area || null, req.schoolAdmin.siteUserId, expiresAt]
-      );
-
-      await conn.commit();
-      conn.release();
-
-      const inviteUrl = `${siteUrl}/school-invite-accept.html?token=${token}`;
-      sendTeacherInvitationEmail({
-        to: email,
-        firstName: inv.firstName || 'Teacher',
-        inviteUrl,
-        schoolDomain: purchase.school_domain,
-        adminName: `${req.schoolAdmin.firstName} ${req.schoolAdmin.lastName}`.trim(),
-        personalMessage: null,
-        expiresAt,
-      }).catch(e => console.error('bulk invite email failed:', e.message));
-
-      results.sent.push({ email, invitationId: invResult.insertId });
-    } catch (e) {
-      results.errors.push({ email, reason: 'Server error: ' + e.message });
     }
   }
 

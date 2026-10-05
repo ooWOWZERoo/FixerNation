@@ -47,36 +47,12 @@ router.get('/accept', async (req, res) => {
   });
 });
 
-router.post('/accept', async (req, res) => {
-  const { token, paymentMethod } = req.body || {};
-  const poNumber = (req.body?.poNumber || '').trim();
-  if (!token) return res.status(400).json({ error: 'Token is required' });
-  if (!['card', 'po'].includes(paymentMethod)) return res.status(400).json({ error: 'paymentMethod must be card or po' });
-  if (paymentMethod === 'po' && !poNumber) return res.status(400).json({ error: 'A Purchase Order number is required' });
-
-  const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
-  const status = quoteStatus(quote);
-  if (status !== 'valid') return res.status(400).json({ error: status });
-
-  // Claim the quote atomically BEFORE creating anything, for the PO path —
-  // the read-then-write above has no lock between them, so two near-
-  // simultaneous requests (a double-click, a client retry after a slow
-  // response) could both pass the check above and each go on to create
-  // their own purchase, invoice, and quote_accepted email. The card path
-  // doesn't need this: it only ever creates a 'pending' purchase and a
-  // Stripe Checkout session here, and the webhook that actually grants
-  // access already re-checks `!qt.accepted_at` before doing anything
-  // (server/routes/checkout.js) — a duplicate request here just creates an
-  // extra abandoned session, not a duplicate real invoice.
-  if (paymentMethod === 'po') {
-    const [claimResult] = await pool.query(
-      "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
-      [quote.id]
-    );
-    if (claimResult.affectedRows === 0) return res.status(400).json({ error: 'already_accepted' });
-  }
-
-  // Find or create the contact
+// Shared prep for both payment methods: find-or-create the contact, resolve
+// trial/term overrides from the quoted product, and create the purchase
+// itself. Pulled out so the PO path (below) and an admin acting on a
+// customer's behalf (server/routes/admin-concierge.js) can both reach it
+// without duplicating this logic a third time.
+async function createPurchaseFromQuote(quote, paymentMethod, req) {
   const [existingContact] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [quote.email]);
   let contactId;
   if (existingContact[0]) {
@@ -150,89 +126,143 @@ router.post('/accept', async (req, res) => {
     // The buyer accepts from their own browser, so their fn_ref cookie (if
     // any) is on this request. A quote an affiliate walked a school through
     // still counts as their sale, as long as the school reached the site
-    // through their link within the 90-day window.
-    affiliateRefCode: refCodeFromRequest(req),
+    // through their link within the 90-day window. There's no such request
+    // when an admin accepts on the customer's behalf (see acceptQuoteViaPO
+    // below) — req is undefined there, and refCodeFromRequest handles that.
+    affiliateRefCode: req ? refCodeFromRequest(req) : null,
     ...trialFields,
   });
 
-  if (paymentMethod === 'po') {
-    // accepted_at was already claimed above, before any of this ran.
-    const connection = await pool.getConnection();
-    let invoiceId;
-    try {
-      await connection.beginTransaction();
-      const [result] = await connection.query(
-        'INSERT INTO invoices (contact_id, po_number, total_cents, status) VALUES (?, ?, ?, ?)',
-        [contactId, poNumber, quote.quoted_amount_cents || 0, 'unpaid']
-      );
-      invoiceId = result.insertId;
-      await generateInvoiceNumber(connection, invoiceId);
-      await connection.commit();
-    } catch (err) {
-      await connection.rollback();
-      throw err;
-    } finally {
-      connection.release();
-    }
+  return { contactId, purchaseId };
+}
 
-    // Quote-accepted PO purchases go through the same gate as the cart PO
-    // flow: license stays pending until an admin marks the PO received
-    // (POST /api/invoices/:id/po-received).
-    await pool.query(
-      "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
-      [invoiceId, poNumber, purchaseId]
+// Accepts a quote via Purchase Order — shared by the customer's own
+// accept-quote.html flow (token-authenticated, below) and an admin acting
+// on the customer's behalf (server/routes/admin-concierge.js, requireAuth).
+// Identical end state either way: claims the quote, creates the purchase +
+// invoice (license_status stays 'pending' until PO Received), sets the
+// buyer up as a school_license_admin, and fires the same quote_accepted
+// email/sales-alert a self-service acceptance would. `req` is optional —
+// only used to read an affiliate referral cookie off a real browser request.
+async function acceptQuoteViaPO(quoteId, poNumber, req) {
+  if (!poNumber) throw Object.assign(new Error('A Purchase Order number is required'), { status: 400 });
+
+  const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quoteId]);
+  const status = quoteStatus(quote);
+  if (status !== 'valid') throw Object.assign(new Error(status), { status: 400 });
+
+  // Claim the quote atomically BEFORE creating anything — the read-then-
+  // write above has no lock between them, so two near-simultaneous requests
+  // (a double-click, a client retry after a slow response) could both pass
+  // the check above and each go on to create their own purchase, invoice,
+  // and quote_accepted email.
+  const [claimResult] = await pool.query(
+    "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
+    [quote.id]
+  );
+  if (claimResult.affectedRows === 0) throw Object.assign(new Error('already_accepted'), { status: 400 });
+
+  const { contactId, purchaseId } = await createPurchaseFromQuote(quote, 'po', req);
+
+  const connection = await pool.getConnection();
+  let invoiceId;
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.query(
+      'INSERT INTO invoices (contact_id, po_number, total_cents, status) VALUES (?, ?, ?, ?)',
+      [contactId, poNumber, quote.quoted_amount_cents || 0, 'unpaid']
     );
-
-    const siteUrl = process.env.SITE_URL || '';
-    let setupUrl = '';
-    try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name, '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
-
-    // Register the buyer as a school license admin for this purchase
-    try {
-      const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [quote.email.toLowerCase()]);
-      if (siteUser) {
-        await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
-        await pool.query(
-          "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
-          [siteUser.id, purchaseId]
-        );
-      }
-    } catch (e) { console.error('school_license_admins insert failed:', e.message); }
-
-    try {
-      await fireAutomation('quote_accepted', {
-        to: quote.email,
-        mergeFields: {
-          firstName: quote.first_name || 'there',
-          school: quote.school || '',
-          productName: quote.quoted_product_name || '',
-          setupUrl,
-        },
-      });
-    } catch (e) { console.error('quote_accepted automation failed:', e.message); }
-
-    try {
-      await sendSalesAlertEmail({
-        to: await getSetting('contact_email_sales_alerts'),
-        subject: `Quote accepted (PO) — ${quote.school || quote.email}`,
-        fields: {
-          Quote: quote.quote_number || null,
-          School: quote.school || null,
-          Buyer: quote.email,
-          Product: quote.quoted_product_name || null,
-          'PO Number': poNumber,
-          Amount: quote.quoted_amount_cents != null ? `$${(quote.quoted_amount_cents / 100).toFixed(2)}` : null,
-          Note: invoiceId ? 'Mark this invoice "Received" once the actual PO payment arrives.' : null,
-        },
-        linkUrl: `${process.env.SITE_URL || ''}/admin-quotes.html`,
-        linkLabel: 'View Quote',
-      });
-    } catch (e) { console.error('sales alert (quote accepted, PO) failed:', e.message); }
-
-    return res.json({ ok: true, purchaseId, invoiceId, setupUrl });
+    invoiceId = result.insertId;
+    await generateInvoiceNumber(connection, invoiceId);
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
   }
 
-  // Card: create Stripe Checkout session
+  // Quote-accepted PO purchases go through the same gate as the cart PO
+  // flow: license stays pending until an admin marks the PO received
+  // (POST /api/invoices/:id/po-received).
+  await pool.query(
+    "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
+    [invoiceId, poNumber, purchaseId]
+  );
+
+  let setupUrl = '';
+  try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name, '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
+
+  // Register the buyer as a school license admin for this purchase
+  try {
+    const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [quote.email.toLowerCase()]);
+    if (siteUser) {
+      await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
+      await pool.query(
+        "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
+        [siteUser.id, purchaseId]
+      );
+    }
+  } catch (e) { console.error('school_license_admins insert failed:', e.message); }
+
+  try {
+    await fireAutomation('quote_accepted', {
+      to: quote.email,
+      mergeFields: {
+        firstName: quote.first_name || 'there',
+        school: quote.school || '',
+        productName: quote.quoted_product_name || '',
+        setupUrl,
+      },
+    });
+  } catch (e) { console.error('quote_accepted automation failed:', e.message); }
+
+  try {
+    await sendSalesAlertEmail({
+      to: await getSetting('contact_email_sales_alerts'),
+      subject: `Quote accepted (PO) — ${quote.school || quote.email}`,
+      fields: {
+        Quote: quote.quote_number || null,
+        School: quote.school || null,
+        Buyer: quote.email,
+        Product: quote.quoted_product_name || null,
+        'PO Number': poNumber,
+        Amount: quote.quoted_amount_cents != null ? `$${(quote.quoted_amount_cents / 100).toFixed(2)}` : null,
+        Note: invoiceId ? 'Mark this invoice "Received" once the actual PO payment arrives.' : null,
+      },
+      linkUrl: `${process.env.SITE_URL || ''}/admin-quotes.html`,
+      linkLabel: 'View Quote',
+    });
+  } catch (e) { console.error('sales alert (quote accepted, PO) failed:', e.message); }
+
+  return { purchaseId, invoiceId, setupUrl };
+}
+
+router.post('/accept', async (req, res) => {
+  const { token, paymentMethod } = req.body || {};
+  const poNumber = (req.body?.poNumber || '').trim();
+  if (!token) return res.status(400).json({ error: 'Token is required' });
+  if (!['card', 'po'].includes(paymentMethod)) return res.status(400).json({ error: 'paymentMethod must be card or po' });
+
+  const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
+  const status = quoteStatus(quote);
+  if (status !== 'valid') return res.status(400).json({ error: status });
+
+  if (paymentMethod === 'po') {
+    try {
+      const result = await acceptQuoteViaPO(quote.id, poNumber, req);
+      return res.json({ ok: true, ...result });
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+  }
+
+  // Card: create Stripe Checkout session. The webhook that actually grants
+  // access (server/routes/checkout.js) re-checks `!qt.accepted_at` before
+  // doing anything, so a duplicate request here just creates an extra
+  // abandoned session, not a duplicate real purchase — no claim needed.
+  const { purchaseId } = await createPurchaseFromQuote(quote, 'card', req);
   const siteUrl = process.env.SITE_URL || '';
   const amountCents = quote.quoted_amount_cents || 0;
   const session = await getStripe().checkout.sessions.create({
@@ -314,4 +344,4 @@ router.post('/accept/invite', async (req, res) => {
   res.json({ ok: true });
 });
 
-module.exports = router;
+module.exports = { router, acceptQuoteViaPO };

@@ -483,7 +483,10 @@ function renderTable(quotes) {
       <td><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></td>
       <td>${quoted}</td>
       <td>${pill}</td>
-      <td><button class="a-btn a-btn-outline" onclick="openModal(${q.id})">View</button></td>
+      <td style="white-space:nowrap;">
+        <button class="a-btn a-btn-outline" onclick="openModal(${q.id})">View</button>
+        ${q.quoted_amount_cents ? `<a class="a-btn a-btn-outline" href="admin-concierge.html?quoteId=${q.id}" title="Accept this quote and set up licensing on the customer's behalf">Concierge</a>` : ''}
+      </td>
     `;
     if (q.school) {
       tr.querySelector('.q-school-cell').addEventListener('click', () => filterBySchool(q.school));

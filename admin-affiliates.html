@@ -565,7 +565,7 @@ async function loadApplications() {
 function renderBadge(counts) {
   var el = document.getElementById('pendingBadge');
   var pending = counts && counts.pending;
-  el.innerHTML = pending ? '<span class="a-pill a-pill-warn" style="margin-left:6px;">' + pending + '</span>' : '';
+  el.innerHTML = pending ? '<span class="a-pill a-pill-warning" style="margin-left:6px;">' + pending + '</span>' : '';
 }
 
 function renderApplications() {
@@ -582,7 +582,7 @@ function renderApplications() {
         ? '<span class="a-pill a-pill-success">Approved</span>'
         : a.status === 'rejected'
           ? '<span class="a-pill a-pill-danger">Rejected</span>'
-          : '<span class="a-pill a-pill-warn">Pending</span>';
+          : '<span class="a-pill a-pill-warning">Pending</span>';
       var repeat = Number(a.prior_decisions || 0) > 0
         ? ' <span class="a-pill a-pill-neutral" title="This email has applied before">Reapplied</span>'
         : '';
@@ -749,7 +749,7 @@ function renderAffiliates() {
     '<table class="a-table"><thead><tr><th>Affiliate</th><th>Referral code</th><th>Rate</th><th>Territory</th><th>Status</th><th>Sales</th><th title="Earned, money not yet confirmed">Pending</th><th title="Confirmed and owed, not yet paid out">Owed</th><th>Paid</th><th>Actions</th></tr></thead><tbody>' +
     affiliates.map(function (a) {
       var name = [a.first_name, a.last_name].filter(Boolean).join(' ');
-      var unverified = a.email_verified ? '' : ' <span class="a-pill a-pill-warn" title="Has not set a password yet">Setup pending</span>';
+      var unverified = a.email_verified ? '' : ' <span class="a-pill a-pill-warning" title="Has not set a password yet">Setup pending</span>';
       var statusPill = a.status === 'active'
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Suspended</span>';
@@ -830,7 +830,7 @@ async function doEdit() {
 var commissions = [], commFilterAffiliate = null, payId = null, reverseId = null, adjustId = null;
 
 var COMM_PILL = {
-  pending:  '<span class="a-pill a-pill-warn" title="Earned, but the money has not been confirmed yet">Pending</span>',
+  pending:  '<span class="a-pill a-pill-warning" title="Earned, but the money has not been confirmed yet">Pending</span>',
   approved: '<span class="a-pill a-pill-success" title="Confirmed and owed, not yet paid out">Approved</span>',
   paid:     '<span class="a-pill a-pill-neutral">Paid</span>',
   on_hold:  '<span class="a-pill a-pill-neutral">On hold</span>',
@@ -1162,7 +1162,7 @@ function renderTerritoryRequests() {
   var wrap = document.getElementById('reqTableWrap');
   var badge = document.getElementById('reqBadge');
   var pendingCount = territoryRequests.filter(function (r) { return r.status === 'pending'; }).length;
-  badge.innerHTML = pendingCount ? '<span class="a-pill a-pill-warn">' + pendingCount + '</span>' : '';
+  badge.innerHTML = pendingCount ? '<span class="a-pill a-pill-warning">' + pendingCount + '</span>' : '';
 
   if (!territoryRequests.length) {
     wrap.innerHTML = '<div class="a-empty"><div class="big">🗺️</div>No territory requests here.</div>';
@@ -1178,7 +1178,7 @@ function renderTerritoryRequests() {
         ? '<span class="a-pill a-pill-success">Approved</span>'
         : req.status === 'rejected'
           ? '<span class="a-pill a-pill-danger">Rejected</span>'
-          : '<span class="a-pill a-pill-warn">Pending</span>';
+          : '<span class="a-pill a-pill-warning">Pending</span>';
       var currentNames = req.currentTerritories.map(function (t) { return esc(t.name); }).join(', ') || '—';
       var actions = req.status === 'pending'
         ? '<button class="a-btn a-btn-primary a-btn-sm" onclick="doApproveRequest(' + req.id + ')">Approve</button> ' +

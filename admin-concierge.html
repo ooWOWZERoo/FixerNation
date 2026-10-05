@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Concierge Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=17">
+<style>
+  .cc-step{margin-bottom:20px;}
+  .cc-step-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .cc-step-num{width:26px;height:26px;border-radius:50%;background:var(--a-border);color:var(--a-text-soft);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .cc-step-num.done{background:var(--a-accent-fill);color:#fff;}
+  .cc-step-title{font-size:15px;font-weight:700;}
+  .cc-step-sub{font-size:12.5px;color:var(--a-text-soft);margin-top:2px;}
+  .cc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;}
+  .cc-field{flex:1;min-width:160px;}
+  .cc-field label{display:block;font-size:11.5px;font-weight:700;color:var(--a-text-soft);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;}
+  .cc-field input,.cc-field select{width:100%;padding:9px 12px;border:1px solid var(--a-border);border-radius:8px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);}
+  .cc-done-box{background:var(--a-bg);border:1px solid var(--a-border);border-radius:10px;padding:12px 14px;font-size:13.5px;}
+  .cc-teacher-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .cc-teacher-row input{flex:1;padding:8px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-card);color:var(--a-text);}
+  .cc-summary{font-size:13.5px;color:var(--a-text-soft);margin-bottom:18px;}
+  .cc-summary strong{color:var(--a-text);}
+  .err-inline{color:var(--a-danger);font-size:13px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+  <script src="admin-nav.js?v=20"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Concierge Setup</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <p class="cc-summary" id="ccSummary">Loading…</p>
+      <div id="ccErr" class="err-inline" style="display:none;"></div>
+
+      <!-- Step 1: Accept -->
+      <div class="a-card cc-step" id="step1Card">
+        <div class="cc-step-head">
+          <div class="cc-step-num" id="step1Num">1</div>
+          <div><div class="cc-step-title">Accept this quote (Purchase Order)</div><div class="cc-step-sub">Creates the purchase and invoice — license stays pending until the PO is marked received.</div></div>
+        </div>
+        <div id="step1Body"></div>
+      </div>
+
+      <!-- Step 2: School admin -->
+      <div class="a-card cc-step" id="step2Card">
+        <div class="cc-step-head">
+          <div class="cc-step-num" id="step2Num">2</div>
+          <div><div class="cc-step-title">School License Administrator</div><div class="cc-step-sub">The buyer manages their own roster from here on once this is set.</div></div>
+        </div>
+        <div id="step2Body"></div>
+      </div>
+
+      <!-- Step 3: District admin (optional) -->
+      <div class="a-card cc-step" id="step3Card">
+        <div class="cc-step-head">
+          <div class="cc-step-num" id="step3Num">3</div>
+          <div><div class="cc-step-title">District Administrator <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></div><div class="cc-step-sub">Only if this contact oversees more than one school in the system.</div></div>
+        </div>
+        <div id="step3Body"></div>
+      </div>
+
+      <!-- Step 4: Invite teachers -->
+      <div class="a-card cc-step" id="step4Card">
+        <div class="cc-step-head">
+          <div class="cc-step-num" id="step4Num">4</div>
+          <div><div class="cc-step-title">Invite teachers</div><div class="cc-step-sub">Each invited teacher gets the same email they'd get from their own school admin.</div></div>
+        </div>
+        <div id="step4Body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=16"></script>
+<script>
+var quoteId = new URLSearchParams(location.search).get('quoteId');
+var state = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showErr(msg) { var e = document.getElementById('ccErr'); e.textContent = msg; e.style.display = 'block'; }
+function clearErr() { document.getElementById('ccErr').style.display = 'none'; }
+
+async function loadState() {
+  if (!quoteId) { showErr('No quote specified. Open this page from a quote on admin-quotes.html.'); return; }
+  try {
+    const r = await fetch('/api/admin/concierge/quotes/' + quoteId, { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed to load');
+    state = d;
+    render();
+  } catch (e) { showErr(e.message); }
+}
+
+function render() {
+  var q = state.quote;
+  document.getElementById('ccSummary').innerHTML =
+    '<strong>' + esc([q.firstName, q.lastName].filter(Boolean).join(' ') || q.email) + '</strong>' +
+    (q.school ? ' · ' + esc(q.school) : '') + ' · ' + esc(q.email) +
+    (q.productName ? ' · ' + esc(q.productName) + (q.seatCount ? ' (' + q.seatCount + ' seats)' : '') : '') +
+    (q.amountCents != null ? ' · $' + (q.amountCents / 100).toFixed(2) : '');
+
+  renderStep1();
+  renderStep2();
+  renderStep3();
+  renderStep4();
+}
+
+// --- Step 1: Accept ---
+function renderStep1() {
+  var p = state.purchase;
+  var num = document.getElementById('step1Num');
+  var body = document.getElementById('step1Body');
+  if (p) {
+    num.classList.add('done'); num.textContent = '✓';
+    body.innerHTML = '<div class="cc-done-box">Accepted. Invoice ' + esc(p.invoice_number || ('#' + p.invoice_id)) +
+      ' (' + esc(p.invoice_status || 'unpaid') + ') — license is <strong>' + esc(p.license_status) + '</strong>' +
+      (p.license_status === 'pending' ? '. Mark the PO received on <a href="admin-invoices.html">admin-invoices.html</a> to activate it.' : '.') +
+      '</div>';
+  } else {
+    num.classList.remove('done'); num.textContent = '1';
+    body.innerHTML =
+      '<div class="cc-row">' +
+        '<div class="cc-field"><label>PO Number</label><input type="text" id="poNumberInput" placeholder="e.g. PO-2026-0417"></div>' +
+      '</div>' +
+      '<button class="a-btn a-btn-primary" id="acceptBtn" onclick="doAccept()">Accept on behalf of customer</button>';
+  }
+}
+
+async function doAccept() {
+  clearErr();
+  var btn = document.getElementById('acceptBtn');
+  var poNumber = document.getElementById('poNumberInput').value.trim();
+  if (!poNumber) { showErr('A PO number is required.'); return; }
+  btn.disabled = true; btn.textContent = 'Accepting…';
+  try {
+    const r = await fetch('/api/admin/concierge/quotes/' + quoteId + '/accept', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poNumber }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Accepted — invoice created.');
+    await loadState();
+  } catch (e) { showErr(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Accept on behalf of customer'; }
+}
+
+// --- Step 2: School admin ---
+function renderStep2() {
+  var p = state.purchase;
+  var sa = state.schoolAdmin;
+  var num = document.getElementById('step2Num');
+  var body = document.getElementById('step2Body');
+  if (!p) {
+    num.classList.remove('done'); num.textContent = '2';
+    body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
+    return;
+  }
+  if (sa) {
+    num.classList.add('done'); num.textContent = '✓';
+    body.innerHTML = '<div class="cc-done-box">' + esc([sa.first_name, sa.last_name].filter(Boolean).join(' ')) + ' (' + esc(sa.email) + ') — ' + esc(sa.permission_level) + '</div>';
+  } else {
+    num.classList.remove('done'); num.textContent = '2';
+    var q = state.quote;
+    body.innerHTML =
+      '<div class="cc-row">' +
+        '<div class="cc-field"><label>First name</label><input type="text" id="saFirst" value="' + esc(q.firstName || '') + '"></div>' +
+        '<div class="cc-field"><label>Last name</label><input type="text" id="saLast" value="' + esc(q.lastName || '') + '"></div>' +
+        '<div class="cc-field"><label>Email</label><input type="text" id="saEmail" value="' + esc(q.email || '') + '"></div>' +
+      '</div>' +
+      '<button class="a-btn a-btn-primary" id="saBtn" onclick="doAssignSchoolAdmin()">Assign</button>';
+  }
+}
+
+async function doAssignSchoolAdmin() {
+  clearErr();
+  var btn = document.getElementById('saBtn');
+  var firstName = document.getElementById('saFirst').value.trim();
+  var lastName = document.getElementById('saLast').value.trim();
+  var email = document.getElementById('saEmail').value.trim();
+  if (!firstName || !lastName || !email) { showErr('First name, last name, and email are all required.'); return; }
+  btn.disabled = true; btn.textContent = 'Assigning…';
+  try {
+    const r = await fetch('/api/admin/school-admins/assign', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, firstName, lastName, purchaseId: state.purchase.id, permissionLevel: 'primary' }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('School License Administrator assigned — welcome email sent.');
+    await loadState();
+  } catch (e) { showErr(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Assign'; }
+}
+
+// --- Step 3: District admin (optional) ---
+var districtsLoaded = false;
+async function renderStep3() {
+  var da = state.districtAdmin;
+  var num = document.getElementById('step3Num');
+  var body = document.getElementById('step3Body');
+  if (da) {
+    num.classList.add('done'); num.textContent = '✓';
+    body.innerHTML = '<div class="cc-done-box">District Administrator for <strong>' + esc(da.district_name) + '</strong>.</div>';
+    return;
+  }
+  num.classList.remove('done'); num.textContent = '3';
+  var q = state.quote;
+  body.innerHTML =
+    '<div class="cc-row">' +
+      '<div class="cc-field"><label>Existing district</label><select id="daDistrictSelect"><option value="">Select…</option></select></div>' +
+      '<div class="cc-field"><label>or create new</label><input type="text" id="daNewDistrict" placeholder="District name"></div>' +
+    '</div>' +
+    '<div class="cc-row">' +
+      '<div class="cc-field"><label>First name</label><input type="text" id="daFirst" value="' + esc(q.firstName || '') + '"></div>' +
+      '<div class="cc-field"><label>Last name</label><input type="text" id="daLast" value="' + esc(q.lastName || '') + '"></div>' +
+      '<div class="cc-field"><label>Email</label><input type="text" id="daEmail" value="' + esc(q.email || '') + '"></div>' +
+    '</div>' +
+    '<button class="a-btn a-btn-outline" id="daBtn" onclick="doAssignDistrictAdmin()">Assign district admin</button>';
+
+  if (!districtsLoaded) {
+    districtsLoaded = true;
+    try {
+      const r = await fetch('/api/admin/districts?limit=100', { credentials: 'include' });
+      const d = await r.json();
+      var sel = document.getElementById('daDistrictSelect');
+      if (sel) sel.innerHTML = '<option value="">Select…</option>' + (d.districts || []).map(function (x) { return '<option value="' + x.id + '">' + esc(x.name) + '</option>'; }).join('');
+    } catch (e) { /* non-fatal -- the "create new" field still works */ }
+  }
+}
+
+async function doAssignDistrictAdmin() {
+  clearErr();
+  var btn = document.getElementById('daBtn');
+  var existingId = document.getElementById('daDistrictSelect').value;
+  var newName = document.getElementById('daNewDistrict').value.trim();
+  var firstName = document.getElementById('daFirst').value.trim();
+  var lastName = document.getElementById('daLast').value.trim();
+  var email = document.getElementById('daEmail').value.trim();
+  if (!existingId && !newName) { showErr('Pick an existing district or type a new district name.'); return; }
+  if (!firstName || !lastName || !email) { showErr('First name, last name, and email are all required.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Assigning…';
+  try {
+    var districtId = existingId;
+    if (!districtId) {
+      const cr = await fetch('/api/admin/districts', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+      const cd = await cr.json();
+      if (!cr.ok) throw new Error(cd.error || 'Could not create district');
+      districtId = cd.id;
+    }
+
+    const r = await fetch('/api/admin/districts/' + districtId + '/admins/assign', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, firstName, lastName }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('District Administrator assigned — welcome email sent.');
+    districtsLoaded = false;
+    await loadState();
+  } catch (e) { showErr(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Assign district admin'; }
+}
+
+// --- Step 4: Invite teachers ---
+var teacherRowCount = 0;
+function renderStep4() {
+  var p = state.purchase;
+  var num = document.getElementById('step4Num');
+  var body = document.getElementById('step4Body');
+  if (!p) {
+    num.classList.remove('done'); num.textContent = '4';
+    body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
+    return;
+  }
+  var registeredCount = state.seats.filter(function (s) { return s.status === 'registered'; }).length;
+  num.classList.toggle('done', state.seats.length > 0);
+  num.textContent = state.seats.length > 0 ? '✓' : '4';
+
+  var rosterRows = state.seats.map(function (s) {
+    var name = [s.invitation_first_name, s.invitation_last_name].filter(Boolean).join(' ') || s.invited_email || '—';
+    var pill = s.status === 'registered' ? '<span class="a-pill a-pill-success">Registered</span>' : '<span class="a-pill a-pill-warning">Pending</span>';
+    return '<tr><td>' + esc(name) + '</td><td>' + esc(s.invited_email || '—') + '</td><td>' + pill + '</td></tr>';
+  }).join('');
+
+  body.innerHTML =
+    '<div id="teacherRows"></div>' +
+    '<button class="a-btn a-btn-outline a-btn-sm" onclick="addTeacherRow()" style="margin-bottom:12px;">+ Add teacher</button><br>' +
+    '<button class="a-btn a-btn-primary" id="inviteBtn" onclick="doInviteTeachers()">Send invites</button>' +
+    (state.seats.length ? '<table class="a-table" style="margin-top:18px;"><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>' + rosterRows + '</tbody></table>' +
+      '<div class="meta-line" style="margin-top:8px;">' + registeredCount + ' of ' + state.seats.length + ' registered' + (p.seat_count ? ' · ' + p.seat_count + ' seat(s) on this license' : '') + '</div>' : '');
+
+  document.getElementById('teacherRows').innerHTML = '';
+  teacherRowCount = 0;
+  addTeacherRow();
+}
+
+function addTeacherRow() {
+  var wrap = document.getElementById('teacherRows');
+  var id = 'tRow' + (teacherRowCount++);
+  var div = document.createElement('div');
+  div.className = 'cc-teacher-row';
+  div.id = id;
+  div.innerHTML =
+    '<input type="text" placeholder="First name" class="t-first">' +
+    '<input type="text" placeholder="Last name" class="t-last">' +
+    '<input type="email" placeholder="Email" class="t-email">' +
+    '<button class="a-btn a-btn-outline a-btn-sm" onclick="document.getElementById(\'' + id + '\').remove()">✕</button>';
+  wrap.appendChild(div);
+}
+
+async function doInviteTeachers() {
+  clearErr();
+  var btn = document.getElementById('inviteBtn');
+  var rows = Array.from(document.getElementById('teacherRows').children);
+  var invitations = rows.map(function (row) {
+    return {
+      firstName: row.querySelector('.t-first').value.trim(),
+      lastName: row.querySelector('.t-last').value.trim(),
+      email: row.querySelector('.t-email').value.trim(),
+    };
+  }).filter(function (r) { return r.email; });
+
+  if (!invitations.length) { showErr('Add at least one teacher with an email.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/admin/concierge/purchases/' + state.purchase.id + '/invite-teachers/bulk', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invitations }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    var msg = d.sent.length + ' invited.';
+    if (d.skipped.length) msg += ' ' + d.skipped.length + ' skipped (already invited/registered).';
+    if (d.errors.length) msg += ' ' + d.errors.length + ' failed: ' + d.errors.map(function (e) { return e.email + ' (' + e.reason + ')'; }).join(', ');
+    fnToast(msg);
+    await loadState();
+  } catch (e) { showErr(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Send invites'; }
+}
+
+loadState();
+</script>
+</body>
+</html>
