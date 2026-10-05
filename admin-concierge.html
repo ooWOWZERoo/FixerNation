@@ -31,6 +31,21 @@
   .cc-summary{font-size:13.5px;color:var(--a-text-soft);margin-bottom:18px;}
   .cc-summary strong{color:var(--a-text);}
   .err-inline{color:var(--a-danger);font-size:13px;margin-bottom:12px;}
+  .logo-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:14px;}
+  .logo-box{width:160px;height:80px;border:1.5px dashed var(--a-border);border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--a-bg);overflow:hidden;flex-shrink:0;font-size:12px;color:var(--a-text-soft);}
+  .logo-box img{max-width:100%;max-height:100%;object-fit:contain;}
+  .color-row{display:flex;align-items:center;gap:12px;padding:8px 0;}
+  .color-row .name{font-weight:700;font-size:13px;min-width:90px;}
+  .color-swatch{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--a-border);padding:0;cursor:pointer;background:none;}
+  .color-hex{width:90px !important;padding:7px 9px !important;font-family:monospace;text-transform:uppercase;}
+  /* --sa-accent / --sa-sidebar-bg / --sa-sidebar-text are the exact custom
+     properties school-branding.js's fnApplyBranding() writes (FN_SCHOOL_ADMIN_VARMAP)
+     -- matching those names, not admin-common.css's own --a-* ones, is what
+     makes the live preview below actually move when a color changes. */
+  .pv-admin-header{background:var(--sa-sidebar-bg,#1a2332);color:var(--sa-sidebar-text,rgba(255,255,255,.85));padding:12px 14px;display:flex;align-items:center;gap:10px;border-radius:8px 8px 0 0;}
+  .pv-admin-header img{height:22px;width:auto;display:block;background:#fff;border-radius:6px;padding:2px 4px;}
+  .pv-admin-body{padding:14px;background:var(--a-bg);border:1px solid var(--a-border);border-top:none;border-radius:0 0 8px 8px;}
+  .pv-admin-btn{display:inline-block;padding:7px 14px;border-radius:8px;background:var(--sa-accent,#164F4A);color:#fff;font-size:12px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -85,10 +100,20 @@
         </div>
         <div id="step4Body"></div>
       </div>
+
+      <!-- Step 5: District branding (optional) -->
+      <div class="a-card cc-step" id="step5Card">
+        <div class="cc-step-head">
+          <div class="cc-step-num" id="step5Num">5</div>
+          <div><div class="cc-step-title">District Branding <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></div><div class="cc-step-sub">Get a starting logo/colors live now — the district admin can fine-tune it (including crop) later from their own portal.</div></div>
+        </div>
+        <div id="step5Body"></div>
+      </div>
     </div>
   </div>
 </div>
 
+<script src="school-branding.js?v=1"></script>
 <script src="admin-common.js?v=16"></script>
 <script>
 var quoteId = new URLSearchParams(location.search).get('quoteId');
@@ -122,6 +147,7 @@ function render() {
   renderStep2();
   renderStep3();
   renderStep4();
+  renderStep5();
 }
 
 // --- Step 1: Accept ---
@@ -384,6 +410,170 @@ async function doInviteTeachers() {
     await loadState();
   } catch (e) { showErr(e.message); }
   finally { btn.disabled = false; btn.textContent = 'Send invites'; }
+}
+
+// --- Step 5: District branding (optional) ---
+// Mirrors district-admin-branding.html's own editor (same backend logic,
+// server/lib/branding-editor.js, just reachable by an FNE admin instead of
+// the district admin) -- minus the crop tool, which is deliberately left
+// for the district admin to do themselves later from their own portal.
+var brandingState = null;
+
+function colorRow(key, label, hex) {
+  return '<div class="color-row">' +
+    '<span class="name">' + esc(label) + '</span>' +
+    '<input type="color" class="color-swatch" id="b' + key + 'Swatch" value="' + esc(hex) + '" oninput="onBrandingSwatch(\'' + key + '\')">' +
+    '<input type="text" class="color-hex" id="b' + key + 'Hex" value="' + esc(hex.toUpperCase()) + '" oninput="onBrandingHex(\'' + key + '\')">' +
+  '</div>';
+}
+
+async function renderStep5() {
+  var num = document.getElementById('step5Num');
+  var body = document.getElementById('step5Body');
+  var da = state.districtAdmin;
+  if (!da) {
+    num.classList.remove('done'); num.textContent = '5';
+    body.innerHTML = '<div class="meta-line">Assign a District Administrator first.</div>';
+    return;
+  }
+
+  var districtId = da.district_id;
+  try {
+    const r = await fetch('/api/admin/concierge/districts/' + districtId + '/branding', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    brandingState = await r.json();
+    if (!r.ok) throw new Error(brandingState.error || 'Failed to load branding');
+  } catch (e) {
+    body.innerHTML = '<div class="meta-line">Could not load branding: ' + esc(e.message) + '</div>';
+    return;
+  }
+
+  num.classList.toggle('done', brandingState.status === 'PUBLISHED');
+  num.textContent = brandingState.status === 'PUBLISHED' ? '✓' : '5';
+
+  var d = brandingState.draft;
+  body.innerHTML =
+    '<div class="logo-row">' +
+      '<div class="logo-box" id="bLogoBox">' + (d.logo_display_url ? '<img src="' + esc(d.logo_display_url) + '">' : '<span>No logo yet</span>') + '</div>' +
+      '<div><input type="file" id="bLogoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none;" onchange="handleBrandingLogo(' + districtId + ',this)">' +
+        '<button class="a-btn a-btn-outline a-btn-sm" onclick="document.getElementById(\'bLogoFile\').click()">Upload Logo</button>' +
+        '<div class="meta-line" style="margin-top:6px;">PNG, JPG, WebP, or SVG. Max 2 MB.</div>' +
+        '<div id="bLogoErr" class="err-inline" style="display:none;margin-top:6px;margin-bottom:0;"></div>' +
+      '</div>' +
+    '</div>' +
+    colorRow('primary', 'Primary', d.primary_color || '#F26B4D') +
+    colorRow('secondary', 'Secondary', d.secondary_color || '#0E3733') +
+    colorRow('accent', 'Accent', d.accent_color || '#EBA657') +
+    '<div id="bPvWrap" style="margin-top:14px;max-width:320px;">' +
+      '<div class="pv-admin-header"><img class="brand-logo" src="' + esc(d.logo_display_url || 'logo-fne.png') + '" alt=""><span>School Admin</span></div>' +
+      '<div class="pv-admin-body"><div class="pv-admin-btn">Invite a Teacher</div></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;">' +
+      '<button class="a-btn a-btn-outline a-btn-sm" onclick="resetBrandingStep5(' + districtId + ')">Reset to FNE Default</button>' +
+      '<button class="a-btn a-btn-outline" onclick="saveBrandingDraft(' + districtId + ')">Save Draft</button>' +
+      '<button class="a-btn a-btn-primary" onclick="publishBrandingStep5(' + districtId + ')">Publish Branding</button>' +
+    '</div>' +
+    (brandingState.hasUnpublishedChanges ? '<div class="meta-line" style="margin-top:8px;text-align:right;">Unpublished changes.</div>' : '') +
+    (brandingState.status === 'PUBLISHED' ? '<div class="cc-done-box" style="margin-top:10px;">Published — live for every school in this district that hasn\'t set its own branding.</div>' : '');
+
+  updateBrandingPreview();
+}
+
+function currentBrandingDraft() {
+  return {
+    logoDisplayUrl: brandingState && brandingState.draft.logo_display_url,
+    primaryColor: document.getElementById('bprimaryHex').value,
+    secondaryColor: document.getElementById('bsecondaryHex').value,
+    accentColor: document.getElementById('baccentHex').value,
+  };
+}
+
+function updateBrandingPreview() {
+  var wrap = document.getElementById('bPvWrap');
+  if (!wrap) return;
+  fnApplyBranding(currentBrandingDraft(), wrap, window.FN_SCHOOL_ADMIN_VARMAP);
+}
+
+function onBrandingSwatch(key) {
+  document.getElementById('b' + key + 'Hex').value = document.getElementById('b' + key + 'Swatch').value.toUpperCase();
+  updateBrandingPreview();
+}
+function onBrandingHex(key) {
+  var v = document.getElementById('b' + key + 'Hex').value;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('b' + key + 'Swatch').value = v;
+  updateBrandingPreview();
+}
+
+async function handleBrandingLogo(districtId, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var errEl = document.getElementById('bLogoErr');
+  errEl.style.display = 'none';
+
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/api/admin/concierge/districts/' + districtId + '/branding/logo', {
+      method: 'POST', credentials: 'include', body: fd,
+    });
+    if (fnHandleUnauthorized(r)) return;
+    var data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Upload failed'; errEl.style.display = ''; return; }
+    fnToast('Logo uploaded. Publish to make it live.');
+    await renderStep5();
+  } catch (e) {
+    errEl.textContent = 'Upload failed. Please try again.';
+    errEl.style.display = '';
+  }
+  input.value = '';
+}
+
+async function saveBrandingDraft(districtId) {
+  try {
+    const r = await fetch('/api/admin/concierge/districts/' + districtId + '/branding', {
+      method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        primaryColor: document.getElementById('bprimaryHex').value,
+        secondaryColor: document.getElementById('bsecondaryHex').value,
+        accentColor: document.getElementById('baccentHex').value,
+      }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Draft saved.');
+    await renderStep5();
+  } catch (e) { showErr(e.message); }
+}
+
+async function publishBrandingStep5(districtId) {
+  clearErr();
+  try {
+    await saveBrandingDraft(districtId);
+    const r = await fetch('/api/admin/concierge/districts/' + districtId + '/branding/publish', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Branding published.');
+    await renderStep5();
+  } catch (e) { showErr(e.message); }
+}
+
+async function resetBrandingStep5(districtId) {
+  if (!confirm('Reset this district\'s branding to the FNE default look? This clears the logo and colors every school in this district would otherwise inherit.')) return;
+  clearErr();
+  try {
+    const r = await fetch('/api/admin/concierge/districts/' + districtId + '/branding/reset', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Branding reset to FNE default.');
+    await renderStep5();
+  } catch (e) { showErr(e.message); }
 }
 
 loadState();

@@ -7,7 +7,16 @@
 //     assignment that comes with it is part of that same function)
 //   - inviting a teacher -> inviteTeacherToSeat() in
 //     server/lib/teacher-invitations.js
-// District Administrator assignment and marking a PO received are NOT
+//   - district branding (colors/logo/publish) -> the same
+//     server/lib/branding-editor.js district-admin-branding.html itself
+//     calls, just under requireAuth instead of requireDistrictAdmin, and
+//     with updatedBy left NULL (the FNE admin session here is a one-off JWT,
+//     not a site_users row, so there's no real site_user id to attribute it
+//     to). Crop is deliberately NOT exposed here — concierge's job is
+//     getting a reasonable starting look live, not pixel-perfect framing;
+//     the district admin can always refine the crop themselves later from
+//     their own portal once handed off.
+// District Administrator ASSIGNMENT and marking a PO received are NOT
 // duplicated here at all — admin-districts.html and admin-invoices.html
 // already do those, unchanged; admin-concierge.html just links to them.
 //
@@ -20,6 +29,14 @@ const { requireAuth } = require('../middleware/auth');
 const { audit } = require('../lib/audit');
 const { acceptQuoteViaPO } = require('./quote-accept');
 const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
+const {
+  logoUpload,
+  getRow: getBrandingRow,
+  upsertDraftColors,
+  processLogoUpload,
+  publishBranding,
+  resetBranding,
+} = require('../lib/branding-editor');
 
 const router = express.Router();
 
@@ -57,7 +74,7 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
     const [[site]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [(quote.email || '').toLowerCase()]);
     if (site) {
       const [[dla]] = await pool.query(
-        `SELECT dla.id, d.name AS district_name
+        `SELECT dla.id, d.id AS district_id, d.name AS district_name
          FROM district_license_admins dla JOIN districts d ON d.id = dla.district_id
          WHERE dla.site_user_id = ? AND dla.is_active = 1 LIMIT 1`,
         [site.id]
@@ -178,6 +195,126 @@ router.post('/purchases/:purchaseId/invite-teachers/bulk', requireAuth, async (r
   }
 
   res.json(results);
+});
+
+// ---------------------------------------------------------------------------
+// District branding — lets an FNE admin set a reasonable starting logo/
+// colors for a district and publish it during concierge setup, instead of
+// leaving the district on FNE's default look until the district admin logs
+// in and does it themselves. Same shared logic district-admin-branding.html
+// uses (server/lib/branding-editor.js), just reachable by an FNE admin for
+// ANY district (no ownership-scope check, same as every other route in this
+// file -- trusted because the route itself is requireAuth).
+// ---------------------------------------------------------------------------
+
+const BRANDING_COLOR_FIELDS = ['primary_color', 'secondary_color', 'accent_color'];
+const BRANDING_LOGO_FIELDS = ['logo_original_url', 'logo_display_url'];
+const BRANDING_LOGO_EXTRA_FIELDS = ['logo_crop'];
+
+function pickBranding(row, prefix) {
+  const out = {};
+  [...BRANDING_LOGO_FIELDS, ...BRANDING_LOGO_EXTRA_FIELDS, ...BRANDING_COLOR_FIELDS].forEach((f) => {
+    out[f] = row ? row[`${prefix}_${f}`] : null;
+  });
+  return out;
+}
+
+// GET /api/admin/concierge/districts/:districtId/branding
+router.get('/districts/:districtId/branding', requireAuth, async (req, res) => {
+  const districtId = Number(req.params.districtId);
+  const [[district]] = await pool.query('SELECT name FROM districts WHERE id = ?', [districtId]);
+  if (!district) return res.status(404).json({ error: 'District not found' });
+
+  const row = await getBrandingRow('district_branding', 'district_id', districtId);
+
+  const published = pickBranding(row, 'published');
+  const draft = pickBranding(row, 'draft');
+  const draftForEditing = { ...published, ...Object.fromEntries(Object.entries(draft).filter(([, v]) => v != null)) };
+
+  const hasUnpublishedChanges = row
+    ? [...BRANDING_LOGO_FIELDS, ...BRANDING_COLOR_FIELDS].some(f => row[`draft_${f}`] != null && row[`draft_${f}`] !== row[`published_${f}`])
+    : false;
+
+  res.json({
+    districtId,
+    districtName: district.name,
+    status: row ? row.branding_status : 'DEFAULT',
+    published,
+    draft: draftForEditing,
+    hasUnpublishedChanges,
+  });
+});
+
+// PUT /api/admin/concierge/districts/:districtId/branding — save draft colors
+router.put('/districts/:districtId/branding', requireAuth, async (req, res) => {
+  const districtId = Number(req.params.districtId);
+  const { primaryColor, secondaryColor, accentColor } = req.body || {};
+  const hexOk = (v) => !v || /^#[0-9a-fA-F]{6}$/.test(v);
+  if (!hexOk(primaryColor)) return res.status(400).json({ error: 'Primary color must be a valid hex value, e.g. #003B71' });
+  if (!hexOk(secondaryColor)) return res.status(400).json({ error: 'Secondary color must be a valid hex value.' });
+  if (!hexOk(accentColor)) return res.status(400).json({ error: 'Accent color must be a valid hex value.' });
+
+  await upsertDraftColors({
+    table: 'district_branding', idColumn: 'district_id', id: districtId,
+    primaryColor, secondaryColor, accentColor, updatedBy: null,
+  });
+
+  res.json({ ok: true });
+});
+
+// POST /api/admin/concierge/districts/:districtId/branding/logo
+router.post('/districts/:districtId/branding/logo', requireAuth, (req, res, next) => {
+  logoUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    next();
+  });
+}, async (req, res) => {
+  const districtId = Number(req.params.districtId);
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  try {
+    const result = await processLogoUpload({
+      table: 'district_branding', idColumn: 'district_id', id: districtId,
+      fileBuffer: req.file.buffer, mimetype: req.file.mimetype, updatedBy: null,
+    });
+    res.status(201).json(result);
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+// POST /api/admin/concierge/districts/:districtId/branding/publish
+router.post('/districts/:districtId/branding/publish', requireAuth, async (req, res) => {
+  const districtId = Number(req.params.districtId);
+
+  try {
+    await publishBranding({ table: 'district_branding', idColumn: 'district_id', id: districtId, updatedBy: null });
+  } catch (e) {
+    return res.status(e.statusCode || 500).json({ error: e.message });
+  }
+
+  await audit(pool, {
+    actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+    action: 'district_branding_published_by_admin', entityType: 'district_branding', entityId: districtId,
+    ipAddress: req.ip,
+  });
+
+  res.json({ ok: true });
+});
+
+// POST /api/admin/concierge/districts/:districtId/branding/reset
+router.post('/districts/:districtId/branding/reset', requireAuth, async (req, res) => {
+  const districtId = Number(req.params.districtId);
+
+  await resetBranding({ table: 'district_branding', idColumn: 'district_id', id: districtId, updatedBy: null });
+
+  await audit(pool, {
+    actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+    action: 'district_branding_reset_by_admin', entityType: 'district_branding', entityId: districtId,
+    ipAddress: req.ip,
+  });
+
+  res.json({ ok: true });
 });
 
 module.exports = router;
