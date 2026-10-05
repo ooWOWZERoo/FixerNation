@@ -98,6 +98,7 @@
         <div class="cc-step-head">
           <div class="cc-step-num" id="step4Num">4</div>
           <div><div class="cc-step-title">Invite teachers</div><div class="cc-step-sub">Each invited teacher gets the same email they'd get from their own school admin.</div></div>
+          <span id="step4SeatCounter" class="a-pill a-pill-neutral" style="margin-left:auto;display:none;"></span>
         </div>
         <div id="step4Body"></div>
       </div>
@@ -346,14 +347,27 @@ function renderStep4() {
   var p = state.purchase;
   var num = document.getElementById('step4Num');
   var body = document.getElementById('step4Body');
+  var counter = document.getElementById('step4SeatCounter');
   if (!p) {
     num.classList.remove('done'); num.textContent = '4';
     body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
+    counter.style.display = 'none';
     return;
   }
   var registeredCount = state.seats.filter(function (s) { return s.status === 'registered'; }).length;
   num.classList.toggle('done', state.seats.length > 0);
   num.textContent = state.seats.length > 0 ? '✓' : '4';
+
+  // "Issued" = seats already invited or registered (state.seats only ever
+  // holds non-'available' rows -- see GET /quotes/:quoteId's seats query in
+  // admin-concierge.js), out of the license's total purchased seat count.
+  if (p.seat_count) {
+    counter.textContent = state.seats.length + ' / ' + p.seat_count + ' issued';
+    counter.className = 'a-pill ' + (state.seats.length >= p.seat_count ? 'a-pill-warning' : 'a-pill-neutral');
+    counter.style.display = '';
+  } else {
+    counter.style.display = 'none';
+  }
 
   var rosterRows = state.seats.map(function (s) {
     var name = [s.invitation_first_name, s.invitation_last_name].filter(Boolean).join(' ') || s.invited_email || '—';
