@@ -360,7 +360,7 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
 
   const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
           quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil,
-          quotedSchoolDomain, contentProfileId } = req.body || {};
+          quotedSchoolDomain, contentProfileId, noEmail } = req.body || {};
   // quotedAmountCents can legitimately be 0 (a free trial) — only reject a
   // missing amount, not a falsy-but-valid zero.
   if (quotedAmountCents == null || !quotedProductName) {
@@ -401,34 +401,42 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
 
   const validUntil = quotedValidUntil || (quote.quote_valid_until ? String(quote.quote_valid_until).slice(0, 10) : null);
 
-  await sendQuoteEmail({
-    to: quote.email,
-    firstName: quote.first_name,
-    lastName: quote.last_name,
-    school: quote.school,
-    quoteNumber: quote.quote_number || null,
-    productName: quotedProductName,
-    seatCount: quotedSeatCount || null,
-    amountDollars: quotedAmountCents / 100,
-    replyTo,
-    fromEmail: fromEmail || null,
-    addonSeats: quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
-    termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
-    discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
-    quoteValidUntil: validUntil,
-    acceptUrl,
-    contentSections: {
-      annualIncludes: (profile && profile.section_annual_includes) || '',
-      lessonPackage:  (profile && profile.section_lesson_package)  || '',
-      videoAccess:    (profile && profile.section_video_access)    || '',
-      licenseTerms:   (profile && profile.section_license_terms)   || '',
-    },
-  });
+  // noEmail: the deal was agreed by phone and already finalized verbally --
+  // skip the actual email, but still record everything else "Send Quote"
+  // normally does (pricing snapshot, quote_sent_at, new->contacted status),
+  // so the quote is just as usable from Concierge/accept-quote.html as a
+  // genuinely emailed one. quote_sent_via distinguishes the two so the list
+  // page doesn't falsely claim an email went out.
+  if (!noEmail) {
+    await sendQuoteEmail({
+      to: quote.email,
+      firstName: quote.first_name,
+      lastName: quote.last_name,
+      school: quote.school,
+      quoteNumber: quote.quote_number || null,
+      productName: quotedProductName,
+      seatCount: quotedSeatCount || null,
+      amountDollars: quotedAmountCents / 100,
+      replyTo,
+      fromEmail: fromEmail || null,
+      addonSeats: quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
+      termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
+      discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
+      quoteValidUntil: validUntil,
+      acceptUrl,
+      contentSections: {
+        annualIncludes: (profile && profile.section_annual_includes) || '',
+        lessonPackage:  (profile && profile.section_lesson_package)  || '',
+        videoAccess:    (profile && profile.section_video_access)    || '',
+        licenseTerms:   (profile && profile.section_license_terms)   || '',
+      },
+    });
+  }
 
   await pool.query(
     `UPDATE quote_requests
      SET quoted_product_id = ?, quoted_product_name = ?, quoted_seat_count = ?,
-         quoted_amount_cents = ?, quoted_at = NOW(), quote_sent_at = NOW(),
+         quoted_amount_cents = ?, quoted_at = NOW(), quote_sent_at = NOW(), quote_sent_via = ?,
          status = IF(status = 'new', 'contacted', status),
          quoted_tier_name = ?, quoted_addon_seats = ?,
          quoted_term_years = ?, quoted_school_domain = ?,
@@ -436,6 +444,7 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
          content_profile_id = ?
      WHERE id = ?`,
     [quotedProductId || null, quotedProductName, quotedSeatCount || null, quotedAmountCents,
+     noEmail ? 'phone' : 'email',
      quotedTierName || null,
      quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
      quotedTermYears != null ? Number(quotedTermYears) : null,

@@ -473,8 +473,9 @@ function renderTable(quotes) {
     const pill     = `<span class="a-pill ${STATUS_CLASSES[q.status] || 'a-pill-neutral'}">${STATUS_LABELS[q.status] || q.status}</span>`;
     // quoted_amount_cents can legitimately be 0 (a free trial) — check
     // presence, not truthiness, so a $0.00 quote still renders its amount.
+    const sentLabel = q.quote_sent_via === 'phone' ? 'By phone' : (q.quote_sent_at ? 'Sent' : '');
     const quoted   = q.quoted_amount_cents != null
-      ? `<span style="font-weight:600;">$${(q.quoted_amount_cents / 100).toFixed(2)}</span>${q.quote_sent_at ? '<br><span style="font-size:11px;color:var(--a-text-soft);">Sent</span>' : ''}`
+      ? `<span style="font-weight:600;">$${(q.quoted_amount_cents / 100).toFixed(2)}</span>${sentLabel ? '<br><span style="font-size:11px;color:var(--a-text-soft);">' + sentLabel + '</span>' : ''}`
       : '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -516,9 +517,17 @@ function openModal(id) {
 
   const savedAmount = q.quoted_amount_cents != null ? (q.quoted_amount_cents / 100).toFixed(2) : '';
 
-  const sentBadge = q.quote_sent_at
-    ? `<div class="q-sent-badge">✓ Quote emailed on ${fnFormatDate(q.quote_sent_at)}</div>`
-    : '';
+  // quote_sent_via distinguishes a genuinely emailed quote from one
+  // finalized by phone (noEmail checkbox below) without ever sending mail.
+  // Legacy rows sent before this field existed have quote_sent_at set but
+  // quote_sent_via NULL -- those were always real emails, so default to
+  // 'email' rather than showing them as ambiguous.
+  const sentVia = q.quote_sent_via || (q.quote_sent_at ? 'email' : null);
+  const sentBadge = !q.quote_sent_at ? '' : (
+    sentVia === 'phone'
+      ? `<div class="q-sent-badge">📞 Agreed by phone on ${fnFormatDate(q.quote_sent_at)} — no email sent</div>`
+      : `<div class="q-sent-badge">✓ Quote emailed on ${fnFormatDate(q.quote_sent_at)}</div>`
+  );
 
   const annualProds = licenseProds.filter(p => !p.isTrial);
   const addonProds  = annualProds.filter(p => p.addonRate > 0);
@@ -595,6 +604,12 @@ function openModal(id) {
     <hr class="q-section-divider">
     <p class="q-section-title">Generate Quote</p>
     ${sentBadge}
+    <div class="q-field" style="margin-top:6px;">
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;cursor:pointer;">
+        <input type="checkbox" id="qNoEmail" style="margin-top:3px;" onchange="onNoEmailChange()" ${sentVia === 'phone' ? 'checked' : ''}>
+        <span>Don't email this quote — it was already agreed by phone and just needs to be finalized here.</span>
+      </label>
+    </div>
 
     <!-- Hidden payload fields -->
     <input type="hidden" id="qProductId">
@@ -744,6 +759,7 @@ function openModal(id) {
       }
     }
     calcBreakdown();
+    onNoEmailChange();
   }, 0);
 
   document.getElementById('quoteModalOverlay').style.display = 'flex';
@@ -1038,6 +1054,13 @@ async function saveModal() {
   fnToast('Saved');
 }
 
+// Keeps the primary button's label honest about what it's about to do —
+// toggled on checkbox change and set once when the modal opens.
+function onNoEmailChange() {
+  const noEmail = document.getElementById('qNoEmail').checked;
+  document.getElementById('sendQuoteBtn').textContent = noEmail ? 'Finalize Quote (No Email)' : 'Send Quote';
+}
+
 async function sendQuote() {
   const id = await ensureQuoteSaved();
   if (!id) return;
@@ -1048,6 +1071,8 @@ async function sendQuote() {
   // missing/invalid amount, not a falsy-but-valid zero.
   if (amountCents == null || isNaN(amountCents)) { fnToast('Enter a dollar amount'); return; }
 
+  const noEmail = document.getElementById('qNoEmail').checked;
+
   // Quotes aren't sent often enough for a confirm-every-time prompt to
   // become fatiguing, and there's no reliable structural way to detect a
   // real product/profile mismatch (quote_content_profiles has no tag
@@ -1057,10 +1082,12 @@ async function sendQuote() {
   const profileId = profileSel ? Number(profileSel.value) || null : null;
   const profile = profileId ? quoteProfiles.find(p => p.id === profileId) : null;
   const profileLabel = profile ? profile.name : '(none selected)';
-  const confirmed = confirm(
-    `Send this quote?\n\nProduct: ${productName}\nQuote Content Profile: ${profileLabel}\n\n` +
-    `Are you sure you selected the correct Quote Content Profile?`
-  );
+  const confirmed = noEmail
+    ? confirm(`Finalize this quote WITHOUT emailing it?\n\nProduct: ${productName}\n\nUse this only if the deal was already agreed by phone.`)
+    : confirm(
+        `Send this quote?\n\nProduct: ${productName}\nQuote Content Profile: ${profileLabel}\n\n` +
+        `Are you sure you selected the correct Quote Content Profile?`
+      );
   if (!confirmed) return;
 
   // Persist contact info / status / notes / profile / pricing before
@@ -1069,8 +1096,9 @@ async function sendQuote() {
   if (!saved) { fnToast('Could not save changes'); return; }
 
   const btn = document.getElementById('sendQuoteBtn');
+  const origLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Sending…';
+  btn.textContent = noEmail ? 'Finalizing…' : 'Sending…';
 
   const profileEl = document.getElementById('qContentProfile');
   const r = await fetch(`/api/contact/quotes/${id}/send`, {
@@ -1088,14 +1116,15 @@ async function sendQuote() {
       quotedValidUntil: quotedValidUntil || null,
       quotedSchoolDomain: quotedSchoolDomain,
       contentProfileId: profileEl ? (Number(profileEl.value) || null) : null,
+      noEmail,
     }),
   });
 
   btn.disabled = false;
-  btn.textContent = 'Send Quote';
+  btn.textContent = origLabel;
 
   if (!r.ok) {
-    let msg = 'Could not send quote';
+    let msg = noEmail ? 'Could not finalize quote' : 'Could not send quote';
     try { const d = await r.json(); msg = d.error || msg; } catch (_) {}
     fnToast(msg);
     return;
@@ -1108,7 +1137,7 @@ async function sendQuote() {
   updateStats();
   applyFilters();
   closeModal();
-  fnToast('Quote sent');
+  fnToast(noEmail ? 'Quote finalized — no email sent' : 'Quote sent');
 }
 
 function renderProfilesList() {

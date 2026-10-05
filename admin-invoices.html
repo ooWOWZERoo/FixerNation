@@ -81,12 +81,12 @@ async function loadInvoices(status) {
     const statusPill = cancelled ? 'a-pill-danger' : (paid ? 'a-pill-success' : 'a-pill-neutral');
     // PO Received is a separate signal from Paid -- it's what actually
     // activates the school license (POST /:id/po-received); Paid tracks the
-    // financial obligation independently. Only shown for a PO invoice
-    // (every row here is one today, but this stays correct if that changes),
-    // and never for a $0 invoice -- a free ($0) quote acceptance skips the
-    // PO gate entirely and is already paid/active from creation, so there's
-    // nothing pending to receive (see quote-accept.js's acceptQuoteViaPO).
-    const poPill = (inv.paymentMethod !== 'po' || inv.total === 0) ? '' : (
+    // financial obligation independently. Shown for any PO invoice
+    // (every row here is one today, but this stays correct if that
+    // changes) -- matches the "Mark PO received" action button below,
+    // which is also available regardless of amount, so the status pill
+    // and the action that sets it stay consistent with each other.
+    const poPill = inv.paymentMethod !== 'po' ? '' : (
       inv.poReceivedDate
         ? '<span class="a-pill a-pill-success">PO Received</span>'
         : '<span class="a-pill a-pill-warning">PO Pending</span>'
