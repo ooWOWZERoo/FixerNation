@@ -112,7 +112,7 @@ router.post('/create-session', async (req, res) => {
     if (!(seatCount > 0)) return res.status(400).json({ error: 'seatCount must be a positive number' });
 
     const [rows] = await pool.query(
-      'SELECT id, name, price_cents, variable_seats, is_trial, trial_days, trial_lesson_limit, active FROM license_products WHERE id = ?',
+      'SELECT id, name, price_cents, variable_seats, is_trial, trial_days, trial_lesson_limit, seat_count, active FROM license_products WHERE id = ?',
       [productId]
     );
     const lp = rows[0];
@@ -120,7 +120,11 @@ router.post('/create-session', async (req, res) => {
       return res.status(400).json({ error: 'License product not found or not available' });
     }
 
-    const resolvedSeatCount = lp.is_trial ? 1 : Number(b.seatCount);
+    // A trial's price is a flat one-time fee, not a per-seat rate -- the
+    // product's own seat_count (e.g. a 5-seat pilot) is what actually gets
+    // granted, but the Stripe charge itself always stays quantity 1 so a
+    // multi-seat trial doesn't get charged price_cents x seats.
+    const resolvedSeatCount = lp.is_trial ? (lp.seat_count || 1) : Number(b.seatCount);
     if (!lp.is_trial && !(resolvedSeatCount > 0)) {
       return res.status(400).json({ error: 'seatCount must be a positive number' });
     }
@@ -135,7 +139,7 @@ router.post('/create-session', async (req, res) => {
           product_data: { name: lp.name },
           unit_amount: lp.price_cents,
         },
-        quantity: resolvedSeatCount,
+        quantity: lp.is_trial ? 1 : resolvedSeatCount,
       }],
       metadata: { productId: String(productId), seatCount: String(resolvedSeatCount), email, ...refMeta },
       success_url: `${siteUrl}/licenses.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -664,10 +668,16 @@ async function webhookHandler(req, res) {
         if (lp && lp.is_trial) {
           isTrialSignup = true;
           const trialLibraryLimit = lp.trial_library_limit || Math.max(1, parseInt(await getSetting('teacher_lesson_plan_limit_trial') || '10', 10));
+          // metadata.seatCount carries the product's real seat count
+          // (resolved at checkout-session creation above) -- a multi-seat
+          // trial (e.g. a 5-seat pilot) still auto-claims one seat for the
+          // buyer (autoClaimEmail), leaving the rest 'available' to invite
+          // teachers into, same as any other group license.
           await createPurchase(contactId, {
-            productType: 'single_license',
+            productType: 'group_license',
             licenseProductId: lp.id,
-            seatCount: 1,
+            seatCount: Number(metadata.seatCount) || 1,
+            autoClaimEmail: metadata.email,
             source: 'Stripe',
             stripeSessionId: session.id,
             paymentMethod: 'stripe',

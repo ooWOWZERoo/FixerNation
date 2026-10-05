@@ -388,7 +388,7 @@ async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation, affiliateRefCode }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation, affiliateRefCode, autoClaimEmail }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const normalizedDomain = productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null;
@@ -459,10 +459,26 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
         [purchaseId, contactRows[0].email, 'pending']
       );
     } else if (productType === 'group_license') {
-      await connection.query(
-        'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(finalSeatCount).fill('(?, NULL, ?)').join(', '),
-        Array.from({ length: finalSeatCount }).flatMap(() => [purchaseId, 'available'])
-      );
+      // A multi-seat TRIAL still auto-claims one seat for the buyer
+      // themselves, same as a single_license trial always has -- otherwise
+      // the buyer ends up with an active purchase and zero actual access
+      // until someone manually invites them into their own seat. The rest
+      // of the seats (if any) start 'available', same as any group license.
+      if (autoClaimEmail) {
+        const availableCount = finalSeatCount - 1;
+        const values = [purchaseId, autoClaimEmail, 'pending'];
+        let sql = 'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, ?)';
+        if (availableCount > 0) {
+          sql += ', ' + Array(availableCount).fill('(?, NULL, ?)').join(', ');
+          for (let i = 0; i < availableCount; i++) values.push(purchaseId, 'available');
+        }
+        await connection.query(sql, values);
+      } else {
+        await connection.query(
+          'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES ' + Array(finalSeatCount).fill('(?, NULL, ?)').join(', '),
+          Array.from({ length: finalSeatCount }).flatMap(() => [purchaseId, 'available'])
+        );
+      }
     }
     await connection.commit();
 

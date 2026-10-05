@@ -387,8 +387,7 @@ function renderStep4() {
     '<button class="a-btn a-btn-primary" id="inviteBtn" onclick="doInviteTeachers()">Send invites</button>' +
     (lastInviteResult ? '<div class="cc-done-box" style="margin-top:12px;">' + lastInviteResult +
       ' <a href="#" onclick="lastInviteResult=null;renderStep4();return false;" style="font-weight:600;">Dismiss</a></div>' : '') +
-    (state.seats.length ? '<table class="a-table" style="margin-top:18px;"><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>' + rosterRows + '</tbody></table>' +
-      '<div class="meta-line" style="margin-top:8px;">' + registeredCount + ' of ' + state.seats.length + ' registered' + (p.seat_count ? ' · ' + p.seat_count + ' seat(s) on this license' : '') + '</div>' : '');
+    (state.seats.length ? '<table class="a-table" style="margin-top:18px;"><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>' + rosterRows + '</tbody></table>' : '');
 
   document.getElementById('teacherRows').innerHTML = '';
   teacherRowCount = 0;

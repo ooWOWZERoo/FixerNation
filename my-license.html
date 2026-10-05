@@ -150,8 +150,13 @@ function render(purchases) {
 
   wrap.innerHTML = licenses.map(p => {
     const dateLabel = formatDate(p.purchasedAt);
+    // Checked before productType -- a trial can now be a multi-seat
+    // group_license (the buyer still auto-claims one seat, the rest start
+    // 'available' to invite teachers into), so a trial must always get
+    // the trial card regardless of product type, not just when it happens
+    // to be the older single-seat single_license shape.
+    if (p.isTrial) return renderTrialCard(p);
     if (p.productType === 'single_license') {
-      if (p.isTrial) return renderTrialCard(p);
       const seat = p.seats && p.seats[0];
       const status = seat && seat.status === 'registered' ? 'Active' : 'Pending activation';
       return `<div class="card">

@@ -65,22 +65,23 @@ async function createPurchaseFromQuote(quote, paymentMethod, req) {
     contactId = r.insertId;
   }
 
-  // A quoted product (e.g. the 90-Day Classroom Pilot) can itself be a trial
-  // tier — carry that over so an accepted trial quote actually expires like
-  // any other trial purchase, instead of silently becoming a permanent license.
-  // Every real trial product is single-seat by design (mark-pilot-product-
-  // as-trial.js: "Pilot purchases are meant to be full ... access" for the
-  // buyer themselves) — checkout.js's self-service trial signup already
-  // forces productType:'single_license', seatCount:1 for exactly this reason:
-  // a group_license purchase only ever creates unassigned 'available' seats
-  // (no invited_email), and the account-registration auto-claim in
-  // createSetPasswordUrl only matches a 'pending' seat with a specific
-  // invited_email — an 'available' seat can never be claimed that way, so a
-  // trial quoted and accepted as a group_license left the buyer with an
-  // active purchase and zero actual content access. Also carries over
-  // conversionCreditCents (checkout.js's trial signup sets this to the
-  // trial product's own price so a later paid conversion isn't charged full
-  // price on top of what was already paid) — quote-accept never set this.
+  // A quoted product (e.g. the 30-Day Trial) can itself be a trial tier —
+  // carry that over so an accepted trial quote actually expires like any
+  // other trial purchase, instead of silently becoming a permanent license.
+  // A trial is always productType:'group_license' with the product's own
+  // seat_count (quoted_seat_count mirrors it) PLUS autoClaimEmail set to the
+  // buyer — createPurchase() auto-claims one of those seats for the buyer
+  // themselves (status 'pending', immediately claimable on registration,
+  // same as a single-seat trial always has), leaving any remaining seats
+  // 'available' to invite teachers into. Before this, every trial was
+  // hardcoded to productType:'single_license', seatCount:1 regardless of
+  // the product's configured seat count — correct for a 1-seat trial, but
+  // it silently capped a multi-seat trial product (e.g. a 5-seat pilot) at
+  // 1 real seat, with the other 4 "purchased" seats never actually created.
+  // Also carries over conversionCreditCents (checkout.js's trial signup
+  // sets this to the trial product's own price so a later paid conversion
+  // isn't charged full price on top of what was already paid) — quote-
+  // accept never set this.
   let trialFields = {};
   let isTrial = false;
   let licenseDurationDaysOverride = null;
@@ -108,9 +109,10 @@ async function createPurchaseFromQuote(quote, paymentMethod, req) {
   }
 
   const purchaseId = await createPurchase(contactId, {
-    productType: isTrial ? 'single_license' : 'group_license',
+    productType: 'group_license',
     licenseProductId: quote.quoted_product_id || null,
-    seatCount: isTrial ? 1 : (quote.quoted_seat_count || 1),
+    seatCount: quote.quoted_seat_count || 1,
+    autoClaimEmail: isTrial ? quote.email : null,
     amountCents: quote.quoted_amount_cents != null ? quote.quoted_amount_cents : null,
     paymentMethod,
     paymentStatus: 'pending',
@@ -120,7 +122,16 @@ async function createPurchaseFromQuote(quote, paymentMethod, req) {
     // registration outright (school-registration.js does an exact match on
     // the registering teacher's real email domain). quoted_school_domain is
     // the real domain the admin verifies with the buyer on the quote builder.
-    schoolDomain: quote.quoted_school_domain || null,
+    //
+    // Deliberately NULL for a trial: school-registration.js's self-service
+    // "check eligibility, auto-claim a seat" flow matches ANY group_license
+    // purchase by school_domain, no admin invitation required. A trial was
+    // always isolated from that (always single_license, domain always
+    // NULL) — now that a trial can be group_license too (to honor a
+    // multi-seat trial product), it must stay isolated explicitly, or any
+    // teacher at a matching domain could silently consume the trial's
+    // limited seats without ever being invited.
+    schoolDomain: isTrial ? null : (quote.quoted_school_domain || null),
     quoteId: quote.id,
     licenseDurationDaysOverride,
     // The buyer accepts from their own browser, so their fn_ref cookie (if
