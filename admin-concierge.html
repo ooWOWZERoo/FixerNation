@@ -297,6 +297,15 @@ async function doAssignDistrictAdmin() {
 
 // --- Step 4: Invite teachers ---
 var teacherRowCount = 0;
+// Holds the most recent invite-teachers result so it survives the
+// loadState()->render() refresh that doInviteTeachers() triggers right
+// after sending (renderStep4() fully replaces step4Body's innerHTML, which
+// would otherwise wipe out a message written directly into it). Unlike
+// fnToast (2.4s auto-dismiss, shared by every admin page), this one stays
+// up until explicitly dismissed or overwritten by the next invite attempt
+// -- the skipped/failed detail (which email, which reason) is exactly the
+// part worth having time to actually read.
+var lastInviteResult = null;
 function renderStep4() {
   var p = state.purchase;
   var num = document.getElementById('step4Num');
@@ -320,6 +329,8 @@ function renderStep4() {
     '<div id="teacherRows"></div>' +
     '<button class="a-btn a-btn-outline a-btn-sm" onclick="addTeacherRow()" style="margin-bottom:12px;">+ Add teacher</button><br>' +
     '<button class="a-btn a-btn-primary" id="inviteBtn" onclick="doInviteTeachers()">Send invites</button>' +
+    (lastInviteResult ? '<div class="cc-done-box" style="margin-top:12px;">' + lastInviteResult +
+      ' <a href="#" onclick="lastInviteResult=null;renderStep4();return false;" style="font-weight:600;">Dismiss</a></div>' : '') +
     (state.seats.length ? '<table class="a-table" style="margin-top:18px;"><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody>' + rosterRows + '</tbody></table>' +
       '<div class="meta-line" style="margin-top:8px;">' + registeredCount + ' of ' + state.seats.length + ' registered' + (p.seat_count ? ' · ' + p.seat_count + ' seat(s) on this license' : '') + '</div>' : '');
 
@@ -368,7 +379,8 @@ async function doInviteTeachers() {
     var msg = d.sent.length + ' invited.';
     if (d.skipped.length) msg += ' ' + d.skipped.length + ' skipped (already invited/registered).';
     if (d.errors.length) msg += ' ' + d.errors.length + ' failed: ' + d.errors.map(function (e) { return e.email + ' (' + e.reason + ')'; }).join(', ');
-    fnToast(msg);
+    fnToast(d.sent.length + ' invited.');
+    lastInviteResult = esc(msg);
     await loadState();
   } catch (e) { showErr(e.message); }
   finally { btn.disabled = false; btn.textContent = 'Send invites'; }
