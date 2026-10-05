@@ -15,7 +15,7 @@ const router = express.Router();
 // admin-invoices.html's "Mark PO Received" button (gated on
 // paymentMethod === 'po') could never render for ANY invoice, ever. Callers
 // must now pass the real value, derived from that invoice's purchases.
-function serialize(row, contact, paymentMethod) {
+function serialize(row, contact, paymentMethod, quoteNumber) {
   return {
     id: row.id,
     invoiceNumber: row.invoice_number,
@@ -28,6 +28,7 @@ function serialize(row, contact, paymentMethod) {
     status: row.status,
     createdAt: row.created_at,
     paidAt: row.paid_at,
+    quoteNumber: quoteNumber || null,
   };
 }
 
@@ -58,8 +59,14 @@ async function fetchInvoiceWithLineItems(id) {
     renewalDate = d.toISOString().slice(0, 10);
   }
 
+  const purchaseWithQuote = purchaseRows.find(p => p.quote_id);
+  const quoteId = purchaseWithQuote && purchaseWithQuote.quote_id;
+  const [[quoteRow]] = quoteId
+    ? await pool.query('SELECT quote_number FROM quote_requests WHERE id = ?', [quoteId])
+    : [[null]];
+
   return {
-    ...serialize(invoice, contactRows[0], purchaseRows[0] && purchaseRows[0].payment_method),
+    ...serialize(invoice, contactRows[0], purchaseRows[0] && purchaseRows[0].payment_method, quoteRow && quoteRow.quote_number),
     renewalDate,
     buyer: contactRows[0] ? {
       name: contactRows[0].name,
@@ -110,9 +117,20 @@ router.get('/', requireAuth, async (req, res) => {
   );
   const paymentMethodByInvoice = Object.fromEntries(paymentMethodRows.map(r => [r.invoice_id, r.payment_method]));
 
+  // Same one-transaction-per-invoice reasoning as payment_method above --
+  // every purchase under one invoice came from the same quote acceptance
+  // (if any), so they share one quote_id.
+  const [quoteNumberRows] = await pool.query(
+    `SELECT p.invoice_id, qr.quote_number
+     FROM purchases p JOIN quote_requests qr ON qr.id = p.quote_id
+     WHERE p.invoice_id IN (?)`,
+    [rows.map(i => i.id)]
+  );
+  const quoteNumberByInvoice = Object.fromEntries(quoteNumberRows.map(r => [r.invoice_id, r.quote_number]));
+
   res.json({
     invoices: rows.map(row => ({
-      ...serialize(row, contactById[row.contact_id], paymentMethodByInvoice[row.id]),
+      ...serialize(row, contactById[row.contact_id], paymentMethodByInvoice[row.id], quoteNumberByInvoice[row.id]),
       itemCount: itemCountByInvoice[row.id] || 0,
     })),
   });

@@ -43,7 +43,7 @@
           </select>
         </div>
         <table class="a-table" id="invoicesTable">
-          <thead><tr><th>Invoice #</th><th>School / Buyer</th><th>PO Number</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <thead><tr><th>Invoice #</th><th>Quote #</th><th>School / Buyer</th><th>PO Number</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="a-empty" id="invoicesEmpty" style="display:none;">
@@ -79,13 +79,26 @@ async function loadInvoices(status) {
     const cancelled = inv.status === 'cancelled';
     const statusLabel = cancelled ? 'Cancelled' : (paid ? 'Paid' : 'Unpaid');
     const statusPill = cancelled ? 'a-pill-danger' : (paid ? 'a-pill-success' : 'a-pill-neutral');
+    // PO Received is a separate signal from Paid -- it's what actually
+    // activates the school license (POST /:id/po-received); Paid tracks the
+    // financial obligation independently. Only shown for a PO invoice
+    // (every row here is one today, but this stays correct if that changes),
+    // and never for a $0 invoice -- a free ($0) quote acceptance skips the
+    // PO gate entirely and is already paid/active from creation, so there's
+    // nothing pending to receive (see quote-accept.js's acceptQuoteViaPO).
+    const poPill = (inv.paymentMethod !== 'po' || inv.total === 0) ? '' : (
+      inv.poReceivedDate
+        ? '<span class="a-pill a-pill-success">PO Received</span>'
+        : '<span class="a-pill a-pill-warning">PO Pending</span>'
+    );
     tr.innerHTML = `
       <td class="a-cell-title"><a href="admin-invoice-print.html?id=${inv.id}" target="_blank">${inv.invoiceNumber}</a></td>
+      <td>${inv.quoteNumber ? `#${inv.quoteNumber}` : '—'}</td>
       <td>${(inv.buyer && (inv.buyer.company || inv.buyer.name)) || '—'}<div class="a-note">${(inv.buyer && inv.buyer.email) || ''}</div></td>
       <td>${inv.poNumber || '—'}</td>
       <td>${inv.itemCount}</td>
       <td>${fnFormatCurrency(inv.total)}</td>
-      <td><span class="a-pill ${statusPill}">${statusLabel}</span></td>
+      <td>${poPill}${poPill ? '<br>' : ''}<span class="a-pill ${statusPill}" style="margin-top:4px;display:inline-block;">${statusLabel}</span></td>
       <td>${fnFormatDate(inv.createdAt)}</td>
       <td>
         <div class="a-row-actions">
