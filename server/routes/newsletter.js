@@ -187,7 +187,8 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
 
 // GET /api/newsletter/contacts/:id/roles — everything role-specific about
 // this contact that the generic CRM card otherwise has no visibility into:
-// their site account role, every School License Administrator assignment
+// their site account role, their curriculum-level audience preference
+// (ES/MS/HS/Higher Ed), every School License Administrator assignment
 // (which purchase/school, permission level), every District Administrator
 // assignment (which district), and every teacher seat they hold or have
 // been invited to (grade/title/department/subject, registered vs pending).
@@ -201,7 +202,7 @@ router.get('/contacts/:id/roles', requireAuth, async (req, res) => {
 
   const [[siteUser]] = await pool.query('SELECT id, role FROM site_users WHERE email = ?', [contact.email]);
   if (!siteUser) {
-    return res.json({ role: null, schoolAdminRoles: [], districtAdminRoles: [], teacherSeats: [] });
+    return res.json({ role: null, audiences: [], schoolAdminRoles: [], districtAdminRoles: [], teacherSeats: [] });
   }
 
   const [schoolAdminRows] = await pool.query(
@@ -237,8 +238,19 @@ router.get('/contacts/:id/roles', requireAuth, async (req, res) => {
     [siteUser.id, contact.email]
   );
 
+  // Curriculum level (ES/MS/HS/Higher Ed) is a per-person preference, not
+  // per-seat -- a teacher sets it once on their own account (or their
+  // school admin/an FNE admin sets it for them), not once per license they
+  // happen to hold. Fetched once here rather than duplicated onto every
+  // teacherSeats row.
+  const [audienceRows] = await pool.query(
+    'SELECT audience FROM site_user_audiences WHERE site_user_id = ?',
+    [siteUser.id]
+  );
+
   res.json({
     role: siteUser.role,
+    audiences: audienceRows.map(r => r.audience),
     schoolAdminRoles: schoolAdminRows,
     districtAdminRoles: districtAdminRows,
     teacherSeats: teacherSeatRows,

@@ -678,6 +678,11 @@ async function renderRolesAndAssignments(c) {
   const roleBadge = d.role
     ? `<span class="a-pill a-pill-info" style="margin-bottom:10px;">${ROLE_LABELS[d.role] || d.role}</span>`
     : '';
+  // Curriculum level is a per-person preference (set once, not per seat),
+  // so it's shown once here rather than repeated on every teacher seat row.
+  const audienceBadges = (d.audiences || []).length
+    ? ' ' + d.audiences.map(a => `<span class="a-pill a-pill-neutral" style="margin-bottom:10px;">${esc(a)}</span>`).join(' ')
+    : '';
 
   const schoolRows = (d.schoolAdminRoles || []).map(sa => `
     <div class="a-repeat-row" style="align-items:flex-start;">
@@ -719,7 +724,7 @@ async function renderRolesAndAssignments(c) {
     teacherRows ? `<div style="margin-top:8px;"><div class="a-note" style="margin-bottom:4px;">Teacher seat(s)</div>${teacherRows}</div>` : '',
   ].filter(Boolean).join('');
 
-  body.innerHTML = roleBadge + (sections || '<div class="a-note">No School/District Administrator assignments or teacher seats found for this account.</div>');
+  body.innerHTML = roleBadge + audienceBadges + (sections || '<div class="a-note">No School/District Administrator assignments or teacher seats found for this account.</div>');
 }
 
 function resendVerificationButtonHtml(c) {
