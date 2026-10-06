@@ -16,6 +16,12 @@
 <link rel="stylesheet" href="admin-common.css?v=17">
 <style>
   .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text);}
+  /* #searchInput is a bare <input> with no class, so it never picked up
+     .a-filter-select's look (or any border/radius/background at all) --
+     matching that styling here, with extra left padding to make room for
+     the .a-search::before magnifying-glass icon (admin-common.css). */
+  #searchInput{padding:9px 12px 9px 34px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text); box-sizing:border-box;}
+  #searchInput:focus{outline:none; border-color:var(--a-accent);}
   #contactsTable th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
   #contactsTable th.sortable:hover{color:var(--a-accent);}
   .sort-arrow{font-size:10px; margin-left:3px; opacity:0.7;}
