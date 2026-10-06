@@ -147,9 +147,16 @@ button, input, select, textarea{font-family:inherit;}
 .a-card{background:var(--a-card); border:1px solid var(--a-border); border-radius:var(--a-radius); box-shadow:var(--a-shadow); padding:24px; margin-bottom:24px;}
 .a-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px;}
 .a-card-head h2{font-size:16px; margin:0; font-weight:800;}
-.a-card-head .a-search{position:relative;}
-.a-card-head .a-search input{padding-left:34px; width:240px;}
-.a-card-head .a-search::before{content:"🔍"; position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:13px; opacity:0.55;}
+/* The icon used to be an absolutely-positioned ::before emoji centered via
+   top:50%/translateY(-50%) -- mathematically centered on the box, but emoji
+   glyphs carry inconsistent built-in vertical metrics across fonts/platforms,
+   so it visually sat off-center. A real flex sibling sidesteps that; flexbox
+   centers it against the input's actual rendered box, not the font's idea
+   of its own center. */
+.a-card-head .a-search{display:flex; align-items:center; gap:8px; padding:0 12px; border-radius:10px; border:1px solid var(--a-border); background:var(--a-card);}
+.a-card-head .a-search:focus-within{border-color:var(--a-accent);}
+.a-card-head .a-search-icon{font-size:13px; opacity:0.55; flex-shrink:0; line-height:1;}
+.a-card-head .a-search input{border:none; background:none; outline:none; padding:9px 0; color:var(--a-text); font-size:13.5px; font-family:inherit; width:240px;}
 
 table.a-table{width:100%; border-collapse:collapse; font-size:14px;}
 table.a-table th{text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--a-text-soft); font-weight:700; padding:10px 14px; border-bottom:1.5px solid var(--a-border);}
