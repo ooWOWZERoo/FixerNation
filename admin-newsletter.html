@@ -101,15 +101,17 @@
 
 <!-- Add/Edit contact modal -->
 <div class="a-modal-overlay" id="contactModalOverlay">
-  <div class="a-modal" style="max-width:480px;">
+  <div class="a-modal" style="max-width:880px;">
     <div class="a-modal-head">
       <h3 id="contactModalTitle">Add Contact</h3>
       <button class="a-modal-close" onclick="closeContactModal()">✕</button>
     </div>
     <div class="a-modal-body">
       <form id="contactForm">
-        <div class="a-field"><label>Name</label><input type="text" id="contactName"></div>
-        <div class="a-field"><label>Email *</label><input type="email" id="contactEmail" required></div>
+        <div class="a-form-row">
+          <div class="a-field"><label>Name</label><input type="text" id="contactName"></div>
+          <div class="a-field"><label>Email *</label><input type="email" id="contactEmail" required></div>
+        </div>
         <div class="a-form-row">
           <div class="a-field"><label>Phone</label><input type="text" id="contactPhone"></div>
           <div class="a-field"><label>Company</label><input type="text" id="contactCompany"></div>
@@ -119,17 +121,19 @@
           <div class="a-field"><label>City</label><input type="text" id="contactCity"></div>
           <div class="a-field"><label>State</label><input type="text" id="contactState"></div>
         </div>
-        <div class="a-field" style="max-width:160px;"><label>ZIP</label><input type="text" id="contactZip"></div>
-        <div class="a-field">
-          <label>Source</label>
-          <select id="contactSource">
-            <option>Homepage</option>
-            <option>Manual Entry</option>
-            <option>Event</option>
-            <option>Referral</option>
-          </select>
+        <div class="a-form-row">
+          <div class="a-field" style="max-width:160px;"><label>ZIP</label><input type="text" id="contactZip"></div>
+          <div class="a-field">
+            <label>Source</label>
+            <select id="contactSource">
+              <option>Homepage</option>
+              <option>Manual Entry</option>
+              <option>Event</option>
+              <option>Referral</option>
+            </select>
+          </div>
         </div>
-        <div class="a-field">
+        <div class="a-field" style="max-width:260px;">
           <label>Subscription Status</label>
           <select id="contactStatus">
             <option>Subscribed</option>
@@ -143,14 +147,16 @@
         </div>
         <div class="a-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Optional"></div>
       </form>
-      <div class="a-field" id="contactAccountField" style="display:none;">
-        <label>Site Account</label>
-        <div id="contactAccountStatus" style="font-size:13.5px; margin-bottom:10px;"></div>
-        <div class="a-row-actions" id="contactAccountActions"></div>
-      </div>
-      <div class="a-field" id="contactRolesField" style="display:none;">
-        <label>Roles &amp; Assignments</label>
-        <div id="contactRolesBody" style="font-size:13px;"></div>
+      <div class="a-form-row" style="margin-top:4px;">
+        <div class="a-field" id="contactAccountField" style="display:none; margin-bottom:0;">
+          <label>Site Account</label>
+          <div id="contactAccountStatus" style="font-size:13.5px; margin-bottom:10px;"></div>
+          <div class="a-row-actions" id="contactAccountActions"></div>
+        </div>
+        <div class="a-field" id="contactRolesField" style="display:none; margin-bottom:0;">
+          <label>Roles &amp; Assignments</label>
+          <div id="contactRolesBody" style="font-size:13px;"></div>
+        </div>
       </div>
     </div>
     <div class="a-modal-foot">
