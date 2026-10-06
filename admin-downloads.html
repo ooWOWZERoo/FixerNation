@@ -13,14 +13,14 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
-<link rel="stylesheet" href="admin-common.css?v=20">
+<link rel="stylesheet" href="admin-common.css?v=21">
 <style>
   .dl-tabs{display:flex;gap:0;border-bottom:2px solid var(--a-border);margin-bottom:20px;}
   .dl-tab{padding:10px 20px;border:none;background:transparent;font-family:inherit;font-weight:600;font-size:14px;color:var(--a-text-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
   .dl-tab.active{color:var(--a-accent);border-bottom-color:var(--a-accent);}
   .dl-tab:hover:not(.active){color:var(--a-text);}
   .dl-search-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .dl-search-input{flex:1;min-width:200px;padding:7px 12px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);outline:none;}
+  .dl-search-input{flex:1;min-width:200px;padding:7px 12px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-bg);color:var(--a-text);outline:none;}
   .dl-search-input:focus{border-color:var(--a-accent);}
   .dl-search-hint{font-size:11px;color:var(--a-text-soft);padding:0 0 10px;}
   .dl-pagination{display:flex;align-items:center;gap:10px;padding:14px 0 4px;font-size:13px;color:var(--a-text-soft);}
@@ -33,17 +33,17 @@
   .dl-reset-btn{background:none;border:1px solid var(--a-border);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--a-text-soft);}
   .dl-reset-btn:hover{border-color:var(--a-accent);color:var(--a-accent);}
   .dl-reset-btn:disabled{opacity:.45;cursor:default;}
-  .dl-count-input{width:60px;padding:3px 6px;border:1px solid var(--a-accent);border-radius:5px;font-size:13px;background:var(--a-surface);color:var(--a-text);}
+  .dl-count-input{width:60px;padding:3px 6px;border:1px solid var(--a-accent);border-radius:5px;font-size:13px;background:var(--a-bg);color:var(--a-text);}
   .a-table td.teacher-name{font-weight:600;}
   .a-table td.no-data{color:var(--a-text-soft);font-style:italic;}
   .dl-students-note{padding:32px 0;text-align:center;color:var(--a-text-soft);font-size:14px;}
 </style>
 </head>
-<body>
+<body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=22"></script>
+<script src="admin-nav.js?v=23"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -327,5 +327,6 @@ function fnEsc(str) {
 
 switchTab('teacher');
 </script>
+<script src="admin-shell.js?v=1"></script>
 </body>
 </html>

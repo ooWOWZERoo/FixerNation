@@ -110,9 +110,13 @@ STRIPE_WEBHOOK_SECRET=
 ELEVENLABS_API_KEY=      # not yet live; blocks Morning Boost voice-over
 ```
 
-## Admin nav ordering
+## Admin navigation and Mission Control visual system
 
-The icon nav in every `admin-*.html` sidebar is **strictly alphabetical** within the cluster below the divider. Dashboard always stays alone above the divider; Settings/View Site/Log Out always stay in the footer unordered. Insert new nav links alphabetically by label — not at the end, not next to the conceptually related page. Also add the link to **every other** `admin-*.html` file (grep `admin-morning-boost.html` to see the pattern).
+`admin-nav.js` renders the sidebar for 23 admin workspace pages from one `SECTIONS` array. Preserve the existing workflow groups: Sales & Schools, Content, Marketing & CRM, Community, Reports. Mission Control (the existing dashboard URL) remains pinned; Settings/View Site/Log Out remain in the footer. This supersedes the former alphabetical/per-page navigation instructions.
+
+`admin-shell.js` renders the common page header, local page finder, mobile drawer, and page-specific introductions. It moves existing heading nodes rather than cloning them so dynamic IDs such as `ccTitle` continue to work. Do not add shell code to `admin-common.js`, which is also used by public pages. The approved visual direction is recorded in `.interface-design/system.md`.
+
+Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v23, admin-shell.js v1; admin-common.js remains v16 because it was not changed. Do not accidentally match school-admin or district-admin assets.
 
 ## Deploy workflow
 

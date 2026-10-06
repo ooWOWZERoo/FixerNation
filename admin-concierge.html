@@ -13,7 +13,7 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
-<link rel="stylesheet" href="admin-common.css?v=20">
+<link rel="stylesheet" href="admin-common.css?v=21">
 <style>
   .cc-step{margin-bottom:20px;}
   .cc-step-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
@@ -49,11 +49,11 @@
   .pv-admin-btn{display:inline-block;padding:7px 14px;border-radius:8px;background:var(--sa-accent,#164F4A);color:#fff;font-size:12px;font-weight:700;}
 </style>
 </head>
-<body>
+<body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-  <script src="admin-nav.js?v=22"></script>
+  <script src="admin-nav.js?v=23"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -647,5 +647,6 @@ async function resetBrandingStep5(districtId) {
 
 loadState();
 </script>
+<script src="admin-shell.js?v=1"></script>
 </body>
 </html>

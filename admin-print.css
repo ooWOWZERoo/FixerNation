@@ -1,0 +1,4 @@
+/* Invoice presentation stays printable and independent of the application shell. */
+@media screen{body{background:#eef5f3;color:#183f43;}button,.toolbar a{border-radius:8px;}h1{font-family:Georgia,'Times New Roman',serif;color:#164f4a;}table th{background:#edf5f2;}}
+@media print{body{background:#fff;color:#111;}h1{color:#164f4a;}}
+@media screen and (max-width:600px){body{padding:16px;}.toolbar{gap:12px;flex-wrap:wrap;}.sheet{padding:24px 18px;}.brand-row{flex-direction:column;gap:24px;}.brand{flex-wrap:wrap;}.invoice-title{text-align:left;}.meta-grid{grid-template-columns:1fr;gap:18px;}.paid-stamp{top:120px;right:20px;width:75px;height:75px;font-size:12px;}.sheet table{table-layout:fixed;}.sheet td,.sheet th{overflow-wrap:anywhere;}.sheet .brand img{max-width:100%;}}

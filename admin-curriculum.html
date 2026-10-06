@@ -13,17 +13,17 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
-<link rel="stylesheet" href="admin-common.css?v=20">
+<link rel="stylesheet" href="admin-common.css?v=21">
 <style>
   .series-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .series-chip { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer; background:var(--a-accent-soft); border:1.5px solid transparent; color:var(--a-accent-on-soft); letter-spacing:0.01em; transition:background 0.15s, color 0.15s; }
   .series-chip:hover { background:var(--a-accent-fill); color:#fff; }
   .series-chip.active { background:var(--a-accent-fill); color:#fff; border-color:var(--a-accent-fill-hover); }
-  .drag-handle { cursor:grab; color:var(--a-muted); font-size:16px; user-select:none; text-align:center; width:28px; }
+  .drag-handle { cursor:grab; color:var(--a-text-soft); font-size:16px; user-select:none; text-align:center; width:28px; }
   .drag-handle:active { cursor:grabbing; }
   tr.drag-over { border-top:2px solid var(--a-accent-fill); }
   tr.dragging { opacity:0.4; }
-  .quiz-drop-zone { border:2px dashed var(--a-border); border-radius:10px; padding:32px 24px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s; color:var(--a-muted); }
+  .quiz-drop-zone { border:2px dashed var(--a-border); border-radius:10px; padding:32px 24px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s; color:var(--a-text-soft); }
   .quiz-drop-zone:hover, .quiz-drop-zone.drag-active { border-color:var(--a-accent-fill); background:var(--a-accent-soft); color:var(--a-accent-on-soft); }
   .quiz-drop-zone .drop-icon { font-size:28px; margin-bottom:8px; }
   .quiz-drop-zone .drop-label { font-size:14px; font-weight:600; }
@@ -37,11 +37,11 @@
   .quiz-import-result.error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
 </style>
 </head>
-<body>
+<body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=22"></script>
+<script src="admin-nav.js?v=23"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -223,11 +223,11 @@
         <label>Email</label>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <input type="email" id="simTeacherEmail" placeholder="user@school.edu" style="flex:2;min-width:180px;">
-          <select id="simUserType" style="flex:1;min-width:100px;padding:7px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);">
+          <select id="simUserType" style="flex:1;min-width:100px;padding:7px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-bg);color:var(--a-text);">
             <option value="teacher">Teacher</option>
             <option value="parent">Parent</option>
           </select>
-          <select id="simResourceType" style="flex:2;min-width:160px;padding:7px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-surface);color:var(--a-text);">
+          <select id="simResourceType" style="flex:2;min-width:160px;padding:7px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-bg);color:var(--a-text);">
             <option value="Teacher Copy">Teacher Copy</option>
             <option value="Student Handout">Student Handout</option>
             <option value="Classroom Poster">Classroom Poster</option>
@@ -408,7 +408,7 @@ function renderResourceCheckboxes() {
     if (checked && hasLimit) {
       limitHtml = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--a-text-soft);">
         <label style="white-space:nowrap;">Download limit per user:</label>
-        <input type="number" min="0" value="${entry.downloadLimit || 0}" style="width:70px;padding:3px 6px;border:1px solid var(--a-border);border-radius:5px;font-size:12.5px;background:var(--a-surface);color:var(--a-text);" oninput="updateResourceLimit('${r.replace(/'/g, "\\'")}', this.value)">
+        <input type="number" min="0" value="${entry.downloadLimit || 0}" style="width:70px;padding:3px 6px;border:1px solid var(--a-border);border-radius:5px;font-size:12.5px;background:var(--a-bg);color:var(--a-text);" oninput="updateResourceLimit('${r.replace(/'/g, "\\'")}', this.value)">
         <span style="font-size:11px;">(0 = unlimited)</span>
       </div>`;
     }
@@ -1057,5 +1057,6 @@ async function resetAllDownloads() {
 renderCurricula();
 </script>
 
+<script src="admin-shell.js?v=1"></script>
 </body>
 </html>

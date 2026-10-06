@@ -212,3 +212,7 @@ Three of these (`trial_expired`, `school_license_expiring_soon`, `school_license
 
 - Author photo: `anthony.png` (about page).
 - Any book-cover/trailer assets referenced by the old consumer-book pages were removed along with those pages in the 2026-08-22 scope cleanup — FNE no longer sells books directly.
+
+## Mission Control visual refresh — 2026-10-06 (not deployed)
+
+The uploaded source has been updated to prototype 1: shared illustrated page introductions, SVG sidebar icons, local admin-page finder, mobile drawer, coordinated cards/tables/forms, dark mode, dashboard workspace links, and Morning Boost section tabs. 23 workspaces use new `admin-shell.js`; login/invite and invoice print are also coordinated. CSS v21, nav v23, shell v1. This supersedes the earlier restrained visual-direction notes; historical audit findings above remain as history, not current design instructions. No backend or database modifications in this refresh. See `MISSION_CONTROL_HANDOFF.md`.

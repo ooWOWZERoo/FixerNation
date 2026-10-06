@@ -110,17 +110,13 @@ STRIPE_WEBHOOK_SECRET=
 ELEVENLABS_API_KEY=      # not yet live; blocks Morning Boost voice-over
 ```
 
-## Admin nav ordering
+## Admin navigation and Mission Control visual system
 
-The sidebar is no longer hand-written per page. Every `admin-*.html` file holds an empty `<aside class="a-sidebar"></aside>` followed by `<script src="admin-nav.js?v=N"></script>`, and `admin-nav.js` builds the whole nav from one `SECTIONS` array — so a new admin page means **one** edit there, not 30.
+`admin-nav.js` renders the sidebar for 23 admin workspace pages from one `SECTIONS` array. Preserve the existing workflow groups: Sales & Schools, Content, Marketing & CRM, Community, Reports. Mission Control (the existing dashboard URL) remains pinned; Settings/View Site/Log Out remain in the footer. This supersedes the former alphabetical/per-page navigation instructions.
 
-Links sit in a labelled, collapsible section (Sales & Schools, Content, Marketing & CRM, Community, Reports) and are ordered by workflow within it, not alphabetically. Dashboard stays alone above the divider; Settings/View Site/Log Out stay in the footer.
+`admin-shell.js` renders the common page header, local page finder, mobile drawer, and page-specific introductions. It moves existing heading nodes rather than cloning them so dynamic IDs such as `ccTitle` continue to work. Do not add shell code to `admin-common.js`, which is also used by public pages. The approved visual direction is recorded in `.interface-design/system.md`.
 
-`admin-nav.js` is cache-busted, so **bump `?v=N` in all 22 admin HTML files whenever you touch it** — they're expected to stay on one version, so set them together:
-```bash
-sed -i '' -E 's/"admin-nav\.js\?v=[0-9]+"/"admin-nav.js?v=NEW"/g' admin-*.html
-```
-Keep the leading `"` in that pattern and scope it to `admin-*.html`. `school-admin-nav.js` and `district-admin-nav.js` are separate files on their own independent versions, and an unanchored `admin-nav\.js` matches both of them as a substring.
+Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v23, admin-shell.js v1; admin-common.js remains v16 because it was not changed. Do not accidentally match school-admin or district-admin assets.
 
 ## Deploy workflow
 

@@ -13,36 +13,36 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
-<link rel="stylesheet" href="admin-common.css?v=20">
+<link rel="stylesheet" href="admin-common.css?v=21">
 <style>
 .cal-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
 .cal-stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
 .cal-stat { background:var(--a-card); border-radius:12px; padding:14px 20px; min-width:110px; flex:1; }
 .cal-stat .val { font-size:26px; font-weight:700; color:var(--a-text); }
-.cal-stat .lbl { font-size:12px; color:var(--a-text-muted); margin-top:2px; }
+.cal-stat .lbl { font-size:12px; color:var(--a-text-soft); margin-top:2px; }
 .month-section { margin-bottom:24px; }
-.month-heading { font-size:15px; font-weight:700; color:var(--a-text-muted); text-transform:uppercase; letter-spacing:.05em; padding:10px 0 6px; border-bottom:1px solid var(--a-border); margin-bottom:0; }
+.month-heading { font-size:15px; font-weight:700; color:var(--a-text-soft); text-transform:uppercase; letter-spacing:.05em; padding:10px 0 6px; border-bottom:1px solid var(--a-border); margin-bottom:0; }
 table.cal-table { width:100%; border-collapse:collapse; }
-table.cal-table th { font-size:11px; font-weight:600; color:var(--a-text-muted); text-transform:uppercase; padding:8px 10px; text-align:left; border-bottom:1px solid var(--a-border); }
+table.cal-table th { font-size:11px; font-weight:600; color:var(--a-text-soft); text-transform:uppercase; padding:8px 10px; text-align:left; border-bottom:1px solid var(--a-border); }
 table.cal-table td { padding:8px 10px; font-size:13.5px; border-bottom:1px solid var(--a-border); vertical-align:top; }
 table.cal-table tr:last-child td { border-bottom:none; }
 table.cal-table tr:hover td { background:var(--a-bg); }
 .cal-date { white-space:nowrap; font-weight:600; }
-.cal-day { color:var(--a-text-muted); font-size:12px; }
-.cal-series { color:var(--a-text-muted); font-size:12.5px; }
+.cal-day { color:var(--a-text-soft); font-size:12px; }
+.cal-series { color:var(--a-text-soft); font-size:12.5px; }
 .pill-linked { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-success-soft,#d1fae5); color:var(--a-success,#065f46); }
 .pill-draft { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-warning-soft,#fef3c7); color:var(--a-warning,#92400e); }
-.pill-none { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-bg); color:var(--a-text-muted); border:1px solid var(--a-border); }
-.a-link { color:var(--a-primary); text-decoration:none; font-weight:500; }
+.pill-none { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--a-bg); color:var(--a-text-soft); border:1px solid var(--a-border); }
+.a-link { color:var(--a-accent); text-decoration:none; font-weight:500; }
 .a-link:hover { text-decoration:underline; }
-.sel-count { font-size:13px; color:var(--a-text-muted); }
+.sel-count { font-size:13px; color:var(--a-text-soft); }
 </style>
 </head>
-<body>
+<body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=22"></script>
+<script src="admin-nav.js?v=23"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -172,7 +172,7 @@ function renderCalendar() {
         '</td>' +
         '<td style="white-space:nowrap;">' + (hasPost
           ? '<a class="a-link" href="admin-blogs.html?post=' + e.blogPostId + '" target="_blank">Edit Post ↗</a>'
-          : '<span style="color:var(--a-text-muted);font-size:12px;">Select to create →</span>') +
+          : '<span style="color:var(--a-text-soft);font-size:12px;">Select to create →</span>') +
         '</td>' +
       '</tr>';
     });
@@ -247,5 +247,6 @@ function esc(s) {
 
 load();
 </script>
+<script src="admin-shell.js?v=1"></script>
 </body>
 </html>
