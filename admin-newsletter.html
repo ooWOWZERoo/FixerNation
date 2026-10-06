@@ -671,9 +671,15 @@ async function renderRolesAndAssignments(c) {
   body.innerHTML = '<span style="color:var(--a-text-soft);">Loading…</span>';
 
   const r = await fetch(`/api/newsletter/contacts/${c.id}/roles`, { credentials: 'include' });
+  // Stale-response guard: if the admin already closed this modal or opened
+  // a DIFFERENT contact while this fetch was in flight, editingContactId
+  // has moved on -- discard this response instead of overwriting whatever
+  // is now actually on screen with data for a contact that isn't it.
+  if (editingContactId !== c.id) return;
   if (fnHandleUnauthorized(r)) return;
   if (!r.ok) { body.innerHTML = '<span style="color:var(--a-danger);">Could not load roles.</span>'; return; }
   const d = await r.json();
+  if (editingContactId !== c.id) return;
 
   const roleBadge = d.role
     ? `<span class="a-pill a-pill-info" style="margin-bottom:10px;">${ROLE_LABELS[d.role] || d.role}</span>`
