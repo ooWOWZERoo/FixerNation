@@ -35,7 +35,12 @@
   .fin-top-items{width:100%; border-collapse:collapse;}
   .fin-top-items td{padding:8px 4px; font-size:13.5px; border-top:1px solid var(--a-border);}
   .fin-top-items td.num{text-align:right; color:var(--a-text-soft);}
-  .a-filter-select{padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px; font-family:inherit; background:var(--a-card); color:var(--a-text);}
+  .a-stat-grid-featured{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:28px;}
+  .a-stat-card-featured{background:var(--a-accent-soft); border:1px solid var(--a-accent); border-radius:var(--a-radius); padding:22px 24px; box-shadow:var(--a-shadow);}
+  .a-stat-card-featured .label{font-size:12.5px; font-weight:700; color:var(--a-accent-on-soft); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:10px;}
+  .a-stat-card-featured .value{font-size:36px; font-weight:800; color:var(--a-accent-on-soft);}
+  .a-stat-card-featured .delta{font-size:12.5px; color:var(--a-accent-on-soft); font-weight:700; margin-top:6px; opacity:0.85;}
+  @media (max-width:900px){ .a-stat-grid-featured{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -52,6 +57,22 @@
     </div>
 
     <div class="a-content">
+      <div class="a-stat-grid-featured">
+        <div class="a-stat-card-featured">
+          <div class="label">Sales Today</div>
+          <div class="value" id="finSalesToday">—</div>
+          <div class="delta" id="finOrdersToday"></div>
+        </div>
+        <div class="a-stat-card-featured">
+          <div class="label">Revenue Outstanding</div>
+          <div class="value" id="finRevenueOutstanding">—</div>
+        </div>
+        <div class="a-stat-card-featured">
+          <div class="label">Invoices Outstanding</div>
+          <div class="value" id="finInvoicesOutstanding">—</div>
+        </div>
+      </div>
+
       <div class="a-card" style="margin-bottom:24px;">
         <div class="a-card-head">
           <h2>Quick Actions</h2>
@@ -71,12 +92,7 @@
       </div>
       <div id="body-financialInsights">
 
-      <div class="a-stat-grid">
-        <div class="a-stat-card">
-          <div class="label">Sales Today</div>
-          <div class="value" id="finSalesToday">—</div>
-          <div class="delta" id="finOrdersToday"></div>
-        </div>
+      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
         <div class="a-stat-card">
           <div class="label">Sales This Week</div>
           <div class="value" id="finSalesWeek">—</div>
@@ -92,14 +108,10 @@
         </div>
       </div>
 
-      <div class="a-stat-grid">
+      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
         <div class="a-stat-card">
           <div class="label">Revenue Collected</div>
           <div class="value" id="finRevenueCollected">—</div>
-        </div>
-        <div class="a-stat-card">
-          <div class="label">Revenue Outstanding</div>
-          <div class="value" id="finRevenueOutstanding">—</div>
         </div>
         <div class="a-stat-card">
           <div class="label">Average Order Value</div>
@@ -111,15 +123,11 @@
         </div>
       </div>
 
-      <div class="a-stat-grid">
+      <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr);">
         <div class="a-stat-card">
           <div class="label">Purchase Order Invoices Issued</div>
           <div class="value" id="finInvoicesTotal">—</div>
           <div class="delta" id="finInvoicesBreakdown"></div>
-        </div>
-        <div class="a-stat-card">
-          <div class="label">Invoices Outstanding</div>
-          <div class="value" id="finInvoicesOutstanding">—</div>
         </div>
         <div class="a-stat-card">
           <div class="label">Quotes Issued (30d)</div>
