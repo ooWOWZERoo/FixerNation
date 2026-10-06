@@ -41,6 +41,15 @@
   .a-stat-card-featured .value{font-size:36px; font-weight:800; color:var(--a-accent-on-soft);}
   .a-stat-card-featured .delta{font-size:12.5px; color:var(--a-accent-on-soft); font-weight:700; margin-top:6px; opacity:0.85;}
   @media (max-width:900px){ .a-stat-grid-featured{grid-template-columns:1fr;} }
+  .a-needs-attention{border-left:4px solid var(--a-warning); margin-bottom:24px;}
+  .a-needs-attention.is-clear{border-left-color:var(--a-success);}
+  .na-row{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 2px; border-top:1px solid var(--a-border); text-decoration:none; color:var(--a-text);}
+  .na-row:first-child{border-top:none; padding-top:4px;}
+  .na-label{font-weight:600; font-size:14px;}
+  .na-meta{font-size:12.5px; color:var(--a-text-soft); margin-top:2px;}
+  .na-count{font-size:22px; font-weight:800; color:var(--a-warning); flex-shrink:0;}
+  .na-row:hover .na-label{color:var(--a-accent);}
+  .na-clear{padding:4px 2px 2px; color:var(--a-text-soft); font-size:14px;}
 </style>
 </head>
 <body>
@@ -71,6 +80,13 @@
           <div class="label">Invoices Outstanding</div>
           <div class="value" id="finInvoicesOutstanding">—</div>
         </div>
+      </div>
+
+      <div class="a-card a-needs-attention" id="needsAttentionCard">
+        <div class="a-card-head">
+          <h2>Needs Attention</h2>
+        </div>
+        <div id="needsAttentionBody"></div>
       </div>
 
       <div class="a-card" style="margin-bottom:24px;">
@@ -350,6 +366,53 @@ function renderSalesChart(salesOverTime) {
   }).join('');
 }
 
+function renderNeedsAttention(data) {
+  const card = document.getElementById('needsAttentionCard');
+  const body = document.getElementById('needsAttentionBody');
+  const items = [];
+
+  if (data.invoices.unpaid > 0) {
+    items.push({
+      href: 'admin-invoices.html?status=unpaid',
+      label: `${data.invoices.unpaid} unpaid invoice${data.invoices.unpaid === 1 ? '' : 's'}`,
+      meta: `${fnFormatCurrency(data.invoices.outstandingTotal)} outstanding`,
+      count: data.invoices.unpaid,
+    });
+  }
+  if (data.invoices.poPending > 0) {
+    items.push({
+      href: 'admin-invoices.html',
+      label: `${data.invoices.poPending} PO${data.invoices.poPending === 1 ? '' : 's'} not yet received`,
+      meta: 'License activation is on hold until marked received',
+      count: data.invoices.poPending,
+    });
+  }
+  if (data.quotes.expiringSoon > 0) {
+    items.push({
+      href: 'admin-quotes.html',
+      label: `${data.quotes.expiringSoon} quote${data.quotes.expiringSoon === 1 ? '' : 's'} expiring within 7 days`,
+      meta: 'Not yet accepted or closed',
+      count: data.quotes.expiringSoon,
+    });
+  }
+
+  if (!items.length) {
+    card.classList.add('is-clear');
+    body.innerHTML = '<div class="na-clear">✅ Nothing needs attention today.</div>';
+    return;
+  }
+  card.classList.remove('is-clear');
+  body.innerHTML = items.map(item => `
+    <a class="na-row" href="${item.href}">
+      <div>
+        <div class="na-label">${item.label}</div>
+        <div class="na-meta">${item.meta}</div>
+      </div>
+      <div class="na-count">${item.count}</div>
+    </a>
+  `).join('');
+}
+
 function renderBestItem(bestItem, topItems) {
   const best = document.getElementById('finBestItem');
   const table = document.querySelector('#finTopItemsTable tbody');
@@ -409,6 +472,7 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   document.getElementById('finQuotesTotal').textContent = data.quotes.total;
 
   renderBestItem(data.bestSellingItem, data.topItems);
+  renderNeedsAttention(data);
 });
 
 function formatPercent(value, decimals) {

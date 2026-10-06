@@ -112,12 +112,24 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
        SUM(status = 'unpaid') AS unpaid,
        SUM(status = 'paid') AS paid,
        SUM(status = 'cancelled') AS cancelled,
-       COALESCE(SUM(CASE WHEN status = 'unpaid' THEN total_cents ELSE 0 END),0) AS outstanding_cents
+       COALESCE(SUM(CASE WHEN status = 'unpaid' THEN total_cents ELSE 0 END),0) AS outstanding_cents,
+       SUM(po_received_date IS NULL AND status != 'cancelled') AS po_pending
      FROM invoices`
   );
 
   const [[quoteTotals]] = await pool.query(
     "SELECT COUNT(*) AS total, SUM(created_at >= NOW() - INTERVAL 30 DAY) AS last30 FROM quote_requests"
+  );
+
+  // Mirrors scripts/quote-expiring-reminder.js's own criteria for "still open
+  // and about to lapse" (minus its send-dedup column, since this is just a
+  // live count for the dashboard, not a send guard).
+  const [[quotesExpiringRow]] = await pool.query(
+    `SELECT COUNT(*) AS count FROM quote_requests
+     WHERE quote_valid_until BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+       AND accepted_at IS NULL
+       AND status != 'closed'
+       AND quote_sent_at IS NOT NULL`
   );
 
   const [[activeCustomersRow]] = await pool.query(
@@ -142,10 +154,12 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
       paid: invoiceTotals.paid || 0,
       cancelled: invoiceTotals.cancelled || 0,
       outstandingTotal: toDollars(invoiceTotals.outstanding_cents),
+      poPending: invoiceTotals.po_pending || 0,
     },
     quotes: {
       total: quoteTotals.total,
       last30Days: quoteTotals.last30 || 0,
+      expiringSoon: quotesExpiringRow.count || 0,
     },
     activeCustomersLast30Days: activeCustomersRow.count,
   });
