@@ -110,17 +110,33 @@ button, input, select, textarea{font-family:inherit;}
 .a-sidebar .a-logo .a-logo-pill{background:#fff; border-radius:11px; padding:8px 12px; display:flex; align-items:center;}
 .a-sidebar .a-logo .a-logo-img{height:48px; width:auto; display:block;}
 .a-nav-pinned{display:flex; flex-direction:column; gap:3px;}
-.a-nav-pinned a,.a-nav a{display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:999px; font-size:14px; font-weight:600; color:var(--a-sidebar-text);}
-.a-nav-pinned a .ic,.a-nav a .ic{width:18px; text-align:center; font-size:15px;}
+.a-nav-pinned a,.a-nav a{display:flex; align-items:center; gap:11px; padding:8px 12px; border-radius:999px; font-size:14px; font-weight:600; color:var(--a-sidebar-text);}
+.a-nav-pinned a .ic,.a-nav a .ic{width:28px; height:28px; flex-shrink:0; border-radius:8px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:14px; transition:background .15s ease;}
 .a-nav-pinned a:hover,.a-nav a:hover{background:var(--a-sidebar-soft); color:#fff;}
 .a-nav-pinned a.active,.a-nav a.active{background:var(--a-accent-fill); color:#fff;}
+.a-nav-pinned a.active .ic,.a-nav a.active .ic{background:rgba(255,255,255,0.18);}
 .a-nav{display:flex; flex-direction:column; gap:3px; flex:1; min-height:0; overflow-y:auto;}
 .a-nav-divider{border-top:1px solid rgba(255,255,255,0.1); margin:8px 12px;}
 .a-nav-section:first-child .a-nav-section-head{padding-top:6px;}
 .a-nav-section-head{display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:14px 16px 4px; margin:0; cursor:pointer; font-family:inherit;}
 .a-nav-section-head:hover .a-nav-section-label{opacity:.9;}
-.a-nav-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--a-sidebar-text); opacity:.6;}
+.a-nav-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--a-sidebar-text); opacity:.6; transition:color .15s ease;}
 .a-nav-section-arrow{font-size:10px; color:var(--a-sidebar-text); opacity:.5; transition:transform .15s ease;}
+
+/* Category color-coding — reuses the 3 existing brand hues (teal/coral/gold)
+   as a restrained identity per nav section, like color-coded tabs in a
+   filing system, rather than decoration. Community & Reports stay neutral
+   on purpose (cross-cutting/informational, not a transactional category) --
+   see .interface-design/system.md. */
+.a-nav-section[data-cat="sales"] .a-nav-section-label{color:#EBA657; opacity:1;}
+.a-nav-section[data-cat="sales"] .ic{background:rgba(235,166,87,0.16);}
+.a-nav-section[data-cat="sales"] a.active{background:#EBA657; color:#2A1F0A;}
+.a-nav-section[data-cat="sales"] a.active .ic{background:rgba(42,31,10,0.12);}
+.a-nav-section[data-cat="content"] .a-nav-section-label{color:var(--a-accent); opacity:1;}
+.a-nav-section[data-cat="content"] .ic{background:rgba(93,202,165,0.16);}
+.a-nav-section[data-cat="marketing"] .a-nav-section-label{color:#F0997B; opacity:1;}
+.a-nav-section[data-cat="marketing"] .ic{background:rgba(242,107,77,0.16);}
+.a-nav-section[data-cat="marketing"] a.active{background:#F26B4D; color:#fff;}
 .a-nav-section.collapsed .a-nav-section-arrow{transform:rotate(-90deg);}
 .a-nav-section.collapsed .a-nav-section-body{display:none;}
 .a-sidebar-foot{border-top:1px solid rgba(255,255,255,0.1); padding-top:14px; margin-top:14px; display:flex; flex-direction:column; gap:3px;}
@@ -143,6 +159,13 @@ button, input, select, textarea{font-family:inherit;}
 .a-stat-card .label{font-size:12.5px; font-weight:700; color:var(--a-text-soft); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:10px;}
 .a-stat-card .value{font-size:28px; font-weight:800;}
 .a-stat-card .delta{font-size:12.5px; color:var(--a-success); font-weight:700; margin-top:6px;}
+/* Compact tier -- for secondary, nice-to-know metrics grouped in larger
+   counts (5-6 up) where nothing individually needs daily attention. Pairs
+   with .a-stat-card-featured (hero tier) so weight follows importance
+   instead of one flat grid everywhere. */
+.a-stat-card-compact{padding:14px 16px;}
+.a-stat-card-compact .label{font-size:11px; margin-bottom:6px;}
+.a-stat-card-compact .value{font-size:20px;}
 
 .a-card{background:var(--a-card); border:1px solid var(--a-border); border-radius:var(--a-radius); box-shadow:var(--a-shadow); padding:24px; margin-bottom:24px;}
 .a-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px;}
@@ -174,6 +197,15 @@ table.a-table tr:hover td{background:var(--a-bg);}
 .a-pill-warning{background:var(--a-warning-soft); color:var(--a-warning);}
 .a-pill-neutral{background:var(--a-neutral-soft); color:var(--a-text-soft);}
 .a-pill-danger{background:var(--a-danger-soft); color:var(--a-danger);}
+
+/* Ledger stamp -- reserved for "this is now locked in" confirmed states
+   (Paid, PO Received, Converted), echoing the literal paperwork this
+   business runs on (purchase orders, signed invoices). .a-pill stays for
+   lighter-weight / in-progress statuses -- this is for the moment
+   something becomes final. See .interface-design/system.md. */
+.a-stamp{display:inline-flex; align-items:center; justify-content:center; width:50px; height:50px; border-radius:50%; border:2px solid currentColor; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.02em; line-height:1.15; text-align:center; transform:rotate(-7deg); flex-shrink:0; padding:4px; box-sizing:border-box;}
+.a-stamp-success{color:var(--a-success); background:var(--a-success-soft);}
+.a-stamp-accent{color:var(--a-accent); background:var(--a-accent-soft);}
 
 .a-row-actions{display:flex; gap:8px;}
 .a-icon-btn{width:32px; height:32px; border-radius:8px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px;}

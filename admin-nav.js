@@ -20,7 +20,7 @@
   }
 
   var SECTIONS = [
-    { key: 'sales-schools', label: 'Sales &amp; Schools', links: [
+    { key: 'sales-schools', cat: 'sales', label: 'Sales &amp; Schools', links: [
       link('admin-quotes.html',             '💬', 'Quotes'),
       link('admin-orders.html',             '📦', 'Orders'),
       link('admin-invoices.html',           '🧾', 'Invoices'),
@@ -30,13 +30,13 @@
       link('admin-affiliates.html',         '🤝', 'Affiliates'),
       link('admin-account-lookup.html',     '🔎', 'Account Lookup'),
     ]},
-    { key: 'content', label: 'Content', links: [
+    { key: 'content', cat: 'content', label: 'Content', links: [
       link('admin-curriculum.html',         '🎓', 'Curriculums'),
       link('admin-blogs.html',              '📝', 'Blogs'),
       link('admin-morning-boost.html',      '🌅', 'Morning Boost Studio'),
       link('admin-morning-boost-email.html','📨', 'Morning Boost Email'),
     ]},
-    { key: 'marketing-crm', label: 'Marketing &amp; CRM', links: [
+    { key: 'marketing-crm', cat: 'marketing', label: 'Marketing &amp; CRM', links: [
       link('admin-newsletter.html',         '✉️', 'CRM'),
       link('admin-campaigns.html',          '📣', 'Campaigns'),
       link('admin-automations.html',        '🤖', 'Automations'),
@@ -58,7 +58,8 @@
     // regardless of stored state — never hide the page you're on.
     var hasActive = s.links.some(function (html) { return html.indexOf('class="active"') !== -1; });
     var isCollapsed = !hasActive && collapsed.indexOf(s.key) !== -1;
-    return '<div class="a-nav-section' + (isCollapsed ? ' collapsed' : '') + '" data-key="' + s.key + '">' +
+    var catAttr = s.cat ? ' data-cat="' + s.cat + '"' : '';
+    return '<div class="a-nav-section' + (isCollapsed ? ' collapsed' : '') + '" data-key="' + s.key + '"' + catAttr + '>' +
       '<button type="button" class="a-nav-section-head" data-key="' + s.key + '">' +
         '<span class="a-nav-section-label">' + s.label + '</span>' +
         '<span class="a-nav-section-arrow">▾</span>' +

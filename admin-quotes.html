@@ -87,7 +87,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=20"></script>
+<script src="admin-nav.js?v=21"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -193,7 +193,10 @@
 <div class="a-modal-overlay" id="quoteModalOverlay" style="display:none;" onclick="if(event.target===this)closeModal()">
   <div class="a-modal" style="max-width:540px;">
     <div class="a-modal-head">
-      <h3 id="modalTitle">Quote Request</h3>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <h3 id="modalTitle">Quote Request</h3>
+        <span id="convertedStamp" class="a-stamp a-stamp-success" style="display:none;">Converted</span>
+      </div>
       <button class="a-modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="a-modal-body" id="modalBody"></div>
@@ -513,6 +516,7 @@ function openModal(id) {
     const titleSuffix = q.quote_number ? ` — #${q.quote_number}` : '';
     document.getElementById('modalTitle').textContent = titleLabel + titleSuffix;
   }
+  document.getElementById('convertedStamp').style.display = (!creatingQuote && q.status === 'converted') ? '' : 'none';
 
   const savedAmount = q.quoted_amount_cents != null ? (q.quoted_amount_cents / 100).toFixed(2) : '';
 
