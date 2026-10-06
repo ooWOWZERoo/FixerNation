@@ -26,6 +26,14 @@
   .fn-columns-menu{position:absolute; top:calc(100% + 6px); right:0; background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; box-shadow:var(--a-shadow); padding:10px 14px; z-index:50; min-width:180px;}
   .fn-columns-menu label{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0; cursor:pointer; white-space:nowrap;}
   .fn-columns-menu label input{margin:0;}
+  .a-tag-pill{display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 12px; border-radius:999px; background:var(--a-accent-soft); color:var(--a-accent-on-soft); font-size:12.5px; font-weight:600;}
+  .a-tag-pill button{border:none; background:none; cursor:pointer; color:inherit; opacity:0.65; font-size:13px; line-height:1; padding:2px;}
+  .a-tag-pill button:hover{opacity:1;}
+  .fn-groups-dropdown{position:absolute; top:calc(100% - 2px); left:0; right:0; background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; box-shadow:var(--a-shadow); z-index:60; max-height:220px; overflow-y:auto;}
+  .fn-groups-dropdown .opt{padding:9px 14px; font-size:13px; cursor:pointer;}
+  .fn-groups-dropdown .opt:hover{background:var(--a-bg);}
+  .fn-groups-dropdown .opt.empty{color:var(--a-text-soft); cursor:default;}
+  .fn-groups-dropdown .opt.empty:hover{background:none;}
 </style>
 </head>
 <body>
@@ -140,9 +148,12 @@
             <option>Unsubscribed</option>
           </select>
         </div>
-        <div class="a-field">
+        <div class="a-field" style="position:relative;">
           <label>Groups</label>
-          <div class="a-tag-row" id="contactGroupsRow"></div>
+          <div class="a-tag-row" id="contactGroupsSelected" style="margin-bottom:8px;"></div>
+          <input type="text" id="contactGroupsSearch" placeholder="+ Add a group…" autocomplete="off"
+                 oninput="onGroupsSearchInput()" onfocus="onGroupsSearchInput()" onblur="scheduleHideGroupsDropdown()">
+          <div id="contactGroupsDropdown" class="fn-groups-dropdown" style="display:none;"></div>
           <div class="a-note" id="contactGroupsEmptyNote" style="display:none;">No groups yet — create one with "Manage Groups" first.</div>
         </div>
         <div class="a-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Optional"></div>
@@ -531,18 +542,77 @@ async function deleteContact(id) {
   fnToast('Contact removed');
 }
 
+// Groups field: selected groups show as removable pills; a typeahead
+// below adds more. Replaces the old "every group as its own checkbox"
+// layout, which didn't scale once the group list grew past a handful (one
+// per county/batch, in practice) -- that rendered every unselected group
+// too, with no search, growing the modal's height without bound.
+let selectedGroupIds = [];
+
 function renderGroupCheckboxes(selectedIds) {
-  const row = document.getElementById('contactGroupsRow');
-  const selected = selectedIds || [];
-  row.innerHTML = groupsCache.map(g => {
-    const checked = selected.includes(g.id) ? 'checked' : '';
-    return `<label class="a-tag-check"><input type="checkbox" value="${g.id}" ${checked}> ${g.name}</label>`;
-  }).join('');
+  selectedGroupIds = (selectedIds || []).slice();
+  renderGroupPills();
+  document.getElementById('contactGroupsSearch').value = '';
+  hideGroupsDropdown();
   document.getElementById('contactGroupsEmptyNote').style.display = groupsCache.length === 0 ? 'block' : 'none';
 }
 
+function renderGroupPills() {
+  const row = document.getElementById('contactGroupsSelected');
+  row.innerHTML = selectedGroupIds.map(id => {
+    const g = groupsCache.find(x => x.id === id);
+    if (!g) return '';
+    return `<span class="a-tag-pill">${esc(g.name)}<button type="button" title="Remove" onclick="removeGroup(${id})">✕</button></span>`;
+  }).join('') || '<span class="a-note" style="margin:0;">No groups assigned yet.</span>';
+}
+
+function addGroup(id) {
+  if (!selectedGroupIds.includes(id)) selectedGroupIds.push(id);
+  renderGroupPills();
+  const search = document.getElementById('contactGroupsSearch');
+  search.value = '';
+  search.focus();
+  onGroupsSearchInput();
+}
+
+function removeGroup(id) {
+  selectedGroupIds = selectedGroupIds.filter(x => x !== id);
+  renderGroupPills();
+}
+
+function onGroupsSearchInput() {
+  const q = document.getElementById('contactGroupsSearch').value.trim().toLowerCase();
+  const available = groupsCache.filter(g => !selectedGroupIds.includes(g.id));
+  const matches = (q ? available.filter(g => g.name.toLowerCase().includes(q)) : available).slice(0, 25);
+
+  const dropdown = document.getElementById('contactGroupsDropdown');
+  if (!groupsCache.length) {
+    dropdown.innerHTML = '<div class="opt empty">No groups exist yet — create one with "Manage Groups" first.</div>';
+  } else if (!available.length) {
+    dropdown.innerHTML = '<div class="opt empty">All groups already assigned.</div>';
+  } else if (!matches.length) {
+    dropdown.innerHTML = '<div class="opt empty">No matching groups.</div>';
+  } else {
+    dropdown.innerHTML = matches.map(g => `<div class="opt" onmousedown="event.preventDefault(); addGroup(${g.id})">${esc(g.name)}</div>`).join('');
+  }
+  dropdown.style.display = 'block';
+}
+
+let groupsDropdownHideTimer = null;
+function scheduleHideGroupsDropdown() {
+  // A plain blur fires before the dropdown option's own click would --
+  // the matching onmousedown above (with preventDefault) stops that blur
+  // from happening at all when the click is on an option, so this timer
+  // only ever actually fires for a genuine click-away.
+  groupsDropdownHideTimer = setTimeout(hideGroupsDropdown, 150);
+}
+function hideGroupsDropdown() {
+  clearTimeout(groupsDropdownHideTimer);
+  document.getElementById('contactGroupsDropdown').style.display = 'none';
+}
+
 function getCheckedGroupIds() {
-  return Array.from(document.querySelectorAll('#contactGroupsRow input:checked')).map(cb => Number(cb.value));
+  return selectedGroupIds.slice();
 }
 
 async function openContactModal() {
