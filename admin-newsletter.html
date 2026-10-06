@@ -583,7 +583,13 @@ function removeGroup(id) {
 function onGroupsSearchInput() {
   const q = document.getElementById('contactGroupsSearch').value.trim().toLowerCase();
   const available = groupsCache.filter(g => !selectedGroupIds.includes(g.id));
-  const matches = (q ? available.filter(g => g.name.toLowerCase().includes(q)) : available).slice(0, 25);
+  // No cap here -- the dropdown's own max-height + overflow-y:auto already
+  // keeps this visually bounded with a scrollbar. A fixed slice(0, N) used
+  // to apply even to the unfiltered (no search text yet) list, silently
+  // hiding every group alphabetically past the Nth -- scrolling couldn't
+  // reveal them because they were never in the DOM, not because there was
+  // a backend limit (there isn't; GET /groups returns everything).
+  const matches = q ? available.filter(g => g.name.toLowerCase().includes(q)) : available;
 
   const dropdown = document.getElementById('contactGroupsDropdown');
   if (!groupsCache.length) {
@@ -681,8 +687,23 @@ async function renderRolesAndAssignments(c) {
   const d = await r.json();
   if (editingContactId !== c.id) return;
 
-  const roleBadge = d.role
-    ? `<span class="a-pill a-pill-info" style="margin-bottom:10px;">${ROLE_LABELS[d.role] || d.role}</span>`
+  // site_users.role is a single column that only ever holds whatever role
+  // was assigned MOST RECENTLY -- a person who's a school admin AND later
+  // became a district admin shows role:'district_admin' even though the
+  // school admin assignment is still fully active (as school_license_admins
+  // still has their row). Showing just that one value implied it was their
+  // ONLY role. Derive the real set from which sections actually have data
+  // instead; only fall back to the raw role column for values that aren't
+  // derivable from any of the three arrays (admin/parent/affiliate).
+  const roleLabels = [];
+  if ((d.schoolAdminRoles || []).length) roleLabels.push('School License Administrator');
+  if ((d.districtAdminRoles || []).length) roleLabels.push('District Administrator');
+  if ((d.teacherSeats || []).length) roleLabels.push('Teacher');
+  if (d.role && !['teacher', 'school_license_admin', 'district_admin'].includes(d.role)) {
+    roleLabels.push(ROLE_LABELS[d.role] || d.role);
+  }
+  const roleBadge = roleLabels.length
+    ? roleLabels.map(label => `<span class="a-pill a-pill-info" style="margin-bottom:10px;">${esc(label)}</span>`).join(' ') + ' '
     : '';
   // Curriculum level is a per-person preference (set once, not per seat),
   // so it's shown once here rather than repeated on every teacher seat row.
