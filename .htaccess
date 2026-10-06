@@ -3,3 +3,15 @@ RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 LimitRequestBody 268435456
+
+# HTML documents had no Cache-Control header at all, so each page's cache
+# entry was governed purely by browser heuristics -- independent per page,
+# which is why a hard refresh on one page never fixed a different page that
+# looked identically stale. CSS/JS already get a 7-day cache from LiteSpeed's
+# own defaults and are safely cache-busted via ?v=N query strings; HTML itself
+# has no such versioning, so it must always revalidate instead.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
