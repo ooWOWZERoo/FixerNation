@@ -41,11 +41,11 @@
       link('admin-campaigns.html',          '📣', 'Campaigns'),
       link('admin-automations.html',        '🤖', 'Automations'),
     ]},
-    { key: 'community', label: 'Community', links: [
+    { key: 'community', cat: 'neutral', label: 'Community', links: [
       link('admin-social.html',             '👥', 'Social'),
       link('admin-content-safety.html',     '🛡️', 'Content Safety'),
     ]},
-    { key: 'reports', label: 'Reports', links: [
+    { key: 'reports', cat: 'neutral', label: 'Reports', links: [
       link('admin-downloads.html',          '⬇️', 'Downloads'),
       link('admin-analytics.html',          '👣', 'Visitor Paths'),
     ]},
@@ -80,6 +80,20 @@
       '<a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>' +
       '<a href="#" onclick="if(typeof fnLogout===\'function\')fnLogout();return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>' +
     '</div>';
+
+  // Every click is a full page load (no client-side routing), so without
+  // this the nav's own scroll position resets to the top on every single
+  // navigation -- annoying once the link list no longer fits one screen.
+  // sessionStorage (not localStorage) so it clears with the tab/session.
+  var navEl = aside.querySelector('.a-nav');
+  if (navEl) {
+    var SCROLL_KEY = 'fnAdminNavScrollTop';
+    var savedScroll = parseInt(sessionStorage.getItem(SCROLL_KEY), 10);
+    if (!isNaN(savedScroll)) navEl.scrollTop = savedScroll;
+    navEl.addEventListener('scroll', function () {
+      sessionStorage.setItem(SCROLL_KEY, String(navEl.scrollTop));
+    });
+  }
 
   aside.querySelectorAll('.a-nav-section-head').forEach(function (head) {
     head.addEventListener('click', function () {

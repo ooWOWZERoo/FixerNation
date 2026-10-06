@@ -25,7 +25,9 @@ Reuses the 3 existing brand hues as a per-section identity in `admin-nav.js`'s `
 - `sales` (Sales & Schools) → gold `#EBA657`
 - `content` (Content) → teal, `var(--a-accent)`
 - `marketing` (Marketing & CRM) → coral `#F26B4D` / `#F0997B` label tint
-- Community & Reports → **no `cat`**, deliberately neutral. These are cross-cutting/informational, not transactional — forcing a 4th hue here would be decoration, not meaning (see "gray for structural/neutral" in the craft discipline).
+- Community & Reports → `cat: 'neutral'`, deliberately hue-less. These are cross-cutting/informational, not transactional — forcing a 4th hue here would be decoration, not meaning (see "gray for structural/neutral" in the craft discipline).
+
+**Bug found 2026-10-06, fixed same day:** leaving `cat` unset entirely for Community/Reports (rather than an explicit `'neutral'` value) meant their active-link fill silently inherited the global default (`var(--a-accent-fill)`, teal) — the same hue as Content — while their section label stayed plain dim gray. Visiting those pages showed a teal-highlighted active link under an uncolored label, which read as broken, not restrained. Fixed by giving `neutral` its own explicit CSS branch (`[data-cat="neutral"]`): brighter label opacity (`.85` vs the `.6` default) and a white-overlay active-fill that doesn't borrow any category's hue. Lesson: "intentionally no styling" needs its own explicit rule, not an implicit fallthrough to whatever the global default happens to be — the global default can coincidentally match a *different*, real category.
 
 This one shared-file change reaches all 23 `admin-nav.js`-driven pages at once — the highest-leverage single edit in this rollout. Bump `admin-nav.js?v=N` in every admin HTML file whenever this file changes (see CLAUDE.md).
 

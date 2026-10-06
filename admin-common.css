@@ -137,6 +137,15 @@ button, input, select, textarea{font-family:inherit;}
 .a-nav-section[data-cat="marketing"] .a-nav-section-label{color:#F0997B; opacity:1;}
 .a-nav-section[data-cat="marketing"] .ic{background:rgba(242,107,77,0.16);}
 .a-nav-section[data-cat="marketing"] a.active{background:#F26B4D; color:#fff;}
+.a-nav-section[data-cat="content"] a.active{background:var(--a-accent-fill); color:#fff;}
+/* Community & Reports are deliberately hue-less (cross-cutting, not
+   transactional -- see system.md) but still need their OWN explicit
+   treatment: without this, their active link silently inherited the
+   global default teal fill -- the same hue as Content -- while their
+   label stayed dim gray, a mismatch that read as broken, not restrained. */
+.a-nav-section[data-cat="neutral"] .a-nav-section-label{opacity:.85;}
+.a-nav-section[data-cat="neutral"] a.active{background:rgba(255,255,255,0.16); color:#fff;}
+.a-nav-section[data-cat="neutral"] a.active .ic{background:rgba(255,255,255,0.1);}
 .a-nav-section.collapsed .a-nav-section-arrow{transform:rotate(-90deg);}
 .a-nav-section.collapsed .a-nav-section-body{display:none;}
 .a-sidebar-foot{border-top:1px solid rgba(255,255,255,0.1); padding-top:14px; margin-top:14px; display:flex; flex-direction:column; gap:3px;}
