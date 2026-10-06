@@ -30,7 +30,7 @@ async function attachGroups(contacts) {
 async function attachSiteUserInfo(contacts) {
   if (contacts.length === 0) return contacts;
   const emails = contacts.map(c => c.email);
-  const [rows] = await pool.query('SELECT id, email, email_verified FROM site_users WHERE email IN (?)', [emails]);
+  const [rows] = await pool.query('SELECT id, email, email_verified, role FROM site_users WHERE email IN (?)', [emails]);
   const byEmail = {};
   rows.forEach(r => { byEmail[r.email.toLowerCase()] = r; });
   return contacts.map(c => ({ ...c, siteUser: byEmail[c.email.toLowerCase()] || null }));
@@ -62,6 +62,7 @@ function serialize(row) {
     siteUserId: row.siteUser ? row.siteUser.id : null,
     hasAccount: !!row.siteUser,
     accountVerified: row.siteUser ? !!row.siteUser.email_verified : false,
+    role: row.siteUser ? row.siteUser.role : null,
   };
 }
 
@@ -182,6 +183,66 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
   const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;
   await sendVerificationEmail({ to: contact.email, firstName: user.first_name, verifyUrl });
   res.json({ ok: true });
+});
+
+// GET /api/newsletter/contacts/:id/roles — everything role-specific about
+// this contact that the generic CRM card otherwise has no visibility into:
+// their site account role, every School License Administrator assignment
+// (which purchase/school, permission level), every District Administrator
+// assignment (which district), and every teacher seat they hold or have
+// been invited to (grade/title/department/subject, registered vs pending).
+// All three admin tables are keyed by site_users.id, not by this contact's
+// own id — newsletter_contacts and site_users are only ever linked by
+// matching email, never a direct FK — so this is a contact-id entry point
+// that resolves to a site_user first, then fans out from there.
+router.get('/contacts/:id/roles', requireAuth, async (req, res) => {
+  const [[contact]] = await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [req.params.id]);
+  if (!contact) return res.status(404).json({ error: 'Contact not found' });
+
+  const [[siteUser]] = await pool.query('SELECT id, role FROM site_users WHERE email = ?', [contact.email]);
+  if (!siteUser) {
+    return res.json({ role: null, schoolAdminRoles: [], districtAdminRoles: [], teacherSeats: [] });
+  }
+
+  const [schoolAdminRows] = await pool.query(
+    `SELECT sla.id, sla.permission_level, sla.is_active, sla.notes, sla.created_at,
+            p.id AS purchase_id, p.school_domain, lp.name AS license_name
+     FROM school_license_admins sla
+     JOIN purchases p ON p.id = sla.purchase_id
+     LEFT JOIN license_products lp ON lp.id = p.license_product_id
+     WHERE sla.site_user_id = ? ORDER BY sla.created_at DESC`,
+    [siteUser.id]
+  );
+
+  const [districtAdminRows] = await pool.query(
+    `SELECT dla.id, dla.is_active, dla.notes, dla.created_at, d.id AS district_id, d.name AS district_name
+     FROM district_license_admins dla
+     JOIN districts d ON d.id = dla.district_id
+     WHERE dla.site_user_id = ? ORDER BY dla.created_at DESC`,
+    [siteUser.id]
+  );
+
+  // Matches by registered_site_user_id (already claimed) OR invited_email
+  // (still pending) -- a teacher can hold a seat they haven't registered
+  // for yet, which has no site_user_id to match on at all.
+  const [teacherSeatRows] = await pool.query(
+    `SELECT ls.id, ls.status, p.id AS purchase_id, p.school_domain, lp.name AS license_name,
+            si.grade_level, si.role_title, si.department, si.subject_area
+     FROM license_seats ls
+     JOIN purchases p ON p.id = ls.purchase_id
+     LEFT JOIN license_products lp ON lp.id = p.license_product_id
+     LEFT JOIN school_invitations si ON si.seat_id = ls.id
+     WHERE ls.registered_site_user_id = ? OR ls.invited_email = ?
+     ORDER BY ls.id DESC`,
+    [siteUser.id, contact.email]
+  );
+
+  res.json({
+    role: siteUser.role,
+    schoolAdminRoles: schoolAdminRows,
+    districtAdminRoles: districtAdminRows,
+    teacherSeats: teacherSeatRows,
+  });
 });
 
 // Auto-assigns a contact to the correct system group(s) based on what they

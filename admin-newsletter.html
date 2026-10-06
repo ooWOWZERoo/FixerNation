@@ -148,6 +148,10 @@
         <div id="contactAccountStatus" style="font-size:13.5px; margin-bottom:10px;"></div>
         <div class="a-row-actions" id="contactAccountActions"></div>
       </div>
+      <div class="a-field" id="contactRolesField" style="display:none;">
+        <label>Roles &amp; Assignments</label>
+        <div id="contactRolesBody" style="font-size:13px;"></div>
+      </div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeContactModal()">Cancel</button>
@@ -261,6 +265,8 @@
 <script>
 fnRequireAuth();
 
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 let searchTerm = '';
 let filterGroupId = '';
 let filterStatus = '';
@@ -291,8 +297,13 @@ const CONTACT_COLUMNS = [
   { key: 'signupDate', label: 'Signed Up', sortable: true },
   { key: 'source', label: 'Source', sortable: true },
   { key: 'status', label: 'Status', sortable: true },
+  { key: 'role', label: 'Role', sortable: true },
   { key: 'groups', label: 'Groups', sortable: false },
 ];
+const ROLE_LABELS_SHORT = {
+  teacher: 'Teacher', school_license_admin: 'School Admin', district_admin: 'District Admin',
+  admin: 'FNE Admin', parent: 'Parent', affiliate: 'Affiliate',
+};
 const COLUMNS_STORAGE_KEY = 'fnContactsVisibleColumns';
 
 function loadVisibleColumns() {
@@ -469,6 +480,7 @@ function applyFiltersAndRender() {
       signupDate: `<td>${fnFormatDate(c.signupDate)}</td>`,
       source: `<td><span class="a-pill a-pill-neutral">${c.source}</span></td>`,
       status: `<td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>`,
+      role: `<td>${c.role ? `<span class="a-pill a-pill-neutral">${ROLE_LABELS_SHORT[c.role] || c.role}</span>` : '—'}</td>`,
       groups: `<td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>`,
     };
     tr.innerHTML = CONTACT_COLUMNS.filter(col => visibleColumns.has(col.key)).map(col => cellsByKey[col.key]).join('') + `
@@ -560,7 +572,78 @@ async function editContact(id) {
   groupsCache = await fetchGroups();
   renderGroupCheckboxes((c.groups || []).map(g => g.id));
   renderContactAccountField(c);
+  renderRolesAndAssignments(c);
   document.getElementById('contactModalOverlay').classList.add('show');
+}
+
+const ROLE_LABELS = {
+  teacher: 'Teacher', school_license_admin: 'School License Administrator',
+  district_admin: 'District Administrator', admin: 'FNE Admin',
+  parent: 'Parent', affiliate: 'Affiliate',
+};
+
+// Fills in everything the generic contact fields can't show: account role,
+// every School/District Administrator assignment, and every teacher seat
+// held or invited to -- none of these join to newsletter_contacts directly
+// (they're all keyed off site_users, linked to a contact only by matching
+// email), so the central CRM card never showed any of it before this.
+async function renderRolesAndAssignments(c) {
+  const field = document.getElementById('contactRolesField');
+  const body = document.getElementById('contactRolesBody');
+  if (!c.hasAccount) { field.style.display = 'none'; return; }
+  field.style.display = 'block';
+  body.innerHTML = '<span style="color:var(--a-text-soft);">Loading…</span>';
+
+  const r = await fetch(`/api/newsletter/contacts/${c.id}/roles`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { body.innerHTML = '<span style="color:var(--a-danger);">Could not load roles.</span>'; return; }
+  const d = await r.json();
+
+  const roleBadge = d.role
+    ? `<span class="a-pill a-pill-info" style="margin-bottom:10px;">${ROLE_LABELS[d.role] || d.role}</span>`
+    : '';
+
+  const schoolRows = (d.schoolAdminRoles || []).map(sa => `
+    <div class="a-repeat-row" style="align-items:flex-start;">
+      <div class="info" style="flex:1;">
+        <div class="name">🏫 ${esc(sa.license_name) || 'School License'}${sa.school_domain ? ' — ' + esc(sa.school_domain) : ''}
+          <span class="a-pill ${sa.is_active ? 'a-pill-success' : 'a-pill-neutral'}" style="margin-left:6px;">${esc(sa.permission_level)}${sa.is_active ? '' : ' · inactive'}</span>
+        </div>
+        ${sa.notes ? `<div class="a-note">${esc(sa.notes)}</div>` : ''}
+      </div>
+      <a class="a-btn a-btn-outline" style="padding:4px 10px; font-size:11.5px;" href="admin-school-admins.html" target="_blank">Manage</a>
+    </div>`).join('');
+
+  const districtRows = (d.districtAdminRoles || []).map(da => `
+    <div class="a-repeat-row" style="align-items:flex-start;">
+      <div class="info" style="flex:1;">
+        <div class="name">🗺️ ${esc(da.district_name)}
+          <span class="a-pill ${da.is_active ? 'a-pill-success' : 'a-pill-neutral'}" style="margin-left:6px;">${da.is_active ? 'active' : 'inactive'}</span>
+        </div>
+        ${da.notes ? `<div class="a-note">${esc(da.notes)}</div>` : ''}
+      </div>
+      <a class="a-btn a-btn-outline" style="padding:4px 10px; font-size:11.5px;" href="admin-districts.html" target="_blank">Manage</a>
+    </div>`).join('');
+
+  const teacherRows = (d.teacherSeats || []).map(ts => {
+    const detail = [ts.role_title, ts.department, ts.subject_area, ts.grade_level ? `Grade: ${ts.grade_level}` : null].filter(Boolean).map(esc).join(' · ');
+    const pill = ts.status === 'registered' ? '<span class="a-pill a-pill-success">Registered</span>' : '<span class="a-pill a-pill-warning">Pending</span>';
+    return `
+    <div class="a-repeat-row" style="align-items:flex-start;">
+      <div class="info" style="flex:1;">
+        <div class="name">🍎 ${esc(ts.license_name) || 'License'}${ts.school_domain ? ' — ' + esc(ts.school_domain) : ''} ${pill}</div>
+        ${detail ? `<div class="a-note">${detail}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const sections = [
+    schoolRows ? `<div style="margin-top:8px;"><div class="a-note" style="margin-bottom:4px;">School License Administrator</div>${schoolRows}</div>` : '',
+    districtRows ? `<div style="margin-top:8px;"><div class="a-note" style="margin-bottom:4px;">District Administrator</div>${districtRows}</div>` : '',
+    teacherRows ? `<div style="margin-top:8px;"><div class="a-note" style="margin-bottom:4px;">Teacher seat(s)</div>${teacherRows}</div>` : '',
+  ].filter(Boolean).join('');
+
+  body.innerHTML = roleBadge + (sections || '<div class="a-note">No School/District Administrator assignments or teacher seats found for this account.</div>');
 }
 
 function resendVerificationButtonHtml(c) {
