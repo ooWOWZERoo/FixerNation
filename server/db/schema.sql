@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS site_users (
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NULL, -- nullable since scripts/alter-add-microsoft-oauth.js on existing installs; a Microsoft-only account never sets one
+  microsoft_oid VARCHAR(255) NULL UNIQUE, -- added by scripts/alter-add-microsoft-oauth.js on existing installs; the account's linked Microsoft identity (account.homeAccountId), not just its email
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
   role VARCHAR(32) NOT NULL DEFAULT 'teacher', -- 'teacher' | 'school_license_admin' | 'district_admin' | 'admin' | 'parent' | 'affiliate' — added by scripts/alter-school-admin.js on existing installs
   session_invalidated_at DATETIME NULL, -- added by scripts/alter-add-session-invalidated-at.js on existing installs; JWTs issued before this timestamp are rejected

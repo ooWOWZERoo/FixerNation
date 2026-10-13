@@ -49,6 +49,35 @@ function fnAuthShowLoginForm() {
   document.getElementById('fnAuthLoginView').style.display = 'block';
 }
 
+function fnAuthStartMicrosoft() {
+  const next = encodeURIComponent(location.pathname + location.search);
+  window.location.href = '/api/site-auth/microsoft/start?next=' + next;
+}
+
+// If the Microsoft sign-in round trip just failed, show why and open the
+// modal — runs immediately (not on DOMContentLoaded) so the query param is
+// stripped before the user can see/bookmark/refresh into it again.
+(function () {
+  const params = new URLSearchParams(location.search);
+  const msError = params.get('msError');
+  if (!msError) return;
+  const MS_ERROR_MESSAGES = {
+    not_configured: 'Microsoft sign-in isn’t set up yet.',
+    denied: 'Microsoft sign-in was cancelled.',
+    state: 'Your Microsoft sign-in attempt expired. Please try again.',
+    token: 'Could not complete Microsoft sign-in. Please try again.',
+    profile: 'Could not read your Microsoft account details. Please try again.',
+    noemail: 'That Microsoft account has no email address Fixer Nation can use.',
+  };
+  params.delete('msError');
+  const cleanQuery = params.toString();
+  history.replaceState({}, '', location.pathname + (cleanQuery ? '?' + cleanQuery : ''));
+  document.addEventListener('DOMContentLoaded', function () {
+    fnAuthOpenModal('login');
+    fnAuthShowMessage(MS_ERROR_MESSAGES[msError] || 'Microsoft sign-in failed. Please try again.', 'error');
+  });
+})();
+
 function fnAuthOpenModal(tab) {
   fnAuthClearMessage();
   document.getElementById('fnAuthLoginForm').reset();

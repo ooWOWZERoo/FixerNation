@@ -108,7 +108,21 @@ STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 
 ELEVENLABS_API_KEY=      # not yet live; blocks Morning Boost voice-over
+
+MS_OAUTH_CLIENT_ID=      # not yet live; blocks "Continue with Microsoft" site-user sign-in
+MS_OAUTH_CLIENT_SECRET=
+MS_OAUTH_REDIRECT_URI=   # must exactly match the redirect URI registered in Azure, e.g. https://fixernationeducation.com/api/site-auth/microsoft/callback
 ```
+
+## Microsoft sign-in (Entra ID / Azure AD)
+
+"Continue with Microsoft" in the shared auth modal (`site-auth.js` + the modal markup duplicated across 23 public HTML pages — same `fnAuthModalOverlay` maintenance pattern as everything else there) lets any `site_users` account — teacher, parent, school/district admin — sign in via their Microsoft 365 or personal Microsoft account instead of (or in addition to) a password. Routes live in `server/routes/site-auth.js` (`/microsoft/start`, `/microsoft/callback`); the MSAL client setup is in `server/lib/microsoft-oauth.js`.
+
+Account linking is by `microsoft_oid` first (returning user), then by email (links to an existing password account and auto-verifies it), then falls back to creating a new account. Linking never removes the password login path — both work afterward. `site_users.password_hash` is nullable for Microsoft-only accounts; `change-password` explicitly guards against `bcrypt.compare` on a null hash.
+
+The Entra app registration **must** be multi-tenant ("accounts in any organizational directory and personal Microsoft accounts") — FNE serves many separate school districts, each with its own tenant, plus parents who may only have a personal account. A single-tenant registration would only work for one specific organization.
+
+"Coded but not live until configured" (same pattern as `ELEVENLABS_API_KEY`) — `server/lib/microsoft-oauth.js`'s `isConfigured()` guards both routes, so the button degrades to a clear error toast instead of a crash until the real Azure credentials are in `server/.env`. Needs `npm install --prefix server` (`@azure/msal-node`), `node scripts/alter-add-microsoft-oauth.js`, and a Node app restart before going live.
 
 ## Admin navigation and Mission Control visual system
 

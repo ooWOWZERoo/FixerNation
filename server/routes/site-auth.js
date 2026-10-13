@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
@@ -15,6 +16,7 @@ const { addTeacherToSocialGroups } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
+const msOAuth = require('../lib/microsoft-oauth');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
@@ -62,6 +64,40 @@ function setSiteSessionCookie(res, user) {
   });
 }
 
+// If a license seat (single or group) was invited to this exact email,
+// claims it on the new account's behalf — only for paid purchases, and
+// domain must match for group licenses (school_domain NULL means
+// single/book with no domain constraint). Shared by password signup and
+// Microsoft sign-in so a brand-new Microsoft account isn't treated worse
+// than a password one — both create the same kind of account afterward.
+async function claimPendingSeatsAndSubscribe(userId, email, firstName, lastName, source) {
+  const [existingContact] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [email]);
+  if (!existingContact[0]) {
+    await pool.query(
+      'INSERT INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, ?, ?)',
+      [`${firstName} ${lastName}`.trim(), email, source, 'Subscribed']
+    );
+  }
+
+  const [seatResult] = await pool.query(
+    `UPDATE license_seats ls
+     JOIN purchases p ON p.id = ls.purchase_id
+     SET ls.status = 'registered', ls.registered_site_user_id = ?, ls.registered_at = NOW()
+     WHERE ls.invited_email = ?
+       AND ls.status = 'pending'
+       AND p.payment_status = 'paid'
+       AND (p.school_domain IS NULL OR LOWER(SUBSTRING_INDEX(?, '@', -1)) = LOWER(p.school_domain))`,
+    [userId, email, email]
+  );
+  if (seatResult.affectedRows > 0) {
+    try { await addTeacherToSocialGroups(userId); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
+    pool.query(
+      "UPDATE school_invitations SET status = 'registered' WHERE invited_email = ? AND status NOT IN ('revoked','registered','expired')",
+      [email.toLowerCase()]
+    ).catch(e => console.error('invitation status update failed:', e.message));
+  }
+}
+
 router.post('/signup', async (req, res) => {
   const b = req.body || {};
   const firstName = (b.firstName || '').trim();
@@ -87,43 +123,118 @@ router.post('/signup', async (req, res) => {
     [firstName, lastName, email, passwordHash]
   );
 
-  // Add to the CRM contact list, per the site's newsletter policy — but don't
-  // clobber an existing contact's data if this email is already there.
-  const [existingContact] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [email]);
-  if (!existingContact[0]) {
-    await pool.query(
-      'INSERT INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, ?, ?)',
-      [`${firstName} ${lastName}`, email, 'Homepage', 'Subscribed']
-    );
-  }
-
-  // If a license seat (single or group) was invited to this exact email,
-  // signing up claims it — only for paid purchases, and domain must match for
-  // group licenses (school_domain NULL means single/book with no domain constraint).
-  const [seatResult] = await pool.query(
-    `UPDATE license_seats ls
-     JOIN purchases p ON p.id = ls.purchase_id
-     SET ls.status = 'registered', ls.registered_site_user_id = ?, ls.registered_at = NOW()
-     WHERE ls.invited_email = ?
-       AND ls.status = 'pending'
-       AND p.payment_status = 'paid'
-       AND (p.school_domain IS NULL OR LOWER(SUBSTRING_INDEX(?, '@', -1)) = LOWER(p.school_domain))`,
-    [result.insertId, email, email]
-  );
-  if (seatResult.affectedRows > 0) {
-    try { await addTeacherToSocialGroups(result.insertId); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
-    // Mark any school invitations for this email as registered
-    pool.query(
-      "UPDATE school_invitations SET status = 'registered' WHERE invited_email = ? AND status NOT IN ('revoked','registered','expired')",
-      [email.toLowerCase()]
-    ).catch(e => console.error('invitation status update failed:', e.message));
-  }
+  await claimPendingSeatsAndSubscribe(result.insertId, email, firstName, lastName, 'Homepage');
 
   const verifyToken = await createToken(result.insertId, 'verify', 24 * 60 * 60 * 1000);
   const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;
   await sendVerificationEmail({ to: email, firstName, verifyUrl });
 
   res.status(201).json({ ok: true, message: 'Check your email to verify your account before logging in.' });
+});
+
+// --- Microsoft sign-in (Entra ID / Azure AD) ---
+// "Continue with Microsoft" in the shared auth modal. Covers teachers,
+// parents, and school/district admins alike — they're all site_users rows,
+// so there's nothing audience-specific about this flow.
+//
+// Account linking: matched first by microsoft_oid (returning user), then by
+// email (links to an existing password account and auto-verifies it, since
+// Microsoft already verified the email itself), then falls back to creating
+// a brand-new account. Linking never removes the password path — an account
+// can be signed into with either method afterward.
+const MS_STATE_COOKIE = 'fn_ms_oauth_state';
+
+function appendQueryError(path, code) {
+  return path + (path.includes('?') ? '&' : '?') + 'msError=' + code;
+}
+
+router.get('/microsoft/start', async (req, res) => {
+  const returnTo = typeof req.query.next === 'string' && req.query.next.startsWith('/') ? req.query.next : '/index.html';
+  if (!msOAuth.isConfigured()) {
+    return res.redirect(appendQueryError(returnTo, 'not_configured'));
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  res.cookie(MS_STATE_COOKIE, JSON.stringify({ state, returnTo }), {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 10 * 60 * 1000, // just long enough for the Microsoft round trip
+  });
+
+  const authUrl = await msOAuth.getMsalClient().getAuthCodeUrl({
+    scopes: msOAuth.SCOPES,
+    redirectUri: process.env.MS_OAUTH_REDIRECT_URI,
+    state,
+  });
+  res.redirect(authUrl);
+});
+
+router.get('/microsoft/callback', async (req, res) => {
+  let stateCookie = null;
+  try { stateCookie = JSON.parse(req.cookies[MS_STATE_COOKIE] || ''); } catch { /* malformed/missing — treated as absent below */ }
+  res.clearCookie(MS_STATE_COOKIE);
+  const fallbackReturnTo = (stateCookie && stateCookie.returnTo) || '/index.html';
+
+  if (req.query.error) {
+    return res.redirect(appendQueryError(fallbackReturnTo, 'denied'));
+  }
+  if (!stateCookie || !req.query.state || req.query.state !== stateCookie.state) {
+    return res.redirect(appendQueryError('/index.html', 'state'));
+  }
+
+  let tokenResult;
+  try {
+    tokenResult = await msOAuth.getMsalClient().acquireTokenByCode({
+      code: req.query.code,
+      scopes: msOAuth.SCOPES,
+      redirectUri: process.env.MS_OAUTH_REDIRECT_URI,
+    });
+  } catch (err) {
+    console.error('Microsoft OAuth token exchange failed:', err.message);
+    return res.redirect(appendQueryError(stateCookie.returnTo, 'token'));
+  }
+
+  const profile = await msOAuth.fetchGraphProfile(tokenResult.accessToken);
+  if (!profile) {
+    return res.redirect(appendQueryError(stateCookie.returnTo, 'profile'));
+  }
+  const email = (profile.mail || profile.userPrincipalName || '').trim().toLowerCase();
+  const firstName = (profile.givenName || profile.displayName || 'there').trim();
+  const lastName = (profile.surname || '').trim();
+  // Microsoft's documented stable identifier for "this person, in this
+  // tenant, across sessions" when using the multi-tenant /common authority —
+  // more reliable than the ID token's bare oid claim alone for personal
+  // Microsoft accounts mixed with work/school ones.
+  const microsoftOid = tokenResult.account.homeAccountId;
+
+  if (!email || !EMAIL_PATTERN.test(email)) {
+    return res.redirect(appendQueryError(stateCookie.returnTo, 'noemail'));
+  }
+
+  let [rows] = await pool.query('SELECT * FROM site_users WHERE microsoft_oid = ?', [microsoftOid]);
+  let user = rows[0];
+
+  if (!user) {
+    [rows] = await pool.query('SELECT * FROM site_users WHERE email = ?', [email]);
+    user = rows[0];
+    if (user) {
+      await pool.query('UPDATE site_users SET microsoft_oid = ?, email_verified = 1 WHERE id = ?', [microsoftOid, user.id]);
+      user.microsoft_oid = microsoftOid;
+      user.email_verified = 1;
+    } else {
+      const [result] = await pool.query(
+        'INSERT INTO site_users (first_name, last_name, email, password_hash, microsoft_oid, email_verified) VALUES (?, ?, ?, NULL, ?, 1)',
+        [firstName, lastName, email, microsoftOid]
+      );
+      await claimPendingSeatsAndSubscribe(result.insertId, email, firstName, lastName, 'Microsoft Sign-In');
+      [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [result.insertId]);
+      user = rows[0];
+    }
+  }
+
+  setSiteSessionCookie(res, user);
+  res.redirect(stateCookie.returnTo);
 });
 
 router.get('/verify', async (req, res) => {
@@ -332,6 +443,13 @@ router.put('/change-password', requireSiteAuth, async (req, res) => {
   }
   if (newPassword.length < 8) {
     return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+  // A Microsoft-only account has no password_hash yet — bcrypt.compare
+  // requires a real hash string, so this needs its own message rather than
+  // a confusing 500. (Use "Forgot Password" instead: it sets a password
+  // hash too, so the account then has both sign-in methods available.)
+  if (!req.siteUser.password_hash) {
+    return res.status(400).json({ error: 'This account doesn\'t have a password set. Use "Forgot password?" on the login screen to create one.' });
   }
   const matches = await bcrypt.compare(currentPassword, req.siteUser.password_hash);
   if (!matches) {
