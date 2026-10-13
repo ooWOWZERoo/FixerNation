@@ -428,7 +428,10 @@ function editPost(id) {
   currentImageData = p.featuredImage || '';
   pendingImageFile = null;
   pendingVideoFile = p.videoFileName ? { name: p.videoFileName, sizeLabel: p.videoFileSize || '' } : null;
-  slugManuallyEdited = true;
+  // Same rule as a new post: the slug stays reactive to title edits until
+  // the admin types into the slug field directly, even for an existing
+  // post -- it doesn't lock just because the post already has a saved slug.
+  slugManuallyEdited = false;
   loadedCalendarDate = null;
   document.getElementById('postModalTitle').textContent = 'Edit Post';
   document.getElementById('calendarLoadField').style.display = 'none';
