@@ -26,11 +26,13 @@
   }
 
   var SECTIONS = [
-    { key: 'sales-schools', cat: 'sales', label: 'Sales &amp; Schools', links: [
+    { key: 'sales', cat: 'sales', label: 'Sales', links: [
       link('admin-quotes.html',             '💬', 'Quotes'),
       link('admin-orders.html',             '📦', 'Orders'),
       link('admin-invoices.html',           '🧾', 'Invoices'),
       link('admin-licenses.html',           '🏷️', 'License Products'),
+    ]},
+    { key: 'schools-partners', cat: 'sales', label: 'Schools &amp; Partners', links: [
       link('admin-school-admins.html',      '🏫', 'School Admins'),
       link('admin-districts.html',          '🗺️', 'Districts'),
       link('admin-affiliates.html',         '🤝', 'Affiliates'),
