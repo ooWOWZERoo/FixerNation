@@ -112,7 +112,7 @@ ELEVENLABS_API_KEY=      # not yet live; blocks Morning Boost voice-over
 
 ## Admin navigation and Mission Control visual system
 
-`admin-nav.js` renders the sidebar for 23 admin workspace pages from one `SECTIONS` array. Preserve the existing workflow groups: Sales & Schools, Content, Marketing & CRM, Community, Reports. Mission Control (the existing dashboard URL) remains pinned; Settings/View Site/Log Out remain in the footer. This supersedes the former alphabetical/per-page navigation instructions.
+`admin-nav.js` renders the sidebar for 23 admin workspace pages from one `SECTIONS` array. Preserve the existing workflow groups: Sales, Schools & Partners, Content, Marketing & CRM, Community, Reports (Sales was split from the original "Sales & Schools" on 2026-10-13 -- it mixed catalog/config with transactional workflow). Mission Control (the existing dashboard URL) remains pinned; Settings/View Site/Log Out remain in the footer. This supersedes the former alphabetical/per-page navigation instructions.
 
 `admin-shell.js` renders the common page header, local page finder, mobile drawer, and page-specific introductions. It moves existing heading nodes rather than cloning them so dynamic IDs such as `ccTitle` continue to work. Do not add shell code to `admin-common.js`, which is also used by public pages. The approved visual direction is recorded in `.interface-design/system.md`.
 
