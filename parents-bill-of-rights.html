@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Parents' Bill of Rights &amp; Transparency Compliance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:var(--teal-dark); text-decoration:none; font-weight:600;}
+  a:hover{text-decoration:underline;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{background:var(--teal-dark); padding:80px 32px 76px; text-align:center;}
+  .hero .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:20px;}
+  .hero h1{font-size:34px; color:#fff; line-height:1.15; max-width:760px; margin:0 auto 14px;}
+  .hero p{font-size:15.5px; color:rgba(255,255,255,0.8); max-width:640px; margin:0 auto; line-height:1.7;}
+
+  .content-wrap{max-width:960px; margin:0 auto; padding:0 32px;}
+  .section{padding:56px 0;}
+  .section > h2{font-size:24px; margin-bottom:10px;}
+  .section > .section-lead{font-size:14.5px; color:var(--ink-soft); max-width:680px; margin-bottom:32px; line-height:1.7;}
+
+  /* Section 1 -- pillar grid */
+  .pillar-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .pillar-card{background:#fff; border:1px solid rgba(22,79,74,0.12); border-radius:var(--radius-md); padding:28px 26px;}
+  .pillar-card .pillar-icon{width:44px; height:44px; border-radius:12px; background:var(--cream-soft); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:16px;}
+  .pillar-card h3{font-size:17px; margin-bottom:10px;}
+  .pillar-card p{font-size:13.5px; color:var(--ink-soft); line-height:1.65;}
+
+  /* Section 2 -- state selector */
+  .state-picker{background:#fff; border:1px solid rgba(22,79,74,0.12); border-radius:var(--radius-md); padding:28px; box-shadow:var(--shadow); margin-bottom:24px;}
+  .state-picker label{display:block; font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:10px;}
+  .state-picker select{width:100%; max-width:380px; padding:12px 16px; border-radius:10px; border:1.5px solid rgba(22,79,74,0.2); font-size:15px; font-family:inherit; background:#fff; color:var(--ink); cursor:pointer;}
+  .state-picker select:focus{outline:3px solid rgba(242,107,77,0.4); outline-offset:2px;}
+
+  .state-empty{font-size:14px; color:var(--ink-soft); padding:4px 2px;}
+
+  .state-result article{background:#fff; border:1px solid rgba(22,79,74,0.12); border-radius:var(--radius-md); padding:30px 28px;}
+  .state-result h3{font-size:19px; margin-bottom:4px;}
+  .state-result .law-cite{font-size:12.5px; color:var(--coral-dark); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:18px;}
+  .state-result .state-block{margin-bottom:18px;}
+  .state-result .state-block:last-child{margin-bottom:0;}
+  .state-result .state-block h4{font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:8px;}
+  .state-result .state-block p{font-size:14.5px; line-height:1.7; color:var(--ink);}
+  .state-result .state-block.compliance{background:var(--cream-soft); border-radius:12px; padding:16px 18px;}
+  .state-result .state-block.compliance h4{color:var(--teal-dark);}
+
+  .contact-box{background:var(--teal-dark); color:#fff; border-radius:var(--radius-md); padding:36px 40px; text-align:center; margin:48px 0 0;}
+  .contact-box h2{color:#fff; font-size:22px; margin-bottom:12px;}
+  .contact-box p{font-size:14.5px; color:rgba(255,255,255,0.82); line-height:1.7; margin-bottom:20px;}
+  .contact-box a{color:var(--gold); font-weight:700;}
+
+  @media(max-width:860px){
+    .pillar-grid{grid-template-columns:1fr;}
+  }
+  @media(max-width:600px){
+    .hero{padding:64px 20px 60px;}
+    .hero h1{font-size:27px;}
+    .wrap,.content-wrap{padding:0 20px;}
+    .contact-box{padding:24px 20px;}
+    .state-picker,.state-result article{padding:22px 20px;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<main>
+<section class="hero">
+  <div class="eyebrow">Parents' Bill of Rights</div>
+  <h1>Parents' Bill of Rights &amp; Transparency Compliance</h1>
+  <p>How Fixer Nation Education ensures complete curriculum visibility, data privacy, and alignment with state and national parental rights standards.</p>
+</section>
+
+<div class="content-wrap">
+
+  <!-- ── Section 1: National Baseline Standard ──────────────────────────── -->
+  <section class="section" aria-labelledby="baseline-heading">
+    <h2 id="baseline-heading">The National Baseline Standard</h2>
+    <p class="section-lead">Every Fixer Nation Education classroom — in every state — operates under the same three commitments, regardless of local law. State-specific requirements below build on top of this baseline; they never weaken it.</p>
+
+    <div class="pillar-grid">
+      <article class="pillar-card">
+        <div class="pillar-icon" aria-hidden="true">👁️</div>
+        <h3>Curriculum Transparency</h3>
+        <p>Every daily Morning Boost video, script, and family-facing handout is previewable by school administrators, teachers, and parents before it's ever assigned. Teacher copies, lesson plans, and quiz answer keys stay limited to the licensed educator — so answer keys are never exposed to the students being assessed.</p>
+      </article>
+      <article class="pillar-card">
+        <div class="pillar-icon" aria-hidden="true">🔒</div>
+        <h3>Data Privacy &amp; Security</h3>
+        <p>Student quiz responses and written reflections are visible only to that student's own teacher, by design — not even a linked parent account can see them. Parents instead see lesson completion status for their child. Everything is role-restricted and encrypted in transit.</p>
+      </article>
+      <article class="pillar-card">
+        <div class="pillar-icon" aria-hidden="true">🌱</div>
+        <h3>Character-Focused Foundations</h3>
+        <p>Our daily SEL content focuses on universally recognized civic virtues — resilience, responsibility, empathy, and decision-making — keeping lessons focused on positive character development rather than any contested or political subject matter.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── Section 2: State-Specific Addendums ─────────────────────────────── -->
+  <section class="section" aria-labelledby="state-heading">
+    <h2 id="state-heading">State-Specific Addendums</h2>
+    <p class="section-lead">Select a state to see the specific parental-rights requirement it has adopted, and how Fixer Nation Education's platform is built to support compliance with it.</p>
+
+    <div class="state-picker">
+      <label for="stateSelect">Select your state</label>
+      <select id="stateSelect" aria-describedby="stateSelectHint">
+        <option value="">Choose a state…</option>
+      </select>
+      <p id="stateSelectHint" class="state-empty" style="margin-top:10px; margin-bottom:0;">More states are added as new requirements take effect — contact us if yours isn't listed yet.</p>
+    </div>
+
+    <div id="stateResult" class="state-result" aria-live="polite">
+      <p class="state-empty">Select your state to view localized legal compliance.</p>
+    </div>
+  </section>
+
+</div><!-- /.content-wrap -->
+
+<div class="wrap">
+  <div class="contact-box">
+    <h2>Questions about a specific requirement?</h2>
+    <p>Our education team works directly with district compliance offices to document how Fixer Nation Education supports state and federal parental-rights requirements.</p>
+    <a href="contact.html">Contact the Education Team →</a>
+  </div>
+</div>
+
+<div style="padding:48px 0;"></div>
+</main>
+
+<footer></footer>
+
+<script src="admin-common.js?v=16"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=9"></script>
+<script src="footer.js?v=5"></script>
+<script>
+// Each entry's "compliance" text is reviewed against this platform's actual
+// built capabilities, not aspirational copy -- see the inline notes below.
+// NEEDS REAL LEGAL REVIEW before this page is treated as a compliance
+// representation to any district: the "requirement" summaries are a
+// plain-language gloss on public reporting about each law, not legal advice,
+// and should be checked against the current statute text before publishing.
+const STATE_ADDENDUMS = [
+  {
+    state: 'North Carolina',
+    citation: 'Senate Bill 49 -- "Parents’ Bill of Rights"',
+    requirement: 'Prohibits instruction on gender identity, sexual activity, or sexuality in grades K-4 (from school personnel or third parties), requires schools to make learning materials available for parents to review, and requires parental notification if a school is asked to use a different name or pronoun for a student.',
+    // Compliance note: removed the original draft's "all lesson metadata is
+    // searchable for fast district-level reporting" claim -- no such
+    // district-reporting search tool exists in the current admin/district
+    // portals. Replaced with a true, verifiable statement instead.
+    compliance: 'Morning Boost content for grades K-4 is written around age-appropriate character skills -- self-direction, focus, kindness, honesty -- and does not include instruction on gender identity, sexual activity, or sexuality. Every lesson’s video, script, and handout is previewable by school administrators and parents before it airs.',
+  },
+  {
+    state: 'Florida',
+    citation: 'House Bill 1557 and House Bill 1069 -- "Parental Rights in Education"',
+    requirement: 'Restricts classroom instruction on sexual orientation or gender identity in kindergarten through grade 3 (and beyond that, requires it be age- and developmentally-appropriate), and requires any sex-education or reproductive-health materials to be approved by the state before classroom use.',
+    // Compliance note: removed the original draft's "allowing seamless
+    // opt-outs" claim -- no per-lesson parent opt-out feature exists in the
+    // product today. Replaced with what the Curriculum Dashboard actually
+    // does: let an admin share the full syllabus with parents in advance.
+    compliance: 'Fixer Nation Morning Boost content contains no sexual orientation, gender identity, or reproductive-health instruction at any grade band, so it falls outside what HB 1557/1069 restrict. School admins can share a full multi-week syllabus with parents through the Curriculum Dashboard before any lesson airs, so families have advance visibility into exactly what’s coming.',
+  },
+  {
+    state: 'Indiana',
+    citation: 'House Bill 1608 (2024)',
+    requirement: 'Requires a teacher to notify at least one parent within five business days if a student asks to be referred to by a different name or pronoun, and prohibits instruction on human sexuality from pre-kindergarten through grade 3.',
+    compliance: 'Fixer Nation’s teacher and parent portals are a guided reflection tool for standard SEL lessons -- they do not collect, change, or report a student’s name, pronouns, or demographic information, and do not issue any psychological survey. Any such request a student makes stays entirely within the school’s own process; our platform has no role in it.',
+  },
+];
+
+const stateSelect = document.getElementById('stateSelect');
+const stateResult = document.getElementById('stateResult');
+
+STATE_ADDENDUMS.forEach(function (entry, i) {
+  const opt = document.createElement('option');
+  opt.value = String(i);
+  opt.textContent = entry.state;
+  stateSelect.appendChild(opt);
+});
+
+function renderStateResult() {
+  const idx = stateSelect.value;
+  if (idx === '') {
+    stateResult.innerHTML = '<p class="state-empty">Select your state to view localized legal compliance.</p>';
+    return;
+  }
+  const entry = STATE_ADDENDUMS[Number(idx)];
+  stateResult.innerHTML =
+    '<article>' +
+      '<h3>' + entry.state + '</h3>' +
+      '<div class="law-cite">' + entry.citation + '</div>' +
+      '<div class="state-block">' +
+        '<h4>What the law requires</h4>' +
+        '<p>' + entry.requirement + '</p>' +
+      '</div>' +
+      '<div class="state-block compliance">' +
+        '<h4>How Fixer Nation Education supports it</h4>' +
+        '<p>' + entry.compliance + '</p>' +
+      '</div>' +
+    '</article>';
+}
+
+stateSelect.addEventListener('change', renderStateResult);
+</script>
+</body>
+</html>
