@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
 const { sendContactFormEmail } = require('../lib/mailer');
+const { limiter } = require('../lib/rate-limit');
 
 function domainFromEmail(email) {
   const at = (email || '').lastIndexOf('@');
@@ -11,7 +12,7 @@ function domainFromEmail(email) {
 // POST /api/school-registration/check
 // Atomically validates teacher eligibility and reserves a license seat.
 // Returns { eligible, reason?, seatId?, purchaseId?, totalSeats?, usedSeats? }
-router.post('/check', async (req, res) => {
+router.post('/check', limiter({ name: 'schoolreg-check', windowMs: 3600000, max: 60 }), async (req, res) => {
   const { email, firstName, lastName } = req.body || {};
   if (!email || !firstName || !lastName) {
     return res.status(400).json({ error: 'email, firstName, and lastName are required' });
@@ -122,7 +123,7 @@ router.post('/check', async (req, res) => {
 // POST /api/school-registration/notify-admin
 // Sends the school's license admin a notification email with 24-hour dedup.
 // Returns { sent, reason? }
-router.post('/notify-admin', async (req, res) => {
+router.post('/notify-admin', limiter({ name: 'schoolreg-notify', windowMs: 3600000, max: 5 }), async (req, res) => {
   const { email, firstName, lastName, reason } = req.body || {};
   if (!email || !reason) {
     return res.status(400).json({ error: 'email and reason are required' });

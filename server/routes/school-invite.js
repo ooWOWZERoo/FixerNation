@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { getSetting } = require('../lib/settings');
-const jwt = require('jsonwebtoken');
+const { signSession, verifySession } = require('../lib/session-tokens');
 
 const router = express.Router();
 
@@ -14,7 +14,7 @@ async function getLoggedInUser(req) {
   const cookieToken = req.cookies && req.cookies[SITE_COOKIE_NAME];
   if (!cookieToken) return null;
   try {
-    const payload = jwt.verify(cookieToken, process.env.SESSION_SECRET);
+    const payload = verifySession('site', cookieToken);
     const [[user]] = await pool.query('SELECT id, email, first_name, last_name FROM site_users WHERE id = ?', [payload.userId]);
     return user || null;
   } catch {
@@ -277,11 +277,7 @@ router.post('/register', async (req, res) => {
 
     // Issue a session cookie so the user lands already logged in
     try {
-      const sessionToken = jwt.sign(
-        { userId: newUserId, firstName: firstName.trim(), role: 'teacher' },
-        process.env.SESSION_SECRET,
-        { expiresIn: '30d' }
-      );
+      const sessionToken = signSession('site', { userId: newUserId, firstName: firstName.trim(), role: 'teacher' }, '30d');
       res.cookie(SITE_COOKIE_NAME, sessionToken, {
         httpOnly: true, sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
@@ -398,11 +394,7 @@ router.post('/accept-and-verify', async (req, res) => {
   ).catch(e => console.error('audit log error:', e.message));
 
   try {
-    const sessionToken = jwt.sign(
-      { userId: user.id, firstName: user.first_name, role: 'teacher' },
-      process.env.SESSION_SECRET,
-      { expiresIn: '30d' }
-    );
+    const sessionToken = signSession('site', { userId: user.id, firstName: user.first_name, role: 'teacher' }, '30d');
     res.cookie(SITE_COOKIE_NAME, sessionToken, {
       httpOnly: true, sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

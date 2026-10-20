@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   password_hash VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE,
   email_verified TINYINT(1) NOT NULL DEFAULT 1, -- 1 for the original admin (no invite flow); a newly-invited admin starts at 0 until they accept
+  session_invalidated_at DATETIME NULL, -- any admin session token issued before this moment is rejected (stamped on password change/reset)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

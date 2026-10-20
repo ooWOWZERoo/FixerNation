@@ -1,13 +1,17 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { signSession, verifySession } = require('../lib/session-tokens');
 const crypto = require('crypto');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const multer = require('multer');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../lib/mailer');
+const { sendVerificationEmail, sendPasswordResetEmail, sendMicrosoftLinkEmail } = require('../lib/mailer');
+const { safeLocalPath } = require('../lib/safe-redirect');
+const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
+const { reencodeImageToWebp } = require('../lib/upload-safety');
 const { createToken, consumeToken } = require('../lib/site-tokens');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
@@ -20,13 +24,18 @@ const msOAuth = require('../lib/microsoft-oauth');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
+// Avatars from ordinary signed-in users are the lowest-trust upload on the site,
+// so the raw upload never lands in a web-served folder: it's written to the OS
+// temp dir under a random name, decoded and re-encoded to WebP (which a disguised
+// HTML/SVG/script file cannot survive), and only the re-encoded image is saved
+// into the avatars folder, always as .webp -- the client controls neither the
+// extension nor the content type that gets served.
+const avatarTmpDir = path.join(os.tmpdir(), 'fn-avatar-uploads');
+fs.mkdirSync(avatarTmpDir, { recursive: true });
 const avatarUpload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, avatarsDir),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      cb(null, 'avatar-' + req.siteUser.id + '-' + Date.now() + ext);
-    },
+    destination: (req, file, cb) => cb(null, avatarTmpDir),
+    filename: (req, file, cb) => cb(null, crypto.randomBytes(12).toString('hex') + '.part'),
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -37,6 +46,23 @@ const avatarUpload = multer({
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Same cost factor as real password hashes, so a "no such account" login takes
+// as long as a genuine wrong-password one.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 12);
+
+// Throttles. Failed logins are counted per account and per IP; the email-
+// sending endpoints are limited per IP AND per target address so nobody can
+// use them to flood a victim's inbox (the per-address limit is what stops that
+// when IPs are rotated).
+const HOUR = 60 * 60 * 1000;
+const bodyEmail = (r) => String((r.body && r.body.email) || '').trim().toLowerCase().slice(0, 254) || null;
+const loginFailsByAccount = new FailureTracker({ name: 'site-login-acct', windowMs: 15 * 60 * 1000, max: 8 });
+const loginFailsByIp = new FailureTracker({ name: 'site-login-ip', windowMs: 15 * 60 * 1000, max: 30 });
+const signupLimit = limiter({ name: 'site-signup', windowMs: HOUR, max: 10 });
+const resendLimitIp = limiter({ name: 'site-resend-ip', windowMs: HOUR, max: 10 });
+const resendLimitAcct = limiter({ name: 'site-resend-acct', windowMs: HOUR, max: 3, key: bodyEmail });
+const forgotLimitIp = limiter({ name: 'site-forgot-ip', windowMs: HOUR, max: 10 });
+const forgotLimitAcct = limiter({ name: 'site-forgot-acct', windowMs: HOUR, max: 3, key: bodyEmail });
 
 // Site-user session check for the self-service "My License" endpoints below —
 // mirrors /me's cookie/JWT verification but rejects with 401 instead of a
@@ -51,11 +77,7 @@ async function requireSiteAuth(req, res, next) {
 }
 
 function setSiteSessionCookie(res, user) {
-  const token = jwt.sign(
-    { userId: user.id, firstName: user.first_name, role: user.role || 'teacher' },
-    process.env.SESSION_SECRET,
-    { expiresIn: '30d' }
-  );
+  const token = signSession('site', { userId: user.id, firstName: user.first_name, role: user.role || 'teacher' }, '30d');
   res.cookie(SITE_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -98,7 +120,7 @@ async function claimPendingSeatsAndSubscribe(userId, email, firstName, lastName,
   }
 }
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', signupLimit, async (req, res) => {
   const b = req.body || {};
   const firstName = (b.firstName || '').trim();
   const lastName = (b.lastName || '').trim();
@@ -137,11 +159,17 @@ router.post('/signup', async (req, res) => {
 // parents, and school/district admins alike — they're all site_users rows,
 // so there's nothing audience-specific about this flow.
 //
-// Account linking: matched first by microsoft_oid (returning user), then by
-// email (links to an existing password account and auto-verifies it, since
-// Microsoft already verified the email itself), then falls back to creating
-// a brand-new account. Linking never removes the password path — an account
-// can be signed into with either method afterward.
+// Account linking: a returning user is matched by microsoft_oid ONLY -- the
+// tenant-scoped, Microsoft-issued identifier. The email Microsoft reports is
+// NOT trusted on its own: for work/school accounts the `mail` attribute is set
+// by that tenant's admin and Microsoft doesn't verify it, so anyone who spins
+// up a free Entra tenant can claim to be principal@anyschool.org. Trusting it
+// would let them log into (and auto-verify) the real principal's account, or
+// pre-claim license seats invited to that address. So a first-time Microsoft
+// sign-in never links or creates anything directly -- it emails the address
+// a confirmation link, and the link/account is only completed once someone
+// with access to that mailbox clicks it (see /microsoft/confirm below).
+// Linking never removes the password path -- both work afterward.
 const MS_STATE_COOKIE = 'fn_ms_oauth_state';
 
 function appendQueryError(path, code) {
@@ -149,7 +177,7 @@ function appendQueryError(path, code) {
 }
 
 router.get('/microsoft/start', async (req, res) => {
-  const returnTo = typeof req.query.next === 'string' && req.query.next.startsWith('/') ? req.query.next : '/index.html';
+  const returnTo = safeLocalPath(req.query.next);
   if (!msOAuth.isConfigured()) {
     return res.redirect(appendQueryError(returnTo, 'not_configured'));
   }
@@ -174,10 +202,12 @@ router.get('/microsoft/callback', async (req, res) => {
   let stateCookie = null;
   try { stateCookie = JSON.parse(req.cookies[MS_STATE_COOKIE] || ''); } catch { /* malformed/missing — treated as absent below */ }
   res.clearCookie(MS_STATE_COOKIE);
-  const fallbackReturnTo = (stateCookie && stateCookie.returnTo) || '/index.html';
+  // The state cookie is unsigned, so re-validate its returnTo rather than
+  // trusting that /microsoft/start was the only thing that ever wrote it.
+  const returnTo = safeLocalPath(stateCookie && stateCookie.returnTo);
 
   if (req.query.error) {
-    return res.redirect(appendQueryError(fallbackReturnTo, 'denied'));
+    return res.redirect(appendQueryError(returnTo, 'denied'));
   }
   if (!stateCookie || !req.query.state || req.query.state !== stateCookie.state) {
     return res.redirect(appendQueryError('/index.html', 'state'));
@@ -192,12 +222,12 @@ router.get('/microsoft/callback', async (req, res) => {
     });
   } catch (err) {
     console.error('Microsoft OAuth token exchange failed:', err.message);
-    return res.redirect(appendQueryError(stateCookie.returnTo, 'token'));
+    return res.redirect(appendQueryError(returnTo, 'token'));
   }
 
   const profile = await msOAuth.fetchGraphProfile(tokenResult.accessToken);
   if (!profile) {
-    return res.redirect(appendQueryError(stateCookie.returnTo, 'profile'));
+    return res.redirect(appendQueryError(returnTo, 'profile'));
   }
   const email = (profile.mail || profile.userPrincipalName || '').trim().toLowerCase();
   const firstName = (profile.givenName || profile.displayName || 'there').trim();
@@ -209,32 +239,72 @@ router.get('/microsoft/callback', async (req, res) => {
   const microsoftOid = tokenResult.account.homeAccountId;
 
   if (!email || !EMAIL_PATTERN.test(email)) {
-    return res.redirect(appendQueryError(stateCookie.returnTo, 'noemail'));
+    return res.redirect(appendQueryError(returnTo, 'noemail'));
   }
 
-  let [rows] = await pool.query('SELECT * FROM site_users WHERE microsoft_oid = ?', [microsoftOid]);
-  let user = rows[0];
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE microsoft_oid = ?', [microsoftOid]);
+  if (rows[0]) {
+    // Returning user, already proven linked to this exact Microsoft identity.
+    setSiteSessionCookie(res, rows[0]);
+    return res.redirect(returnTo);
+  }
+
+  // First time this Microsoft identity has been seen. Nothing is created or
+  // linked yet and no session is issued -- the pending sign-in rides in a
+  // short-lived signed token that only gets acted on once the mailbox owner
+  // confirms (stateless on purpose: no half-created, unverified accounts left
+  // behind for every address anyone types into a throwaway tenant).
+  const linkToken = signSession('msLink', { oid: microsoftOid, email, firstName, lastName, returnTo }, '1h');
+  const confirmUrl = `${process.env.SITE_URL || ''}/microsoft-confirm.html?token=${encodeURIComponent(linkToken)}`;
+  try {
+    await sendMicrosoftLinkEmail({ to: email, firstName, confirmUrl });
+  } catch (err) {
+    console.error('Microsoft link confirmation email failed:', err.message);
+    return res.redirect(appendQueryError(returnTo, 'email_failed'));
+  }
+  res.redirect(appendQueryError(returnTo, 'confirm_email'));
+});
+
+// POST (not GET) on purpose: mail scanners and link-preview bots routinely
+// GET every URL in an email. If the link itself completed the account link, a
+// bot on the *victim's* mailbox could finish an attacker-initiated sign-in for
+// them. A button that POSTs is something automated prefetching doesn't do.
+router.post('/microsoft/confirm', async (req, res) => {
+  const token = req.body && req.body.token;
+  let pending;
+  try { pending = verifySession('msLink', String(token || '')); } catch { pending = null; }
+  if (!pending || !pending.oid || !pending.email) {
+    return res.status(400).json({ error: 'This confirmation link is invalid or has expired. Please start Microsoft sign-in again.' });
+  }
+
+  const [byOid] = await pool.query('SELECT * FROM site_users WHERE microsoft_oid = ?', [pending.oid]);
+  let user = byOid[0];
 
   if (!user) {
-    [rows] = await pool.query('SELECT * FROM site_users WHERE email = ?', [email]);
-    user = rows[0];
+    const [byEmail] = await pool.query('SELECT * FROM site_users WHERE email = ?', [pending.email]);
+    user = byEmail[0];
     if (user) {
-      await pool.query('UPDATE site_users SET microsoft_oid = ?, email_verified = 1 WHERE id = ?', [microsoftOid, user.id]);
-      user.microsoft_oid = microsoftOid;
+      if (user.microsoft_oid && user.microsoft_oid !== pending.oid) {
+        return res.status(409).json({ error: 'This email is already linked to a different Microsoft account. Sign in with that one, or use your password.' });
+      }
+      // The mailbox owner just proved control of this address, so linking and
+      // marking it verified is now legitimate.
+      await pool.query('UPDATE site_users SET microsoft_oid = ?, email_verified = 1 WHERE id = ?', [pending.oid, user.id]);
+      user.microsoft_oid = pending.oid;
       user.email_verified = 1;
     } else {
       const [result] = await pool.query(
         'INSERT INTO site_users (first_name, last_name, email, password_hash, microsoft_oid, email_verified) VALUES (?, ?, ?, NULL, ?, 1)',
-        [firstName, lastName, email, microsoftOid]
+        [pending.firstName || 'there', pending.lastName || '', pending.email, pending.oid]
       );
-      await claimPendingSeatsAndSubscribe(result.insertId, email, firstName, lastName, 'Microsoft Sign-In');
-      [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [result.insertId]);
-      user = rows[0];
+      await claimPendingSeatsAndSubscribe(result.insertId, pending.email, pending.firstName || 'there', pending.lastName || '', 'Microsoft Sign-In');
+      const [created] = await pool.query('SELECT * FROM site_users WHERE id = ?', [result.insertId]);
+      user = created[0];
     }
   }
 
   setSiteSessionCookie(res, user);
-  res.redirect(stateCookie.returnTo);
+  res.json({ ok: true, returnTo: safeLocalPath(pending.returnTo) });
 });
 
 router.get('/verify', async (req, res) => {
@@ -248,7 +318,7 @@ router.get('/verify', async (req, res) => {
   res.send('<p style="font-family:sans-serif; padding:40px; text-align:center;">Your email is verified! You can now log in. <a href="/index.html">Return to the homepage</a>.</p>');
 });
 
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', resendLimitIp, resendLimitAcct, async (req, res) => {
   const email = (req.body && req.body.email || '').trim();
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
@@ -268,16 +338,34 @@ router.post('/login', async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
+  if (typeof email !== 'string' || typeof password !== 'string' || password.length > 1000) {
+    return res.status(400).json({ error: 'Invalid email or password' });
+  }
+
+  const acctKey = email.trim().toLowerCase();
+  const ip = clientIp(req);
+  if (rejectIfBlocked(res, [[loginFailsByAccount, acctKey], [loginFailsByIp, ip]])) return;
 
   const [rows] = await pool.query('SELECT * FROM site_users WHERE email = ?', [email.trim()]);
   const user = rows[0];
-  if (!user) {
+  // No such account, or a Microsoft-only account with no password set (its
+  // password_hash is NULL, and bcrypt.compare throws on a non-string hash --
+  // that was a 500). Compare against a dummy hash either way so the response
+  // takes the same time as a real wrong-password attempt and doesn't reveal
+  // which emails have accounts.
+  if (!user || !user.password_hash) {
+    await bcrypt.compare(String(password), DUMMY_HASH);
+    loginFailsByAccount.fail(acctKey);
+    loginFailsByIp.fail(ip);
     return res.status(401).json({ error: 'Invalid email or password' });
   }
   const matches = await bcrypt.compare(password, user.password_hash);
   if (!matches) {
+    loginFailsByAccount.fail(acctKey);
+    loginFailsByIp.fail(ip);
     return res.status(401).json({ error: 'Invalid email or password' });
   }
+  loginFailsByAccount.clear(acctKey);
   if (!user.email_verified) {
     return res.status(403).json({ error: 'Please verify your email before logging in.', reason: 'unverified' });
   }
@@ -307,7 +395,7 @@ router.get('/me', async (req, res) => {
   const token = req.cookies[SITE_COOKIE_NAME];
   if (!token) return res.json({ loggedIn: false });
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('site', token);
     const [rows] = await pool.query('SELECT email FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return res.json({ loggedIn: false });
     // hasLicense/isParent/isSchoolAdmin/isDistrictAdmin/isAffiliate are real
@@ -341,14 +429,14 @@ router.get('/me', async (req, res) => {
   }
 });
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotLimitIp, forgotLimitAcct, async (req, res) => {
   const email = (req.body && req.body.email || '').trim();
   if (!email) return res.status(400).json({ error: 'Email is required' });
   // Only accept a same-site path (e.g. from the school-invite-accept flow,
   // so resetting a password can drop the user right back into claiming
   // their invitation) — never an absolute/external URL, to avoid turning
   // this into an open redirect via an emailed link.
-  const nextPath = typeof req.body.next === 'string' && req.body.next.startsWith('/') ? req.body.next : '';
+  const nextPath = safeLocalPath(req.body && req.body.next, '');
 
   const [rows] = await pool.query('SELECT id, first_name FROM site_users WHERE email = ?', [email]);
   const user = rows[0];
@@ -401,21 +489,32 @@ router.post('/profile/avatar', requireSiteAuth, function(req, res, next) {
 }, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
-  // Content Safety Gateway (PROFILE_IMAGE)
+  let webp;
+  try {
+    webp = await reencodeImageToWebp(req.file.path, { maxDimension: 512 });
+  } catch (err) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ error: 'That file doesn\'t look like a valid image.' });
+  }
+  fs.unlink(req.file.path, () => {});
+
+  // Content Safety Gateway (PROFILE_IMAGE) -- screens the exact bytes that will be published.
   const schoolDomain = await resolveSchoolDomainForTeacher(req.siteUser.id);
   const screen = await gateway.screenContent({
     contentContext: 'PROFILE_IMAGE',
-    images: [{ buffer: fs.readFileSync(req.file.path), mimetype: req.file.mimetype }],
+    images: [{ buffer: webp, mimetype: 'image/webp' }],
     authorSiteUserId: req.siteUser.id,
     schoolDomain,
   });
   if (!gateway.isPublishable(screen.decision)) {
-    fs.unlink(req.file.path, () => {});
     return res.status(422).json({ error: screen.message });
   }
 
+  const avatarFilename = 'avatar-' + req.siteUser.id + '-' + Date.now() + '.webp';
+  fs.writeFileSync(path.join(avatarsDir, avatarFilename), webp);
+
   const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'avatars/';
-  const avatarUrl = prefix + req.file.filename;
+  const avatarUrl = prefix + avatarFilename;
   await pool.query(
     'INSERT INTO social_profiles (user_id, avatar_url) VALUES (?, ?) ON DUPLICATE KEY UPDATE avatar_url = VALUES(avatar_url)',
     [req.siteUser.id, avatarUrl]

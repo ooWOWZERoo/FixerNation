@@ -25,6 +25,7 @@ const {
   territoriesForAffiliate, listTerritories,
 } = require('../lib/territories');
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
+const { limiter, clientIp } = require('../lib/rate-limit');
 
 const router = express.Router();
 
@@ -40,47 +41,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Public application endpoint
 // ---------------------------------------------------------------------------
 
-// In-process, per-IP throttle for the public form. There is no rate-limit
-// infrastructure anywhere in this codebase yet (contact.js has none either —
-// a known gap), and this host runs a single Node process, so a plain Map is
-// genuinely enough here. It resets on restart, which is acceptable for spam
-// deterrence and deliberately not treated as a security control.
-const APPLY_WINDOW_MS = 60 * 60 * 1000;
-const APPLY_MAX_PER_WINDOW = 5;
-const applyHits = new Map();
-
-// req.ip is the proxy's address on this host, since 'trust proxy' is not set
-// app-wide (setting it would change behaviour for every existing route, which
-// isn't this stage's job). The forwarded header is the only per-visitor signal
-// available, so the throttle reads that first and falls back to req.ip.
-function clientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) return String(forwarded).split(',')[0].trim();
-  return req.ip || 'unknown';
-}
-
-function throttled(ip) {
-  const now = Date.now();
-  const recent = (applyHits.get(ip) || []).filter(t => now - t < APPLY_WINDOW_MS);
-  if (recent.length >= APPLY_MAX_PER_WINDOW) {
-    applyHits.set(ip, recent);
-    return true;
-  }
-  recent.push(now);
-  applyHits.set(ip, recent);
-  // Opportunistic cleanup so the Map can't grow without bound on a long uptime.
-  if (applyHits.size > 5000) {
-    for (const [key, times] of applyHits) {
-      if (!times.some(t => now - t < APPLY_WINDOW_MS)) applyHits.delete(key);
-    }
-  }
-  return false;
-}
+// Per-IP throttle for the public form, via the shared limiter (lib/rate-limit.js).
+// It reads the RIGHTMOST X-Forwarded-For entry -- the one our own proxy wrote --
+// because the first entry is client-supplied and was trivially spoofable (this
+// file used to trust it), and it skips the limit entirely rather than lumping
+// everyone onto the proxy's address when no client IP can be resolved.
+const applyLimit = limiter({ name: 'affiliate-apply', windowMs: 60 * 60 * 1000, max: 5 });
 
 // POST /api/affiliates/apply — public. A rejected applicant may reapply at any
 // time (confirmed decision), so this never checks for prior rows; the review
 // queue surfaces earlier decisions instead.
-router.post('/apply', async (req, res) => {
+router.post('/apply', applyLimit, async (req, res) => {
   const b = req.body || {};
 
   // Honeypot: a field no real person sees, hidden by CSS on the form. Anything
@@ -89,10 +60,6 @@ router.post('/apply', async (req, res) => {
   if (b.website) {
     console.log(`[affiliate] Honeypot triggered from ${clientIp(req)} — application discarded`);
     return res.status(201).json({ ok: true });
-  }
-
-  if (throttled(clientIp(req))) {
-    return res.status(429).json({ error: 'Too many applications from this connection. Please try again later.' });
   }
 
   const firstName = (b.firstName || '').trim();

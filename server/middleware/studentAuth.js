@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { STUDENT_COOKIE_NAME } = require('../lib/session');
 
@@ -6,7 +6,7 @@ async function requireStudentAuth(req, res, next) {
   const token = req.cookies[STUDENT_COOKIE_NAME];
   if (!token) return res.status(401).json({ error: 'Not logged in' });
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('student', token);
     const [rows] = await pool.query(
       'SELECT cs.*, c.name AS classroom_name, c.teacher_site_user_id FROM classroom_students cs JOIN classrooms c ON c.id = cs.classroom_id WHERE cs.id = ? AND cs.is_active = 1 AND c.archived_at IS NULL',
       [payload.studentId]

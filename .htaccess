@@ -2,6 +2,15 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# Repo internals and server source must never be reachable over the web, even if
+# a stray copy lands in public_html (the deploy's rsync has historically left old
+# copies behind: ads.db, deploy.sh, tests/, and a whole server/ tree were all
+# being served). Uses rewrite rules on purpose -- they're already proven to work
+# on this host, unlike newer directive types.
+RewriteRule ^(server|tests|docs|\.interface-design|\.git)(/|$) - [F,L]
+RewriteRule ^(deploy\.sh|ads\.db|db\.sqlite3|package(-lock)?\.json)$ - [F,L]
+RewriteRule \.(sql|sqlite3?|db|bak|log|env)$ - [F,L]
+
 LimitRequestBody 268435456
 
 # HTML documents had no Cache-Control header at all, so each page's cache
@@ -14,4 +23,31 @@ LimitRequestBody 268435456
   <FilesMatch "\.html$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
+</IfModule>
+
+# Security headers. None were set before, so any site could frame an admin
+# page (clickjacking), browsers would MIME-sniff uploads, and nothing told
+# browsers to stay on HTTPS.
+<IfModule mod_headers.c>
+  # Browsers stay on HTTPS for a year. No includeSubDomains on purpose: add it
+  # only once every subdomain is confirmed to serve HTTPS.
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+  # REPORT-ONLY: nothing is blocked yet, violations only show in the browser
+  # console. Pages use inline <script>/<style>, so 'unsafe-inline' stays for now
+  # -- the immediate value here is frame-ancestors, base-uri, form-action and
+  # object-src, not inline-script blocking. Browse the site and admin with the
+  # console open, fix anything flagged, then rename this to
+  # Content-Security-Policy to enforce.
+  Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.quilljs.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.quilljs.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.unsplash.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+
+  # Anything under /uploads is user- or admin-supplied content. If one ever
+  # ends up as HTML/SVG it must not be able to run script on this origin.
+  # (<Directory> isn't allowed in .htaccess, hence the env-var condition.)
+  SetEnvIf Request_URI "^/uploads/" fn_is_upload
+  Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; sandbox" env=fn_is_upload
 </IfModule>

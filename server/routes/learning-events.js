@@ -16,7 +16,7 @@
 // into a shared helper yet — brain-games.js's own copy is separate,
 // working, production code that stays untouched.
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { getSiteUser } = require('../lib/site-user');
 const { STUDENT_COOKIE_NAME } = require('../lib/session');
@@ -27,7 +27,7 @@ async function getStudentPrincipal(req) {
   const token = req.cookies?.[STUDENT_COOKIE_NAME];
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('student', token);
     const [rows] = await pool.query(
       `SELECT cs.id FROM classroom_students cs
        JOIN classrooms c ON c.id = cs.classroom_id

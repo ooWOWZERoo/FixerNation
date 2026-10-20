@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
 
@@ -18,7 +18,7 @@ async function requireDistrictAdmin(req, res, next) {
 
   let payload;
   try {
-    payload = jwt.verify(token, process.env.SESSION_SECRET);
+    payload = verifySession('site', token);
   } catch {
     return res.status(401).json({ error: 'Not logged in' });
   }

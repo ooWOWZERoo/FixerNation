@@ -1,5 +1,5 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../lib/session-tokens');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
@@ -11,6 +11,7 @@ const { requireAuth } = require('../middleware/auth');
 const { ensureProfile } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForSocialGroup, resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
+const { sniffFile, reencodeImageToWebp, IMAGE_KINDS } = require('../lib/upload-safety');
 
 // ── File upload for social posts ──────────────────────────────────────────
 
@@ -18,15 +19,41 @@ const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'upload
 const socialUploadsDir = path.join(uploadsDir, 'social');
 fs.mkdirSync(socialUploadsDir, { recursive: true });
 
-const SOCIAL_ALLOWED = /^(image\/|video\/|application\/pdf|application\/msword|application\/vnd\.|text\/plain)/;
+// Client Content-Type is only a first filter; the real type is decided from the
+// file's bytes in the /upload handler. No text/plain, no SVG, no vnd.* catch-all.
+const SOCIAL_ALLOWED = /^(image\/(png|jpeg|gif|webp)|video\/(mp4|quicktime|webm)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/;
+const SOCIAL_KINDS = new Set(['png', 'jpg', 'gif', 'webp', 'mp4', 'mov', 'webm', 'pdf', 'doc', 'docx']);
+
+// Post/DM attachments come back from the client as JSON and are rendered into
+// href/src attributes for every reader. HTML-escaping can't make a
+// "javascript:..." URL safe, and an arbitrary external URL is a tracking /
+// phishing link posted under a trusted colleague's name. So the only
+// attachments accepted are ones our own POST /upload endpoint produced: a URL
+// that is exactly <uploads prefix>social/<generated filename>. Everything else
+// is dropped, not trusted.
+const ATTACHMENT_FILENAME = /^\d{10,}-[0-9a-f]{12}(\.[a-z0-9]{1,8})?$/;
+function sanitizeAttachments(input) {
+  if (!Array.isArray(input)) return [];
+  const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'social/';
+  const clean = [];
+  for (const a of input.slice(0, 5)) {
+    if (!a || typeof a.url !== 'string' || !a.url.startsWith(prefix)) continue;
+    if (!ATTACHMENT_FILENAME.test(a.url.slice(prefix.length))) continue;
+    clean.push({
+      type: ['image', 'video', 'file'].includes(a.type) ? a.type : 'file',
+      url: a.url,
+      name: String(a.name || '').slice(0, 200),
+      size: Number.isFinite(Number(a.size)) ? Number(a.size) : 0,
+    });
+  }
+  return clean;
+}
 
 const socialUploadMw = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, socialUploadsDir),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
-    },
+    // No user-chosen extension: the real one is assigned after the type is verified.
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.part`),
   }),
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -44,7 +71,7 @@ async function requireSocialAccess(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Login required' });
   let payload;
   try {
-    payload = jwt.verify(token, process.env.SESSION_SECRET);
+    payload = verifySession('site', token);
   } catch {
     return res.status(401).json({ error: 'Login required' });
   }
@@ -71,14 +98,39 @@ async function requireSocialAccess(req, res, next) {
 router.post('/upload', requireSocialAccess, socialUploadMw.array('files', 5), async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
 
-  // Content Safety Gateway (SOCIAL_IMAGE) — screen every uploaded image
-  // before it's ever returned to the client as an attachable URL. Non-image
-  // files (video/pdf/doc) pass through unscreened in Phase 1 (nsfwjs/OpenAI
-  // omni-moderation image support only cover still images).
-  const schoolDomain = await resolveSchoolDomainForTeacher(req.siteUser.id);
-  const imageFiles = req.files.filter(f => f.mimetype.startsWith('image/'));
-  if (imageFiles.length) {
-    const images = imageFiles.map(f => ({ buffer: fs.readFileSync(f.path), mimetype: f.mimetype }));
+  const discardAll = () => { for (const f of req.files) fs.unlink(f.path, () => {}); };
+
+  // 1. Decide each file's REAL type from its bytes. The client-supplied
+  //    Content-Type and filename are never used to pick what gets stored/served.
+  const items = [];
+  for (const f of req.files) {
+    const detected = sniffFile(f.path);
+    if (!detected || !SOCIAL_KINDS.has(detected.kind)) {
+      discardAll();
+      return res.status(400).json({ error: 'One of those files isn\'t a supported type.' });
+    }
+    items.push({ f, detected });
+  }
+
+  // 2. Images are decoded and re-encoded to WebP, so what's published is a plain
+  //    raster image no matter what the upload contained (and EXIF/GPS is stripped).
+  for (const item of items) {
+    if (!IMAGE_KINDS.has(item.detected.kind)) continue;
+    try {
+      item.webp = await reencodeImageToWebp(item.f.path);
+    } catch (err) {
+      discardAll();
+      return res.status(400).json({ error: 'One of those images couldn\'t be read.' });
+    }
+  }
+
+  // 3. Content Safety Gateway (SOCIAL_IMAGE) — screen every image (the exact
+  //    re-encoded bytes) before it's ever returned to the client as an attachable
+  //    URL. Non-image files (video/pdf/doc) pass through unscreened in Phase 1
+  //    (nsfwjs/OpenAI omni-moderation image support only cover still images).
+  const images = items.filter(i => i.webp).map(i => ({ buffer: i.webp, mimetype: 'image/webp' }));
+  if (images.length) {
+    const schoolDomain = await resolveSchoolDomainForTeacher(req.siteUser.id);
     const result = await gateway.screenContent({
       contentContext: 'SOCIAL_IMAGE',
       images,
@@ -86,20 +138,28 @@ router.post('/upload', requireSocialAccess, socialUploadMw.array('files', 5), as
       schoolDomain,
     });
     if (!gateway.isPublishable(result.decision)) {
-      for (const f of req.files) fs.unlink(f.path, () => {});
+      discardAll();
       return res.status(422).json({ error: result.message });
     }
   }
 
+  // 4. Publish under a server-chosen name whose extension comes from the detected type.
   const prefix = (process.env.UPLOADS_URL_PREFIX || '/uploads/') + 'social/';
-  const attachments = req.files.map(f => ({
-    type: f.mimetype.startsWith('image/') ? 'image'
-        : f.mimetype.startsWith('video/') ? 'video'
-        : 'file',
-    url: prefix + f.filename,
-    name: f.originalname,
-    size: f.size,
-  }));
+  const attachments = items.map(({ f, detected, webp }) => {
+    const base = f.filename.replace(/\.part$/, '');
+    let finalName, type;
+    if (webp) {
+      finalName = base + '.webp';
+      fs.writeFileSync(path.join(socialUploadsDir, finalName), webp);
+      fs.unlink(f.path, () => {});
+      type = 'image';
+    } else {
+      finalName = base + detected.ext;
+      fs.renameSync(f.path, path.join(socialUploadsDir, finalName));
+      type = ['mp4', 'mov', 'webm'].includes(detected.kind) ? 'video' : 'file';
+    }
+    return { type, url: prefix + finalName, name: String(f.originalname || '').slice(0, 200), size: webp ? webp.length : f.size };
+  });
   res.status(201).json({ attachments });
 });
 
@@ -273,8 +333,8 @@ router.get('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
 router.post('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
   const groupId = Number(req.params.groupId);
   const content = (req.body && req.body.content || '').trim();
-  const hasAttachments = req.body && Array.isArray(req.body.attachments) && req.body.attachments.length > 0;
-  if (!content && !hasAttachments) return res.status(400).json({ error: 'Content or attachment is required' });
+  const cleanAttachments = sanitizeAttachments(req.body && req.body.attachments);
+  if (!content && !cleanAttachments.length) return res.status(400).json({ error: 'Content or attachment is required' });
 
   const [mem] = await pool.query(
     'SELECT 1 FROM social_group_members WHERE group_id = ? AND user_id = ?',
@@ -297,7 +357,7 @@ router.post('/groups/:groupId/posts', requireSocialAccess, async (req, res) => {
     }
   }
 
-  const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
+  const attachments = cleanAttachments.length ? JSON.stringify(cleanAttachments) : null;
   const [result] = await pool.query(
     'INSERT INTO social_posts (group_id, author_id, content, attachments) VALUES (?, ?, ?, ?)',
     [groupId, req.siteUser.id, content, attachments]
@@ -328,9 +388,28 @@ router.delete('/posts/:postId', requireAuth, async (req, res) => {
 
 // ── Reactions ──────────────────────────────────────────────────────────────
 
+// A post's reactions and comments are only visible/writable to members of the
+// group the post lives in. GET/POST /groups/:groupId/posts already enforce
+// membership, but the by-post-id routes below did not, so any community member
+// could read or write inside another school's private group just by iterating
+// post ids. Returns the post row, or null if it doesn't exist / isn't theirs.
+async function postIfMember(postId, userId) {
+  if (!Number.isInteger(postId)) return null;
+  const [[post]] = await pool.query(
+    `SELECT p.id, p.group_id FROM social_posts p
+     JOIN social_group_members m ON m.group_id = p.group_id AND m.user_id = ?
+     WHERE p.id = ? AND p.deleted_at IS NULL`,
+    [userId, postId]
+  );
+  return post || null;
+}
+
 router.post('/posts/:postId/react', requireSocialAccess, async (req, res) => {
   const postId = Number(req.params.postId);
-  const reaction = (req.body && req.body.reaction) || 'like';
+  // Stored and echoed back to other users, so keep it to a short token, not free text.
+  const rawReaction = req.body && req.body.reaction;
+  const reaction = typeof rawReaction === 'string' && /^[a-z_]{1,20}$/.test(rawReaction) ? rawReaction : 'like';
+  if (!(await postIfMember(postId, req.siteUser.id))) return res.status(404).json({ error: 'Post not found' });
 
   const [existing] = await pool.query(
     'SELECT 1 FROM social_reactions WHERE post_id = ? AND user_id = ?',
@@ -351,6 +430,7 @@ router.post('/posts/:postId/react', requireSocialAccess, async (req, res) => {
 // ── Comments ───────────────────────────────────────────────────────────────
 
 router.get('/posts/:postId/comments', requireSocialAccess, async (req, res) => {
+  if (!(await postIfMember(Number(req.params.postId), req.siteUser.id))) return res.status(404).json({ error: 'Post not found' });
   const [rows] = await pool.query(
     `SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
             su.first_name, su.last_name, sp.avatar_url
@@ -369,7 +449,7 @@ router.post('/posts/:postId/comments', requireSocialAccess, async (req, res) => 
   const content = (req.body && req.body.content || '').trim();
   if (!content) return res.status(400).json({ error: 'Content is required' });
 
-  const [[post]] = await pool.query('SELECT id, group_id FROM social_posts WHERE id = ? AND deleted_at IS NULL', [postId]);
+  const post = await postIfMember(postId, req.siteUser.id);
   if (!post) return res.status(404).json({ error: 'Post not found' });
 
   // Content Safety Gateway (SOCIAL_COMMENT)
@@ -491,7 +571,8 @@ router.post('/messages', requireSocialAccess, async (req, res) => {
     return res.status(422).json({ error: screen.message });
   }
 
-  const attachments = req.body && req.body.attachments ? JSON.stringify(req.body.attachments) : null;
+  const dmAttachments = sanitizeAttachments(req.body && req.body.attachments);
+  const attachments = dmAttachments.length ? JSON.stringify(dmAttachments) : null;
   const [result] = await pool.query(
     'INSERT INTO social_messages (sender_id, recipient_id, content, attachments) VALUES (?, ?, ?, ?)',
     [req.siteUser.id, recipientId, content, attachments]

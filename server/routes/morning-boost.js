@@ -28,6 +28,11 @@ function toUtcIso(str) {
   return str.replace(' ', 'T') + '.000Z';
 }
 
+// Constant-time token comparison (HMAC tokens shouldn't be compared with !==).
+function tokensMatch(given, expected) {
+  const a = Buffer.from(String(given)), b = Buffer.from(String(expected));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 function mbUnsubscribeToken(email) {
   return crypto.createHmac('sha256', process.env.SESSION_SECRET).update(email.toLowerCase()).digest('hex');
 }
@@ -603,7 +608,7 @@ router.get('/email/track-click', async (req, res) => {
 // GET /api/morning-boost/email/unsubscribe — public: Morning Boost-specific unsubscribe
 router.get('/email/unsubscribe', async (req, res) => {
   const { email, token } = req.query;
-  if (!email || !token || token !== mbUnsubscribeToken(email)) {
+  if (!email || !token || !tokensMatch(token, mbUnsubscribeToken(email))) {
     return res.status(400).send('Invalid unsubscribe link.');
   }
   await pool.query(

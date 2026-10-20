@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
+const { limiter } = require('../lib/rate-limit');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ const INTENT_EVENTS = ['add_to_cart', 'quote_request', 'ask_the_fixer', 'contact
 // Public — called from every public v1 page via fnTrackPageview()/fnTrackEvent()
 // in admin-common.js. Anonymous: no IP address stored, no link to a logged-in
 // identity, session id lives only in the visitor's own sessionStorage.
-router.post('/track', async (req, res) => {
+router.post('/track', limiter({ name: 'analytics-track', windowMs: 600000, max: 300 }), async (req, res) => {
   const b = req.body || {};
   const sessionId = b.sessionId;
   const eventType = b.eventType;

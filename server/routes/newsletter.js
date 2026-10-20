@@ -1,10 +1,12 @@
 const express = require('express');
 const pool = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
-const { unsubscribeToken, sendVerificationEmail } = require('../lib/mailer');
+const { requireAuth, getAuthUser } = require('../middleware/auth');
+const { unsubscribeToken, sendVerificationEmail, esc } = require('../lib/mailer');
+const crypto = require('crypto');
 const { createToken } = require('../lib/site-tokens');
 const { fireAutomation } = require('../lib/automations');
 const { attributePurchase } = require('../lib/affiliate-attribution');
+const { limiter, clientIp } = require('../lib/rate-limit');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -66,12 +68,37 @@ function serialize(row) {
   };
 }
 
-// Public — used by both the homepage signup form and the admin's "Add Contact" button.
-router.post('/contacts', async (req, res) => {
+// Anonymous callers only (an admin adding contacts in bulk must never be throttled).
+const newsletterSignupLimit = limiter({ name: 'newsletter-signup', windowMs: 60 * 60 * 1000, max: 20, key: (req) => (getAuthUser(req) ? null : clientIp(req)) });
+
+// Used by both the public homepage signup form and the admin's "Add Contact"
+// button, so it has two modes:
+//
+//  - Anonymous caller: name + email only. Source, status, notes, phone,
+//    address and group membership are set by the server, never the caller --
+//    otherwise anyone on the internet could write arbitrary text into CRM
+//    fields the admin renders, drop themselves into any contact group, or
+//    flag themselves Unsubscribed/whatever. The response is identical whether
+//    or not the address already existed, so this can't be used to probe who is
+//    on the list.
+//  - Admin caller: the full contact payload, as before.
+router.post('/contacts', newsletterSignupLimit, async (req, res) => {
   const b = req.body || {};
   const email = (b.email || '').trim();
-  if (!email || !EMAIL_PATTERN.test(email)) {
+  if (!email || email.length > 254 || !EMAIL_PATTERN.test(email)) {
     return res.status(400).json({ ok: false, reason: 'invalid' });
+  }
+
+  if (!getAuthUser(req)) {
+    try {
+      await pool.query(
+        "INSERT INTO newsletter_contacts (name, email, source, status) VALUES (?, ?, 'Homepage', 'Subscribed')",
+        [String(b.name || '').trim().slice(0, 120), email]
+      );
+    } catch (err) {
+      if (err.code !== 'ER_DUP_ENTRY') throw err;
+    }
+    return res.status(201).json({ ok: true });
   }
 
   const address = b.address || {};
@@ -330,14 +357,17 @@ router.get('/unsubscribe', async (req, res) => {
   const sendToken = req.query.send || '';
   res.set('Content-Type', 'text/html');
 
-  if (!email || token !== unsubscribeToken(email)) {
+  // Constant-time compare: the token is an HMAC, so a plain !== leaks how many leading characters matched.
+  const expected = Buffer.from(unsubscribeToken(email || ''));
+  const given = Buffer.from(String(token));
+  if (!email || given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
     return res.status(400).send('<p style="font-family:sans-serif; padding:40px; text-align:center;">This unsubscribe link is invalid.</p>');
   }
   await pool.query('UPDATE newsletter_contacts SET status = ? WHERE email = ?', ['Unsubscribed', email]);
   if (sendToken) {
     await pool.query('UPDATE campaign_sends SET unsubscribed_at = NOW() WHERE token = ?', [sendToken]);
   }
-  res.send(`<p style="font-family:sans-serif; padding:40px; text-align:center;">${email} has been unsubscribed from Fixer Nation emails.</p>`);
+  res.send(`<p style="font-family:sans-serif; padding:40px; text-align:center;">${esc(email)} has been unsubscribed from Fixer Nation emails.</p>`);
 });
 
 // --- Purchases (books, single teacher licenses, group/school licenses) ---

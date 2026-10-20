@@ -34,9 +34,11 @@ function extractText(filePath) {
   }
 
   // Fallback: unzip via child_process
-  const { execSync } = require('child_process');
+  // execFileSync passes the path as a single argv entry -- no shell, so a
+  // filename containing quotes/$()/backticks can't be interpreted as commands.
+  const { execFileSync } = require('child_process');
   try {
-    const xml = execSync(`unzip -p "${filePath}" word/document.xml`, { encoding: 'utf8' });
+    const xml = execFileSync('unzip', ['-p', filePath, 'word/document.xml'], { encoding: 'utf8' });
     return xml.replace(/<w:br[^/]*/g, '\n')
               .replace(/<\/w:p>/g, '\n')
               .replace(/<[^>]+>/g, '')

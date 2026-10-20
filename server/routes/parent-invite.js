@@ -8,7 +8,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
-const jwt = require('jsonwebtoken');
+const { signSession, verifySession } = require('../lib/session-tokens');
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ async function getLoggedInUser(req) {
   const cookieToken = req.cookies && req.cookies[SITE_COOKIE_NAME];
   if (!cookieToken) return null;
   try {
-    const payload = jwt.verify(cookieToken, process.env.SESSION_SECRET);
+    const payload = verifySession('site', cookieToken);
     const [[user]] = await pool.query('SELECT id, email, first_name, last_name FROM site_users WHERE id = ?', [payload.userId]);
     return user || null;
   } catch {
@@ -148,11 +148,7 @@ router.post('/register', async (req, res) => {
     await conn.query("UPDATE parent_student_invitations SET status = 'accepted' WHERE id = ?", [inv.id]);
     await conn.commit();
 
-    const sessionToken = jwt.sign(
-      { userId: newUserId, firstName: firstName.trim(), role: 'parent' },
-      process.env.SESSION_SECRET,
-      { expiresIn: '30d' }
-    );
+    const sessionToken = signSession('site', { userId: newUserId, firstName: firstName.trim(), role: 'parent' }, '30d');
     res.cookie(SITE_COOKIE_NAME, sessionToken, {
       httpOnly: true, sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
@@ -196,11 +192,7 @@ router.post('/accept-and-verify', async (req, res) => {
   }
   await linkParentToStudent(user.id, inv);
 
-  const sessionToken = jwt.sign(
-    { userId: user.id, firstName: user.first_name, role: 'parent' },
-    process.env.SESSION_SECRET,
-    { expiresIn: '30d' }
-  );
+  const sessionToken = signSession('site', { userId: user.id, firstName: user.first_name, role: 'parent' }, '30d');
   res.cookie(SITE_COOKIE_NAME, sessionToken, {
     httpOnly: true, sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME } = require('../lib/session');
 const { getLevelFromXP, getNextLevel, updateStreak } = require('../lib/rewards');
@@ -153,7 +153,7 @@ async function getSiteUser(req) {
   const token = req.cookies?.[SITE_COOKIE_NAME];
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('site', token);
     const [[user]] = await pool.query(
       'SELECT id, email, first_name, last_name FROM site_users WHERE id = ?', [payload.userId]
     );
@@ -165,7 +165,7 @@ async function getStudentPrincipal(req) {
   const token = req.cookies?.[STUDENT_COOKIE_NAME];
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('student', token);
     // Same gate as requireStudentAuth (middleware/studentAuth.js): active
     // student, non-archived classroom — archiving a classroom must cut off
     // Brain Games access the same way it cuts off everything else.
@@ -474,7 +474,10 @@ router.put('/sessions/:token/complete', async (req, res) => {
   const validationStatus = isValid ? 'valid' : 'suspicious';
 
   // Server-side score recalculation
-  const normalizedScore = calcScore(session.game_slug, metrics, session.difficulty);
+  // A malformed metric (e.g. a string where a number is expected) makes the maths
+  // NaN; store 0 rather than failing the whole completion with a 500.
+  const rawScore = calcScore(session.game_slug, metrics, session.difficulty);
+  const normalizedScore = Number.isFinite(rawScore) ? rawScore : 0;
   const accuracy = getAccuracy(session.game_slug, metrics);
 
   const idCol = principal.idCol;
@@ -505,19 +508,23 @@ router.put('/sessions/:token/complete', async (req, res) => {
     // Update progress
     const newXP = currentXP + xpEarned;
     const newLevel = getLevelFromXP(newXP).level;
+    // Every value is bound as a parameter. (These used to be interpolated into the
+    // SQL string -- numerically safe only because calcScore() happens to return
+    // numbers, which is one refactor away from an injection.)
     const updates = [
       'total_completed = total_completed + 1',
-      `xp = ${newXP}`,
-      `level = ${newLevel}`,
+      'xp = ?',
+      'level = ?',
       'last_played_at = NOW()',
     ];
+    const updateParams = [newXP, newLevel];
     if (isPersonalBest) {
-      updates.push(`best_normalized_score = ${normalizedScore}`);
-      updates.push(`best_metrics_json = ${conn.escape(JSON.stringify(metrics))}`);
+      updates.push('best_normalized_score = ?', 'best_metrics_json = ?');
+      updateParams.push(normalizedScore, JSON.stringify(metrics));
     }
     await conn.query(
       `UPDATE brain_game_user_progress SET ${updates.join(', ')} WHERE ${idCol}=? AND game_id=?`,
-      [principal.id, session.game_id]
+      [...updateParams, principal.id, session.game_id]
     );
 
     await conn.commit();

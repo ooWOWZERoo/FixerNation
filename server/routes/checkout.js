@@ -11,6 +11,7 @@ const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail } = require('../lib/mailer');
 const { refCodeFromRequest, codeForAffiliateId } = require('../lib/affiliate-attribution');
+const { limiter } = require('../lib/rate-limit');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,7 +91,7 @@ const PRICING = {
   group_license: { name: 'Fixer Nation Group License Seat', unitAmountCents: 3900 },
 };
 
-router.post('/create-session', async (req, res) => {
+router.post('/create-session', limiter({ name: 'checkout-session', windowMs: 3600000, max: 30 }), async (req, res) => {
   const b = req.body || {};
   const email = (b.email || '').trim();
 
@@ -251,7 +252,7 @@ async function fulfillResolvedItems(contactId, resolved, fulfillmentFields) {
 // Cart checkout — multiple books and/or license products in one Stripe
 // Checkout session. Actual purchases are only created by the webhook once
 // payment is confirmed (see webhookHandler below), never from this response.
-router.post('/create-cart-session', async (req, res) => {
+router.post('/create-cart-session', limiter({ name: 'checkout-cart', windowMs: 3600000, max: 30 }), async (req, res) => {
   const b = req.body || {};
   const email = (b.email || '').trim();
   const items = Array.isArray(b.items) ? b.items : [];
@@ -296,7 +297,7 @@ router.post('/create-cart-session', async (req, res) => {
 // (and grants license seats) immediately so the school isn't blocked waiting
 // on their business office, but flags payment_status='pending' so an admin
 // can track who still owes money and mark it paid once received.
-router.post('/create-po-order', async (req, res) => {
+router.post('/create-po-order', limiter({ name: 'checkout-po', windowMs: 3600000, max: 10 }), async (req, res) => {
   const b = req.body || {};
   const email = (b.email || '').trim();
   const poNumber = (b.poNumber || '').trim();
@@ -451,7 +452,7 @@ async function handleTrialConversionCompleted(session, metadata) {
   } catch (e) { console.error('sales alert (trial converted) failed:', e.message); }
 }
 
-router.post('/convert-trial', async (req, res) => {
+router.post('/convert-trial', limiter({ name: 'checkout-trial', windowMs: 3600000, max: 10 }), async (req, res) => {
   const siteUser = await getSiteUser(req);
   if (!siteUser) return res.status(401).json({ error: 'Not authenticated' });
 

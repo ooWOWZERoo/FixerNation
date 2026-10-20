@@ -1,18 +1,29 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { signSession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { STUDENT_COOKIE_NAME, STUDENT_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { requireStudentAuth } = require('../middleware/studentAuth');
+const crypto = require('crypto');
+
+const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
 const router = express.Router();
 
+// Student PINs are 6 digits (1,000,000 possibilities) and usernames are guessable
+// (firstname, firstname2, ...), so the PIN is only as strong as the lockout in
+// front of it. Failures are tracked per STUDENT (what actually protects an
+// account, and works even when IP can't be resolved) and per IP. The IP limit is
+// deliberately generous: a whole class logs in from one school address, and
+// correct PINs never count against it.
+const PIN_WINDOW = 15 * 60 * 1000;
+const pinFailsByStudent = new FailureTracker({ name: 'pin-student', windowMs: PIN_WINDOW, max: 5 });
+const pinFailsByIp = new FailureTracker({ name: 'pin-ip', windowMs: PIN_WINDOW, max: 100 });
+const joinCodeMissesByIp = new FailureTracker({ name: 'join-code-miss-ip', windowMs: PIN_WINDOW, max: 30 });
+const joinLimit = limiter({ name: 'student-join', windowMs: 60 * 60 * 1000, max: 150 });
+
 function setStudentCookie(res, student) {
-  const token = jwt.sign(
-    { studentId: student.id, classroomId: student.classroom_id },
-    process.env.SESSION_SECRET,
-    { expiresIn: '8h' }
-  );
+  const token = signSession('student', { studentId: student.id, classroomId: student.classroom_id }, '8h');
   res.cookie(STUDENT_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -25,13 +36,13 @@ function generateJoinCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += chars[crypto.randomInt(chars.length)];
   }
   return code;
 }
 
 function generatePin() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 async function generateUsername(conn, firstName) {
@@ -58,15 +69,24 @@ async function generateUsername(conn, firstName) {
 // If it doesn't match (or the name is new), falls through to the original
 // create-a-new-account behavior — this was the one documented-but-never-
 // implemented behavior this route claimed to have.
-router.post('/join', async (req, res) => {
-  const { joinCode, displayName, pin } = req.body;
+router.post('/join', joinLimit, async (req, res) => {
+  const { joinCode, displayName, pin } = req.body || {};
   if (!joinCode) return res.status(400).json({ error: 'Join code required' });
+  if (typeof joinCode !== 'string' || (displayName != null && typeof displayName !== 'string') || (pin != null && typeof pin !== 'string' && typeof pin !== 'number')) {
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+
+  const ip = clientIp(req);
+  if (rejectIfBlocked(res, [[joinCodeMissesByIp, ip]])) return;
 
   const [classrooms] = await pool.query(
     'SELECT * FROM classrooms WHERE join_code = ? AND archived_at IS NULL',
     [String(joinCode).toUpperCase().trim()]
   );
-  if (!classrooms[0]) return res.status(404).json({ error: 'Classroom not found — check your join code' });
+  if (!classrooms[0]) {
+    joinCodeMissesByIp.fail(ip);
+    return res.status(404).json({ error: 'Classroom not found — check your join code' });
+  }
   const classroom = classrooms[0];
 
   if (!displayName) return res.status(400).json({ error: 'Display name required', classroomName: classroom.name });
@@ -78,8 +98,13 @@ router.post('/join', async (req, res) => {
       [classroom.id, displayName.trim()]
     );
     if (existingByName[0]) {
+      // A returning student re-authenticating by name + PIN is a PIN guess like
+      // any other, so it shares the per-student lockout with /login.
+      const studentKey = 'username:' + String(existingByName[0].username).toLowerCase().trim(); // same key /login uses, so guesses can't be split across the two routes
+      if (rejectIfBlocked(res, [[pinFailsByStudent, studentKey], [pinFailsByIp, ip]])) return;
       const matches = await bcrypt.compare(String(pin), existingByName[0].password_hash);
       if (matches) {
+        pinFailsByStudent.clear(studentKey);
         setStudentCookie(res, existingByName[0]);
         return res.json({
           classroomName: classroom.name,
@@ -89,6 +114,8 @@ router.post('/join', async (req, res) => {
           reauthenticated: true,
         });
       }
+      pinFailsByStudent.fail(studentKey);
+      pinFailsByIp.fail(ip);
       nameCollision = true;
     }
   }
@@ -135,21 +162,37 @@ router.post('/join', async (req, res) => {
 // POST /api/classroom-auth/login
 // Body: { username, pin }
 router.post('/login', async (req, res) => {
-  const { username, pin } = req.body;
+  const { username, pin } = req.body || {};
   if (!username || !pin) return res.status(400).json({ error: 'Username and PIN required' });
+  if (typeof username !== 'string' || (typeof pin !== 'string' && typeof pin !== 'number')) {
+    return res.status(400).json({ error: 'Invalid username or PIN' });
+  }
+
+  const ip = clientIp(req);
+  const usernameKey = 'username:' + username.toLowerCase().trim();
+  if (rejectIfBlocked(res, [[pinFailsByStudent, usernameKey], [pinFailsByIp, ip]])) return;
 
   const [rows] = await pool.query(
     'SELECT cs.*, c.name AS classroom_name, c.archived_at FROM classroom_students cs JOIN classrooms c ON c.id = cs.classroom_id WHERE cs.username = ? AND cs.is_active = 1',
     [String(username).toLowerCase().trim()]
   );
   const student = rows[0];
-  if (!student) return res.status(401).json({ error: 'Invalid username or PIN' });
+  if (!student) {
+    pinFailsByStudent.fail(usernameKey);
+    pinFailsByIp.fail(ip);
+    return res.status(401).json({ error: 'Invalid username or PIN' });
+  }
   if (student.archived_at) {
     return res.status(401).json({ error: 'This classroom has been archived. Ask your teacher for help.' });
   }
 
   const ok = await bcrypt.compare(String(pin), student.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Invalid username or PIN' });
+  if (!ok) {
+    pinFailsByStudent.fail(usernameKey);
+    pinFailsByIp.fail(ip);
+    return res.status(401).json({ error: 'Invalid username or PIN' });
+  }
+  pinFailsByStudent.clear(usernameKey);
 
   setStudentCookie(res, student);
   res.json({ classroomName: student.classroom_name, displayName: student.display_name, username: student.username });

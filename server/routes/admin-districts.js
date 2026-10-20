@@ -16,6 +16,7 @@ const { createToken } = require('../lib/site-tokens');
 const { sendDistrictAdminWelcomeEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
 const { getSetting } = require('../lib/settings');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ router.post('/:districtId/admins/assign', requireAuth, async (req, res) => {
     let isNewUser = false;
 
     if (!user) {
-      const randomHash = await bcrypt.hash(Math.random().toString(36), 12);
+      const randomHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
       const firstName = bodyFirstName.trim();
       const lastName = bodyLastName.trim();
 

@@ -50,6 +50,9 @@ if (!process.env.SESSION_SECRET) {
 
 const app = express();
 
+// Don't advertise the framework/version to anyone fingerprinting the API.
+app.disable('x-powered-by');
+
 // Stripe's webhook signature check needs the raw, unparsed request body, so
 // this must be registered before the global JSON body parser below (which
 // would otherwise consume the stream and leave nothing for Stripe to verify).
@@ -58,6 +61,33 @@ app.post('/api/checkout/webhook', express.raw({ type: 'application/json' }), che
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, private'); next(); });
+
+// Defense-in-depth against cross-site request forgery. Session cookies are
+// SameSite=Lax and the JSON body parser only accepts application/json (which a
+// cross-site page can't send without a CORS preflight this API never grants),
+// so forged writes are already blocked -- but SameSite is *same-site*, not
+// same-origin, so a compromised sibling subdomain would slip past it. Modern
+// browsers label every request with Sec-Fetch-Site / Origin; reject any write
+// that says it came from somewhere else. Requests with neither header
+// (curl, server-to-server) are untouched, and the Stripe webhook is exempt
+// since it authenticates by signature instead.
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  if (req.path === '/checkout/webhook') return next();
+  const fetchSite = req.get('Sec-Fetch-Site');
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+    return res.status(403).json({ error: 'Cross-site request blocked' });
+  }
+  const origin = req.get('Origin');
+  if (origin) {
+    let originHost = null;
+    try { originHost = new URL(origin).host; } catch { /* malformed Origin is rejected below */ }
+    if (!originHost || originHost !== req.get('Host')) {
+      return res.status(403).json({ error: 'Cross-site request blocked' });
+    }
+  }
+  next();
+});
 
 app.use('/api/auth', authRoutes.router);
 app.use('/api/books', bookRoutes);

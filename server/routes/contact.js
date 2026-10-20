@@ -4,10 +4,11 @@ const pool = require('../db/pool');
 const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
+const { limiter } = require('../lib/rate-limit');
 
 const router = express.Router();
 
-router.post('/general-inquiry', async (req, res) => {
+router.post('/general-inquiry', limiter({ name: 'contact-general', windowMs: 3600000, max: 10 }), async (req, res) => {
   const { name, email, message } = req.body || {};
   if (!email || !message) return res.status(400).json({ error: 'Email and message are required' });
 
@@ -24,7 +25,7 @@ router.post('/general-inquiry', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.post('/ask-the-fixer', async (req, res) => {
+router.post('/ask-the-fixer', limiter({ name: 'contact-fixer', windowMs: 3600000, max: 10 }), async (req, res) => {
   const { firstName, lastName, email, message } = req.body || {};
   if (!email || !message) return res.status(400).json({ error: 'Email and message are required' });
 
@@ -43,7 +44,7 @@ router.post('/ask-the-fixer', async (req, res) => {
 });
 
 function generateQuoteNumber() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 async function getDefaultContentProfileId() {
@@ -51,7 +52,7 @@ async function getDefaultContentProfileId() {
   return row ? row.id : null;
 }
 
-router.post('/quote', async (req, res) => {
+router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 10 }), async (req, res) => {
   const { firstName, lastName, email, school, phone, message } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
@@ -105,7 +106,7 @@ const REQUEST_TYPE_LABELS = {
   other: 'Other',
 };
 
-router.post('/privacy-request', async (req, res) => {
+router.post('/privacy-request', limiter({ name: 'contact-privacy', windowMs: 3600000, max: 10 }), async (req, res) => {
   const { name, email, requestType, message } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
 

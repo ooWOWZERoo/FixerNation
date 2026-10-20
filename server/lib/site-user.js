@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('./session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('./session');
 
@@ -12,7 +12,7 @@ async function getSiteUser(req) {
   const token = req.cookies?.[SITE_COOKIE_NAME];
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('site', token);
     const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return null;
     if (rows[0].session_invalidated_at) {

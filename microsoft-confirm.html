@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Confirm Microsoft Sign-In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:stretch; padding:0;}
+  main{flex:1; display:flex; align-items:center; justify-content:center; padding:24px;}
+  h1{font-family:'Fraunces', serif; color:var(--teal-dark); font-size:26px; margin-bottom:8px;}
+  a{color:var(--teal-dark);}
+  .card{background:#fff; border-radius:22px; box-shadow:0 20px 45px -18px rgba(22,79,74,0.28); padding:38px; max-width:420px; width:100%;}
+  .brand{display:flex; align-items:center; margin-bottom:24px;}
+  .brand img{height:72px; width:auto; display:block;}
+  p.sub{font-size:14px; color:var(--ink-soft); margin-bottom:22px;}
+  button{width:100%; padding:13px; border-radius:999px; border:none; background:var(--coral); color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;}
+  button:hover{background:var(--coral-dark);}
+  button:disabled{opacity:0.6; cursor:default;}
+  .message{display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:16px;}
+  .back-link{display:block; text-align:center; margin-top:18px; font-size:13.5px; font-weight:600;}
+</style>
+</head>
+<body>
+
+<main>
+<div class="card">
+  <a href="index.html" style="text-decoration:none;" class="brand"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"></a>
+  <h1>Confirm your Microsoft sign-in</h1>
+  <p class="sub">Press Confirm to connect this Microsoft account to your Fixer Nation account. If you didn't start this, just close the page. Nothing has been connected yet.</p>
+
+  <div class="message" id="message" role="status"></div>
+
+  <!-- A button, not an automatic action on page load: email scanners and link
+       previewers open every URL in a message, and they don't press buttons. -->
+  <button type="button" id="confirmBtn">Confirm</button>
+
+  <a class="back-link" href="index.html">← Return to FNE Home</a>
+</div>
+</main>
+
+<script>
+function showMessage(text, kind) {
+  const box = document.getElementById('message');
+  box.textContent = text;
+  box.style.display = 'block';
+  box.style.background = kind === 'error' ? '#FDECEA' : '#E4F3EE';
+  box.style.color = kind === 'error' ? '#B3261E' : '#164F4A';
+}
+
+const token = new URLSearchParams(window.location.search).get('token');
+const btn = document.getElementById('confirmBtn');
+
+if (!token) {
+  showMessage('This link is missing its token. Please use the link in your email.', 'error');
+  btn.style.display = 'none';
+}
+
+btn.addEventListener('click', async function () {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/site-auth/microsoft/confirm', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const result = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      showMessage(result.error || "We couldn't confirm your sign-in. Please start again from the login screen.", 'error');
+      btn.disabled = false;
+      return;
+    }
+    btn.style.display = 'none';
+    showMessage("You're signed in. Taking you back now.", 'success');
+    // Same-site paths only (mirrors server/lib/safe-redirect.js).
+    const dest = /^\/(?![\/\\])[A-Za-z0-9\-._~\/%?=&#+,:@]*$/.test(result.returnTo || '') ? result.returnTo : '/index.html';
+    setTimeout(function () { window.location.href = dest; }, 900);
+  } catch (e) {
+    showMessage("We couldn't confirm your sign-in. Please start again from the login screen.", 'error');
+    btn.disabled = false;
+  }
+});
+</script>
+
+<footer></footer>
+<script src="footer.js?v=5"></script>
+</body>
+</html>

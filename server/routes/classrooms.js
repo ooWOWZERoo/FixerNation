@@ -14,7 +14,7 @@ const router = express.Router();
 function generateCode8() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
-  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 8; i++) code += chars[crypto.randomInt(chars.length)];
   return code;
 }
 
@@ -23,7 +23,7 @@ function generateParentCode() {
   let code = '';
   for (let i = 0; i < 8; i++) {
     if (i === 4) code += '-';
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += chars[crypto.randomInt(chars.length)];
   }
   return code;
 }
@@ -239,7 +239,7 @@ router.post('/:id/students/bulk', requireSiteAuth, async (req, res) => {
     while (taken.has(username)) { username = base + n; n++; }
     taken.add(username);
 
-    const rawPin = s.pin || String(Math.floor(100000 + Math.random() * 900000));
+    const rawPin = s.pin || String(crypto.randomInt(100000, 1000000));
     const passwordHash = await bcrypt.hash(rawPin, 10);
     try {
       const [r] = await pool.query(
@@ -482,6 +482,14 @@ router.get('/:id/assignments/:cid/progress', requireSiteAuth, async (req, res) =
 router.delete('/:id/assignments/:cid/quiz/:studentId', requireSiteAuth, async (req, res) => {
   const classroom = await ownedClassroom(req, res);
   if (!classroom) return;
+
+  // Owning classroom :id says nothing about :studentId -- without this check any
+  // teacher could wipe any student's quiz data (in any school) by iterating ids.
+  const [[student]] = await pool.query(
+    'SELECT id FROM classroom_students WHERE id = ? AND classroom_id = ?',
+    [req.params.studentId, classroom.id]
+  );
+  if (!student) return res.status(404).json({ error: 'Student not found in this classroom' });
 
   await pool.query(
     'DELETE FROM student_quiz_responses WHERE student_id = ? AND curriculum_id = ?',

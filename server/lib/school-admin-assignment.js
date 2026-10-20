@@ -17,6 +17,7 @@ const { createToken } = require('./site-tokens');
 const { sendSchoolAdminWelcomeEmail, sendPasswordResetEmail, sendSalesAlertEmail } = require('./mailer');
 const { syncRoleToAssignments } = require('./school-admin-roles');
 const { getSetting } = require('./settings');
+const crypto = require('crypto');
 
 async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = 'primary', notes, createdByAdminId = null, firstName: bodyFirstName, lastName: bodyLastName }) {
   if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
@@ -48,7 +49,7 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
     user = userRows[0];
 
     if (!user) {
-      const randomHash = await bcrypt.hash(Math.random().toString(36), 12);
+      const randomHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
       const firstName = bodyFirstName.trim();
       const lastName = bodyLastName.trim();
 

@@ -67,13 +67,41 @@ function systemFromAddress() {
   return `"Fixer Nation" <${process.env.SMTP_USER}>`;
 }
 
+// HTML-escapes a value that came from a user or a public form before it's
+// interpolated into an email body. Anything that originates outside this
+// codebase (names, schools, messages) must go through this -- unescaped, a form
+// field like <a href="https://evil">Verify your account</a> arrives in the
+// recipient's inbox as a live link, from our own trusted sender address.
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Only ever place an http(s) URL into an href; anything else (javascript:,
+// data:, or garbage) degrades to an inert "#".
+function safeUrl(url) {
+  return /^https?:\/\//i.test(String(url || '')) ? esc(url) : '#';
+}
+
+// Sent when someone signs in with Microsoft for the first time. Microsoft's
+// reported email isn't trusted on its own (see routes/site-auth.js), so this
+// mail is the proof that whoever is signing in controls the mailbox.
+async function sendMicrosoftLinkEmail({ to, firstName, confirmUrl }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: 'Confirm your Microsoft sign-in to Fixer Nation',
+    text: `Hi ${firstName},\n\nSomeone signed in to Fixer Nation with a Microsoft account using this email address. To finish connecting that Microsoft account, open this link and press Confirm:\n${confirmUrl}\n\nThis link expires in 1 hour. If this wasn't you, ignore this email — nothing has been connected and no one has been signed in.`,
+    html: `<p>Hi ${esc(firstName)},</p><p>Someone signed in to Fixer Nation with a Microsoft account using this email address. To finish connecting that Microsoft account, open the link below and press <strong>Confirm</strong>:</p><p><a href="${safeUrl(confirmUrl)}">Confirm my Microsoft sign-in</a></p><p>This link expires in 1 hour. If this wasn't you, ignore this email &mdash; nothing has been connected and no one has been signed in.</p>`,
+  });
+}
+
 async function sendVerificationEmail({ to, firstName, verifyUrl }) {
   await getTransporter().sendMail({
     from: systemFromAddress(),
     to,
     subject: 'Verify your Fixer Nation account',
     text: `Hi ${firstName},\n\nWelcome to Fixer Nation! Please verify your email address by visiting this link:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
-    html: `<p>Hi ${firstName},</p><p>Welcome to Fixer Nation! Please verify your email address by clicking the link below:</p><p><a href="${verifyUrl}">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
+    html: `<p>Hi ${esc(firstName)},</p><p>Welcome to Fixer Nation! Please verify your email address by clicking the link below:</p><p><a href="${safeUrl(verifyUrl)}">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
   });
 }
 
@@ -83,7 +111,7 @@ async function sendPasswordResetEmail({ to, firstName, resetUrl }) {
     to,
     subject: 'Reset your Fixer Nation password',
     text: `Hi ${firstName},\n\nWe received a request to reset your Fixer Nation password. Visit this link to choose a new one:\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
-    html: `<p>Hi ${firstName},</p><p>We received a request to reset your Fixer Nation password. Click below to choose a new one:</p><p><a href="${resetUrl}">Reset my password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
+    html: `<p>Hi ${esc(firstName)},</p><p>We received a request to reset your Fixer Nation password. Click below to choose a new one:</p><p><a href="${safeUrl(resetUrl)}">Reset my password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
   });
 }
 
@@ -96,7 +124,7 @@ async function sendAdminInviteEmail({ to, username, inviteUrl }) {
     to,
     subject: 'You have been assigned an admin role on Fixer Nation Education',
     text: `Hi ${username},\n\nYou have been assigned an admin role on the Fixer Nation Education domain. Please verify your email address and set your password by visiting this link:\n${inviteUrl}\n\nThis link expires in 24 hours.`,
-    html: `<p>Hi ${username},</p><p>You have been assigned an admin role on the Fixer Nation Education domain. Please verify your email address and set your password by clicking the link below:</p><p><a href="${inviteUrl}">Activate my admin account</a></p><p>This link expires in 24 hours.</p>`,
+    html: `<p>Hi ${esc(username)},</p><p>You have been assigned an admin role on the Fixer Nation Education domain. Please verify your email address and set your password by clicking the link below:</p><p><a href="${safeUrl(inviteUrl)}">Activate my admin account</a></p><p>This link expires in 24 hours.</p>`,
   });
 }
 
@@ -108,7 +136,7 @@ async function sendAdminPasswordResetEmail({ to, username, resetUrl }) {
     to,
     subject: 'Reset your Fixer Nation admin password',
     text: `Hi ${username},\n\nAn admin password reset was requested for your Fixer Nation Education account. Visit this link to set a new password:\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
-    html: `<p>Hi ${username},</p><p>An admin password reset was requested for your Fixer Nation Education account. Click below to set a new password:</p><p><a href="${resetUrl}">Reset my password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
+    html: `<p>Hi ${esc(username)},</p><p>An admin password reset was requested for your Fixer Nation Education account. Click below to set a new password:</p><p><a href="${safeUrl(resetUrl)}">Reset my password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
   });
 }
 
@@ -120,7 +148,7 @@ const CONTACT_INBOX = 'admin@fixernationeducation.com';
 async function sendContactFormEmail({ to, formName, fields, replyTo }) {
   const rows = Object.entries(fields)
     .filter(([, value]) => value)
-    .map(([label, value]) => `<p><strong>${label}:</strong> ${value}</p>`)
+    .map(([label, value]) => `<p><strong>${esc(label)}:</strong> ${esc(value)}</p>`)
     .join('');
   const text = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
 
@@ -141,9 +169,9 @@ async function sendContactFormEmail({ to, formName, fields, replyTo }) {
 // alert block the underlying purchase/response, same convention as
 // fireAutomation() elsewhere.
 async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel }) {
-  const rows = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `<p><strong>${label}:</strong> ${value}</p>`).join('');
+  const rows = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `<p><strong>${esc(label)}:</strong> ${esc(value)}</p>`).join('');
   const text = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
-  const linkHtml = linkUrl ? `<p style="margin-top:14px;"><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">${linkLabel || 'View in Admin'}</a></p>` : '';
+  const linkHtml = linkUrl ? `<p style="margin-top:14px;"><a href="${safeUrl(linkUrl)}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">${esc(linkLabel || 'View in Admin')}</a></p>` : '';
   const linkText = linkUrl ? `\n\n${linkLabel || 'View in Admin'}: ${linkUrl}` : '';
 
   await getTransporter().sendMail({
@@ -160,7 +188,7 @@ async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel }) 
 // body rather than linked to.
 async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total, status, lineItems }) {
   const rows = lineItems.map(li =>
-    `<tr><td style="padding:6px 10px;">${li.description}${li.seatCount ? ` (${li.seatCount} seats)` : ''}</td><td style="padding:6px 10px; text-align:right;">${li.amount !== null ? '$' + li.amount.toFixed(2) : '—'}</td></tr>`
+    `<tr><td style="padding:6px 10px;">${esc(li.description)}${li.seatCount ? ` (${li.seatCount} seats)` : ''}</td><td style="padding:6px 10px; text-align:right;">${li.amount !== null ? '$' + li.amount.toFixed(2) : '—'}</td></tr>`
   ).join('');
   const textRows = lineItems.map(li =>
     `- ${li.description}${li.seatCount ? ` (${li.seatCount} seats)` : ''}: ${li.amount !== null ? '$' + li.amount.toFixed(2) : '—'}`
@@ -172,8 +200,8 @@ async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total,
     to,
     subject: `Invoice ${invoiceNumber} — Fixer Nation`,
     text: `Hi ${buyerName || 'there'},\n\nHere is invoice ${invoiceNumber}${poNumber ? ` (PO ${poNumber})` : ''}, status: ${statusLabel}.\n\n${textRows}\n\nTotal: $${total.toFixed(2)}\n\nQuestions? Just reply to this email.`,
-    html: `<p>Hi ${buyerName || 'there'},</p>
-      <p>Here is invoice <strong>${invoiceNumber}</strong>${poNumber ? ` (PO ${poNumber})` : ''} — status: <strong>${statusLabel}</strong>.</p>
+    html: `<p>Hi ${esc(buyerName || 'there')},</p>
+      <p>Here is invoice <strong>${esc(invoiceNumber)}</strong>${poNumber ? ` (PO ${esc(poNumber)})` : ''} — status: <strong>${statusLabel}</strong>.</p>
       <table style="border-collapse:collapse; width:100%; max-width:480px;">${rows}
         <tr><td style="padding:10px; font-weight:700; border-top:2px solid #ddd;">Total</td><td style="padding:10px; font-weight:700; text-align:right; border-top:2px solid #ddd;">$${total.toFixed(2)}</td></tr>
       </table>
@@ -193,23 +221,23 @@ async function sendAutomationEmail({ to, subject, body }) {
     to,
     subject,
     text: body,
-    html: body.split('\n').filter(line => line.trim()).map(line => `<p>${line}</p>`).join(''),
+    html: body.split('\n').filter(line => line.trim()).map(line => `<p>${esc(line)}</p>`).join(''),
   });
 }
 
 // Teacher invitation sent by a school license administrator
 async function sendTeacherInvitationEmail({ to, firstName, inviteUrl, schoolDomain, adminName, personalMessage, expiresAt }) {
   const expiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '14 days';
-  const personal = personalMessage ? `<p style="font-style:italic;color:#555;">"${personalMessage}"</p>` : '';
+  const personal = personalMessage ? `<p style="font-style:italic;color:#555;">"${esc(personalMessage)}"</p>` : '';
   await getTransporter().sendMail({
     from: systemFromAddress(),
     to,
     subject: `You're invited to join ${schoolDomain || 'your school'} on Fixer Nation Education`,
     text: `Hi ${firstName},\n\n${adminName || 'Your school administrator'} has invited you to access licensed 2D SEL curriculum on Fixer Nation Education.\n\n${personalMessage ? `"${personalMessage}"\n\n` : ''}Click the link below to accept your invitation and create your account:\n${inviteUrl}\n\nThis invitation expires on ${expiry}.\n\nIf you have any questions, contact your school administrator.`,
-    html: `<p>Hi ${firstName},</p>
-      <p><strong>${adminName || 'Your school administrator'}</strong> has invited you to access licensed 2D SEL curriculum on Fixer Nation Education.</p>
+    html: `<p>Hi ${esc(firstName)},</p>
+      <p><strong>${esc(adminName || 'Your school administrator')}</strong> has invited you to access licensed 2D SEL curriculum on Fixer Nation Education.</p>
       ${personal}
-      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
+      <p><a href="${safeUrl(inviteUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
       <p style="font-size:13px;color:#888;">This invitation expires on ${expiry}. If you didn't expect this email, you can safely ignore it.</p>`,
   });
 }
@@ -219,16 +247,16 @@ async function sendTeacherInvitationEmail({ to, firstName, inviteUrl, schoolDoma
 // parent/guardian instead of a teacher.
 async function sendParentInvitationEmail({ to, studentName, inviteUrl, className, teacherName, personalMessage, expiresAt }) {
   const expiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '14 days';
-  const personal = personalMessage ? `<p style="font-style:italic;color:#555;">"${personalMessage}"</p>` : '';
+  const personal = personalMessage ? `<p style="font-style:italic;color:#555;">"${esc(personalMessage)}"</p>` : '';
   await getTransporter().sendMail({
     from: systemFromAddress(),
     to,
     subject: `You're invited to follow ${studentName}'s progress on Fixer Nation Education`,
     text: `Hi,\n\n${teacherName || 'Your child\'s teacher'} has invited you to link to ${studentName}'s classroom (${className}) on Fixer Nation Education, so you can see their lesson progress.\n\n${personalMessage ? `"${personalMessage}"\n\n` : ''}Click the link below to accept:\n${inviteUrl}\n\nThis invitation expires on ${expiry}.`,
     html: `<p>Hi,</p>
-      <p><strong>${teacherName || "Your child's teacher"}</strong> has invited you to link to <strong>${studentName}</strong>'s classroom (${className}) on Fixer Nation Education, so you can see their lesson progress.</p>
+      <p><strong>${esc(teacherName || "Your child's teacher")}</strong> has invited you to link to <strong>${esc(studentName)}</strong>'s classroom (${esc(className)}) on Fixer Nation Education, so you can see their lesson progress.</p>
       ${personal}
-      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
+      <p><a href="${safeUrl(inviteUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
       <p style="font-size:13px;color:#888;">This invitation expires on ${expiry}. If you didn't expect this email, you can safely ignore it.</p>`,
   });
 }
@@ -241,9 +269,9 @@ async function sendInvitationReminderEmail({ to, firstName, inviteUrl, schoolDom
     to,
     subject: `Reminder: Your invitation to Fixer Nation Education expires ${expiry}`,
     text: `Hi ${firstName},\n\nA reminder that you have a pending invitation to join ${schoolDomain || 'your school'} on Fixer Nation Education.\n\nAccept your invitation here:\n${inviteUrl}\n\nThis invitation expires on ${expiry}.`,
-    html: `<p>Hi ${firstName},</p>
-      <p>Just a reminder that your invitation to join <strong>${schoolDomain || 'your school'}</strong> on Fixer Nation Education is still waiting.</p>
-      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
+    html: `<p>Hi ${esc(firstName)},</p>
+      <p>Just a reminder that your invitation to join <strong>${esc(schoolDomain || 'your school')}</strong> on Fixer Nation Education is still waiting.</p>
+      <p><a href="${safeUrl(inviteUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Accept Invitation</a></p>
       <p style="font-size:13px;color:#888;">This invitation expires on ${expiry}.</p>`,
   });
 }
@@ -258,17 +286,17 @@ async function sendSchoolAdminWelcomeEmail({ to, firstName, schoolDomain, portal
     ? `Please set your password and access your portal here:\n${activateUrl}`
     : `You already have a Fixer Nation Education account (${to}) — sign in to access your new School License Administrator portal here:\n${portalUrl}`;
   const actionHtml = isNewUser
-    ? `<p><a href="${activateUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
-    : `<p>You already have a Fixer Nation Education account (<strong>${to}</strong>) — sign in to access your new portal. Forgot your password? Use the "Forgot your password?" link on the sign-in page.</p>
-       <p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Sign In to School Admin Portal</a></p>`;
+    ? `<p><a href="${safeUrl(activateUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
+    : `<p>You already have a Fixer Nation Education account (<strong>${esc(to)}</strong>) — sign in to access your new portal. Forgot your password? Use the "Forgot your password?" link on the sign-in page.</p>
+       <p><a href="${safeUrl(portalUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Sign In to School Admin Portal</a></p>`;
 
   await getTransporter().sendMail({
     from: systemFromAddress(),
     to,
     subject: `You're now a School License Administrator for ${schoolDomain || 'your school'} on Fixer Nation Education`,
     text: `Hi ${firstName},\n\nYou have been assigned as a School License Administrator for ${schoolDomain || 'your school'} on Fixer Nation Education.\n\nAs a School License Administrator, you can invite teachers, manage licenses, and monitor usage from your portal.\n\n${actionLine}\n\nIf you have questions, contact Fixer Nation Education support.`,
-    html: `<p>Hi ${firstName},</p>
-      <p>You have been assigned as a <strong>School License Administrator</strong> for <strong>${schoolDomain || 'your school'}</strong> on Fixer Nation Education.</p>
+    html: `<p>Hi ${esc(firstName)},</p>
+      <p>You have been assigned as a <strong>School License Administrator</strong> for <strong>${esc(schoolDomain || 'your school')}</strong> on Fixer Nation Education.</p>
       <p>As a School License Administrator, you can:</p>
       <ul><li>Invite teachers and manage invitations</li><li>Assign and revoke licenses</li><li>Monitor license utilization</li><li>View teacher activity and reports</li></ul>
       ${actionHtml}
@@ -287,17 +315,17 @@ async function sendDistrictAdminWelcomeEmail({ to, firstName, districtName, port
     ? `Please set your password and access your portal here:\n${activateUrl}`
     : `You already have a Fixer Nation Education account (${to}) — sign in to access your new District Administrator portal here:\n${portalUrl}`;
   const actionHtml = isNewUser
-    ? `<p><a href="${activateUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
-    : `<p>You already have a Fixer Nation Education account (<strong>${to}</strong>) — sign in to access your new portal. Forgot your password? Use the "Forgot your password?" link on the sign-in page.</p>
-       <p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Sign In to District Admin Portal</a></p>`;
+    ? `<p><a href="${safeUrl(activateUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Set Password &amp; Access Portal</a></p>`
+    : `<p>You already have a Fixer Nation Education account (<strong>${esc(to)}</strong>) — sign in to access your new portal. Forgot your password? Use the "Forgot your password?" link on the sign-in page.</p>
+       <p><a href="${safeUrl(portalUrl)}" style="display:inline-block;padding:12px 24px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Sign In to District Admin Portal</a></p>`;
 
   await getTransporter().sendMail({
     from: systemFromAddress(),
     to,
     subject: `You're now a District Administrator for ${districtName || 'your district'} on Fixer Nation Education`,
     text: `Hi ${firstName},\n\nYou have been assigned as a District Administrator for ${districtName || 'your district'} on Fixer Nation Education.\n\nAs a District Administrator, you can set default branding (logo and colors) for every school in your district that hasn't set its own.\n\n${actionLine}\n\nIf you have questions, contact Fixer Nation Education support.`,
-    html: `<p>Hi ${firstName},</p>
-      <p>You have been assigned as a <strong>District Administrator</strong> for <strong>${districtName || 'your district'}</strong> on Fixer Nation Education.</p>
+    html: `<p>Hi ${esc(firstName)},</p>
+      <p>You have been assigned as a <strong>District Administrator</strong> for <strong>${esc(districtName || 'your district')}</strong> on Fixer Nation Education.</p>
       <p>As a District Administrator, you can set default branding (logo and colors) for every school in your district that hasn't set its own.</p>
       ${actionHtml}
       <p style="font-size:13px;color:#888;">If you didn't expect this email, contact Fixer Nation Education support.</p>`,
@@ -311,10 +339,10 @@ async function sendLicenseUtilizationAlertEmail({ to, adminName, schoolDomain, t
     to,
     subject: `License alert: ${pctUsed}% of seats used for ${schoolDomain || 'your school'}`,
     text: `Hi ${adminName || 'Administrator'},\n\nYour school license for ${schoolDomain} has reached ${pctUsed}% utilization.\n\n${assignedSeats} of ${totalSeats} seats are assigned.\n\nTo purchase additional licenses, visit:\n${purchaseMoreUrl}\n\nFixer Nation Education`,
-    html: `<p>Hi ${adminName || 'Administrator'},</p>
-      <p>Your school license for <strong>${schoolDomain}</strong> has reached <strong>${pctUsed}% utilization</strong>.</p>
-      <p>${assignedSeats} of ${totalSeats} seats are currently assigned.</p>
-      <p><a href="${purchaseMoreUrl}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Request Additional Licenses</a></p>`,
+    html: `<p>Hi ${esc(adminName || 'Administrator')},</p>
+      <p>Your school license for <strong>${esc(schoolDomain)}</strong> has reached <strong>${esc(pctUsed)}% utilization</strong>.</p>
+      <p>${esc(assignedSeats)} of ${esc(totalSeats)} seats are currently assigned.</p>
+      <p><a href="${safeUrl(purchaseMoreUrl)}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Request Additional Licenses</a></p>`,
   });
 }
 
@@ -325,8 +353,8 @@ async function sendTeacherRegisteredNotificationEmail({ to, adminName, teacherNa
     to,
     subject: `${teacherName} has joined ${schoolDomain || 'your school'} on Fixer Nation Education`,
     text: `Hi ${adminName || 'Administrator'},\n\n${teacherName} (${teacherEmail}) has accepted their invitation and registered on Fixer Nation Education.\n\nOne license has been consumed from your school's pool.\n\nFixer Nation Education`,
-    html: `<p>Hi ${adminName || 'Administrator'},</p>
-      <p><strong>${teacherName}</strong> (${teacherEmail}) has accepted their invitation and registered on Fixer Nation Education.</p>
+    html: `<p>Hi ${esc(adminName || 'Administrator')},</p>
+      <p><strong>${esc(teacherName)}</strong> (${esc(teacherEmail)}) has accepted their invitation and registered on Fixer Nation Education.</p>
       <p>One license has been consumed from your school's pool.</p>`,
   });
 }
@@ -374,7 +402,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
     const row = (label, val) =>
       `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;background:#f9fafb;">${label}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${val}</td></tr>`;
 
-    htmlRows += row(`${productName} (${seats} seat${seats !== 1 ? 's' : ''})`, `See total below`);
+    htmlRows += row(`${esc(productName)} (${seats} seat${seats !== 1 ? 's' : ''})`, `See total below`);
     if (addOn > 0) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, `included`);
     if (years > 1) htmlRows += row(`${years}-year term`, `included`);
     if (disc > 0)  htmlRows += row(`Multi-year discount`, `${disc}% off`);
@@ -391,7 +419,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
     const seats = seatCount ? `${seatCount} seat${seatCount === 1 ? '' : 's'}` : null;
     const descLine = seats ? `${productName} — ${seats}` : productName;
     htmlRows = `
-      <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">License</td><td style="padding:10px 14px;border:1px solid #e5e7eb;">${descLine}</td></tr>
+      <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">License</td><td style="padding:10px 14px;border:1px solid #e5e7eb;">${esc(descLine)}</td></tr>
       <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">Total</td><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;">${total}</td></tr>`;
     textLines = `  License: ${descLine}\n  Total:   ${total}`;
   }
@@ -417,7 +445,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
 
   const acceptCtaHtml = acceptUrl ? `
     <div style="text-align:center;margin:24px 0;">
-      <a href="${acceptUrl}" style="display:inline-block;background:#F26B4D;color:#fff;font-weight:700;padding:14px 32px;border-radius:999px;text-decoration:none;font-size:15px;">Accept Quote</a>
+      <a href="${safeUrl(acceptUrl)}" style="display:inline-block;background:#F26B4D;color:#fff;font-weight:700;padding:14px 32px;border-radius:999px;text-decoration:none;font-size:15px;">Accept Quote</a>
     </div>
     <p style="font-size:12px;color:#9ca3af;text-align:center;">${validUntilHtml} Clicking Accept Quote takes you to our secure order processing page.</p>` : `<p style="font-size:13px;color:#6b7280;">${validUntilHtml} To move forward or ask any questions, just reply to this email.</p>`;
 
@@ -443,8 +471,8 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
       `Fixer Nation Education`,
     ].join('\n'),
     html: `
-      <p>Hi ${name},</p>
-      <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${school || 'your school'}</strong>:</p>
+      <p>Hi ${esc(name)},</p>
+      <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${esc(school || 'your school')}</strong>:</p>
       ${sectionsHtml}
       <table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;">${htmlRows}</table>
       ${acceptCtaHtml}
@@ -453,4 +481,4 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail };
+module.exports = { sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail };

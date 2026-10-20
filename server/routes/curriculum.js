@@ -609,8 +609,14 @@ router.get('/:id/file', async (req, res) => {
   const filename = path.basename(file_path);
   const absolutePath = path.join(uploadsDir, filename);
 
+  // file_name is whatever an admin typed when attaching the file. Put raw into a
+  // quoted header value, a '"' breaks out of the quotes and a CR/LF is a header-
+  // injection attempt (Node throws on it, turning the download into a 500). Send
+  // a sanitised ASCII fallback plus an RFC 5987 filename* for the real name.
+  const displayName = String(file_name || filename);
+  const asciiName = displayName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
   res.setHeader('Content-Disposition',
-    `${forceDownload ? 'attachment' : 'inline'}; filename="${file_name || filename}"`);
+    `${forceDownload ? 'attachment' : 'inline'}; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(displayName)}`);
   res.sendFile(absolutePath, { dotfiles: 'deny' }, function(err) {
     if (err && !res.headersSent) res.status(404).json({ error: 'File not found on disk' });
   });

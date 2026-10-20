@@ -1,19 +1,40 @@
 const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { signSession, verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { COOKIE_NAME, COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendAdminInviteEmail, sendAdminPasswordResetEmail } = require('../lib/mailer');
+const { FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Failed-login throttles. Per account (so a botnet can't hammer one admin from
+// many IPs) and per IP (so one host can't spray many usernames). Only failures
+// count, and a success clears the account's counter.
+const loginFailsByAccount = new FailureTracker({ name: 'admin-login-acct', windowMs: 15 * 60 * 1000, max: 8 });
+const loginFailsByIp = new FailureTracker({ name: 'admin-login-ip', windowMs: 15 * 60 * 1000, max: 30 });
+// Compared against when no such account exists, so "unknown username" takes as
+// long as "wrong password" and response timing can't enumerate admin accounts.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 12);
+
+// Sets an admin's new password and revokes every session issued before now.
+// Falls back to the plain update if scripts/alter-add-admin-session-invalidated.js
+// hasn't been run yet, so a password change/invite can never 500 on deploy order.
+async function setAdminPassword(adminId, passwordHash, { markVerified = false } = {}) {
+  const verified = markVerified ? ', email_verified = 1' : '';
+  try {
+    await pool.query(`UPDATE admin_users SET password_hash = ?${verified}, session_invalidated_at = NOW() WHERE id = ?`, [passwordHash, adminId]);
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+    await pool.query(`UPDATE admin_users SET password_hash = ?${verified} WHERE id = ?`, [passwordHash, adminId]);
+  }
+}
+
 function setSessionCookie(res, user) {
-  const token = jwt.sign({ userId: user.id, username: user.username }, process.env.SESSION_SECRET, {
-    expiresIn: '24h',
-  });
+  const token = signSession('admin', { userId: user.id, username: user.username }, '24h');
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -27,25 +48,36 @@ router.post('/login', async (req, res) => {
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
   }
+  if (typeof username !== 'string' || typeof password !== 'string' || password.length > 1000) {
+    return res.status(400).json({ error: 'Invalid username or password' });
+  }
+
+  const acctKey = username.trim().toLowerCase();
+  const ip = clientIp(req);
+  if (rejectIfBlocked(res, [[loginFailsByAccount, acctKey], [loginFailsByIp, ip]])) return;
 
   // Accepts either the literal username or the account's email — usernames
-  // like "AJP-VSSUS" aren't something an admin reliably remembers, and the
-  // generic "Invalid username or password" error gave no hint that the
-  // identifier itself (not the password) was the actual mismatch.
+  // like "AJP-VSSUS" aren't something an admin reliably remembers.
   const [rows] = await pool.query('SELECT id, username, password_hash, email_verified FROM admin_users WHERE username = ? OR email = ?', [username, username]);
   const user = rows[0];
-  if (!user) {
+
+  // Always run a bcrypt compare, and check the password BEFORE telling anyone
+  // anything about the account's state. This used to answer "please activate
+  // your account" (403) before looking at the password, which confirmed to an
+  // anonymous caller that a username/email belongs to a real, not-yet-active
+  // admin. A pending admin has no usable password yet, so they can't get past
+  // the compare -- they follow their emailed invite link instead.
+  const matches = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
+  if (!user || !matches) {
+    loginFailsByAccount.fail(acctKey);
+    loginFailsByIp.fail(ip);
     return res.status(401).json({ error: 'Invalid username or password' });
   }
   if (!user.email_verified) {
     return res.status(403).json({ error: 'Please activate your admin account using the link emailed to you first.' });
   }
 
-  const matches = await bcrypt.compare(password, user.password_hash);
-  if (!matches) {
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-
+  loginFailsByAccount.clear(acctKey);
   setSessionCookie(res, user);
   res.json({ ok: true, username: user.username });
 });
@@ -61,7 +93,7 @@ router.get('/me', (req, res) => {
     return res.json({ loggedIn: false });
   }
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
+    const payload = verifySession('admin', token);
     res.json({ loggedIn: true, username: payload.username });
   } catch {
     res.json({ loggedIn: false });
@@ -87,7 +119,12 @@ router.put('/password', requireAuth, async (req, res) => {
   }
 
   const newHash = await bcrypt.hash(newPassword, 12);
-  await pool.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+  // Revoke every other browser's session for this admin (a stolen cookie must
+  // not survive a password change), then reissue one for THIS browser: its new
+  // iat lands at-or-after session_invalidated_at, so it survives requireAuth.
+  await setAdminPassword(user.id, newHash);
+  const [[fresh]] = await pool.query('SELECT id, username FROM admin_users WHERE id = ?', [user.id]);
+  if (fresh) setSessionCookie(res, fresh);
   res.json({ ok: true });
 });
 
@@ -233,7 +270,9 @@ router.post('/accept-invite', async (req, res) => {
   if (!record) return res.status(400).json({ error: 'This invite link is invalid or has expired.' });
 
   const passwordHash = await bcrypt.hash(password, 12);
-  await pool.query('UPDATE admin_users SET password_hash = ?, email_verified = 1 WHERE id = ?', [passwordHash, record.admin_id]);
+  // An invite or reset link sets a brand-new password, so any session that
+  // existed under the old one is revoked too.
+  await setAdminPassword(record.admin_id, passwordHash, { markVerified: true });
   await pool.query('DELETE FROM admin_invite_tokens WHERE id = ?', [record.id]);
 
   res.json({ ok: true });
