@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
-const { getParentClassrooms, hasParentAccessToCurriculum } = require('../lib/access');
+const { getParentClassrooms, hasParentAccessToCurriculum, isLinkedParent } = require('../lib/access');
 const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/branding');
 
 const router = express.Router();
@@ -17,7 +17,7 @@ const router = express.Router();
 // to get linked now is a teacher-sent per-student invite
 // (POST /api/classrooms/:id/students/:sid/invite-parent).
 router.get('/children', requireSiteAuth, async (req, res) => {
-  if (req.siteUser.role !== 'parent') {
+  if (!(await isLinkedParent(req.siteUser.id))) {
     return res.status(403).json({ error: 'Parent access required' });
   }
 
@@ -64,7 +64,7 @@ router.get('/children', requireSiteAuth, async (req, res) => {
 // product decision, this shows completion status only (no quiz answers,
 // no reflections; those stay teacher-only for now).
 router.get('/students/:studentId/progress', requireSiteAuth, async (req, res) => {
-  if (req.siteUser.role !== 'parent') {
+  if (!(await isLinkedParent(req.siteUser.id))) {
     return res.status(403).json({ error: 'Parent access required' });
   }
 
@@ -101,7 +101,7 @@ router.get('/students/:studentId/progress', requireSiteAuth, async (req, res) =>
 // GET /api/parent/lesson/:curriculumId
 // Returns curriculum details for parents — resources, videos (no quiz, no lesson plan docs).
 router.get('/lesson/:curriculumId', requireSiteAuth, async (req, res) => {
-  if (req.siteUser.role !== 'parent') {
+  if (!(await isLinkedParent(req.siteUser.id))) {
     return res.status(403).json({ error: 'Parent access required' });
   }
 
@@ -156,7 +156,7 @@ router.get('/lesson/:curriculumId', requireSiteAuth, async (req, res) => {
 // different entry per classroom rather than one global theme, since the
 // portal renders one block per child on a single page.
 router.get('/branding', requireSiteAuth, async (req, res) => {
-  if (req.siteUser.role !== 'parent') {
+  if (!(await isLinkedParent(req.siteUser.id))) {
     return res.status(403).json({ error: 'Parent access required' });
   }
 

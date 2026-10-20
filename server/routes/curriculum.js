@@ -4,7 +4,7 @@ const multer = require('multer');
 const AdmZip = require('adm-zip');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
-const { getSiteUser, hasActiveLicense, hasParentAccessToCurriculum } = require('../lib/access');
+const { getSiteUser, hasActiveLicense, hasParentAccessToCurriculum, isLinkedParent } = require('../lib/access');
 
 const quizUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -269,7 +269,9 @@ router.get('/', async (req, res) => {
   } else {
     const siteUser = await getSiteUser(req);
     // Licensed non-admin teachers with ≥1 plan selection see only their library
-    if (siteUser && siteUser.role !== 'parent' && await hasActiveLicense(siteUser.id)) {
+    // A licensed user gets the teacher library view regardless of site_users.role
+    // (a parent who also holds a licence seat is a teacher here, not just a parent).
+    if (siteUser && await hasActiveLicense(siteUser.id)) {
       const [selRows] = await pool.query(
         'SELECT curriculum_id FROM teacher_lesson_plans WHERE site_user_id = ?',
         [siteUser.id]
@@ -498,7 +500,7 @@ router.get('/:id/file', async (req, res) => {
   const siteUser = isAdmin ? null : await getSiteUser(req);
   const licensed = isAdmin || !!(siteUser && await hasActiveLicense(siteUser.id));
 
-  const isParent = !isAdmin && !!(siteUser && siteUser.role === 'parent');
+  const isParent = !isAdmin && !!(siteUser && await isLinkedParent(siteUser.id));
   const parentCanView = isParent && resourceType && PARENT_ACCESSIBLE_RESOURCES.includes(resourceType)
     && await hasParentAccessToCurriculum(siteUser.id, id);
 

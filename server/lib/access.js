@@ -97,6 +97,18 @@ async function getParentClassrooms(siteUserId) {
   return rows;
 }
 
+// True if this site_user is linked to at least one classroom/student as a parent.
+// This -- not site_users.role -- is what makes someone a parent. role is a single
+// mutually-exclusive value (every admin/parent assignment overwrites it), so an
+// account that is a teacher AND a parent (or a school admin who invited their own
+// child's classroom) would lose its parent portal depending on which role was
+// assigned last. Same rule school/district admin already follow.
+async function isLinkedParent(siteUserId) {
+  if (!siteUserId) return false;
+  const [rows] = await pool.query('SELECT 1 FROM parent_classroom_links WHERE site_user_id = ? LIMIT 1', [siteUserId]);
+  return rows.length > 0;
+}
+
 // True if a parent user is linked to any classroom that has the given curriculum assigned.
 async function hasParentAccessToCurriculum(siteUserId, curriculumId) {
   if (!siteUserId || !curriculumId) return false;
@@ -109,4 +121,4 @@ async function hasParentAccessToCurriculum(siteUserId, curriculumId) {
   return rows.length > 0;
 }
 
-module.exports = { getSiteUser, hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms, hasParentAccessToCurriculum };
+module.exports = { getSiteUser, hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms, hasParentAccessToCurriculum, isLinkedParent };
