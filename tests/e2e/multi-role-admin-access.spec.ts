@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomTestPassword } from "./helpers/qa";
 import { signInAsAdmin, signInAsSchoolAdminAccount, signInAsDistrictAdminAccount } from "./helpers/auth";
 
 // ---------------------------------------------------------------------------
@@ -142,7 +143,7 @@ test.describe("Multi-role admin access", () => {
     // against the SAME .env.test values, this will correctly fail with a 400
     // ("invalid or expired") on re-run. That's not a regression; re-run
     // seed-qa-test-accounts.js to mint a fresh token before retrying.
-    const newPassword = "QaTest!2026-Reset";
+    const newPassword = randomTestPassword();
 
     const resetRes = await page.request.post("/api/site-auth/reset-password", {
       data: { token, newPassword },

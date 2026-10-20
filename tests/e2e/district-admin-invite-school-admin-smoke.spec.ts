@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { QA_PASSWORD } from "./helpers/qa";
 import { signInAsDistrictAdminAccount } from "./helpers/auth";
 
 // Live smoke test for the new "district admin invites a School License
@@ -19,7 +20,8 @@ const INVITE_EMAIL = "qa-district-invite-test@example.com";
 test.describe.serial("district admin school-invite management", () => {
 
 test("district admin sees their district's licensed school and can invite a school license admin", async ({ page }) => {
-  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", "QaTest!2026");
+  test.skip(!QA_PASSWORD, "TEST_QA_PASSWORD not set — see tests/.env.test.example");
+  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", QA_PASSWORD);
   await page.goto("/district-admin-schools.html");
 
   const schoolCard = page.locator("#schoolsList .sa-card", { hasText: "qa-dual-role-school.example.com" });
@@ -40,7 +42,8 @@ test("district admin sees their district's licensed school and can invite a scho
 });
 
 test("district admin can resend welcome, edit permission level, and revoke an admin", async ({ page }) => {
-  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", "QaTest!2026");
+  test.skip(!QA_PASSWORD, "TEST_QA_PASSWORD not set — see tests/.env.test.example");
+  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", QA_PASSWORD);
   await page.goto("/district-admin-schools.html");
 
   const schoolCard = page.locator("#schoolsList .sa-card", { hasText: "qa-dual-role-school.example.com" });
@@ -82,7 +85,7 @@ test("district admin can resend welcome, edit permission level, and revoke an ad
 });
 
 test("rejects an invite with a blank first or last name", async ({ page }) => {
-  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", "QaTest!2026");
+  await signInAsDistrictAdminAccount(page, "qa-dual-role-admin@example.com", QA_PASSWORD);
   await page.goto("/district-admin-schools.html");
 
   const schoolCard = page.locator("#schoolsList .sa-card", { hasText: "qa-dual-role-school.example.com" });

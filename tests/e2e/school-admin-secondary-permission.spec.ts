@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { QA_PASSWORD } from "./helpers/qa";
 import { signInAsSchoolAdminAccount } from "./helpers/auth";
 
 // ---------------------------------------------------------------------------
@@ -29,7 +30,7 @@ test.describe.configure({ mode: "serial" });
 test.describe("School admin 'secondary' permission level actually restricts revocation", () => {
   const email = process.env.TEST_SECONDARY_ADMIN_EMAIL;
   const revokeInvitationId = process.env.TEST_SECONDARY_REVOKE_INVITATION_ID;
-  const password = "QaTest!2026";
+  const password = QA_PASSWORD;
 
   test("a secondary admin cannot revoke an invitation", async ({ page }) => {
     test.skip(!email || !revokeInvitationId, "TEST_SECONDARY_ADMIN_EMAIL / TEST_SECONDARY_REVOKE_INVITATION_ID not set — see tests/.env.test.example");

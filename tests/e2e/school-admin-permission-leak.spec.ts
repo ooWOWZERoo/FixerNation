@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { QA_PASSWORD } from "./helpers/qa";
 import { signInAsSchoolAdminAccount } from "./helpers/auth";
 
 // ---------------------------------------------------------------------------
@@ -29,7 +30,7 @@ test.describe("School admin cross-purchase permission leak", () => {
   const email = process.env.TEST_PERMLEAK_ADMIN_EMAIL;
   const olderPurchaseId = process.env.TEST_PERMLEAK_OLDER_PURCHASE_ID;
   const newerPurchaseId = process.env.TEST_PERMLEAK_NEWER_PURCHASE_ID;
-  const password = "QaTest!2026";
+  const password = QA_PASSWORD;
 
   test("a write against the read_only-on-paper OLDER purchase is blocked, not silently allowed via the newer primary assignment", async ({ page }) => {
     test.skip(!email || !olderPurchaseId, "TEST_PERMLEAK_ADMIN_EMAIL / TEST_PERMLEAK_OLDER_PURCHASE_ID not set — see tests/.env.test.example");

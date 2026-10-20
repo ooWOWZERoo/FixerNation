@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomTestPassword } from "./helpers/qa";
 import { signInAsAdmin, signInAsSchoolAdmin } from "./helpers/auth";
 
 // ---------------------------------------------------------------------------
@@ -91,8 +92,9 @@ test.describe("School invite flow", () => {
 
     await newState.locator("#newFirst").fill("QA");
     await newState.locator("#newLast").fill("InviteTeacherTest");
-    await newState.locator("#newPass").fill("QaTest!2026");
-    await newState.locator("#newPass2").fill("QaTest!2026");
+    const invitePassword = randomTestPassword();
+    await newState.locator("#newPass").fill(invitePassword);
+    await newState.locator("#newPass2").fill(invitePassword);
     await newState.locator("#newBtn").click();
 
     await expect(page.locator("#stateSuccess")).toBeVisible({ timeout: 10000 });

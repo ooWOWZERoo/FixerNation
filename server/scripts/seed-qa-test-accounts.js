@@ -16,8 +16,20 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const QA_PASSWORD = 'QaTest!2026';
-const QA_PIN = '135790';
+// These accounts live in the real production database (this site has no staging
+// DB) and include a licensed teacher and school/district admins, so their
+// credentials must NOT be committed -- this repo is public, and a committed
+// password here was effectively a free paid-licence login for anyone who read it.
+// Supply them for each run, e.g.:
+//   QA_PASSWORD='...' QA_PIN='######' node scripts/seed-qa-test-accounts.js
+// Only affects accounts this run CREATES; to change the password on accounts that
+// already exist, run scripts/rotate-qa-test-credentials.js.
+const QA_PASSWORD = process.env.QA_PASSWORD;
+const QA_PIN = process.env.QA_PIN;
+if (!QA_PASSWORD || QA_PASSWORD.length < 12 || !/^\d{6}$/.test(QA_PIN || '')) {
+  console.error('Set QA_PASSWORD (12+ chars) and QA_PIN (exactly 6 digits) in the environment before running this seed.');
+  process.exit(1);
+}
 
 async function findOrCreateSiteUser(conn, { email, firstName, lastName, role }) {
   const [[existing]] = await conn.query('SELECT id, role FROM site_users WHERE email = ?', [email]);
