@@ -284,7 +284,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 let _groups = [];
 let _selectedGroupIds = new Set();
@@ -368,7 +368,7 @@ function renderGroupGrid() {
   if (!_groups.length) { grid.innerHTML = '<span style="color:var(--a-text-soft);font-size:13px;">No groups found.</span>'; return; }
   grid.innerHTML = _groups.map(g => `
     <div class="group-chip${_selectedGroupIds.has(g.id) ? ' selected' : ''}" onclick="toggleGroup(${g.id}, this)">
-      <span>${g.name}</span>
+      <span>${fnEscape(g.name)}</span>
       <span style="font-size:11px;color:var(--a-text-soft);">(${g.memberCount || 0})</span>
     </div>
   `).join('');
@@ -434,13 +434,13 @@ async function sendToday() {
         body: JSON.stringify({ date: new Date().toISOString().slice(0, 10), resend: true }),
       });
       const d2 = await r2.json().catch(() => ({}));
-      fnToast(d2.ok ? `Resent — ${d2.sent} delivered` : 'Resend failed: ' + (d2.errors || []).join('; '));
+      fnToast(d2.ok ? `Resent — ${fnEscape(d2.sent)} delivered` : 'Resend failed: ' + (d2.errors || []).join('; '));
       loadHistory(0);
     }
     return;
   }
   if (data.ok) {
-    fnToast(`Sent — ${data.sent} delivered, ${data.failed} failed`);
+    fnToast(`Sent — ${fnEscape(data.sent)} delivered, ${fnEscape(data.failed)} failed`);
     switchTab('history');
   } else {
     fnToast('Send failed: ' + (data.errors || ['Unknown error']).join('; '));
@@ -463,9 +463,9 @@ async function loadHistory(offset = 0) {
   } else {
     tbody.innerHTML = sends.map(s => `
       <tr class="send-row" onclick="openDetail(${s.id})">
-        <td>${s.boostDate || '—'}</td>
-        <td><span class="status-chip chip-${s.status}">${s.status}</span>${s.isResend ? ' <span style="font-size:11px;color:var(--a-text-soft);">(resend)</span>' : ''}</td>
-        <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.subject || '—'}</td>
+        <td>${fnEscape(s.boostDate || '—')}</td>
+        <td><span class="status-chip chip-${fnEscape(s.status)}">${fnEscape(s.status)}</span>${s.isResend ? ' <span style="font-size:11px;color:var(--a-text-soft);">(resend)</span>' : ''}</td>
+        <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fnEscape(s.subject || '—')}</td>
         <td>${s.recipientCount}</td>
         <td>${s.sentCount}</td>
         <td>${s.failedCount}</td>
@@ -494,7 +494,7 @@ async function openDetail(sendId) {
   const data = await res.json().catch(() => ({}));
   const { send, stats, recipients } = data;
 
-  document.getElementById('detailHeading').textContent = `${send.boostDate || '?'} — ${send.subject || 'Morning Boost'}`;
+  document.getElementById('detailHeading').textContent = `${fnEscape(send.boostDate || '?')} — ${fnEscape(send.subject || 'Morning Boost')}`;
   document.getElementById('detailStats').innerHTML = [
     { label: 'Recipients', value: send.recipientCount },
     { label: 'Sent', value: stats.sent },
@@ -502,15 +502,15 @@ async function openDetail(sendId) {
     { label: 'Skipped', value: stats.skipped },
     { label: 'Opened', value: stats.opened },
     { label: 'Clicked', value: stats.clicked },
-  ].map(s => `<div class="stat-box"><div class="sv">${s.value}</div><div class="sl">${s.label}</div></div>`).join('');
+  ].map(s => `<div class="stat-box"><div class="sv">${fnEscape(s.value)}</div><div class="sl">${fnEscape(s.label)}</div></div>`).join('');
 
   document.getElementById('detailMeta').innerHTML = [
     send.fromEmail && `From: ${send.fromName ? send.fromName + ' &lt;' + send.fromEmail + '&gt;' : send.fromEmail}`,
-    send.ctaUrl && `CTA: <a href="${send.ctaUrl}" target="_blank" style="color:var(--a-accent);">${send.ctaUrl}</a>`,
-    send.postTitle && `Post: ${send.postTitle}`,
+    send.ctaUrl && `CTA: <a href="${fnEscape(send.ctaUrl)}" target="_blank" style="color:var(--a-accent);">${fnEscape(send.ctaUrl)}</a>`,
+    send.postTitle && `Post: ${fnEscape(send.postTitle)}`,
     send.scheduledFor && `Scheduled: ${new Date(send.scheduledFor).toLocaleString()}`,
     send.sentAt && `Sent: ${new Date(send.sentAt).toLocaleString()}`,
-    send.failureReason && `<span style="color:var(--a-danger);">Failure: ${send.failureReason}</span>`,
+    send.failureReason && `<span style="color:var(--a-danger);">Failure: ${fnEscape(send.failureReason)}</span>`,
   ].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
   const resendFailedBtn = document.getElementById('resendFailedBtn');
@@ -518,8 +518,8 @@ async function openDetail(sendId) {
 
   document.getElementById('detailRecipients').innerHTML = (recipients || []).map(r => `
     <tr>
-      <td>${r.email}</td>
-      <td><span class="status-chip chip-${r.status}">${r.status}</span>${r.error ? ` <span style="font-size:11px;color:var(--a-text-soft);">${r.error.slice(0, 60)}</span>` : ''}</td>
+      <td>${fnEscape(r.email)}</td>
+      <td><span class="status-chip chip-${fnEscape(r.status)}">${fnEscape(r.status)}</span>${r.error ? ` <span style="font-size:11px;color:var(--a-text-soft);">${r.error.slice(0, 60)}</span>` : ''}</td>
       <td>${r.sentAt ? new Date(r.sentAt).toLocaleTimeString() : '—'}</td>
       <td>${r.openedAt ? '✓' : '—'}</td>
       <td>${r.clickedAt ? '✓' : '—'}</td>
@@ -549,7 +549,7 @@ async function doResend(onlyFailed) {
   const msgEl = document.getElementById('detailResendMsg');
   if (data.ok) {
     msgEl.style.color = 'var(--a-accent)';
-    msgEl.textContent = `Resent — ${data.sent} delivered, ${data.failed} failed.`;
+    msgEl.textContent = `Resent — ${fnEscape(data.sent)} delivered, ${fnEscape(data.failed)} failed.`;
     loadHistory(0);
   } else {
     msgEl.style.color = 'var(--a-danger)';
@@ -579,10 +579,10 @@ async function loadSchedule() {
     const entry = entryMap[iso];
     const hasPost = entry && entry.blogPostId;
     const themeCell = entry
-      ? `<div style="font-size:12px;font-weight:600;">${entry.theme || '—'}</div><div style="font-size:11px;color:var(--a-text-soft);">${entry.series || ''}</div>`
+      ? `<div style="font-size:12px;font-weight:600;">${fnEscape(entry.theme || '—')}</div><div style="font-size:11px;color:var(--a-text-soft);">${fnEscape(entry.series || '')}</div>`
       : `<span style="color:var(--a-text-soft);font-size:12px;">—</span>`;
     const postCell = hasPost
-      ? `<span class="post-linked">${entry.postTitle || '(untitled)'}</span><span class="pub-badge ${entry.postPublished ? 'pub-yes' : 'pub-no'}">${entry.postPublished ? 'Published' : 'Draft'}</span>`
+      ? `<span class="post-linked">${fnEscape(entry.postTitle || '(untitled)')}</span><span class="pub-badge ${entry.postPublished ? 'pub-yes' : 'pub-no'}">${entry.postPublished ? 'Published' : 'Draft'}</span>`
       : `<span class="post-unlinked">— not linked —</span>`;
     let actions;
     if (hasPost) {
@@ -645,7 +645,7 @@ function filterPostList() {
   el.innerHTML = filtered.slice(0, 60).map(p => {
     const safeTitle = JSON.stringify(p.title || '').replace(/"/g, '&quot;');
     return `<div class="post-item" onclick="selectPost(${p.id}, ${safeTitle})">
-      <div class="post-item-title">${p.title || '(untitled)'}</div>
+      <div class="post-item-title">${fnEscape(p.title || '(untitled)')}</div>
       <div class="post-item-meta">${p.published ? 'Published' : 'Draft'} · ${fnFormatDate(p.publishDate) || '—'}</div>
     </div>`;
   }).join('');

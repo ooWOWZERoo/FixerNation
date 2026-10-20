@@ -328,7 +328,7 @@
 </div>
 
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -521,7 +521,7 @@ function populateGroupCheckboxes(containerId, checkedIds) {
   container.innerHTML = groupsCache.map(g => `
     <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:400;text-transform:none;font-size:13.5px;cursor:pointer;">
       <input type="checkbox" value="${g.id}" ${checked.has(g.id) ? 'checked' : ''} onchange="${containerId === 'audienceGroupList' ? 'updateAudiencePreview()' : 'updateSeriesAudiencePreview()'}">
-      ${g.name}
+      ${fnEscape(g.name)}
     </label>
   `).join('');
 }
@@ -596,7 +596,7 @@ async function renderCampaigns() {
     const stats = campaignStatsCache[c.id];
     const openedCell = c.status !== 'Sent' ? '—'
       : c.bodyFormat !== 'html' ? '<span title="Plain-text emails have no HTML to embed a tracking pixel in, so opens can never be tracked for this campaign.">N/A (plain text)</span>'
-      : stats ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : '—';
+      : stats ? `${fnEscape(stats.opened)} (${Math.round(stats.openRate * 100)}%)` : '—';
     const unsubCell = c.status === 'Sent' && stats ? stats.unsubscribed : '—';
     const statusPill = c.status === 'Sent' ? 'a-pill-success' : (c.status === 'Scheduled' || c.status === 'Sending') ? 'a-pill-warning' : 'a-pill-neutral';
     const dateCell = c.status === 'Sent' ? fnFormatDate(c.sentAt)
@@ -605,9 +605,9 @@ async function renderCampaigns() {
       : '—';
     const seriesTag = c.seriesId ? ' <span class="a-pill a-pill-neutral" title="Spawned by a recurring campaign">🔁</span>' : '';
     tr.innerHTML = `
-      <td class="a-cell-title" style="cursor:pointer;" onclick="viewCampaign(${c.id})" title="Click to view details">${c.subject} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}${seriesTag}</td>
+      <td class="a-cell-title" style="cursor:pointer;" onclick="viewCampaign(${c.id})" title="Click to view details">${fnEscape(c.subject)} ${c.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}${seriesTag}</td>
       <td>${audienceLabel}</td>
-      <td><span class="a-pill ${statusPill}">${c.status}</span></td>
+      <td><span class="a-pill ${statusPill}">${fnEscape(c.status)}</span></td>
       <td>${dateCell}</td>
       <td>${(c.status === 'Sent' || c.status === 'Sending') ? c.recipientCount : '—'}</td>
       <td>${openedCell}</td>
@@ -709,7 +709,7 @@ async function duplicateCampaign(id) {
   if (!c) return;
 
   const data = {
-    subject: `${c.subject} (Copy)`,
+    subject: `${fnEscape(c.subject)} (Copy)`,
     fromName: c.fromName,
     fromEmail: c.fromEmail,
     audienceFilter: c.audienceFilter,
@@ -795,10 +795,10 @@ async function viewCampaign(id) {
   const audienceLabel = describeAudience(c.audienceFilter);
   const stats = campaignStatsCache[id];
   document.getElementById('viewMeta').innerHTML =
-    `From: ${c.fromName} &lt;${c.fromEmail}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${c.status}` +
+    `From: ${fnEscape(c.fromName)} &lt;${fnEscape(c.fromEmail)}&gt;<br>Audience: ${audienceLabel}<br>Format: ${c.bodyFormat === 'html' ? 'HTML' : 'Plain Text'}<br>Status: ${fnEscape(c.status)}` +
     (c.status === 'Sent' ? `<br>Sent ${fnFormatDate(c.sentAt)} to ${c.recipientCount} recipient(s)` : '') +
     (c.status === 'Sending' ? `<br>${c.recipientCount || 0} of ${c.totalRecipientsAtSend != null ? c.totalRecipientsAtSend : '?'} sent so far — next batch ${fnFormatDate(c.nextBatchAt)}` : '') +
-    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'}${c.bodyFormat === 'html' ? ` · Clicked: ${stats.clicked}` : ''} · Bounced: ${stats.bounced} · Undelivered: ${stats.undelivered}` : '');
+    (stats ? `<br>Opened: ${c.bodyFormat === 'html' ? `${stats.opened} (${Math.round(stats.openRate * 100)}%)` : 'N/A (plain text)'}${c.bodyFormat === 'html' ? ` · Clicked: ${stats.clicked}` : ''} · Bounced: ${fnEscape(stats.bounced)} · Undelivered: ${fnEscape(stats.undelivered)}` : '');
 
   const activityEl = document.getElementById('viewActivity');
   activityEl.innerHTML = '';
@@ -818,10 +818,10 @@ async function viewCampaign(id) {
           ${activity.links.map(l => `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:6px 0; border-bottom:1px solid var(--a-border);">
               <div style="min-width:0; flex:1;">
-                <a href="${l.url}" target="_blank" rel="noopener" style="font-size:12.5px; color:var(--a-accent); word-break:break-all;">${truncateUrl(l.url)}</a>
+                <a href="${fnEscape(l.url)}" target="_blank" rel="noopener" style="font-size:12.5px; color:var(--a-accent); word-break:break-all;">${truncateUrl(l.url)}</a>
                 ${l.clickers.length ? `<div style="font-size:11.5px; color:var(--a-text-soft); margin-top:2px;">${l.clickers.join(', ')}</div>` : ''}
               </div>
-              <span style="white-space:nowrap; font-size:12px; font-weight:700;">${l.totalClicks} click${l.totalClicks !== 1 ? 's' : ''}</span>
+              <span style="white-space:nowrap; font-size:12px; font-weight:700;">${fnEscape(l.totalClicks)} click${l.totalClicks !== 1 ? 's' : ''}</span>
             </div>
           `).join('')}
         </div>
@@ -1022,10 +1022,10 @@ function ordinal(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 function describeRecurrence(s) {
-  const time = new Date(`2000-01-01T${s.sendTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const time = new Date(`2000-01-01T${fnEscape(s.sendTime)}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   const tz = (s.sendTimezone || '').split('/').pop().replace('_', ' ');
   if (s.recurrenceType === 'daily') return `Daily at ${time} ${tz}`;
-  if (s.recurrenceType === 'weekly') return `Weekly on ${WEEKDAY_NAMES[s.recurrenceDayOfWeek]} at ${time} ${tz}`;
+  if (s.recurrenceType === 'weekly') return `Weekly on ${fnEscape(WEEKDAY_NAMES[s.recurrenceDayOfWeek])} at ${time} ${tz}`;
   if (s.recurrenceType === 'monthly') return `Monthly on the ${ordinal(s.recurrenceDayOfMonth)} at ${time} ${tz}`;
   return '—';
 }
@@ -1046,7 +1046,7 @@ async function renderSeries() {
     const tr = document.createElement('tr');
     const audienceLabel = describeAudience(s.audienceFilter);
     tr.innerHTML = `
-      <td class="a-cell-title">${s.subject} ${s.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
+      <td class="a-cell-title">${fnEscape(s.subject)} ${s.bodyFormat === 'html' ? '<span class="a-pill a-pill-neutral">HTML</span>' : ''}</td>
       <td>${audienceLabel}</td>
       <td>${describeRecurrence(s)}</td>
       <td>${s.isActive ? fnFormatDate(s.nextFireAt) : '—'}</td>
@@ -1145,7 +1145,7 @@ async function editSeries(id) {
   populateSourceOptions('seriesAudienceSource');
   populateGroupCheckboxes('seriesAudienceGroupList', s.audienceFilter.groupIds);
   document.getElementById('seriesAudienceSource').value = s.audienceFilter.source;
-  document.querySelector(`input[name="recurrenceType"][value="${s.recurrenceType}"]`).checked = true;
+  document.querySelector(`input[name="recurrenceType"][value="${fnEscape(s.recurrenceType)}"]`).checked = true;
   if (s.recurrenceType === 'weekly') document.getElementById('recurrenceDayOfWeek').value = s.recurrenceDayOfWeek;
   if (s.recurrenceType === 'monthly') document.getElementById('recurrenceDayOfMonth').value = s.recurrenceDayOfMonth;
   document.getElementById('recurrenceSendTime').value = s.sendTime.slice(0, 5);

@@ -52,7 +52,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -89,10 +89,10 @@ async function loadInvoices(status) {
         : '<span class="a-pill a-pill-warning">PO Pending</span>'
     );
     tr.innerHTML = `
-      <td class="a-cell-title"><a href="admin-invoice-print.html?id=${inv.id}" target="_blank">${inv.invoiceNumber}</a></td>
+      <td class="a-cell-title"><a href="admin-invoice-print.html?id=${inv.id}" target="_blank">${fnEscape(inv.invoiceNumber)}</a></td>
       <td>${inv.quoteNumber ? `#${inv.quoteNumber}` : '—'}</td>
       <td>${(inv.buyer && (inv.buyer.company || inv.buyer.name)) || '—'}<div class="a-note">${(inv.buyer && inv.buyer.email) || ''}</div></td>
-      <td>${inv.poNumber || '—'}</td>
+      <td>${fnEscape(inv.poNumber || '—')}</td>
       <td>${inv.itemCount}</td>
       <td>${fnFormatCurrency(inv.total)}</td>
       <td>${poPill}${poPill ? '<br>' : ''}<span class="a-pill ${statusPill}" style="margin-top:4px;display:inline-block;">${statusLabel}</span></td>

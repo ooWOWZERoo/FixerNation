@@ -62,7 +62,7 @@
   <p style="text-align:center; color:var(--ink-soft);">Loading invoice…</p>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -92,7 +92,7 @@ function renderInvoice(inv, branding) {
   const businessName = branding.businessName || 'Fixer Nation Education';
   const tagline = branding.tagline || '';
   const brandMark = branding.logoUrl
-    ? `<img src="${branding.logoUrl}" style="width:40px; height:40px; border-radius:12px; object-fit:contain;">`
+    ? `<img src="${fnEscape(branding.logoUrl)}" style="width:40px; height:40px; border-radius:12px; object-fit:contain;">`
     : `<img src="logo-fne.png?v=2" alt="Fixer Nation Education" style="height:80px; width:auto; object-fit:contain;">`;
   const buyer = inv.buyer || {};
   const address = buyer.address || {};
@@ -101,7 +101,7 @@ function renderInvoice(inv, branding) {
 
   const rows = inv.lineItems.map(li => `
     <tr>
-      <td>${li.description}${li.seatCount ? ` <span style="color:var(--ink-soft);">(${li.seatCount} seats)</span>` : ''}</td>
+      <td>${fnEscape(li.description)}${li.seatCount ? ` <span style="color:var(--ink-soft);">(${li.seatCount} seats)</span>` : ''}</td>
       <td class="amount">${li.amount !== null ? fnFormatCurrency(li.amount) : '—'}</td>
     </tr>
   `).join('');
@@ -111,7 +111,7 @@ function renderInvoice(inv, branding) {
       <div class="brand">${brandMark}<div class="brand-word">${businessName}</div></div>
       <div class="invoice-title">
         <h1>Invoice</h1>
-        <div class="num">${inv.invoiceNumber}</div>
+        <div class="num">${fnEscape(inv.invoiceNumber)}</div>
         ${paid ? '' : '<div class="status-badge unpaid">Unpaid</div>'}
       </div>
     </div>
@@ -123,7 +123,7 @@ function renderInvoice(inv, branding) {
         <p>
           ${buyer.company || buyer.name || '—'}<br>
           ${buyer.name && buyer.company ? buyer.name + '<br>' : ''}
-          ${buyer.email || ''}<br>
+          ${fnEscape(buyer.email || '')}<br>
           ${addressLine}
         </p>
       </div>
@@ -132,7 +132,7 @@ function renderInvoice(inv, branding) {
         <p>
           Effective Date: ${fnFormatDate(inv.createdAt)}<br>
           ${inv.renewalDate ? 'Renewal Date: ' + fnFormatDate(inv.renewalDate) + '<br>' : ''}
-          PO Number: ${inv.poNumber || '—'}<br>
+          PO Number: ${fnEscape(inv.poNumber || '—')}<br>
           ${inv.paidAt ? 'Paid: ' + fnFormatDate(inv.paidAt) : ''}
         </p>
       </div>

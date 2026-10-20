@@ -232,7 +232,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -319,7 +319,7 @@ async function loadInvoiceBranding() {
   invoiceLogoData = data.logoUrl || '';
   pendingInvoiceLogoFile = null;
   document.getElementById('invoiceLogoPreview').innerHTML = data.logoUrl
-    ? `<img src="${data.logoUrl}" onerror="this.parentElement.textContent='Preview unavailable'">`
+    ? `<img src="${fnEscape(data.logoUrl)}" onerror="this.parentElement.textContent='Preview unavailable'">`
     : 'No logo uploaded';
 }
 
@@ -330,7 +330,7 @@ document.getElementById('invoiceLogoFile').addEventListener('change', function(e
   document.getElementById('invoiceLogoUrl').value = '';
   const reader = new FileReader();
   reader.onload = function(ev) {
-    document.getElementById('invoiceLogoPreview').innerHTML = `<img src="${ev.target.result}">`;
+    document.getElementById('invoiceLogoPreview').innerHTML = `<img src="${fnEscape(ev.target.result)}">`;
   };
   reader.readAsDataURL(file);
 });
@@ -387,8 +387,8 @@ async function loadAdmins() {
   adminsCache = admins;
   document.querySelector('#adminsTable tbody').innerHTML = admins.map(a => `
     <tr>
-      <td class="a-cell-title">${a.username}</td>
-      <td>${a.email || '—'}</td>
+      <td class="a-cell-title">${fnEscape(a.username)}</td>
+      <td>${fnEscape(a.email || '—')}</td>
       <td><span class="a-pill ${a.emailVerified ? 'a-pill-success' : 'a-pill-neutral'}">${a.emailVerified ? 'Active' : 'Pending'}</span></td>
       <td>${fnFormatDate(a.createdAt)}</td>
       <td>

@@ -105,9 +105,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 <script>
 var me = null;
 
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 async function load() {
   var r = await fetch('/api/classroom-auth/me', { credentials: 'include' });

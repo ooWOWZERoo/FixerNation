@@ -156,7 +156,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', loadDistricts);
 
 function debounceLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(loadDistricts, 300); }
 
-function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return fnEscape(str); }
 
 async function loadDistricts() {
   const q = document.getElementById('searchInput').value.trim();
@@ -204,9 +204,9 @@ function renderTable(rows) {
         '<td>' + r.admin_count + '</td>' +
         '<td>' + brandingPill + '</td>' +
         '<td style="white-space:nowrap;">' +
-          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openManageModal(' + r.id + ',\'' + esc(r.name) + '\')">Manage</button> ' +
-          '<button class="a-btn a-btn-outline a-btn-sm" onclick="openRenameModal(' + r.id + ',\'' + esc(r.name) + '\')">Rename</button> ' +
-          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openDeleteModal(' + r.id + ',\'' + esc(r.name) + '\',' + r.school_count + ')">Delete</button>' +
+          '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(r.name) + '" onclick="openManageModal(' + r.id + ',this.dataset.v)">Manage</button> ' +
+          '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(r.name) + '" onclick="openRenameModal(' + r.id + ',this.dataset.v)">Rename</button> ' +
+          '<button class="a-btn a-btn-danger a-btn-sm" data-v="' + esc(r.name) + '" onclick="openDeleteModal(' + r.id + ',this.dataset.v,' + r.school_count + ')">Delete</button>' +
         '</td></tr>';
     }).join('') +
     '</tbody></table>';

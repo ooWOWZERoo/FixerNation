@@ -292,7 +292,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 <script src="cart.js"></script>
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=15"></script>
-<script src="site-auth.js?v=9"></script>
+<script src="site-auth.js?v=10"></script>
 <script src="school-branding.js?v=1"></script>
 <script>
 fnRequireSiteAuth();
@@ -319,9 +319,7 @@ function toast(msg) {
   setTimeout(function(){ t.classList.remove('show'); }, 3200);
 }
 
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -398,8 +396,8 @@ function renderStudents() {
       '<td>' + esc(s.student_number || '—') + '</td>' +
       '<td>' + (s.is_active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + '</td>' +
       '<td style="white-space:nowrap;">' +
-        '<button class="btn btn-outline btn-xs" style="margin-right:6px;" onclick="openPinReset(' + s.id + ',\'' + esc(s.display_name) + '\')">Reset PIN</button>' +
-        '<button class="btn btn-outline btn-xs" style="margin-right:6px;" onclick="openInviteParent(' + s.id + ',\'' + esc(s.display_name) + '\')">Invite Parent</button>' +
+        '<button class="btn btn-outline btn-xs" style="margin-right:6px;" data-v="' + esc(s.display_name) + '" onclick="openPinReset(' + s.id + ',this.dataset.v)">Reset PIN</button>' +
+        '<button class="btn btn-outline btn-xs" style="margin-right:6px;" data-v="' + esc(s.display_name) + '" onclick="openInviteParent(' + s.id + ',this.dataset.v)">Invite Parent</button>' +
         (s.is_active ? '<button class="btn btn-danger btn-xs" onclick="deactivateStudent(' + s.id + ')">Deactivate</button>' : '') +
       '</td>' +
     '</tr>';

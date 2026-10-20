@@ -95,9 +95,7 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:26px;margin-bot
 <script>
 var goals = [];
 
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function fmtDate(iso) {
   if (!iso) return '';

@@ -140,7 +140,7 @@
   </div>
 </div>
 
-<script src="site-auth.js?v=9"></script>
+<script src="site-auth.js?v=10"></script>
 <script src="cart.js"></script>
 <script>
 const API = '/api/social';
@@ -148,7 +148,7 @@ const params = new URLSearchParams(location.search);
 const viewId = params.get('id');
 const isMe = params.get('me') === '1' || !viewId;
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function initials(fn,ln){ return ((fn||'')[0]||'') + ((ln||'')[0]||''); }
 
 async function init(){

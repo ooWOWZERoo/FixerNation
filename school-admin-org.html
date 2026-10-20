@@ -29,7 +29,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=18"></script>
+  <script src="school-admin-nav.js?v=19"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -257,7 +257,7 @@ function info(label, value) {
   return '<div class="info-item"><div class="info-label">' + esc(label) + '</div><div class="info-value">' + esc(String(value)) + '</div></div>';
 }
 
-function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
 </body>
 </html>

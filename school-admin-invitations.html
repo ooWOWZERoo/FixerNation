@@ -29,7 +29,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=18"></script>
+  <script src="school-admin-nav.js?v=19"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -222,14 +222,14 @@ function renderInvitations(invs) {
       // esc() doesn't escape single quotes, which is safe since email
       // addresses can never contain one.
       if (inv.status === 'pending' || inv.status === 'opened' || inv.status === 'expired') {
-        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="resend(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Resend</button> ';
-        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="extend(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Extend</button> ';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" data-v="' + esc(inv.invited_email) + '" onclick="resend(' + inv.id + ',this.dataset.v)">Resend</button> ';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm" data-v="' + esc(inv.invited_email) + '" onclick="extend(' + inv.id + ',this.dataset.v)">Extend</button> ';
       }
       if (inv.status !== 'revoked' && inv.status !== 'registered') {
-        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Revoke</button>';
+        actions += '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" data-v="' + esc(inv.invited_email) + '" onclick="openRevoke(' + inv.id + ',this.dataset.v)">Revoke</button>';
       }
       if (inv.status === 'revoked' || inv.status === 'expired') {
-        actions += ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="deleteInvitation(' + inv.id + ',\'' + esc(inv.invited_email) + '\')">Delete</button>';
+        actions += ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" data-v="' + esc(inv.invited_email) + '" onclick="deleteInvitation(' + inv.id + ',this.dataset.v)">Delete</button>';
       }
       var roleLine = [inv.role_title, inv.subject_area].filter(Boolean).join(' · ');
       var inviterLine = (inv.inviter_first || inv.inviter_last) ? 'Invited by ' + esc([inv.inviter_first, inv.inviter_last].filter(Boolean).join(' ')) : '';
@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
 </body>
 </html>

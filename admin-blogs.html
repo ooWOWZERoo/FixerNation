@@ -212,7 +212,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -304,8 +304,8 @@ async function renderPosts() {
     const statusPill = !p.published ? 'a-pill-neutral' : (isScheduled ? 'a-pill-warning' : 'a-pill-success');
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" value="${p.id}" onchange="updateBulkBar()"></td>
-      <td><img class="a-row-thumb" style="aspect-ratio:16/10; height:auto;" src="${p.featuredImage || ''}" alt="${p.title}" onerror="this.style.opacity=0.2;"></td>
-      <td><div class="a-cell-title">${p.title} ${hasVideo ? '🎥' : ''} ${p.requiresMembership ? '🔒' : ''}</div><div class="a-cell-sub">/${p.slug || ''}</div></td>
+      <td><img class="a-row-thumb" style="aspect-ratio:16/10; height:auto;" src="${fnEscape(p.featuredImage || '')}" alt="${fnEscape(p.title)}" onerror="this.style.opacity=0.2;"></td>
+      <td><div class="a-cell-title">${fnEscape(p.title)} ${hasVideo ? '🎥' : ''} ${p.requiresMembership ? '🔒' : ''}</div><div class="a-cell-sub">/${fnEscape(p.slug || '')}</div></td>
       <td>${categories.map(c => `<span class="a-pill a-pill-neutral" style="margin:2px;">${c}</span>`).join('')}</td>
       <td>${p.publishDate ? fnFormatDate(p.publishDate) : '—'}</td>
       <td>
@@ -391,8 +391,8 @@ async function loadFromCalendar() {
   }
   const { entry } = await r.json();
   loadedCalendarDate = date;
-  document.getElementById('title').value = `${entry.series}: ${entry.theme}`;
-  document.getElementById('slug').value = fnSlugify(`${entry.series}: ${entry.theme}`);
+  document.getElementById('title').value = `${fnEscape(entry.series)}: ${fnEscape(entry.theme)}`;
+  document.getElementById('slug').value = fnSlugify(`${fnEscape(entry.series)}: ${fnEscape(entry.theme)}`);
   slugManuallyEdited = true;
   document.getElementById('postTheme').value = entry.theme;
   document.getElementById('postSeries').value = entry.series;
@@ -402,8 +402,8 @@ async function loadFromCalendar() {
   document.getElementById('publishDate').value = date;
   renderCategoryCheckboxes(['Morning Boost']);
   document.getElementById('calendarLoadNote').textContent = entry.blogPostId
-    ? `Loaded — Theme: "${entry.theme}", Series: "${entry.series}". A post already exists for this date (editing it won't create a duplicate link).`
-    : `Loaded — Theme: "${entry.theme}", Series: "${entry.series}".`;
+    ? `Loaded — Theme: "${fnEscape(entry.theme)}", Series: "${fnEscape(entry.series)}". A post already exists for this date (editing it won't create a duplicate link).`
+    : `Loaded — Theme: "${fnEscape(entry.theme)}", Series: "${fnEscape(entry.series)}".`;
 }
 
 function toggleRequiresMembership() {
@@ -459,7 +459,7 @@ function editPost(id) {
   setPublishedToggle(!!p.published);
   setRequiresMembershipToggle(!!p.requiresMembership);
   if (p.featuredImage) {
-    document.getElementById('imagePreview').innerHTML = `<img src="${p.featuredImage}" onerror="this.parentElement.textContent='Preview unavailable'">`;
+    document.getElementById('imagePreview').innerHTML = `<img src="${fnEscape(p.featuredImage)}" onerror="this.parentElement.textContent='Preview unavailable'">`;
   } else {
     document.getElementById('imagePreview').innerHTML = 'No image selected';
   }
@@ -531,7 +531,7 @@ function renderVideoFileList() {
   if (pendingVideoFile) {
     const row = document.createElement('div');
     row.className = 'a-repeat-row';
-    row.innerHTML = `<div class="info"><div class="name">🎬 ${pendingVideoFile.name}</div><div class="meta">${pendingVideoFile.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideoFile()">✕</button>`;
+    row.innerHTML = `<div class="info"><div class="name">🎬 ${fnEscape(pendingVideoFile.name)}</div><div class="meta">${fnEscape(pendingVideoFile.sizeLabel)}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideoFile()">✕</button>`;
     el.appendChild(row);
   }
 }
@@ -574,7 +574,7 @@ document.getElementById('imageFile').addEventListener('change', function(e){
   document.getElementById('imageUrl').value = '';
   const reader = new FileReader();
   reader.onload = function(ev){
-    document.getElementById('imagePreview').innerHTML = `<img src="${ev.target.result}">`;
+    document.getElementById('imagePreview').innerHTML = `<img src="${fnEscape(ev.target.result)}">`;
   };
   reader.readAsDataURL(file);
 });

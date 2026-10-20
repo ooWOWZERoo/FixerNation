@@ -16,7 +16,7 @@
 <body>
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
-  <script src="district-admin-nav.js?v=4"></script>
+  <script src="district-admin-nav.js?v=5"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -142,7 +142,7 @@ function renderSchools(schools) {
           '<div style="font-weight:700; font-size:15px;">' + esc(s.school_display_name || s.school_domain) + '</div>' +
           '<div style="font-size:12px; color:var(--sa-text-soft);">' + esc(s.school_domain) + ' · ' + esc(s.plan_name || 'Group License') + ' · ' + (s.seat_count || 0) + ' seats · ' + esc(s.payment_status || '') + '</div>' +
         '</div>' +
-        '<button class="sa-btn sa-btn-primary sa-btn-sm" onclick="openAssignModal(' + s.purchase_id + ', \'' + esc((s.school_display_name || s.school_domain).replace(/'/g, "\\'")) + '\')">+ Invite Admin</button>' +
+        '<button class="sa-btn sa-btn-primary sa-btn-sm" data-v="' + esc(s.school_display_name || s.school_domain) + '" onclick="openAssignModal(' + s.purchase_id + ', this.dataset.v)">+ Invite Admin</button>' +
       '</div>' +
       '<div style="margin-top:10px; border-top:1px solid var(--sa-border); padding-top:10px;">' + adminsHtml + '</div>' +
     '</div>';
@@ -160,8 +160,6 @@ function adminRow(a) {
     : ' <span class="sa-badge sa-badge-orange" style="margin-left:6px;">Pending Setup</span>';
   const permLabel = a.permission_level === 'read_only' ? 'Read Only' : (a.permission_level === 'secondary' ? 'Secondary' : 'Primary');
   const roleLabel = ROLE_LABELS[a.role] || a.role;
-  const escEmail = esc(a.email).replace(/'/g, "\\'");
-
   const resendBtn = !a.email_verified
     ? '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="resendWelcome(' + a.assignment_id + ', this)">Resend Welcome</button>'
     : '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="sendPasswordReset(' + a.assignment_id + ', this)">Reset Password</button>';
@@ -173,7 +171,7 @@ function adminRow(a) {
     '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
       resendBtn +
       '<button class="sa-btn sa-btn-outline sa-btn-sm" onclick="openEditPermissionModal(' + a.assignment_id + ', \'' + a.permission_level + '\')">Edit</button>' +
-      '<button class="sa-btn sa-btn-danger sa-btn-sm" onclick="revokeAdmin(' + a.assignment_id + ', \'' + escEmail + '\')">Revoke</button>' +
+      '<button class="sa-btn sa-btn-danger sa-btn-sm" data-v="' + esc(a.email) + '" onclick="revokeAdmin(' + a.assignment_id + ', this.dataset.v)">Revoke</button>' +
     '</div>' +
   '</div>';
 }
@@ -306,7 +304,7 @@ async function submitAssign() {
   }
 }
 
-function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
 </body>
 </html>

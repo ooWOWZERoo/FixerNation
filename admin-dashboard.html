@@ -277,7 +277,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -328,7 +328,7 @@ fetch('/api/newsletter/contacts', { credentials: 'include' }).then(r => fnHandle
   } else {
     recent.forEach(c => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="a-cell-title">${c.name || '—'}</td><td>${c.email}</td><td>${fnFormatDate(c.signupDate)}</td><td><span class="a-pill a-pill-neutral">${c.source}</span></td>`;
+      tr.innerHTML = `<td class="a-cell-title">${fnEscape(c.name || '—')}</td><td>${fnEscape(c.email)}</td><td>${fnFormatDate(c.signupDate)}</td><td><span class="a-pill a-pill-neutral">${fnEscape(c.source)}</span></td>`;
       tbody.appendChild(tr);
     });
   }
@@ -374,7 +374,7 @@ function renderNeedsAttention(data) {
   if (data.invoices.unpaid > 0) {
     items.push({
       href: 'admin-invoices.html?status=unpaid',
-      label: `${data.invoices.unpaid} unpaid invoice${data.invoices.unpaid === 1 ? '' : 's'}`,
+      label: `${fnEscape(data.invoices.unpaid)} unpaid invoice${data.invoices.unpaid === 1 ? '' : 's'}`,
       meta: `${fnFormatCurrency(data.invoices.outstandingTotal)} outstanding`,
       count: data.invoices.unpaid,
     });
@@ -382,7 +382,7 @@ function renderNeedsAttention(data) {
   if (data.invoices.poPending > 0) {
     items.push({
       href: 'admin-invoices.html',
-      label: `${data.invoices.poPending} PO${data.invoices.poPending === 1 ? '' : 's'} not yet received`,
+      label: `${fnEscape(data.invoices.poPending)} PO${data.invoices.poPending === 1 ? '' : 's'} not yet received`,
       meta: 'License activation is on hold until marked received',
       count: data.invoices.poPending,
     });
@@ -390,7 +390,7 @@ function renderNeedsAttention(data) {
   if (data.quotes.expiringSoon > 0) {
     items.push({
       href: 'admin-quotes.html',
-      label: `${data.quotes.expiringSoon} quote${data.quotes.expiringSoon === 1 ? '' : 's'} expiring within 7 days`,
+      label: `${fnEscape(data.quotes.expiringSoon)} quote${data.quotes.expiringSoon === 1 ? '' : 's'} expiring within 7 days`,
       meta: 'Not yet accepted or closed',
       count: data.quotes.expiringSoon,
     });
@@ -403,9 +403,9 @@ function renderNeedsAttention(data) {
   }
   card.classList.remove('is-clear');
   body.innerHTML = items.map(item => `
-    <a class="na-row" href="${item.href}">
+    <a class="na-row" href="${fnEscape(item.href)}">
       <div>
-        <div class="na-label">${item.label}</div>
+        <div class="na-label">${fnEscape(item.label)}</div>
         <div class="na-meta">${item.meta}</div>
       </div>
       <div class="na-count">${item.count}</div>
@@ -430,15 +430,15 @@ function renderBestItem(bestItem, topItems) {
   best.innerHTML = `
     <div class="fin-best-badge">${ITEM_TYPE_ICON[bestItem.type] || '🛒'}</div>
     <div>
-      <div class="name">${bestItem.name}</div>
-      <div class="meta">${bestItem.unitsSold} sold · ${fnFormatCurrency(bestItem.revenue)} in revenue</div>
+      <div class="name">${fnEscape(bestItem.name)}</div>
+      <div class="meta">${fnEscape(bestItem.unitsSold)} sold · ${fnFormatCurrency(bestItem.revenue)} in revenue</div>
     </div>
   `;
 
   table.innerHTML = topItems.map((item, i) => `
     <tr>
-      <td>${i + 1}. ${ITEM_TYPE_ICON[item.type] || '🛒'} ${item.name}</td>
-      <td class="num">${item.unitsSold} sold</td>
+      <td>${i + 1}. ${ITEM_TYPE_ICON[item.type] || '🛒'} ${fnEscape(item.name)}</td>
+      <td class="num">${fnEscape(item.unitsSold)} sold</td>
       <td class="num">${fnFormatCurrency(item.revenue)}</td>
     </tr>
   `).join('');
@@ -450,12 +450,12 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   document.getElementById('finSalesToday').textContent = fnFormatCurrency(data.salesToday);
   const todayIso = isoDate(new Date());
   document.getElementById('finOrdersToday').innerHTML =
-    `<a href="admin-orders.html?start=${todayIso}&end=${todayIso}" style="color:inherit; text-decoration:underline;">${data.ordersToday} order${data.ordersToday === 1 ? '' : 's'}</a>`;
+    `<a href="admin-orders.html?start=${todayIso}&end=${todayIso}" style="color:inherit; text-decoration:underline;">${fnEscape(data.ordersToday)} order${data.ordersToday === 1 ? '' : 's'}</a>`;
   document.getElementById('finSalesWeek').textContent = fnFormatCurrency(data.salesThisWeek);
   document.getElementById('finSalesMonth').textContent = fnFormatCurrency(data.salesThisMonth);
   document.getElementById('finSalesAllTime').textContent = fnFormatCurrency(data.salesAllTime);
   document.getElementById('finOrdersAllTime').innerHTML =
-    `<a href="admin-orders.html" style="color:inherit; text-decoration:underline;">${data.ordersAllTime} order${data.ordersAllTime === 1 ? '' : 's'} total</a>`;
+    `<a href="admin-orders.html" style="color:inherit; text-decoration:underline;">${fnEscape(data.ordersAllTime)} order${data.ordersAllTime === 1 ? '' : 's'} total</a>`;
 
   document.getElementById('finRevenueCollected').textContent = fnFormatCurrency(data.revenueCollected);
   document.getElementById('finRevenueOutstanding').textContent = fnFormatCurrency(data.revenueOutstanding);
@@ -464,9 +464,9 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
 
   document.getElementById('finInvoicesTotal').textContent = data.invoices.total;
   document.getElementById('finInvoicesBreakdown').innerHTML =
-    `<a href="admin-invoices.html?status=paid" style="color:inherit; text-decoration:underline;">${data.invoices.paid} paid</a> · ` +
-    `<a href="admin-invoices.html?status=unpaid" style="color:inherit; text-decoration:underline;">${data.invoices.unpaid} unpaid</a> · ` +
-    `<a href="admin-invoices.html?status=cancelled" style="color:inherit; text-decoration:underline;">${data.invoices.cancelled} cancelled</a>`;
+    `<a href="admin-invoices.html?status=paid" style="color:inherit; text-decoration:underline;">${fnEscape(data.invoices.paid)} paid</a> · ` +
+    `<a href="admin-invoices.html?status=unpaid" style="color:inherit; text-decoration:underline;">${fnEscape(data.invoices.unpaid)} unpaid</a> · ` +
+    `<a href="admin-invoices.html?status=cancelled" style="color:inherit; text-decoration:underline;">${fnEscape(data.invoices.cancelled)} cancelled</a>`;
   document.getElementById('finInvoicesOutstanding').textContent = fnFormatCurrency(data.invoices.outstandingTotal);
   document.getElementById('finQuotes30').textContent = data.quotes.last30Days;
   document.getElementById('finQuotesTotal').textContent = data.quotes.total;
@@ -488,19 +488,19 @@ fetch('/api/dashboard/insights', { credentials: 'include' }).then(r => fnHandleU
 
   const conv = data.quoteToSaleConversion;
   document.getElementById('insightQuoteConv').textContent = conv.conversionRate === null ? 'N/A' : Math.round(conv.conversionRate * 100) + '%';
-  document.getElementById('insightQuoteConvDelta').textContent = `${conv.convertedQuotes} of ${conv.totalQuotes} quotes converted`;
+  document.getElementById('insightQuoteConvDelta').textContent = `${fnEscape(conv.convertedQuotes)} of ${fnEscape(conv.totalQuotes)} quotes converted`;
 
   document.getElementById('insightDSO').textContent = data.daysSalesOutstanding === null ? 'N/A' : data.daysSalesOutstanding.toFixed(1) + ' days';
   document.getElementById('insightLTV').textContent = fnFormatCurrency(data.customerLifetimeValue);
 
   const cancel = data.cancellationRate;
   document.getElementById('insightCancelRate').textContent = cancel.rate === null ? 'N/A' : Math.round(cancel.rate * 100) + '%';
-  document.getElementById('insightCancelDelta').textContent = `${cancel.cancelledInvoices} of ${cancel.totalInvoices} invoices cancelled`;
+  document.getElementById('insightCancelDelta').textContent = `${fnEscape(cancel.cancelledInvoices)} of ${fnEscape(cancel.totalInvoices)} invoices cancelled`;
 
   const tbody = document.querySelector('#revenueByCategoryTable tbody');
   tbody.innerHTML = data.revenueByCategory.map(cat => `
     <tr>
-      <td>${cat.label}</td>
+      <td>${fnEscape(cat.label)}</td>
       <td class="num">${fnFormatCurrency(cat.revenue)}</td>
       <td class="num">${cat.percentOfTotal.toFixed(1)}%</td>
     </tr>

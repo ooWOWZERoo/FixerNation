@@ -126,7 +126,7 @@
   </div><!-- /.a-main -->
 </div><!-- /.a-shell -->
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 let currentPage = 1;
 let totalPosts = 0;
@@ -170,8 +170,8 @@ async function loadPage(page) {
           </div>
           <div class="soc-post-content">${esc(p.content)}</div>
           <div class="soc-post-footer">
-            <span>👍 ${p.reaction_count}</span>
-            <span>💬 ${p.comment_count}</span>
+            <span>👍 ${fnEscape(p.reaction_count)}</span>
+            <span>💬 ${fnEscape(p.comment_count)}</span>
           </div>
         </div>`;
     }).join('');
@@ -215,11 +215,11 @@ function renderGroups(groups) {
           <div style="flex:1;min-width:0;">
             <div class="soc-group-name">${esc(g.name)} ${pubTag}</div>
             ${g.description ? `<div class="soc-group-desc">${esc(g.description)}</div>` : ''}
-            <div class="soc-group-meta">${g.member_count} member${g.member_count!==1?'s':''} &middot; ${g.post_count} post${g.post_count!==1?'s':''} &middot; Created ${fmtDate(g.created_at)}</div>
+            <div class="soc-group-meta">${fnEscape(g.member_count)} member${g.member_count!==1?'s':''} &middot; ${fnEscape(g.post_count)} post${g.post_count!==1?'s':''} &middot; Created ${fmtDate(g.created_at)}</div>
           </div>
           <div class="soc-group-actions">
             <button class="soc-btn-sm" onclick="toggleEdit(${g.id})">Edit</button>
-            <button class="soc-btn-sm" onclick="togglePublic(${g.id}, ${g.is_public}, this)">${g.is_public ? 'Make Private' : 'Make Public'}</button>
+            <button class="soc-btn-sm" onclick="togglePublic(${g.id}, ${fnEscape(g.is_public)}, this)">${g.is_public ? 'Make Private' : 'Make Public'}</button>
             <button class="soc-btn-sm soc-btn-danger" onclick="deleteGroup(${g.id})">Delete</button>
           </div>
         </div>
@@ -309,9 +309,7 @@ async function deleteGroup(id) {
   loadGroups();
 }
 
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return fnEscape(s); }
 function fmtDate(s) {
   if (!s) return '';
   return new Date(s).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });

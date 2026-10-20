@@ -91,7 +91,7 @@
 
 <footer></footer>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>fnTrackPageview();</script>
 <script src="cart.js"></script>
 <script>
@@ -140,7 +140,7 @@ function renderCart() {
       return `
         <div class="cart-item">
           <div class="info">
-            <div class="name">📗 ${item.name}</div>
+            <div class="name">📗 ${fnEscape(item.name)}</div>
             <div class="price">${fnFormatCurrency(item.price)} each</div>
           </div>
           <input type="number" class="qty-input" min="1" value="${item.quantity}" onchange="cartUpdateQuantity(${index}, this.value); renderCart();">
@@ -151,11 +151,11 @@ function renderCart() {
     return `
       <div class="cart-item">
         <div class="info">
-          <div class="name">🏫 ${item.name}</div>
+          <div class="name">🏫 ${fnEscape(item.name)}</div>
           <div class="price">${fnFormatCurrency(item.price)}</div>
           <div class="domain-field">
             <label>School Domain (required)</label>
-            <input type="text" placeholder="e.g. lincolnhigh.edu" value="${item.schoolDomain || ''}" onchange="cartUpdateDomain(${index}, this.value.trim())">
+            <input type="text" placeholder="e.g. lincolnhigh.edu" value="${fnEscape(item.schoolDomain || '')}" onchange="cartUpdateDomain(${index}, this.value.trim())">
           </div>
         </div>
         <button class="remove-btn" onclick="cartRemove(${index}); renderCart();">Remove</button>
@@ -170,7 +170,7 @@ function renderCart() {
   const emailFieldHtml = needsEmailField
     ? `<div class="a-field"><label>Your Email (School Buyer)</label><input type="email" id="checkoutEmail" placeholder="you@school.org"></div>`
     : (siteAuthState.loggedIn
-      ? `<div class="a-field"><label>Your Email</label><div style="padding:11px 14px; border-radius:10px; border:1px solid var(--border); font-size:14px; background:var(--cream-soft); color:var(--ink-soft);">${siteAuthState.email} (from your account)</div></div>`
+      ? `<div class="a-field"><label>Your Email</label><div style="padding:11px 14px; border-radius:10px; border:1px solid var(--border); font-size:14px; background:var(--cream-soft); color:var(--ink-soft);">${fnEscape(siteAuthState.email)} (from your account)</div></div>`
       : `<div class="status-banner cancelled">Please <a href="#" onclick="fnAuthOpenModal('login'); return false;" style="color:var(--coral-dark); font-weight:700;">log in</a> or <a href="#" onclick="fnAuthOpenModal('signup'); return false;" style="color:var(--coral-dark); font-weight:700;">sign up</a> to check out.</div>`);
 
   wrap.innerHTML = `
@@ -316,7 +316,7 @@ document.addEventListener('fn-auth-changed', async () => {
   </div>
 </div>
 
-<script src="site-auth.js?v=9"></script>
+<script src="site-auth.js?v=10"></script>
 
 <script src="footer.js?v=5"></script>
 </body>

@@ -150,7 +150,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -205,7 +205,7 @@ function renderFunnel(data) {
     return `${dropHtml}
       <div class="fn-funnel-stage">
         <div class="fn-funnel-row">
-          <div class="fn-funnel-label">${stage.label}</div>
+          <div class="fn-funnel-label">${fnEscape(stage.label)}</div>
           <div class="fn-funnel-count">${stage.count.toLocaleString()}<span class="fn-funnel-pct">${pct}%</span></div>
         </div>
         <div class="fn-funnel-track"><div class="fn-funnel-fill" style="width:${Math.max(pct, top > 0 ? 1 : 0)}%"></div></div>
@@ -214,7 +214,7 @@ function renderFunnel(data) {
   document.getElementById('funnelStages').innerHTML = stagesHtml;
 
   const chips = data.intentBreakdown.map(b =>
-    `<span class="fn-funnel-chip">${FUNNEL_ICONS[b.eventType] || '•'} ${b.count.toLocaleString()} ${formatEventType(b.eventType).toLowerCase()}</span>`
+    `<span class="fn-funnel-chip">${fnEscape(FUNNEL_ICONS[b.eventType] || '•')} ${b.count.toLocaleString()} ${formatEventType(b.eventType).toLowerCase()}</span>`
   ).join('');
   document.getElementById('funnelChips').innerHTML = chips;
 }
@@ -250,7 +250,7 @@ async function loadSummary() {
   document.getElementById('topEntryPagesEmpty').style.display = data.topEntryPages.length ? 'none' : 'block';
 
   const eventsList = document.getElementById('topEventsList');
-  eventsList.innerHTML = data.topEvents.map(e => `<li><span>${formatEventType(e.event_type)} — ${e.label}</span><span class="count">${e.count}</span></li>`).join('');
+  eventsList.innerHTML = data.topEvents.map(e => `<li><span>${formatEventType(e.event_type)} — ${fnEscape(e.label)}</span><span class="count">${e.count}</span></li>`).join('');
   document.getElementById('topEventsEmpty').style.display = data.topEvents.length ? 'none' : 'block';
 }
 
@@ -273,8 +273,8 @@ async function loadSessions() {
   sessions.forEach(s => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="a-cell-title">${s.entryPage || '—'}</td>
-      <td>${s.referrer || '(direct)'}</td>
+      <td class="a-cell-title">${fnEscape(s.entryPage || '—')}</td>
+      <td>${fnEscape(s.referrer || '(direct)')}</td>
       <td>${fnFormatDate(s.firstSeen)}</td>
       <td>${fnFormatDate(s.lastSeen)}</td>
       <td>${s.eventCount}</td>
@@ -303,11 +303,11 @@ function journeyNodeInfo(step, index) {
     case 'pageview':
       return { icon: index === 0 ? '🚪' : '📄', category: 'entry', text: `${index === 0 ? 'Entered' : 'Viewed'}: ${prettyPageName(step.page)}` };
     case 'book_view':
-      return { icon: '📗', category: 'engage', text: `Viewed Product: ${step.label}` };
+      return { icon: '📗', category: 'engage', text: `Viewed Product: ${fnEscape(step.label)}` };
     case 'resource_open':
-      return { icon: '🎓', category: 'engage', text: `Opened Resource: ${step.label}` };
+      return { icon: '🎓', category: 'engage', text: `Opened Resource: ${fnEscape(step.label)}` };
     case 'add_to_cart':
-      return { icon: '🛒', category: 'intent', text: `Added to Cart: ${step.label}` };
+      return { icon: '🛒', category: 'intent', text: `Added to Cart: ${fnEscape(step.label)}` };
     case 'quote_request':
       return { icon: '📝', category: 'intent', text: 'Requested Quote' };
     case 'ask_the_fixer':
@@ -326,7 +326,7 @@ async function viewPath(sessionId) {
   const { session, path } = await r.json();
 
   document.getElementById('pathMeta').innerHTML =
-    `Entry: ${session.entryPage || '—'}<br>Referrer: ${session.referrer || '(direct)'}<br>Started: ${fnFormatDate(session.firstSeen)} · Last activity: ${fnFormatDate(session.lastSeen)}`;
+    `Entry: ${fnEscape(session.entryPage || '—')}<br>Referrer: ${fnEscape(session.referrer || '(direct)')}<br>Started: ${fnFormatDate(session.firstSeen)} · Last activity: ${fnFormatDate(session.lastSeen)}`;
 
   const timeline = document.getElementById('pathTimeline');
   timeline.innerHTML = path.map((step, i) => {
@@ -340,7 +340,7 @@ async function viewPath(sessionId) {
     return `
       <div class="fn-journey-node" title="${fnFormatDate(step.at)}">
         ${connector}
-        <div class="fn-journey-dot cat-${node.category}"></div>
+        <div class="fn-journey-dot cat-${fnEscape(node.category)}"></div>
         <div class="fn-journey-node-label">${node.icon} ${node.text}</div>
       </div>`;
   }).join('') || '<div class="a-note">No events recorded for this session.</div>';

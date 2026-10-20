@@ -152,7 +152,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -205,10 +205,10 @@ function renderTable(rows) {
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Inactive</span>';
       const resendBtn = !r.email_verified
-        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(' + r.id + ',\'' + esc(r.email) + '\',this)">Resend Welcome</button> '
+        ? '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(r.email) + '" onclick="resendWelcome(' + r.id + ',this.dataset.v,this)">Resend Welcome</button> '
         : '';
       const resetPasswordBtn = r.email_verified
-        ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="sendPasswordReset(' + r.site_user_id + ',\'' + esc(r.email) + '\',this)">Reset Password</button> '
+        ? '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(r.email) + '" onclick="sendPasswordReset(' + r.site_user_id + ',this.dataset.v,this)">Reset Password</button> '
         : '';
       return '<tr>' +
         '<td style="font-weight:600;">' + esc(name) + '</td>' +
@@ -220,7 +220,7 @@ function renderTable(rows) {
           resendBtn +
           resetPasswordBtn +
           '<button class="a-btn a-btn-outline a-btn-sm" onclick="openEditModal(' + r.id + ')">Edit</button> ' +
-          '<button class="a-btn a-btn-danger a-btn-sm" onclick="openRemoveModal(' + r.id + ',\'' + esc(r.email) + '\')">Remove</button>' +
+          '<button class="a-btn a-btn-danger a-btn-sm" data-v="' + esc(r.email) + '" onclick="openRemoveModal(' + r.id + ',this.dataset.v)">Remove</button>' +
         '</td></tr>';
     }).join('') +
     '</tbody></table>';
@@ -418,7 +418,7 @@ async function sendPasswordReset(siteUserId, email, btn) {
   }
 }
 
-function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return fnEscape(str); }
 </script>
 <script src="admin-shell.js?v=1"></script>
 </body>

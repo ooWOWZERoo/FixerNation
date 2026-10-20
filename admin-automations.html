@@ -448,7 +448,7 @@
 </div>
 
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -658,10 +658,10 @@ async function loadOverview() {
     <li>
       <div class="act-dot ${a.enabled ? 'ok' : 'off'}"></div>
       <div style="flex:1;">
-        <div class="act-text">${a.label}</div>
+        <div class="act-text">${fnEscape(a.label)}</div>
         <div class="act-time">${a.enabled ? 'Active' : 'Paused'} · ${fmtKey(a.eventKey)}</div>
       </div>
-      <button class="a-icon-btn" onclick="openEditAuto('${a.eventKey}')" title="Edit">✏️</button>
+      <button class="a-icon-btn" onclick="openEditAuto('${fnEscape(a.eventKey)}')" title="Edit">✏️</button>
     </li>
   `).join('');
 }
@@ -698,7 +698,7 @@ function filterAutomations() {
     const stat = statsCache.byEvent[a.eventKey];
     return `
     <tr>
-      <td class="a-cell-title">${a.label}</td>
+      <td class="a-cell-title">${fnEscape(a.label)}</td>
       <td><span style="font-size:12px;color:var(--a-text-soft);">Email</span></td>
       <td style="font-size:12.5px;">${fmtKey(a.eventKey)}</td>
       <td><span class="a-pill ${a.enabled ? 'a-pill-success' : 'a-pill-neutral'}">${a.enabled ? 'Active' : 'Paused'}</span></td>
@@ -707,8 +707,8 @@ function filterAutomations() {
       <td style="color:var(--a-text-soft);font-size:13px;">${stat && stat.successRate != null ? stat.successRate + '%' : '—'}</td>
       <td>
         <div style="display:flex;gap:6px;">
-          <button class="a-icon-btn" title="Edit"   onclick="openEditAuto('${a.eventKey}')">✏️</button>
-          <button class="a-icon-btn" title="${a.enabled?'Pause':'Activate'}" onclick="toggleAuto('${a.eventKey}',${!a.enabled})">${a.enabled?'⏸️':'▶️'}</button>
+          <button class="a-icon-btn" title="Edit"   onclick="openEditAuto('${fnEscape(a.eventKey)}')">✏️</button>
+          <button class="a-icon-btn" title="${a.enabled?'Pause':'Activate'}" onclick="toggleAuto('${fnEscape(a.eventKey)}',${!a.enabled})">${a.enabled?'⏸️':'▶️'}</button>
         </div>
       </td>
     </tr>
@@ -765,7 +765,7 @@ function renderTplGrid(cat) {
   document.getElementById('tplGrid').innerHTML = items.map(t => `
     <div class="tpl-card" onclick="useTemplate('${t.id}')">
       <div class="tpl-card-icon">${t.icon}</div>
-      <div class="tpl-card-name">${t.name}</div>
+      <div class="tpl-card-name">${fnEscape(t.name)}</div>
       <div class="tpl-card-desc">${t.desc}</div>
       ${cat === 'all' ? `<span class="tpl-card-cat">${(TPL_CATS.find(c=>c.key===t.cat)||{}).label||t.cat}</span>` : ''}
     </div>
@@ -969,9 +969,7 @@ const HIST_RESULT_PILL = { success: 'a-pill-success', failed: 'a-pill-danger', s
 // Execution rows render recipient emails and SMTP error text — unlike most
 // of this admin-only page's fields (all admin-authored), these two can
 // reflect external input, so they're HTML-escaped before interpolation.
-function escHtml(s) {
-  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function escHtml(s) { return fnEscape(s); }
 
 async function loadHistory() {
   const tbody = document.getElementById('histTbody');
@@ -1008,7 +1006,7 @@ async function loadHistory() {
       <td>${e.contactName ? escHtml(e.contactName) + '<br><span style="color:var(--a-text-soft);font-size:12px;">' + escHtml(e.recipientEmail) + '</span>' : escHtml(e.recipientEmail)}</td>
       <td style="font-size:12.5px;">${fmtKey(e.eventKey)}</td>
       <td>
-        <span class="a-pill ${HIST_RESULT_PILL[e.status] || 'a-pill-neutral'}">${e.status}</span>
+        <span class="a-pill ${fnEscape(HIST_RESULT_PILL[e.status] || 'a-pill-neutral')}">${fnEscape(e.status)}</span>
         ${e.errorMessage ? '<div style="color:var(--a-danger);font-size:11.5px;margin-top:3px;">' + escHtml(e.errorMessage) + '</div>' : ''}
       </td>
       <td style="color:var(--a-text-soft);font-size:13px;">${e.durationMs != null ? e.durationMs + ' ms' : '—'}</td>

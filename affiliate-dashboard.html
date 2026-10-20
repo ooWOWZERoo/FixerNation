@@ -146,8 +146,8 @@
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=15"></script>
-<script src="site-auth.js?v=9"></script>
-<script src="admin-common.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="admin-common.js?v=17"></script>
 <script>fnTrackPageview();</script>
 <script>
 var currentReferralLink = '';
@@ -160,7 +160,7 @@ var STATUS_LABEL = {
   pending: 'Pending', approved: 'Approved', paid: 'Paid', on_hold: 'On hold', reversed: 'Reversed',
 };
 
-function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function money(cents) { return '$' + (Number(cents || 0) / 100).toFixed(2); }
 function shortDate(v) { return v ? String(v).slice(0, 10) : '—'; }
 

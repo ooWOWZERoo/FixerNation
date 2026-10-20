@@ -196,8 +196,8 @@ img{max-width:100%; display:block;}
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=15"></script>
-<script src="site-auth.js?v=9"></script>
-<script src="admin-common.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="admin-common.js?v=17"></script>
 <script src="pdf-modal.js?v=1"></script>
 <script>
 var RESOURCE_LABELS = {
@@ -214,9 +214,7 @@ var RESOURCE_ICONS = {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // ── Render ────────────────────────────────────────────────────
 

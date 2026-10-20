@@ -36,7 +36,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=18"></script>
+  <script src="school-admin-nav.js?v=19"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -263,14 +263,14 @@ function renderRoster(seats) {
       var actions = '—';
       if (s.status === 'registered') {
         actions = editGrades +
-          '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="deactivate(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Deactivate</button>' +
-          ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Remove</button>';
+          '<button class="sa-btn sa-btn-ghost sa-btn-sm" data-v="' + esc(s.email) + '" onclick="deactivate(' + s.site_user_id + ',this.dataset.v)">Deactivate</button>' +
+          ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" data-v="' + esc(s.email) + '" onclick="removeTeacher(' + s.site_user_id + ',this.dataset.v)">Remove</button>';
       } else if (s.status === 'inactive') {
         actions = editGrades +
-          '<button class="sa-btn sa-btn-ghost sa-btn-sm" onclick="reactivate(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Reactivate</button>' +
-          ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="removeTeacher(' + s.site_user_id + ',\'' + esc(s.email) + '\')">Remove</button>';
+          '<button class="sa-btn sa-btn-ghost sa-btn-sm" data-v="' + esc(s.email) + '" onclick="reactivate(' + s.site_user_id + ',this.dataset.v)">Reactivate</button>' +
+          ' <button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" data-v="' + esc(s.email) + '" onclick="removeTeacher(' + s.site_user_id + ',this.dataset.v)">Remove</button>';
       } else if (s.status === 'pending') {
-        actions = '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" onclick="openRevoke(' + s.id + ',\'' + esc(s.invited_email || '') + '\')">Revoke</button>';
+        actions = '<button class="sa-btn sa-btn-ghost sa-btn-sm sa-btn-danger-ghost" data-v="' + esc(s.invited_email || '') + '" onclick="openRevoke(' + s.id + ',this.dataset.v)">Revoke</button>';
       }
 
       return '<tr>' +
@@ -403,9 +403,7 @@ function removeTeacher(userId, email) {
   );
 }
 
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // --- Grade levels modal ---
 var SA_GRADE_OPTIONS = ['Elementary School', 'Middle School', 'High School', 'Higher Education'];

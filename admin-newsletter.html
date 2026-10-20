@@ -277,11 +277,11 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
-function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return fnEscape(s); }
 
 let searchTerm = '';
 let filterGroupId = '';
@@ -335,15 +335,15 @@ function renderTableHead() {
   const row = document.getElementById('contactsTableHead');
   row.innerHTML = CONTACT_COLUMNS.filter(c => visibleColumns.has(c.key)).map(c =>
     c.sortable
-      ? `<th class="sortable" onclick="setSort('${c.key}')">${c.label}<span class="sort-arrow" id="arrow-${c.key}"></span></th>`
-      : `<th>${c.label}</th>`
+      ? `<th class="sortable" onclick="setSort('${fnEscape(c.key)}')">${fnEscape(c.label)}<span class="sort-arrow" id="arrow-${fnEscape(c.key)}"></span></th>`
+      : `<th>${fnEscape(c.label)}</th>`
   ).join('') + '<th></th>';
 }
 
 function renderColumnsMenu() {
   const menu = document.getElementById('columnsMenu');
   menu.innerHTML = CONTACT_COLUMNS.map(c =>
-    `<label><input type="checkbox" value="${c.key}" ${visibleColumns.has(c.key) ? 'checked' : ''} onchange="toggleColumn('${c.key}', this.checked)"> ${c.label}</label>`
+    `<label><input type="checkbox" value="${fnEscape(c.key)}" ${visibleColumns.has(c.key) ? 'checked' : ''} onchange="toggleColumn('${fnEscape(c.key)}', this.checked)"> ${fnEscape(c.label)}</label>`
   ).join('');
 }
 
@@ -403,14 +403,14 @@ function populateFilterOptions() {
   const groupSelect = document.getElementById('filterGroup');
   const currentGroupValue = groupSelect.value;
   groupSelect.innerHTML = '<option value="">All Groups</option>' +
-    groupsCache.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    groupsCache.map(g => `<option value="${g.id}">${fnEscape(g.name)}</option>`).join('');
   groupSelect.value = currentGroupValue;
 
   const sourceSelect = document.getElementById('filterSource');
   const currentSourceValue = sourceSelect.value;
   const sources = [...new Set(contactsCache.map(c => c.source).filter(Boolean))].sort();
   sourceSelect.innerHTML = '<option value="">All Sources</option>' +
-    sources.map(s => `<option value="${s}">${s}</option>`).join('');
+    sources.map(s => `<option value="${fnEscape(s)}">${fnEscape(s)}</option>`).join('');
   sourceSelect.value = currentSourceValue;
 }
 
@@ -458,7 +458,7 @@ function applyFiltersAndRender() {
   filteredContactsCache = contacts;
 
   CONTACT_COLUMNS.filter(c => c.sortable && visibleColumns.has(c.key)).forEach(c => {
-    document.getElementById(`arrow-${c.key}`).textContent = sortField === c.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
+    document.getElementById(`arrow-${fnEscape(c.key)}`).textContent = sortField === c.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
   });
 
   const tbody = document.querySelector('#contactsTable tbody');
@@ -488,16 +488,16 @@ function applyFiltersAndRender() {
     const tr = document.createElement('tr');
     const subscribed = c.status === 'Subscribed';
     const cellsByKey = {
-      name: `<td class="a-cell-title">${c.name || '—'}</td>`,
-      email: `<td>${c.email}</td>`,
-      phone: `<td>${c.phone || '—'}</td>`,
-      company: `<td>${c.company || '—'}</td>`,
+      name: `<td class="a-cell-title">${fnEscape(c.name || '—')}</td>`,
+      email: `<td>${fnEscape(c.email)}</td>`,
+      phone: `<td>${fnEscape(c.phone || '—')}</td>`,
+      company: `<td>${fnEscape(c.company || '—')}</td>`,
       address: `<td title="${fnFormatAddress(c.address, true)}">${fnFormatAddress(c.address)}</td>`,
       signupDate: `<td>${fnFormatDate(c.signupDate)}</td>`,
-      source: `<td><span class="a-pill a-pill-neutral">${c.source}</span></td>`,
-      status: `<td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${c.status}</span></td>`,
+      source: `<td><span class="a-pill a-pill-neutral">${fnEscape(c.source)}</span></td>`,
+      status: `<td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${fnEscape(c.status)}</span></td>`,
       role: `<td>${c.role ? `<span class="a-pill a-pill-neutral">${ROLE_LABELS_SHORT[c.role] || c.role}</span>` : '—'}</td>`,
-      groups: `<td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g.name}</span>`).join('') || '—'}</td>`,
+      groups: `<td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${fnEscape(g.name)}</span>`).join('') || '—'}</td>`,
     };
     tr.innerHTML = CONTACT_COLUMNS.filter(col => visibleColumns.has(col.key)).map(col => cellsByKey[col.key]).join('') + `
       <td>
@@ -770,12 +770,11 @@ function renderContactAccountField(c) {
     return;
   }
 
-  const emailForJs = c.email.replace(/'/g, "\\'");
   status.innerHTML = `<span class="a-pill ${c.accountVerified ? 'a-pill-success' : 'a-pill-neutral'}">${c.accountVerified ? 'Verified' : 'Unverified'}</span> Registered on the public site.`;
   actions.innerHTML = `
     ${c.accountVerified ? '' : `<button type="button" class="a-btn a-btn-outline" onclick="resendVerification(${c.id})">Resend Verification</button>`}
-    <button type="button" class="a-btn a-btn-outline" onclick="sendAccountPasswordReset(${c.siteUserId}, '${emailForJs}')">Send Password Reset</button>
-    <button type="button" class="a-btn a-btn-outline" style="color:var(--a-danger); border-color:var(--a-danger);" onclick="deleteSiteAccount(${c.siteUserId}, '${emailForJs}')">Delete Account</button>
+    <button type="button" class="a-btn a-btn-outline" data-email="${fnEscape(c.email)}" onclick="sendAccountPasswordReset(${c.siteUserId}, this.dataset.email)">Send Password Reset</button>
+    <button type="button" class="a-btn a-btn-outline" style="color:var(--a-danger); border-color:var(--a-danger);" data-email="${fnEscape(c.email)}" onclick="deleteSiteAccount(${c.siteUserId}, this.dataset.email)">Delete Account</button>
   `;
 }
 
@@ -916,7 +915,7 @@ function renderGroupsList() {
   document.getElementById('groupsEmptyNote').style.display = groupsCache.length === 0 ? 'block' : 'none';
   el.innerHTML = groupsCache.map(g => `
     <div class="a-repeat-row">
-      <div class="info"><div class="name">${g.name}</div></div>
+      <div class="info"><div class="name">${fnEscape(g.name)}</div></div>
       <button type="button" class="a-repeat-remove" title="Delete group" onclick="deleteGroup(${g.id})">✕</button>
     </div>
   `).join('');
@@ -996,7 +995,7 @@ function parseImportInput() {
     const valid = emailPattern.test(r.email || '');
     if (valid) validCount++;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.name || '—'}</td><td style="${valid?'':'color:var(--a-danger);'}">${r.email || '(missing)'}</td><td>${[r.city, r.state].filter(Boolean).join(', ') || '—'}</td><td>${r.source || '—'}</td><td>${(r.groups || []).join(', ') || '—'}</td>`;
+    tr.innerHTML = `<td>${fnEscape(r.name || '—')}</td><td style="${valid?'':'color:var(--a-danger);'}">${fnEscape(r.email || '(missing)')}</td><td>${fnEscape([r.city, r.state].filter(Boolean).join(', ') || '—')}</td><td>${fnEscape(r.source || '—')}</td><td>${fnEscape((r.groups || []).join(', ') || '—')}</td>`;
     body.appendChild(tr);
   });
 
@@ -1042,7 +1041,7 @@ async function confirmImport() {
   const result = await r.json();
   closeImportModal();
   fetchAndRenderContacts();
-  let msg = `Imported ${result.imported} new · updated ${result.updated} existing · skipped ${result.skippedInvalid} invalid`;
+  let msg = `Imported ${fnEscape(result.imported)} new · updated ${fnEscape(result.updated)} existing · skipped ${fnEscape(result.skippedInvalid)} invalid`;
   if (result.groupsCreated && result.groupsCreated.length) msg += ` · created group(s): ${result.groupsCreated.join(', ')}`;
   if (result.groupsSkipped && result.groupsSkipped.length) msg += ` · skipped group(s): ${result.groupsSkipped.join(', ')}`;
   fnToast(msg);
@@ -1077,7 +1076,7 @@ async function openPurchasesModal(contactId) {
   document.getElementById('purchasesContactName').textContent = (c && (c.name || c.email)) || '';
 
   booksCache = await fetchBooksForDropdown();
-  document.getElementById('purchaseBookId').innerHTML = booksCache.map(b => `<option value="${b.id}">${b.title}</option>`).join('') || '<option value="">No books yet</option>';
+  document.getElementById('purchaseBookId').innerHTML = booksCache.map(b => `<option value="${b.id}">${fnEscape(b.title)}</option>`).join('') || '<option value="">No books yet</option>';
   document.getElementById('purchaseType').value = 'book';
   document.getElementById('purchaseSeatCount').value = 5;
   document.getElementById('purchaseSchoolDomain').value = '';
@@ -1101,20 +1100,20 @@ async function renderPurchasesList() {
   wrap.innerHTML = purchases.map(p => {
     const dateLabel = fnFormatDate(p.purchasedAt);
     if (p.productType === 'book') {
-      return purchaseCard(p, `📗 Book: ${p.bookTitle || '(deleted book)'}`, `Purchased ${dateLabel}`, '');
+      return purchaseCard(p, `📗 Book: ${fnEscape(p.bookTitle || '(deleted book)')}`, `Purchased ${dateLabel}`, '');
     }
     if (p.productType === 'single_license') {
       const seat = p.seats[0];
       const statusLine = seat && seat.status === 'registered'
-        ? `Registered to ${seat.registeredName}`
+        ? `Registered to ${fnEscape(seat.registeredName)}`
         : `Pending — awaiting sign-up from ${seat ? seat.invitedEmail : 'this contact'}`;
       return purchaseCard(p, '🔑 Single Teacher License', `Purchased ${dateLabel} · ${statusLine}`, '');
     }
     if (p.productType === 'group_license') {
       const registeredCount = p.seats.filter(s => s.status === 'registered').length;
       const seatRows = p.seats.map(s => seatRowHtml(p.id, s)).join('');
-      const domainLabel = p.schoolDomain ? ` · ${p.schoolDomain}` : ' · no school domain set';
-      const productLabel = p.licenseProductName ? ` (${p.licenseProductName})` : '';
+      const domainLabel = p.schoolDomain ? ` · ${fnEscape(p.schoolDomain)}` : ' · no school domain set';
+      const productLabel = p.licenseProductName ? ` (${fnEscape(p.licenseProductName)})` : '';
       return purchaseCard(
         p,
         `🏫 Group License${productLabel} — ${registeredCount}/${p.seatCount} seats used`,
@@ -1123,7 +1122,7 @@ async function renderPurchasesList() {
       );
     }
     // Legacy/unrecognized product type (e.g. a historical membership purchase from before that feature was removed) — render a generic card instead of crashing on fields (like p.seats) that only exist for license purchases.
-    return purchaseCard(p, `Purchase (${p.productType})`, `Purchased ${dateLabel}`, '');
+    return purchaseCard(p, `Purchase (${fnEscape(p.productType)})`, `Purchased ${dateLabel}`, '');
   }).join('');
 }
 
@@ -1131,14 +1130,14 @@ function seatRowHtml(purchaseId, s) {
   if (s.status === 'registered') {
     return `
       <div class="a-repeat-row">
-        <div class="info" style="flex:1;"><div class="name">✅ ${s.registeredName} <span style="color:var(--a-text-soft); font-weight:400;">(${s.invitedEmail})</span></div></div>
+        <div class="info" style="flex:1;"><div class="name">✅ ${fnEscape(s.registeredName)} <span style="color:var(--a-text-soft); font-weight:400;">(${fnEscape(s.invitedEmail)})</span></div></div>
         <button type="button" class="a-repeat-remove" title="Free this seat (does not delete the account)" onclick="unregisterSeat(${purchaseId}, ${s.id})">↺</button>
       </div>`;
   }
   const inputId = `seatEmail_${s.id}`;
   return `
     <div class="a-repeat-row">
-      <input type="email" id="${inputId}" placeholder="teacher@school.org" value="${s.invitedEmail || ''}" style="flex:1;">
+      <input type="email" id="${inputId}" placeholder="teacher@school.org" value="${fnEscape(s.invitedEmail || '')}" style="flex:1;">
       <button type="button" class="a-btn a-btn-outline a-btn-sm" onclick="assignSeatEmail(${purchaseId}, ${s.id}, document.getElementById('${inputId}').value)">Save Invite</button>
       <button type="button" class="a-btn a-btn-outline a-btn-sm" onclick="registerSeatDirectly(${purchaseId}, ${s.id}, document.getElementById('${inputId}').value)">Register Now</button>
     </div>`;
@@ -1147,7 +1146,7 @@ function seatRowHtml(purchaseId, s) {
 function purchaseCard(p, title, subtitle, extraHtml) {
   const paymentBadge = p.paymentMethod && p.paymentMethod !== 'manual'
     ? `<span class="a-pill ${p.paymentStatus === 'paid' ? 'a-pill-success' : 'a-pill-neutral'}" style="margin-left:8px;">
-        ${p.paymentMethod === 'po' ? 'PO' + (p.poNumber ? ' ' + p.poNumber : '') : 'Stripe'} · ${p.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+        ${p.paymentMethod === 'po' ? 'PO' + (p.poNumber ? ' ' + fnEscape(p.poNumber) : '') : 'Stripe'} · ${p.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
       </span>`
     : '';
   const invoiceLink = p.invoiceId
@@ -1165,7 +1164,7 @@ function purchaseCard(p, title, subtitle, extraHtml) {
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
         <div>
           <div class="a-cell-title">${title}${paymentBadge}${invoiceLink}${markPaidBtn}</div>
-          <div class="a-note" style="margin:2px 0 0;">${subtitle}${p.notes ? ' · ' + p.notes : ''}</div>
+          <div class="a-note" style="margin:2px 0 0;">${subtitle}${p.notes ? ' · ' + fnEscape(p.notes) : ''}</div>
         </div>
         <div style="display:flex; gap:4px;">
           <button class="a-icon-btn" title="Edit" onclick="togglePurchaseEdit(${p.id})">✏️</button>
@@ -1180,13 +1179,13 @@ function purchaseCard(p, title, subtitle, extraHtml) {
           </div>
           <div class="a-field" style="margin-bottom:8px;">
             <label style="font-size:11.5px;">School Domain</label>
-            <input type="text" id="editSchoolDomain_${p.id}" placeholder="e.g. lincolnhigh.edu" value="${(p.schoolDomain || '').replace(/"/g, '&quot;')}">
+            <input type="text" id="editSchoolDomain_${p.id}" placeholder="e.g. lincolnhigh.edu" value="${fnEscape(p.schoolDomain || '')}">
           </div>` : ''}
         <div class="a-field" style="margin-bottom:8px;">
           <label style="font-size:11.5px;">Notes</label>
-          <input type="text" id="editNotes_${p.id}" value="${(p.notes || '').replace(/"/g, '&quot;')}">
+          <input type="text" id="editNotes_${p.id}" value="${fnEscape(p.notes || '')}">
         </div>
-        <button type="button" class="a-btn a-btn-outline a-btn-sm" onclick="savePurchaseEdit(${p.id}, '${p.productType}')">Save Changes</button>
+        <button type="button" class="a-btn a-btn-outline a-btn-sm" onclick="savePurchaseEdit(${p.id}, '${fnEscape(p.productType)}')">Save Changes</button>
       </div>
       ${extraHtml}
     </div>

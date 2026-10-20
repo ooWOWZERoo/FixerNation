@@ -116,7 +116,7 @@
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=15"></script>
-<script src="site-auth.js?v=9"></script>
+<script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=5"></script>
 <script>
 var BAND_LABELS = { discover: 'Discover', explore: 'Explore', challenge: 'Challenge', advance: 'Advance' };
@@ -127,7 +127,7 @@ var activeDomain = '';
 
 const LEVEL_NAMES = ['','Beginner','Learner','Challenger','Skilled','Advanced','Expert','Master'];
 
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function renderRarityBadge(rarity, emoji, name) {
   return `<div class="badge-chip ${esc(rarity)}">${esc(emoji)} ${esc(name)}</div>`;

@@ -348,6 +348,18 @@ function fnAnalyticsSessionId() {
   return id;
 }
 
+// HTML-escapes a value for safe interpolation into an innerHTML template or an
+// HTML attribute. Anything that originated outside the admin's own keyboard
+// (public forms, newsletter signups, analytics beacons, student/teacher input)
+// is attacker-controlled and MUST go through this before it's rendered -- an
+// unescaped `<img onerror=...>` in a contact name runs in the admin's session.
+// Escapes both quote characters so it's safe inside "..." and '...' attributes.
+function fnEscape(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
 // Uses sendBeacon so the request reliably fires even during page unload
 // (e.g. tracking that someone left a page), without blocking navigation.
 function fnTrackEvent(eventType, label) {

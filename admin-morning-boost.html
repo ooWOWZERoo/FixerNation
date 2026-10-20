@@ -85,7 +85,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -106,7 +106,7 @@ async function loadCalendarEntry() {
   if (fnHandleUnauthorized(r)) return;
   if (!r.ok) { note.textContent = 'No Morning Boost calendar entry for that date.'; return; }
   const { entry } = await r.json();
-  note.innerHTML = `<strong>Theme:</strong> ${entry.theme} &nbsp; <strong>Series:</strong> ${entry.series}${entry.blogPostId ? ' — a blog post already exists for this date.' : ''}`;
+  note.innerHTML = `<strong>Theme:</strong> ${fnEscape(entry.theme)} &nbsp; <strong>Series:</strong> ${fnEscape(entry.series)}${entry.blogPostId ? ' — a blog post already exists for this date.' : ''}`;
 }
 
 async function loadHistory() {
@@ -127,11 +127,11 @@ async function loadHistory() {
       <div class="info" style="flex:1; min-width:0;">
         <div class="name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(c.scriptText || '')}">${escHtml(preview) || '(no script text)'}</div>
         <div class="meta">${date}</div>
-        <audio controls src="${c.url}" style="width:100%; margin-top:6px;"></audio>
+        <audio controls src="${fnEscape(c.url)}" style="width:100%; margin-top:6px;"></audio>
       </div>
       <div style="display:flex; gap:6px; align-items:flex-start; flex-shrink:0;">
-        <a class="a-btn a-btn-outline" style="padding:5px 10px; font-size:12px;" href="${c.url}" download>Download</a>
-        <button type="button" class="a-btn a-btn-outline" style="padding:5px 10px; font-size:12px; color:var(--a-danger,#c0392b);" onclick="deleteClip('${c.filename}', ${c.id})">Delete</button>
+        <a class="a-btn a-btn-outline" style="padding:5px 10px; font-size:12px;" href="${fnEscape(c.url)}" download>Download</a>
+        <button type="button" class="a-btn a-btn-outline" style="padding:5px 10px; font-size:12px; color:var(--a-danger,#c0392b);" onclick="deleteClip('${fnEscape(c.filename)}', ${c.id})">Delete</button>
       </div>
     </div>`;
   }).join('');
@@ -162,9 +162,7 @@ async function deleteClip(filename, id) {
   if (!listEl.children.length) listEl.innerHTML = '<div class="a-note">No voice-overs generated yet.</div>';
 }
 
-function escHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+function escHtml(s) { return fnEscape(s); }
 
 async function loadVoiceId() {
   const r = await fetch('/api/settings/morning-boost-voice', { credentials: 'include' });
@@ -220,12 +218,12 @@ async function generateAudio() {
         if (!r.ok || !res || !res.ok) {
           row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${res ? res.error : (data.error || 'Unknown error')}</div></div>`;
         } else {
-          row.innerHTML = `<div class="info" style="flex:1;"><div class="name">🎧 Script ${i + 1}</div><audio controls src="${res.url}" style="width:100%; margin-top:6px;"></audio></div><a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${res.url}" download>Download</a>`;
+          row.innerHTML = `<div class="info" style="flex:1;"><div class="name">🎧 Script ${i + 1}</div><audio controls src="${fnEscape(res.url)}" style="width:100%; margin-top:6px;"></audio></div><a class="a-btn a-btn-outline" style="padding:6px 12px; font-size:12.5px;" href="${fnEscape(res.url)}" download>Download</a>`;
           succeeded++;
           loadHistory();
         }
       } catch (err) {
-        row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${err.message}</div></div>`;
+        row.innerHTML = `<div class="info"><div class="name">❌ Script ${i + 1}</div><div class="meta">${fnEscape(err.message)}</div></div>`;
       }
     }
     fnToast(`Done — ${succeeded} of ${scripts.length} generated`);

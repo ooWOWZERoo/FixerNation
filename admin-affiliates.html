@@ -438,7 +438,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -536,7 +536,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 function debounceApps() { clearTimeout(appDebounce); appDebounce = setTimeout(loadApplications, 300); }
 function debounceAffs() { clearTimeout(affDebounce); affDebounce = setTimeout(loadAffiliates, 300); }
 
-function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(str) { return fnEscape(str); }
 function money(cents) { return '$' + (Number(cents || 0) / 100).toFixed(2); }
 function shortDate(v) { return v ? String(v).slice(0, 10) : '—'; }
 
@@ -756,7 +756,7 @@ function renderAffiliates() {
       return '<tr>' +
         '<td><div style="font-weight:600;">' + esc(name) + unverified + '</div><div class="meta-line">' + esc(a.email) + '</div></td>' +
         '<td><span class="code-cell">' + esc(a.referral_code) + '</span> ' +
-          '<button class="a-btn a-btn-outline a-btn-sm" onclick="copyLink(\'' + esc(a.referral_code) + '\',this)" title="Copy their referral link">Copy link</button></td>' +
+          '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(a.referral_code) + '" onclick="copyLink(this.dataset.v,this)" title="Copy their referral link">Copy link</button></td>' +
         '<td style="font-size:13px;">' + esc(Number(a.commission_rate).toFixed(2).replace(/\.00$/, '')) + '%</td>' +
         '<td style="font-size:13px;">' + (a.territories ? esc(a.territories) : '<span class="meta-line">None assigned</span>') + '</td>' +
         '<td>' + statusPill + '</td>' +

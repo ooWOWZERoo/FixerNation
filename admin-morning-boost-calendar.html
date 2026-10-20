@@ -73,7 +73,7 @@ table.cal-table tr:hover td { background:var(--a-bg); }
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -241,9 +241,7 @@ async function createDraftPosts() {
   btn.textContent = 'Create Draft Posts';
 }
 
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return fnEscape(s); }
 
 load();
 </script>

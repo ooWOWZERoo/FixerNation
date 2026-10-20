@@ -307,7 +307,7 @@
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=15"></script>
-<script src="site-auth.js?v=9"></script>
+<script src="site-auth.js?v=10"></script>
 <script src="cart.js"></script>
 <script>
 const API = '/api/social';
@@ -324,7 +324,7 @@ let memberSearchTimer = null;
 let allMembers = [];
 let unreadCounts = {}; // groupId → unread post count
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function initials(fn,ln){ return ((fn||'')[0]||'') + ((ln||'')[0]||''); }
 function avatarInner(p){ return p && p.avatar_url ? '<img src="'+esc(p.avatar_url)+'" alt="">' : initials(p&&p.first_name,p&&p.last_name).toUpperCase(); }
 function relTime(s){
@@ -447,7 +447,7 @@ function renderGroupList(){
     const n = unreadCounts[g.id] || 0;
     const badge = n > 0 ? `<span class="g-unread">${n > 99 ? '99+' : n}</span>` : '';
     return `<div class="group-item ${g.id===activeGroupId?'active':''}" onclick="selectGroup(${g.id})">
-       <span class="g-ic">${icons[g.type]||'💬'}</span>
+       <span class="g-ic">${esc(icons[g.type]||'💬')}</span>
        <span class="g-label" title="${esc(g.name)}">${esc(g.name)}</span>
        ${badge}
      </div>`;
@@ -614,17 +614,17 @@ function renderPostAttachments(attachments, text){
   if(images.length){
     const gridClass = `post-images-${Math.min(images.length, 4)}`;
     html += `<div class="post-images ${gridClass}">` +
-      images.map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="${esc(a.name)}" loading="lazy"></a>`).join('') +
+      images.map(a => `<a href="${esc(a.url)}" target="_blank" rel="noopener"><img src="${esc(a.url)}" alt="${esc(a.name)}" loading="lazy"></a>`).join('') +
       `</div>`;
   }
 
   if(videos.length){
-    html += videos.map(a => `<div class="post-video"><video controls controlsList="nodownload" oncontextmenu="return false;" preload="metadata"><source src="${a.url}"></video></div>`).join('');
+    html += videos.map(a => `<div class="post-video"><video controls controlsList="nodownload" oncontextmenu="return false;" preload="metadata"><source src="${esc(a.url)}"></video></div>`).join('');
   }
 
   if(files.length){
     html += `<div class="post-files">` +
-      files.map(a => `<a class="post-file-card" href="${a.url}" download="${esc(a.name)}" target="_blank" rel="noopener">
+      files.map(a => `<a class="post-file-card" href="${esc(a.url)}" download="${esc(a.name)}" target="_blank" rel="noopener">
         <span class="post-file-icon">${getFileIcon(a.name)}</span>
         <span class="post-file-info"><div class="post-file-name">${esc(a.name)}</div><div class="post-file-size">${formatFileSize(a.size||0)}</div></span>
         <span class="post-file-dl">⬇</span>
@@ -649,9 +649,9 @@ function renderPost(p){
   return `
   <div class="post-card" id="post-${p.id}">
     <div class="post-header">
-      <div class="post-avatar" style="cursor:pointer;" onclick="viewProfile(${p.author_id})">${avatarInner(p)}</div>
+      <div class="post-avatar" style="cursor:pointer;" onclick="viewProfile(${esc(p.author_id)})">${avatarInner(p)}</div>
       <div>
-        <div class="post-author"><a href="social-profile.html?id=${p.author_id}" style="color:inherit;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
+        <div class="post-author"><a href="social-profile.html?id=${esc(p.author_id)}" style="color:inherit;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
         <div class="post-time">${relTime(p.created_at)}</div>
       </div>
     </div>
@@ -664,7 +664,7 @@ function renderPost(p){
       <button class="post-action-btn" onclick="toggleComments(${p.id}, this)">
         💬 <span>${p.comment_count}</span>
       </button>
-      <button class="post-action-btn" onclick="openDm(${p.author_id})" title="Send DM">✉️</button>
+      <button class="post-action-btn" onclick="openDm(${esc(p.author_id)})" title="Send DM">✉️</button>
     </div>
     <div class="comments-section" id="comments-${p.id}" style="display:none;"></div>
   </div>`;
@@ -776,7 +776,7 @@ async function loadDmConversations(){
     return;
   }
   el.innerHTML = data.conversations.map(c =>
-    `<div class="dm-item ${c.partner_id===dmPartnerId?'active':''}" onclick="openDm(${c.partner_id})">
+    `<div class="dm-item ${c.partner_id===dmPartnerId?'active':''}" onclick="openDm(${esc(c.partner_id)})">
        <div class="member-avatar" style="width:28px;height:28px;font-size:11px;">${avatarInner(c)}</div>
        <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.first_name)} ${esc(c.last_name)}</span>
        ${c.unread_count>0?`<span class="dm-badge">${c.unread_count}</span>`:''}

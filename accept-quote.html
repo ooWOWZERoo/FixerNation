@@ -126,9 +126,7 @@ const TOKEN  = params.get('token') || '';
 const CHECKOUT_SUCCESS = params.get('checkout') === 'success';
 let quoteData = null;
 
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d + 'T12:00:00');

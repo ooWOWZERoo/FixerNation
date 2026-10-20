@@ -172,7 +172,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -194,7 +194,7 @@ async function loadGroups() {
   groupsCache = (await r.json()).groups || [];
   const sel = document.getElementById('productGroup');
   sel.innerHTML = '<option value="">— None (default: Teachers) —</option>' +
-    groupsCache.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    groupsCache.map(g => `<option value="${g.id}">${fnEscape(g.name)}</option>`).join('');
 }
 
 /* ---- License Products CRUD ---- */
@@ -217,7 +217,7 @@ async function renderProducts() {
   productsCache.forEach(p => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="a-cell-title">${p.name}${p.isTrial ? ' <span class="a-pill a-pill-warn" title="' + (p.trialDays || 90) + '-day trial, up to ' + (p.trialLibraryLimit || '—') + ' library plans">Trial</span>' : ''}</td>
+      <td class="a-cell-title">${fnEscape(p.name)}${p.isTrial ? ' <span class="a-pill a-pill-warn" title="' + (p.trialDays || 90) + '-day trial, up to ' + (p.trialLibraryLimit || '—') + ' library plans">Trial</span>' : ''}</td>
       <td>${p.seatCount}</td>
       <td>${p.callForQuote ? 'Call For Quote' : fnFormatCurrency(p.price)}</td>
       <td><span class="a-pill ${p.active ? 'a-pill-success' : 'a-pill-neutral'}">${p.active ? 'Active' : 'Inactive'}</span></td>
@@ -380,12 +380,12 @@ const LICENSE_STATUS_PILL = {
 function licenseCard(p) {
   const registered = p.seats.filter(s => s.status === 'registered');
   const available = p.seatCount - registered.length;
-  const buyerLine = p.buyer ? `${p.buyer.name || p.buyer.email} (${p.buyer.email})` : 'Unknown buyer';
+  const buyerLine = p.buyer ? `${p.buyer.name || p.buyer.email} (${fnEscape(p.buyer.email)})` : 'Unknown buyer';
   const status = p.licenseStatus || 'active';
   const statusPill = LICENSE_STATUS_PILL[status] || 'a-pill-neutral';
   const statusLabel = LICENSE_STATUS_LABELS[status] || status;
   const expiryBadge = p.expirationDate
-    ? `<span style="font-size:12px; color:var(--a-text-soft); font-weight:500;">Expires ${p.expirationDate}</span>`
+    ? `<span style="font-size:12px; color:var(--a-text-soft); font-weight:500;">Expires ${fnEscape(p.expirationDate)}</span>`
     : '';
 
   const statusOptions = Object.entries(LICENSE_STATUS_LABELS)
@@ -395,13 +395,13 @@ function licenseCard(p) {
   const rosterRows = registered.length
     ? registered.map(s => `
         <tr>
-          <td class="a-cell-title">${s.registeredName}</td>
-          <td>${s.invitedEmail}</td>
+          <td class="a-cell-title">${fnEscape(s.registeredName)}</td>
+          <td>${fnEscape(s.invitedEmail)}</td>
           <td>${(s.audiences && s.audiences.length) ? s.audiences.join(', ') : '—'}</td>
           <td>${fnFormatDate(s.registeredAt)}</td>
           <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openGradeModal(${s.id}, ${JSON.stringify(s.audiences || []).replace(/"/g, '&quot;')})">✏️ Edit</button></td>
-          <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openLessonPlanModal(${s.registeredSiteUserId || 0}, '${(s.registeredName || '').replace(/'/g, "\\'")}')">📚 Library</button></td>
-          <td>${s.registeredSiteUserId ? `<button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="sendTeacherPasswordReset(${s.registeredSiteUserId}, '${s.invitedEmail.replace(/'/g, "\\'")}')">🔑 Reset Pwd</button>` : ''}</td>
+          <td><button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" data-name="${fnEscape(s.registeredName || '')}" onclick="openLessonPlanModal(${s.registeredSiteUserId || 0}, this.dataset.name)">📚 Library</button></td>
+          <td>${s.registeredSiteUserId ? `<button class="a-btn a-btn-ghost" style="padding:4px 10px; font-size:12px;" data-email="${fnEscape(s.invitedEmail)}" onclick="sendTeacherPasswordReset(${s.registeredSiteUserId}, this.dataset.email)">🔑 Reset Pwd</button>` : ''}</td>
         </tr>
       `).join('')
     : `<tr><td colspan="7" style="color:var(--a-text-soft);">No teachers have registered against this license yet.</td></tr>`;
@@ -410,11 +410,11 @@ function licenseCard(p) {
     <div class="a-card" style="margin-bottom:20px;">
       <div class="a-card-head">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <h2 style="margin:0;">🏫 ${p.schoolDomain}</h2>
+          <h2 style="margin:0;">🏫 ${fnEscape(p.schoolDomain)}</h2>
           <span class="a-pill ${statusPill}">${statusLabel}</span>
           ${expiryBadge}
         </div>
-        <button type="button" class="a-btn a-btn-danger" onclick="deleteSchool('${p.schoolDomain}', ${registered.length})">🗑️ Delete School</button>
+        <button type="button" class="a-btn a-btn-danger" data-domain="${fnEscape(p.schoolDomain)}" onclick="deleteSchool(this.dataset.domain, ${registered.length})">🗑️ Delete School</button>
       </div>
       <div class="a-note" style="margin-bottom:16px;">Purchased by ${buyerLine} · ${fnFormatDate(p.purchasedAt)}${p.notes ? ' · ' + p.notes : ''}</div>
 
@@ -441,11 +441,11 @@ function licenseCard(p) {
           </div>
           <div class="a-field" style="margin-bottom:0;">
             <label>Effective Date</label>
-            <input type="date" id="effectiveDateInput_${p.id}" value="${p.effectiveDate || ''}" style="padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px;">
+            <input type="date" id="effectiveDateInput_${p.id}" value="${fnEscape(p.effectiveDate || '')}" style="padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px;">
           </div>
           <div class="a-field" style="margin-bottom:0;">
             <label>Expiration Date</label>
-            <input type="date" id="expirationDateInput_${p.id}" value="${p.expirationDate || ''}" style="padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px;">
+            <input type="date" id="expirationDateInput_${p.id}" value="${fnEscape(p.expirationDate || '')}" style="padding:9px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:13.5px;">
           </div>
           <button type="button" class="a-btn a-btn-primary" onclick="saveLicenseDates(${p.id})">Save</button>
         </div>
@@ -603,8 +603,8 @@ async function refreshLessonPlanModal() {
     <thead><tr><th>Title</th><th>Series</th><th>Added</th><th></th></tr></thead>
     <tbody>${selections.map(s => `
       <tr>
-        <td>${s.title}</td>
-        <td style="color:var(--a-text-soft);">${s.series || '—'}</td>
+        <td>${fnEscape(s.title)}</td>
+        <td style="color:var(--a-text-soft);">${fnEscape(s.series || '—')}</td>
         <td style="color:var(--a-text-soft);">${fnFormatDate(s.selectedAt)}</td>
         <td><button class="a-btn a-btn-danger" style="padding:3px 9px;font-size:12px;" onclick="removeLessonPlan(${s.curriculumId})">Remove</button></td>
       </tr>`).join('')}
@@ -615,7 +615,7 @@ async function refreshLessonPlanModal() {
 function renderLessonPlanAddSelect() {
   const sel = document.getElementById('lessonPlanAddSelect');
   sel.innerHTML = '<option value="">— Select a plan to add —</option>' +
-    _allCurricula.map(c => `<option value="${c.id}">${c.title}${c.series ? ' (' + c.series + ')' : ''}</option>`).join('');
+    _allCurricula.map(c => `<option value="${c.id}">${fnEscape(c.title)}${c.series ? ' (' + c.series + ')' : ''}</option>`).join('');
 }
 
 async function removeLessonPlan(curriculumId) {

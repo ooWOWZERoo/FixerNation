@@ -276,7 +276,7 @@
   </div>
 </div>
 
-<script src="admin-common.js?v=16"></script>
+<script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
 
@@ -398,7 +398,7 @@ function renderResourceCheckboxes() {
     let fileHtml = '';
     if (checked && needsFile) {
       fileHtml = entry.fileName
-        ? `<div class="a-repeat-row"><div class="info"><div class="name">📄 ${entry.fileName}</div><div class="meta">Attached to ${r}</div></div><button type="button" class="a-repeat-remove" onclick="removeResourceFile('${r.replace(/'/g, "\\'")}')">✕</button></div>`
+        ? `<div class="a-repeat-row"><div class="info"><div class="name">📄 ${fnEscape(entry.fileName)}</div><div class="meta">Attached to ${r}</div></div><button type="button" class="a-repeat-remove" onclick="removeResourceFile('${r.replace(/'/g, "\\'")}')">✕</button></div>`
         : `<input type="file" onchange="uploadResourceFile('${r.replace(/'/g, "\\'")}', this)">`;
     } else if (checked) {
       fileHtml = `<div class="a-note" style="margin-top:0;">Uses the Quiz Questions section below — no file needed.</div>`;
@@ -408,7 +408,7 @@ function renderResourceCheckboxes() {
     if (checked && hasLimit) {
       limitHtml = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--a-text-soft);">
         <label style="white-space:nowrap;">Download limit per user:</label>
-        <input type="number" min="0" value="${entry.downloadLimit || 0}" style="width:70px;padding:3px 6px;border:1px solid var(--a-border);border-radius:5px;font-size:12.5px;background:var(--a-bg);color:var(--a-text);" oninput="updateResourceLimit('${r.replace(/'/g, "\\'")}', this.value)">
+        <input type="number" min="0" value="${fnEscape(entry.downloadLimit || 0)}" style="width:70px;padding:3px 6px;border:1px solid var(--a-border);border-radius:5px;font-size:12.5px;background:var(--a-bg);color:var(--a-text);" oninput="updateResourceLimit('${r.replace(/'/g, "\\'")}', this.value)">
         <span style="font-size:11px;">(0 = unlimited)</span>
       </div>`;
     }
@@ -512,7 +512,7 @@ async function renderCurricula() {
     tr.innerHTML = `
       <td class="drag-handle" title="Drag to reorder">⠿</td>
       <td style="padding-left:14px;"><input type="checkbox" class="row-check" value="${c.id}" onchange="updateBulkBar()"></td>
-      <td><div class="a-cell-title">${c.title} ${c.isFeatured ? '<span class="a-pill a-pill-success" title="Shown as the homepage spotlight lesson">⭐ Featured</span>' : ''}</div><div class="a-cell-sub">${c.series || 'No series'}</div></td>
+      <td><div class="a-cell-title">${fnEscape(c.title)} ${c.isFeatured ? '<span class="a-pill a-pill-success" title="Shown as the homepage spotlight lesson">⭐ Featured</span>' : ''}</div><div class="a-cell-sub">${fnEscape(c.series || 'No series')}</div></td>
       <td>${audienceBadges || '<span class="a-cell-sub">Not set</span>'}</td>
       <td><div>${contents}</div><div class="a-cell-sub" style="margin-top:3px;">${resLimits}</div></td>
 
@@ -601,7 +601,7 @@ function renderVideoList() {
     const badge = v.url
       ? '<span class="a-pill a-pill-success" style="margin-left:8px;">▶ Playable</span>'
       : '<span class="a-pill a-pill-neutral" style="margin-left:8px;">Not playable</span>';
-    row.innerHTML = `<div class="info"><div class="name">🎬 ${v.name}${badge}</div><div class="meta">${v.sizeLabel}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideo(${i})">✕</button>`;
+    row.innerHTML = `<div class="info"><div class="name">🎬 ${fnEscape(v.name)}${badge}</div><div class="meta">${fnEscape(v.sizeLabel)}</div></div><button type="button" class="a-repeat-remove" onclick="removeVideo(${i})">✕</button>`;
     el.appendChild(row);
   });
 }
@@ -712,7 +712,7 @@ function renderLessonDocList() {
   const el = document.getElementById('lessonDocList');
   el.innerHTML = currentLessonDocs.map((d, i) => `
     <div class="a-repeat-row">
-      <div class="info"><div class="name">📄 ${d.name}</div><div class="meta">Attached document</div></div>
+      <div class="info"><div class="name">📄 ${fnEscape(d.name)}</div><div class="meta">Attached document</div></div>
       <button type="button" class="a-repeat-remove" onclick="removeLessonDoc(${i})">✕</button>
     </div>
   `).join('');
@@ -783,7 +783,7 @@ async function toggleFeatured(id) {
   const makeFeatured = !c.isFeatured;
   if (makeFeatured) {
     const current = curriculaCache.find(x => x.isFeatured);
-    if (current && !confirm(`This will replace "${current.title}" as the homepage featured lesson. Continue?`)) return;
+    if (current && !confirm(`This will replace "${fnEscape(current.title)}" as the homepage featured lesson. Continue?`)) return;
   }
   const r = await fetch(`/api/curricula/${id}/featured`, {
     method: 'PUT',
@@ -990,7 +990,7 @@ async function renderDownloadHistory() {
   el.innerHTML = records.map(r => {
     const typeLabel = r.userType === 'parent' ? 'Parent' : 'Teacher';
     const resLabel = r.resourceType === 'any' ? 'All (legacy)' : (r.resourceType || '');
-    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     return `
       <div class="a-download-row">
         <div style="flex:1;">
@@ -1000,7 +1000,7 @@ async function renderDownloadHistory() {
         <div style="text-align:right; margin-left:14px;">
           <div style="font-weight:700;">${r.count}</div>
           <button class="a-icon-btn" style="margin-top:4px;" title="Reset this entry"
-            onclick="resetOneDownload('${esc(r.userEmail)}','${esc(r.userType)}','${esc(r.resourceType)}')">↺</button>
+            data-e="${esc(r.userEmail)}" data-u="${esc(r.userType)}" data-r="${esc(r.resourceType)}" onclick="resetOneDownload(this.dataset.e, this.dataset.u, this.dataset.r)">↺</button>
         </div>
       </div>
     `;
@@ -1024,7 +1024,7 @@ async function simulateDownload() {
   if (result.ok) {
     resultEl.innerHTML = `<div class="a-error show" style="background:var(--a-success-soft); color:var(--a-success);">✓ Download allowed — ${result.count}${result.limit > 0 ? ' of ' + result.limit : ''} used for ${email} (${resourceType}).</div>`;
   } else if (result.reason === 'limit_reached') {
-    resultEl.innerHTML = `<div class="a-error show">✕ Blocked — ${email} has reached the limit of ${result.limit} for ${resourceType}.</div>`;
+    resultEl.innerHTML = `<div class="a-error show">✕ Blocked — ${email} has reached the limit of ${fnEscape(result.limit)} for ${resourceType}.</div>`;
   } else {
     resultEl.innerHTML = `<div class="a-error show">Something went wrong.</div>`;
   }

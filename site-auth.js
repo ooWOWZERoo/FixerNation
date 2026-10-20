@@ -68,13 +68,17 @@ function fnAuthStartMicrosoft() {
     token: 'Could not complete Microsoft sign-in. Please try again.',
     profile: 'Could not read your Microsoft account details. Please try again.',
     noemail: 'That Microsoft account has no email address Fixer Nation can use.',
+    confirm_email: 'Check your email. We sent you a link to confirm your Microsoft sign-in.',
+    email_failed: 'We couldn’t send the confirmation email. Please try again.',
   };
+  // confirm_email isn't a failure: the sign-in is waiting on the user's inbox.
+  const msKind = msError === 'confirm_email' ? 'success' : 'error';
   params.delete('msError');
   const cleanQuery = params.toString();
   history.replaceState({}, '', location.pathname + (cleanQuery ? '?' + cleanQuery : ''));
   document.addEventListener('DOMContentLoaded', function () {
     fnAuthOpenModal('login');
-    fnAuthShowMessage(MS_ERROR_MESSAGES[msError] || 'Microsoft sign-in failed. Please try again.', 'error');
+    fnAuthShowMessage(MS_ERROR_MESSAGES[msError] || 'Microsoft sign-in failed. Please try again.', msKind);
   });
 })();
 
