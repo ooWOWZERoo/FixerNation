@@ -1,6 +1,7 @@
 const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
+const { isSalesDemoAccount, DEMO_SCHOOL_DOMAIN } = require('../lib/sales-demo');
 
 // Verifies that the requester is a logged-in site_user with at least one
 // active school_license_admins assignment. Deliberately does NOT also
@@ -39,7 +40,7 @@ async function requireSchoolAdmin(req, res, next) {
   }
 
   // Load their purchase scope
-  const [assignments] = await pool.query(
+  let [assignments] = await pool.query(
     `SELECT sla.id AS assignment_id, sla.purchase_id, sla.permission_level,
             p.school_domain, p.seat_count, p.payment_status, p.payment_method,
             p.invoice_id, p.purchased_at, p.notes AS purchase_notes,
@@ -52,6 +53,13 @@ async function requireSchoolAdmin(req, res, next) {
      ORDER BY p.purchased_at DESC`,
     [user.id]
   );
+
+  // A sales-demo account only ever sees the demo school -- even if someone later
+  // assigns it to a real customer's purchase, that purchase is filtered out here, so
+  // the real school's teachers and invitations can never reach a salesperson.
+  if (assignments.length && await isSalesDemoAccount(user.id)) {
+    assignments = assignments.filter(a => a.school_domain === DEMO_SCHOOL_DOMAIN);
+  }
 
   if (!assignments.length) {
     return res.status(403).json({ error: 'No active school administrator assignment found' });

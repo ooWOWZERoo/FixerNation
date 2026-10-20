@@ -17,6 +17,7 @@ const { sendDistrictAdminWelcomeEmail, sendSalesAlertEmail } = require('../lib/m
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
 const { getSetting } = require('../lib/settings');
 const crypto = require('crypto');
+const { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN } = require('../lib/sales-demo');
 
 const router = express.Router();
 
@@ -307,10 +308,19 @@ router.put('/:id/schools', requireAuth, async (req, res) => {
   const { schoolId, assign } = req.body || {};
   if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
 
-  const [[district]] = await pool.query('SELECT id FROM districts WHERE id = ?', [districtId]);
+  const [[district]] = await pool.query('SELECT id, name FROM districts WHERE id = ?', [districtId]);
   if (!district) return res.status(404).json({ error: 'District not found' });
 
   if (assign) {
+    // Keep demo and real data apart in BOTH directions. Sales-demo accounts are
+    // admins of the demo district, so putting a real school in it would show that
+    // school's teachers and students to every salesperson; putting the demo school
+    // in a real district would show fake data to that customer's district admin.
+    const [[school]] = await pool.query('SELECT domain FROM schools WHERE id = ?', [schoolId]);
+    if (!school) return res.status(404).json({ error: 'School not found' });
+    if ((district.name === DEMO_DISTRICT_NAME) !== (school.domain === DEMO_SCHOOL_DOMAIN)) {
+      return res.status(409).json({ error: 'The sales demo district can only contain the demo school (and the demo school can only be in the demo district).' });
+    }
     const [result] = await pool.query(
       'UPDATE schools SET district_id = ? WHERE id = ? AND (district_id IS NULL OR district_id = ?)',
       [districtId, schoolId, districtId]

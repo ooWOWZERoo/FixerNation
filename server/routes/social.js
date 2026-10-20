@@ -86,6 +86,15 @@ async function requireSocialAccess(req, res, next) {
   }
   req.siteUser = rows[0];
 
+  // Sales-demo accounts hold a licence seat (so the teacher view works) and would
+  // therefore pass the licence check below -- but the community is the one place a
+  // teacher sees other REAL teachers: the member list, profiles, posts, comments, DMs.
+  // Demo accounts are confined to demo data, so they're refused here, for every
+  // community route (all of them go through this middleware).
+  if (rows[0].is_sales_demo) {
+    return res.status(403).json({ error: 'The community isn\'t available on demo accounts.' });
+  }
+
   const licensed = await hasActiveLicense(rows[0].id);
   if (!licensed) {
     return res.status(403).json({ error: 'A valid license is required to access the community.' });

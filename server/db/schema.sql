@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS site_users (
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
   role VARCHAR(32) NOT NULL DEFAULT 'teacher', -- 'teacher' | 'school_license_admin' | 'district_admin' | 'admin' | 'parent' | 'affiliate' — added by scripts/alter-school-admin.js on existing installs
   session_invalidated_at DATETIME NULL, -- added by scripts/alter-add-session-invalidated-at.js on existing installs; JWTs issued before this timestamp are rejected
+  is_sales_demo TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-sales-demo-flag.js on existing installs; 1 = FNE sales-demo account, confined to demo data (see lib/sales-demo.js)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

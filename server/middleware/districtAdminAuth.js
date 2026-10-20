@@ -1,6 +1,7 @@
 const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
+const { isSalesDemoAccount, DEMO_DISTRICT_NAME } = require('../lib/sales-demo');
 
 // District admins are a THIRD role on the existing site_user / fn_user_session
 // system, structurally identical to requireSchoolAdmin (school_license_admin)
@@ -38,7 +39,7 @@ async function requireDistrictAdmin(req, res, next) {
     return res.status(401).json({ error: 'Not logged in', reason: 'revoked' });
   }
 
-  const [assignments] = await pool.query(
+  let [assignments] = await pool.query(
     `SELECT dla.id AS assignment_id, dla.district_id, d.name AS district_name
      FROM district_license_admins dla
      JOIN districts d ON d.id = dla.district_id
@@ -46,6 +47,12 @@ async function requireDistrictAdmin(req, res, next) {
      ORDER BY d.name`,
     [user.id]
   );
+
+  // Same confinement as the school-admin portal: a sales-demo account only ever
+  // sees the demo district, whatever else it gets assigned to later.
+  if (assignments.length && await isSalesDemoAccount(user.id)) {
+    assignments = assignments.filter(a => a.district_name === DEMO_DISTRICT_NAME);
+  }
 
   if (!assignments.length) {
     return res.status(403).json({ error: 'No active district administrator assignment found' });

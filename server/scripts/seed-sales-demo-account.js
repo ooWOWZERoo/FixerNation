@@ -15,9 +15,19 @@ const crypto = require('crypto');
 //       Does it for real and emails the salesperson a link to choose their own password.
 //   ... --apply --no-email
 //       Same, but prints the one-time password-setup link instead of emailing it.
+//   ... --allow-existing
+//       Needed only if the email already belongs to an account that holds REAL licence seats,
+//       school-admin assignments or classrooms. Converting such an account to a confined demo
+//       account is refused by default -- use a fresh email for the salesperson instead.
 //
 // Safe to re-run: every step finds-or-creates, so running it again for the same
 // person only fills in whatever is missing.
+//
+// The account is flagged site_users.is_sales_demo = 1 (run scripts/alter-add-sales-demo-flag.js
+// first). The server then CONFINES it, whatever it is assigned later: no community access
+// (the one place teachers see other real teachers), school/district admin portals limited to
+// the demo school/district, teacher invitations into the demo school limited to example.com
+// and the inviter's own email domain. See lib/sales-demo.js.
 //
 // WHY DEMO DATA ONLY: the school-admin and district-admin portals show real student
 // and teacher records for whatever school/district the account is assigned to.
@@ -31,20 +41,19 @@ const crypto = require('crypto');
 // assignments, a demo classroom with three fake students, and a parent link to one
 // of those students.
 
-const DEMO_DISTRICT_NAME = 'FNE Sales Demo District';
-const DEMO_SCHOOL_DOMAIN = 'sales-demo.example.com';
+const { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN, DEMO_SOURCE } = require('../lib/sales-demo');
 const DEMO_SCHOOL_NAME = 'Fixer Nation Demo School';
 const DEMO_PRODUCT_NAME = '[Sales Demo] Demo License';
 const DEMO_CONTACT_EMAIL = 'sales-demo@example.com';
-const DEMO_SOURCE = 'Sales Demo';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function parseArgs(argv) {
-  const args = { apply: false, noEmail: false };
+  const args = { apply: false, noEmail: false, allowExisting: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--apply') args.apply = true;
     else if (a === '--no-email') args.noEmail = true;
+    else if (a === '--allow-existing') args.allowExisting = true;
     else if (a === '--email') args.email = argv[++i];
     else if (a === '--first') args.first = argv[++i];
     else if (a === '--last') args.last = argv[++i];
@@ -140,23 +149,32 @@ async function seed(conn, args, report) {
   let [[user]] = await conn.query('SELECT id, role FROM site_users WHERE email = ?', [args.email]);
   if (user) {
     report.reused(`account ${args.email} (#${user.id}, role "${user.role}")`);
-    // Flag anything this person already holds on real data -- we add to it, never touch it.
-    const [existingSeats] = await conn.query(
+    // An existing account that already holds REAL data would be silently converted into a
+    // confined demo account (and lose community access). Refuse unless explicitly asked.
+    const [[seats]] = await conn.query(
       "SELECT COUNT(*) AS n FROM license_seats WHERE registered_site_user_id = ? AND status = 'registered' AND purchase_id <> ?", [user.id, purchase.id]);
-    const [existingAdmin] = await conn.query(
+    const [[admins]] = await conn.query(
       'SELECT COUNT(*) AS n FROM school_license_admins WHERE site_user_id = ? AND is_active = 1 AND purchase_id <> ?', [user.id, purchase.id]);
-    if (existingSeats[0].n || existingAdmin[0].n) {
-      report.note(`this account ALREADY holds ${existingSeats[0].n} real licence seat(s) and ${existingAdmin[0].n} real school-admin assignment(s) -- left untouched; remember the demo grants are additive`);
+    const [[rooms]] = await conn.query(
+      'SELECT COUNT(*) AS n FROM classrooms WHERE teacher_site_user_id = ? AND name NOT LIKE ?', [user.id, 'Demo Classroom - %']);
+    if (seats.n || admins.n || rooms.n) {
+      const detail = `${seats.n} real licence seat(s), ${admins.n} real school-admin assignment(s), ${rooms.n} real classroom(s)`;
+      if (!args.allowExisting) {
+        throw new Error(`${args.email} is an existing account that already holds ${detail}. Converting it would confine it to demo data. Use a fresh email for the salesperson, or pass --allow-existing if you really mean it.`);
+      }
+      report.note(`CONVERTING an account that holds ${detail} -- the demo restrictions will now apply to it`);
     }
+    await conn.query('UPDATE site_users SET is_sales_demo = 1 WHERE id = ?', [user.id]);
+    report.note('flagged as a sales-demo account (confined to demo data)');
   } else {
     // Unusable random password: the salesperson sets their own via the emailed link.
     const unusable = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
     const [r] = await conn.query(
-      `INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role) VALUES (?, ?, ?, ?, 1, 'teacher')`,
+      `INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role, is_sales_demo) VALUES (?, ?, ?, ?, 1, 'teacher', 1)`,
       [args.first, args.last, args.email, unusable]
     );
     user = { id: r.insertId, role: 'teacher' };
-    report.created(`account ${args.email} (verified, role "teacher", no usable password yet)`);
+    report.created(`account ${args.email} (verified, role "teacher", flagged sales-demo, no usable password yet)`);
   }
   out.userId = user.id;
 
@@ -244,6 +262,14 @@ async function main() {
     host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
     user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
   });
+
+  const [flagCol] = await conn.query(
+    `SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'site_users' AND COLUMN_NAME = 'is_sales_demo'`,
+    [process.env.DB_NAME]);
+  if (!flagCol.length) {
+    await conn.end();
+    throw new Error('site_users.is_sales_demo does not exist yet. Run `node scripts/alter-add-sales-demo-flag.js` first -- without the flag the account would NOT be confined to demo data.');
+  }
 
   console.log(`\n${args.apply ? 'APPLYING' : 'DRY RUN (nothing will be written)'} -- sales demo account for ${args.email}\n`);
   const report = makeReport();

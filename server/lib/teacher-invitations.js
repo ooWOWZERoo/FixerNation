@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const pool = require('../db/pool');
 const { audit } = require('./audit');
 const { sendTeacherInvitationEmail } = require('./mailer');
+const { DEMO_SCHOOL_DOMAIN, demoInviteAllowed } = require('./sales-demo');
 
 const INVITATION_EXPIRY_DAYS = 14;
 
@@ -48,6 +49,13 @@ async function inviteTeacherToSeat({
   );
   if (!purchase || purchase.payment_status !== 'paid') {
     throw Object.assign(new Error('School license is not yet active. The associated invoice must be marked as paid before invitations can be sent.'), { status: 422 });
+  }
+
+  // The demo school is fake. Inviting a REAL teacher into it would email them about a
+  // school that doesn't exist and put them in a roster a salesperson can see, so demo
+  // invitations are limited to example.com addresses and the inviter's own colleagues.
+  if (purchase.school_domain === DEMO_SCHOOL_DOMAIN && !demoInviteAllowed(normalEmail, invitedBy && invitedBy.email)) {
+    throw Object.assign(new Error('This is the sales demo school -- you can only invite example.com addresses or colleagues who share your own email domain.'), { status: 422 });
   }
 
   // Duplicate invitation check
