@@ -41,18 +41,47 @@ function emailDomain(email) {
   return at === -1 ? '' : String(email).trim().toLowerCase().slice(at + 1);
 }
 
-// May `inviteeEmail` be invited into the DEMO school by `inviterEmail`? A demo
-// school admin is allowed to invite teachers (that's a core thing to demo), but the
-// invitee becomes a seat holder on the demo purchase and then shows up in the demo
-// roster -- so a real teacher invited there would be visible to the salesperson, and
-// would get a real email from FNE about a school that doesn't exist. Colleagues (same
-// email domain as the inviter) and example.com addresses are fine.
+// Free/consumer mail providers. "Same email domain" means "same organisation" for a
+// company address, but for these it means "any member of the public" -- a salesperson
+// using a yahoo.com address must not be able to invite every Yahoo user (real teachers
+// included). Best-effort list; anything not on it is treated as a company domain.
+const CONSUMER_EMAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'ymail.com', 'rocketmail.com', 'yahoo.co.uk', 'yahoo.ca',
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'hotmail.co.uk', 'icloud.com', 'me.com', 'mac.com',
+  'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.net', 'mail.com', 'zoho.com', 'comcast.net',
+  'att.net', 'sbcglobal.net', 'verizon.net', 'cox.net', 'bellsouth.net', 'charter.net',
+]);
+
+function emailLocal(email) {
+  const e = String(email || '').trim().toLowerCase();
+  const at = e.lastIndexOf('@');
+  return at === -1 ? '' : e.slice(0, at);
+}
+
+// "john+demo" and "john+teacher1" are both the mailbox "john".
+function mailboxBase(local) {
+  return String(local || '').split('+')[0];
+}
+
+// May `inviteeEmail` be invited into the DEMO school by `inviterEmail`? A demo school
+// admin is allowed to invite teachers (that's a core thing to demo), but the invitee
+// becomes a seat holder on the demo purchase and then shows up in the demo roster -- so
+// a real teacher invited there would be visible to the salesperson, and would get a real
+// email from FNE about a school that doesn't exist. Allowed:
+//   - any example.com address (fake by definition);
+//   - a colleague on the inviter's own COMPANY email domain;
+//   - on a consumer provider (yahoo.com, gmail.com, ...) only the inviter's own mailbox,
+//     including its plus-variants (johnfshaw+teacher1@yahoo.com) -- enough to demo the
+//     invite flow with yourself without opening it to the whole provider.
 function demoInviteAllowed(inviteeEmail, inviterEmail) {
   const invitee = emailDomain(inviteeEmail);
   if (!invitee) return false;
   if (invitee === 'example.com' || invitee.endsWith('.example.com')) return true;
   const inviter = emailDomain(inviterEmail);
-  return !!inviter && invitee === inviter;
+  if (!inviter || invitee !== inviter) return false;
+  if (!CONSUMER_EMAIL_DOMAINS.has(inviter)) return true;
+  const mine = mailboxBase(emailLocal(inviterEmail));
+  return !!mine && mailboxBase(emailLocal(inviteeEmail)) === mine;
 }
 
 module.exports = { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN, DEMO_SOURCE, isSalesDemoAccount, demoInviteAllowed, emailDomain };

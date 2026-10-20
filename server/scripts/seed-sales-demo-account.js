@@ -26,8 +26,9 @@ const crypto = require('crypto');
 // The account is flagged site_users.is_sales_demo = 1 (run scripts/alter-add-sales-demo-flag.js
 // first). The server then CONFINES it, whatever it is assigned later: no community access
 // (the one place teachers see other real teachers), school/district admin portals limited to
-// the demo school/district, teacher invitations into the demo school limited to example.com
-// and the inviter's own email domain. See lib/sales-demo.js.
+// the demo school/district, teacher invitations into the demo school limited to example.com,
+// colleagues on the inviter's own company domain, or -- for a consumer address such as
+// yahoo.com or gmail.com -- only the inviter's own mailbox and its + variants. See lib/sales-demo.js.
 //
 // WHY DEMO DATA ONLY: the school-admin and district-admin portals show real student
 // and teacher records for whatever school/district the account is assigned to.
