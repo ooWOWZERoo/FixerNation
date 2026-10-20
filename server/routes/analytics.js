@@ -26,7 +26,12 @@ router.post('/track', limiter({ name: 'analytics-track', windowMs: 600000, max: 
   const b = req.body || {};
   const sessionId = b.sessionId;
   const eventType = b.eventType;
-  if (!SESSION_ID_PATTERN.test(sessionId) || !EVENT_TYPE_PATTERN.test(eventType)) {
+  // RegExp.test() coerces its argument to a string, so a request with no body makes
+  // sessionId `undefined`, which becomes the 9-letter string "undefined" -- and that
+  // satisfies BOTH patterns below. It then reached the INSERT as id = NULL and threw a
+  // 500 (a stack trace in stderr.log for every scanner probe). Require real strings first.
+  if (typeof sessionId !== 'string' || typeof eventType !== 'string'
+      || !SESSION_ID_PATTERN.test(sessionId) || !EVENT_TYPE_PATTERN.test(eventType)) {
     return res.status(400).json({ error: 'Invalid session id or event type' });
   }
 
