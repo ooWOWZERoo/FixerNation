@@ -54,7 +54,7 @@ const [[row]] = await pool.query('SELECT ... LIMIT 1', [id]);
 | Identity | Single admin account | Teachers / consumers who sign up on the site |
 | Used in | All `admin-*.html` pages, all `requireAuth` routes | Public-facing `/api/site-auth/*`, membership, curriculum access |
 
-`getAuthUser(req)` returns the admin user if the `fn_session` cookie is valid. `getSiteUser(req)` returns the site user from `fn_user_session`. A licensed teacher accessing curriculum uses `getSiteUser` + `hasActiveLicense` — never `getAuthUser`.
+**All three session types are signed with the same `SESSION_SECRET`, so they are separated by a JWT `aud` claim, not just by cookie name** (an attacker controls their own cookie jar — without `aud`, a free site-user's token pasted into `fn_session` passed `requireAuth` as admin). Every sign/verify goes through `server/lib/session-tokens.js` (`signSession(kind, …)` / `verifySession(kind, …)`, kinds `admin` / `site` / `student` / `msLink`). **Never call `jwt.sign`/`jwt.verify` directly.** `requireAuth` additionally confirms the admin row still exists. `getAuthUser(req)` returns the admin user if the `fn_session` cookie is valid. `getSiteUser(req)` returns the site user from `fn_user_session`. A licensed teacher accessing curriculum uses `getSiteUser` + `hasActiveLicense` — never `getAuthUser`.
 
 ### Database schema changes
 
@@ -73,6 +73,8 @@ No build step. All public pages are flat HTML files with inline `<style>` and `<
 - `admin-common.js` / `admin-common.css` — shared by all `admin-*.html` pages. **Cache-busted as `?v=N`** — bump `N` in every admin HTML file whenever either one changes (grep `admin-common.js?v=` to find all references).
 - `site-auth.js` — login/signup modal, auth-state nav rendering, used on every public page.
 - `cart.js` — localStorage cart helper used on every public page with a shopping element.
+
+**Escaping rule (admin pages especially):** anything that originated outside the admin's own keyboard — public form fields, newsletter signups, analytics beacons, signup names/emails, student display names — must go through `fnEscape()` (`admin-common.js`) before it's interpolated into `innerHTML` or an attribute. Never put such data inside an inline `onclick="fn('${...}')"` string: HTML-escaping doesn't help there (`&#39;` decodes back to `'` before the JS runs). Put it in a `data-` attribute (`data-v="${fnEscape(x)}" onclick="fn(this.dataset.v)"`).
 
 Public pages write `credentials: 'include'` on every `fetch()` to send the `fn_user_session` cookie. Admin pages rely on the `fn_session` cookie the same way.
 
@@ -118,7 +120,7 @@ MS_OAUTH_REDIRECT_URI=   # must exactly match the redirect URI registered in Azu
 
 "Continue with Microsoft" in the shared auth modal (`site-auth.js` + the modal markup duplicated across 23 public HTML pages — same `fnAuthModalOverlay` maintenance pattern as everything else there) lets any `site_users` account — teacher, parent, school/district admin — sign in via their Microsoft 365 or personal Microsoft account instead of (or in addition to) a password. Routes live in `server/routes/site-auth.js` (`/microsoft/start`, `/microsoft/callback`); the MSAL client setup is in `server/lib/microsoft-oauth.js`.
 
-Account linking is by `microsoft_oid` first (returning user), then by email (links to an existing password account and auto-verifies it), then falls back to creating a new account. Linking never removes the password login path — both work afterward. `site_users.password_hash` is nullable for Microsoft-only accounts; `change-password` explicitly guards against `bcrypt.compare` on a null hash.
+A returning user is matched by `microsoft_oid` only. The email Microsoft reports is **never trusted by itself**: for work/school accounts the `mail` attribute is set by that tenant's own admin and isn't verified, so anyone with a free Entra tenant could otherwise claim `principal@anyschool.org` and take over (or pre-claim license seats for) the real account. A first-time Microsoft sign-in therefore emails that address a confirmation link (`microsoft-confirm.html`, a page with a **button** that POSTs to `/microsoft/confirm` — never a GET that acts, since mail scanners prefetch links); the pending sign-in rides in a 1-hour signed `msLink` token, and the account is only linked/created (and seats claimed) once the mailbox owner confirms. Linking never removes the password login path — both work afterward. `site_users.password_hash` is nullable for Microsoft-only accounts; `change-password` explicitly guards against `bcrypt.compare` on a null hash.
 
 The Entra app registration **must** be multi-tenant ("accounts in any organizational directory and personal Microsoft accounts") — FNE serves many separate school districts, each with its own tenant, plus parents who may only have a personal account. A single-tenant registration would only work for one specific organization.
 
@@ -130,7 +132,7 @@ The Entra app registration **must** be multi-tenant ("accounts in any organizati
 
 `admin-shell.js` renders the common page header, local page finder, mobile drawer, and page-specific introductions. It moves existing heading nodes rather than cloning them so dynamic IDs such as `ccTitle` continue to work. Do not add shell code to `admin-common.js`, which is also used by public pages. The approved visual direction is recorded in `.interface-design/system.md`.
 
-Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v23, admin-shell.js v1; admin-common.js remains v16 because it was not changed. Do not accidentally match school-admin or district-admin assets.
+Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v23, admin-shell.js v1; admin-common.js v17 (added the shared `fnEscape`), site-auth.js v10, school-admin-nav.js v19, district-admin-nav.js v5. Do not accidentally match school-admin or district-admin assets.
 
 ## Deploy workflow
 
@@ -161,9 +163,13 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
      --exclude='server' \
      --exclude='api' \
      --exclude='uploads' \
+     --exclude='tests' \
+     --exclude='docs' \
+     --exclude='deploy.sh' \
+     --exclude='.interface-design' \
      /home/fixernat/repositories/fixernation/ /home/fixernat/public_html/
    ```
-   `api/` is cPanel-generated proxy glue (not in git). `uploads/` holds real uploaded files (not in git). Excluding both from `--delete` is intentional — they must never be wiped. **Never add `--delete-excluded`** — it deletes every excluded path found on the destination, including `api/` and `uploads/`. This has happened once and took down all API routes until the Node app was restarted to regenerate `api/`.
+   `api/` is cPanel-generated proxy glue (not in git). `uploads/` holds real uploaded files (not in git). Excluding both from `--delete` is intentional — they must never be wiped. `tests`, `docs`, `deploy.sh` and `.interface-design` are repo internals that used to be copied into the web root and served publicly (test code with a hard-coded test password, internal scripts); they're excluded now, and `.htaccess` also blocks those paths. **`--exclude` only protects a path from `--delete` — it does not remove copies already sitting in `public_html`.** Those need a one-time manual cleanup (delete `public_html/tests`, `docs`, `deploy.sh`, `ads.db`, `.interface-design`, and the stale `public_html/server` tree if it is not the live Node app root — check cPanel → Setup Node.js App first). **Never add `--delete-excluded`** — it deletes every excluded path found on the destination, including `api/` and `uploads/`. This has happened once and took down all API routes until the Node app was restarted to regenerate `api/`.
 
 4. **Activate nodevenv before any Node command — every single time:**
    ```bash
@@ -176,7 +182,7 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
 
 6. **Restart the Node app** (cPanel → Setup Node.js App panel) if any `server/` code changed. `git pull` alone leaves old code running in memory — new routes 404 with Express's own page, not a server crash. **pm2 is not installed** on this host.
 
-7. For schema changes to existing tables: run the one-off alter script with the nodevenv prefix:
+7. For schema changes to existing tables: run the one-off alter script with the nodevenv prefix (**run it before restarting the Node app** when the new code reads the column — `middleware/auth.js` and `routes/auth.js` tolerate the missing `admin_users.session_invalidated_at` column, but don't rely on that):
    ```bash
    source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
      cd /home/fixernat/repositories/fixernation/server && \
@@ -218,6 +224,18 @@ grep -rn "old pattern" --include="*.html" --include="*.js" .
 Securing the API endpoint (who can call it) is not the same as preventing the user at the browser from saving the rendered content. Opening a file in a new tab via the API still exposes the native PDF viewer's Download button and right-click Save As. PDF.js canvas rendering addresses the browser-side threat: no download button, right-click yields a single-page PNG, URL never appears in the address bar.
 
 **PDF iframes are unreliable.** They fail on iOS/iPadOS and when `Content-Disposition: attachment` is set. Use PDF.js canvas rendering in a modal (`pdf-modal.js`) or open in a new tab via the API. Test on mobile before shipping any file-display feature.
+
+## Security rules (from the 2026-10-15 audit — each one closed a real hole)
+
+- **Never call `jwt.sign`/`jwt.verify` directly** — use `server/lib/session-tokens.js` (per-session-type `aud`; see "Two separate auth systems").
+- **Rate limiting:** public endpoints that send email, create rows, or check credentials use `server/lib/rate-limit.js` — `limiter()` for spam-prone forms, `FailureTracker` for logins (counts failures only, cleared on success). It reads the **rightmost** `X-Forwarded-For` entry (the one LiteSpeed wrote; the left ones are client-supplied) and **skips IP limits entirely** when no client IP resolves, so one visitor can never exhaust a bucket shared by everyone. Student PINs are 6 digits, so the per-username lockout (5 failures / 15 min) is the real protection — don't loosen it. Check the app log for the one-time `rate-limit: could not resolve a client IP` warning after deploy.
+- **Uploads:** a file's type comes from its bytes (`server/lib/upload-safety.js` — `sniffFile`/`finalizeUpload`), never from the client's `Content-Type` or filename, and the stored extension comes from the detected type. Images from non-admin users are decoded and re-encoded to WebP (`reencodeImageToWebp`) so a disguised HTML/SVG/script file can't survive. SVG is not an accepted upload type (logos go through `branding-editor.js`, which sanitizes it). Uploads are served from the site's own origin, so a stored `.html` is a page that runs with the site's privileges.
+- **Randomness for anything guessable-matters** (PINs, join/parent codes, tokens, placeholder passwords): `crypto.randomInt` / `crypto.randomBytes`, never `Math.random()`.
+- **Public endpoints that write CRM rows** take only the fields the public form actually has (`POST /api/newsletter/contacts` is name + email for anonymous callers; the full payload only for a real admin).
+- **Escaping:** see the Frontend section — `fnEscape()`, and `data-` attributes instead of data inside inline handlers. Email HTML bodies must use `esc()`/`safeUrl()` from `lib/mailer.js` for any user-supplied value (plain-text bodies stay unescaped).
+- **Second-level IDs need their own scope check.** Owning classroom `:id` says nothing about `:studentId`; being in a group says nothing about a `:postId` in a different group. Every ID taken from the URL/body gets bound to the already-verified parent in its own query.
+- **`.htaccess`:** `<Directory>`/`<LocationMatch>` aren't allowed there and `LimitRequestBody` can't be scoped to a path (it's a global 256 MB cap — lowering it needs the host's server config). Use `RewriteRule`/`SetEnvIf`+`Header … env=`, which are proven to work on this host. CSP is currently **report-only** — promote it to `Content-Security-Policy` once the console is quiet.
+- **Never commit credentials**, including test/QA ones: the repo is public and the QA fixture accounts are real accounts in the production DB (one holds a paid licence seat). `seed-qa-test-accounts.js` and the e2e tests read `QA_PASSWORD`/`TEST_QA_PASSWORD` from the environment.
 
 ## Infra gotchas (all previously bitten in this project)
 
