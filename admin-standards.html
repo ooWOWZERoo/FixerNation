@@ -256,7 +256,7 @@ function renderState() {
     <div class="a-card">
       <div class="a-card-head">
         <h2>${fnEscape(state.name)} <span style="font-weight:500;" class="a-note">${fnEscape(state.code)}</span></h2>
-        <div class="sx-actions"><button class="a-btn a-btn-outline a-btn-sm" data-act="close-state">Close</button></div>
+        <div class="sx-actions"><a class="a-btn a-btn-outline a-btn-sm" href="state-standards.html?state=${encodeURIComponent(state.code)}&preview=1" target="_blank" rel="noopener">Preview as a visitor</a><button class="a-btn a-btn-outline a-btn-sm" data-act="close-state">Close</button></div>
       </div>
 
       <h3 style="font-size:14px; margin:0 0 4px;">What does this state have? ${reviewPill(c.reviewStatus)}<span class="a-note" style="font-weight:400;">${reviewed}</span></h3>

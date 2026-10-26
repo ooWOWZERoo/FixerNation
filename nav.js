@@ -85,6 +85,7 @@
   var libraryActive        = page === 'education-portal';
   var morningBoostActive   = page === 'morning-boost-blog';
   var researchActive  = page === 'research';
+  var standardsActive = page === 'state-standards';
   var pricingActive   = page === 'school-licensing' || page === 'licenses' || page === 'education-schools';
   var brainActive     = page === 'brain-games' || page.indexOf('brain-') === 0;
   var communityActive = page === 'social' || page === 'social-profile' || page === 'fnnetwork';
@@ -109,10 +110,11 @@
       '<a href="index.html" class="brand"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="brand-logo"></a>' +
       '<nav class="nav-links">' +
         '<div class="fn-nav-dropdown">' +
-          '<button class="fn-nav-parent' + (whyActive || researchActive || aboutActive ? ' active' : '') + '">Why FNE <span class="fn-nav-caret">&#9662;</span></button>' +
+          '<button class="fn-nav-parent' + (whyActive || researchActive || standardsActive || aboutActive ? ' active' : '') + '">Why FNE <span class="fn-nav-caret">&#9662;</span></button>' +
           '<div class="fn-nav-menu">' +
             '<a href="why-fixer-nation.html"' + (whyActive      ? ' class="active"' : '') + '>Why FNE</a>'    +
             '<a href="research.html"'          + (researchActive ? ' class="active"' : '') + '>Research</a>'   +
+            '<a href="state-standards.html"'   + (standardsActive ? ' class="active"' : '') + '>State Standards</a>' +
             '<a href="about.html"'             + (aboutActive    ? ' class="active"' : '') + '>About</a>'       +
           '</div>' +
         '</div>' +
@@ -159,6 +161,7 @@
       mmLabel('Why FNE') +
       lnk('why-fixer-nation.html', 'Why FNE', whyActive) +
       lnk('research.html',         'Research', researchActive) +
+      lnk('state-standards.html',  'State Standards', standardsActive) +
       lnk('about.html',            'About', aboutActive) +
       mmLabel('Explore') +
       lnk('how-it-works.html',  'How It Works', howActive) +

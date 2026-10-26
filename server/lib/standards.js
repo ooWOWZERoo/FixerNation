@@ -407,23 +407,27 @@ async function getPublicOverview() {
   };
 }
 
-async function getPublicState(codeIn) {
+async function buildState(codeIn, includeDrafts) {
+  // `includeDrafts` is passed ONLY by the admin-only preview functions below. The public path
+  // (getPublicState) always passes false, so the verified-only filter stays in the SQL.
+  const V = includeDrafts ? '' : " AND review_status = 'verified'";
+  const AV = includeDrafts ? '' : " AND a.review_status = 'verified'";
   const code = stateCode(codeIn);
-  const [[cov]] = await pool.query(`SELECT * FROM standards_state_coverage WHERE state_code = ? AND review_status = 'verified'`, [code]);
+  const [[cov]] = await pool.query(`SELECT * FROM standards_state_coverage WHERE state_code = ?${V}`, [code]);
   const [fws] = await pool.query(
-    `SELECT * FROM standards_frameworks WHERE state_code = ? AND review_status = 'verified' ORDER BY framework_type, name`, [code]);
+    `SELECT * FROM standards_frameworks WHERE state_code = ?${V} ORDER BY framework_type, name`, [code]);
   if (!cov && !fws.length) return null; // nothing verified for this state yet -- indistinguishable from "no data"
 
   const frameworks = [];
   for (const fw of fws) {
     const [items] = await pool.query('SELECT * FROM standards_items WHERE framework_id = ? ORDER BY sort_order, code', [fw.id]);
     const [aligns] = await pool.query(
-      `SELECT a.item_id, a.target_type, a.target_id, a.strength, a.rationale, c.title AS curriculum_title, g.name AS game_name
+      `SELECT a.item_id, a.review_status, a.target_type, a.target_id, a.strength, a.rationale, c.title AS curriculum_title, g.name AS game_name
        FROM standards_alignments a
        JOIN standards_items i ON i.id = a.item_id
        LEFT JOIN curricula c ON a.target_type = 'curriculum' AND c.id = a.target_id AND c.published = 1
        LEFT JOIN brain_games g ON a.target_type = 'brain_game' AND g.id = a.target_id
-       WHERE i.framework_id = ? AND a.review_status = 'verified'`, [fw.id]);
+       WHERE i.framework_id = ?${AV}`, [fw.id]);
     const visible = aligns.filter(a => a.target_type === 'program'
       || (a.target_type === 'curriculum' && a.curriculum_title)   // unpublished or deleted lessons never show
       || (a.target_type === 'brain_game' && a.game_name));
@@ -436,11 +440,25 @@ async function getPublicState(codeIn) {
         targetTitle: a.target_type === 'program' ? 'Fixer Nation Education program' : (isLesson ? lessonStem(a.curriculum_title) : a.game_name),
         ...(isLesson ? { versions: versions.get(lessonStem(a.curriculum_title)) || [] } : {}),
         strength: a.strength, rationale: a.rationale,
+        ...(includeDrafts ? { draft: a.review_status !== 'verified' } : {}),
       });
     }
-    frameworks.push({ ...forPublic(frameworkOut(fw)), items: items.map(it => ({ ...itemOut(it), alignments: byItem[it.id] || [] })) });
+    frameworks.push({ ...forPublic(frameworkOut(fw)), ...(includeDrafts ? { draft: fw.review_status !== 'verified' } : {}), items: items.map(it => ({ ...itemOut(it), alignments: byItem[it.id] || [] })) });
   }
-  return { state: { code, name: STATES[code] }, coverage: cov ? forPublic(coverageOut(cov)) : null, frameworks };
+  return { state: { code, name: STATES[code] }, coverage: cov ? { ...forPublic(coverageOut(cov)), ...(includeDrafts ? { draft: cov.review_status !== 'verified' } : {}) } : null, frameworks };
+}
+
+async function getPublicState(codeIn) { return buildState(codeIn, false); }
+// Admin-only: the same page data INCLUDING drafts, each marked `draft: true`. Reachable only via
+// the requireAuth router; the public routes never call it.
+async function getPreviewState(codeIn) { return buildState(codeIn, true); }
+async function getPreviewOverview() {
+  const [rows] = await pool.query('SELECT * FROM standards_state_coverage ORDER BY state_code');
+  const [counts] = await pool.query('SELECT state_code, COUNT(*) AS n FROM standards_frameworks GROUP BY state_code');
+  const byState = Object.fromEntries(counts.map(c => [c.state_code, Number(c.n)]));
+  const states = rows.map(r => ({ ...forPublic(coverageOut(r)), draft: r.review_status !== 'verified', verifiedFrameworks: byState[r.state_code] || 0 }))
+    .concat(Object.keys(byState).filter(c => !rows.some(r => r.state_code === c)).map(c => ({ stateCode: c, stateName: STATES[c], draft: true, verifiedFrameworks: byState[c] })));
+  return { verifiedStates: states.length, totalJurisdictions: Object.keys(STATES).length, preview: true, states: states.sort((x, y) => x.stateCode.localeCompare(y.stateCode)) };
 }
 
 // ---- ADMIN: everything, with review status ------------------------------------------
@@ -491,5 +509,5 @@ module.exports = {
   upsertCoverage, verifyCoverage, unverifyCoverage,
   createFramework, updateFramework, deleteFramework, upsertItems, deleteItem, verifyFramework, unverifyFramework,
   upsertAlignment, deleteAlignment, verifyAlignment, verifyAlignmentsForItem, unverifyAlignment,
-  getPublicOverview, getPublicState, getAdminOverview, getAdminState, getAdminFramework,
+  getPublicOverview, getPublicState, getPreviewState, getPreviewOverview, getAdminOverview, getAdminState, getAdminFramework,
 };

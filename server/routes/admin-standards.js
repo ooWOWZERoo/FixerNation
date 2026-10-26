@@ -16,6 +16,13 @@ const wrap = (fn) => async (req, res) => {
 const num = (v) => Number(v);
 
 router.get('/overview', wrap(() => standards.getAdminOverview()));
+// Admin-only "preview as a visitor": the public page's data, drafts included and marked.
+router.get('/preview/overview', wrap(() => standards.getPreviewOverview()));
+router.get('/preview/states/:code', wrap(async (req) => {
+  const d = await standards.getPreviewState(req.params.code);
+  if (!d) { const e = new Error('Nothing loaded for that state yet'); e.status = 404; throw e; }
+  return d;
+}));
 router.get('/states/:code', wrap((req) => standards.getAdminState(req.params.code)));
 
 // Coverage (one row per jurisdiction)

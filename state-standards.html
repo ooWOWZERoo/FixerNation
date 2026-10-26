@@ -95,6 +95,9 @@
   #app[data-grade="high"] a.ver:not([data-level="high"]){display:none;}
   .grade-pick{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:12px 0 0; font-size:14px; font-weight:600; color:var(--teal-dark);}
   .grade-pick select{padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#fff; font:600 14px 'Plus Jakarta Sans',sans-serif; color:var(--ink);}
+  .preview-banner{background:#2A2420; color:#fff; border-radius:14px; padding:14px 20px; margin:22px 0 0; font-size:14px; line-height:1.55;}
+  .preview-banner a{color:#EBA657; font-weight:700; text-decoration:underline; text-underline-offset:3px;}
+  .draft-tag{display:inline-block; font-size:11px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:#2A2420; color:#fff; margin-left:8px; vertical-align:middle;}
   .badge{font-size:11px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; padding:3px 10px; border-radius:999px;}
   .badge.direct{background:var(--teal); color:#fff;}
   .badge.supporting{background:rgba(235,166,87,0.28); color:#7a4a0a;}
@@ -134,6 +137,8 @@
   <div class="notice">
     <strong>Please read:</strong> This is Fixer Nation's own mapping of its lessons and games to each state's published framework. Neither a state education agency nor CASEL has reviewed or endorsed it, and neither has certified it. Each standard gets a short summary and a link to the official document, which is always the source of truth.
   </div>
+
+  <div id="previewBanner" class="preview-banner" hidden></div>
 
   <section class="picker-section" aria-labelledby="pickerLabel">
     <div class="picker-row">
@@ -205,7 +210,7 @@
 <script>fnTrackPageview();</script>
 <script src="cart.js"></script>
 <script src="referral.js?v=1"></script>
-<script src="nav.js?v=15"></script>
+<script src="nav.js?v=16"></script>
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=6"></script>
 <script>
@@ -229,6 +234,23 @@
   var KIND_LABEL = { program: 'Program', curriculum: 'Lesson', brain_game: 'Game' };
   var STRENGTH_LABEL = { direct: 'Direct match', supporting: 'Supporting connection' };
 
+  var qs = new URLSearchParams(location.search);
+  var PREVIEW = qs.get('preview') === '1';
+  var API = PREVIEW ? '/api/admin/standards/preview' : '/api/standards';
+  var banner = document.getElementById('previewBanner');
+  var DRAFT = '<span class="draft-tag">Draft</span>';
+  function suffix() { return PREVIEW ? '&preview=1' : ''; }
+  function previewOn() {
+    banner.hidden = false;
+    banner.textContent = 'Admin preview: this page shows drafts that visitors can\'t see yet.';
+    var m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex'; document.head.appendChild(m);
+  }
+  function previewDenied() {
+    PREVIEW = false; API = '/api/standards';
+    banner.hidden = false;
+    banner.innerHTML = 'Sign in as an admin to use preview. Showing the public view instead. <a href="admin-login.html">Admin sign-in</a>';
+  }
+
   var esc = fnEscape;
   function safeHttps(u) { return typeof u === 'string' && /^https:\/\//i.test(u) ? u : null; }
   function link(u, text) { var s = safeHttps(u); return s ? '<a href="' + esc(s) + '" target="_blank" rel="noopener noreferrer">' + esc(text) + '</a>' : ''; }
@@ -240,6 +262,7 @@
   function getJson(url) {
     return fetch(url, { credentials: 'include' }).then(function (r) {
       if (r.status === 404) return null;
+      if (r.status === 401) { var e = new Error('unauthorized'); e.unauthorized = true; throw e; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
@@ -250,7 +273,7 @@
 
   function renderOverview(ov) {
     var n = ov.verifiedStates, total = ov.totalJurisdictions;
-    progress.innerHTML = '<strong>' + esc(n) + '</strong> of ' + esc(total) + ' jurisdictions reviewed so far. We add a state once our team finishes checking it.';
+    progress.innerHTML = PREVIEW ? '<strong>' + esc(n) + '</strong> of ' + esc(total) + ' jurisdictions loaded (drafts included).' : '<strong>' + esc(n) + '</strong> of ' + esc(total) + ' jurisdictions reviewed so far. We add a state once our team finishes checking it.';
     if (!n) {
       picker.innerHTML = '<option value="">No states yet</option>';
       app.innerHTML = '<div class="empty"><h2>We\'re still reviewing our first states.</h2><p>Check back soon. If one state matters most to you, tell us and we\'ll move it up the list.</p><a class="btn" href="contact.html">Tell us your state</a></div>';
@@ -263,7 +286,7 @@
     var grid = ov.states.map(function (s) {
       var f = s.verifiedFrameworks;
       return '<button type="button" class="state-btn" data-state="' + esc(s.stateCode) + '">' + esc(s.stateName) +
-        '<small>' + esc(f) + (f === 1 ? ' framework' : ' frameworks') + '</small></button>';
+        '<small>' + esc(f) + (f === 1 ? ' framework' : ' frameworks') + '</small>' + (s.draft ? '<small>' + DRAFT + '</small>' : '') + '</button>';
     }).join('');
     app.innerHTML = '<div class="state-grid">' + grid + '</div>';
   }
@@ -283,7 +306,7 @@
     } else if (a.targetType === 'program') t = '<a class="t" href="programs.html">' + title + '</a>';
     else t = '<span class="t">' + title + '</span>';
     return '<div class="al"><div class="al-top"><span class="badge ' + (a.strength === 'direct' ? 'direct' : 'supporting') + '">' +
-      esc(STRENGTH_LABEL[a.strength] || a.strength) + '</span>' + t + '<span class="kind">' + esc(KIND_LABEL[a.targetType] || '') + '</span></div>' + extra +
+      esc(STRENGTH_LABEL[a.strength] || a.strength) + '</span>' + (a.draft ? DRAFT : '') + t + '<span class="kind">' + esc(KIND_LABEL[a.targetType] || '') + '</span></div>' + extra +
       '<p>' + esc(a.rationale) + '</p></div>';
   }
   var KIND_ORDER = { curriculum: 0, brain_game: 1, program: 2 };
@@ -314,7 +337,7 @@
     var h = '<div class="state-head"><h2>' + esc(d.state.name) + '</h2>' + (date ? '<p class="checked">Checked against the state\'s documents on ' + esc(niceDate(date)) + '.</p>' : '') + '</div>';
     if (cov) {
       h += '<div class="coverage">' +
-        '<div class="cov-card"><div class="k">Social-emotional learning</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div>' + link(cov.selSourceUrl, 'Where we checked') + '</div>' +
+        '<div class="cov-card"><div class="k">Social-emotional learning' + (cov.draft ? DRAFT : '') + '</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div>' + link(cov.selSourceUrl, 'Where we checked') + '</div>' +
         '<div class="cov-card"><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div>' + link(cov.pogSourceUrl, 'Where we checked') + '</div></div>';
     }
     if (fws.length) {
@@ -329,7 +352,7 @@
       if (fw.gradeSpan) meta.push('Grades ' + esc(fw.gradeSpan));
       var l = link(fw.officialUrl, 'Read the official document');
       if (l) meta.push(l);
-      h += '<section class="framework"><h3>' + esc(fw.name) + '</h3><p class="fw-meta">' + meta.join(' &middot; ') + '</p>' +
+      h += '<section class="framework"><h3>' + esc(fw.name) + (fw.draft ? DRAFT : '') + '</h3><p class="fw-meta">' + meta.join(' &middot; ') + '</p>' +
         (fw.items || []).map(standardHtml).join('') + '</section>';
     });
     app.removeAttribute('data-grade');
@@ -357,15 +380,15 @@
     code = String(code || '').toUpperCase();
     if (!/^[A-Z]{2}$/.test(code)) { picker.value = ''; if (overview) renderOverview(overview); return Promise.resolve(); }
     picker.value = code;
-    if (push) history.pushState({ s: code }, '', '?state=' + encodeURIComponent(code));
-    return getJson('/api/standards/states/' + encodeURIComponent(code)).then(function (d) {
+    if (push) history.pushState({ s: code }, '', '?state=' + encodeURIComponent(code) + suffix());
+    return getJson(API + '/states/' + encodeURIComponent(code)).then(function (d) {
       if (!d) { app.innerHTML = '<div class="empty"><h2>We haven\'t finished reviewing that state yet.</h2><p>Pick another state above, or tell us this one matters to you.</p><a class="btn" href="contact.html">Tell us your state</a></div>'; return; }
       renderState(d);
       window.scrollTo({ top: document.querySelector('.picker-section').offsetTop - 80, behavior: 'smooth' });
-    }).catch(showError);
+    }).catch(function (e) { if (e && e.unauthorized) { previewDenied(); loadState(code, false); } else showError(); });
   }
 
-  picker.addEventListener('change', function () { if (picker.value) loadState(picker.value, true); else { history.pushState({}, '', location.pathname); if (overview) renderOverview(overview); } });
+  picker.addEventListener('change', function () { if (picker.value) loadState(picker.value, true); else { history.pushState({}, '', PREVIEW ? '?preview=1' : location.pathname); if (overview) renderOverview(overview); } });
   app.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.state-btn');
     if (b) loadState(b.getAttribute('data-state'), true);
@@ -375,12 +398,19 @@
     if (s) loadState(s, false); else { picker.value = ''; if (overview) renderOverview(overview); }
   });
 
-  getJson('/api/standards/overview').then(function (ov) {
-    overview = ov || { verifiedStates: 0, totalJurisdictions: 51, states: [] };
-    renderOverview(overview);
-    var s = new URLSearchParams(location.search).get('state');
-    if (s) loadState(s, false);
-  }).catch(function () { picker.innerHTML = '<option value="">Unavailable</option>'; showError(); });
+  function start() {
+    getJson(API + '/overview').then(function (ov) {
+      if (PREVIEW) previewOn();
+      overview = ov || { verifiedStates: 0, totalJurisdictions: 51, states: [] };
+      renderOverview(overview);
+      var s = new URLSearchParams(location.search).get('state');
+      if (s) loadState(s, false);
+    }).catch(function (e) {
+      if (e && e.unauthorized) { previewDenied(); start(); return; }
+      picker.innerHTML = '<option value="">Unavailable</option>'; showError();
+    });
+  }
+  start();
 })();
 </script>
 </body>

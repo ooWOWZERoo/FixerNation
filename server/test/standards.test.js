@@ -205,6 +205,29 @@ test('REVIEW GATE: verifying every draft connection under one standard', async (
   assert.equal((await call('POST', `/api/admin/standards/items/${itemIds[0]}/verify-alignments`, {})).status, 401, 'admin only');
 });
 
+test('PREVIEW: admins see drafts (marked) through their own endpoints; the public never does', async () => {
+  reset();
+  await admin('PUT', '/coverage/IL', { selStatus: 'k12_standards', pogStatus: 'none', selSourceUrl: 'https://example.org/a', pogSourceUrl: 'https://example.org/b', sourceAccessedOn: today });
+  const { fwId, itemIds } = await seedFramework();                   // framework and coverage stay DRAFT
+  await admin('PUT', '/alignments', { itemId: itemIds[0], targetType: 'program', strength: 'direct', rationale: 'A draft connection that only the admin preview may show.' });
+
+  const pv = await admin('GET', '/preview/states/IL');
+  assert.equal(pv.status, 200);
+  assert.equal(pv.json.coverage.draft, true);
+  assert.equal(pv.json.frameworks[0].draft, true);
+  assert.equal(pv.json.frameworks[0].items[0].alignments[0].draft, true);
+  assert.ok(!/reviewedBy|reviewed_by/.test(pv.raw), 'preview still hides reviewer identity');
+  const ov = (await admin('GET', '/preview/overview')).json;
+  assert.deepEqual(ov.states.map(s => [s.stateCode, s.draft]), [['IL', true]]);
+  assert.equal((await admin('GET', '/preview/states/KS')).status, 404, 'nothing loaded -> 404');
+
+  assert.equal((await pub('/states/IL')).status, 404, 'the public endpoint is unchanged: still nothing');
+  assert.equal((await pub('/overview')).json.verifiedStates, 0);
+  assert.equal((await call('GET', '/api/admin/standards/preview/states/IL', {})).status, 401, 'anonymous cannot preview');
+  assert.equal((await call('GET', '/api/admin/standards/preview/overview', { cookie: siteCookie() })).status, 401, 'a site-user session cannot preview');
+  assert.ok(fwId);
+});
+
 test('REVIEW GATE: what can and cannot be verified', async () => {
   reset();
   // coverage: unknown status can't be a verified fact; sources required even for "none"
