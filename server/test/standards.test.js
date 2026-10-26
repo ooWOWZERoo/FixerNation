@@ -233,6 +233,19 @@ test('EDITS: changing verified content sends it back to draft; identical re-impo
   assert.equal((await admin('GET', '/states/IL')).json.coverage.reviewStatus, 'draft');
 });
 
+test('EDITS: adding a NEW standard re-drafts the framework but keeps alignments on unchanged standards', async () => {
+  reset();
+  const { fwId, itemIds } = await seedFramework({ verify: true });
+  const al = (await admin('PUT', '/alignments', { itemId: itemIds[0], targetType: 'program', strength: 'direct', rationale: 'A rationale that is long enough to review.' })).json;
+  await admin('POST', `/alignments/${al.id}/verify`);
+  const r = (await admin('PUT', `/frameworks/${fwId}/items`, { items: [...ITEMS, { code: '3C', title: 'A brand-new standard' }] })).json;
+  assert.deepEqual([r.added, r.updated, r.unchanged], [1, 0, 2]);
+  const after = (await admin('GET', `/frameworks/${fwId}`)).json;
+  assert.equal(after.reviewStatus, 'draft', 'framework must be re-verified before anything is public again');
+  assert.equal(after.items.find(i => i.code === '1A').alignments[0].reviewStatus, 'verified', 'the unchanged standard\'s alignment was reviewed against text that did not change');
+  assert.equal((await pub('/states/IL')).status, 404, 'but nothing is public while the framework is a draft');
+});
+
 test('UNVERIFY: pulling a framework pulls everything under it off the public page', async () => {
   reset();
   const { fwId, itemIds } = await seedFramework({ verify: true });

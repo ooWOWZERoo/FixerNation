@@ -27,6 +27,7 @@
     'quotes': ['From interest to impact', '', 'Build proposals, follow opportunities, and help more schools get started.', 'Sales & Schools'],
     'school-admins': ['Empower the people leading change', '', 'Connect school leaders with the access and responsibilities they need to support their teachers.', 'Sales & Schools'],
     'settings': ['Make it work for your mission', '', 'Manage the preferences, branding, and delivery settings behind your daily operations.', 'Administration'],
+    'standards': ['Know the standards. Show the fit.', '', 'Track what each state expects, record where FNE lessons connect, and verify every claim before anyone sees it.', 'Content'],
     'social': ['Connection creates momentum', '', 'Shape the conversations and shared moments that bring your community together.', 'Community']
   };
   var key = page.replace('admin-', '').replace('.html', '');

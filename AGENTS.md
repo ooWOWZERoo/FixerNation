@@ -124,7 +124,7 @@ A returning user is matched by `microsoft_oid` only. The email Microsoft reports
 
 The Entra app registration **must** be multi-tenant ("accounts in any organizational directory and personal Microsoft accounts") — FNE serves many separate school districts, each with its own tenant, plus parents who may only have a personal account. A single-tenant registration would only work for one specific organization.
 
-"Coded but not live until configured" (same pattern as `ELEVENLABS_API_KEY`) — `server/lib/microsoft-oauth.js`'s `isConfigured()` guards both routes, so the button degrades to a clear error toast instead of a crash until the real Azure credentials are in `server/.env`. Needs `npm install --prefix server` (`@azure/msal-node`), `node scripts/alter-add-microsoft-oauth.js`, and a Node app restart before going live.
+**Live in production since mid-October 2026** (Azure app registered, credentials in `server/.env`). `server/lib/microsoft-oauth.js`'s `isConfigured()` still guards both routes, so on any environment without the credentials the button degrades to a clear error toast instead of a crash.
 
 ## Admin navigation and Mission Control visual system
 
@@ -132,7 +132,7 @@ The Entra app registration **must** be multi-tenant ("accounts in any organizati
 
 `admin-shell.js` renders the common page header, local page finder, mobile drawer, and page-specific introductions. It moves existing heading nodes rather than cloning them so dynamic IDs such as `ccTitle` continue to work. Do not add shell code to `admin-common.js`, which is also used by public pages. The approved visual direction is recorded in `.interface-design/system.md`.
 
-Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v23, admin-shell.js v1; admin-common.js v17 (added the shared `fnEscape`), site-auth.js v10, school-admin-nav.js v19, district-admin-nav.js v5. Do not accidentally match school-admin or district-admin assets.
+Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v25, admin-shell.js v2; admin-common.js v17 (added the shared `fnEscape`), site-auth.js v10, school-admin-nav.js v19, district-admin-nav.js v5. Do not accidentally match school-admin or district-admin assets.
 
 ## Deploy workflow
 
@@ -247,12 +247,13 @@ Parent access is decided by **parent links** (`parent_classroom_links`, via `isL
 
 Design, rules, access matrix and phase plan: `docs/standards-crosswalk/DESIGN.md` — read it before touching this. Scope agreed 2026-10-26: **SEL standards + Portrait of a Graduate** (not academic standards); **hidden from the public until a person verifies it**; pipeline first, then a pilot batch of states. One dataset, three views (public crosswalk page, per-district frameworks, sales one-pager).
 
-Code: `server/lib/standards.js` (data layer + review gate), `routes/standards.js` (public, read-only), `routes/admin-standards.js` (FNE admin), `scripts/import-standards.js` (research JSON in `server/data/standards/<STATE>.json` → draft rows), tables created by `scripts/alter-create-standards-crosswalk.js` (also in `schema.sql`). **Run `cd server && npm test`** — it exercises the real routes against a real SQL engine (Node's built-in SQLite), including mutation-checked "a draft can never reach a public endpoint" tests. Keep the SQL in `lib/standards.js` portable (no `NOW()`, no `ON DUPLICATE KEY`, no array params) so it keeps running on both MariaDB and the test database.
+Admin UI: `admin-standards.html` (Content → Standards Crosswalk) — coverage matrix of all 51 jurisdictions, per-state review, frameworks, standards (paste JSON), alignments, verify/unverify. Code: `server/lib/standards.js` (data layer + review gate), `routes/standards.js` (public, read-only), `routes/admin-standards.js` (FNE admin), `scripts/import-standards.js` (research JSON in `server/data/standards/<STATE>.json` → draft rows), tables created by `scripts/alter-create-standards-crosswalk.js` (also in `schema.sql`). **Run `cd server && npm test`** — it exercises the real routes against a real SQL engine (Node's built-in SQLite), including mutation-checked "a draft can never reach a public endpoint" tests. Keep the SQL in `lib/standards.js` portable (no `NOW()`, no `ON DUPLICATE KEY`, no array params) so it keeps running on both MariaDB and the test database.
 
 Rules that must not erode: every record needs an https source URL and the date it was checked; public endpoints filter `review_status = 'verified'` **in the SQL**; editing a verified record sends it (and, for a framework, its alignments) back to draft; an alignment can only be verified once its framework is; alignment is FNE's own thematic mapping, never a state/CASEL endorsement (same disclaimer as `research.html`); store short summaries and link out, not whole standards documents. Claude can research and draft, but **cannot verify** — a human reviews in the admin UI.
 
 ## Infra gotchas (all previously bitten in this project)
 
+- **The Node app's error log is `/home/fixernat/repositories/fixernation/server/stderr.log`** (not `~/logs`, which only holds cron/PHP logs). It has **no timestamps** and keeps old entries, so judge recency from the file's modified time (`ls -l --time-style=long-iso`) and from stack-trace line numbers vs. the deployed file. To test whether it is still being written, send one deliberately malformed request tagged with a unique `User-Agent` and `grep` for it (done 2026-10-26 — the log is alive and was simply quiet).
 - **`dotenv.config()` needs an explicit path.** Under this host's Passenger/LiteSpeed Node integration, `process.cwd()` isn't the app root — `require('dotenv').config()` with no path silently loads nothing. Use `require('dotenv').config({ path: path.join(__dirname, '.env') })` (or `path.join(__dirname, '..', '.env')` in scripts one level deeper).
 - **Don't use `cookie-session` or any library relying on Express's deferred `on-headers` write hook** — it silently fails to attach `Set-Cookie` on this host. Sign a JWT and attach it via a direct `res.cookie()` call in the route handler itself.
 - **The reverse proxy rejects POST/PUT/DELETE with no body/Content-Type** — returns a bare 400 before Express ever sees it. Every mutating `fetch()` must send `headers: {'Content-Type': 'application/json'}` and a body (`'{}'` if nothing to send), even for actions like logout.

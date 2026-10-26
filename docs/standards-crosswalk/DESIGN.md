@@ -21,7 +21,7 @@ So the dataset is a **coverage matrix**, not 50 identical records: for each juri
 
 1. **Every record carries a primary-source URL (https) and the date it was checked.** Claude researches and drafts; Claude cannot verify.
 2. **Nothing is public until an FNE admin verifies it.** Drafts never appear on any public endpoint.
-3. **Editing a verified record sends it back to draft.** Changing a framework or its items also sends its alignments back to draft (an alignment was reviewed against the old text).
+3. **Editing a verified record sends it back to draft.** An alignment is reviewed against one specific standard's text, so: changing a standard's text sends *that standard's* alignments back to draft; editing the framework's own details (name, source, dates…) or unverifying it sends *all* of its alignments back to draft; adding a brand-new standard sends the framework back to draft (it must be re-verified before anything shows) but leaves alignments on unchanged standards as they were.
 4. **An alignment can only be verified if its framework is verified**, it has a real rationale, and its FNE target exists.
 5. **Alignment is FNE's own thematic mapping**, not an endorsement or certification by any state or by CASEL. The public page carries the same disclaimer as `research.html`.
 6. **Short summaries + links out.** Store the code, title, a short paraphrase/excerpt and the source link — not whole standards documents.

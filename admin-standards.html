@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Standards Crosswalk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=21">
+<style>
+  .sx-filters{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .sx-filters select, .sx-filters input{padding:9px 12px; border:1px solid var(--a-border); border-radius:8px; background:var(--a-card); color:var(--a-text); font:inherit; font-size:13px;}
+  tr.sx-row-open{background:var(--a-accent-soft);}
+  .sx-meta{font-size:12.5px; color:var(--a-text-soft); margin:2px 0 0; line-height:1.55;}
+  .sx-meta a{color:var(--a-accent-on-soft); font-weight:600;}
+  .sx-fw{margin-top:20px;}
+  .sx-fw-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+  .sx-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .sx-align{display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; padding:7px 0; border-top:1px dashed var(--a-border); font-size:12.5px;}
+  .sx-align:first-child{border-top:0;}
+  .sx-align .sx-why{flex:1 1 260px; color:var(--a-text-soft);}
+  .sx-two{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px;}
+  .sx-two .a-field textarea{width:100%; min-height:70px;}
+  .sx-callout{border-left:4px solid var(--a-accent); padding:10px 14px; background:var(--a-accent-soft); border-radius:6px; font-size:12.5px; margin:0 0 16px; color:var(--a-accent-on-soft);}
+  textarea.sx-json{width:100%; min-height:220px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;}
+  .sx-err{color:var(--a-danger); font-size:12.5px; margin-top:8px; display:none;}
+</style>
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=25"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Standards Crosswalk</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <p class="sx-callout">
+        Nothing here is public until you <strong>verify</strong> it. Check each record against its official source,
+        then press Verify. Editing a verified record sends it back to draft, and an alignment can only be verified
+        once its framework is. Alignment is FNE's own thematic mapping, never an endorsement by a state or CASEL.
+      </p>
+
+      <div class="a-stat-grid" id="summaryStats" style="margin-bottom:24px;"></div>
+
+      <div class="a-card" id="listCard">
+        <div class="a-card-head">
+          <h2>Coverage by state</h2>
+          <div class="sx-filters">
+            <label for="filterStatus" class="a-note" style="margin:0;">Show</label>
+            <select id="filterStatus">
+              <option value="all">All 51</option>
+              <option value="review">Needs review</option>
+              <option value="verified">Verified</option>
+              <option value="new">Not started</option>
+            </select>
+            <input type="search" id="filterText" placeholder="Find a state…" aria-label="Find a state">
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="a-table" id="coverageTable">
+            <thead><tr><th>State</th><th>SEL standards</th><th>Portrait of a Graduate</th><th>Coverage</th><th>Frameworks</th><th>Alignments</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="stateDetail" style="display:none; margin-top:24px;"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Framework create / edit -->
+<div class="a-modal-overlay" id="fwModal">
+  <div class="a-modal" style="max-width:600px;">
+    <div class="a-modal-head"><h2 id="fwModalTitle">Framework</h2><button class="a-modal-close" data-act="close-modal" aria-label="Close">✕</button></div>
+    <div class="a-modal-body">
+      <div class="a-field"><label for="fwType">Type</label>
+        <select id="fwType"><option value="sel_standards">SEL standards</option><option value="portrait_of_graduate">Portrait of a Graduate</option></select></div>
+      <div class="a-field"><label for="fwName">Name *</label><input type="text" id="fwName" maxlength="255" placeholder="Exactly as the state titles it"></div>
+      <div class="a-field"><label for="fwBody">Issuing body *</label><input type="text" id="fwBody" maxlength="255" placeholder="e.g. the state education agency"></div>
+      <div class="a-field"><label for="fwUrl">Official source URL * (https)</label><input type="url" id="fwUrl" maxlength="500" placeholder="https://…"></div>
+      <div class="sx-two">
+        <div class="a-field"><label for="fwYear">Year adopted</label><input type="number" id="fwYear" min="1990" max="2100"></div>
+        <div class="a-field"><label for="fwSpan">Grade span</label><input type="text" id="fwSpan" maxlength="32" placeholder="e.g. K-12"></div>
+        <div class="a-field"><label for="fwAccessed">Source checked on *</label><input type="date" id="fwAccessed"></div>
+      </div>
+      <div class="a-field"><label for="fwNotes">Notes</label><textarea id="fwNotes" maxlength="1000" rows="3"></textarea></div>
+      <div class="sx-err" id="fwErr" role="alert"></div>
+    </div>
+    <div class="a-modal-foot"><button class="a-btn a-btn-outline" data-act="close-modal">Cancel</button><button class="a-btn a-btn-primary" data-act="save-framework">Save</button></div>
+  </div>
+</div>
+
+<!-- Items (paste JSON) -->
+<div class="a-modal-overlay" id="itemsModal">
+  <div class="a-modal" style="max-width:720px;">
+    <div class="a-modal-head"><h2 id="itemsModalTitle">Add or update standards</h2><button class="a-modal-close" data-act="close-modal" aria-label="Close">✕</button></div>
+    <div class="a-modal-body">
+      <p class="a-note" style="margin-top:0;">
+        Paste a JSON list. Items are matched by <code>code</code>: new codes are added, changed ones updated, identical ones left alone.
+        Keep <code>summary</code> short (a paraphrase, 600 characters max); the source link is the real reference.
+        <code>caselCompetency</code> is optional: self_awareness, self_management, social_awareness, relationship_skills, responsible_decision_making.
+      </p>
+      <textarea class="sx-json" id="itemsJson" spellcheck="false" aria-label="Standards as JSON"></textarea>
+      <div class="sx-err" id="itemsErr" role="alert"></div>
+    </div>
+    <div class="a-modal-foot"><button class="a-btn a-btn-outline" data-act="close-modal">Cancel</button><button class="a-btn a-btn-primary" data-act="save-items">Save standards</button></div>
+  </div>
+</div>
+
+<!-- Alignment -->
+<div class="a-modal-overlay" id="alignModal">
+  <div class="a-modal" style="max-width:600px;">
+    <div class="a-modal-head"><h2>Align FNE content</h2><button class="a-modal-close" data-act="close-modal" aria-label="Close">✕</button></div>
+    <div class="a-modal-body">
+      <p class="a-note" id="alignItemLabel" style="margin-top:0;"></p>
+      <div class="a-field"><label for="alTargetType">FNE content</label>
+        <select id="alTargetType"><option value="program">The FNE program as a whole</option><option value="curriculum">A specific lesson</option><option value="brain_game">A specific Tune Your Brain game</option></select></div>
+      <div class="a-field" id="alTargetWrap" style="display:none;"><label for="alTarget">Which one *</label><select id="alTarget"></select></div>
+      <div class="a-field"><label for="alStrength">Strength</label>
+        <select id="alStrength"><option value="direct">Direct: it teaches this</option><option value="supporting">Supporting: it reinforces this</option></select></div>
+      <div class="a-field"><label for="alWhy">Why? * (what a reviewer should check)</label><textarea id="alWhy" maxlength="1000" rows="4" placeholder="Name the specific lesson content or activity that addresses this standard."></textarea></div>
+      <div class="sx-err" id="alErr" role="alert"></div>
+    </div>
+    <div class="a-modal-foot"><button class="a-btn a-btn-outline" data-act="close-modal">Cancel</button><button class="a-btn a-btn-primary" data-act="save-alignment">Save</button></div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script>
+/* Standards crosswalk review page. Every value that came from the API goes through fnEscape()
+   before it reaches innerHTML, and no data is placed inside inline handlers: a single delegated
+   click handler reads data- attributes. See docs/standards-crosswalk/DESIGN.md. */
+const SEL_LABELS = { k12_standards: 'K-12 standards', prek_only: 'Pre-K only', guidance_only: 'Guidance only', none: 'None found', unknown: 'Not researched' };
+const POG_LABELS = { statewide: 'Statewide portrait', state_led_in_progress: 'State-led, in progress', district_led_only: 'District-led only', none: 'None found', unknown: 'Not researched' };
+const TYPE_LABELS = { sel_standards: 'SEL standards', portrait_of_graduate: 'Portrait of a Graduate' };
+const CASEL_LABELS = { self_awareness: 'Self-awareness', self_management: 'Self-management', social_awareness: 'Social awareness', relationship_skills: 'Relationship skills', responsible_decision_making: 'Responsible decision-making' };
+
+let overview = [];          // all 51 rows
+let openState = null;       // { state, coverage, frameworks }
+let editingFwId = null;     // null = creating
+let itemsFwId = null;
+let alignItemId = null;
+let lessonOptions = null;   // loaded lazily
+let gameOptions = null;
+
+const $ = (id) => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0, 10);
+
+async function api(method, url, body) {
+  const r = await fetch('/api/admin/standards' + url, {
+    method, credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body || {}),
+  });
+  if (fnHandleUnauthorized(r)) return null;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { return { __error: data.error || 'Request failed (' + r.status + ')' }; }
+  return data;
+}
+const failed = (d) => !d || d.__error;
+
+const reviewPill = (status) => status === 'verified'
+  ? '<span class="a-pill a-pill-success">Verified</span>' : '<span class="a-pill a-pill-warning">Draft</span>';
+const safeLink = (url, label) => (typeof url === 'string' && url.startsWith('https://'))
+  ? `<a href="${fnEscape(url)}" target="_blank" rel="noopener noreferrer">${fnEscape(label || url)}</a>` : fnEscape(url || '');
+
+/* ---------------------------------------------------------------- overview */
+async function loadOverview() {
+  const data = await api('GET', '/overview');
+  if (failed(data)) { if (data) fnToast(data.__error); return; }
+  overview = data;
+  renderSummary();
+  renderList();
+}
+
+function stateKind(s) {
+  const hasAny = !!s.coverage || s.frameworks.draft + s.frameworks.verified > 0;
+  if (!hasAny) return 'new';
+  const drafts = (s.coverage && s.coverage.reviewStatus !== 'verified') || !s.coverage || s.frameworks.draft > 0 || s.alignments.draft > 0;
+  return drafts ? 'review' : 'verified';
+}
+
+function renderSummary() {
+  const verifiedStates = overview.filter(s => s.coverage && s.coverage.reviewStatus === 'verified').length;
+  const sum = (key, st) => overview.reduce((n, s) => n + s[key][st], 0);
+  const needs = overview.filter(s => stateKind(s) === 'review').length;
+  const card = (label, value, sub) => `<div class="a-stat-card"><div class="label">${fnEscape(label)}</div><div class="value">${fnEscape(value)}</div><div class="delta" style="color:var(--a-text-soft);">${fnEscape(sub)}</div></div>`;
+  $('summaryStats').innerHTML =
+    card('States verified', verifiedStates + ' / ' + overview.length, 'coverage finding reviewed and sourced') +
+    card('Frameworks verified', sum('frameworks', 'verified'), sum('frameworks', 'draft') + ' still draft') +
+    card('Alignments verified', sum('alignments', 'verified'), sum('alignments', 'draft') + ' still draft') +
+    card('Waiting on you', needs, needs === 1 ? 'state with draft work' : 'states with draft work');
+}
+
+function renderList() {
+  const mode = $('filterStatus').value;
+  const q = $('filterText').value.trim().toLowerCase();
+  const rows = overview.filter(s => {
+    if (q && !(s.stateName.toLowerCase().includes(q) || s.stateCode.toLowerCase() === q)) return false;
+    return mode === 'all' || stateKind(s) === mode;
+  });
+  const tbody = document.querySelector('#coverageTable tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="a-empty" style="padding:18px;">No states match.</div></td></tr>'; return; }
+  tbody.innerHTML = rows.map(s => {
+    const c = s.coverage;
+    const cov = c ? reviewPill(c.reviewStatus) : '<span class="a-pill a-pill-neutral">Not started</span>';
+    const open = openState && openState.state.code === s.stateCode ? ' class="sx-row-open"' : '';
+    return `<tr${open}>
+      <td><div class="a-cell-title">${fnEscape(s.stateName)}</div><div class="a-cell-sub">${fnEscape(s.stateCode)}</div></td>
+      <td>${fnEscape(c ? SEL_LABELS[c.selStatus] : '—')}</td>
+      <td>${fnEscape(c ? POG_LABELS[c.pogStatus] : '—')}</td>
+      <td>${cov}</td>
+      <td>${fnEscape(s.frameworks.verified)} verified${s.frameworks.draft ? ' · ' + fnEscape(s.frameworks.draft) + ' draft' : ''}</td>
+      <td>${fnEscape(s.alignments.verified)} verified${s.alignments.draft ? ' · ' + fnEscape(s.alignments.draft) + ' draft' : ''}</td>
+      <td><button class="a-btn a-btn-outline a-btn-sm" data-act="open-state" data-code="${fnEscape(s.stateCode)}">Open</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ------------------------------------------------------------ state detail */
+async function openStatePanel(code) {
+  const data = await api('GET', '/states/' + encodeURIComponent(code));
+  if (failed(data)) { fnToast(data ? data.__error : 'Could not load that state'); return; }
+  openState = data;
+  renderState();
+  renderList();
+  $('stateDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function selectOptions(labels, current) {
+  return Object.entries(labels).map(([v, l]) => `<option value="${fnEscape(v)}"${v === current ? ' selected' : ''}>${fnEscape(l)}</option>`).join('');
+}
+
+function renderState() {
+  const { state, coverage, frameworks } = openState;
+  const c = coverage || { selStatus: 'unknown', pogStatus: 'unknown', selSourceUrl: '', pogSourceUrl: '', sourceAccessedOn: '', notes: '', reviewStatus: 'draft' };
+  const reviewed = coverage && coverage.reviewStatus === 'verified' && coverage.reviewedAt ? ` · reviewed ${fnEscape(fnFormatDate(coverage.reviewedAt))}` : '';
+  $('stateDetail').innerHTML = `
+    <div class="a-card">
+      <div class="a-card-head">
+        <h2>${fnEscape(state.name)} <span style="font-weight:500;" class="a-note">${fnEscape(state.code)}</span></h2>
+        <div class="sx-actions"><button class="a-btn a-btn-outline a-btn-sm" data-act="close-state">Close</button></div>
+      </div>
+
+      <h3 style="font-size:14px; margin:0 0 4px;">What does this state have? ${reviewPill(c.reviewStatus)}<span class="a-note" style="font-weight:400;">${reviewed}</span></h3>
+      <p class="sx-meta" style="margin-bottom:12px;">Cite where you looked, including when the answer is “none found”. Both statuses must be decided (not “Not researched”) before this can be verified.</p>
+      <div class="sx-two">
+        <div class="a-field"><label for="cvSel">SEL standards</label><select id="cvSel">${selectOptions(SEL_LABELS, c.selStatus)}</select></div>
+        <div class="a-field"><label for="cvPog">Portrait of a Graduate</label><select id="cvPog">${selectOptions(POG_LABELS, c.pogStatus)}</select></div>
+        <div class="a-field"><label for="cvAccessed">Sources checked on</label><input type="date" id="cvAccessed" value="${fnEscape(c.sourceAccessedOn || '')}"></div>
+      </div>
+      <div class="sx-two">
+        <div class="a-field"><label for="cvSelUrl">SEL source URL (https)</label><input type="url" id="cvSelUrl" maxlength="500" value="${fnEscape(c.selSourceUrl || '')}"></div>
+        <div class="a-field"><label for="cvPogUrl">Portrait source URL (https)</label><input type="url" id="cvPogUrl" maxlength="500" value="${fnEscape(c.pogSourceUrl || '')}"></div>
+      </div>
+      <div class="a-field"><label for="cvNotes">Notes</label><textarea id="cvNotes" maxlength="1000" rows="2" style="width:100%;">${fnEscape(c.notes || '')}</textarea></div>
+      <div class="sx-actions">
+        <button class="a-btn a-btn-primary a-btn-sm" data-act="save-coverage">Save</button>
+        ${coverage ? (coverage.reviewStatus === 'verified'
+          ? '<button class="a-btn a-btn-outline a-btn-sm" data-act="unverify-coverage">Unverify</button>'
+          : '<button class="a-btn a-btn-outline a-btn-sm" data-act="verify-coverage">Verify</button>') : ''}
+      </div>
+    </div>
+
+    <div class="a-card" style="margin-top:24px;">
+      <div class="a-card-head"><h2>Frameworks</h2>
+        <button class="a-btn a-btn-primary a-btn-sm" data-act="new-framework">+ Add framework</button></div>
+      ${frameworks.length ? frameworks.map(frameworkHtml).join('') : '<div class="a-empty" style="padding:14px;">No frameworks recorded for this state yet.</div>'}
+    </div>`;
+  $('stateDetail').style.display = 'block';
+}
+
+function frameworkHtml(fw) {
+  const verified = fw.reviewStatus === 'verified';
+  const reviewed = verified && fw.reviewedAt ? ` · reviewed ${fnEscape(fnFormatDate(fw.reviewedAt))}` : '';
+  const items = fw.items.length
+    ? `<div style="overflow-x:auto;"><table class="a-table"><thead><tr><th>Code</th><th>Standard</th><th>CASEL</th><th>Band</th><th>FNE alignment</th></tr></thead><tbody>${fw.items.map(it => itemRowHtml(fw, it)).join('')}</tbody></table></div>`
+    : '<div class="a-empty" style="padding:12px;">No standards loaded yet. Use “Add / update standards”.</div>';
+  return `
+    <div class="sx-fw a-card" style="box-shadow:none;" data-fw="${fnEscape(fw.id)}">
+      <div class="sx-fw-head">
+        <div>
+          <div class="a-cell-title">${fnEscape(fw.name)} ${reviewPill(fw.reviewStatus)} <span class="a-pill a-pill-neutral">${fnEscape(TYPE_LABELS[fw.type] || fw.type)}</span></div>
+          <p class="sx-meta">${fnEscape(fw.issuingBody)}${fw.adoptedYear ? ' · adopted ' + fnEscape(fw.adoptedYear) : ''}${fw.gradeSpan ? ' · ' + fnEscape(fw.gradeSpan) : ''}<br>
+            Source: ${safeLink(fw.officialUrl)} · checked ${fnEscape(fnFormatDate(fw.sourceAccessedOn))}${reviewed}</p>
+          ${fw.notes ? `<p class="sx-meta">${fnEscape(fw.notes)}</p>` : ''}
+        </div>
+        <div class="sx-actions">
+          <button class="a-btn a-btn-outline a-btn-sm" data-act="edit-framework" data-id="${fnEscape(fw.id)}">Edit</button>
+          <button class="a-btn a-btn-outline a-btn-sm" data-act="edit-items" data-id="${fnEscape(fw.id)}">Add / update standards</button>
+          ${verified
+            ? `<button class="a-btn a-btn-outline a-btn-sm" data-act="unverify-fw" data-id="${fnEscape(fw.id)}">Unverify</button>`
+            : `<button class="a-btn a-btn-primary a-btn-sm" data-act="verify-fw" data-id="${fnEscape(fw.id)}">Verify</button>`}
+          <button class="a-btn a-btn-danger a-btn-sm" data-act="delete-fw" data-id="${fnEscape(fw.id)}">Delete</button>
+        </div>
+      </div>
+      ${items}
+    </div>`;
+}
+
+function itemRowHtml(fw, it) {
+  const aligns = it.alignments.map(a => `
+    <div class="sx-align">
+      <span class="a-pill ${a.strength === 'direct' ? 'a-pill-success' : 'a-pill-neutral'}">${fnEscape(a.strength)}</span>
+      <strong>${fnEscape(targetLabel(a))}</strong> ${reviewPill(a.reviewStatus)}
+      <span class="sx-why">${fnEscape(a.rationale)}</span>
+      <span class="sx-actions">
+        ${a.reviewStatus === 'verified'
+          ? `<button class="a-btn a-btn-outline a-btn-sm" data-act="unverify-al" data-id="${fnEscape(a.id)}">Unverify</button>`
+          : `<button class="a-btn a-btn-primary a-btn-sm" data-act="verify-al" data-id="${fnEscape(a.id)}"${fw.reviewStatus === 'verified' ? '' : ' disabled title="Verify the framework first"'}>Verify</button>`}
+        <button class="a-btn a-btn-danger a-btn-sm" data-act="delete-al" data-id="${fnEscape(a.id)}">Remove</button>
+      </span>
+    </div>`).join('');
+  return `<tr>
+    <td style="white-space:nowrap;"><strong>${fnEscape(it.code)}</strong></td>
+    <td><div class="a-cell-title">${fnEscape(it.title)}</div>${it.summary ? `<div class="a-cell-sub">${fnEscape(it.summary)}</div>` : ''}</td>
+    <td>${fnEscape(it.caselCompetency ? CASEL_LABELS[it.caselCompetency] : '—')}</td>
+    <td>${fnEscape(it.gradeBand || '—')}</td>
+    <td style="min-width:300px;">${aligns}<button class="a-btn a-btn-outline a-btn-sm" style="margin-top:6px;" data-act="new-alignment" data-id="${fnEscape(it.id)}" data-label="${fnEscape(it.code + ' — ' + it.title)}">+ Align</button></td>
+  </tr>`;
+}
+
+function targetLabel(a) {
+  if (a.targetType === 'program') return 'FNE program as a whole';
+  const list = a.targetType === 'curriculum' ? lessonOptions : gameOptions;
+  const hit = (list || []).find(o => o.id === a.targetId);
+  return (a.targetType === 'curriculum' ? 'Lesson: ' : 'Game: ') + (hit ? hit.label : '#' + a.targetId);
+}
+
+/* ------------------------------------------------------------------ actions */
+async function refreshOpenState(msg) {
+  if (msg) fnToast(msg);
+  await loadOverview();
+  if (openState) {
+    const data = await api('GET', '/states/' + encodeURIComponent(openState.state.code));
+    if (!failed(data)) { openState = data; renderState(); renderList(); }
+  }
+}
+async function run(promise, okMsg) {
+  const data = await promise;
+  if (failed(data)) { fnToast(data ? data.__error : 'Request failed'); return false; }
+  await refreshOpenState(okMsg);
+  return true;
+}
+function showErr(id, msg) { const el = $(id); el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+const modal = (id, on) => $(id).classList.toggle('show', on);
+
+function coverageBody() {
+  return { selStatus: $('cvSel').value, pogStatus: $('cvPog').value, selSourceUrl: $('cvSelUrl').value.trim(), pogSourceUrl: $('cvPogUrl').value.trim(), sourceAccessedOn: $('cvAccessed').value, notes: $('cvNotes').value.trim() };
+}
+
+function openFrameworkModal(fw) {
+  editingFwId = fw ? fw.id : null;
+  $('fwModalTitle').textContent = fw ? 'Edit framework' : 'Add framework to ' + openState.state.name;
+  $('fwType').value = fw ? fw.type : 'sel_standards';
+  $('fwType').disabled = !!fw;
+  $('fwName').value = fw ? fw.name : '';
+  $('fwBody').value = fw ? fw.issuingBody : '';
+  $('fwUrl').value = fw ? fw.officialUrl : '';
+  $('fwYear').value = fw && fw.adoptedYear ? fw.adoptedYear : '';
+  $('fwSpan').value = fw && fw.gradeSpan ? fw.gradeSpan : '';
+  $('fwAccessed').value = fw ? fw.sourceAccessedOn : today();
+  $('fwNotes').value = fw && fw.notes ? fw.notes : '';
+  showErr('fwErr', '');
+  modal('fwModal', true);
+}
+
+async function saveFramework() {
+  const body = {
+    stateCode: openState.state.code, type: $('fwType').value, name: $('fwName').value.trim(), issuingBody: $('fwBody').value.trim(),
+    officialUrl: $('fwUrl').value.trim(), adoptedYear: $('fwYear').value || null, gradeSpan: $('fwSpan').value.trim(),
+    sourceAccessedOn: $('fwAccessed').value, notes: $('fwNotes').value.trim(),
+  };
+  const data = editingFwId ? await api('PUT', '/frameworks/' + editingFwId, body) : await api('POST', '/frameworks', body);
+  if (failed(data)) { showErr('fwErr', data ? data.__error : 'Request failed'); return; }
+  modal('fwModal', false);
+  await refreshOpenState(editingFwId ? (data.changed ? 'Saved. It is a draft again until re-verified.' : 'No changes.') : 'Framework added as a draft.');
+}
+
+function openItemsModal(fwId) {
+  itemsFwId = fwId;
+  const fw = openState.frameworks.find(f => f.id === fwId);
+  $('itemsModalTitle').textContent = 'Standards for ' + fw.name;
+  const sample = fw.items.length
+    ? fw.items.map(({ code, title, summary, gradeBand, caselCompetency }) => ({ code, title, summary: summary || undefined, gradeBand: gradeBand || undefined, caselCompetency: caselCompetency || undefined }))
+    : [{ code: '', title: '', summary: '', gradeBand: '', caselCompetency: '' }];
+  $('itemsJson').value = JSON.stringify(sample, null, 2);
+  showErr('itemsErr', '');
+  modal('itemsModal', true);
+}
+
+async function saveItems() {
+  let items;
+  try { items = JSON.parse($('itemsJson').value); } catch (e) { showErr('itemsErr', 'That is not valid JSON: ' + e.message); return; }
+  if (!Array.isArray(items)) { showErr('itemsErr', 'Expected a list: [ { "code": …, "title": … }, … ]'); return; }
+  items = items.map(i => { const o = {}; for (const k of Object.keys(i)) if (i[k] !== '' && i[k] != null) o[k] = i[k]; return o; });
+  const data = await api('PUT', '/frameworks/' + itemsFwId + '/items', { items });
+  if (failed(data)) { showErr('itemsErr', data ? data.__error : 'Request failed'); return; }
+  modal('itemsModal', false);
+  await refreshOpenState(`Standards saved: ${data.added} added, ${data.updated} updated, ${data.unchanged} unchanged.${data.added || data.updated ? ' The framework is a draft again.' : ''}`);
+}
+
+async function ensureOptions() {
+  if (lessonOptions && gameOptions) return;
+  try {
+    const l = await fetch('/api/curricula?all=true', { credentials: 'include' });
+    lessonOptions = l.ok ? ((await l.json()).curricula || []).map(c => ({ id: c.id, label: c.title })) : [];
+  } catch (e) { lessonOptions = []; }
+  try {
+    const g = await fetch('/api/brain-games', { credentials: 'include' });
+    gameOptions = g.ok ? ((await g.json()).games || []).filter(x => Number.isInteger(x.id)).map(x => ({ id: x.id, label: x.name })) : [];
+  } catch (e) { gameOptions = []; }
+}
+
+function fillTargets() {
+  const type = $('alTargetType').value;
+  $('alTargetWrap').style.display = type === 'program' ? 'none' : 'block';
+  const list = type === 'curriculum' ? lessonOptions : gameOptions;
+  $('alTarget').innerHTML = (list || []).map(o => `<option value="${fnEscape(o.id)}">${fnEscape(o.label)}</option>`).join('') || '<option value="">(none found)</option>';
+}
+
+async function openAlignModal(itemId, label) {
+  await ensureOptions();
+  alignItemId = itemId;
+  $('alignItemLabel').textContent = label;
+  $('alTargetType').value = 'program'; fillTargets();
+  $('alStrength').value = 'direct'; $('alWhy').value = '';
+  showErr('alErr', '');
+  modal('alignModal', true);
+}
+
+async function saveAlignment() {
+  const type = $('alTargetType').value;
+  const body = { itemId: alignItemId, targetType: type, targetId: type === 'program' ? 0 : Number($('alTarget').value), strength: $('alStrength').value, rationale: $('alWhy').value.trim() };
+  const data = await api('PUT', '/alignments', body);
+  if (failed(data)) { showErr('alErr', data ? data.__error : 'Request failed'); return; }
+  modal('alignModal', false);
+  await refreshOpenState(data.changed ? 'Alignment saved as a draft.' : 'No changes.');
+}
+
+document.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const act = el.dataset.act, id = Number(el.dataset.id);
+  switch (act) {
+    case 'open-state': return openStatePanel(el.dataset.code);
+    case 'close-state': openState = null; $('stateDetail').style.display = 'none'; return renderList();
+    case 'close-modal': return ['fwModal', 'itemsModal', 'alignModal'].forEach(m => modal(m, false));
+    case 'save-coverage': return run(api('PUT', '/coverage/' + openState.state.code, coverageBody()), 'Coverage saved as a draft.');
+    case 'verify-coverage': return run(api('POST', '/coverage/' + openState.state.code + '/verify'), 'Coverage verified.');
+    case 'unverify-coverage': return run(api('POST', '/coverage/' + openState.state.code + '/unverify'), 'Coverage moved back to draft.');
+    case 'new-framework': return openFrameworkModal(null);
+    case 'edit-framework': return openFrameworkModal(openState.frameworks.find(f => f.id === id));
+    case 'save-framework': return saveFramework();
+    case 'edit-items': return openItemsModal(id);
+    case 'save-items': return saveItems();
+    case 'verify-fw': return run(api('POST', '/frameworks/' + id + '/verify'), 'Framework verified. It is now public.');
+    case 'unverify-fw': return run(api('POST', '/frameworks/' + id + '/unverify'), 'Framework and its alignments moved back to draft.');
+    case 'delete-fw': { const fw = openState.frameworks.find(f => f.id === id);
+      if (!confirm(`Delete “${fw.name}” and all of its standards and alignments? This can't be undone.`)) return;
+      return run(api('DELETE', '/frameworks/' + id), 'Framework deleted.'); }
+    case 'new-alignment': return openAlignModal(id, el.dataset.label);
+    case 'save-alignment': return saveAlignment();
+    case 'verify-al': return run(api('POST', '/alignments/' + id + '/verify'), 'Alignment verified. It is now public.');
+    case 'unverify-al': return run(api('POST', '/alignments/' + id + '/unverify'), 'Alignment moved back to draft.');
+    case 'delete-al': if (!confirm('Remove this alignment?')) return; return run(api('DELETE', '/alignments/' + id), 'Alignment removed.');
+  }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['fwModal', 'itemsModal', 'alignModal'].forEach(m => modal(m, false)); });
+$('alTargetType').addEventListener('change', fillTargets);
+$('filterStatus').addEventListener('change', renderList);
+$('filterText').addEventListener('input', renderList);
+
+(async function init() {
+  await ensureOptions();   // so existing alignments show lesson/game names
+  await loadOverview();
+})();
+</script>
+<script src="admin-shell.js?v=2"></script>
+</body>
+</html>
