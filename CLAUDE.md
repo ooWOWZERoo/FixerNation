@@ -245,6 +245,14 @@ One account per salesperson, **demo data only**, created with `server/scripts/se
 
 Parent access is decided by **parent links** (`parent_classroom_links`, via `isLinkedParent()` in `lib/access.js`), never by `site_users.role` — `role` holds one value and every admin/parent assignment overwrites it, which is exactly why a combined account would otherwise lose its parent portal depending on assignment order.
 
+## State standards & Portrait of a Graduate crosswalk (in progress)
+
+Design, rules, access matrix and phase plan: `docs/standards-crosswalk/DESIGN.md` — read it before touching this. Scope agreed 2026-10-26: **SEL standards + Portrait of a Graduate** (not academic standards); **hidden from the public until a person verifies it**; pipeline first, then a pilot batch of states. One dataset, three views (public crosswalk page, per-district frameworks, sales one-pager).
+
+Code: `server/lib/standards.js` (data layer + review gate), `routes/standards.js` (public, read-only), `routes/admin-standards.js` (FNE admin), `scripts/import-standards.js` (research JSON in `server/data/standards/<STATE>.json` → draft rows), tables created by `scripts/alter-create-standards-crosswalk.js` (also in `schema.sql`). **Run `cd server && npm test`** — it exercises the real routes against a real SQL engine (Node's built-in SQLite), including mutation-checked "a draft can never reach a public endpoint" tests. Keep the SQL in `lib/standards.js` portable (no `NOW()`, no `ON DUPLICATE KEY`, no array params) so it keeps running on both MariaDB and the test database.
+
+Rules that must not erode: every record needs an https source URL and the date it was checked; public endpoints filter `review_status = 'verified'` **in the SQL**; editing a verified record sends it (and, for a framework, its alignments) back to draft; an alignment can only be verified once its framework is; alignment is FNE's own thematic mapping, never a state/CASEL endorsement (same disclaimer as `research.html`); store short summaries and link out, not whole standards documents. Claude can research and draft, but **cannot verify** — a human reviews in the admin UI.
+
 ## Infra gotchas (all previously bitten in this project)
 
 - **`dotenv.config()` needs an explicit path.** Under this host's Passenger/LiteSpeed Node integration, `process.cwd()` isn't the app root — `require('dotenv').config()` with no path silently loads nothing. Use `require('dotenv').config({ path: path.join(__dirname, '.env') })` (or `path.join(__dirname, '..', '.env')` in scripts one level deeper).

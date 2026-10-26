@@ -8,7 +8,8 @@
     "start": "node app.js",
     "dev": "node --watch app.js",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "test": "node --no-warnings --test \"test/**/*.test.js\""
   },
   "engines": {
     "node": ">=18"

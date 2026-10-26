@@ -43,6 +43,8 @@ const contentSafetyRoutes = require('./routes/content-safety');
 const adminAccountLookupRoutes = require('./routes/admin-account-lookup');
 const affiliateRoutes = require('./routes/affiliates');
 const affiliatePortalRoutes = require('./routes/affiliate-portal');
+const standardsRoutes = require('./routes/standards');
+const adminStandardsRoutes = require('./routes/admin-standards');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -128,6 +130,8 @@ app.use('/api/content-safety', contentSafetyRoutes);
 app.use('/api/admin/account-lookup', adminAccountLookupRoutes);
 app.use('/api/affiliates', affiliateRoutes);
 app.use('/api/affiliate-portal', affiliatePortalRoutes);
+app.use('/api/standards', standardsRoutes);
+app.use('/api/admin/standards', adminStandardsRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
 // In production LiteSpeed checks public_html/uploads/ first; if the file isn't
