@@ -16,28 +16,14 @@ npm run db:migrate # node scripts/migrate.js  — CREATE TABLE IF NOT EXISTS for
 npm run db:seed    # node scripts/seed.js     — seed reference data (run after migrate)
 ```
 
-On **cPanel Terminal** (production), `node`/`npm` are not on PATH. Every Node command must activate the nodevenv first — see "Deploy workflow" for the exact prefix.
-
-**Where the database actually lives.** `fixernat_fixernation` (MariaDB, ~66 MB, app user `fixernat_fixernation_app`) runs on the same Hosting.com/cPanel account as the site itself, alongside the domain — see cPanel → MySQL Databases. That's why `server/.env` has `DB_HOST=127.0.0.1`: localhost *from the app server's point of view*, not from anyone's laptop. Calling it "no local DB" was misleading and has been fixed here: there is a real, live database, it just isn't on a dev machine. `SCHEMA.md` documents its current shape.
-
-What that means in practice: a dev machine has no copy of the schema to try changes against (verified 2026-09-24 — no MySQL/MariaDB client installed, nothing listening on 3306, no database container), so migrations and queries are not exercised before they reach the server. All verification is done against production via `curl` with a cookie jar. Use `@example.com` emails and obviously-fake school domains for test data and clean them up after.
-
-If a migration is ever worth dry-running first, Docker is available on the dev machine (it's already running containers for other projects), so a throwaway `mariadb` container is a reasonable way to prove `schema.sql` and an `alter-*.js` script before deploying. Nothing like that is set up today.
-
+On **cPanel Terminal** (production) `node`/`npm` are not on PATH — activate the nodevenv first (see Deploy workflow). The MariaDB database `fixernat_fixernation` (~66 MB) lives on the same cPanel account as the site (`DB_HOST=127.0.0.1` means the server itself); a dev machine has no copy, so verify against production with `curl` and a cookie jar, using `@example.com` emails and fake school domains, and clean up. `SCHEMA.md` documents the schema.
 ## Architecture
 
 ### Server (`server/`)
 
 `app.js` loads all route modules and mounts them at `/api/*`. The two body-parser rules are load-order sensitive: `express.raw()` for `/api/checkout/webhook` must be registered before `express.json()` (Stripe signature check needs the raw body).
 
-`server/lib/` holds shared utilities — always extract there when two route files would otherwise need to require each other:
-- `mailer.js` — all transactional email (nodemailer SMTP)
-- `access.js` — `getSiteUser(req)`, `hasActiveLicense(userId)` for curriculum/blog gating
-- `settings.js` — `getSetting(key)` key-value store (contact routing, invoice branding)
-- `automations.js` — `fireAutomation(eventKey, contact, mergeFields)` — single call site for all 6 auto-email events
-- `session.js` — JWT cookie constants
-- `site-tokens.js` — email verification and password-reset token generation
-- `campaign-tracking.js` — open-pixel and link-click helpers; `classifySendError()` for bounce/undelivered classification
+`server/lib/` holds shared utilities — extract there when two route files would otherwise need to require each other (circular requires bite). Key ones: `mailer.js` (all transactional email), `access.js` (`getSiteUser`, `hasActiveLicense`, `isLinkedParent`), `settings.js` (`getSetting`), `automations.js` (`fireAutomation` — single call site for auto-emails), `session-tokens.js` (all JWT signing), `site-tokens.js` (verify/reset tokens), `campaign-tracking.js` (open pixel, link clicks, bounce classification), `rate-limit.js`, `upload-safety.js`, `standards.js`.
 
 `server/db/pool.js` exports a `mysql2/promise` pool (connectionLimit 10, `dateStrings: true`). Queries follow this pattern everywhere:
 ```js
@@ -118,22 +104,10 @@ MS_OAUTH_REDIRECT_URI=   # must exactly match the redirect URI registered in Azu
 
 ## Microsoft sign-in (Entra ID / Azure AD)
 
-"Continue with Microsoft" in the shared auth modal (`site-auth.js` + the modal markup duplicated across 23 public HTML pages — same `fnAuthModalOverlay` maintenance pattern as everything else there) lets any `site_users` account — teacher, parent, school/district admin — sign in via their Microsoft 365 or personal Microsoft account instead of (or in addition to) a password. Routes live in `server/routes/site-auth.js` (`/microsoft/start`, `/microsoft/callback`); the MSAL client setup is in `server/lib/microsoft-oauth.js`.
-
-A returning user is matched by `microsoft_oid` only. The email Microsoft reports is **never trusted by itself**: for work/school accounts the `mail` attribute is set by that tenant's own admin and isn't verified, so anyone with a free Entra tenant could otherwise claim `principal@anyschool.org` and take over (or pre-claim license seats for) the real account. A first-time Microsoft sign-in therefore emails that address a confirmation link (`microsoft-confirm.html`, a page with a **button** that POSTs to `/microsoft/confirm` — never a GET that acts, since mail scanners prefetch links); the pending sign-in rides in a 1-hour signed `msLink` token, and the account is only linked/created (and seats claimed) once the mailbox owner confirms. Linking never removes the password login path — both work afterward. `site_users.password_hash` is nullable for Microsoft-only accounts; `change-password` explicitly guards against `bcrypt.compare` on a null hash.
-
-The Entra app registration **must** be multi-tenant ("accounts in any organizational directory and personal Microsoft accounts") — FNE serves many separate school districts, each with its own tenant, plus parents who may only have a personal account. A single-tenant registration would only work for one specific organization.
-
-**Live in production since mid-October 2026** (Azure app registered, credentials in `server/.env`). `server/lib/microsoft-oauth.js`'s `isConfigured()` still guards both routes, so on any environment without the credentials the button degrades to a clear error toast instead of a crash.
-
+"Continue with Microsoft" for any `site_users` account (`/microsoft/start|callback|confirm` in `routes/site-auth.js`, `lib/microsoft-oauth.js`). **Live in production** since mid-Oct 2026; `isConfigured()` guards the routes. Hard rules: match returning users by `microsoft_oid` only and **never trust the email Microsoft reports** (tenant admins set `mail`); a first-time sign-in emails a confirm link to `microsoft-confirm.html`, whose **button** POSTs (never a GET that acts — mail scanners prefetch links); `password_hash` is nullable, so guard `bcrypt.compare`; the Entra app registration must stay multi-tenant. Detail: `docs/reference/microsoft-signin.md`.
 ## Admin navigation and Mission Control visual system
 
-`admin-nav.js` renders the sidebar for 23 admin workspace pages from one `SECTIONS` array. Preserve the existing workflow groups: Sales, Schools & Partners, Content, Marketing & CRM, Community, Reports (Sales was split from the original "Sales & Schools" on 2026-10-13 -- it mixed catalog/config with transactional workflow). Mission Control (the existing dashboard URL) remains pinned; Settings/View Site/Log Out remain in the footer. This supersedes the former alphabetical/per-page navigation instructions.
-
-`admin-shell.js` renders the common page header, local page finder, mobile drawer, and page-specific introductions. It moves existing heading nodes rather than cloning them so dynamic IDs such as `ccTitle` continue to work. Do not add shell code to `admin-common.js`, which is also used by public pages. The approved visual direction is recorded in `.interface-design/system.md`.
-
-Bump the relevant cache version across all exact admin HTML references when changing shared assets. Current versions: admin-common.css v21, admin-nav.js v25, admin-shell.js v2; admin-common.js v17 (added the shared `fnEscape`), site-auth.js v10, footer.js v6, school-admin-nav.js v19, district-admin-nav.js v5. Do not accidentally match school-admin or district-admin assets.
-
+`admin-nav.js` renders the sidebar for the admin workspace pages from one `SECTIONS` array (groups: Sales, Schools & Partners, Content, Marketing & CRM, Community, Reports; Mission Control pinned; Settings/View Site/Log Out in the footer). `admin-shell.js` renders the page header, page finder, mobile drawer and page intros (it moves heading nodes, never clones them; don't put shell code in `admin-common.js`, which public pages also load). Visual direction: `.interface-design/system.md`. Bump the `?v=N` cache version on every exact admin HTML reference when a shared asset changes. Current: admin-common.css v21, admin-nav.js v25, admin-shell.js v2, admin-common.js v17, site-auth.js v10, footer.js v6, school-admin-nav.js v19, district-admin-nav.js v5 (don't match school-admin/district-admin assets by accident).
 ## Deploy workflow
 
 Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → user runs the following in cPanel's browser Terminal.
@@ -197,62 +171,27 @@ When giving deploy instructions after a push, always specify:
 
 ## Access control design rules
 
-**Always write the access matrix before building any endpoint that gates access.**
-Write every role (anonymous, student, licensed teacher, admin) × every action (view, download, edit) for the specific resource. Share it, confirm it, implement once against it. The file-serving endpoint was fully rewritten because this was skipped — it blocked teachers who had valid licenses.
-
-Example matrix for curriculum file endpoints:
-```
-Role              | View file | Download file | View Quiz+Key | View docs
-------------------+-----------+---------------+---------------+----------
-Anonymous         |    YES    |      NO       |      NO       |    NO
-Student (class)   |    YES*   |      NO       |      NO       |    NO
-Licensed teacher  |    YES    |  YES (counted)|      YES      |   YES
-Admin             |    YES    |      YES      |      YES      |   YES
-* Student Handout only
-```
-
-**Never block the old access path until the new one is proven live.**
-Build and verify the replacement in production first; block the old path second. Adding an `.htaccess` `Deny from all` to `uploads/` before the Node `/file` endpoint was running would have taken down every file link. The rule: prove the replacement works, then optionally add the block.
-
-**Grep the entire codebase before calling any security or access migration complete.**
-When file access was migrated from raw `/uploads/` URLs to the `/api/.../file` endpoint, a fourth page (`education-portal.html`) was missed and only caught by manual production testing. Before closing any cross-cutting change, run:
-```bash
-grep -rn "old pattern" --include="*.html" --include="*.js" .
-```
-
-**Server-side protection and browser-side protection are different problems.**
-Securing the API endpoint (who can call it) is not the same as preventing the user at the browser from saving the rendered content. Opening a file in a new tab via the API still exposes the native PDF viewer's Download button and right-click Save As. PDF.js canvas rendering addresses the browser-side threat: no download button, right-click yields a single-page PNG, URL never appears in the address bar.
-
-**PDF iframes are unreliable.** They fail on iOS/iPadOS and when `Content-Disposition: attachment` is set. Use PDF.js canvas rendering in a modal (`pdf-modal.js`) or open in a new tab via the API. Test on mobile before shipping any file-display feature.
-
+Write the access matrix (role × action) before building any gating endpoint, confirm it, then implement once. Never block an old access path until its replacement is proven live in production. After any security or access migration, grep the whole codebase for the old pattern (a fourth page was missed once). Server-side protection is not browser-side protection: show PDFs with PDF.js canvas rendering (`pdf-modal.js`), never iframes (they fail on iOS and with `Content-Disposition: attachment`). Example matrix and history: `docs/reference/security-and-access-rules.md`.
 ## Security rules (from the 2026-10-15 audit — each one closed a real hole)
 
-- **Never call `jwt.sign`/`jwt.verify` directly** — use `server/lib/session-tokens.js` (per-session-type `aud`; see "Two separate auth systems").
-- **Rate limiting:** public endpoints that send email, create rows, or check credentials use `server/lib/rate-limit.js` — `limiter()` for spam-prone forms, `FailureTracker` for logins (counts failures only, cleared on success). It reads the **rightmost** `X-Forwarded-For` entry (the one LiteSpeed wrote; the left ones are client-supplied) and **skips IP limits entirely** when no client IP resolves, so one visitor can never exhaust a bucket shared by everyone. Student PINs are 6 digits, so the per-username lockout (5 failures / 15 min) is the real protection — don't loosen it. Check the app log for the one-time `rate-limit: could not resolve a client IP` warning after deploy.
-- **Uploads:** a file's type comes from its bytes (`server/lib/upload-safety.js` — `sniffFile`/`finalizeUpload`), never from the client's `Content-Type` or filename, and the stored extension comes from the detected type. Images from non-admin users are decoded and re-encoded to WebP (`reencodeImageToWebp`) so a disguised HTML/SVG/script file can't survive. SVG is not an accepted upload type (logos go through `branding-editor.js`, which sanitizes it). Uploads are served from the site's own origin, so a stored `.html` is a page that runs with the site's privileges.
-- **Randomness for anything guessable-matters** (PINs, join/parent codes, tokens, placeholder passwords): `crypto.randomInt` / `crypto.randomBytes`, never `Math.random()`.
-- **Public endpoints that write CRM rows** take only the fields the public form actually has (`POST /api/newsletter/contacts` is name + email for anonymous callers; the full payload only for a real admin).
-- **Escaping:** see the Frontend section — `fnEscape()`, and `data-` attributes instead of data inside inline handlers. Email HTML bodies must use `esc()`/`safeUrl()` from `lib/mailer.js` for any user-supplied value (plain-text bodies stay unescaped).
-- **Second-level IDs need their own scope check.** Owning classroom `:id` says nothing about `:studentId`; being in a group says nothing about a `:postId` in a different group. Every ID taken from the URL/body gets bound to the already-verified parent in its own query.
-- **`.htaccess`:** `<Directory>`/`<LocationMatch>` aren't allowed there and `LimitRequestBody` can't be scoped to a path (it's a global 256 MB cap — lowering it needs the host's server config). Use `RewriteRule`/`SetEnvIf`+`Header … env=`, which are proven to work on this host. CSP is currently **report-only** — promote it to `Content-Security-Policy` once the console is quiet.
-- **Never commit credentials**, including test/QA ones: the repo is public and the QA fixture accounts are real accounts in the production DB (one holds a paid licence seat). `seed-qa-test-accounts.js` and the e2e tests read `QA_PASSWORD`/`TEST_QA_PASSWORD` from the environment.
+- **Never call `jwt.sign`/`jwt.verify` directly** — use `server/lib/session-tokens.js` (per-type `aud`).
+- **Rate limiting:** `lib/rate-limit.js` — `limiter()` for spam-prone forms, `FailureTracker` for logins; rightmost `X-Forwarded-For`; student PIN lockout (5 failures/15 min per username) is the real protection, don't loosen it.
+- **Uploads:** type comes from the file's bytes (`lib/upload-safety.js`), never `Content-Type` or filename; non-admin images are re-encoded to WebP; no SVG uploads.
+- **Randomness** for anything guessable (PINs, codes, tokens): `crypto.randomInt`/`randomBytes`, never `Math.random()`.
+- **Public endpoints that write CRM rows** take only the fields the public form has.
+- **Escaping:** `fnEscape()` in admin pages, `data-` attributes instead of data inside inline handlers; `esc()`/`safeUrl()` from `lib/mailer.js` in email HTML.
+- **Second-level IDs** (`:studentId`, `:postId`) need their own scope check against the verified parent.
+- **`.htaccess`:** no `<Directory>`/`<LocationMatch>`; use `RewriteRule`/`SetEnvIf`+`Header … env=`. CSP is report-only until the console is quiet. `LimitRequestBody` is a global 256 MB cap.
+- **Never commit credentials**, including QA ones (public repo; QA accounts are real prod accounts) — scripts read `QA_PASSWORD`/`TEST_QA_PASSWORD` from the environment.
+- **`RegExp.test()` coerces:** `typeof` check request input first (`undefined` matches `^[a-z]{8,}$`).
 
+Why each rule exists: `docs/reference/security-and-access-rules.md`.
 ## Sales demo accounts
 
-One account per salesperson, **demo data only**, created with `server/scripts/seed-sales-demo-account.js` (`--email --first --last`; dry run by default — it runs every statement in a transaction against the real schema and rolls back; `--apply` commits and emails the person a link to choose their own password; `--no-email` prints the link instead). The account is a normal `site_users` row (NOT an FNE admin — it can't reach any `admin-*.html` page) holding every customer role against a fake district/school (`sales-demo.example.com`) and its own demo classroom with three fake students: teacher (licence seat), parent (link to a demo student), school licence admin, district admin. Re-running for the same email only fills in what's missing. Never point a salesperson at a real customer's school or district — those portals show real student and teacher records. The shared demo licence product is $0/inactive and the contact is Unsubscribed so it never shows in revenue or gets emailed; the purchase is tagged `source = 'Sales Demo'` if it needs filtering out of a report.
+One account per salesperson, **demo data only**, made by `server/scripts/seed-sales-demo-account.js` (dry run by default; `--apply`, `--no-email`, `--allow-existing`; run `alter-add-sales-demo-flag.js` first). It is a normal `site_users` row holding every customer role against a fake school/district — NOT an FNE admin. Confined server-side by `site_users.is_sales_demo` (`lib/sales-demo.js`): refused by community routes; school/district portals filtered to the demo school/district; teacher invitations limited to example.com, the inviter's own company domain, or (consumer providers like yahoo/gmail) only their own mailbox and `+` variants. Never point a salesperson at a real school or district. Parent access is `isLinkedParent()` (parent links), never `site_users.role`. Detail: `docs/reference/sales-demo-accounts.md`.
+## State standards & Portrait of a Graduate crosswalk
 
-**The demo account is confined server-side to demo data** (`server/lib/sales-demo.js`, flag `site_users.is_sales_demo` — added by `scripts/alter-add-sales-demo-flag.js`, which must run before the seed script; the flag is a real column, not derived from the licence seat, because a derived flag would switch off the moment the seat is revoked). A flagged account: (1) is **refused by every community route** (the one place a teacher sees other real teachers — `requireSocialAccess`); (2) sees **only the demo school's purchase** in the school-admin portal and **only the demo district** in the district-admin portal *even if an admin later assigns it a real school* (filtered in `schoolAdminAuth.js`/`districtAdminAuth.js`); (3) can only invite **example.com addresses, colleagues on the inviter's own *company* email domain, or — if the inviter uses a consumer provider like yahoo.com/gmail.com (see `CONSUMER_EMAIL_DOMAINS` in `lib/sales-demo.js`) — only their own mailbox and its `+` variants** into the demo school (`inviteTeacherToSeat`), because an invitee would otherwise land in a roster the salesperson can see and get a real email about a fake school. ("Same domain" is meaningless for a consumer provider: it would let a salesperson invite every Yahoo user, real teachers included.) `PUT /api/admin/districts/:id/schools` refuses to put a real school in the demo district or the demo school in a real district. The seed script refuses to convert an existing account that holds real seats/assignments/classrooms unless `--allow-existing`. Not restricted: parent invites from the demo classroom send real email to whatever address is typed (no real data is exposed — the invitee only sees a fake student).
-
-Parent access is decided by **parent links** (`parent_classroom_links`, via `isLinkedParent()` in `lib/access.js`), never by `site_users.role` — `role` holds one value and every admin/parent assignment overwrites it, which is exactly why a combined account would otherwise lose its parent portal depending on assignment order.
-
-## State standards & Portrait of a Graduate crosswalk (in progress)
-
-Design, rules, access matrix and phase plan: `docs/standards-crosswalk/DESIGN.md` — read it before touching this. Scope agreed 2026-10-26: **SEL standards + Portrait of a Graduate** (not academic standards); **hidden from the public until a person verifies it**; pipeline first, then a pilot batch of states. One dataset, three views (public crosswalk page, per-district frameworks, sales one-pager).
-
-Admin UI: `admin-standards.html` (Content → Standards Crosswalk) — coverage matrix of all 51 jurisdictions, per-state review, frameworks, standards (paste JSON), alignments, verify/unverify. Code: `server/lib/standards.js` (data layer + review gate), `routes/standards.js` (public, read-only), `routes/admin-standards.js` (FNE admin), `scripts/import-standards.js` (research JSON in `server/data/standards/<STATE>.json` → draft rows), tables created by `scripts/alter-create-standards-crosswalk.js` (also in `schema.sql`). **Run `cd server && npm test`** — it exercises the real routes against a real SQL engine (Node's built-in SQLite), including mutation-checked "a draft can never reach a public endpoint" tests. Keep the SQL in `lib/standards.js` portable (no `NOW()`, no `ON DUPLICATE KEY`, no array params) so it keeps running on both MariaDB and the test database. **Public page:** `state-standards.html` (footer → State Standards) reads `/api/standards/overview` and `/states/:code` and renders everything through `fnEscape`; it only opens `https://` source links. The public API strips the reviewer-only `notes` field (`forPublic()` in `lib/standards.js`, tested) — notes contain reviewer instructions and must never be shown publicly. Pilot research lives in `server/data/standards/<STATE>.json`; load with `node scripts/import-standards.js` (idempotent, drafts only).
-
-Rules that must not erode: every record needs an https source URL and the date it was checked; public endpoints filter `review_status = 'verified'` **in the SQL**; editing a verified record sends it (and, for a framework, its alignments) back to draft; an alignment can only be verified once its framework is; alignment is FNE's own thematic mapping, never a state/CASEL endorsement (same disclaimer as `research.html`); store short summaries and link out, not whole standards documents. Claude can research and draft, but **cannot verify** — a human reviews in the admin UI.
-
+Design, rules, access matrix, phases: `docs/standards-crosswalk/DESIGN.md` — read before touching. Admin page `admin-standards.html`; public page `state-standards.html`; code `lib/standards.js`, `routes/standards.js`, `routes/admin-standards.js`, `scripts/import-standards.js` (research JSON in `server/data/standards/<STATE>.json` → draft rows); tables from `alter-create-standards-crosswalk.js`. `cd server && npm test` runs the real routes on a real SQL engine (`node:sqlite`) — keep SQL portable (no `NOW()`, `ON DUPLICATE KEY`, array params). Rules that must not erode: every record has an https source and the date checked; public SQL filters `review_status = 'verified'`; editing a verified record re-drafts it; an alignment verifies only once its framework does; the public API strips reviewer `notes` (`forPublic()`); alignment is FNE's thematic mapping, never a state or CASEL endorsement; short summaries and links out, not whole documents. Claude researches and drafts but **cannot verify**.
 ## Infra gotchas (all previously bitten in this project)
 
 - **The Node app's error log is `/home/fixernat/repositories/fixernation/server/stderr.log`** (not `~/logs`, which only holds cron/PHP logs). It has **no timestamps** and keeps old entries, so judge recency from the file's modified time (`ls -l --time-style=long-iso`) and from stack-trace line numbers vs. the deployed file. To test whether it is still being written, send one deliberately malformed request tagged with a unique `User-Agent` and `grep` for it (done 2026-10-26 — the log is alive and was simply quiet).
@@ -267,16 +206,7 @@ Rules that must not erode: every record needs an https source URL and the date i
 
 ## Working with this codebase in an AI-assisted session
 
-**Give a constraint inventory at the start of any new session.** The real constraints are on the *host*: Hosting.com/cPanel shared hosting, no SSH (browser Terminal only), no pm2, and the MariaDB database sits on that same server rather than on any dev machine. Docker is **not** a constraint — it's installed and running on the dev machine, so don't repeat the old "no Docker" line that used to be here. The relevant constraints are all documented in this file — point a new session here first.
-
-**Requirements before code, always.** For any feature touching access control, billing, or user-facing auth behavior: write the requirement explicitly, get it confirmed, then ask for implementation. Both the file protection endpoint and the download counter were rebuilt because this step was skipped.
-
-**Cross-cutting changes need a codebase-wide grep.** After any migration (URL patterns, auth patterns, analytics instrumentation), ask: "Are there any other pages in the codebase where this same pattern exists?" before closing the work. A missed page is always worse than the cost of one grep.
-
-**Save learnings to persistent memory during the session.** Context compacts on long sessions. Any correction or discovery that should hold for future sessions belongs in the memory system — not just in the current context window.
-
-**Token/cost hygiene.** Specific prompts cost less than vague ones. File path + line number saves a full read. Batch related edits into one prompt. End sessions at clean boundaries (feature complete, deployed) rather than mid-task. Put everything that would need re-explaining into this file.
-
+Real constraints are on the host: Hosting.com/cPanel shared hosting, no SSH (browser Terminal only), no pm2, and MariaDB lives on that server (Docker exists on the dev machine and can run a throwaway mariadb). **Requirements before code** for anything touching access control, billing, or auth: write them, get them confirmed, then build. **Grep the codebase** after any cross-cutting change. **Save learnings to memory** during the session. Keep prompts specific (file + line), batch edits, and end sessions at clean boundaries.
 ## Maintain the changelog
 
 Every time a feature or fix is completed and deployed, add a new release entry to the top of `CHANGELOG.md` (below the `Unreleased / Known pending work` section). Keep entries short and business-facing — what changed and why it matters, not a line-by-line code diff. Format: `## Release N — YYYY-MM-DD — Title` with short bullets. Increment `N` from the previous release. If a feature is coded and pushed but not yet deployed (e.g. blocked on a credential), note it under `Unreleased / Known pending work` instead.
