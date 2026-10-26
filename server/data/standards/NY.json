@@ -1,0 +1,142 @@
+{
+  "state": "NY",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "statewide",
+    "selSourceUrl": "https://www.nysed.gov/innovation-school-reform/social-emotional-learning",
+    "pogSourceUrl": "https://www.nysed.gov/grad-measures/new-york-state-portrait-graduate",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: NYSED benchmarks (3 goals, K-12 plus adult indicators), recommended for VOLUNTARY use. Portrait of a Graduate: adopted by the Board of Regents July 2025; NYSED memo (7/31/2025) says it does not change current graduation requirements and that required instructional alignment begins with the 2029 cohort (grade 9 in 2029-30). Reviewer: re-check both pages for later changes."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "issuingBody": "New York State Education Department",
+      "officialUrl": "https://www.nysed.gov/innovation-school-reform/social-emotional-learning",
+      "adoptedYear": 2022,
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Original benchmarks 2018; equity revisions 2022. Three goals: (1) self-awareness that nurtures identity and agency, (2) social awareness and interpersonal skills for supportive relationships, (3) intentional decision-making. Items here are the 10 base indicators (1A-3C); each has grade-band indicators (K-2, 3-5, 6-8, 9-10, 11-12) in the source. Titles are short paraphrases. Text was read from the Children's Institute-hosted copy of NYSED's document (nysed.gov's own PDF refused the download); confirm against NYSED's PDF before verifying. CASEL tags follow the document's own footnote (goal 1 = self-awareness and self-management, goal 2 = social awareness and relationship skills, goal 3 = responsible decision-making); the split within goals is a judgment call for the reviewer.",
+      "items": [
+        {
+          "code": "1A",
+          "title": "Understand emotions and how they relate to actions",
+          "summary": "Identify one's emotions, see how they connect to what one does, and use that understanding to guide actions.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1B",
+          "title": "Explore personal and group identity",
+          "summary": "Reflect on personal and group identity, including cultural background, and find outside supports for identity development.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1C",
+          "title": "Set and work toward goals; learn from mistakes",
+          "summary": "Set personal and academic goals, take risks, own mistakes, and use them to grow.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2A",
+          "title": "Build empathy for others' feelings and perspectives",
+          "summary": "Recognize and understand that other people feel and react differently based on their experiences and cultures.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "2B",
+          "title": "Affirm identities, similarities and differences",
+          "summary": "Recognize and affirm individual and group identities and differences, and engage respectfully in difficult conversations.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "2C",
+          "title": "Communicate and interact across lines of difference",
+          "summary": "Use a range of communication and social skills with individuals and groups, with empathy in every interaction.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "2D",
+          "title": "Prevent, manage and resolve conflicts",
+          "summary": "Prevent, manage or resolve conflicts, including those involving injustice, and express agreement or disagreement respectfully.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "3A",
+          "title": "Consider safety, well-being and context in decisions",
+          "summary": "Weigh individual and collective social, emotional and physical safety and the social context when making decisions.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "3B",
+          "title": "Apply decision-making skills to shape outcomes",
+          "summary": "Use decision-making skills to influence outcomes and strengthen agency in social and academic life.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "3C",
+          "title": "Act to support school and community well-being",
+          "summary": "Take action for the well-being of school and community, including standing against bias and injustice.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        }
+      ]
+    },
+    {
+      "type": "portrait_of_graduate",
+      "name": "New York State Portrait of a Graduate",
+      "issuingBody": "New York State Board of Regents / NYSED",
+      "officialUrl": "https://www.nysed.gov/grad-measures/new-york-state-portrait-graduate",
+      "adoptedYear": 2025,
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Six interconnected attributes grounded in Culturally Responsive-Sustaining Education. Read from NYSED's one-page Portrait PDF (nysed.gov/sites/default/files/programs/grad-measures/portrait-of-a-graduate.pdf). Summaries are paraphrases.",
+      "items": [
+        {
+          "code": "AP",
+          "title": "Academically Prepared",
+          "summary": "Strong foundation in the NYS learning standards, ready for college, careers, civic engagement, service and life.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "CI",
+          "title": "Creative Innovator",
+          "summary": "Uses imagination, curiosity and flexible thinking to solve problems and develop new ideas while adapting to change.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "CT",
+          "title": "Critical Thinker",
+          "summary": "Analyzes information, weighs evidence and finds connections across subjects to address complex issues.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "EC",
+          "title": "Effective Communicator",
+          "summary": "Expresses ideas clearly through speaking, writing and media, and listens to different perspectives.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "GC",
+          "title": "Global Citizen",
+          "summary": "Acts responsibly and ethically in local, global and digital communities and contributes to a diverse, democratic society.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "RF",
+          "title": "Reflective and Future Focused",
+          "summary": "Reflects on strengths and growth areas, sets goals, keeps supportive relationships and makes responsible decisions that protect well-being.",
+          "gradeBand": "K-12"
+        }
+      ]
+    }
+  ]
+}

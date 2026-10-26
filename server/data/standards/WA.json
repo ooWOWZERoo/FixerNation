@@ -1,0 +1,135 @@
+{
+  "state": "WA",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "statewide",
+    "selSourceUrl": "https://ospi.k12.wa.us/student-success/health-safety/mental-social-behavioral-health/social-and-emotional-learning-sel",
+    "pogSourceUrl": "https://sbe.wa.gov/our-work/graduation-requirements/profile-graduate",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: OSPI's SEL Standards and Benchmarks (6 standards, 17 benchmarks) adopted January 2020, with indicators by grade band. Portrait of a Graduate: Washington calls it the 'Profile of a Graduate' - a guiding vision developed by the Mastery-based Learning Work Group (directed by SSB 5249, 2021) and published by the State Board of Education. The SBE page describes it as a guiding vision to inform policy, not a graduation requirement. Its component list is in a graphic that was NOT read, so no Profile items are loaded yet. Reviewer: confirm 'statewide' fits the Profile's actual status."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Washington Social Emotional Learning Standards, Benchmarks and Indicators",
+      "issuingBody": "Office of Superintendent of Public Instruction (OSPI)",
+      "officialUrl": "https://ospi.k12.wa.us/student-success/health-safety/mental-social-behavioral-health/social-and-emotional-learning-sel",
+      "adoptedYear": 2020,
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from OSPI's long-form PDF (ospi.k12.wa.us/sites/default/files/2023-08/selstandardsbenchmarksindicatorslongform_0.pdf). Six standards (Self-Awareness, Self-Management, Self-Efficacy, Social Awareness, Social Management, Social Engagement) and 17 benchmarks; indicators by grade band (K-3, 4-5, 6-8, 9+). Items are the 17 benchmarks; titles are short paraphrases. Washington's standards do not map one-to-one onto CASEL, so CASEL tags are set only where the standard's name matches (1, 2A/2B, 4); the rest are blank on purpose.",
+      "items": [
+        {
+          "code": "1A",
+          "title": "Awareness of one's own emotions and their influence on behavior",
+          "summary": "Standard 1, Self-Awareness: understand one's emotions and how they affect behavior.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1B",
+          "title": "Awareness of personal and collective identity",
+          "summary": "Standard 1, Self-Awareness: strengths, areas for growth, aspirations, and cultural and linguistic assets.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1C",
+          "title": "Awareness of external influences and supports",
+          "summary": "Standard 1, Self-Awareness: how culture, family, school and community resources and supports shape the individual.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "2A",
+          "title": "Manage emotions, thoughts, impulses and stress",
+          "summary": "Standard 2, Self-Management: skills to manage emotions, thoughts, impulses and stress constructively.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2B",
+          "title": "Responsible decision-making and problem-solving",
+          "summary": "Standard 2, Self-Management: make responsible decisions and solve problems.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "3A",
+          "title": "Set, monitor, adapt, persevere, achieve and evaluate goals",
+          "summary": "Standard 3, Self-Efficacy: skills to work through goals from setting to evaluating.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "3B",
+          "title": "Problem-solving to engage responsibly in varied situations",
+          "summary": "Standard 3, Self-Efficacy: use problem-solving skills to engage responsibly.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "3C",
+          "title": "Speak up for personal rights and advocacy",
+          "summary": "Standard 3, Self-Efficacy: awareness of and ability to speak on behalf of personal rights.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "4A",
+          "title": "Awareness of others' emotions, perspectives and identities",
+          "summary": "Standard 4, Social Awareness: awareness of others' emotions, perspectives, cultures, languages, histories, identities and abilities.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "4B",
+          "title": "Awareness and respect for similarities and differences",
+          "summary": "Standard 4, Social Awareness: respect for similarities and differences among community, cultural and social groups.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "4C",
+          "title": "Understanding variation within and across cultures",
+          "summary": "Standard 4, Social Awareness: understand the variation within and across cultures.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "5A",
+          "title": "Communication and social skills for effective interaction",
+          "summary": "Standard 5, Social Management: use communication and social skills to interact effectively.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "5B",
+          "title": "Identify and resolve interpersonal conflicts constructively",
+          "summary": "Standard 5, Social Management: take steps to resolve conflicts constructively.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "5C",
+          "title": "Respectful, healthy relationships across differences",
+          "summary": "Standard 5, Social Management: build respectful relationships with people of diverse perspectives, cultures, languages, histories, identities and abilities.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "6A",
+          "title": "Sense of school and community responsibility",
+          "summary": "Standard 6, Social Engagement: a sense of responsibility to school and community.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "6B",
+          "title": "Work with others to set and achieve goals",
+          "summary": "Standard 6, Social Engagement: collaborate to set, monitor, adapt, achieve and evaluate goals.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "6C",
+          "title": "Contribute productively to school, workplace and community",
+          "summary": "Standard 6, Social Engagement: contribute to the well-being of school, workplace and community.",
+          "gradeBand": "K-12"
+        }
+      ]
+    }
+  ]
+}

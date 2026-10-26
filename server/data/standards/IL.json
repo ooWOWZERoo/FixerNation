@@ -1,0 +1,129 @@
+{
+  "state": "IL",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "district_led_only",
+    "selSourceUrl": "https://www.isbe.net/sel",
+    "pogSourceUrl": "https://www.oakpark.com/?p=191170",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: ISBE's revised SEL Standards (July 2026 edition; 5 goals, 15 indicators, grade-banded) apply beginning the 2026-27 school year; the original 2005 standards had 3 goals and 10 standards. Portrait of a Graduate: SECONDARY SOURCE ONLY - a local news report (Oak Park) quoting an ISBE spokesperson that districts decide on local portraits; a 2025 research report also lists Illinois as optional/district-led. No ISBE document stating this was found. Reviewer: confirm with ISBE before verifying the POG status."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Illinois Social and Emotional Learning Standards (July 2026 revision)",
+      "issuingBody": "Illinois State Board of Education",
+      "officialUrl": "https://www.isbe.net/sel",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from ISBE's 'Social and Emotional Learning Standards' PDF dated July 2026 (isbe.net/Documents/SEL-Standards-Chart.pdf). Five goals named after the CASEL competencies; 15 indicators (1A-5C), each with benchmarks for K-2, 3-5, 6-8, 9-10 and 11-12. ISBE's own front-page notice says indicators 2B and 2C were mistakenly printed with the text of 1B and 1C; the intended wording (used here) will be corrected through rulemaking in 2026-27. Titles are short paraphrases. Adoption year deliberately left blank: confirm the rule's effective date with ISBE.",
+      "items": [
+        {
+          "code": "1A",
+          "title": "Awareness of one's emotions and their influence on behavior",
+          "summary": "Recognize and understand one's emotions and how they shape behavior.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1B",
+          "title": "Awareness of personal and collective identity",
+          "summary": "Understand identity, strengths, areas for growth, aspirations, and cultural and linguistic assets.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1C",
+          "title": "How external influences shape personal and academic goals",
+          "summary": "Understand how culture, family and community deepen one's grasp of personal and academic goals.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "2A",
+          "title": "Manage emotions, thoughts and behaviors effectively",
+          "summary": "Use strategies to manage emotions, thoughts and behavior.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2B",
+          "title": "Adapt, persevere and build resilience",
+          "summary": "Use effective strategies to adapt, persevere and build resilience (intended wording; see framework notes).",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2C",
+          "title": "Apply problem solving to personal and academic goals",
+          "summary": "Use problem-solving skills and strategies to achieve personal and academic goals (intended wording; see framework notes).",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "3A",
+          "title": "Recognize that others think and feel differently",
+          "summary": "Understand that others may have similar or different thoughts and feelings based on experience, ability, community and culture.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "3B",
+          "title": "Interact and communicate effectively with others",
+          "summary": "Use a range of skills to interact and communicate well in social and academic settings.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "3C",
+          "title": "Awareness of others' emotions, perspectives and backgrounds",
+          "summary": "Show awareness of others' emotions, perspectives, backgrounds, identities, languages, abilities and cultures.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "4A",
+          "title": "Value similarities and differences to build relationships",
+          "summary": "Recognize, value and affirm individual and group similarities and differences to strengthen relationships in communities.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "4B",
+          "title": "Communicate and listen across diverse perspectives",
+          "summary": "Communicate and listen effectively with people of diverse perspectives, cultures, languages and abilities to build relationships.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "4C",
+          "title": "Prevent, manage and resolve conflicts",
+          "summary": "Prevent, manage and resolve conflicts by interacting productively with others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "5A",
+          "title": "Question, investigate and seek understanding",
+          "summary": "Engage in questioning and investigating a topic or problem to build knowledge and solve problems.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "5B",
+          "title": "Weigh sources and perspectives to make informed decisions",
+          "summary": "Consider multiple sources of information and diverse perspectives, and the impact of decisions on self and others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "5C",
+          "title": "Make thoughtful, safe, inclusive decisions",
+          "summary": "Make thoughtful, safe and inclusive choices in academic, social and digital environments.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "state": "KS",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "unknown",
+    "selSourceUrl": "https://www.ksde.gov/student-success/resources-by-subject-area/social-emotional-character-development/secd-standards-and-competencies",
+    "pogSourceUrl": "https://www.ksde.gov/state-board/board-goals-and-outcomes",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: KSDE lists the Kansas Social-Emotional Character Development (SECD) Model Standards (adopted April 2012, revised July 2018 by the State Board) and says they were reviewed and converted into Student Character Development Competencies in 2025. The page names the skill areas only broadly and says both documents are 'available upon request' from KSDE - no download link; the older ksde.gov PDF links now return 404. NO items loaded: the standards text must come from KSDE itself. Portrait of a Graduate: search results mentioned a January 2016 State Board definition of a successful high school graduate (five components), but the current KSDE Board Goals page does not show it, so nothing is claimed; status stays 'unknown'."
+  },
+  "frameworks": []
+}

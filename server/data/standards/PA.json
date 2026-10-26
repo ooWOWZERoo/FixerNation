@@ -1,0 +1,44 @@
+{
+  "state": "PA",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "unknown",
+    "selSourceUrl": "https://www.pa.gov/agencies/education/resources/student/career-ready-pa/pennsylvania-career-ready-skills",
+    "pogSourceUrl": "https://www.pa.gov/agencies/education/resources/student/career-ready-pa/pennsylvania-career-ready-skills",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: the Pennsylvania Career Ready Skills (final July 2018) are PDE's SEL learning progressions, Pre-K-12, in three domains; PDE presents them as guidance and a target for instruction, aligned with (not duplicating) the Career Education and Work Standards, and credits CASEL. Reviewer: decide whether 'guidance_only' is the more accurate status. Portrait of a Graduate: no statewide portrait was found on the PDE pages checked, and vendor pages that claim one could not be traced to a state document, so the status stays 'unknown' (absence not proven); many PA districts have their own portraits."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Pennsylvania Career Ready Skills",
+      "issuingBody": "Pennsylvania Department of Education",
+      "officialUrl": "https://www.pa.gov/agencies/education/resources/student/career-ready-pa/pennsylvania-career-ready-skills",
+      "adoptedYear": 2018,
+      "gradeSpan": "PreK-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from PDE's Career Ready Skills page, the one-page 'Career Ready Skills' PDF and 'The Pennsylvania Career Ready Skills Continuum' PDF (grade bands Pre-K-K, 1-5, 6-8, 9-12). Items are the three domains; the continuum PDF holds the grade-banded skills under each. Summaries paraphrase PDE's domain descriptions.",
+      "items": [
+        {
+          "code": "A",
+          "title": "Self-Awareness and Self-Management",
+          "summary": "Recognize and regulate emotions and thoughts: manage stress, control impulses, motivate oneself, and set and work toward personal and academic goals.",
+          "gradeBand": "PreK-12"
+        },
+        {
+          "code": "B",
+          "title": "Establishing and Maintaining Relationships",
+          "summary": "Build and keep healthy relationships with diverse people: communicate, listen, cooperate, resist inappropriate pressure, resolve conflict, and ask for or offer help.",
+          "gradeBand": "PreK-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "C",
+          "title": "Social Problem-Solving Skills",
+          "summary": "Show empathy and understand others' perspectives, and make constructive, respectful choices that weigh the consequences for oneself and others.",
+          "gradeBand": "PreK-12"
+        }
+      ]
+    }
+  ]
+}
