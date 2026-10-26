@@ -1,0 +1,699 @@
+{
+  "state": "NV",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "statewide",
+    "selSourceUrl": "https://doe.nv.gov/offices/osrle/school-climate/social-emotional-learning",
+    "pogSourceUrl": "https://doe.nv.gov/offices/office-of-teaching-and-learning/future-of-learning-network",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: NDE's Office for a Safe & Respectful Learning Environment publishes 'Nevada Social Emotional Learning Standards' (2-page PDF, 'Revised Standards with Definitions', file dated April 2025): 15 numbered standards grouped under the five CASEL competency names. The PDF has no grade bands and no per-grade benchmarks; NDE's pre-K standards page confirms 'K-12 NV SEL standards' exist and that SE standards were redeveloped in 2025. NDE's SEL page says Nevada adopted CASEL's five competencies as guidance in 2017 (per the 'SEL in Nevada' PDF). Portrait: NDE's Future of Learning Network page presents the 'Portrait of a Nevada Learner' (co-designed 2021-22) as the state's guiding vision, so pogStatus is statewide. Reviewer: I did not find a State Board adoption record for either document; confirm formal status with NDE."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "issuingBody": "Nevada Department of Education, Office for a Safe & Respectful Learning Environment",
+      "officialUrl": "https://doe.nv.gov/offices/osrle/school-climate/social-emotional-learning",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from the NDE PDF https://webapp-strapi-paas-prod-nde-001.azurewebsites.net/uploads/sel_standards_with_definitions_d8b61da366.pdf (linked from the NDE SEL page as 'Nevada Social Emotional Standards'). Page 1 defines the five competencies; page 2 lists the 15 standards in a two-column layout. Grouping (1-3 Self-Awareness, 4-6 Self-Management, 7-9 Social Awareness, 10-12 Relationship Skills, 13-15 Responsible Decision Making) was confirmed from text-block positions on the page, because plain text extraction scrambles the column order. The PDF gives only short titles, so the summaries are brief paraphrases built from those titles and the document's glossary (self-efficacy, growth mindset, agency are marked with an asterisk there). The 'K-12' grade label comes from NDE's pre-K page, not from this PDF. Adoption year left blank: the file date (April 2025) is not a stated adoption date.",
+      "items": [
+        {
+          "code": "1",
+          "title": "Develop personal interests and self-efficacy",
+          "summary": "Build personal interests and confidence in one's ability to reach goals (the state defines self-efficacy that way).",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "2",
+          "title": "Identify emotions",
+          "summary": "Recognize and name one's own emotions.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "3",
+          "title": "Cultivate a growth mindset",
+          "summary": "Believe abilities can improve through practice, taking on challenges and learning from mistakes (the state's glossary meaning of growth mindset).",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "4",
+          "title": "Regulate emotions",
+          "summary": "Respond to and manage emotions and thoughts in different situations.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "5",
+          "title": "Set and achieve goals",
+          "summary": "Set goals and work toward them, personally and collectively.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "6",
+          "title": "Develop agency",
+          "summary": "Build the freedom and ownership to make choices and take intentional action (the state's glossary meaning of agency).",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "7",
+          "title": "Recognize the emotions and perspectives of others",
+          "summary": "Notice and understand how other people feel and see things.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "8",
+          "title": "Demonstrate empathy and compassion",
+          "summary": "Show empathy and compassion toward others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "9",
+          "title": "Practice gratitude",
+          "summary": "Practice gratitude.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "10",
+          "title": "Communicate effectively",
+          "summary": "Communicate clearly and listen actively with others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "11",
+          "title": "Practice teamwork and collaborative problem-solving",
+          "summary": "Work together with others to solve problems.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "12",
+          "title": "Seek and offer support when needed",
+          "summary": "Ask for help and give help to others when it is needed.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "13",
+          "title": "Cultivate curiosity and open-mindedness",
+          "summary": "Stay curious and open to other ideas and viewpoints.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "14",
+          "title": "Make reasoned decisions and judgments",
+          "summary": "Make careful, well-reasoned choices and judgments.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "15",
+          "title": "Understand the impact of one's actions",
+          "summary": "Consider how one's own actions affect oneself and others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        }
+      ]
+    },
+    {
+      "type": "portrait_of_graduate",
+      "name": "Portrait of a Nevada Learner",
+      "issuingBody": "Nevada Department of Education (with the Nevada Future of Learning Network)",
+      "officialUrl": "https://doe.nv.gov/offices/office-of-teaching-and-learning/future-of-learning-network",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from the 2-page 'Portrait of a Nevada Learner' pamphlet (PDF dated December 2023) linked from the NDE page: https://www.nvfutureoflearning.org/_files/ugd/edc730_4d8bc57c3d84481d8e26d50b8a72b3f0.pdf. Four attributes (Empowering, Connecting, Impacting, Thriving), each with a guiding question and 3-4 'I' statements; the items below summarise each attribute. Caveats: the PDF is hosted on the Future of Learning Network site (nvfutureoflearning.org), not doe.nv.gov, although NDE links to it and describes it as the guiding vision and 'key outcomes for each learner'. The document is called a Portrait of a Learner, not Graduate. Adoption year not stated; the 2021-22 co-design date comes from the NDE page. No State Board adoption found.",
+      "items": [
+        {
+          "code": "EMPOWERING",
+          "title": "Empowering: How will I grow in my learning?",
+          "summary": "Know one's strengths, stay curious with a growth attitude, be self-aware and advocate for oneself, and ask for support to keep a balance across intellectual, physical, mental, social and emotional well-being.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "CONNECTING",
+          "title": "Connecting: How do I build and sustain relationships and community?",
+          "summary": "Listen actively and collaborate, adapt communication to different audiences and tools, and show empathy and respect for people of different backgrounds and viewpoints.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "IMPACTING",
+          "title": "Impacting: How will I contribute to make an impact?",
+          "summary": "Apply knowledge across subjects for a purpose, think critically and creatively to solve problems, and take part in community and civic life.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "THRIVING",
+          "title": "Thriving: How will I thrive?",
+          "summary": "Stay resilient and courageous through change and mistakes, keep learning, unlearning and relearning, and act with integrity by keeping commitments and staying true to one's values.",
+          "gradeBand": "K-12"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "1",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Trust Your Growth\" (series: Confidence & Courage; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that growth does not always happen quickly or dramatically. They will learn to recognize progress, avoid comparison, respect small steps, and build confidence by trusting what is being developed inside them.\" Teaches recognising progress, avoiding comparison and building confidence from small steps. Limit: Confidence and self-belief only; personal interests are not a stated objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Trust Your Growth - Lesson Plan 5 - 1 - #30_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names persistence and growth mindset. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "2",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" The lesson has students recognise when emotions start driving behaviour and choose a response, which is the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "2",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (tagged self-awareness). FNE's catalog description: \"Notice real cues in a scene, then pick every feeling that plausibly fits.\" Covers naming what someone feels from real cues; it does not by itself connect those feelings to the player's own actions.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "2",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names understanding and naming emotions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "3",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" The lesson frames a mistake as information about what to practise next and treats owning it as part of growth, the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "3",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Teaches that repetition with feedback supports growth.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "3",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names growth mindset. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "4",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Calm Is A Super Power\" (series: Emotional Strength; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that calm is strength under control. They will learn to identify situations that may trigger quick reactions, practice habits that support self-control, and recognize how calm responses can improve decisions, relationships, and daily ...\" The lesson teaches spotting triggers and practising habits that interrupt impulsive reactions, matching the self-regulation skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Calm Is A Super Power - Lesson Plan 8 - 31 - #116 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "4",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Teaches a short pause-and-reset routine before responding, matching the skill of managing emotions and behaviour.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "4",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (tagged self-management). FNE's catalog description: \"Listen to a frustrating moment, then pick what would help you feel calm.\" Students pick what would help them calm down after a frustrating moment, which practises the same strategy-choosing skill.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "4",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "5",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a skill to strengthen, track it and adjust with feedback, which is goal-setting and monitoring. Limit: Goals are personal habits; it does not cover career or post-graduation planning.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "5",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Carry Yesterday’s Growth Forward\" (series: Strength Through Consistency; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain how reflection supports growth, identify one useful lesson from a recent experience, and choose one present action that applies that learning in a constructive way.\" Turns reflection on a recent experience into one present action; supports reviewing and adjusting.",
+      "target": {
+        "type": "curriculum",
+        "title": "Carry Yesterday’s Growth Forward - Lesson Plan 9 - 8 - #122 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "5",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities.\" The theme names setting goals. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "6",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Take Responsibility for Your Growth\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that support from teachers, family, and friends matters, but no one can grow for them. They will learn that personal growth happens when they choose effort, practice, better responses, and steady learning, even when it feels ...\" Teaches that no one can grow for the student and that choosing effort builds growth. Limit: Agency in learning only.",
+      "target": {
+        "type": "curriculum",
+        "title": "Take Responsibility for Your Growth - Lesson Plan 5 - 21 - #44_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "6",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Leadership & Responsibility\" (programs.html). FNE's published description: \"What leadership looks like in a classroom, on a team, and in a community. Students explore ownership, initiative, accountability, and what it means to lead from any position.\" The theme names initiative and accountability. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "7",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened to someone and choose the kind response, which practises noticing another person's experience. Limit: Everyday kindness scenarios; does not teach perspective-taking across cultures or backgrounds.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "7",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" The cycle includes understanding the impact of a situation on others before choosing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "7",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "8",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened to someone and choose the kind response, which practises noticing another person's experience. Limit: Everyday kindness scenarios; does not teach perspective-taking across cultures or backgrounds.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "8",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Kindness practice; compassion is not a stated objective.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "9",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Notice What Is Good\" (series: Gratitude & Perspective; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that gratitude does not mean pretending life is perfect. They will learn that gratitude helps them notice what is still good while they work through challenges, mistakes, delays, or frustrations with a calmer and stronger mindset.\" Students practise noticing what is still good while working through frustration, which is the same skill as practising gratitude.",
+      "target": {
+        "type": "curriculum",
+        "title": "Notice What Is Good - Lesson Plan 5 - 27 - #48_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "9",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stop Taking Small Blessings for Granted\" (series: Gratitude & Perspective; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that small blessings, such as kind words, clean water, food, help from others, a safe place to learn, and a new morning, should not be ignored. They will learn that appreciation helps strengthen patience, respect, kindness, and ...\" Students practise appreciating small everyday good things and how appreciation strengthens patience and kindness.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stop Taking Small Blessings for Granted - Lesson Plan 5 - 28 - #49_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "10",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "10",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and ...\" Teaches letting others finish, asking respectful questions and responding with care, which is the listening half of the skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "10",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names active listening and expressing yourself clearly. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "11",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Share the Credit\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that sharing credit helps build trust, respect, humility, and stronger teamwork. They will learn that every helpful part matters, including listening, encouraging, practicing, helping quietly, offering ideas, and doing their part.\" Teaches that helping, listening and doing one's part all count toward a team's success. Limit: Classroom-scale teamwork; not structured collaborative problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Share the Credit - Lesson Plan: 6 - 23 - #67 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "11",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Encourage the People Around You\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that encouragement is a respectful choice that helps strengthen classrooms, teams, families, and communities. They will learn to notice effort, speak with kindness, remind others they can keep going, and use their words to build ...\" Teaches encouraging others so classrooms and teams grow stronger. Limit: Encouragement rather than shared problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Encourage the People Around You - Lesson Plan: 6 - 24 - #68 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "11",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part for a team or community. Limit: Small-scale classroom and team contribution.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "11",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Leadership & Responsibility\" (programs.html). FNE's published description: \"What leadership looks like in a classroom, on a team, and in a community. Students explore ownership, initiative, accountability, and what it means to lead from any position.\" The theme names working as a team. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Teamwork and encouragement; the collaborative problem-solving half is practised in the decision games.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "12",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Ask for Help the Right Way\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that needing help does not mean they are weak. It means they are honest enough to recognize when they need support. Students will learn to ask clearly, speak respectfully, listen carefully, and keep trying instead of shutting down or ...\" Teaches asking clearly and respectfully and keeping going rather than shutting down, which includes seeking help.",
+      "target": {
+        "type": "curriculum",
+        "title": "Ask for Help the Right Way - Lesson Plan: 6 - 9 - #57_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "12",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part for a team or community. Limit: Small-scale classroom and team contribution.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "12",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities.\" The theme names asking for help. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "14",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "14",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Before You Act\" (series: Self-Control & Daily Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that wise choices often begin with a pause. They will learn that self-control means slowing down long enough to think clearly, notice consequences, manage pressure, and choose what is right instead of reacting too quickly.\" Teaches pausing to notice consequences and manage pressure before choosing.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Before You Act - Lesson Plan 7 - 6 - #76_MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "14",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" Walks players through recognising a peer situation, understanding impact, weighing options, choosing and reflecting, which is a full decision-making cycle.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "14",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Critical Read\" (a literacy-domain game). FNE's catalog description: \"Judge real claims for evidence, bias, and source reasoning, then prove your judgment from the text.\" Students judge claims for evidence and bias, which practises reasoned judgment. Limit: Reading-comprehension setting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "14",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences.\" The theme names evaluating options before acting. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "15",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "15",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Count the Cost Before You Choose\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify a likely cost of a choice, consider who may be affected, and choose a responsible next step or ask for guidance.\" Students identify a likely cost of a choice and who may be affected before choosing.",
+      "target": {
+        "type": "curriculum",
+        "title": "Count the Cost Before You Choose - Lesson Plan 10 - 9 - #145 - MS"
+      }
+    },
+    {
+      "framework": "Nevada Social Emotional Learning Standards (Revised 2025)",
+      "itemCode": "15",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences.\" The theme names choices and consequences. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "EMPOWERING",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a skill to strengthen and track it with feedback.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "EMPOWERING",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" The lesson frames a mistake as information about what to practise next and treats owning it as part of growth, the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "EMPOWERING",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names persistence and growth mindset. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "CONNECTING",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Respect Starts with How You Treat People\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respect is not only something they want from others. It is something they practice through how they speak, listen, respond, and treat people. Students will learn that respectful choices help build stronger character and healthier ...\" Teaches practising respect in how one speaks, listens and responds, and links it to healthier relationships. Limit: Does not address differences among cultures, languages or abilities.",
+      "target": {
+        "type": "curriculum",
+        "title": "Respect Starts with How You Treat People - Lesson Plan: 6 - 1 - #51_MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "CONNECTING",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Be Someone Others Can Trust\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that trust is earned through dependable choices. They will learn that telling the truth, keeping their word, admitting mistakes, doing their part, and treating others with respect help build character that others can count on.\" Teaches dependable choices that build trust in relationships. Limit: Does not address differences among cultures, languages or abilities.",
+      "target": {
+        "type": "curriculum",
+        "title": "Be Someone Others Can Trust - Lesson Plan: 6 - 5 - #55 - MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "CONNECTING",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame. Limit: Covers respectful speaking and listening.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "CONNECTING",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names building healthy relationships. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "IMPACTING",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part to strengthen a class, team or community. Limit: Small-scale classroom and team contribution; no civic action or advocacy.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "IMPACTING",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Make Others Better Around You\" (series: Leadership Through Example; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong leadership does not only help the self. They will learn that real influence helps the whole group become better by encouraging, strengthening, respecting, and supporting the people around them.\" Frames leadership as encouraging and supporting the group. Limit: Does not address organised service or community change.",
+      "target": {
+        "type": "curriculum",
+        "title": "Make Others Better Around You - Lesson Plan 7 - 24 - #90 - MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "IMPACTING",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Leadership & Responsibility\" (programs.html). FNE's published description: \"What leadership looks like in a classroom, on a team, and in a community. Students explore ownership, initiative, accountability, and what it means to lead from any position.\" The theme names leading in a class, team and community. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "THRIVING",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Know Your Limits\" (series: Healthy Boundaries; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that knowing their limits is not weakness. They will learn that paying attention to stress, tiredness, overload, and the need for help or rest can help them make stronger, healthier decisions.\" Students attend to stress, tiredness and overload and the need for rest, which is sustaining well-being.",
+      "target": {
+        "type": "curriculum",
+        "title": "Know Your Limits - Lesson Plan 5 - 8 - #35_MS"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "THRIVING",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (tagged self-management). FNE's catalog description: \"Listen to a frustrating moment, then pick what would help you feel calm.\" Practises choosing what helps one calm down.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "Portrait of a Nevada Learner",
+      "itemCode": "THRIVING",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Wellness & Self-Care\" (programs.html). FNE's published description: \"Physical and mental wellness, stress management, healthy habits, and taking care of yourself so you can show up for others.\" The theme names mental wellness and self-care. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    }
+  ]
+}

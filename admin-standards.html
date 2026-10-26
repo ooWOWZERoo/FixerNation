@@ -316,6 +316,7 @@ function frameworkHtml(fw) {
 }
 
 function itemRowHtml(fw, it) {
+  const draftCount = it.alignments.filter(a => a.reviewStatus !== 'verified').length;
   const aligns = it.alignments.map(a => `
     <div class="sx-align">
       <span class="a-pill ${a.strength === 'direct' ? 'a-pill-success' : 'a-pill-neutral'}">${fnEscape(a.strength)}</span>
@@ -333,7 +334,7 @@ function itemRowHtml(fw, it) {
     <td><div class="a-cell-title">${fnEscape(it.title)}</div>${it.summary ? `<div class="a-cell-sub">${fnEscape(it.summary)}</div>` : ''}</td>
     <td>${fnEscape(it.caselCompetency ? CASEL_LABELS[it.caselCompetency] : '—')}</td>
     <td>${fnEscape(it.gradeBand || '—')}</td>
-    <td style="min-width:300px;">${aligns}<button class="a-btn a-btn-outline a-btn-sm" style="margin-top:6px;" data-act="new-alignment" data-id="${fnEscape(it.id)}" data-label="${fnEscape(it.code + ' — ' + it.title)}">+ Align</button></td>
+    <td style="min-width:300px;">${aligns}${draftCount ? `<button class="a-btn a-btn-primary a-btn-sm" style="margin:6px 6px 0 0;" data-act="verify-item-als" data-id="${fnEscape(it.id)}" data-n="${fnEscape(draftCount)}"${fw.reviewStatus === 'verified' ? '' : ' disabled title="Verify the framework first"'}>Verify all ${fnEscape(draftCount)} draft connection${draftCount === 1 ? '' : 's'}</button>` : ''}<button class="a-btn a-btn-outline a-btn-sm" style="margin-top:6px;" data-act="new-alignment" data-id="${fnEscape(it.id)}" data-label="${fnEscape(it.code + ' — ' + it.title)}">+ Align</button></td>
   </tr>`;
 }
 
@@ -478,6 +479,11 @@ document.addEventListener('click', async (e) => {
       return run(api('DELETE', '/frameworks/' + id), 'Framework deleted.'); }
     case 'new-alignment': return openAlignModal(id, el.dataset.label);
     case 'save-alignment': return saveAlignment();
+    case 'verify-item-als': {
+      const n = Number(el.dataset.n) || 0;
+      if (!confirm('Verify all ' + n + ' draft connection' + (n === 1 ? '' : 's') + ' under this standard? Do this only after you have read each one. Verified connections become public immediately.')) return;
+      return run(api('POST', '/items/' + id + '/verify-alignments'), 'Connections verified. They are now public.');
+    }
     case 'verify-al': return run(api('POST', '/alignments/' + id + '/verify'), 'Alignment verified. It is now public.');
     case 'unverify-al': return run(api('POST', '/alignments/' + id + '/unverify'), 'Alignment moved back to draft.');
     case 'delete-al': if (!confirm('Remove this alignment?')) return; return run(api('DELETE', '/alignments/' + id), 'Alignment removed.');

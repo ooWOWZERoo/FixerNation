@@ -87,6 +87,14 @@
   .al-top{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;}
   .al-top .t{font-weight:700; font-size:14.5px; color:var(--teal-dark);}
   .al-top a.t{text-decoration:underline; text-underline-offset:3px;}
+  .vers{display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; margin:8px 0 2px; font-size:13px; color:var(--ink-soft);}
+  a.ver{font-weight:700; font-size:12.5px; color:var(--teal-dark); background:rgba(22,79,74,0.08); padding:4px 11px; border-radius:999px; text-decoration:none;}
+  a.ver:hover{background:var(--teal); color:#fff;}
+  #app[data-grade="elementary"] a.ver:not([data-level="elementary"]),
+  #app[data-grade="middle"] a.ver:not([data-level="middle"]),
+  #app[data-grade="high"] a.ver:not([data-level="high"]){display:none;}
+  .grade-pick{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:12px 0 0; font-size:14px; font-weight:600; color:var(--teal-dark);}
+  .grade-pick select{padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#fff; font:600 14px 'Plus Jakarta Sans',sans-serif; color:var(--ink);}
   .badge{font-size:11px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; padding:3px 10px; border-radius:999px;}
   .badge.direct{background:var(--teal); color:#fff;}
   .badge.supporting{background:rgba(235,166,87,0.28); color:#7a4a0a;}
@@ -261,18 +269,32 @@
   }
 
   function alignmentHtml(a) {
-    var title = esc(a.targetTitle);
-    var t;
-    if (a.targetType === 'curriculum' && a.targetId) t = '<a class="t" href="lesson-detail.html?id=' + encodeURIComponent(a.targetId) + '">' + title + '</a>';
-    else if (a.targetType === 'program') t = '<a class="t" href="programs.html">' + title + '</a>';
+    var title = esc(a.targetTitle), t, extra = '';
+    if (a.targetType === 'curriculum') {
+      var vs = a.versions || [];
+      t = '<span class="t">' + title + '</span>';
+      if (vs.length) {
+        extra = '<div class="vers"><span>Grade versions:</span>' + vs.map(function (v) {
+          return '<a class="ver" data-level="' + esc(v.level) + '" href="lesson-detail.html?id=' + encodeURIComponent(v.id) + '">' + esc(v.label + ' ' + v.grades) + '</a>';
+        }).join('') + '</div>';
+      } else if (a.targetId) {
+        t = '<a class="t" href="lesson-detail.html?id=' + encodeURIComponent(a.targetId) + '">' + title + '</a>';
+      }
+    } else if (a.targetType === 'program') t = '<a class="t" href="programs.html">' + title + '</a>';
     else t = '<span class="t">' + title + '</span>';
     return '<div class="al"><div class="al-top"><span class="badge ' + (a.strength === 'direct' ? 'direct' : 'supporting') + '">' +
-      esc(STRENGTH_LABEL[a.strength] || a.strength) + '</span>' + t + '<span class="kind">' + esc(KIND_LABEL[a.targetType] || '') + '</span></div>' +
+      esc(STRENGTH_LABEL[a.strength] || a.strength) + '</span>' + t + '<span class="kind">' + esc(KIND_LABEL[a.targetType] || '') + '</span></div>' + extra +
       '<p>' + esc(a.rationale) + '</p></div>';
+  }
+  var KIND_ORDER = { curriculum: 0, brain_game: 1, program: 2 };
+  function sortAlignments(als) {
+    return als.slice().sort(function (x, y) {
+      return (x.strength === 'direct' ? 0 : 1) - (y.strength === 'direct' ? 0 : 1) || (KIND_ORDER[x.targetType] - KIND_ORDER[y.targetType]);
+    });
   }
 
   function standardHtml(it) {
-    var als = it.alignments || [];
+    var als = sortAlignments(it.alignments || []);
     var h = '<article class="std" data-has="' + (als.length ? '1' : '0') + '"><div class="std-top"><span class="code">' + esc(it.code) + '</span><h4>' + esc(it.title) + '</h4>';
     if (it.gradeBand) h += '<span class="pill">Grades ' + esc(it.gradeBand) + '</span>';
     if (it.caselCompetency && CASEL_LABEL[it.caselCompetency]) h += '<span class="pill">' + esc(CASEL_LABEL[it.caselCompetency]) + '</span>';
@@ -296,7 +318,8 @@
         '<div class="cov-card"><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div>' + link(cov.pogSourceUrl, 'Where we checked') + '</div></div>';
     }
     if (fws.length) {
-      h += '<div class="legend"><strong>How to read the connections.</strong> A direct match means the lesson or game teaches the same skill the standard names. A supporting connection means it reinforces part of the standard.</div>' +
+      h += '<div class="legend"><strong>How to read the connections.</strong> A direct match means the lesson or game teaches the same skill the standard names. A supporting connection means it reinforces part of the standard. Each lesson has versions for K-5, 6-8 and 9-12, written for that age group. The goals are the same in every version, so a connection applies to all of them.</div>' +
+        '<label class="grade-pick" for="gradePick">Show lesson versions for <select id="gradePick"><option value="">All grades</option><option value="elementary">Elementary (K-5)</option><option value="middle">Middle (6-8)</option><option value="high">High school (9-12)</option></select></label>' +
         '<label class="filter"><input type="checkbox" id="onlyLinked"> Show only standards with a Fixer Nation connection</label>';
     }
     fws.forEach(function (fw) {
@@ -309,8 +332,19 @@
       h += '<section class="framework"><h3>' + esc(fw.name) + '</h3><p class="fw-meta">' + meta.join(' &middot; ') + '</p>' +
         (fw.items || []).map(standardHtml).join('') + '</section>';
     });
+    app.removeAttribute('data-grade');
     app.innerHTML = h;
     document.title = d.state.name + ' - State SEL Standards & Portrait of a Graduate - Fixer Nation Education';
+    var gp = document.getElementById('gradePick');
+    if (gp) {
+      var g0 = new URLSearchParams(location.search).get('grade');
+      if (g0 === 'elementary' || g0 === 'middle' || g0 === 'high') { gp.value = g0; app.setAttribute('data-grade', g0); }
+      gp.addEventListener('change', function () {
+        if (gp.value) app.setAttribute('data-grade', gp.value); else app.removeAttribute('data-grade');
+        var q = new URLSearchParams(location.search); if (gp.value) q.set('grade', gp.value); else q.delete('grade');
+        history.replaceState({ s: q.get('state') }, '', '?' + q.toString());
+      });
+    }
     var cb = document.getElementById('onlyLinked');
     if (cb) cb.addEventListener('change', function () {
       var rows = app.querySelectorAll('.std');

@@ -22,6 +22,7 @@ db.exec('PRAGMA foreign_keys = ON');
 db.exec(`
 CREATE TABLE admin_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, email_verified INTEGER DEFAULT 1, session_invalidated_at TEXT);
 CREATE TABLE curricula (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, published INTEGER DEFAULT 0);
+CREATE TABLE curriculum_audiences (id INTEGER PRIMARY KEY AUTOINCREMENT, curriculum_id INTEGER NOT NULL REFERENCES curricula(id) ON DELETE CASCADE, audience TEXT NOT NULL);
 CREATE TABLE brain_games (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT);
 CREATE TABLE standards_state_coverage (
   state_code TEXT PRIMARY KEY, sel_status TEXT NOT NULL DEFAULT 'unknown', pog_status TEXT NOT NULL DEFAULT 'unknown',
@@ -86,7 +87,7 @@ const admin = (method, url, body) => call(method, '/api/admin/standards' + url, 
 const pub = (url) => call('GET', '/api/standards' + url);
 
 function reset() {
-  db.exec('DELETE FROM standards_alignments; DELETE FROM standards_items; DELETE FROM standards_frameworks; DELETE FROM standards_state_coverage; DELETE FROM curricula; DELETE FROM brain_games; DELETE FROM admin_users;');
+  db.exec('DELETE FROM standards_alignments; DELETE FROM standards_items; DELETE FROM standards_frameworks; DELETE FROM standards_state_coverage; DELETE FROM curriculum_audiences; DELETE FROM curricula; DELETE FROM brain_games; DELETE FROM admin_users;');
   db.exec(`INSERT INTO admin_users (id, username) VALUES (1, 'admin')`);
 }
 const today = new Date().toISOString().slice(0, 10);
@@ -154,6 +155,54 @@ test('PUBLIC: an alignment to an unpublished or deleted lesson is never shown', 
   db.prepare('DELETE FROM curricula WHERE id = ?').run(pubCur);
   t = (await pub('/states/IL')).json.frameworks[0].items[0].alignments;
   assert.equal(t.length, 0, 'a lesson that no longer exists vanishes from the public page');
+});
+
+test('PUBLIC: a lesson connection lists its grade versions (K-12 only, published only)', async () => {
+  reset();
+  const mk = (title, audience, published = 1) => {
+    const id = Number(db.prepare('INSERT INTO curricula (title, published) VALUES (?, ?)').run(title, published).lastInsertRowid);
+    db.prepare('INSERT INTO curriculum_audiences (curriculum_id, audience) VALUES (?, ?)').run(id, audience);
+    return id;
+  };
+  const stem = 'Pause Before You Escalate';
+  const es = mk(`${stem} - Lesson Plan 10 - 19 - #151 - ES`, 'Elementary School');
+  const ms = mk(`${stem} - Lesson Plan 10 - 19 - #151 - MS`, 'Middle School');
+  const hs = mk(`${stem} - Lesson Plan 10 - 19 - #151 - HS`, 'High School');
+  mk(`${stem} - Lesson Plan 10 - 19 - #151 - HE`, 'Higher Education');       // never listed: outside K-12
+  mk(`${stem} Again - Lesson Plan 10 - 20 - #152 - ES`, 'Elementary School'); // a different lesson sharing a prefix
+  const hsDraft = mk(`Other Lesson - Lesson Plan 1 - 1 - #1 - HS`, 'High School', 0);
+  const { itemIds } = await seedFramework({ verify: true });
+  const a = (await admin('PUT', '/alignments', { itemId: itemIds[0], targetType: 'curriculum', targetId: ms, strength: 'direct', rationale: 'The lesson teaches the same skill the standard names.' })).json;
+  await admin('POST', `/alignments/${a.id}/verify`);
+
+  const al = (await pub('/states/IL')).json.frameworks[0].items[0].alignments[0];
+  assert.equal(al.targetTitle, stem, 'shown by lesson name, not by one grade\'s copy');
+  assert.deepEqual(al.versions.map(v => [v.level, v.grades, v.id]), [['elementary', 'K-5', es], ['middle', '6-8', ms], ['high', '9-12', hs]]);
+  assert.ok(!/Higher/.test(JSON.stringify(al)), 'higher education is never shown on a K-12 page');
+
+  db.prepare('UPDATE curricula SET published = 0 WHERE id = ?').run(hs);
+  assert.deepEqual((await pub('/states/IL')).json.frameworks[0].items[0].alignments[0].versions.map(v => v.level), ['elementary', 'middle'], 'an unpublished version drops off');
+  assert.ok(hsDraft);
+});
+
+test('REVIEW GATE: verifying every draft connection under one standard', async () => {
+  reset();
+  const { fwId, itemIds } = await seedFramework();             // framework still a draft
+  const mkAl = async (rationale, strength = 'direct') => (await admin('PUT', '/alignments', { itemId: itemIds[0], targetType: 'program', targetId: 0, strength, rationale })).json;
+  await mkAl('First connection under this standard.');
+  const gone = db.prepare("INSERT INTO curricula (title, published) VALUES ('Soon Removed', 1)").run().lastInsertRowid;
+  await admin('PUT', '/alignments', { itemId: itemIds[0], targetType: 'curriculum', targetId: Number(gone), strength: 'supporting', rationale: 'This lesson is deleted before the bulk verify.' });
+  assert.equal((await admin('POST', `/items/${itemIds[0]}/verify-alignments`)).status, 400, 'the framework must be verified first');
+
+  await admin('POST', `/frameworks/${fwId}/verify`);
+  db.prepare('DELETE FROM curricula WHERE id = ?').run(gone);
+  const r = await admin('POST', `/items/${itemIds[0]}/verify-alignments`);
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.json.verified, r.json.skipped], [1, 1], 'content that no longer exists is skipped, not verified');
+  const states = (await admin('GET', `/frameworks/${fwId}`)).json.items[0].alignments.map(a => a.reviewStatus).sort();
+  assert.deepEqual(states, ['draft', 'verified']);
+  assert.equal((await admin('POST', '/items/99999/verify-alignments')).status, 404);
+  assert.equal((await call('POST', `/api/admin/standards/items/${itemIds[0]}/verify-alignments`, {})).status, 401, 'admin only');
 });
 
 test('REVIEW GATE: what can and cannot be verified', async () => {

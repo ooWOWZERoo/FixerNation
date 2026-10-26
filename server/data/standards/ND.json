@@ -1,0 +1,459 @@
+{
+  "state": "ND",
+  "coverage": {
+    "selStatus": "guidance_only",
+    "pogStatus": "statewide",
+    "selSourceUrl": "https://www.nd.gov/dpi/districtsschools/safety-health/youth-behavioral-health/social-emotional-learning",
+    "pogSourceUrl": "https://www.nd.gov/dpi/districtsschools/learning-continuum",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: North Dakota has NDMTSS SEL Goals (June 2018, K-12, four grade spans, five CASEL-named competencies), led and funded by the DPI's MTSS project. Their own introduction says freestanding SEL standards do not currently exist in ND and points to a crosswalk of SEL embedded in content standards; DPI's SEL page calls the goals a framework to guide instruction, so I chose guidance_only. NOTE: DPI's live SEL page returned HTTP 403 to my downloads, so I read an Internet Archive copy (Sept 2022) of that page and Archive copies (Aug 2022 capture) of the four goal PDFs it links on ndrea.org; the live ndrea.org links are gone. I could not confirm the goals are unchanged since 2018. Portrait of a Graduate: DPI's Learning Continuum page (read live) states ND's Portrait of a Graduate was unveiled by Governor Burgum at the 2021 Summit on Innovative Education and lists seven attributes; I read the DPI PDF. Reviewer: confirm the live SEL page and any newer SEL document."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "North Dakota MTSS Social and Emotional Learning Goals",
+      "issuingBody": "North Dakota Department of Public Instruction (NDMTSS project)",
+      "officialUrl": "https://www.nd.gov/dpi/districtsschools/safety-health/youth-behavioral-health/social-emotional-learning",
+      "adoptedYear": 2018,
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read in Internet Archive copies (capture 2022-08-12) of the documents DPI's SEL page links, originally at ndrea.org/assets/docs/NDMTSS SEL Goals/: '6-1-18 NDMTSS SEL Learning Goals Introduction.pdf', '...Goals by Competancy.pdf', '...Goals by Grade-level.pdf' and 'Compiled NDMTSS SEL Scales.pdf' (all dated June 2018). Not formal standards: the introduction says freestanding SEL standards do not exist in ND. Each of the five competencies has 4-6 numbered goals per grade span (K-2, 3-5, 6-8, 9-12); the goals are not tied one-to-one to named indicators, so items here are the five competencies only, with summaries I wrote from the goal themes. The goals are named after and organized by CASEL's five competencies, so caselCompetency is the document's own structure. Year 2018 is the document date, not an adoption date.",
+      "items": [
+        {
+          "code": "SA",
+          "title": "Recognizing emotions, strengths and limits, and asking for help",
+          "summary": "Across K-12 goals: label emotions and what triggers them, link emotions to behavior, identify strengths and interests, build a growth mindset, recover from setbacks, seek help, and advocate for oneself.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "SM",
+          "title": "Regulating emotions and pursuing goals",
+          "summary": "Across K-12 goals: self-control, handling stress and emotions, taking responsibility, self-motivation, setting and monitoring goals, and planning, prioritizing and managing time.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "SOC",
+          "title": "Empathy, respect, and using supports",
+          "summary": "Across K-12 goals: identify others' feelings and perspectives, appreciate individual and cultural differences, oppose stereotyping, ask for help, and use home, school and community resources.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "REL",
+          "title": "Communication, teamwork, and conflict resolution",
+          "summary": "Across K-12 goals: verbal, non-verbal and electronic etiquette, social participation, giving and receiving feedback, making friends, teamwork, limit setting, and resolving conflict.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "RDM",
+          "title": "Solving problems and weighing consequences",
+          "summary": "Across K-12 goals: define and solve problems, weigh consequences, tell safe from risky behavior, use refusal skills, take responsibility, notice outside influences, and apply ethical standards.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        }
+      ]
+    },
+    {
+      "type": "portrait_of_graduate",
+      "name": "North Dakota's Portrait of a Graduate",
+      "issuingBody": "North Dakota Department of Public Instruction",
+      "officialUrl": "https://www.nd.gov/dpi/districtsschools/learning-continuum",
+      "adoptedYear": 2021,
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read in DPI's PDF https://www.nd.gov/dpi/sites/www/files/documents/Academic%20Support/ND%20Learning%20Continuum/FinalNoDakPOG.pdf (linked from the Learning Continuum page, which says it was unveiled in 2021 and supports alternate pathways to graduation). Seven attributes, each with 2-4 'A North Dakotan...' statements; summaries are my paraphrases. The PDF itself shows no date and one secondary source (KnowledgeWorks) says 2020, so the 2021 year comes from the DPI page only; reviewer should confirm. Not mapped to CASEL competencies by the state.",
+      "items": [
+        {
+          "code": "critical-thinking",
+          "title": "Critical Thinking",
+          "summary": "Improves the quality of one's own thinking by questioning bias and assumptions, thinks clearly and open-mindedly, and weighs global and local effects of solutions.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "communication",
+          "title": "Communication",
+          "summary": "Listens to understand, expresses ideas effectively in varied forms, and communicates for different purposes, including self-advocacy, relationships, conflict resolution and feedback.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "empathy",
+          "title": "Empathy",
+          "summary": "Seeks to understand and respond to others' views, feelings and experiences, takes responsibility for making the world better, and accepts that societal challenges need compromise.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "collaboration",
+          "title": "Collaboration",
+          "summary": "Takes shared responsibility, uses strengths to build collective commitment, contributes to group effectiveness, and draws out diverse perspectives.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "learners-mindset",
+          "title": "Learner's Mindset",
+          "summary": "Commits to lifelong learning with passion and is willing to learn, unlearn and relearn.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "adaptability",
+          "title": "Adaptability",
+          "summary": "Responds productively to feedback, setbacks and criticism, balances differing views to reach workable solutions, and plans using self-awareness and self-management.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "perseverance",
+          "title": "Perseverance",
+          "summary": "Understands how effort, attitude and achievement connect, treats failure as part of success, handles adversity using strengths and supports, and shows grit and curiosity.",
+          "gradeBand": "K-12"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SA",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" The lesson has students recognise when emotions start driving behaviour and choose a response, which is the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SA",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Know Your Limits\" (series: Healthy Boundaries; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that knowing their limits is not weakness. They will learn that paying attention to stress, tiredness, overload, and the need for help or rest can help them make stronger, healthier decisions.\" Students attend to stress, tiredness and overload and the need for help or rest.",
+      "target": {
+        "type": "curriculum",
+        "title": "Know Your Limits - Lesson Plan 5 - 8 - #35_MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SA",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Ask for Help the Right Way\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that needing help does not mean they are weak. It means they are honest enough to recognize when they need support. Students will learn to ask clearly, speak respectfully, listen carefully, and keep trying instead of shutting down or ...\" Teaches asking clearly and respectfully and keeping going rather than shutting down, which includes seeking help.",
+      "target": {
+        "type": "curriculum",
+        "title": "Ask for Help the Right Way - Lesson Plan: 6 - 9 - #57_MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SA",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names understanding emotions and self-awareness. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Strengths are not a stated objective.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Calm Is A Super Power\" (series: Emotional Strength; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that calm is strength under control. They will learn to identify situations that may trigger quick reactions, practice habits that support self-control, and recognize how calm responses can improve decisions, relationships, and daily ...\" The lesson teaches spotting triggers and practising habits that interrupt impulsive reactions, matching the self-regulation skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Calm Is A Super Power - Lesson Plan 8 - 31 - #116 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Teaches a short pause-and-reset routine before responding, matching the skill of managing emotions and behaviour.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a skill to strengthen, track it and adjust with feedback, which is goal-setting and monitoring. Limit: Goals are personal habits; it does not cover career or post-graduation planning.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SM",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SOC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened to someone and choose the kind response, which practises noticing another person's experience. Limit: Everyday kindness scenarios; does not teach perspective-taking across cultures or backgrounds.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SOC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" The cycle includes understanding the impact of a situation on others before choosing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SOC",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Ask for Help the Right Way\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that needing help does not mean they are weak. It means they are honest enough to recognize when they need support. Students will learn to ask clearly, speak respectfully, listen carefully, and keep trying instead of shutting down or ...\" Teaches asking clearly and respectfully and keeping going rather than shutting down, which includes seeking help.",
+      "target": {
+        "type": "curriculum",
+        "title": "Ask for Help the Right Way - Lesson Plan: 6 - 9 - #57_MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "SOC",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Respect across differences is not a stated objective.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "REL",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "REL",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Share the Credit\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that sharing credit helps build trust, respect, humility, and stronger teamwork. They will learn that every helpful part matters, including listening, encouraging, practicing, helping quietly, offering ideas, and doing their part.\" Teaches that helping, listening and doing one's part all count toward a team's success. Limit: Classroom-scale teamwork; not structured collaborative problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Share the Credit - Lesson Plan: 6 - 23 - #67 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "REL",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Students spot the signs a conflict is escalating and choose a respectful response that moves toward an answer.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "REL",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names listening, conflict and healthy relationships. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "RDM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "RDM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Before You Act\" (series: Self-Control & Daily Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that wise choices often begin with a pause. They will learn that self-control means slowing down long enough to think clearly, notice consequences, manage pressure, and choose what is right instead of reacting too quickly.\" Teaches pausing to notice consequences and manage pressure before choosing.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Before You Act - Lesson Plan 7 - 6 - #76_MS"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "RDM",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" Walks players through recognising a peer situation, understanding impact, weighing options, choosing and reflecting, which is a full decision-making cycle.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the responsible thing to do.\" Single-choice practice at picking the responsible action; shorter than a full decision process.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "North Dakota MTSS Social and Emotional Learning Goals",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences.\" The theme names choices and consequences. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "critical-thinking",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Critical Read\" (a literacy-domain game). FNE's catalog description: \"Judge real claims for evidence, bias, and source reasoning, then prove your judgment from the text.\" Students judge claims for evidence, bias and source reasoning, which is questioning assumptions and applying disciplined thinking. Limit: Reading-comprehension setting; global perspectives are not stated objectives.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "communication",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame. Limit: Covers speaking and listening; not writing or media.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "communication",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and ...\" Teaches letting others finish, asking respectful questions and responding with care, which is the listening half of the skill. Limit: Covers speaking and listening; not writing or media.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "empathy",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened and choose the kind response.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "empathy",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" The cycle includes understanding the impact of a situation on others.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "collaboration",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Share the Credit\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that sharing credit helps build trust, respect, humility, and stronger teamwork. They will learn that every helpful part matters, including listening, encouraging, practicing, helping quietly, offering ideas, and doing their part.\" Teaches that helping, listening and doing one's part all count toward a team's success. Limit: Classroom-scale teamwork; not structured collaborative problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Share the Credit - Lesson Plan: 6 - 23 - #67 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "collaboration",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Encourage the People Around You\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that encouragement is a respectful choice that helps strengthen classrooms, teams, families, and communities. They will learn to notice effort, speak with kindness, remind others they can keep going, and use their words to build ...\" Teaches encouraging others so classrooms and teams grow stronger. Limit: Encouragement rather than shared problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Encourage the People Around You - Lesson Plan: 6 - 24 - #68 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "collaboration",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part for a team or community. Limit: Small-scale classroom and team contribution.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "learners-mindset",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" The lesson frames a mistake as information about what to practise next and treats owning it as part of growth, the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "learners-mindset",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Teaches that repetition with feedback supports growth.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "learners-mindset",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names growth mindset. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "perseverance",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Covers persevering through repeated practice.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "perseverance",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" The lesson frames a mistake as information about what to practise next and treats owning it as part of growth, the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "North Dakota's Portrait of a Graduate",
+      "itemCode": "perseverance",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names persistence. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    }
+  ]
+}

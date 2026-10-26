@@ -1,0 +1,743 @@
+{
+  "state": "WI",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "state_led_in_progress",
+    "selSourceUrl": "https://dpi.wi.gov/sspw/mental-health/social-emotional-learning/competencies",
+    "pogSourceUrl": "https://dpi.wi.gov/families-students/programs-initiatives/portrait-graduate",
+    "sourceAccessedOn": "2026-10-26",
+    "notes": "SEL: DPI's 'Wisconsin PK-Adult Social and Emotional Learning Competencies' (May 2018): 24 numbered competencies in 3 domains with benchmarks for six grade bands (4K-5K, 1-3, 4-5, 6-8, 9-10, 11-adult). Read the English PDF linked from the DPI page. DPI calls these 'competencies', not 'standards', and the guide does not say whether use is required; I chose k12_standards because they are state-issued, grade-banded benchmarks (same call as NY's voluntary benchmarks) - reviewer may prefer guidance_only. Portrait of a Graduate: the DPI page says a statewide Portrait is being developed with AASA through a 5-phase process running October 2025 to October 2026 (listening sessions done, draft not yet published on the page). No attributes were published, so no POG framework was added. Reviewer: re-check the POG page; it may be finalized by or after this date."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "issuingBody": "Wisconsin Department of Public Instruction",
+      "officialUrl": "https://dpi.wi.gov/sspw/mental-health/social-emotional-learning/competencies",
+      "adoptedYear": 2018,
+      "gradeSpan": "PK-adult",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from DPI's PDF 'Social and Emotional Learning Competencies' (May 2018), https://dpi.wi.gov/sites/default/files/imce/sspw/pdf/SEL-Competencies-Guide-web.pdf (same file as the English link /media/40286/download?inline on the DPI page; text compared and identical). Three Wisconsin domains: Emotional Development (1-6), Self-Concept (7-11), Social Competence (12-24). The PDF gives no short titles - only a domain heading plus a grade-band statement per number - so the titles here are MY paraphrased labels and the summaries blend the six grade-band statements; reviewer should check them against the chart (PDF pages 18-25). caselCompetency is set only where the guide's CASEL Domain column lists a single domain; competencies 9, 11, 22, 23, 24 list two or more domains and 4 is labeled 'Focus Attention' (not a CASEL domain), so those are left blank. Items use the guide's own numbers. 'Adopted' year is the publication year; the guide does not describe a formal adoption.",
+      "items": [
+        {
+          "code": "1",
+          "title": "Recognizing and labeling emotions",
+          "summary": "Notice and name one's own and others' feelings, moving from basic to complex and changing emotions, and see how this shapes thinking and relationships.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "2",
+          "title": "Expressing emotions appropriately",
+          "summary": "Express feelings in words and actions that fit the setting and audience, and understand how that expression affects how others respond.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "3",
+          "title": "Managing strong emotions",
+          "summary": "Use calming and coping strategies for stress and impulses, progressing from adult-guided support to anticipating and planning for triggering situations.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "4",
+          "title": "Focusing attention",
+          "summary": "Use organizational skills and strategies to hold attention despite distractions and work toward short-term, then long-term, personal and academic goals.",
+          "gradeBand": "PK-adult"
+        },
+        {
+          "code": "5",
+          "title": "Empathy and compassion",
+          "summary": "Read how others feel, respond with comfort and respect, and grow toward showing connection and empathy for communities.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "6",
+          "title": "Predicting others' feelings and cues",
+          "summary": "Link words, gestures, and situations to others' emotions, use perspective-taking to predict feelings and the effect of one's own behavior, and read social and cultural cues.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "7",
+          "title": "Strengths and growth mindset",
+          "summary": "Recognize strengths and areas needing help, use a growth mindset, and set priorities for building skills and overcoming barriers.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "8",
+          "title": "Beliefs, values, and reflection",
+          "summary": "Identify one's own beliefs and values, compare them with others', and reflect on whether behavior matches them.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "9",
+          "title": "Family, culture, and identity",
+          "summary": "Understand how family, culture, and community roles shape identity, thoughts, and actions, and how one's beliefs affect growth.",
+          "gradeBand": "PK-adult"
+        },
+        {
+          "code": "10",
+          "title": "Setting and tracking goals",
+          "summary": "Set realistic personal and academic goals, monitor progress, and adjust plans, extending to group goals in later grades.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "11",
+          "title": "Persistence and learning from setbacks",
+          "summary": "Try new things, keep going after setbacks, spot barriers and supports, and show perseverance through adversity.",
+          "gradeBand": "PK-adult"
+        },
+        {
+          "code": "12",
+          "title": "Perspective-taking and respect for viewpoints",
+          "summary": "Understand and respect other people's points of view, express one's own, and use conversation to learn others' perspectives.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "13",
+          "title": "Respecting family, culture, and community",
+          "summary": "Find commonalities, build relationships across groups, and support everyone's right to express family, culture, and community identity.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "14",
+          "title": "Difference, bias, and discrimination",
+          "summary": "Respect individual differences, understand how stereotypes harm, identify discrimination, and assess personal bias.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "15",
+          "title": "Building healthy relationships",
+          "summary": "Form and keep healthy relationships, recognize the costs of unhealthy ones, and use boundaries and warning signs to avoid them.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "16",
+          "title": "Communication and assertiveness",
+          "summary": "Start conversations, listen, and communicate clearly, building to assertive communication, including refusals, that meets needs without harming others.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "17",
+          "title": "Adapting to and giving feedback",
+          "summary": "Adapt behavior to adult direction, peer feedback, and environmental cues, and accept and later offer constructive feedback.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "18",
+          "title": "Cooperation and teamwork",
+          "summary": "Take part in cooperative play and group work, set shared goals, overcome disagreements, and recognize each member's contribution.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "19",
+          "title": "Conflict resolution",
+          "summary": "Communicate needs in conflict, understand others' perspectives and causes, apply negotiation and resolution skills, and reflect on one's own role.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "20",
+          "title": "Making responsible choices",
+          "summary": "Recognize choices, generate options, weigh consequences for oneself and others, and apply a systematic decision process with ethical and safety factors.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "21",
+          "title": "Social norms and expectations",
+          "summary": "Follow group rules and school expectations, and understand how social norms vary by setting and culture and are shaped by public opinion.",
+          "gradeBand": "PK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "22",
+          "title": "Personal health and safety",
+          "summary": "Understand safety rules, describe ways to stay safe, use refusal and negotiation skills against unwanted pressure, and protect personal and community health.",
+          "gradeBand": "PK-adult"
+        },
+        {
+          "code": "23",
+          "title": "Seeking help and self-advocacy",
+          "summary": "Learn to get help from trusted adults, offer help to others, and advocate for one's own and others' needs using support networks.",
+          "gradeBand": "PK-adult"
+        },
+        {
+          "code": "24",
+          "title": "Contributing to the community",
+          "summary": "Notice classroom, school, and community needs, plan actions that address them, and later engage in civic activity to improve communities.",
+          "gradeBand": "PK-adult"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "1",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" The lesson has students recognise when emotions start driving behaviour and choose a response, which is the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "1",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (tagged self-awareness). FNE's catalog description: \"Notice real cues in a scene, then pick every feeling that plausibly fits.\" Covers naming what someone feels from real cues; it does not by itself connect those feelings to the player's own actions.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names understanding and naming emotions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "2",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches explaining feelings and needs without blame.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "2",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (tagged self-management). FNE's catalog description: \"Listen to a frustrating moment, then pick what would help you feel calm.\" Practises choosing a healthy way to handle frustration.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "2",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "3",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Calm Is A Super Power\" (series: Emotional Strength; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that calm is strength under control. They will learn to identify situations that may trigger quick reactions, practice habits that support self-control, and recognize how calm responses can improve decisions, relationships, and daily ...\" The lesson teaches spotting triggers and practising habits that interrupt impulsive reactions, matching the self-regulation skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Calm Is A Super Power - Lesson Plan 8 - 31 - #116 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "3",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Teaches a short pause-and-reset routine before responding, matching the skill of managing emotions and behaviour.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "3",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (tagged self-management). FNE's catalog description: \"Listen to a frustrating moment, then pick what would help you feel calm.\" Students pick what would help them calm down after a frustrating moment, which practises the same strategy-choosing skill.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "3",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "4",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Slow Down to Think Clearly\" (series: Clarity & Focus; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that slowing down is not weakness; it is wisdom. Students will learn how pausing, breathing, resetting, and choosing a steady pace can help them make better decisions, protect their peace, and improve focus.\" Teaches pausing, breathing and choosing a steady pace to improve focus.",
+      "target": {
+        "type": "curriculum",
+        "title": "Slow Down to Think Clearly - Lesson Plan 4 - 17 - #16_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "5",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened to someone and choose the kind response, which practises noticing another person's experience. Limit: Everyday kindness scenarios; does not teach perspective-taking across cultures or backgrounds.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "5",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" The cycle includes understanding the impact of a situation on others before choosing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "5",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "6",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (tagged self-awareness). FNE's catalog description: \"Notice real cues in a scene, then pick every feeling that plausibly fits.\" Students read real cues in a scene to name what someone plausibly feels.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "6",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened and choose the kind response.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "7",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" The lesson frames a mistake as information about what to practise next and treats owning it as part of growth, the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "7",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Trust Your Growth\" (series: Confidence & Courage; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that growth does not always happen quickly or dramatically. They will learn to recognize progress, avoid comparison, respect small steps, and build confidence by trusting what is being developed inside them.\" Teaches recognising progress and building confidence from small steps.",
+      "target": {
+        "type": "curriculum",
+        "title": "Trust Your Growth - Lesson Plan 5 - 1 - #30_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "7",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names growth mindset. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "8",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Carry Yesterday’s Growth Forward\" (series: Strength Through Consistency; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain how reflection supports growth, identify one useful lesson from a recent experience, and choose one present action that applies that learning in a constructive way.\" Turns reflection on a recent experience into one present action; supports reviewing and adjusting.",
+      "target": {
+        "type": "curriculum",
+        "title": "Carry Yesterday’s Growth Forward - Lesson Plan 9 - 8 - #122 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "10",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a skill to strengthen, track it and adjust with feedback, which is goal-setting and monitoring. Limit: Goals are personal habits; it does not cover career or post-graduation planning.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "10",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Carry Yesterday’s Growth Forward\" (series: Strength Through Consistency; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain how reflection supports growth, identify one useful lesson from a recent experience, and choose one present action that applies that learning in a constructive way.\" Turns reflection on a recent experience into one present action; supports reviewing and adjusting.",
+      "target": {
+        "type": "curriculum",
+        "title": "Carry Yesterday’s Growth Forward - Lesson Plan 9 - 8 - #122 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "10",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities.\" The theme names setting goals. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "11",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Covers persevering through repeated practice.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "11",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" The lesson frames a mistake as information about what to practise next and treats owning it as part of growth, the same skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "11",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks.\" The theme names persistence and bouncing back. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "12",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Students listen to what happened to someone and choose the kind response, which practises noticing another person's experience. Limit: Everyday kindness scenarios; does not teach perspective-taking across cultures or backgrounds.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "12",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and ...\" Teaches letting others finish and asking respectful questions.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "12",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Does not address viewpoints rooted in differing cultures or identities.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "15",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Respect Starts with How You Treat People\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respect is not only something they want from others. It is something they practice through how they speak, listen, respond, and treat people. Students will learn that respectful choices help build stronger character and healthier ...\" Teaches practising respect in how one speaks, listens and responds, and links it to healthier relationships. Limit: Does not address differences among cultures, languages or abilities.",
+      "target": {
+        "type": "curriculum",
+        "title": "Respect Starts with How You Treat People - Lesson Plan: 6 - 1 - #51_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "15",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Be Someone Others Can Trust\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that trust is earned through dependable choices. They will learn that telling the truth, keeping their word, admitting mistakes, doing their part, and treating others with respect help build character that others can count on.\" Teaches dependable choices that build trust in relationships. Limit: Does not address differences among cultures, languages or abilities.",
+      "target": {
+        "type": "curriculum",
+        "title": "Be Someone Others Can Trust - Lesson Plan: 6 - 5 - #55 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "15",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names building healthy relationships. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "16",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "16",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and ...\" Teaches letting others finish, asking respectful questions and responding with care, which is the listening half of the skill.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "16",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Choose Peace Without Losing Strength\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will distinguish peace from passivity, identify one calm and assertive response to conflict, and explain when respectful help-seeking protects safety, boundaries, or a fair solution.\" Teaches a calm, assertive response to conflict.",
+      "target": {
+        "type": "curriculum",
+        "title": "Choose Peace Without Losing Strength - Lesson Plan 10 - 20 - #152 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "16",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names expressing yourself clearly. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "17",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students use tracking and feedback to improve practice. Limit: Receiving feedback; giving feedback is not a stated objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "18",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Share the Credit\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that sharing credit helps build trust, respect, humility, and stronger teamwork. They will learn that every helpful part matters, including listening, encouraging, practicing, helping quietly, offering ideas, and doing their part.\" Teaches that helping, listening and doing one's part all count toward a team's success. Limit: Classroom-scale teamwork; not structured collaborative problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Share the Credit - Lesson Plan: 6 - 23 - #67 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "18",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Encourage the People Around You\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that encouragement is a respectful choice that helps strengthen classrooms, teams, families, and communities. They will learn to notice effort, speak with kindness, remind others they can keep going, and use their words to build ...\" Teaches encouraging others so classrooms and teams grow stronger. Limit: Encouragement rather than shared problem-solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Encourage the People Around You - Lesson Plan: 6 - 24 - #68 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "18",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part for a team or community. Limit: Small-scale classroom and team contribution.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "18",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Leadership & Responsibility\" (programs.html). FNE's published description: \"What leadership looks like in a classroom, on a team, and in a community. Students explore ownership, initiative, accountability, and what it means to lead from any position.\" The theme names working as a team. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "19",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Students spot the signs a conflict is escalating and choose a respectful response that moves toward an answer.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "19",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Choose Peace Without Losing Strength\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will distinguish peace from passivity, identify one calm and assertive response to conflict, and explain when respectful help-seeking protects safety, boundaries, or a fair solution.\" Students practise a calm, assertive response to conflict and learn when respectful help-seeking protects a fair solution.",
+      "target": {
+        "type": "curriculum",
+        "title": "Choose Peace Without Losing Strength - Lesson Plan 10 - 20 - #152 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "19",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Repair Your Words\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that repairing their words is a responsible communication skill. They will learn to notice when their tone, timing, or words are not helpful, apologize when needed, try again with better words, and use communication to make things ...\" Teaches noticing unhelpful tone, apologising and trying again with better words; supports repairing a conflict.",
+      "target": {
+        "type": "curriculum",
+        "title": "Repair Your Words - Lesson Plan: 6 - 11 - #59 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "19",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names navigating conflict. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "20",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "20",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Before You Act\" (series: Self-Control & Daily Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that wise choices often begin with a pause. They will learn that self-control means slowing down long enough to think clearly, notice consequences, manage pressure, and choose what is right instead of reacting too quickly.\" Teaches pausing to notice consequences and manage pressure before choosing.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Before You Act - Lesson Plan 7 - 6 - #76_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "20",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a real Issues-to-Answers cycle on a peer situation - recognize, understand impact, consider options, choose, and reflect.\" Walks players through recognising a peer situation, understanding impact, weighing options, choosing and reflecting, which is a full decision-making cycle.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "20",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the responsible thing to do.\" Single-choice practice at picking the responsible action; shorter than a full decision process.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "20",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences.\" The theme names real-life decisions and consequences. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "22",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Know Your Limits\" (series: Healthy Boundaries; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that knowing their limits is not weakness. They will learn that paying attention to stress, tiredness, overload, and the need for help or rest can help them make stronger, healthier decisions.\" Students attend to stress, tiredness and overload and the need for rest. Limit: Wellness habits; physical safety is not a stated objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Know Your Limits - Lesson Plan 5 - 8 - #35_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "22",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Wellness & Self-Care\" (programs.html). FNE's published description: \"Physical and mental wellness, stress management, healthy habits, and taking care of yourself so you can show up for others.\" The theme names healthy habits. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "23",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Ask for Help the Right Way\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that needing help does not mean they are weak. It means they are honest enough to recognize when they need support. Students will learn to ask clearly, speak respectfully, listen carefully, and keep trying instead of shutting down or ...\" Teaches asking clearly and respectfully and keeping going rather than shutting down, which includes seeking help.",
+      "target": {
+        "type": "curriculum",
+        "title": "Ask for Help the Right Way - Lesson Plan: 6 - 9 - #57_MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "23",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities.\" The theme names asking for help. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "24",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part to strengthen a class, team or community. Limit: Small-scale classroom and team contribution; no civic action or advocacy.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "24",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Make Others Better Around You\" (series: Leadership Through Example; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong leadership does not only help the self. They will learn that real influence helps the whole group become better by encouraging, strengthening, respecting, and supporting the people around them.\" Frames leadership as encouraging and supporting the group. Limit: Does not address organised service or community change.",
+      "target": {
+        "type": "curriculum",
+        "title": "Make Others Better Around You - Lesson Plan 7 - 24 - #90 - MS"
+      }
+    },
+    {
+      "framework": "Wisconsin PK-Adult Social and Emotional Learning Competencies",
+      "itemCode": "24",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Leadership & Responsibility\" (programs.html). FNE's published description: \"What leadership looks like in a classroom, on a team, and in a community. Students explore ownership, initiative, accountability, and what it means to lead from any position.\" The theme names leading in a class, team and community. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    }
+  ]
+}

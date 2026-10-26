@@ -332,6 +332,25 @@ async function verifyAlignment(id, adminId) {
   if (!(await targetExists(a.target_type, a.target_id))) throw bad('The FNE content this points at no longer exists');
   await pool.query(`UPDATE standards_alignments SET review_status = 'verified', reviewed_by = ?, reviewed_at = ? WHERE id = ?`, [adminId, nowStr(), id]);
 }
+
+// Verify every DRAFT alignment under one standard in one step (the reviewer has read them
+// all). Same rule as verifyAlignment: the framework must already be verified, and the FNE
+// content each one points at must still exist -- those that don't are skipped and counted.
+async function verifyAlignmentsForItem(itemId, adminId) {
+  const [[it]] = await pool.query(
+    `SELECT i.id, f.review_status AS fw_status FROM standards_items i JOIN standards_frameworks f ON f.id = i.framework_id WHERE i.id = ?`, [itemId]);
+  if (!it) throw bad('Standard not found', 404);
+  if (it.fw_status !== 'verified') throw bad('Verify the framework first -- alignments can only be verified against a framework that has itself been verified');
+  const [drafts] = await pool.query(`SELECT id, target_type, target_id FROM standards_alignments WHERE item_id = ? AND review_status = 'draft'`, [itemId]);
+  let verified = 0, skipped = 0;
+  for (const a of drafts) {
+    if (!(await targetExists(a.target_type, a.target_id))) { skipped++; continue; }
+    await pool.query(`UPDATE standards_alignments SET review_status = 'verified', reviewed_by = ?, reviewed_at = ? WHERE id = ?`, [adminId, nowStr(), a.id]);
+    verified++;
+  }
+  return { verified, skipped };
+}
+
 async function unverifyAlignment(id) {
   const [r] = await pool.query(`UPDATE standards_alignments SET review_status = 'draft', reviewed_by = NULL, reviewed_at = NULL WHERE id = ?`, [id]);
   if (!r.affectedRows) throw bad('Alignment not found', 404);
@@ -342,6 +361,40 @@ async function unverifyAlignment(id) {
 // =====================================================================================
 
 // ---- PUBLIC: verified rows only, enforced in the SQL itself ------------------------
+
+// ---- lesson families ------------------------------------------------------------------
+// FNE publishes each lesson in elementary, middle, high school and higher-education
+// versions. Their objectives are identical, so an alignment is a claim about the LESSON
+// and it applies to every version. The versions share a title stem ("Pause Before You
+// Escalate"), which is everything before " - Lesson Plan". Higher education is outside
+// K-12 standards, so it is never listed on a state page.
+const LEVELS = {
+  'Elementary School': { key: 'elementary', label: 'Elementary', grades: 'K-5', order: 1 },
+  'Middle School':     { key: 'middle',     label: 'Middle',     grades: '6-8', order: 2 },
+  'High School':       { key: 'high',       label: 'High school', grades: '9-12', order: 3 },
+};
+const lessonStem = (title) => String(title || '').split(/\s*-\s*Lesson Plan/i)[0].trim();
+const likeEscape = (v) => String(v).replace(/[!%_]/g, '!$&');
+
+async function lessonVersionsByStem(stems) {
+  const out = new Map();
+  for (const stem of new Set(stems.filter(Boolean))) {
+    const [rows] = await pool.query(
+      `SELECT c.id, c.title, a.audience FROM curricula c
+       LEFT JOIN curriculum_audiences a ON a.curriculum_id = c.id
+       WHERE c.published = 1 AND c.title LIKE ? ESCAPE '!'`, [likeEscape(stem) + '%']);
+    const seen = new Set(), versions = [];
+    for (const r of rows) {
+      const lvl = LEVELS[r.audience];
+      if (!lvl || lessonStem(r.title) !== stem || seen.has(lvl.key)) continue;
+      seen.add(lvl.key);
+      versions.push({ id: r.id, level: lvl.key, label: lvl.label, grades: lvl.grades, order: lvl.order });
+    }
+    out.set(stem, versions.sort((a, b) => a.order - b.order).map(({ order, ...v }) => v));
+  }
+  return out;
+}
+
 async function getPublicOverview() {
   const [rows] = await pool.query(`SELECT * FROM standards_state_coverage WHERE review_status = 'verified' ORDER BY state_code`);
   const [counts] = await pool.query(
@@ -374,11 +427,14 @@ async function getPublicState(codeIn) {
     const visible = aligns.filter(a => a.target_type === 'program'
       || (a.target_type === 'curriculum' && a.curriculum_title)   // unpublished or deleted lessons never show
       || (a.target_type === 'brain_game' && a.game_name));
+    const versions = await lessonVersionsByStem(visible.filter(a => a.target_type === 'curriculum').map(a => lessonStem(a.curriculum_title)));
     const byItem = {};
     for (const a of visible) {
+      const isLesson = a.target_type === 'curriculum';
       (byItem[a.item_id] = byItem[a.item_id] || []).push({
         targetType: a.target_type, targetId: a.target_id || null,
-        targetTitle: a.target_type === 'program' ? 'Fixer Nation Education program' : (a.curriculum_title || a.game_name),
+        targetTitle: a.target_type === 'program' ? 'Fixer Nation Education program' : (isLesson ? lessonStem(a.curriculum_title) : a.game_name),
+        ...(isLesson ? { versions: versions.get(lessonStem(a.curriculum_title)) || [] } : {}),
         strength: a.strength, rationale: a.rationale,
       });
     }
@@ -434,6 +490,6 @@ module.exports = {
   STATES, SEL_STATUSES, POG_STATUSES, FRAMEWORK_TYPES, CASEL, TARGET_TYPES, STRENGTHS,
   upsertCoverage, verifyCoverage, unverifyCoverage,
   createFramework, updateFramework, deleteFramework, upsertItems, deleteItem, verifyFramework, unverifyFramework,
-  upsertAlignment, deleteAlignment, verifyAlignment, unverifyAlignment,
+  upsertAlignment, deleteAlignment, verifyAlignment, verifyAlignmentsForItem, unverifyAlignment,
   getPublicOverview, getPublicState, getAdminOverview, getAdminState, getAdminFramework,
 };

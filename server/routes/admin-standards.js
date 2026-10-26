@@ -37,6 +37,7 @@ router.post('/frameworks/:id/unverify', wrap(async (req) => { await standards.un
 router.put('/alignments', wrap((req) => standards.upsertAlignment(req.body || {})));
 router.delete('/alignments/:id', wrap(async (req) => { await standards.deleteAlignment(num(req.params.id)); }));
 router.post('/alignments/:id/verify', wrap(async (req) => { await standards.verifyAlignment(num(req.params.id), req.user.userId); }));
+router.post('/items/:id/verify-alignments', wrap((req) => standards.verifyAlignmentsForItem(num(req.params.id), req.user.userId)));
 router.post('/alignments/:id/unverify', wrap(async (req) => { await standards.unverifyAlignment(num(req.params.id)); }));
 
 module.exports = router;

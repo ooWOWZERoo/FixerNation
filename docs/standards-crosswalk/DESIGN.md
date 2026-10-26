@@ -59,6 +59,16 @@ Public endpoints: `GET /api/standards/overview`, `GET /api/standards/states/:cod
 5. Sales one-pager
 6. Remaining states in batches, driven by the coverage tracker
 
+## Grade levels (decided 2026-10-26, with the owner)
+
+FNE publishes every lesson at four levels: elementary (K-5), middle (6-8), high school (9-12) and higher education. For all 142 lesson families the published objective, overview, teacher notes and SEL-alignment text are word-for-word identical across the levels; the owner confirms the versions themselves (video, handout, quiz level) are written for each age group. So:
+
+- **An alignment is a claim about the lesson, made once, and it applies to every version.** It is stored against one version (the middle-school copy) and the public API expands it to the lesson's published K-12 siblings (`lessonVersionsByStem()` in `lib/standards.js`, matched on the title before " - Lesson Plan").
+- **The public page shows "Grade versions: Elementary K-5 / Middle 6-8 / High school 9-12"** as links, with a grade picker. It never claims a per-grade *benchmark* is met, because the published text cannot support that.
+- **Higher education is never shown on a state page** (K-12 standards do not apply to it).
+- **Specificity:** two to four best-fit lessons per standard, not an exhaustive list; the strongest are "direct" only where FNE's stated objective is the same skill.
+- **Verification:** the owner verifies everything. Admin has a "Verify all N draft connections" button per standard (framework must be verified first; deleted targets are skipped).
+
 ## Open items
 
 - **FNE content mapping needs a human who knows the lessons.** FNE lessons carry no competency tags today (only `brain_games` has `casel_competencies`). Alignments must be reviewed by someone who can say "this lesson really teaches that".
