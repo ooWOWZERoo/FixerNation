@@ -6,7 +6,7 @@
     "selSourceUrl": "https://ospi.k12.wa.us/student-success/health-safety/mental-social-behavioral-health/social-and-emotional-learning-sel",
     "pogSourceUrl": "https://sbe.wa.gov/our-work/graduation-requirements/profile-graduate",
     "sourceAccessedOn": "2026-10-26",
-    "notes": "SEL: OSPI's SEL Standards and Benchmarks (6 standards, 17 benchmarks) adopted January 2020, with indicators by grade band. Portrait of a Graduate: Washington calls it the 'Profile of a Graduate' - a guiding vision developed by the Mastery-based Learning Work Group (directed by SSB 5249, 2021) and published by the State Board of Education. The SBE page describes it as a guiding vision to inform policy, not a graduation requirement. Its component list is in a graphic that was NOT read, so no Profile items are loaded yet. Reviewer: confirm 'statewide' fits the Profile's actual status."
+    "notes": "SEL: OSPI's SEL Standards and Benchmarks (6 standards, 17 benchmarks) adopted January 2020, with indicators by grade band. Portrait of a Graduate: Washington calls it the 'Profile of a Graduate' - developed by the Mastery-based Learning Work Group (directed by SSB 5249, 2021) and adopted by the State Board of Education as part of its 2024-2028 strategic plan (per SBE's one-page summary, Jan 2025). SBE describes it as a guiding vision to inform policy and graduation-requirement review, not itself a graduation requirement. Six categories with three attributes each, read from SBE's graphic. Reviewer: confirm 'statewide' fits the Profile's actual status."
   },
   "frameworks": [
     {
@@ -127,6 +127,53 @@
           "code": "6C",
           "title": "Contribute productively to school, workplace and community",
           "summary": "Standard 6, Social Engagement: contribute to the well-being of school, workplace and community.",
+          "gradeBand": "K-12"
+        }
+      ]
+    },
+    {
+      "type": "portrait_of_graduate",
+      "name": "Washington State Profile of a Graduate",
+      "issuingBody": "Washington State Board of Education (developed by the Mastery-based Learning Work Group)",
+      "officialUrl": "https://sbe.wa.gov/our-work/graduation-requirements/profile-graduate",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-10-26",
+      "notes": "Read from SBE's Profile of a Graduate graphic (sbe.wa.gov/sites/default/files/2024-08/POG%20PDF.pdf) and one-page summary (sbe.wa.gov/sites/default/files/2025-01/Profile%20of%20a%20Graduate%20One%20Pager%20-%202025_0.pdf); the one-pager ties the Profile to the purpose of the diploma (RCW 28A.230.700) and the goals of basic education (RCW 28A.150.210). Adoption year left blank: the work group published it in 2021 and the Board adopted it into its 2024-2028 plan. Items are the six categories; each summary lists the three attributes the graphic shows under it.",
+      "items": [
+        {
+          "code": "PG",
+          "title": "Cultivates Personal Growth & Knowledge",
+          "summary": "Attributes: shows confidence; applies learning; sets personally meaningful goals.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "SP",
+          "title": "Solves Problems",
+          "summary": "Attributes: thinks critically; demonstrates resilience; embraces creativity.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "CE",
+          "title": "Communicates Effectively",
+          "summary": "Attributes: works on a team; collaborates; navigates conflict.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "SW",
+          "title": "Sustains Wellness",
+          "summary": "Attributes: cultivates physical and emotional well-being; fosters empathy; builds relationships.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "ED",
+          "title": "Embraces Differences/Diversity",
+          "summary": "Attributes: participates in community; promotes global responsibility; shows cultural competency.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "LS",
+          "title": "Masters Life Skills/Self-agency",
+          "summary": "Attributes: takes initiative; understands financial and digital literacy; accesses resources.",
           "gradeBand": "K-12"
         }
       ]
