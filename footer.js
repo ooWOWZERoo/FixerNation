@@ -58,6 +58,7 @@
             '<li><a href="brain-games.html">Brain Games</a></li>' +
             '<li><a href="social.html">Community</a></li>' +
             '<li><a href="research.html">Research &amp; Alignment</a></li>' +
+            '<li><a href="state-standards.html">State Standards</a></li>' +
             '<li><a href="https://fixernation.org/" target="_blank" rel="noopener">The Positivity Network &#8599;</a>' +
               '<div class="fn-fsub">Health, hope &amp; good news &mdash; from our parent community</div>' +
             '</li>' +

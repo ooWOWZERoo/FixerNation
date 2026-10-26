@@ -72,6 +72,9 @@ function year(value, field) {
 }
 
 // ---- row mappers (camelCase out; reviewer id is admin-only, never public) -----------
+// Notes are written for the FNE reviewer ("confirm against the state's PDF", caveats about sources) and
+// must never reach a public response, even for a verified record.
+const forPublic = ({ notes, ...rest }) => rest;
 const reviewFields = (r) => ({ reviewStatus: r.review_status, reviewedAt: r.reviewed_at || null });
 function coverageOut(r, { admin = false } = {}) {
   return {
@@ -347,7 +350,7 @@ async function getPublicOverview() {
   return {
     verifiedStates: rows.length,
     totalJurisdictions: Object.keys(STATES).length,
-    states: rows.map(r => ({ ...coverageOut(r), verifiedFrameworks: byState[r.state_code] || 0 })),
+    states: rows.map(r => ({ ...forPublic(coverageOut(r)), verifiedFrameworks: byState[r.state_code] || 0 })),
   };
 }
 
@@ -379,9 +382,9 @@ async function getPublicState(codeIn) {
         strength: a.strength, rationale: a.rationale,
       });
     }
-    frameworks.push({ ...frameworkOut(fw), items: items.map(it => ({ ...itemOut(it), alignments: byItem[it.id] || [] })) });
+    frameworks.push({ ...forPublic(frameworkOut(fw)), items: items.map(it => ({ ...itemOut(it), alignments: byItem[it.id] || [] })) });
   }
-  return { state: { code, name: STATES[code] }, coverage: cov ? coverageOut(cov) : null, frameworks };
+  return { state: { code, name: STATES[code] }, coverage: cov ? forPublic(coverageOut(cov)) : null, frameworks };
 }
 
 // ---- ADMIN: everything, with review status ------------------------------------------

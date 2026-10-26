@@ -90,7 +90,7 @@ function reset() {
   db.exec(`INSERT INTO admin_users (id, username) VALUES (1, 'admin')`);
 }
 const today = new Date().toISOString().slice(0, 10);
-const FW = { stateCode: 'IL', type: 'sel_standards', name: 'Illinois SEL Standards', issuingBody: 'Illinois State Board of Education', officialUrl: 'https://example.org/il-sel', gradeSpan: 'K-12', sourceAccessedOn: today };
+const FW = { stateCode: 'IL', type: 'sel_standards', name: 'Illinois SEL Standards', issuingBody: 'Illinois State Board of Education', officialUrl: 'https://example.org/il-sel', gradeSpan: 'K-12', sourceAccessedOn: today, notes: 'reviewer-only-note (framework)' };
 const ITEMS = [
   { code: '1A', title: 'Identify and manage emotions', summary: 'Short paraphrase', gradeBand: 'K-2', caselCompetency: 'self_awareness' },
   { code: '2B', title: 'Recognize others\' perspectives', caselCompetency: 'social_awareness' },
@@ -119,7 +119,7 @@ test('PUBLIC: nothing is visible until verified -- drafts never leak', async () 
 
 test('PUBLIC: verified rows appear; draft alignments stay hidden; no reviewer ids exposed', async () => {
   reset();
-  await admin('PUT', '/coverage/IL', { selStatus: 'k12_standards', pogStatus: 'district_led_only', selSourceUrl: 'https://example.org/a', pogSourceUrl: 'https://example.org/b', sourceAccessedOn: today });
+  await admin('PUT', '/coverage/IL', { selStatus: 'k12_standards', pogStatus: 'district_led_only', selSourceUrl: 'https://example.org/a', pogSourceUrl: 'https://example.org/b', sourceAccessedOn: today, notes: 'reviewer-only-note (coverage)' });
   assert.equal((await admin('POST', '/coverage/IL/verify')).status, 200);
   const { fwId, itemIds } = await seedFramework({ verify: true });
   const a1 = (await admin('PUT', '/alignments', { itemId: itemIds[0], targetType: 'program', strength: 'direct', rationale: 'The Issues-to-Answers method builds emotion identification.' })).json;
@@ -134,6 +134,7 @@ test('PUBLIC: verified rows appear; draft alignments stay hidden; no reviewer id
   assert.equal(byCode['2B'].alignments.length, 0, 'the draft alignment does not');
   assert.equal(byCode['1A'].alignments[0].targetTitle, 'Fixer Nation Education program');
   assert.ok(!/reviewedBy|reviewed_by/.test((await pub('/states/IL')).raw), 'reviewer identity is admin-only');
+  assert.ok(!/reviewer-only-note/.test((await pub('/states/IL')).raw + (await pub('/overview')).raw), 'reviewer notes never reach a public response');
   assert.equal((await pub('/overview')).json.verifiedStates, 1);
   assert.equal((await pub('/overview')).json.states[0].verifiedFrameworks, 1);
   assert.ok(fwId);

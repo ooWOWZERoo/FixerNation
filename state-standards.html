@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - State SEL Standards &amp; Portrait of a Graduate</title>
+<meta name="description" content="See how Fixer Nation lessons and games connect to your state's social-emotional learning standards and Portrait of a Graduate. Every entry is checked against the state's own documents.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --line:rgba(22,79,74,0.14); --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 32px;}
+  .eyebrow{display:inline-flex; align-items:center; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); background:rgba(242,107,77,0.1); padding:8px 16px; border-radius:999px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; padding:14px 26px; border-radius:999px; font-weight:700; font-size:14.5px; cursor:pointer; border:none; background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55); transition:transform .18s ease;}
+  .btn:hover{transform:translateY(-2px); background:var(--coral-dark);}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+  :focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+
+  .hero{background:linear-gradient(135deg, var(--teal-dark) 0%, #1a6b63 100%); padding:84px 32px 80px;}
+  .hero-inner{max-width:780px; margin:0 auto; text-align:center;}
+  .hero-inner .eyebrow{background:rgba(255,255,255,0.15); color:#F6D9C3; margin-bottom:20px;}
+  .hero-inner h1{font-size:36px; color:#fff; line-height:1.14; margin-bottom:16px;}
+  .hero-inner p{font-size:16px; color:rgba(255,255,255,0.84); line-height:1.7; max-width:640px; margin:0 auto;}
+
+  .notice{background:#fff; border-left:4px solid var(--gold); border-radius:0 var(--radius-md) var(--radius-md) 0; padding:20px 26px; margin:36px auto 0; box-shadow:0 8px 20px -12px rgba(22,79,74,0.18); font-size:14.5px; line-height:1.65;}
+
+  .picker-section{padding:40px 0 8px;}
+  .picker-row{display:flex; flex-wrap:wrap; gap:14px 24px; align-items:flex-end; justify-content:space-between;}
+  .picker-row label{display:block; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;}
+  .picker-row select{min-width:260px; padding:12px 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font:600 15px 'Plus Jakarta Sans',sans-serif; color:var(--ink);}
+  .progress{font-size:14px; color:var(--ink-soft);}
+  .progress strong{color:var(--teal-dark);}
+
+  .empty{background:var(--teal-dark); color:#fff; border-radius:var(--radius-md); padding:44px 40px; margin:28px auto 0; text-align:center;}
+  .empty h2{color:#fff; font-size:26px; margin-bottom:10px;}
+  .empty p{color:rgba(255,255,255,0.82); max-width:520px; margin:0 auto 22px;}
+  .error{background:#fff; border:1px solid var(--coral); border-radius:var(--radius-md); padding:20px 26px; margin-top:28px; color:var(--ink);}
+
+  .state-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-top:28px;}
+  .state-btn{background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; text-align:left; cursor:pointer; font:600 15px 'Plus Jakarta Sans',sans-serif; color:var(--teal-dark); transition:box-shadow .18s ease, transform .18s ease;}
+  .state-btn:hover{box-shadow:var(--shadow); transform:translateY(-2px);}
+  .state-btn small{display:block; font-weight:500; font-size:12px; color:var(--ink-soft); margin-top:2px;}
+
+  .state-head{margin:36px 0 8px;}
+  .state-head h2{font-size:34px;}
+  .checked{font-size:14px; color:var(--ink-soft); margin-top:6px;}
+  .coverage{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin:22px 0 8px;}
+  .cov-card{background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 24px -16px rgba(22,79,74,0.2);}
+  .cov-card .k{font-size:11.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--coral-dark);}
+  .cov-card .v{font-family:'Fraunces',serif; font-size:19px; color:var(--teal-dark); margin:4px 0 6px;}
+  .cov-card a{font-size:13.5px; font-weight:600; color:var(--teal); text-decoration:underline; text-underline-offset:3px;}
+
+  .legend{font-size:13.5px; color:var(--ink-soft); background:var(--cream-soft); border-radius:12px; padding:14px 18px; margin:22px 0 6px;}
+  .filter{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; margin:12px 0 0; color:var(--teal-dark);}
+  .filter input{width:18px; height:18px; accent-color:var(--teal);}
+
+  .framework{margin-top:42px;}
+  .framework h3{font-size:25px;}
+  .fw-meta{font-size:14px; color:var(--ink-soft); margin:6px 0 18px;}
+  .fw-meta a{color:var(--teal); font-weight:700; text-decoration:underline; text-underline-offset:3px;}
+
+  .std{background:#fff; border-radius:16px; padding:20px 24px; margin-bottom:14px; box-shadow:0 10px 24px -18px rgba(22,79,74,0.22);}
+  .std-top{display:flex; flex-wrap:wrap; gap:8px 12px; align-items:baseline;}
+  .code{font-family:'Fraunces',serif; font-weight:700; font-size:15px; color:var(--coral-dark); min-width:34px;}
+  .std h4{font-size:18px; flex:1 1 320px;}
+  .pill{font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:999px; background:rgba(22,79,74,0.08); color:var(--teal-dark); white-space:nowrap;}
+  .std p.sum{font-size:14.5px; color:var(--ink-soft); margin:8px 0 0 46px;}
+  details.links{margin:14px 0 0 46px;}
+  details.links summary{cursor:pointer; font-size:14px; font-weight:700; color:var(--teal-dark);}
+  .none{font-size:13.5px; color:var(--ink-soft); margin:12px 0 0 46px; font-style:italic;}
+  .al{border-top:1px solid var(--line); padding:12px 0 2px; margin-top:10px;}
+  .al:first-of-type{margin-top:12px;}
+  .al-top{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;}
+  .al-top .t{font-weight:700; font-size:14.5px; color:var(--teal-dark);}
+  .al-top a.t{text-decoration:underline; text-underline-offset:3px;}
+  .badge{font-size:11px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; padding:3px 10px; border-radius:999px;}
+  .badge.direct{background:var(--teal); color:#fff;}
+  .badge.supporting{background:rgba(235,166,87,0.28); color:#7a4a0a;}
+  .kind{font-size:12.5px; color:var(--ink-soft);}
+  .al p{font-size:13.5px; color:var(--ink); margin:6px 0 8px; line-height:1.6;}
+
+  .foot-note{font-size:13.5px; color:var(--ink-soft); margin:46px 0 72px; text-align:center;}
+  .foot-note a{color:var(--teal-dark); font-weight:700; text-decoration:underline; text-underline-offset:3px;}
+  .sr-only{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;}
+
+  @media(max-width:700px){
+    .wrap{padding:0 20px;} .hero{padding:68px 20px 62px;} .hero-inner h1{font-size:28px;}
+    .picker-row select{min-width:0; width:100%;} .picker-row > div{flex:1 1 100%;}
+    .std{padding:18px 18px;} .std p.sum,details.links,.none{margin-left:0;} .empty{padding:32px 22px;}
+  }
+  @media print{
+    header,footer,.picker-section,.filter,.fn-auth-modal-overlay{display:none !important;}
+    body{background:#fff;} details.links{display:block;} details.links > summary{display:none;}
+    details.links:not([open]) > *{display:block;}
+    .std{box-shadow:none; border:1px solid #ccc; break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+
+<header></header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">State standards</span>
+    <h1>How Fixer Nation lines up with your state's SEL standards and Portrait of a Graduate</h1>
+    <p>Pick a state to see its social-emotional learning standards or graduate profile, and which Fixer Nation lessons and games connect to each one. Our team checked every entry here against the state's own documents.</p>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="notice">
+    <strong>Please read:</strong> This is Fixer Nation's own mapping of its lessons and games to each state's published framework. Neither a state education agency nor CASEL has reviewed or endorsed it, and neither has certified it. Each standard gets a short summary and a link to the official document, which is always the source of truth.
+  </div>
+
+  <section class="picker-section" aria-labelledby="pickerLabel">
+    <div class="picker-row">
+      <div>
+        <label id="pickerLabel" for="statePicker">Choose a state</label>
+        <select id="statePicker" disabled><option value="">Loading...</option></select>
+      </div>
+      <p class="progress" id="progress" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <div id="app" aria-live="polite"></div>
+
+  <p class="foot-note">Questions about a standard or a connection? <a href="contact.html">Contact us</a>.</p>
+</main>
+
+<footer></footer>
+
+<!-- Log In / Sign Up modal -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">&#x2715;</button>
+    </div>
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthOAuthRow">
+      <a href="#" onclick="fnAuthStartMicrosoft(); return false;" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:11px; border-radius:999px; border:1px solid rgba(22,79,74,0.18); background:#fff; color:#2A2420; font-weight:600; font-size:13.5px; text-decoration:none; box-sizing:border-box;">
+        <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+        Continue with Microsoft
+      </a>
+      <div style="display:flex; align-items:center; gap:10px; margin:14px 0;"><div style="flex:1; height:1px; background:rgba(22,79,74,0.12);"></div><span style="font-size:11.5px; color:#B8AFA6; font-weight:600;">OR</span><div style="flex:1; height:1px; background:rgba(22,79,74,0.12);"></div></div>
+    </div>
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">&#8592; Back to Log In</a></div>
+    </div>
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=15"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=6"></script>
+<script>
+(function () {
+  var app = document.getElementById('app');
+  var picker = document.getElementById('statePicker');
+  var progress = document.getElementById('progress');
+
+  var SEL_LABEL = {
+    k12_standards: 'Statewide K-12 SEL standards', prek_only: 'SEL standards for pre-K only',
+    guidance_only: 'SEL guidance, not standards', none: 'No state SEL standards found', unknown: 'Not yet determined'
+  };
+  var POG_LABEL = {
+    statewide: 'A statewide Portrait of a Graduate', state_led_in_progress: 'A statewide Portrait of a Graduate is in development',
+    district_led_only: 'Portraits of a Graduate are set by individual districts', none: 'No Portrait of a Graduate found', unknown: 'Not yet determined'
+  };
+  var CASEL_LABEL = {
+    self_awareness: 'Self-awareness', self_management: 'Self-management', social_awareness: 'Social awareness',
+    relationship_skills: 'Relationship skills', responsible_decision_making: 'Responsible decision-making'
+  };
+  var KIND_LABEL = { program: 'Program', curriculum: 'Lesson', brain_game: 'Game' };
+  var STRENGTH_LABEL = { direct: 'Direct match', supporting: 'Supporting connection' };
+
+  var esc = fnEscape;
+  function safeHttps(u) { return typeof u === 'string' && /^https:\/\//i.test(u) ? u : null; }
+  function link(u, text) { var s = safeHttps(u); return s ? '<a href="' + esc(s) + '" target="_blank" rel="noopener noreferrer">' + esc(text) + '</a>' : ''; }
+  function niceDate(d) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+    if (!m) return '';
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  }
+  function getJson(url) {
+    return fetch(url, { credentials: 'include' }).then(function (r) {
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+  function showError() {
+    app.innerHTML = '<div class="error" role="alert">We couldn\'t load this page. Please refresh, or <a href="contact.html" style="text-decoration:underline;">contact us</a> if it keeps happening.</div>';
+  }
+
+  function renderOverview(ov) {
+    var n = ov.verifiedStates, total = ov.totalJurisdictions;
+    progress.innerHTML = '<strong>' + esc(n) + '</strong> of ' + esc(total) + ' jurisdictions reviewed so far. We add a state once our team finishes checking it.';
+    if (!n) {
+      picker.innerHTML = '<option value="">No states yet</option>';
+      app.innerHTML = '<div class="empty"><h2>We\'re still reviewing our first states.</h2><p>Check back soon. If one state matters most to you, tell us and we\'ll move it up the list.</p><a class="btn" href="contact.html">Tell us your state</a></div>';
+      return;
+    }
+    picker.disabled = false;
+    picker.innerHTML = '<option value="">Select...</option>' + ov.states.map(function (s) {
+      return '<option value="' + esc(s.stateCode) + '">' + esc(s.stateName) + '</option>';
+    }).join('');
+    var grid = ov.states.map(function (s) {
+      var f = s.verifiedFrameworks;
+      return '<button type="button" class="state-btn" data-state="' + esc(s.stateCode) + '">' + esc(s.stateName) +
+        '<small>' + esc(f) + (f === 1 ? ' framework' : ' frameworks') + '</small></button>';
+    }).join('');
+    app.innerHTML = '<div class="state-grid">' + grid + '</div>';
+  }
+
+  function alignmentHtml(a) {
+    var title = esc(a.targetTitle);
+    var t;
+    if (a.targetType === 'curriculum' && a.targetId) t = '<a class="t" href="lesson-detail.html?id=' + encodeURIComponent(a.targetId) + '">' + title + '</a>';
+    else if (a.targetType === 'program') t = '<a class="t" href="programs.html">' + title + '</a>';
+    else t = '<span class="t">' + title + '</span>';
+    return '<div class="al"><div class="al-top"><span class="badge ' + (a.strength === 'direct' ? 'direct' : 'supporting') + '">' +
+      esc(STRENGTH_LABEL[a.strength] || a.strength) + '</span>' + t + '<span class="kind">' + esc(KIND_LABEL[a.targetType] || '') + '</span></div>' +
+      '<p>' + esc(a.rationale) + '</p></div>';
+  }
+
+  function standardHtml(it) {
+    var als = it.alignments || [];
+    var h = '<article class="std" data-has="' + (als.length ? '1' : '0') + '"><div class="std-top"><span class="code">' + esc(it.code) + '</span><h4>' + esc(it.title) + '</h4>';
+    if (it.gradeBand) h += '<span class="pill">Grades ' + esc(it.gradeBand) + '</span>';
+    if (it.caselCompetency && CASEL_LABEL[it.caselCompetency]) h += '<span class="pill">' + esc(CASEL_LABEL[it.caselCompetency]) + '</span>';
+    h += '</div>';
+    if (it.summary) h += '<p class="sum">' + esc(it.summary) + '</p>';
+    if (als.length) {
+      h += '<details class="links"><summary>Where Fixer Nation connects (' + als.length + ')</summary>' + als.map(alignmentHtml).join('') + '</details>';
+    } else {
+      h += '<p class="none">We haven\'t reviewed a Fixer Nation connection for this standard yet.</p>';
+    }
+    return h + '</article>';
+  }
+
+  function renderState(d) {
+    var cov = d.coverage, fws = d.frameworks || [];
+    var date = (cov && cov.sourceAccessedOn) || (fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop());
+    var h = '<div class="state-head"><h2>' + esc(d.state.name) + '</h2>' + (date ? '<p class="checked">Checked against the state\'s documents on ' + esc(niceDate(date)) + '.</p>' : '') + '</div>';
+    if (cov) {
+      h += '<div class="coverage">' +
+        '<div class="cov-card"><div class="k">Social-emotional learning</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div>' + link(cov.selSourceUrl, 'Where we checked') + '</div>' +
+        '<div class="cov-card"><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div>' + link(cov.pogSourceUrl, 'Where we checked') + '</div></div>';
+    }
+    if (fws.length) {
+      h += '<div class="legend"><strong>How to read the connections.</strong> A direct match means the lesson or game teaches the same skill the standard names. A supporting connection means it reinforces part of the standard.</div>' +
+        '<label class="filter"><input type="checkbox" id="onlyLinked"> Show only standards with a Fixer Nation connection</label>';
+    }
+    fws.forEach(function (fw) {
+      var meta = [];
+      if (fw.issuingBody) meta.push('Issued by ' + esc(fw.issuingBody));
+      if (fw.adoptedYear) meta.push('Adopted ' + esc(fw.adoptedYear));
+      if (fw.gradeSpan) meta.push('Grades ' + esc(fw.gradeSpan));
+      var l = link(fw.officialUrl, 'Read the official document');
+      if (l) meta.push(l);
+      h += '<section class="framework"><h3>' + esc(fw.name) + '</h3><p class="fw-meta">' + meta.join(' &middot; ') + '</p>' +
+        (fw.items || []).map(standardHtml).join('') + '</section>';
+    });
+    app.innerHTML = h;
+    document.title = d.state.name + ' - State SEL Standards & Portrait of a Graduate - Fixer Nation Education';
+    var cb = document.getElementById('onlyLinked');
+    if (cb) cb.addEventListener('change', function () {
+      var rows = app.querySelectorAll('.std');
+      for (var i = 0; i < rows.length; i++) rows[i].style.display = (cb.checked && rows[i].getAttribute('data-has') !== '1') ? 'none' : '';
+    });
+  }
+
+  var overview = null;
+  function loadState(code, push) {
+    code = String(code || '').toUpperCase();
+    if (!/^[A-Z]{2}$/.test(code)) { picker.value = ''; if (overview) renderOverview(overview); return Promise.resolve(); }
+    picker.value = code;
+    if (push) history.pushState({ s: code }, '', '?state=' + encodeURIComponent(code));
+    return getJson('/api/standards/states/' + encodeURIComponent(code)).then(function (d) {
+      if (!d) { app.innerHTML = '<div class="empty"><h2>We haven\'t finished reviewing that state yet.</h2><p>Pick another state above, or tell us this one matters to you.</p><a class="btn" href="contact.html">Tell us your state</a></div>'; return; }
+      renderState(d);
+      window.scrollTo({ top: document.querySelector('.picker-section').offsetTop - 80, behavior: 'smooth' });
+    }).catch(showError);
+  }
+
+  picker.addEventListener('change', function () { if (picker.value) loadState(picker.value, true); else { history.pushState({}, '', location.pathname); if (overview) renderOverview(overview); } });
+  app.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.state-btn');
+    if (b) loadState(b.getAttribute('data-state'), true);
+  });
+  window.addEventListener('popstate', function () {
+    var s = new URLSearchParams(location.search).get('state');
+    if (s) loadState(s, false); else { picker.value = ''; if (overview) renderOverview(overview); }
+  });
+
+  getJson('/api/standards/overview').then(function (ov) {
+    overview = ov || { verifiedStates: 0, totalJurisdictions: 51, states: [] };
+    renderOverview(overview);
+    var s = new URLSearchParams(location.search).get('state');
+    if (s) loadState(s, false);
+  }).catch(function () { picker.innerHTML = '<option value="">Unavailable</option>'; showError(); });
+})();
+</script>
+</body>
+</html>
