@@ -67,6 +67,10 @@ rsync -a --delete \
   --exclude='server' \
   --exclude='api' \
   --exclude='uploads' \
+  --exclude='tests' \
+  --exclude='docs' \
+  --exclude='.interface-design' \
+  --exclude='mission-control-static-files.txt' \
   "$REPO/" \
   ~/public_html/
 echo "  Done."

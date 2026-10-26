@@ -4,12 +4,12 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Repo internals and server source must never be reachable over the web, even if
 # a stray copy lands in public_html (the deploy's rsync has historically left old
-# copies behind: ads.db, deploy.sh, tests/, and a whole server/ tree were all
-# being served). Uses rewrite rules on purpose -- they're already proven to work
+# copies behind: ads.db, deploy.sh, tests/, a whole server/ tree, and old CLAUDE.md /
+# PROJECT.md / CHANGELOG.md copies were all being served). Uses rewrite rules on purpose -- they're already proven to work
 # on this host, unlike newer directive types.
 RewriteRule ^(server|tests|docs|\.interface-design|\.git)(/|$) - [F,L]
-RewriteRule ^(deploy\.sh|ads\.db|db\.sqlite3|package(-lock)?\.json)$ - [F,L]
-RewriteRule \.(sql|sqlite3?|db|bak|log|env)$ - [F,L]
+RewriteRule ^(deploy\.sh|ads\.db|db\.sqlite3|package(-lock)?\.json|mission-control-static-files\.txt)$ - [F,L]
+RewriteRule \.(md|sql|sqlite3?|db|bak|log|env)$ - [NC,F,L]
 
 LimitRequestBody 268435456
 
