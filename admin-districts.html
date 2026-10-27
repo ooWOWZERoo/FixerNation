@@ -131,6 +131,14 @@
           <select id="addSchoolSelect"><option value="">Select a school to add…</option></select>
           <button class="a-btn a-btn-outline a-btn-sm" id="addSchoolBtn" onclick="doAddSchool()">Add</button>
         </div>
+        <div style="margin-top:14px;">
+          <label for="addDomainInput" style="font-size:12.5px; font-weight:600;">Add a school with no license yet</label>
+          <div class="manage-add-row">
+            <input type="text" id="addDomainInput" placeholder="school domain" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="255">
+            <button class="a-btn a-btn-outline a-btn-sm" id="addDomainBtn" onclick="doAddDomain()">Add by domain</button>
+          </div>
+          <div class="a-hint">Enter the school's email domain, like oak.example.edu. Once a group license is sold for that exact domain, the school links to that license and everyone on it.</div>
+        </div>
       </div>
 
       <div class="manage-section">
@@ -315,6 +323,7 @@ function openManageModal(id, name) {
   document.getElementById('manageTitle').textContent = 'Manage ' + name;
   document.getElementById('schoolsErr').style.display = 'none';
   document.getElementById('schoolsOk').style.display = 'none';
+  document.getElementById('addDomainInput').value = '';
   document.getElementById('adminsErr').style.display = 'none';
   document.getElementById('adminsSuccess').style.display = 'none';
   document.getElementById('addAdminEmail').value = '';
@@ -344,7 +353,7 @@ async function loadManageSchools() {
       ? detail.schools.map(function (s) {
           var l = s.linkage || {};
           return '<div class="manage-row"><span>' + esc(s.display_name || s.domain) +
-            (s.linkage ? '<div class="a-hint">' + esc(l.licenses + ' licenses · ' + l.schoolAdmins + ' school admins · ' + l.teachers + ' teachers') + '</div>' : '') + '</span>' +
+            (s.linkage ? '<div class="a-hint">' + (l.licenses ? esc(l.licenses + ' licenses · ' + l.schoolAdmins + ' school admins · ' + l.teachers + ' teachers') : 'No licenses yet. It links when a group license is sold for this domain.') + '</div>' : '') + '</span>' +
             '<button class="a-btn a-btn-outline a-btn-sm" onclick="doRemoveSchool(' + s.id + ')">Remove</button></div>';
         }).join('')
       : '<div class="a-hint">No schools assigned yet.</div>';
@@ -371,6 +380,42 @@ function schoolMsg(kind, text) {
   const err = document.getElementById('schoolsErr'), ok = document.getElementById('schoolsOk');
   err.style.display = kind === 'err' ? 'block' : 'none'; ok.style.display = kind === 'ok' ? 'block' : 'none';
   (kind === 'err' ? err : ok).textContent = text || '';
+}
+
+async function doAddDomain() {
+  const input = document.getElementById('addDomainInput');
+  const domain = input.value.trim().replace(/^@/, '').toLowerCase();
+  if (!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(domain)) { schoolMsg('err', 'Enter a domain like oak.example.edu, without http:// or an @.'); return; }
+  const btn = document.getElementById('addDomainBtn');
+  btn.disabled = true; btn.textContent = 'Adding…'; schoolMsg('');
+  try {
+    let confirmSimilar = false;
+    for (;;) {
+      const r = await fetch('/api/admin/districts/' + manageDistrictId + '/schools', {
+        method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assign: true, domain: domain, allowUnlicensed: true, confirmSimilar: confirmSimilar }),
+      });
+      if (fnHandleUnauthorized(r)) return;
+      const d = await r.json();
+      if (r.status === 409 && d.needsConfirm && !confirmSimilar) {
+        if (!confirm(domain + ' looks close to ' + d.similar.join(', ') + '. Add it anyway?')) { schoolMsg('err', d.error); return; }
+        confirmSimilar = true; continue;
+      }
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      const l = d.linkage || {};
+      schoolMsg('ok', l.licenses
+        ? 'Added ' + domain + '. ' + l.licenses + ' license(s) are now part of this district, with ' + l.schoolAdmins + ' school admin(s) and ' + l.teachers + ' teacher(s).'
+        : 'Added ' + domain + '. It has no licenses yet, so nothing else is linked. When a group license is sold for this domain, it links automatically.');
+      input.value = '';
+      await loadManageSchools();
+      loadDistricts();
+      return;
+    }
+  } catch (e) {
+    schoolMsg('err', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add by domain';
+  }
 }
 
 async function doAddSchool() {

@@ -322,6 +322,32 @@ async function unlinkedDomains(q) {
   return rows.map(r => ({ domain: r.domain, licenses: Number(r.licenses) }));
 }
 
+// A school can be added before any license exists (allowUnlicensed). It then has nothing to link to:
+// licenses, school admins and teacher seats all hang off purchases. It links itself later, because
+// routes/newsletter.js createPurchase()/PUT purchase call findOrCreateSchoolId(domain), which finds
+// THIS row by its exact (normalized, lower-case) domain. So the spelling has to be right, and we guard
+// against typos: strict hostname shape, plus a warning when it is close to a domain we already know.
+const isPlausibleDomain = (d) => d.length <= 255 && /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(d);
+
+function editDistance(a, b, cap) {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// Known school domains (school records and licensed purchases) within 2 edits of `domain`.
+async function similarDomains(domain) {
+  const [rows] = await pool.query(
+    `SELECT LOWER(TRIM(domain)) AS d FROM schools
+     UNION SELECT LOWER(TRIM(school_domain)) AS d FROM purchases WHERE product_type = 'group_license' AND school_domain IS NOT NULL AND TRIM(school_domain) <> ''`);
+  return [...new Set(rows.map(r => r.d))].filter(d => d && d !== domain && editDistance(domain, d, 2) <= 2).sort().slice(0, 5);
+}
+
 // Find the schools row for a domain, or create it. Returns { id, domain, created }.
 async function findOrCreateSchool(domain) {
   const find = async () => { const [[r]] = await pool.query('SELECT id, domain FROM schools WHERE LOWER(domain) = ?', [domain]); return r; };
@@ -388,7 +414,19 @@ router.put('/:id/schools', requireAuth, async (req, res) => {
     // Only a domain that really has licenses can become a school here, so a typo can't mint an empty school.
     const [[licensed]] = await pool.query(
       `SELECT COUNT(*) AS n FROM purchases WHERE product_type = 'group_license' AND LOWER(TRIM(school_domain)) = ?`, [domain]);
-    if (!Number(licensed.n)) return res.status(404).json({ error: 'No group license was found for that domain' });
+    if (!Number(licensed.n)) {
+      // No license yet. Only an explicit "add it anyway" request gets past this, and only for a well-formed
+      // domain that isn't suspiciously close to one we already know.
+      if (body.allowUnlicensed !== true) return res.status(404).json({ error: 'No group license was found for that domain' });
+      if (!isPlausibleDomain(domain)) return res.status(400).json({ error: 'Enter a domain like oak.example.edu, without http:// or an @.' });
+      const [[known]] = await pool.query('SELECT id FROM schools WHERE LOWER(domain) = ?', [domain]);
+      if (!known && body.confirmSimilar !== true) {
+        const similar = await similarDomains(domain);
+        if (similar.length) {
+          return res.status(409).json({ error: `That domain looks close to one we already have: ${similar.join(', ')}. Check the spelling before you add it.`, needsConfirm: true, similar });
+        }
+      }
+    }
     school = { id: null, domain };
   } else {
     return res.status(400).json({ error: 'schoolId or domain is required' });

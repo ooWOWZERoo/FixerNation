@@ -191,3 +191,58 @@ test('REMOVE: takes the school out of the district and leaves its licenses, admi
   // and it can be added again
   assert.equal((await add(D2, { schoolId: sid })).status, 200);
 });
+
+// ---- a school added before any license exists ---------------------------------------------
+const addEmpty = (districtId, domain, extra = {}) => add(districtId, { domain, allowUnlicensed: true, ...extra });
+
+test('NO LICENSE YET: a school can be added by domain, only on request, and it links nothing it does not have', async () => {
+  reset();
+  const other = purchase('elsewhere.example.edu');
+  assert.equal((await add(D1, { domain: 'cedar.example.edu' })).status, 404, 'without the explicit flag an unlicensed domain is still refused');
+  const r = await addEmpty(D1, ' @Cedar.Example.EDU ');
+  assert.equal(r.status, 200);
+  assert.equal(r.json.createdSchoolRecord, true); assert.equal(r.json.newlyLinkedPurchases, 0);
+  assert.deepEqual(r.json.linkage, { licenses: 0, schoolAdmins: 0, teachers: 0 });
+  const row = q(`SELECT * FROM schools WHERE domain = 'cedar.example.edu'`);
+  assert.equal(row.length, 1, 'stored normalized, so a later purchase finds this exact row'); assert.equal(row[0].district_id, D1);
+  assert.equal(q('SELECT school_id FROM purchases WHERE id = ?', other)[0].school_id, null, 'other schools untouched');
+  const detail = (await call('GET', `/${D1}`)).json;
+  assert.deepEqual(detail.schools.map(s => [s.domain, s.linkage.licenses]), [['cedar.example.edu', 0]]);
+  // once a license exists for the domain, re-adding (or the purchase flow) links it
+  const p = purchase('cedar.example.edu', null);
+  const again = await add(D1, { schoolId: row[0].id });
+  assert.equal(again.json.newlyLinkedPurchases, 1); assert.equal(q('SELECT school_id FROM purchases WHERE id = ?', p)[0].school_id, row[0].id);
+  assert.equal((await addEmpty(D1, 'cedar.example.edu')).status, 200, 'adding the same school twice is harmless');
+  assert.equal(q('SELECT COUNT(*) AS n FROM schools').at(0).n, 1);
+});
+
+test('NO LICENSE YET: malformed domains are refused and create nothing', async () => {
+  reset();
+  for (const bad of ['http://oak.example.edu', 'oak', 'oak edu', 'oak.example.edu/path', 'oak..edu', '-oak.edu', 'oak.e', 'a@b.edu']) {
+    const r = await addEmpty(D1, bad);
+    assert.equal(r.status, 400, bad);
+  }
+  assert.equal(q('SELECT COUNT(*) AS n FROM schools').at(0).n, 0);
+});
+
+test('NO LICENSE YET: a domain close to one we already know needs confirmation (typo guard)', async () => {
+  reset();
+  db.exec(`INSERT INTO schools (domain, district_id) VALUES ('oak.example.edu', ${D2})`);
+  purchase('birch.example.edu');
+  const typo = await addEmpty(D1, 'oak.exampel.edu');
+  assert.equal(typo.status, 409); assert.equal(typo.json.needsConfirm, true); assert.deepEqual(typo.json.similar, ['oak.example.edu']);
+  assert.equal(q(`SELECT COUNT(*) AS n FROM schools WHERE domain = 'oak.exampel.edu'`)[0].n, 0, 'nothing created while unconfirmed');
+  assert.equal((await addEmpty(D1, 'birch.exampl.edu')).status, 409, 'licensed domains count, even without a school record');
+  assert.equal((await addEmpty(D1, 'oak.exampel.edu', { confirmSimilar: true })).status, 200, 'confirmed');
+  assert.equal((await addEmpty(D1, 'totally-different.org')).status, 200, 'unrelated domains need no confirmation');
+  // an exact existing school is not a typo of itself; it belongs to another district, so it is refused, not warned about
+  assert.equal((await addEmpty(D1, 'oak.example.edu')).status, 409);
+  assert.equal(q(`SELECT district_id AS d FROM schools WHERE domain = 'oak.example.edu'`)[0].d, D2);
+});
+
+test('NO LICENSE YET: the demo school and demo district still stay apart', async () => {
+  reset();
+  assert.equal((await addEmpty(D1, DEMO_SCHOOL_DOMAIN)).status, 409);
+  assert.equal((await addEmpty(DEMO, 'real-new.example.edu', { confirmSimilar: true })).status, 409);
+  assert.equal(q('SELECT COUNT(*) AS n FROM schools').at(0).n, 0, 'refused adds create no school record');
+});
