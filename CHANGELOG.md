@@ -12,10 +12,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ## Unreleased / Known pending work
 
-- **Footer "Access" column regrouped and District Admin link added (`footer.js` v7), coded 2026-10-27, not yet deployed (pull + rsync only; no restart).** Sign-in links now run Student, Teacher, Parent Portal, School Admin, District Admin; privacy and contact links sit in their own "Privacy & Help" group below. All 61 pages that load the footer bumped to `footer.js?v=7`.
+- **Footer Explore and Schools columns regrouped (`footer.js` v8), coded 2026-10-27, not yet deployed (pull + rsync only).** Research & Alignment and State Standards moved from Explore to Schools (they are for schools evaluating us); Become an Affiliate moved from Schools to Explore (it is a partner route, not a school one); Explore reordered from story to product to routes. All pages bumped to `footer.js?v=8`.
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded, pushed, and — as of 2026-08-22 — confirmed configured and working end-to-end in Stripe's **test mode** (real e2e coverage, cart → Stripe Checkout → test card → webhook → paid/active license). **Still not live for real customer charges** — that requires swapping in the admin's real/live Stripe keys in place of the test ones. Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
+
+## Release 62 — 2026-10-27 — Footer Access column regrouped
+
+- **Footer "Access" column regrouped and a District Admin link added** (`footer.js` v7). Sign-in links run Student, Teacher, Parent Portal, School Admin, District Admin; privacy and contact links sit in their own "Privacy & Help" group.
 
 ## Release 61 — 2026-10-27 — Standards crosswalk goes public, per-district frameworks, and district school fixes
 

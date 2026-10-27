@@ -48,33 +48,34 @@
           '</div>' +
         '</div>' +
 
-        // Column 2 — Explore
+        // Column 2 — Explore: the story first (why, how), then what you get (lessons, games, community),
+        // then the parent route and the partner route. Research and standards live under Schools.
         '<div>' +
           '<h4>Explore</h4>' +
           '<ul>' +
             '<li><a href="why-fixer-nation.html">Why FNE</a></li>' +
-            '<li><a href="for-parents.html">For Parents</a></li>' +
             '<li><a href="how-it-works.html">How It Works</a></li>' +
             '<li><a href="education-portal.html">Lesson Library</a></li>' +
             '<li><a href="brain-games.html">Brain Games</a></li>' +
             '<li><a href="social.html">Community</a></li>' +
-            '<li><a href="research.html">Research &amp; Alignment</a></li>' +
-            '<li><a href="state-standards.html">State Standards</a></li>' +
+            '<li><a href="for-parents.html">For Parents</a></li>' +
+            '<li><a href="become-an-affiliate.html">Become an Affiliate</a></li>' +
             '<li><a href="https://fixernation.org/" target="_blank" rel="noopener">The Positivity Network &#8599;</a>' +
               '<div class="fn-fsub">Health, hope &amp; good news &mdash; from our parent community</div>' +
             '</li>' +
           '</ul>' +
         '</div>' +
 
-        // Column 3 — Schools
+        // Column 3 — Schools: who it is for, what it costs, the evidence, then signing up.
         '<div>' +
           '<h4>Schools</h4>' +
           '<ul>' +
             '<li><a href="for-teachers.html">For Teachers</a></li>' +
             '<li><a href="for-schools.html">For Schools</a></li>' +
             '<li><a href="school-licensing.html">Pricing &amp; Licensing</a></li>' +
+            '<li><a href="research.html">Research &amp; Alignment</a></li>' +
+            '<li><a href="state-standards.html">State Standards</a></li>' +
             '<li><a href="education-schools.html">Teacher Registration</a></li>' +
-            '<li><a href="become-an-affiliate.html">Become an Affiliate</a></li>' +
           '</ul>' +
         '</div>' +
 
