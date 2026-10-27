@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - State standards one-page summary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --line:rgba(22,79,74,0.22); --fs:10.5px; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  [hidden]{display:none !important;}
+  @page{ size:letter; margin:0.5in; }
+  body{font-family:'Plus Jakarta Sans',sans-serif; color:var(--ink); background:#E9E2D6; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .bar{max-width:8.5in; margin:0 auto; padding:16px 0 12px; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; justify-content:space-between; font-size:14px;}
+  .bar a{color:var(--teal-dark); font-weight:700; text-decoration:underline; text-underline-offset:3px;}
+  .bar button{background:var(--coral-dark); color:#fff; border:none; border-radius:999px; padding:12px 22px; font:700 14px 'Plus Jakarta Sans',sans-serif; cursor:pointer;}
+  .draftbar{max-width:8.5in; margin:0 auto 10px; background:#2A2420; color:#fff; border-radius:10px; padding:10px 16px; font-size:13px;}
+  .msg{max-width:8.5in; margin:0 auto 12px; font-size:14px;}
+  /* the sheet: letter page minus 0.5in margins = 7.5in x 10in */
+  .sheet{width:7.5in; min-height:10in; margin:0 auto 40px; background:#fff; padding:0.18in 0.22in; font-size:var(--fs); line-height:1.32; box-shadow:0 8px 30px rgba(0,0,0,0.12);}
+  .head{display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:2px solid var(--teal); padding-bottom:0.08in; margin-bottom:0.08in;}
+  .head img{height:0.42in; width:auto;}
+  .head .tag{font-size:0.85em; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--coral-dark); text-align:right;}
+  h1{font-family:'Fraunces',serif; font-size:2.1em; line-height:1.1; color:var(--teal-dark); font-weight:700;}
+  .sub{margin-top:0.04in; color:var(--ink-soft); font-size:1.02em;}
+  .draftline{margin-top:0.05in; color:#fff; background:#B3261E; display:inline-block; padding:2px 10px; border-radius:6px; font-weight:800; font-size:0.9em;}
+  .cov{display:flex; gap:0.12in; margin:0.09in 0 0.05in;}
+  .cov div{flex:1; border:1px solid var(--line); border-radius:7px; padding:0.05in 0.09in;}
+  .cov .k{font-size:0.78em; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--coral-dark);}
+  .cov .v{font-weight:700; color:var(--teal-dark);}
+  .sum{font-weight:800; color:var(--teal-dark); margin:0.05in 0 0.04in; font-size:1.08em;}
+  h2{font-family:'Fraunces',serif; font-size:1.2em; color:var(--teal-dark); margin:0.07in 0 0.02in; font-weight:700;}
+  .meta{color:var(--ink-soft); font-size:0.88em; margin-bottom:0.03in;}
+  table{width:100%; border-collapse:collapse;}
+  th{font-size:0.78em; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); text-align:left; border-bottom:1px solid var(--teal); padding:0.01in 0.04in;}
+  td{vertical-align:top; padding:0.022in 0.04in; border-bottom:1px solid rgba(22,79,74,0.12);}
+  td.c{font-weight:800; color:var(--coral-dark); white-space:nowrap; width:0.5in;}
+  td.s{width:3.15in; font-weight:600;}
+  .none{color:var(--ink-soft); font-style:italic;}
+  .cn{display:block;}
+  .st{font-weight:800; font-size:0.84em; text-transform:uppercase; letter-spacing:0.04em; margin-right:4px;}
+  .st.direct{color:var(--teal);} .st.supporting{color:#8a5a12;}
+  .kind{color:var(--ink-soft); font-size:0.9em;}
+  .foot{margin-top:0.09in; padding-top:0.06in; border-top:2px solid var(--teal); font-size:0.92em;}
+  .foot p{margin-bottom:0.04in;}
+  .foot .fine{color:var(--ink-soft); font-size:0.9em;}
+  .foot .contact{font-weight:800; color:var(--teal-dark);}
+  @media print{
+    body{background:#fff;} .bar,.draftbar,.msg{display:none !important;}
+    .sheet{width:auto; min-height:0; margin:0; padding:0; box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar" hidden>
+  <a id="backLink" href="state-standards.html">Back to the state page</a>
+  <button type="button" id="printBtn">Print or save as PDF</button>
+</div>
+<div class="draftbar" id="draftbar" hidden></div>
+<div class="msg" id="msg" aria-live="polite">Loading...</div>
+<main class="sheet" id="sheet" hidden></main>
+
+<script src="admin-common.js?v=17"></script>
+<script>fnTrackPageview();</script>
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var code = String(qs.get('state') || '').toUpperCase();
+  var PREVIEW = qs.get('preview') === '1';
+  var API = PREVIEW ? '/api/admin/standards/preview' : '/api/standards';
+  var sheet = document.getElementById('sheet'), msg = document.getElementById('msg');
+  var esc = fnEscape;
+
+  var SEL_LABEL = { k12_standards: 'Statewide K-12 SEL standards', prek_only: 'SEL standards for pre-K only', guidance_only: 'SEL guidance, not standards', none: 'No state SEL standards found', unknown: 'Not yet determined' };
+  var POG_LABEL = { statewide: 'A statewide Portrait of a Graduate', state_led_in_progress: 'A statewide Portrait of a Graduate is in development', district_led_only: 'Portraits of a Graduate are set by individual districts', none: 'No Portrait of a Graduate found', unknown: 'Not yet determined' };
+  var KIND = { curriculum: 'lesson', brain_game: 'game', program: 'program' };
+  var KIND_ORDER = { curriculum: 0, brain_game: 1, program: 2 };
+
+  function niceDate(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : ''; }
+  function host(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+  function safeHttps(u) { return typeof u === 'string' && /^https:\/\//i.test(u) ? u : null; }
+  function fail(text) { msg.innerHTML = text; msg.hidden = false; }
+
+  // best connections first: direct before supporting, lessons and games before the program as a whole
+  function best(als, n) {
+    var s = als.slice().sort(function (x, y) { return (x.strength === 'direct' ? 0 : 1) - (y.strength === 'direct' ? 0 : 1) || KIND_ORDER[x.targetType] - KIND_ORDER[y.targetType]; });
+    var real = s.filter(function (a) { return a.targetType !== 'program'; });
+    return (real.length ? real : s).slice(0, n);
+  }
+
+  function render(d, perStandard) {
+    var fws = d.frameworks || [], cov = d.coverage, total = 0, linked = 0, anyDraft = false;
+    fws.forEach(function (f) { if (f.draft) anyDraft = true; (f.items || []).forEach(function (i) { total++; if ((i.alignments || []).length) linked++; }); });
+    var date = (cov && cov.sourceAccessedOn) || fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop();
+    var h = '<div class="head"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"><div class="tag">State standards crosswalk</div></div>' +
+      '<h1>' + esc(d.state.name) + ': how Fixer Nation lines up with your standards</h1>' +
+      '<p class="sub">SEL standards and Portrait of a Graduate, checked against the state\'s documents' + (date ? ' on ' + esc(niceDate(date)) : '') + '.</p>' +
+      (anyDraft ? '<div class="draftline">DRAFT PREVIEW: NOT PUBLIC. DO NOT SHARE.</div>' : '');
+    if (cov) h += '<div class="cov"><div><div class="k">Social-emotional learning</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div></div>' +
+      '<div><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div></div></div>';
+    h += '<p class="sum">Connected to ' + linked + ' of ' + total + ' standards. <span style="font-weight:500;color:var(--ink-soft);">Each lesson has versions for K-5, 6-8 and 9-12.</span></p>';
+    fws.forEach(function (fw) {
+      var bits = []; if (fw.issuingBody) bits.push('Issued by ' + esc(fw.issuingBody)); if (fw.adoptedYear) bits.push('Adopted ' + esc(fw.adoptedYear));
+      var src = safeHttps(fw.officialUrl); if (src) bits.push('Source: ' + esc(host(src)));
+      h += '<h2>' + esc(fw.name) + '</h2><p class="meta">' + bits.join(' &middot; ') + '</p><table><thead><tr><th>Code</th><th>Standard</th><th>Fixer Nation connections</th></tr></thead><tbody>';
+      (fw.items || []).forEach(function (it) {
+        var picks = best(it.alignments || [], perStandard);
+        var cell = picks.length ? picks.map(function (a) {
+          return '<span class="cn"><span class="st ' + (a.strength === 'direct' ? 'direct' : 'supporting') + '">' + (a.strength === 'direct' ? 'Direct' : 'Supporting') + '</span>' +
+            esc(a.targetType === 'program' ? 'Morning Boost program themes' : a.targetTitle) + ' <span class="kind">(' + esc(KIND[a.targetType] || '') + ')</span></span>';
+        }).join('') : '<span class="none">Not yet connected</span>';
+        h += '<tr><td class="c">' + esc(it.code) + '</td><td class="s">' + esc(it.title) + '</td><td>' + cell + '</td></tr>';
+      });
+      h += '</tbody></table>';
+    });
+    h += '<div class="foot"><p class="fine">This is Fixer Nation\'s own mapping of its lessons and games to the state\'s published framework. Neither a state education agency nor CASEL has reviewed or endorsed it, and neither has certified it. The official documents are the source of truth.</p>' +
+      '<p class="contact">Questions, or want to see a lesson? Visit fixernationeducation.com/contact.html</p></div>';
+    sheet.innerHTML = h;
+  }
+
+  // Always one page. Prefer readable type: two connections per standard down to 9.5px, then one per
+  // standard down to 9px, and only then shrink further (down to 6px) as a last resort.
+  function fitOnePage(d) {
+    var MAX = 925; // 10in is 960px; leave a margin for print-engine differences
+    var steps = [[2, 10.5, 9.5], [1, 10.5, 9.0], [1, 9.0, 6.0]];
+    for (var p = 0; p < steps.length; p++) {
+      render(d, steps[p][0]);
+      sheet.style.minHeight = '0';
+      for (var fs = steps[p][1]; fs >= steps[p][2]; fs -= 0.25) {
+        sheet.style.setProperty('--fs', fs + 'px');
+        if (sheet.scrollHeight <= MAX) { sheet.dataset.fit = steps[p][0] + '@' + fs + '@' + sheet.scrollHeight; sheet.style.minHeight = ''; return; }
+      }
+    }
+    sheet.style.minHeight = ''; sheet.dataset.fit = 'overflow';
+  }
+
+  if (!/^[A-Z]{2}$/.test(code)) { fail('Choose a state first. <a href="state-standards.html">Go to the state standards page</a>.'); return; }
+  document.getElementById('backLink').href = 'state-standards.html?state=' + encodeURIComponent(code) + (PREVIEW ? '&preview=1' : '');
+  document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+  function load() {
+    fetch(API + '/states/' + encodeURIComponent(code), { credentials: 'include' }).then(function (r) {
+      if (r.status === 401 && PREVIEW) { PREVIEW = false; API = '/api/standards'; return load(); }
+      if (r.status === 404) { fail('We haven\'t finished reviewing that state yet. <a href="state-standards.html">See the states that are ready</a>.'); return null; }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json().then(function (d) {
+        if (!(d.frameworks || []).length) { fail('We haven\'t loaded the standards text for ' + esc(d.state.name) + ' yet, so there is no summary to print. <a href="state-standards.html?state=' + encodeURIComponent(code) + '">Back to the state page</a>.'); return; }
+        document.title = d.state.name + ' - State standards one-page summary - Fixer Nation Education';
+        msg.hidden = true; sheet.hidden = false; document.getElementById('bar').hidden = false;
+        if (PREVIEW) { var b = document.getElementById('draftbar'); b.hidden = false; b.textContent = 'Admin preview: this sheet includes drafts that visitors can\'t see yet.'; }
+        var run = function () { fitOnePage(d); };
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(run); else run();
+      });
+    }).catch(function () { fail('We couldn\'t load this page. Please refresh, or <a href="contact.html">contact us</a> if it keeps happening.'); });
+  }
+  load();
+})();
+</script>
+</body>
+</html>

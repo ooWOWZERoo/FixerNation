@@ -86,6 +86,25 @@
   .review-placeholder h3{color:#fff; font-size:20px; margin-bottom:12px;}
   .review-placeholder p{font-size:14.5px; color:rgba(255,255,255,0.78); line-height:1.7;}
 
+  /* state standards crosswalk feature */
+  .xs-hero{background:linear-gradient(135deg, var(--teal-dark) 0%, #1a6b63 100%); border-radius:28px; padding:56px 48px; text-align:center; box-shadow:0 30px 60px -28px rgba(14,55,51,0.55); position:relative; overflow:hidden;}
+  .xs-hero::after{content:""; position:absolute; right:-80px; top:-80px; width:260px; height:260px; border-radius:50%; background:rgba(235,166,87,0.16);}
+  .xs-eyebrow{display:inline-block; background:var(--gold); color:var(--teal-dark); font-size:12.5px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; padding:8px 18px; border-radius:999px; margin-bottom:18px; position:relative; z-index:1;}
+  .xs-hero h2{color:#fff; font-size:38px; line-height:1.12; max-width:760px; margin:0 auto 16px; position:relative; z-index:1;}
+  .xs-lede{color:rgba(255,255,255,0.86); font-size:16.5px; line-height:1.7; max-width:720px; margin:0 auto 30px; position:relative; z-index:1;}
+  .xs-cards{display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:820px; margin:0 auto 28px; text-align:left; position:relative; z-index:1;}
+  .xs-card{background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.22); border-radius:18px; padding:22px 24px;}
+  .xs-card h3{color:#fff; font-size:20px; margin-bottom:8px;}
+  .xs-card p{color:rgba(255,255,255,0.84); font-size:14.5px; line-height:1.65;}
+  .xs-states{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin:0 auto 8px; max-width:820px; position:relative; z-index:1;}
+  .xs-states-label{color:#F6D9C3; font-weight:700; font-size:14.5px; width:100%; text-align:center; margin-bottom:2px;}
+  .xs-chip{background:#fff; color:var(--teal-dark); font-weight:700; font-size:14px; padding:9px 18px; border-radius:999px; text-decoration:none; transition:transform .18s ease;}
+  .xs-chip:hover{transform:translateY(-2px); background:var(--gold);}
+  .xs-more{color:rgba(255,255,255,0.7); font-size:13.5px; margin:6px 0 24px; position:relative; z-index:1;}
+  .xs-btn{display:inline-block; background:var(--coral); color:#fff; font-weight:800; font-size:16px; padding:16px 38px; border-radius:999px; box-shadow:0 16px 30px -10px rgba(242,107,77,0.65); text-decoration:none; position:relative; z-index:1; transition:transform .18s ease;}
+  .xs-btn:hover{transform:translateY(-2px); background:var(--coral-dark);}
+  .xs-fine{color:rgba(255,255,255,0.62); font-size:12.5px; margin-top:18px; position:relative; z-index:1;}
+  @media(max-width:700px){ .xs-hero{padding:38px 22px;} .xs-hero h2{font-size:28px;} .xs-cards{grid-template-columns:1fr;} }
   @media(max-width:900px){
     .hero-inner h1{font-size:30px;}
     .measures-grid{grid-template-columns:1fr;}
@@ -202,12 +221,19 @@
 <!-- ── State standards crosswalk ─────────────────────────────────────────── -->
 <section class="section" style="padding-top:8px;">
   <div class="wrap">
-    <div class="section-head" style="margin-bottom:24px;">
-      <span class="eyebrow">State standards</span>
-      <h2>See how Fixer Nation connects to your state's standards</h2>
-      <p>We're checking each state's SEL standards and Portrait of a Graduate against our lessons and games, one state at a time. Pick a state to see what we've verified so far.</p>
+    <div class="xs-hero">
+      <span class="xs-eyebrow">New: state standards crosswalk</span>
+      <h2>Does it line up with your state's SEL standards and Portrait of a Graduate?</h2>
+      <p class="xs-lede">Your state has published SEL standards, and a growing number have a Portrait of a Graduate too. We map Fixer Nation lessons and games to each one, and our team checks every connection against the state's own documents before it goes live.</p>
+      <div class="xs-cards">
+        <div class="xs-card"><h3>SEL standards</h3><p>See which lessons and games support each of your state's SEL standards. Every lesson comes in K-5, 6-8 and 9-12 versions.</p></div>
+        <div class="xs-card"><h3>Portrait of a Graduate</h3><p>See how everyday lessons connect to the skills your state wants its graduates to have.</p></div>
+      </div>
+      <div class="xs-states" id="xsStates" aria-live="polite"><span class="xs-states-label">We're verifying our first states now.</span></div>
+      <p class="xs-more">We add each state as soon as our team finishes checking it.</p>
+      <a class="xs-btn" href="state-standards.html">Find your state</a>
+      <p class="xs-fine">This is our own mapping. No state agency or CASEL has endorsed it.</p>
     </div>
-    <div style="text-align:center;"><a class="btn btn-primary" href="state-standards.html">Explore state standards</a></div>
   </div>
 </section>
 
@@ -358,5 +384,18 @@
 <script src="nav.js?v=16"></script>
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=6"></script>
+<script>
+(function () {
+  var box = document.getElementById('xsStates');
+  if (!box || !window.fetch) return;
+  fetch('/api/standards/overview', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (ov) {
+    if (!ov || !ov.states || !ov.states.length) return;
+    box.innerHTML = '<span class="xs-states-label">Ready to explore:</span>' + ov.states.map(function (s) {
+      return '<a class="xs-chip" href="state-standards.html?state=' + encodeURIComponent(s.stateCode) + '">' + fnEscape(s.stateName) + '</a>';
+    }).join('');
+  }).catch(function () {});
+})();
+</script>
+
 </body>
 </html>

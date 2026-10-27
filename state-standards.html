@@ -57,6 +57,7 @@
 
   .state-head{margin:36px 0 8px;}
   .state-head h2{font-size:34px;}
+  .print-btn{margin-top:14px; font-size:13.5px; padding:10px 20px;}
   .checked{font-size:14px; color:var(--ink-soft); margin-top:6px;}
   .coverage{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin:22px 0 8px;}
   .cov-card{background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 24px -16px rgba(22,79,74,0.2);}
@@ -334,7 +335,7 @@
   function renderState(d) {
     var cov = d.coverage, fws = d.frameworks || [];
     var date = (cov && cov.sourceAccessedOn) || (fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop());
-    var h = '<div class="state-head"><h2>' + esc(d.state.name) + '</h2>' + (date ? '<p class="checked">Checked against the state\'s documents on ' + esc(niceDate(date)) + '.</p>' : '') + '</div>';
+    var h = '<div class="state-head"><h2>' + esc(d.state.name) + '</h2>' + (date ? '<p class="checked">Checked against the state\'s documents on ' + esc(niceDate(date)) + '.</p>' : '') + (fws.length ? '<a class="btn print-btn" href="state-onepager.html?state=' + encodeURIComponent(d.state.code) + (PREVIEW ? '&preview=1' : '') + '" target="_blank" rel="noopener">Print a one-page summary</a>' : '') + '</div>';
     if (cov) {
       h += '<div class="coverage">' +
         '<div class="cov-card"><div class="k">Social-emotional learning' + (cov.draft ? DRAFT : '') + '</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div>' + link(cov.selSourceUrl, 'Where we checked') + '</div>' +
