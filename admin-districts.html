@@ -124,10 +124,12 @@
       <div class="manage-section">
         <h4>Schools in this District</h4>
         <div class="err-inline" id="schoolsErr"></div>
+        <div class="success-inline" id="schoolsOk"></div>
         <div id="schoolsList"><div class="a-hint">Loading…</div></div>
+        <div class="a-hint" id="schoolsEmpty" style="display:none;">No schools are available yet. A school shows up here once it has a group license.</div>
         <div class="manage-add-row">
           <select id="addSchoolSelect"><option value="">Select a school to add…</option></select>
-          <button class="a-btn a-btn-outline a-btn-sm" onclick="doAddSchool()">Add</button>
+          <button class="a-btn a-btn-outline a-btn-sm" id="addSchoolBtn" onclick="doAddSchool()">Add</button>
         </div>
       </div>
 
@@ -312,6 +314,7 @@ function openManageModal(id, name) {
   manageDistrictId = id;
   document.getElementById('manageTitle').textContent = 'Manage ' + name;
   document.getElementById('schoolsErr').style.display = 'none';
+  document.getElementById('schoolsOk').style.display = 'none';
   document.getElementById('adminsErr').style.display = 'none';
   document.getElementById('adminsSuccess').style.display = 'none';
   document.getElementById('addAdminEmail').value = '';
@@ -339,7 +342,9 @@ async function loadManageSchools() {
     if (!detail) return;
     listEl.innerHTML = detail.schools.length
       ? detail.schools.map(function (s) {
-          return '<div class="manage-row"><span>' + esc(s.display_name || s.domain) + '</span>' +
+          var l = s.linkage || {};
+          return '<div class="manage-row"><span>' + esc(s.display_name || s.domain) +
+            (s.linkage ? '<div class="a-hint">' + esc(l.licenses + ' licenses · ' + l.schoolAdmins + ' school admins · ' + l.teachers + ' teachers') + '</div>' : '') + '</span>' +
             '<button class="a-btn a-btn-outline a-btn-sm" onclick="doRemoveSchool(' + s.id + ')">Remove</button></div>';
         }).join('')
       : '<div class="a-hint">No schools assigned yet.</div>';
@@ -348,9 +353,13 @@ async function loadManageSchools() {
     const availData = await avail.json();
     const currentIds = new Set(detail.schools.map(function (s) { return s.id; }));
     const candidates = (availData.schools || []).filter(function (s) { return !currentIds.has(s.id); });
+    const unlinked = availData.unlinked || [];
     selEl.innerHTML = '<option value="">Select a school to add…</option>' + candidates.map(function (s) {
-      return '<option value="' + s.id + '">' + esc(s.display_name || s.domain) + '</option>';
-    }).join('');
+      return '<option value="id:' + s.id + '">' + esc(s.display_name || s.domain) + '</option>';
+    }).join('') + (unlinked.length ? '<optgroup label="Licensed, no school record yet (we create it when you add it)">' + unlinked.map(function (u) {
+      return '<option value="domain:' + esc(u.domain) + '">' + esc(u.domain) + '</option>';
+    }).join('') + '</optgroup>' : '');
+    document.getElementById('schoolsEmpty').style.display = (candidates.length || unlinked.length) ? 'none' : 'block';
   } catch (e) {
     listEl.innerHTML = '';
     document.getElementById('schoolsErr').textContent = e.message;
@@ -358,23 +367,40 @@ async function loadManageSchools() {
   }
 }
 
+function schoolMsg(kind, text) {
+  const err = document.getElementById('schoolsErr'), ok = document.getElementById('schoolsOk');
+  err.style.display = kind === 'err' ? 'block' : 'none'; ok.style.display = kind === 'ok' ? 'block' : 'none';
+  (kind === 'err' ? err : ok).textContent = text || '';
+}
+
 async function doAddSchool() {
-  const schoolId = document.getElementById('addSchoolSelect').value;
-  if (!schoolId) return;
+  const sel = document.getElementById('addSchoolSelect');
+  const picked = sel.value;
+  if (!picked) { schoolMsg('err', 'Pick a school from the list first.'); return; }
+  const isDomain = picked.indexOf('domain:') === 0;
+  const body = { assign: true };
+  if (isDomain) body.domain = picked.slice(7); else body.schoolId = Number(picked.slice(3));
+  const label = sel.options[sel.selectedIndex].text;
+  const btn = document.getElementById('addSchoolBtn');
+  btn.disabled = true; btn.textContent = 'Adding…'; schoolMsg('');
   try {
     const r = await fetch('/api/admin/districts/' + manageDistrictId + '/schools', {
       method: 'PUT', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schoolId: Number(schoolId), assign: true }),
+      body: JSON.stringify(body),
     });
     if (fnHandleUnauthorized(r)) return;
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed');
-    loadManageSchools();
+    const l = d.linkage || {};
+    schoolMsg('ok', 'Added ' + label + '. ' + (d.createdSchoolRecord ? 'We created its school record, and ' : '') +
+      l.licenses + ' license(s) are now part of this district, with ' + l.schoolAdmins + ' school admin(s) and ' + l.teachers + ' teacher(s).');
+    await loadManageSchools();
     loadDistricts();
   } catch (e) {
-    document.getElementById('schoolsErr').textContent = e.message;
-    document.getElementById('schoolsErr').style.display = 'block';
+    schoolMsg('err', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add';
   }
 }
 

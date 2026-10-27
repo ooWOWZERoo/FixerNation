@@ -245,7 +245,9 @@ router.get('/:id', requireAuth, async (req, res) => {
   const [[district]] = await pool.query('SELECT id, name, created_at FROM districts WHERE id = ?', [districtId]);
   if (!district) return res.status(404).json({ error: 'District not found' });
 
-  const [schools] = await pool.query('SELECT id, domain, display_name FROM schools WHERE district_id = ? ORDER BY domain', [districtId]);
+  const [schoolRows] = await pool.query('SELECT id, domain, display_name FROM schools WHERE district_id = ? ORDER BY domain', [districtId]);
+  const schools = [];
+  for (const sc of schoolRows) schools.push({ ...sc, linkage: await schoolLinkage(sc.id) });
   const [admins] = await pool.query(
     `SELECT dla.id, dla.is_active, dla.notes, dla.created_at,
             su.id AS site_user_id, su.first_name, su.last_name, su.email, su.email_verified
@@ -284,9 +286,64 @@ router.delete('/:id', requireAuth, async (req, res) => {
   res.json({ ok: true, unassignedSchoolCount: Number(school_count) });
 });
 
-// GET /api/admin/districts/:id/available-schools?q= — schools with no
-// district yet, plus schools already in THIS district (so the assignment UI
-// can show both "add" and "remove" candidates in one list).
+// ---- schools <-> districts ------------------------------------------------------------
+// What "a school" is made of, and what depends on it:
+//   schools row (domain, district_id)  <- the link this endpoint changes
+//   purchases.school_id                <- what the concierge flow and school branding key on
+//   purchases.school_domain            <- what the district-admin portal also matches on
+//   school_license_admins, license_seats  <- keyed by purchase_id, so they follow the purchase and
+//                                         need no copying; the district admin sees them through the
+//                                         purchase -> school -> district join
+// So adding a school must (1) make sure the schools row exists, (2) point every one of that
+// domain's purchases at it, and (3) tell the admin what got linked. All steps are idempotent.
+const normalizeDomain = (d) => String(d || '').trim().replace(/^@/, '').toLowerCase();
+
+async function schoolLinkage(schoolId) {
+  const [[lic]] = await pool.query(`SELECT COUNT(*) AS n FROM purchases WHERE product_type = 'group_license' AND school_id = ?`, [schoolId]);
+  const [[adm]] = await pool.query(
+    `SELECT COUNT(DISTINCT sla.site_user_id) AS n FROM school_license_admins sla JOIN purchases p ON p.id = sla.purchase_id
+     WHERE p.school_id = ? AND sla.is_active = 1`, [schoolId]);
+  const [[tch]] = await pool.query(
+    `SELECT COUNT(*) AS n FROM license_seats ls JOIN purchases p ON p.id = ls.purchase_id
+     WHERE p.school_id = ? AND ls.status = 'registered'`, [schoolId]);
+  return { licenses: Number(lic.n), schoolAdmins: Number(adm.n), teachers: Number(tch.n) };
+}
+
+// Domains that have group licenses but no schools row yet -- these could not be picked before.
+async function unlinkedDomains(q) {
+  const params = [];
+  let where = '';
+  if (q) { where = ' AND LOWER(TRIM(p.school_domain)) LIKE ?'; params.push('%' + q.toLowerCase() + '%'); }
+  const [rows] = await pool.query(
+    `SELECT LOWER(TRIM(p.school_domain)) AS domain, COUNT(*) AS licenses FROM purchases p
+     WHERE p.product_type = 'group_license' AND p.school_domain IS NOT NULL AND TRIM(p.school_domain) <> ''
+       AND NOT EXISTS (SELECT 1 FROM schools s WHERE LOWER(s.domain) = LOWER(TRIM(p.school_domain)))${where}
+     GROUP BY LOWER(TRIM(p.school_domain)) ORDER BY domain LIMIT 200`, params);
+  return rows.map(r => ({ domain: r.domain, licenses: Number(r.licenses) }));
+}
+
+// Find the schools row for a domain, or create it. Returns { id, domain, created }.
+async function findOrCreateSchool(domain) {
+  const find = async () => { const [[r]] = await pool.query('SELECT id, domain FROM schools WHERE LOWER(domain) = ?', [domain]); return r; };
+  const existing = await find();
+  if (existing) return { ...existing, created: false };
+  try { await pool.query('INSERT INTO schools (domain) VALUES (?)', [domain]); }
+  catch (err) { if (err.code !== 'ER_DUP_ENTRY') throw err; } // lost a race with another request: fine, re-read below
+  const row = await find();
+  return { ...row, created: true };
+}
+
+// Point every purchase for this domain that has no school_id yet at the school. Returns how many.
+async function linkPurchases(schoolId, domain) {
+  const [r] = await pool.query(
+    `UPDATE purchases SET school_id = ? WHERE school_id IS NULL AND school_domain IS NOT NULL AND LOWER(TRIM(school_domain)) = ?`,
+    [schoolId, domain]);
+  return r.affectedRows || 0;
+}
+
+// GET /api/admin/districts/:id/available-schools?q= — schools with no district yet, plus schools
+// already in THIS district (so the UI can show both "add" and "remove" candidates), plus
+// `unlinked`: licensed domains that have no school record yet (adding one creates it).
 router.get('/:id/available-schools', requireAuth, async (req, res) => {
   const districtId = Number(req.params.id);
   const q = (req.query.q || '').trim();
@@ -299,38 +356,69 @@ router.get('/:id/available-schools', requireAuth, async (req, res) => {
     `SELECT s.id, s.domain, s.display_name, s.district_id FROM schools s WHERE ${where} ORDER BY s.domain LIMIT 200`,
     params
   );
-  res.json({ schools: rows });
+  res.json({ schools: rows, unlinked: await unlinkedDomains(q) });
 });
 
-// PUT /api/admin/districts/:id/schools — { schoolId, assign: true|false }
+// PUT /api/admin/districts/:id/schools — { schoolId | domain, assign: true|false }
+// `domain` (assign only) is for a licensed school that has no schools row yet.
 router.put('/:id/schools', requireAuth, async (req, res) => {
   const districtId = Number(req.params.id);
-  const { schoolId, assign } = req.body || {};
-  if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+  const body = req.body || {};
+  const assign = body.assign === true || body.assign === 'true';
 
   const [[district]] = await pool.query('SELECT id, name FROM districts WHERE id = ?', [districtId]);
   if (!district) return res.status(404).json({ error: 'District not found' });
 
-  if (assign) {
-    // Keep demo and real data apart in BOTH directions. Sales-demo accounts are
-    // admins of the demo district, so putting a real school in it would show that
-    // school's teachers and students to every salesperson; putting the demo school
-    // in a real district would show fake data to that customer's district admin.
-    const [[school]] = await pool.query('SELECT domain FROM schools WHERE id = ?', [schoolId]);
-    if (!school) return res.status(404).json({ error: 'School not found' });
-    if ((district.name === DEMO_DISTRICT_NAME) !== (school.domain === DEMO_SCHOOL_DOMAIN)) {
-      return res.status(409).json({ error: 'The sales demo district can only contain the demo school (and the demo school can only be in the demo district).' });
-    }
-    const [result] = await pool.query(
-      'UPDATE schools SET district_id = ? WHERE id = ? AND (district_id IS NULL OR district_id = ?)',
-      [districtId, schoolId, districtId]
-    );
-    if (!result.affectedRows) return res.status(409).json({ error: 'This school already belongs to a different district.' });
-  } else {
+  if (!assign) {
+    const schoolId = Number(body.schoolId);
+    if (!Number.isInteger(schoolId) || schoolId <= 0) return res.status(400).json({ error: 'schoolId is required' });
     await pool.query('UPDATE schools SET district_id = NULL WHERE id = ? AND district_id = ?', [schoolId, districtId]);
+    return res.json({ ok: true });
   }
 
-  res.json({ ok: true });
+  let school;
+  let created = false;
+  if (body.schoolId != null && body.schoolId !== '') {
+    const schoolId = Number(body.schoolId);
+    if (!Number.isInteger(schoolId) || schoolId <= 0) return res.status(400).json({ error: 'schoolId is required' });
+    [[school]] = await pool.query('SELECT id, domain FROM schools WHERE id = ?', [schoolId]);
+    if (!school) return res.status(404).json({ error: 'School not found' });
+  } else if (typeof body.domain === 'string' && body.domain.trim()) {
+    const domain = normalizeDomain(body.domain);
+    // Only a domain that really has licenses can become a school here, so a typo can't mint an empty school.
+    const [[licensed]] = await pool.query(
+      `SELECT COUNT(*) AS n FROM purchases WHERE product_type = 'group_license' AND LOWER(TRIM(school_domain)) = ?`, [domain]);
+    if (!Number(licensed.n)) return res.status(404).json({ error: 'No group license was found for that domain' });
+    school = { id: null, domain };
+  } else {
+    return res.status(400).json({ error: 'schoolId or domain is required' });
+  }
+
+  // Keep demo and real data apart in BOTH directions. Sales-demo accounts are
+  // admins of the demo district, so putting a real school in it would show that
+  // school's teachers and students to every salesperson; putting the demo school
+  // in a real district would show fake data to that customer's district admin.
+  if ((district.name === DEMO_DISTRICT_NAME) !== (school.domain === DEMO_SCHOOL_DOMAIN)) {
+    return res.status(409).json({ error: 'The sales demo district can only contain the demo school (and the demo school can only be in the demo district).' });
+  }
+
+  if (!school.id) {
+    const made = await findOrCreateSchool(school.domain);
+    school = { id: made.id, domain: made.domain };
+    created = made.created;
+  }
+
+  const [result] = await pool.query(
+    'UPDATE schools SET district_id = ? WHERE id = ? AND (district_id IS NULL OR district_id = ?)',
+    [districtId, school.id, districtId]
+  );
+  if (!result.affectedRows) {
+    // A school we just created is still unowned; the only way to get here is a school in another district.
+    return res.status(409).json({ error: 'This school already belongs to a different district.' });
+  }
+
+  const newlyLinked = await linkPurchases(school.id, school.domain);
+  res.json({ ok: true, school: { id: school.id, domain: school.domain }, createdSchoolRecord: created, newlyLinkedPurchases: newlyLinked, linkage: await schoolLinkage(school.id) });
 });
 
 module.exports = router;
