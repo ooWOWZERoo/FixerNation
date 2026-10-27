@@ -16,6 +16,7 @@
       '.fn-fsocial a{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}',
       '.fn-fsocial a:hover{background:rgba(255,255,255,0.22);}',
       'footer h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);margin-bottom:14px;}',
+      '.fn-fh2{margin-top:26px;}',
       'footer ul{list-style:none;padding:0;margin:0;}',
       'footer ul li{margin-bottom:9px;}',
       'footer ul a{color:rgba(255,255,255,0.72);text-decoration:none;font-size:14px;transition:color .15s;}',
@@ -77,17 +78,22 @@
           '</ul>' +
         '</div>' +
 
-        // Column 4 — Access
+        // Column 4 — Access: sign-in links first (learners, then the adults who run things, narrowest
+        // scope to widest), then privacy and help in their own group.
         '<div>' +
           '<h4>Access</h4>' +
           '<ul>' +
-            '<li><a href="teacher-classrooms.html">Teacher Login</a></li>' +
             '<li><a href="student-login.html">Student Login</a></li>' +
-            '<li><a href="school-admin-login.html">School Admin</a></li>' +
+            '<li><a href="teacher-classrooms.html">Teacher Login</a></li>' +
             '<li><a href="parent-portal.html">Parent Portal</a></li>' +
-            '<li><a href="privacy-choices.html">Privacy Choices</a></li>' +
+            '<li><a href="school-admin-login.html">School Admin</a></li>' +
+            '<li><a href="district-admin-login.html">District Admin</a></li>' +
+          '</ul>' +
+          '<h4 class="fn-fh2">Privacy &amp; Help</h4>' +
+          '<ul>' +
             '<li><a href="student-data-privacy.html">Student Data Privacy</a></li>' +
             '<li><a href="parents-bill-of-rights.html">Parents\' Bill of Rights</a></li>' +
+            '<li><a href="privacy-choices.html">Privacy Choices</a></li>' +
             '<li><a href="contact.html">Contact</a></li>' +
           '</ul>' +
         '</div>' +
