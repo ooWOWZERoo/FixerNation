@@ -74,6 +74,7 @@
       link('district-admin-dashboard.html', '📊', 'Dashboard') +
       link('district-admin-branding.html',  '🎨', 'Branding') +
       link('district-admin-schools.html',   '🏫', 'Schools') +
+      link('district-admin-standards.html', '🎓', 'Portrait of a Graduate') +
     '</nav>' +
     '<div id="daDistrictInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +

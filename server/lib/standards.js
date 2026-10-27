@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { DEMO_DISTRICT_NAME } = require('./sales-demo');
 
 // State standards / Portrait-of-a-Graduate crosswalk -- data layer and review gate.
 // Design, rules and access matrix: docs/standards-crosswalk/DESIGN.md.
@@ -90,7 +91,8 @@ function frameworkOut(r, { admin = false } = {}) {
     id: r.id, stateCode: r.state_code, type: r.framework_type, name: r.name, issuingBody: r.issuing_body,
     officialUrl: r.official_url, adoptedYear: r.adopted_year || null, gradeSpan: r.grade_span || null,
     sourceAccessedOn: r.source_accessed_on, notes: r.notes || null,
-    ...reviewFields(r), ...(admin ? { reviewedBy: r.reviewed_by || null } : {}),
+    ...reviewFields(r),
+    ...(admin ? { reviewedBy: r.reviewed_by || null, districtId: r.district_id || null, submittedAt: r.submitted_at || null, attestedAt: r.attested_at || null } : {}),
   };
 }
 const itemOut = (r) => ({
@@ -177,14 +179,24 @@ async function draftFramework(frameworkId) {
   await draftAlignmentsForFramework(frameworkId);
 }
 
+// `input.districtId` (FNE admin acting on a district's behalf, or lib/district-standards.js) makes it a
+// DISTRICT framework; without it this is a state framework. The two never share a name scope.
 async function createFramework(input) {
   const f = frameworkInput(input);
-  const [[dupe]] = await pool.query('SELECT id FROM standards_frameworks WHERE state_code = ? AND framework_type = ? AND name = ?', [f.state_code, f.framework_type, f.name]);
-  if (dupe) throw bad('That state already has a framework of that type with that name', 409);
+  let districtId = null;
+  if (input.districtId != null && input.districtId !== '') {
+    districtId = Number(input.districtId);
+    if (!Number.isInteger(districtId) || districtId <= 0) throw bad('districtId must be a district id');
+    const [[d]] = await pool.query('SELECT id FROM districts WHERE id = ?', [districtId]);
+    if (!d) throw bad('District not found', 404);
+  }
+  const ownerKey = districtId || 0;
+  const [[dupe]] = await pool.query('SELECT id FROM standards_frameworks WHERE state_code = ? AND framework_type = ? AND name = ? AND owner_key = ?', [f.state_code, f.framework_type, f.name, ownerKey]);
+  if (dupe) throw bad(districtId ? 'That district already has a framework of that type with that name' : 'That state already has a framework of that type with that name', 409);
   const [r] = await pool.query(
-    `INSERT INTO standards_frameworks (state_code, framework_type, name, issuing_body, official_url, adopted_year, grade_span, source_accessed_on, notes, review_status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
-    [f.state_code, f.framework_type, f.name, f.issuing_body, f.official_url, f.adopted_year, f.grade_span, f.source_accessed_on, f.notes, nowStr(), nowStr()]
+    `INSERT INTO standards_frameworks (state_code, framework_type, name, issuing_body, official_url, adopted_year, grade_span, source_accessed_on, notes, district_id, owner_key, review_status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+    [f.state_code, f.framework_type, f.name, f.issuing_body, f.official_url, f.adopted_year, f.grade_span, f.source_accessed_on, f.notes, districtId, ownerKey, nowStr(), nowStr()]
   );
   return { id: r.insertId, changed: true };
 }
@@ -195,7 +207,7 @@ async function updateFramework(id, input) {
   const f = frameworkInput({ ...input, stateCode: existing.state_code, type: existing.framework_type, name: input.name ?? existing.name });
   if (f.name === existing.name && FRAMEWORK_COLS.every(c => (existing[c] ?? null) === f[c])) return { id, changed: false };
   if (f.name !== existing.name) {
-    const [[dupe]] = await pool.query('SELECT id FROM standards_frameworks WHERE state_code = ? AND framework_type = ? AND name = ? AND id <> ?', [f.state_code, f.framework_type, f.name, id]);
+    const [[dupe]] = await pool.query('SELECT id FROM standards_frameworks WHERE state_code = ? AND framework_type = ? AND name = ? AND owner_key = ? AND id <> ?', [f.state_code, f.framework_type, f.name, existing.owner_key || 0, id]);
     if (dupe) throw bad('That state already has a framework of that type with that name', 409);
   }
   await pool.query(
@@ -281,6 +293,8 @@ async function unverifyFramework(id) {
 // =====================================================================================
 // Alignments (FNE content <-> standard)
 // =====================================================================================
+const hasRealRationale = (r) => String(r || '').trim().length >= 20;
+
 async function targetExists(type, id) {
   if (type === 'program') return true;
   const table = type === 'curriculum' ? 'curricula' : 'brain_games';
@@ -329,6 +343,7 @@ async function verifyAlignment(id, adminId) {
      JOIN standards_items i ON i.id = a.item_id JOIN standards_frameworks f ON f.id = i.framework_id WHERE a.id = ?`, [id]);
   if (!a) throw bad('Alignment not found', 404);
   if (a.fw_status !== 'verified') throw bad('Verify the framework first -- an alignment can only be verified against a framework that has itself been verified');
+  if (!hasRealRationale(a.rationale)) throw bad('Write the rationale first -- a connection suggested by a district has none until FNE explains it');
   if (!(await targetExists(a.target_type, a.target_id))) throw bad('The FNE content this points at no longer exists');
   await pool.query(`UPDATE standards_alignments SET review_status = 'verified', reviewed_by = ?, reviewed_at = ? WHERE id = ?`, [adminId, nowStr(), id]);
 }
@@ -341,10 +356,10 @@ async function verifyAlignmentsForItem(itemId, adminId) {
     `SELECT i.id, f.review_status AS fw_status FROM standards_items i JOIN standards_frameworks f ON f.id = i.framework_id WHERE i.id = ?`, [itemId]);
   if (!it) throw bad('Standard not found', 404);
   if (it.fw_status !== 'verified') throw bad('Verify the framework first -- alignments can only be verified against a framework that has itself been verified');
-  const [drafts] = await pool.query(`SELECT id, target_type, target_id FROM standards_alignments WHERE item_id = ? AND review_status = 'draft'`, [itemId]);
+  const [drafts] = await pool.query(`SELECT id, target_type, target_id, rationale FROM standards_alignments WHERE item_id = ? AND review_status = 'draft'`, [itemId]);
   let verified = 0, skipped = 0;
   for (const a of drafts) {
-    if (!(await targetExists(a.target_type, a.target_id))) { skipped++; continue; }
+    if (!hasRealRationale(a.rationale) || !(await targetExists(a.target_type, a.target_id))) { skipped++; continue; }
     await pool.query(`UPDATE standards_alignments SET review_status = 'verified', reviewed_by = ?, reviewed_at = ? WHERE id = ?`, [adminId, nowStr(), a.id]);
     verified++;
   }
@@ -398,26 +413,24 @@ async function lessonVersionsByStem(stems) {
 async function getPublicOverview() {
   const [rows] = await pool.query(`SELECT * FROM standards_state_coverage WHERE review_status = 'verified' ORDER BY state_code`);
   const [counts] = await pool.query(
-    `SELECT state_code, COUNT(*) AS n FROM standards_frameworks WHERE review_status = 'verified' GROUP BY state_code`);
+    `SELECT state_code, COUNT(*) AS n FROM standards_frameworks WHERE review_status = 'verified' AND district_id IS NULL GROUP BY state_code`);
   const byState = Object.fromEntries(counts.map(c => [c.state_code, Number(c.n)]));
+  const [dcounts] = await pool.query(
+    `SELECT f.state_code, COUNT(DISTINCT f.district_id) AS n FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
+     WHERE f.review_status = 'verified' AND d.name <> ? GROUP BY f.state_code`, [DEMO_DISTRICT_NAME]);
+  const districtsBy = Object.fromEntries(dcounts.map(c => [c.state_code, Number(c.n)]));
   return {
     verifiedStates: rows.length,
     totalJurisdictions: Object.keys(STATES).length,
-    states: rows.map(r => ({ ...forPublic(coverageOut(r)), verifiedFrameworks: byState[r.state_code] || 0 })),
+    states: rows.map(r => ({ ...forPublic(coverageOut(r)), verifiedFrameworks: byState[r.state_code] || 0, verifiedDistricts: districtsBy[r.state_code] || 0 })),
   };
 }
 
-async function buildState(codeIn, includeDrafts) {
-  // `includeDrafts` is passed ONLY by the admin-only preview functions below. The public path
-  // (getPublicState) always passes false, so the verified-only filter stays in the SQL.
-  const V = includeDrafts ? '' : " AND review_status = 'verified'";
-  const AV = includeDrafts ? '' : " AND a.review_status = 'verified'";
-  const code = stateCode(codeIn);
-  const [[cov]] = await pool.query(`SELECT * FROM standards_state_coverage WHERE state_code = ?${V}`, [code]);
-  const [fws] = await pool.query(
-    `SELECT * FROM standards_frameworks WHERE state_code = ?${V} ORDER BY framework_type, name`, [code]);
-  if (!cov && !fws.length) return null; // nothing verified for this state yet -- indistinguishable from "no data"
-
+// Turns framework rows into the page shape: items, and each item's FNE connections. Used for
+// state pages and district pages alike, so the connection rules (published lessons only, grade
+// versions, no blank rationale on the public path) live in exactly one place.
+async function assembleFrameworks(fws, includeDrafts) {
+  const AV = includeDrafts ? '' : " AND a.review_status = 'verified' AND a.rationale <> ''";
   const frameworks = [];
   for (const fw of fws) {
     const [items] = await pool.query('SELECT * FROM standards_items WHERE framework_id = ? ORDER BY sort_order, code', [fw.id]);
@@ -445,16 +458,68 @@ async function buildState(codeIn, includeDrafts) {
     }
     frameworks.push({ ...forPublic(frameworkOut(fw)), ...(includeDrafts ? { draft: fw.review_status !== 'verified' } : {}), items: items.map(it => ({ ...itemOut(it), alignments: byItem[it.id] || [] })) });
   }
-  return { state: { code, name: STATES[code] }, coverage: cov ? { ...forPublic(coverageOut(cov)), ...(includeDrafts ? { draft: cov.review_status !== 'verified' } : {}) } : null, frameworks };
+  return frameworks;
+}
+
+// Districts that have a framework in this state. Public: verified frameworks only, and never the
+// sales-demo district. Preview (admin only): everything, each row marked.
+async function districtsForState(code, includeDrafts) {
+  const V = includeDrafts ? '' : " AND f.review_status = 'verified' AND d.name <> ?";
+  const [rows] = await pool.query(
+    `SELECT f.district_id, d.name AS district_name, f.id AS framework_id, f.framework_type, f.name, f.review_status
+     FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
+     WHERE f.state_code = ?${V} ORDER BY d.name, f.framework_type, f.name`,
+    includeDrafts ? [code] : [code, DEMO_DISTRICT_NAME]);
+  const out = new Map();
+  for (const r of rows) {
+    if (!out.has(r.district_id)) out.set(r.district_id, { id: r.district_id, name: r.district_name, frameworks: [] });
+    out.get(r.district_id).frameworks.push({ type: r.framework_type, name: r.name, ...(includeDrafts ? { draft: r.review_status !== 'verified' } : {}) });
+  }
+  return [...out.values()];
+}
+
+async function buildState(codeIn, includeDrafts) {
+  // `includeDrafts` is passed ONLY by the admin-only preview functions below. The public path
+  // (getPublicState) always passes false, so the verified-only filter stays in the SQL.
+  const V = includeDrafts ? '' : " AND review_status = 'verified'";
+  const code = stateCode(codeIn);
+  const [[cov]] = await pool.query(`SELECT * FROM standards_state_coverage WHERE state_code = ?${V}`, [code]);
+  // district_id IS NULL: a district's framework is never part of its STATE's own list.
+  const [fws] = await pool.query(
+    `SELECT * FROM standards_frameworks WHERE state_code = ? AND district_id IS NULL${V} ORDER BY framework_type, name`, [code]);
+  const districts = await districtsForState(code, includeDrafts);
+  if (!cov && !fws.length && !districts.length) return null; // nothing verified for this state yet -- indistinguishable from "no data"
+  const frameworks = await assembleFrameworks(fws, includeDrafts);
+  return { state: { code, name: STATES[code] }, coverage: cov ? { ...forPublic(coverageOut(cov)), ...(includeDrafts ? { draft: cov.review_status !== 'verified' } : {}) } : null, frameworks, districts };
+}
+
+// ---- PUBLIC district page ----------------------------------------------------------------
+// One district's VERIFIED frameworks. The sales-demo district is excluded in the SQL, so a demo
+// framework is invisible here even if an FNE admin verifies it. Preview (admin) sees everything.
+async function buildDistrict(districtIdIn, includeDrafts) {
+  const districtId = Number(districtIdIn);
+  if (!Number.isInteger(districtId) || districtId <= 0) return null;
+  const [[d]] = await pool.query('SELECT id, name FROM districts WHERE id = ?', [districtId]);
+  if (!d) return null;
+  const isDemo = d.name === DEMO_DISTRICT_NAME;
+  if (isDemo && !includeDrafts) return null;
+  const V = includeDrafts ? '' : " AND review_status = 'verified'";
+  const [fws] = await pool.query(`SELECT * FROM standards_frameworks WHERE district_id = ?${V} ORDER BY framework_type, name`, [districtId]);
+  if (!fws.length) return null; // no verified framework -- indistinguishable from "no such district"
+  const frameworks = await assembleFrameworks(fws, includeDrafts);
+  const code = fws[0].state_code;
+  return { district: { id: d.id, name: d.name, ...(includeDrafts ? { demo: isDemo } : {}) }, state: { code, name: STATES[code] }, frameworks };
 }
 
 async function getPublicState(codeIn) { return buildState(codeIn, false); }
+async function getPublicDistrict(id) { return buildDistrict(id, false); }
+async function getPreviewDistrict(id) { return buildDistrict(id, true); }
 // Admin-only: the same page data INCLUDING drafts, each marked `draft: true`. Reachable only via
 // the requireAuth router; the public routes never call it.
 async function getPreviewState(codeIn) { return buildState(codeIn, true); }
 async function getPreviewOverview() {
   const [rows] = await pool.query('SELECT * FROM standards_state_coverage ORDER BY state_code');
-  const [counts] = await pool.query('SELECT state_code, COUNT(*) AS n FROM standards_frameworks GROUP BY state_code');
+  const [counts] = await pool.query('SELECT state_code, COUNT(*) AS n FROM standards_frameworks WHERE district_id IS NULL GROUP BY state_code');
   const byState = Object.fromEntries(counts.map(c => [c.state_code, Number(c.n)]));
   const states = rows.map(r => ({ ...forPublic(coverageOut(r)), draft: r.review_status !== 'verified', verifiedFrameworks: byState[r.state_code] || 0 }))
     .concat(Object.keys(byState).filter(c => !rows.some(r => r.state_code === c)).map(c => ({ stateCode: c, stateName: STATES[c], draft: true, verifiedFrameworks: byState[c] })));
@@ -464,10 +529,10 @@ async function getPreviewOverview() {
 // ---- ADMIN: everything, with review status ------------------------------------------
 async function getAdminOverview() {
   const [cov] = await pool.query('SELECT * FROM standards_state_coverage');
-  const [fws] = await pool.query('SELECT state_code, review_status, COUNT(*) AS n FROM standards_frameworks GROUP BY state_code, review_status');
+  const [fws] = await pool.query('SELECT state_code, review_status, COUNT(*) AS n FROM standards_frameworks WHERE district_id IS NULL GROUP BY state_code, review_status');
   const [als] = await pool.query(
     `SELECT f.state_code, a.review_status, COUNT(*) AS n FROM standards_alignments a
-     JOIN standards_items i ON i.id = a.item_id JOIN standards_frameworks f ON f.id = i.framework_id GROUP BY f.state_code, a.review_status`);
+     JOIN standards_items i ON i.id = a.item_id JOIN standards_frameworks f ON f.id = i.framework_id WHERE f.district_id IS NULL GROUP BY f.state_code, a.review_status`);
   const covBy = Object.fromEntries(cov.map(c => [c.state_code, c]));
   const tally = (rows, key) => rows.reduce((m, r) => { (m[r.state_code] = m[r.state_code] || { draft: 0, verified: 0 })[r.review_status] = Number(r.n); return m; }, {});
   const fwBy = tally(fws), alBy = tally(als);
@@ -482,7 +547,7 @@ async function getAdminOverview() {
 async function getAdminState(codeIn) {
   const code = stateCode(codeIn);
   const [[cov]] = await pool.query('SELECT * FROM standards_state_coverage WHERE state_code = ?', [code]);
-  const [fws] = await pool.query('SELECT * FROM standards_frameworks WHERE state_code = ? ORDER BY framework_type, name', [code]);
+  const [fws] = await pool.query('SELECT * FROM standards_frameworks WHERE state_code = ? AND district_id IS NULL ORDER BY framework_type, name', [code]);
   const frameworks = [];
   for (const fw of fws) frameworks.push(await getAdminFramework(fw.id));
   return { state: { code, name: STATES[code] }, coverage: cov ? coverageOut(cov, { admin: true }) : null, frameworks };
@@ -498,16 +563,46 @@ async function getAdminFramework(id) {
   for (const a of aligns) {
     (byItem[a.item_id] = byItem[a.item_id] || []).push({
       id: a.id, targetType: a.target_type, targetId: a.target_id || null, strength: a.strength, rationale: a.rationale,
+      suggestedByDistrict: !!a.suggested_by_site_user_id, districtNote: a.district_note || null,
       ...reviewFields(a), reviewedBy: a.reviewed_by || null,
     });
   }
   return { ...frameworkOut(fw, { admin: true }), items: items.map(it => ({ ...itemOut(it), alignments: byItem[it.id] || [] })) };
 }
 
+// Every district framework with its submission state, for the admin "District frameworks" tab.
+// Awaiting-review rows (draft + submitted) come first.
+async function getAdminDistrictQueue() {
+  const [rows] = await pool.query(
+    `SELECT f.id, f.district_id, d.name AS district_name, f.state_code, f.framework_type, f.name, f.review_status, f.submitted_at,
+       (SELECT COUNT(*) FROM standards_items i WHERE i.framework_id = f.id) AS item_count,
+       (SELECT COUNT(*) FROM standards_alignments a JOIN standards_items i ON i.id = a.item_id
+         WHERE i.framework_id = f.id AND a.review_status = 'draft') AS draft_connections,
+       (SELECT COUNT(*) FROM standards_alignments a JOIN standards_items i ON i.id = a.item_id
+         WHERE i.framework_id = f.id AND a.suggested_by_site_user_id IS NOT NULL AND a.review_status = 'draft') AS suggested_connections
+     FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
+     ORDER BY CASE WHEN f.review_status = 'draft' AND f.submitted_at IS NOT NULL THEN 0 WHEN f.review_status = 'draft' THEN 1 ELSE 2 END,
+       f.submitted_at, d.name, f.name`);
+  return rows.map(r => ({
+    id: r.id, districtId: r.district_id, districtName: r.district_name, demo: r.district_name === DEMO_DISTRICT_NAME,
+    stateCode: r.state_code, stateName: STATES[r.state_code], type: r.framework_type, name: r.name,
+    reviewStatus: r.review_status, submittedAt: r.submitted_at || null, awaitingReview: r.review_status === 'draft' && !!r.submitted_at,
+    itemCount: Number(r.item_count), draftConnections: Number(r.draft_connections), suggestedConnections: Number(r.suggested_connections),
+  }));
+}
+
+// Shared with lib/district-standards.js (one set of validators, one set of row mappers).
+const internals = {
+  bad, text, httpsUrl, dateOnly, year, stateCode, oneOf, nowStr, frameworkInput, FRAMEWORK_COLS, frameworkOut, itemOut, forPublic,
+  draftFramework, targetExists, lessonStem, lessonVersionsByStem, hasRealRationale,
+};
+
 module.exports = {
+  internals, getAdminDistrictQueue,
   STATES, SEL_STATUSES, POG_STATUSES, FRAMEWORK_TYPES, CASEL, TARGET_TYPES, STRENGTHS,
   upsertCoverage, verifyCoverage, unverifyCoverage,
   createFramework, updateFramework, deleteFramework, upsertItems, deleteItem, verifyFramework, unverifyFramework,
   upsertAlignment, deleteAlignment, verifyAlignment, verifyAlignmentsForItem, unverifyAlignment,
+  getPublicDistrict, getPreviewDistrict,
   getPublicOverview, getPublicState, getPreviewState, getPreviewOverview, getAdminOverview, getAdminState, getAdminFramework,
 };

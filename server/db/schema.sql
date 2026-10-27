@@ -1354,11 +1354,23 @@ CREATE TABLE IF NOT EXISTS standards_frameworks (
   review_status ENUM('draft','verified') NOT NULL DEFAULT 'draft',
   reviewed_by INT UNSIGNED NULL,
   reviewed_at DATETIME NULL,
+  -- Per-district frameworks (docs/standards-crosswalk/DISTRICT-FRAMEWORKS-REQUIREMENTS.md).
+  -- district_id NULL = a state framework. Every STATE query must say district_id IS NULL.
+  district_id INT UNSIGNED NULL,
+  owner_key INT UNSIGNED NOT NULL DEFAULT 0, -- district_id, or 0 for a state framework (lets the unique key work per owner)
+  submitted_at DATETIME NULL, -- district admin sent it to FNE for review; any edit clears it
+  submitted_by_site_user_id INT UNSIGNED NULL,
+  attested_at DATETIME NULL, -- the district admin confirmed it is their district's official framework
+  attested_by_site_user_id INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_state_type_name (state_code, framework_type, name),
+  UNIQUE KEY uq_owner_type_name (state_code, framework_type, name, owner_key),
   INDEX idx_state (state_code),
-  FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL
+  INDEX idx_district (district_id),
+  FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE CASCADE,
+  FOREIGN KEY (submitted_by_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (attested_by_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS standards_items (
@@ -1380,13 +1392,16 @@ CREATE TABLE IF NOT EXISTS standards_alignments (
   target_type ENUM('program','curriculum','brain_game') NOT NULL,
   target_id INT UNSIGNED NOT NULL DEFAULT 0, -- 0 for 'program' (FNE as a whole)
   strength ENUM('direct','supporting') NOT NULL,
-  rationale VARCHAR(1000) NOT NULL,
+  rationale VARCHAR(1000) NOT NULL, -- '' for a district's suggestion until FNE writes it; can't be verified while blank
   review_status ENUM('draft','verified') NOT NULL DEFAULT 'draft',
   reviewed_by INT UNSIGNED NULL,
   reviewed_at DATETIME NULL,
+  suggested_by_site_user_id INT UNSIGNED NULL, -- set when a district admin suggested this connection
+  district_note VARCHAR(500) NULL, -- the district's private reason; NEVER selected by a public query
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_item_target (item_id, target_type, target_id),
   FOREIGN KEY (item_id) REFERENCES standards_items(id) ON DELETE CASCADE,
-  FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL
+  FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (suggested_by_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

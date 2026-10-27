@@ -79,6 +79,17 @@
         </div>
       </div>
 
+      <div class="a-card" id="districtCard" style="margin-top:24px;">
+        <div class="a-card-head"><h2>District frameworks</h2></div>
+        <p class="a-note" style="margin-top:0;">Submitted by the district. Check each standard against the source link they gave, write the rationale for every suggested connection, then verify.</p>
+        <div style="overflow-x:auto;">
+          <table class="a-table" id="districtTable">
+            <thead><tr><th>District</th><th>Framework</th><th>State</th><th>Status</th><th>Standards</th><th>Connections</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
       <div id="stateDetail" style="display:none; margin-top:24px;"></div>
 
     </div>
@@ -159,6 +170,7 @@ let itemsFwId = null;
 let alignItemId = null;
 let lessonOptions = null;   // loaded lazily
 let gameOptions = null;
+let districtQueue = [];     // district frameworks, awaiting review first
 
 const $ = (id) => document.getElementById(id);
 const today = () => new Date().toISOString().slice(0, 10);
@@ -188,6 +200,55 @@ async function loadOverview() {
   overview = data;
   renderSummary();
   renderList();
+}
+
+/* --------------------------------------------------------- district frameworks */
+async function loadDistricts() {
+  const data = await api('GET', '/districts');
+  if (failed(data)) { if (data) fnToast(data.__error); return; }
+  districtQueue = data;
+  renderDistricts();
+}
+function renderDistricts() {
+  const tbody = document.querySelector('#districtTable tbody');
+  if (!districtQueue.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="a-empty" style="padding:18px;">No district frameworks yet.</div></td></tr>'; return; }
+  tbody.innerHTML = districtQueue.map(r => {
+    const status = r.awaitingReview ? '<span class="a-pill a-pill-warning">Awaiting review</span>' : reviewPill(r.reviewStatus);
+    const open = openState && openState.district && openState.frameworks[0] && openState.frameworks[0].id === r.id ? ' class="sx-row-open"' : '';
+    return `<tr${open}>
+      <td><div class="a-cell-title">${fnEscape(r.districtName)}</div>${r.demo ? '<div class="a-cell-sub">Demo district: never shown publicly</div>' : ''}</td>
+      <td><div class="a-cell-title">${fnEscape(r.name)}</div><div class="a-cell-sub">${fnEscape(TYPE_LABELS[r.type] || r.type)}${r.submittedAt ? ' · submitted ' + fnEscape(fnFormatDate(r.submittedAt)) : ''}</div></td>
+      <td>${fnEscape(r.stateName || r.stateCode)}</td>
+      <td>${status}</td>
+      <td>${fnEscape(r.itemCount)}</td>
+      <td>${fnEscape(r.draftConnections)} draft${r.suggestedConnections ? ' · ' + fnEscape(r.suggestedConnections) + ' suggested by the district' : ''}</td>
+      <td><button class="a-btn a-btn-outline a-btn-sm" data-act="open-district" data-id="${fnEscape(r.id)}">Open</button></td>
+    </tr>`;
+  }).join('');
+}
+async function openDistrictPanel(fwId) {
+  const row = districtQueue.find(r => r.id === fwId);
+  const fw = await api('GET', '/frameworks/' + fwId);
+  if (failed(fw)) { fnToast(fw ? fw.__error : 'Could not load that framework'); return; }
+  openState = { state: { code: fw.stateCode, name: STATE_NAME(fw.stateCode) }, coverage: null, frameworks: [fw],
+    district: { id: fw.districtId, name: row ? row.districtName : 'District', demo: !!(row && row.demo) } };
+  renderState(); renderList(); renderDistricts();
+  $('stateDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+const STATE_NAME = (code) => { const s = overview.find(o => o.stateCode === code); return s ? s.stateName : code; };
+function renderDistrictDetail() {
+  const { district, frameworks } = openState, fw = frameworks[0];
+  $('stateDetail').innerHTML = `
+    <div class="a-card">
+      <div class="a-card-head">
+        <h2>${fnEscape(district.name)} <span style="font-weight:500;" class="a-note">${fnEscape(openState.state.name)}</span></h2>
+        <div class="sx-actions"><a class="a-btn a-btn-outline a-btn-sm" href="state-standards.html?district=${encodeURIComponent(district.id)}&preview=1" target="_blank" rel="noopener">Preview as a visitor</a><button class="a-btn a-btn-outline a-btn-sm" data-act="close-state">Close</button></div>
+      </div>
+      ${district.demo ? '<p class="sx-callout">Demo district: never shown publicly, even if verified.</p>' : ''}
+      <p class="a-note" style="margin-top:0;">${fw.submittedAt ? 'Submitted by the district ' + fnEscape(fnFormatDate(fw.submittedAt)) + (fw.attestedAt ? ', with their confirmation that this is their official framework.' : '.') : 'Not submitted yet. The district is still working on it.'}</p>
+      ${frameworkHtml(fw)}
+    </div>`;
+  $('stateDetail').style.display = 'block';
 }
 
 function stateKind(s) {
@@ -221,7 +282,7 @@ function renderList() {
   tbody.innerHTML = rows.map(s => {
     const c = s.coverage;
     const cov = c ? reviewPill(c.reviewStatus) : '<span class="a-pill a-pill-neutral">Not started</span>';
-    const open = openState && openState.state.code === s.stateCode ? ' class="sx-row-open"' : '';
+    const open = openState && !openState.district && openState.state.code === s.stateCode ? ' class="sx-row-open"' : '';
     return `<tr${open}>
       <td><div class="a-cell-title">${fnEscape(s.stateName)}</div><div class="a-cell-sub">${fnEscape(s.stateCode)}</div></td>
       <td>${fnEscape(c ? SEL_LABELS[c.selStatus] : '—')}</td>
@@ -249,6 +310,7 @@ function selectOptions(labels, current) {
 }
 
 function renderState() {
+  if (openState.district) return renderDistrictDetail();
   const { state, coverage, frameworks } = openState;
   const c = coverage || { selStatus: 'unknown', pogStatus: 'unknown', selSourceUrl: '', pogSourceUrl: '', sourceAccessedOn: '', notes: '', reviewStatus: 'draft' };
   const reviewed = coverage && coverage.reviewStatus === 'verified' && coverage.reviewedAt ? ` · reviewed ${fnEscape(fnFormatDate(coverage.reviewedAt))}` : '';
@@ -320,12 +382,12 @@ function itemRowHtml(fw, it) {
   const aligns = it.alignments.map(a => `
     <div class="sx-align">
       <span class="a-pill ${a.strength === 'direct' ? 'a-pill-success' : 'a-pill-neutral'}">${fnEscape(a.strength)}</span>
-      <strong>${fnEscape(targetLabel(a))}</strong> ${reviewPill(a.reviewStatus)}
-      <span class="sx-why">${fnEscape(a.rationale)}</span>
+      <strong>${fnEscape(targetLabel(a))}</strong> ${reviewPill(a.reviewStatus)}${a.suggestedByDistrict ? ' <span class="a-pill a-pill-neutral">Suggested by the district</span>' : ''}
+      <span class="sx-why">${a.rationale ? fnEscape(a.rationale) : '<em>No rationale yet.</em>'}${a.districtNote ? `<br>District's private note: ${fnEscape(a.districtNote)}` : ''}</span>
       <span class="sx-actions">
         ${a.reviewStatus === 'verified'
           ? `<button class="a-btn a-btn-outline a-btn-sm" data-act="unverify-al" data-id="${fnEscape(a.id)}">Unverify</button>`
-          : `<button class="a-btn a-btn-primary a-btn-sm" data-act="verify-al" data-id="${fnEscape(a.id)}"${fw.reviewStatus === 'verified' ? '' : ' disabled title="Verify the framework first"'}>Verify</button>`}
+          : `${a.rationale ? '' : `<button class="a-btn a-btn-outline a-btn-sm" data-act="write-rationale" data-id="${fnEscape(it.id)}" data-type="${fnEscape(a.targetType)}" data-target="${fnEscape(a.targetId || 0)}" data-strength="${fnEscape(a.strength)}" data-label="${fnEscape(it.code + ' — ' + it.title)}">Write the rationale</button>`}<button class="a-btn a-btn-primary a-btn-sm" data-act="verify-al" data-id="${fnEscape(a.id)}"${fw.reviewStatus !== 'verified' ? ' disabled title="Verify the framework first"' : (a.rationale ? '' : ' disabled title="Write the rationale first"')}>Verify</button>`}
         <button class="a-btn a-btn-danger a-btn-sm" data-act="delete-al" data-id="${fnEscape(a.id)}">Remove</button>
       </span>
     </div>`).join('');
@@ -349,6 +411,12 @@ function targetLabel(a) {
 async function refreshOpenState(msg) {
   if (msg) fnToast(msg);
   await loadOverview();
+  await loadDistricts();
+  if (openState && openState.district) {
+    const fw = await api('GET', '/frameworks/' + openState.frameworks[0].id);
+    if (failed(fw)) { openState = null; $('stateDetail').style.display = 'none'; renderList(); return; }
+    openState.frameworks = [fw]; renderState(); renderDistricts(); return;
+  }
   if (openState) {
     const data = await api('GET', '/states/' + encodeURIComponent(openState.state.code));
     if (!failed(data)) { openState = data; renderState(); renderList(); }
@@ -437,12 +505,13 @@ function fillTargets() {
   $('alTarget').innerHTML = (list || []).map(o => `<option value="${fnEscape(o.id)}">${fnEscape(o.label)}</option>`).join('') || '<option value="">(none found)</option>';
 }
 
-async function openAlignModal(itemId, label) {
+async function openAlignModal(itemId, label, prefill) {
   await ensureOptions();
   alignItemId = itemId;
   $('alignItemLabel').textContent = label;
-  $('alTargetType').value = 'program'; fillTargets();
-  $('alStrength').value = 'direct'; $('alWhy').value = '';
+  $('alTargetType').value = prefill ? prefill.type : 'program'; fillTargets();
+  if (prefill && prefill.type !== 'program') $('alTarget').value = String(prefill.targetId);
+  $('alStrength').value = prefill ? prefill.strength : 'direct'; $('alWhy').value = '';
   showErr('alErr', '');
   modal('alignModal', true);
 }
@@ -462,7 +531,9 @@ document.addEventListener('click', async (e) => {
   const act = el.dataset.act, id = Number(el.dataset.id);
   switch (act) {
     case 'open-state': return openStatePanel(el.dataset.code);
-    case 'close-state': openState = null; $('stateDetail').style.display = 'none'; return renderList();
+    case 'close-state': openState = null; $('stateDetail').style.display = 'none'; renderDistricts(); return renderList();
+    case 'open-district': return openDistrictPanel(id);
+    case 'write-rationale': return openAlignModal(id, el.dataset.label, { type: el.dataset.type, targetId: Number(el.dataset.target), strength: el.dataset.strength });
     case 'close-modal': return ['fwModal', 'itemsModal', 'alignModal'].forEach(m => modal(m, false));
     case 'save-coverage': return run(api('PUT', '/coverage/' + openState.state.code, coverageBody()), 'Coverage saved as a draft.');
     case 'verify-coverage': return run(api('POST', '/coverage/' + openState.state.code + '/verify'), 'Coverage verified.');
@@ -497,6 +568,7 @@ $('filterText').addEventListener('input', renderList);
 (async function init() {
   await ensureOptions();   // so existing alignments show lesson/game names
   await loadOverview();
+  await loadDistricts();
 })();
 </script>
 <script src="admin-shell.js?v=2"></script>

@@ -23,7 +23,14 @@ router.get('/preview/states/:code', wrap(async (req) => {
   if (!d) { const e = new Error('Nothing loaded for that state yet'); e.status = 404; throw e; }
   return d;
 }));
+router.get('/preview/districts/:id', wrap(async (req) => {
+  const d = await standards.getPreviewDistrict(req.params.id);
+  if (!d) { const e = new Error('No framework recorded for that district yet'); e.status = 404; throw e; }
+  return d;
+}));
 router.get('/states/:code', wrap((req) => standards.getAdminState(req.params.code)));
+// District-submitted frameworks (and any an admin recorded for a district), awaiting review first.
+router.get('/districts', wrap(() => standards.getAdminDistrictQueue()));
 
 // Coverage (one row per jurisdiction)
 router.put('/coverage/:code', wrap((req) => standards.upsertCoverage(req.params.code, req.body || {})));

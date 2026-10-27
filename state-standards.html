@@ -55,6 +55,11 @@
   .state-btn:hover{box-shadow:var(--shadow); transform:translateY(-2px);}
   .state-btn small{display:block; font-weight:500; font-size:12px; color:var(--ink-soft); margin-top:2px;}
 
+  .districts{margin:36px 0 8px;}
+  .district-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-top:14px;}
+  .district-btn{display:block; background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; font-weight:700; color:var(--teal-dark); text-decoration:none;}
+  .district-btn:hover{box-shadow:var(--shadow); transform:translateY(-2px);}
+  .district-btn small{display:block; font-weight:500; font-size:12px; color:var(--ink-soft); margin-top:2px;}
   .state-head{margin:36px 0 8px;}
   .state-head h2{font-size:34px;}
   .print-btn{margin-top:14px; font-size:13.5px; padding:10px 20px;}
@@ -129,13 +134,13 @@
 <section class="hero">
   <div class="hero-inner">
     <span class="eyebrow">State standards</span>
-    <h1>How Fixer Nation lines up with your state's SEL standards and Portrait of a Graduate</h1>
-    <p>Pick a state to see its social-emotional learning standards or graduate profile, and which Fixer Nation lessons and games connect to each one. Our team checked every entry here against the state's own documents.</p>
+    <h1 id="heroTitle">How Fixer Nation lines up with your state's SEL standards and Portrait of a Graduate</h1>
+    <p id="heroLead">Pick a state to see its social-emotional learning standards or graduate profile, and which Fixer Nation lessons and games connect to each one. Our team checked every entry here against the state's own documents.</p>
   </div>
 </section>
 
 <main class="wrap">
-  <div class="notice">
+  <div class="notice" id="notice">
     <strong>Please read:</strong> This is Fixer Nation's own mapping of its lessons and games to each state's published framework. Neither a state education agency nor CASEL has reviewed or endorsed it, and neither has certified it. Each standard gets a short summary and a link to the official document, which is always the source of truth.
   </div>
 
@@ -332,20 +337,13 @@
     return h + '</article>';
   }
 
-  function renderState(d) {
-    var cov = d.coverage, fws = d.frameworks || [];
-    var date = (cov && cov.sourceAccessedOn) || (fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop());
-    var h = '<div class="state-head"><h2>' + esc(d.state.name) + '</h2>' + (date ? '<p class="checked">Checked against the state\'s documents on ' + esc(niceDate(date)) + '.</p>' : '') + (fws.length ? '<a class="btn print-btn" href="state-onepager.html?state=' + encodeURIComponent(d.state.code) + (PREVIEW ? '&preview=1' : '') + '" target="_blank" rel="noopener">Print a one-page summary</a>' : '') + '</div>';
-    if (cov) {
-      h += '<div class="coverage">' +
-        '<div class="cov-card"><div class="k">Social-emotional learning' + (cov.draft ? DRAFT : '') + '</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div>' + link(cov.selSourceUrl, 'Where we checked') + '</div>' +
-        '<div class="cov-card"><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div>' + link(cov.pogSourceUrl, 'Where we checked') + '</div></div>';
-    }
-    if (fws.length) {
-      h += '<div class="legend"><strong>How to read the connections.</strong> A direct match means the lesson or game teaches the same skill the standard names. A supporting connection means it reinforces part of the standard. Each lesson has versions for K-5, 6-8 and 9-12, written for that age group. The goals are the same in every version, so a connection applies to all of them.</div>' +
+  function controlsHtml() {
+    return '<div class="legend"><strong>How to read the connections.</strong> A direct match means the lesson or game teaches the same skill the standard names. A supporting connection means it reinforces part of the standard. Each lesson has versions for K-5, 6-8 and 9-12, written for that age group. The goals are the same in every version, so a connection applies to all of them.</div>' +
         '<label class="grade-pick" for="gradePick">Show lesson versions for <select id="gradePick"><option value="">All grades</option><option value="elementary">Elementary (K-5)</option><option value="middle">Middle (6-8)</option><option value="high">High school (9-12)</option></select></label>' +
         '<label class="filter"><input type="checkbox" id="onlyLinked"> Show only standards with a Fixer Nation connection</label>';
-    }
+  }
+  function frameworksHtml(fws) {
+    var h = '';
     fws.forEach(function (fw) {
       var meta = [];
       if (fw.issuingBody) meta.push('Issued by ' + esc(fw.issuingBody));
@@ -356,9 +354,9 @@
       h += '<section class="framework"><h3>' + esc(fw.name) + (fw.draft ? DRAFT : '') + '</h3><p class="fw-meta">' + meta.join(' &middot; ') + '</p>' +
         (fw.items || []).map(standardHtml).join('') + '</section>';
     });
-    app.removeAttribute('data-grade');
-    app.innerHTML = h;
-    document.title = d.state.name + ' - State SEL Standards & Portrait of a Graduate - Fixer Nation Education';
+    return h;
+  }
+  function wireControls() {
     var gp = document.getElementById('gradePick');
     if (gp) {
       var g0 = new URLSearchParams(location.search).get('grade');
@@ -374,6 +372,67 @@
       var rows = app.querySelectorAll('.std');
       for (var i = 0; i < rows.length; i++) rows[i].style.display = (cb.checked && rows[i].getAttribute('data-has') !== '1') ? 'none' : '';
     });
+  }
+
+  function districtsHtml(d) {
+    if (!d.districts || !d.districts.length) return '';
+    return '<section class="districts"><h3>Districts in ' + esc(d.state.name) + '</h3>' +
+      '<p class="fw-meta">These districts shared their own framework with us, and we checked each one against the district\'s published document.</p>' +
+      '<div class="district-grid">' + d.districts.map(function (x) {
+        var n = (x.frameworks || []).length, drafty = (x.frameworks || []).some(function (f) { return f.draft; });
+        return '<a class="district-btn" href="?district=' + encodeURIComponent(x.id) + suffix() + '">' + esc(x.name) + (drafty ? DRAFT : '') +
+          '<small>' + esc(n) + (n === 1 ? ' framework' : ' frameworks') + '</small></a>';
+      }).join('') + '</div></section>';
+  }
+
+  var DISTRICT = qs.get('district');
+  function poss(n) { return /s$/i.test(n) ? n + '\'' : n + '\'s'; }
+  function renderDistrict(d) {
+    var fws = d.frameworks || [], name = d.district.name;
+    document.getElementById('heroTitle').textContent = 'How Fixer Nation lines up with your district\'s framework';
+    document.getElementById('heroLead').textContent = 'See which Fixer Nation lessons and games connect to each part of your district\'s framework. Our team checked every entry against the district\'s own document.';
+    var date = fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop();
+    document.getElementById('notice').innerHTML = '<strong>Please read:</strong> This is Fixer Nation\'s own mapping of its lessons and games to ' + esc(poss(name)) + ' published framework. ' + esc(name) + ', your state education agency and CASEL haven\'t reviewed, endorsed or certified it. Each item gets a short summary and a link to the district\'s own document, which is the source of truth.';
+    var h = '<div class="state-head"><h2>' + esc(name) + (d.district.demo ? DRAFT : '') + '</h2>' +
+      (date ? '<p class="checked">Checked against the district\'s published framework on ' + esc(niceDate(date)) + '.</p>' : '') +
+      (d.district.demo ? '<p class="checked">Demo district: never shown publicly.</p>' : '') +
+      '<p class="checked"><a href="state-standards.html?state=' + encodeURIComponent(d.state.code) + suffix() + '">Back to ' + esc(d.state.name) + '</a></p>' +
+      '<a class="btn print-btn" href="state-onepager.html?district=' + encodeURIComponent(d.district.id) + (PREVIEW ? '&preview=1' : '') + '" target="_blank" rel="noopener">Print a one-page summary</a></div>';
+    h += controlsHtml() + frameworksHtml(fws);
+    app.removeAttribute('data-grade');
+    app.innerHTML = h;
+    document.title = name + ' - Portrait of a Graduate - Fixer Nation Education';
+    wireControls();
+  }
+  function loadDistrict(id) {
+    document.querySelector('.picker-section').style.display = 'none';
+    if (!/^\d+$/.test(id)) { districtMissing(); return; }
+    getJson(API + '/districts/' + encodeURIComponent(id)).then(function (d) {
+      if (PREVIEW) previewOn();
+      if (!d) { districtMissing(); return; }
+      renderDistrict(d);
+    }).catch(function (e) { if (e && e.unauthorized) { previewDenied(); loadDistrict(id); } else showError(); });
+  }
+  function districtMissing() {
+    app.innerHTML = '<div class="empty"><h2>We haven\'t finished reviewing that district yet.</h2><p>Browse the state\'s standards, or let us know your district matters to you.</p><a class="btn" href="contact.html">Tell us about your district</a></div>';
+  }
+
+  function renderState(d) {
+    var cov = d.coverage, fws = d.frameworks || [];
+    var date = (cov && cov.sourceAccessedOn) || (fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop());
+    var h = '<div class="state-head"><h2>' + esc(d.state.name) + '</h2>' + (date ? '<p class="checked">Checked against the state\'s documents on ' + esc(niceDate(date)) + '.</p>' : '') + (fws.length ? '<a class="btn print-btn" href="state-onepager.html?state=' + encodeURIComponent(d.state.code) + (PREVIEW ? '&preview=1' : '') + '" target="_blank" rel="noopener">Print a one-page summary</a>' : '') + '</div>';
+    if (cov) {
+      h += '<div class="coverage">' +
+        '<div class="cov-card"><div class="k">Social-emotional learning' + (cov.draft ? DRAFT : '') + '</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div>' + link(cov.selSourceUrl, 'Where we checked') + '</div>' +
+        '<div class="cov-card"><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div>' + link(cov.pogSourceUrl, 'Where we checked') + '</div></div>';
+    }
+    if (fws.length) h += controlsHtml();
+    h += frameworksHtml(fws);
+    h += districtsHtml(d);
+    app.removeAttribute('data-grade');
+    app.innerHTML = h;
+    document.title = d.state.name + ' - State SEL Standards & Portrait of a Graduate - Fixer Nation Education';
+    wireControls();
   }
 
   var overview = null;
@@ -411,7 +470,7 @@
       picker.innerHTML = '<option value="">Unavailable</option>'; showError();
     });
   }
-  start();
+  if (DISTRICT) loadDistrict(DISTRICT); else start();
 })();
 </script>
 </body>

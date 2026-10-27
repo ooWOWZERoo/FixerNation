@@ -22,4 +22,12 @@ router.get('/states/:code', async (req, res) => {
   res.json(data);
 });
 
+// GET /api/standards/districts/:id -- one district's verified frameworks, items and FNE connections.
+// The sales-demo district is excluded in lib/standards.js's SQL, so it answers 404 like any unknown id.
+router.get('/districts/:id', async (req, res) => {
+  const data = await standards.getPublicDistrict(req.params.id);
+  if (!data) return res.status(404).json({ error: 'No verified framework for that district yet' });
+  res.json(data);
+});
+
 module.exports = router;

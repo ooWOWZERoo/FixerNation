@@ -71,7 +71,7 @@ async function importData(data, { standards, pool }) {
 
   const frameworkIds = {};
   for (const f of data.frameworks || []) {
-    const [[existing]] = await pool.query('SELECT id FROM standards_frameworks WHERE state_code = ? AND framework_type = ? AND name = ?', [state, f.type, f.name]);
+    const [[existing]] = await pool.query('SELECT id FROM standards_frameworks WHERE state_code = ? AND framework_type = ? AND name = ? AND district_id IS NULL', [state, f.type, f.name]);
     const meta = { ...f, stateCode: state };
     delete meta.items;
     const res = existing ? await standards.updateFramework(existing.id, meta) : await standards.createFramework(meta);

@@ -34,7 +34,7 @@ So the dataset is a **coverage matrix**, not 50 identical records: for each juri
 | `standards_frameworks` | A real framework: state, type (`sel_standards` / `portrait_of_graduate`), name, issuing body, official URL, accessed date, review status |
 | `standards_items` | The framework's individual standards/competencies: code, title, short summary, grade band, CASEL competency |
 | `standards_alignments` | FNE content ↔ item: target (`program` / `curriculum` / `brain_game`), strength (`direct` / `supporting`), rationale, review status |
-| *(phase 3)* `district_frameworks` / items | A district's own portrait |
+| *(phase 4)* same tables | A district's own portrait: `standards_frameworks.district_id` (NULL = a state framework). Every STATE query filters `district_id IS NULL`. Detail: `DISTRICT-FRAMEWORKS-REQUIREMENTS.md` |
 
 Review state lives in the database (a human act in the admin UI); the research itself is committed as JSON under `server/data/standards/` and loaded as **draft** by `scripts/import-standards.js`, so every research change is a reviewable git diff. Re-importing identical data does not disturb an existing verification.
 
@@ -45,7 +45,8 @@ Review state lives in the database (a human act in the admin UI); the research i
 | Anonymous | YES | NO | NO | NO |
 | Site user (teacher, parent, student) | YES | NO | NO | NO |
 | Sales-demo account | YES | NO | NO | NO |
-| School / district admin | YES | NO | *(phase 3)* own district's framework only | NO |
+| School admin | YES | NO | NO (read-only) | NO |
+| District admin | YES | own district's only | own district's framework only (suggests connections; cannot verify) | NO |
 | FNE admin (`requireAuth`) | YES | YES | YES | YES |
 
 Public endpoints: `GET /api/standards/overview`, `GET /api/standards/states/:code`. Admin endpoints: `/api/admin/standards/*`.
@@ -55,7 +56,7 @@ Public endpoints: `GET /api/standards/overview`, `GET /api/standards/states/:cod
 1. **Data model, review gate, APIs, import script, tests** *(this change)*
 2. Admin review page (Mission Control style) + research and load a **pilot batch** of states
 3. Public crosswalk page
-4. District frameworks (school/district-admin portals)
+4. District frameworks (district-admin portal) *(built 2026-10-27; see DISTRICT-FRAMEWORKS-REQUIREMENTS.md)*
 5. Sales one-pager
 6. Remaining states in batches, driven by the coverage tracker
 

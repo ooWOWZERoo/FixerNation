@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Portrait of a Graduate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+<style>
+  .fw-card { margin-bottom: 20px; }
+  .fw-meta { font-size: 13px; color: var(--sa-text-soft); margin: 4px 0 12px; }
+  .fw-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+  .std { border-top: 1px solid var(--sa-border); padding: 12px 0; }
+  .std-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .std-title { font-weight: 600; font-size: 14px; }
+  .std-code { font-size: 12px; font-weight: 700; color: var(--sa-text-soft); margin-right: 6px; }
+  .std-sum { font-size: 13px; color: var(--sa-text-soft); margin: 4px 0 0; }
+  .conn { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; font-size: 13px; padding: 6px 0 6px 14px; border-left: 3px solid var(--sa-border); margin-top: 6px; }
+  .conn small { display: block; color: var(--sa-text-soft); margin-top: 2px; }
+  .suggest-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 14px; }
+  .suggest-row select, .suggest-row input { padding: 7px 10px; border: 1px solid var(--sa-border); border-radius: 8px; font: inherit; font-size: 13px; }
+  .suggest-row select { max-width: 280px; }
+  .suggest-row input { flex: 1; min-width: 160px; }
+  .attest { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin-top: 14px; }
+  .attest input { margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="district-admin-nav.js?v=6"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Portrait of a Graduate</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+        <div class="sa-card">
+          <p style="margin:0 0 10px; font-size:14px;">Record your district's Portrait of a Graduate or SEL competencies and link to where your district published it. Our staff review what you submit. Once it's approved, it shows up on a public page next to the lessons and games that match.</p>
+          <div class="sa-alert sa-alert-info" style="margin:0 0 10px;">These matches are Fixer Nation Education's own mapping. They don't mean your district, your state or CASEL endorses or certifies our program.</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span id="limitNote" style="font-size:12.5px; color:var(--sa-text-soft);"></span>
+            <button class="sa-btn sa-btn-primary" id="addFwBtn" data-act="add-fw">Add a framework</button>
+          </div>
+        </div>
+        <div id="fwList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Framework form -->
+<div class="sa-modal-overlay" id="fwModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head"><h2 id="fwModalTitle">Add a framework</h2><button class="sa-modal-close" data-act="close-modal">✕</button></div>
+    <div id="fwErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-form-group"><label for="fName">Name *</label><input type="text" id="fName" maxlength="255" placeholder="Portrait of a Graduate"></div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label for="fType">Type *</label>
+        <select id="fType"><option value="portrait_of_graduate">Portrait of a Graduate</option><option value="sel_standards">SEL standards</option></select></div>
+      <div class="sa-form-group"><label for="fState">State *</label><select id="fState"></select></div>
+    </div>
+    <div class="sa-form-group"><label for="fBody">Published by *</label><input type="text" id="fBody" maxlength="255" placeholder="Your district or board of education"></div>
+    <div class="sa-form-group"><label for="fUrl">Link to the official page (https) *</label><input type="url" id="fUrl" maxlength="500" placeholder="https://"></div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label for="fDate">Date you checked it *</label><input type="date" id="fDate"></div>
+      <div class="sa-form-group"><label for="fYear">Year adopted (optional)</label><input type="number" id="fYear" min="1990" max="2100"></div>
+      <div class="sa-form-group"><label for="fSpan">Grade span (optional)</label><input type="text" id="fSpan" maxlength="32" placeholder="K-12"></div>
+    </div>
+    <div class="sa-modal-foot"><button class="sa-btn sa-btn-secondary" data-act="close-modal">Cancel</button><button class="sa-btn sa-btn-primary" data-act="save-fw">Save</button></div>
+  </div>
+</div>
+
+<!-- Standard form -->
+<div class="sa-modal-overlay" id="stdModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head"><h2 id="stdModalTitle">Add a standard</h2><button class="sa-modal-close" data-act="close-modal">✕</button></div>
+    <div id="stdErr" class="sa-alert sa-alert-danger" style="display:none;"></div>
+    <div class="sa-form-row">
+      <div class="sa-form-group"><label for="sCode">Code *</label><input type="text" id="sCode" maxlength="64" placeholder="1"></div>
+      <div class="sa-form-group"><label for="sBand">Grade band (optional)</label><input type="text" id="sBand" maxlength="32"></div>
+    </div>
+    <div class="sa-form-group"><label for="sTitle">Title *</label><input type="text" id="sTitle" maxlength="255"></div>
+    <div class="sa-form-group"><label for="sSummary">Short summary</label><textarea id="sSummary" maxlength="600" rows="3"></textarea>
+      <div style="font-size:12px; color:var(--sa-text-soft); margin-top:4px;">In your own words, up to 600 characters. For the full text, link to your district's document.</div></div>
+    <div class="sa-form-group"><label for="sCasel">CASEL competency (optional)</label>
+      <select id="sCasel"><option value="">None</option><option value="self_awareness">Self-awareness</option><option value="self_management">Self-management</option><option value="social_awareness">Social awareness</option><option value="relationship_skills">Relationship skills</option><option value="responsible_decision_making">Responsible decision-making</option></select></div>
+    <div class="sa-modal-foot"><button class="sa-btn sa-btn-secondary" data-act="close-modal">Cancel</button><button class="sa-btn sa-btn-primary" data-act="save-std">Save</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var API = '/api/district-admin/standards';
+  var STATES = {AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+  var CASEL = { self_awareness: 'Self-awareness', self_management: 'Self-management', social_awareness: 'Social awareness', relationship_skills: 'Relationship skills', responsible_decision_making: 'Responsible decision-making' };
+  var TYPE = { portrait_of_graduate: 'Portrait of a Graduate', sel_standards: 'SEL standards' };
+  var FW_STATUS = { draft: ['Draft', 'sa-badge-gray'], in_review: ['In review', 'sa-badge-orange'], published: ['Published', 'sa-badge-green'] };
+  var CONN_STATUS = { suggested: ['Suggested', 'sa-badge-gray'], in_review: ['In review', 'sa-badge-orange'], verified: ['Published', 'sa-badge-green'] };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { data: null, targets: null, districtId: null, editFw: null, stdFw: null, stdEdit: null };
+
+  function districtId() { return window.daActiveDistrictId ? window.daActiveDistrictId() : null; }
+  function today() { return new Date().toISOString().slice(0, 10); }
+  function fail(e) { daToast(e && e.message ? e.message : 'Something went wrong', 'error'); }
+  function post(url, method, body) { return daFetch(API + url, { method: method, body: JSON.stringify(body || {}) }); }
+
+  function load() {
+    state.districtId = districtId();
+    return Promise.all([
+      daFetch(API + '/?districtId=' + encodeURIComponent(state.districtId)),
+      state.targets ? Promise.resolve(state.targets) : daFetch(API + '/targets')
+    ]).then(function (r) {
+      state.data = r[0]; state.targets = r[1];
+      $('pageLoading').style.display = 'none'; $('pageContent').style.display = '';
+      render();
+    }).catch(fail);
+  }
+
+  function targetOptions() {
+    var t = state.targets, h = '<option value="">Pick a lesson, game or the program…</option>';
+    h += '<option value="program:0">' + esc(t.program.title) + '</option>';
+    h += '<optgroup label="Lessons">' + t.lessons.map(function (l) { return '<option value="curriculum:' + l.targetId + '">' + esc(l.title) + '</option>'; }).join('') + '</optgroup>';
+    h += '<optgroup label="Games">' + t.games.map(function (g) { return '<option value="brain_game:' + g.targetId + '">' + esc(g.title) + '</option>'; }).join('') + '</optgroup>';
+    return h;
+  }
+
+  function connHtml(c) {
+    var s = CONN_STATUS[c.status] || CONN_STATUS.suggested;
+    return '<div class="conn"><div><strong>' + esc(c.targetTitle) + '</strong> <span class="sa-badge ' + s[1] + '">' + s[0] + '</span>' +
+      (c.yourNote ? '<small>Your note: ' + esc(c.yourNote) + '</small>' : '') +
+      (c.rationale ? '<small>' + esc(c.rationale) + '</small>' : '') + '</div>' +
+      (c.removable ? '<button class="sa-btn sa-btn-ghost sa-btn-sm" data-act="rm-conn" data-id="' + c.id + '">Remove suggestion</button>' : '') + '</div>';
+  }
+
+  function stdHtml(fw, it) {
+    return '<div class="std"><div class="std-head"><div><span class="std-code">' + esc(it.code) + '</span><span class="std-title">' + esc(it.title) + '</span>' +
+      (it.caselCompetency ? ' <span class="sa-badge sa-badge-blue">' + esc(CASEL[it.caselCompetency]) + '</span>' : '') +
+      (it.summary ? '<p class="std-sum">' + esc(it.summary) + '</p>' : '') + '</div>' +
+      '<div><button class="sa-btn sa-btn-ghost sa-btn-sm" data-act="edit-std" data-fw="' + fw.id + '" data-id="' + it.id + '">Edit</button> ' +
+      '<button class="sa-btn sa-btn-ghost sa-btn-sm" data-act="del-std" data-id="' + it.id + '">Delete</button></div></div>' +
+      (it.alignments || []).map(connHtml).join('') +
+      '<div class="suggest-row"><select aria-label="Suggest a connection" data-pick="' + it.id + '">' + targetOptions() + '</select>' +
+      '<input type="text" maxlength="500" aria-label="Note (optional)" placeholder="Note (optional, stays private)" data-note="' + it.id + '">' +
+      '<button class="sa-btn sa-btn-secondary sa-btn-sm" data-act="suggest" data-id="' + it.id + '">Suggest connection</button></div></div>';
+  }
+
+  function fwHtml(fw) {
+    var st = FW_STATUS[fw.status];
+    var meta = [esc(TYPE[fw.type]), esc(STATES[fw.stateCode] || fw.stateCode), 'Published by ' + esc(fw.issuingBody)];
+    if (fw.adoptedYear) meta.push('Adopted ' + esc(fw.adoptedYear));
+    if (fw.gradeSpan) meta.push('Grades ' + esc(fw.gradeSpan));
+    var notice = fw.status === 'published'
+      ? '<div class="sa-alert sa-alert-warn">This framework is published. If you edit it, it goes offline until we review it again.</div>'
+      : (fw.status === 'in_review' ? '<div class="sa-alert sa-alert-info">We\'re reviewing this framework. If you change it, you\'ll need to submit it again.</div>' : '');
+    var h = '<div class="sa-card fw-card" data-fwid="' + fw.id + '"><div class="sa-card-head"><h2>' + esc(fw.name) + ' <span class="sa-badge ' + st[1] + '">' + st[0] + '</span></h2></div>' +
+      '<p class="fw-meta">' + meta.join(' · ') + ' · <a href="' + esc(fw.officialUrl) + '" target="_blank" rel="noopener noreferrer">Official page</a> · Checked ' + esc(fw.sourceAccessedOn) + '</p>' + notice +
+      '<h3 style="font-size:14px; margin:14px 0 2px;">Standards or competencies</h3>' +
+      '<div class="fw-meta" style="margin-top:0;">Add each competency with a short summary in your own words. For the full text, link to your district\'s document.</div>' +
+      (fw.items.length ? fw.items.map(function (it) { return stdHtml(fw, it); }).join('') : '') +
+      '<div class="fw-actions"><button class="sa-btn sa-btn-secondary sa-btn-sm" data-act="add-std" data-fw="' + fw.id + '">Add a standard</button></div>';
+    if (fw.items.length) {
+      h += '<div class="sa-note" style="font-size:12.5px; color:var(--sa-text-soft); margin-top:10px;">Suggest a connection: pick a lesson, a game, or the whole program that fits a competency, and add a note if you want. Our team writes the final explanation before anything appears, and your notes stay private.</div>';
+    }
+    if (fw.status === 'draft') {
+      h += '<label class="attest"><input type="checkbox" data-attest="' + fw.id + '"> <span>I confirm this is my district\'s official framework and I\'m authorized to submit it.</span></label>';
+    }
+    h += '<div class="fw-actions">';
+    if (fw.status === 'draft') h += '<button class="sa-btn sa-btn-primary" data-act="submit" data-id="' + fw.id + '">Submit for review</button>';
+    h += '<button class="sa-btn sa-btn-secondary" data-act="edit-fw" data-id="' + fw.id + '">Edit details</button>';
+    if (fw.status !== 'draft') h += '<button class="sa-btn sa-btn-secondary" data-act="withdraw" data-id="' + fw.id + '">Take back to draft</button>';
+    h += '<button class="sa-btn sa-btn-danger" data-act="del-fw" data-id="' + fw.id + '">Delete framework</button></div></div>';
+    return h;
+  }
+
+  function render() {
+    var d = state.data;
+    $('limitNote').textContent = 'A district can record up to ' + d.limits.frameworks + ' frameworks, with up to ' + d.limits.items + ' standards in each.';
+    $('addFwBtn').style.display = d.frameworks.length >= d.limits.frameworks ? 'none' : '';
+    $('fwList').innerHTML = d.frameworks.length ? d.frameworks.map(fwHtml).join('')
+      : '<div class="sa-card"><div class="sa-empty"><p>You haven\'t added a framework yet. A good place to start is your Portrait of a Graduate.</p></div></div>';
+  }
+
+  function findFw(id) { return state.data.frameworks.filter(function (f) { return f.id === Number(id); })[0]; }
+  function findItem(id) { var r = null; state.data.frameworks.forEach(function (f) { f.items.forEach(function (i) { if (i.id === Number(id)) r = i; }); }); return r; }
+  function openModal(id) { $(id).style.display = ''; }
+  function closeModals() { ['fwModal', 'stdModal'].forEach(function (m) { $(m).style.display = 'none'; }); }
+  function showErr(id, msg) { var e = $(id); e.textContent = msg; e.style.display = msg ? '' : 'none'; }
+
+  function openFw(fw) {
+    state.editFw = fw || null; showErr('fwErr', '');
+    $('fwModalTitle').textContent = fw ? 'Edit details' : 'Add a framework';
+    $('fName').value = fw ? fw.name : 'Portrait of a Graduate';
+    $('fType').value = fw ? fw.type : 'portrait_of_graduate'; $('fType').disabled = !!fw;
+    $('fState').value = fw ? fw.stateCode : '';
+    $('fBody').value = fw ? fw.issuingBody : (window.daPortalData && daPortalData.districts[0] ? daPortalData.districts[0].districtName : '');
+    $('fUrl').value = fw ? fw.officialUrl : ''; $('fDate').value = fw ? fw.sourceAccessedOn : today(); $('fDate').max = today();
+    $('fYear').value = fw && fw.adoptedYear ? fw.adoptedYear : ''; $('fSpan').value = fw && fw.gradeSpan ? fw.gradeSpan : '';
+    openModal('fwModal');
+  }
+  function saveFw() {
+    var body = { name: $('fName').value, type: $('fType').value, stateCode: $('fState').value, issuingBody: $('fBody').value,
+      officialUrl: $('fUrl').value, sourceAccessedOn: $('fDate').value, adoptedYear: $('fYear').value || null, gradeSpan: $('fSpan').value };
+    var req = state.editFw ? post('/frameworks/' + state.editFw.id, 'PUT', body) : post('/frameworks', 'POST', Object.assign({ districtId: state.districtId }, body));
+    req.then(function () { closeModals(); daToast('Saved.', 'success'); return load(); }).catch(function (e) { showErr('fwErr', e.message); });
+  }
+
+  function openStd(fwId, item) {
+    state.stdFw = Number(fwId); state.stdEdit = item || null; showErr('stdErr', '');
+    $('stdModalTitle').textContent = item ? 'Edit a standard' : 'Add a standard';
+    $('sCode').value = item ? item.code : ''; $('sCode').disabled = !!item;
+    $('sTitle').value = item ? item.title : ''; $('sSummary').value = item && item.summary ? item.summary : '';
+    $('sBand').value = item && item.gradeBand ? item.gradeBand : ''; $('sCasel').value = item && item.caselCompetency ? item.caselCompetency : '';
+    openModal('stdModal');
+  }
+  function saveStd() {
+    var item = { code: $('sCode').value, title: $('sTitle').value, summary: $('sSummary').value, gradeBand: $('sBand').value, caselCompetency: $('sCasel').value || null };
+    if (state.stdEdit) item.sortOrder = state.stdEdit.sortOrder;
+    post('/frameworks/' + state.stdFw + '/items', 'PUT', { items: [item] })
+      .then(function () { closeModals(); daToast('Saved.', 'success'); return load(); }).catch(function (e) { showErr('stdErr', e.message); });
+  }
+
+  function suggest(itemId, root) {
+    var sel = root.querySelector('[data-pick="' + itemId + '"]'), note = root.querySelector('[data-note="' + itemId + '"]');
+    if (!sel.value) return daToast('Pick a lesson, game or the program first.', 'error');
+    var p = sel.value.split(':');
+    post('/connections', 'PUT', { itemId: Number(itemId), targetType: p[0], targetId: Number(p[1]), note: note.value })
+      .then(function (r) { daToast(r.alreadyConnected ? 'That connection already exists.' : 'Saved.', r.alreadyConnected ? 'info' : 'success'); return load(); }).catch(fail);
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.dataset.act, id = b.dataset.id, card = b.closest('[data-fwid]');
+    if (act === 'close-modal') return closeModals();
+    if (act === 'add-fw') return openFw(null);
+    if (act === 'save-fw') return saveFw();
+    if (act === 'edit-fw') return openFw(findFw(id));
+    if (act === 'add-std') return openStd(b.dataset.fw, null);
+    if (act === 'edit-std') return openStd(b.dataset.fw, findItem(id));
+    if (act === 'save-std') return saveStd();
+    if (act === 'suggest') return suggest(id, card);
+    if (act === 'rm-conn') return post('/connections/' + id, 'DELETE').then(load).catch(fail);
+    if (act === 'del-std') return post('/items/' + id, 'DELETE').then(function () { daToast('Saved.', 'success'); return load(); }).catch(fail);
+    if (act === 'withdraw') return post('/frameworks/' + id + '/withdraw', 'POST').then(function () { daToast('Back to draft.', 'success'); return load(); }).catch(fail);
+    if (act === 'del-fw') {
+      if (!confirm('Delete this framework? It comes off the public site right away, and you can\'t undo it.')) return;
+      return post('/frameworks/' + id, 'DELETE').then(function () { daToast('Deleted.', 'success'); return load(); }).catch(fail);
+    }
+    if (act === 'submit') {
+      var box = card.querySelector('[data-attest="' + id + '"]');
+      return post('/frameworks/' + id + '/submit', 'POST', { attest: !!(box && box.checked) })
+        .then(function () { daToast('Submitted. We\'ll review it and be in touch.', 'success'); return load(); }).catch(fail);
+    }
+  });
+
+  $('fState').innerHTML = '<option value="">Choose a state…</option>' + Object.keys(STATES).map(function (c) { return '<option value="' + c + '">' + esc(STATES[c]) + '</option>'; }).join('');
+  document.addEventListener('daReady', load);
+  document.addEventListener('daDistrictChanged', load);
+})();
+</script>
+</body>
+</html>

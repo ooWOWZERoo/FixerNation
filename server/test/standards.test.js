@@ -24,6 +24,7 @@ CREATE TABLE admin_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, e
 CREATE TABLE curricula (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, published INTEGER DEFAULT 0);
 CREATE TABLE curriculum_audiences (id INTEGER PRIMARY KEY AUTOINCREMENT, curriculum_id INTEGER NOT NULL REFERENCES curricula(id) ON DELETE CASCADE, audience TEXT NOT NULL);
 CREATE TABLE brain_games (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT);
+CREATE TABLE districts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL);
 CREATE TABLE standards_state_coverage (
   state_code TEXT PRIMARY KEY, sel_status TEXT NOT NULL DEFAULT 'unknown', pog_status TEXT NOT NULL DEFAULT 'unknown',
   sel_source_url TEXT, pog_source_url TEXT, source_accessed_on TEXT, notes TEXT,
@@ -32,7 +33,9 @@ CREATE TABLE standards_frameworks (
   id INTEGER PRIMARY KEY AUTOINCREMENT, state_code TEXT NOT NULL, framework_type TEXT NOT NULL, name TEXT NOT NULL,
   issuing_body TEXT NOT NULL, official_url TEXT NOT NULL, adopted_year INTEGER, grade_span TEXT, source_accessed_on TEXT NOT NULL,
   notes TEXT, review_status TEXT NOT NULL DEFAULT 'draft', reviewed_by INTEGER, reviewed_at TEXT, created_at TEXT, updated_at TEXT,
-  UNIQUE (state_code, framework_type, name));
+  district_id INTEGER REFERENCES districts(id) ON DELETE CASCADE, owner_key INTEGER NOT NULL DEFAULT 0, submitted_at TEXT, submitted_by_site_user_id INTEGER,
+  attested_at TEXT, attested_by_site_user_id INTEGER,
+  UNIQUE (state_code, framework_type, name, owner_key));
 CREATE TABLE standards_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT, framework_id INTEGER NOT NULL REFERENCES standards_frameworks(id) ON DELETE CASCADE,
   code TEXT NOT NULL, title TEXT NOT NULL, summary TEXT, grade_band TEXT, casel_competency TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
@@ -41,6 +44,7 @@ CREATE TABLE standards_alignments (
   id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL REFERENCES standards_items(id) ON DELETE CASCADE,
   target_type TEXT NOT NULL, target_id INTEGER NOT NULL DEFAULT 0, strength TEXT NOT NULL, rationale TEXT NOT NULL,
   review_status TEXT NOT NULL DEFAULT 'draft', reviewed_by INTEGER, reviewed_at TEXT, created_at TEXT, updated_at TEXT,
+  suggested_by_site_user_id INTEGER, district_note TEXT,
   UNIQUE (item_id, target_type, target_id));
 `);
 const pool = {
@@ -87,7 +91,7 @@ const admin = (method, url, body) => call(method, '/api/admin/standards' + url, 
 const pub = (url) => call('GET', '/api/standards' + url);
 
 function reset() {
-  db.exec('DELETE FROM standards_alignments; DELETE FROM standards_items; DELETE FROM standards_frameworks; DELETE FROM standards_state_coverage; DELETE FROM curriculum_audiences; DELETE FROM curricula; DELETE FROM brain_games; DELETE FROM admin_users;');
+  db.exec('DELETE FROM standards_alignments; DELETE FROM standards_items; DELETE FROM standards_frameworks; DELETE FROM districts; DELETE FROM standards_state_coverage; DELETE FROM curriculum_audiences; DELETE FROM curricula; DELETE FROM brain_games; DELETE FROM admin_users;');
   db.exec(`INSERT INTO admin_users (id, username) VALUES (1, 'admin')`);
 }
 const today = new Date().toISOString().slice(0, 10);

@@ -71,6 +71,7 @@
 (function () {
   var qs = new URLSearchParams(location.search);
   var code = String(qs.get('state') || '').toUpperCase();
+  var DID = qs.get('district');
   var PREVIEW = qs.get('preview') === '1';
   var API = PREVIEW ? '/api/admin/standards/preview' : '/api/standards';
   var sheet = document.getElementById('sheet'), msg = document.getElementById('msg');
@@ -97,9 +98,10 @@
     var fws = d.frameworks || [], cov = d.coverage, total = 0, linked = 0, anyDraft = false;
     fws.forEach(function (f) { if (f.draft) anyDraft = true; (f.items || []).forEach(function (i) { total++; if ((i.alignments || []).length) linked++; }); });
     var date = (cov && cov.sourceAccessedOn) || fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop();
-    var h = '<div class="head"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"><div class="tag">State standards crosswalk</div></div>' +
-      '<h1>' + esc(d.state.name) + ': how Fixer Nation lines up with your standards</h1>' +
-      '<p class="sub">SEL standards and Portrait of a Graduate, checked against the state\'s documents' + (date ? ' on ' + esc(niceDate(date)) : '') + '.</p>' +
+    var dist = d.district || null;
+    var h = '<div class="head"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"><div class="tag">' + (dist ? 'District framework crosswalk' : 'State standards crosswalk') + '</div></div>' +
+      '<h1>' + (dist ? esc(dist.name) + ': how Fixer Nation lines up with your framework' : esc(d.state.name) + ': how Fixer Nation lines up with your standards') + '</h1>' +
+      '<p class="sub">' + (dist ? 'Checked against the district\'s published framework' : 'SEL standards and Portrait of a Graduate, checked against the state\'s documents') + (date ? ' on ' + esc(niceDate(date)) : '') + '.</p>' +
       (anyDraft ? '<div class="draftline">DRAFT PREVIEW: NOT PUBLIC. DO NOT SHARE.</div>' : '');
     if (cov) h += '<div class="cov"><div><div class="k">Social-emotional learning</div><div class="v">' + esc(SEL_LABEL[cov.selStatus] || 'Not yet determined') + '</div></div>' +
       '<div><div class="k">Portrait of a Graduate</div><div class="v">' + esc(POG_LABEL[cov.pogStatus] || 'Not yet determined') + '</div></div></div>';
@@ -118,7 +120,7 @@
       });
       h += '</tbody></table>';
     });
-    h += '<div class="foot"><p class="fine">This is Fixer Nation\'s own mapping of its lessons and games to the state\'s published framework. Neither a state education agency nor CASEL has reviewed or endorsed it, and neither has certified it. The official documents are the source of truth.</p>' +
+    h += '<div class="foot"><p class="fine">This is Fixer Nation\'s own mapping of its lessons and games to ' + (dist ? esc(/s$/i.test(dist.name) ? dist.name + '\'' : dist.name + '\'s') : 'the state\'s') + ' published framework. ' + (dist ? esc(dist.name) + ', your state education agency and CASEL haven\'t reviewed, endorsed or certified it.' : 'Neither a state education agency nor CASEL has reviewed or endorsed it, and neither has certified it.') + ' The official documents are the source of truth.</p>' +
       '<p class="contact">Questions, or want to see a lesson? Visit fixernationeducation.com/contact.html</p></div>';
     sheet.innerHTML = h;
   }
@@ -139,18 +141,18 @@
     sheet.style.minHeight = ''; sheet.dataset.fit = 'overflow';
   }
 
-  if (!/^[A-Z]{2}$/.test(code)) { fail('Choose a state first. <a href="state-standards.html">Go to the state standards page</a>.'); return; }
-  document.getElementById('backLink').href = 'state-standards.html?state=' + encodeURIComponent(code) + (PREVIEW ? '&preview=1' : '');
+  if (DID ? !/^\d+$/.test(DID) : !/^[A-Z]{2}$/.test(code)) { fail('Choose a state first. <a href="state-standards.html">Go to the state standards page</a>.'); return; }
+  document.getElementById('backLink').href = 'state-standards.html?' + (DID ? 'district=' + encodeURIComponent(DID) : 'state=' + encodeURIComponent(code)) + (PREVIEW ? '&preview=1' : '');
   document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
 
   function load() {
-    fetch(API + '/states/' + encodeURIComponent(code), { credentials: 'include' }).then(function (r) {
+    fetch(API + (DID ? '/districts/' + encodeURIComponent(DID) : '/states/' + encodeURIComponent(code)), { credentials: 'include' }).then(function (r) {
       if (r.status === 401 && PREVIEW) { PREVIEW = false; API = '/api/standards'; return load(); }
-      if (r.status === 404) { fail('We haven\'t finished reviewing that state yet. <a href="state-standards.html">See the states that are ready</a>.'); return null; }
+      if (r.status === 404) { fail(DID ? 'We haven\'t finished reviewing that district yet. <a href="state-standards.html">See what\'s ready</a>.' : 'We haven\'t finished reviewing that state yet. <a href="state-standards.html">See the states that are ready</a>.'); return null; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json().then(function (d) {
         if (!(d.frameworks || []).length) { fail('We haven\'t loaded the standards text for ' + esc(d.state.name) + ' yet, so there is no summary to print. <a href="state-standards.html?state=' + encodeURIComponent(code) + '">Back to the state page</a>.'); return; }
-        document.title = d.state.name + ' - State standards one-page summary - Fixer Nation Education';
+        document.title = (d.district ? d.district.name + ' - District framework one-page summary' : d.state.name + ' - State standards one-page summary') + ' - Fixer Nation Education';
         msg.hidden = true; sheet.hidden = false; document.getElementById('bar').hidden = false;
         if (PREVIEW) { var b = document.getElementById('draftbar'); b.hidden = false; b.textContent = 'Admin preview: this sheet includes drafts that visitors can\'t see yet.'; }
         var run = function () { fitOnePage(d); };

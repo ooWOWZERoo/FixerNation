@@ -45,6 +45,7 @@ const affiliateRoutes = require('./routes/affiliates');
 const affiliatePortalRoutes = require('./routes/affiliate-portal');
 const standardsRoutes = require('./routes/standards');
 const adminStandardsRoutes = require('./routes/admin-standards');
+const districtAdminStandardsRoutes = require('./routes/district-admin-standards');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -114,6 +115,8 @@ app.use('/api/school-admin', schoolAdminRoutes);
 app.use('/api/school-invite', schoolInviteRoutes);
 app.use('/api/parent-invite', parentInviteRoutes);
 app.use('/api/admin/school-admins', adminSchoolAdminsRoutes);
+// Mounted before the general district-admin router so /standards is never shadowed by it.
+app.use('/api/district-admin/standards', districtAdminStandardsRoutes);
 app.use('/api/district-admin', districtAdminRoutes);
 app.use('/api/admin/districts', adminDistrictsRoutes);
 app.use('/api/admin/concierge', adminConciergeRoutes);
