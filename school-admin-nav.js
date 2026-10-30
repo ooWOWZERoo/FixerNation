@@ -74,6 +74,7 @@
     '</nav>' +
     '<div id="saSchoolInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +
+      '<a href="help-videos.html#school-admins" target="_blank" rel="noopener"><span class="ic">▶</span><span class="label">Help videos</span></a>' +
       '<a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>' +
       '<a href="#" onclick="saLogout();return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>' +
     '</div>';
@@ -185,8 +186,13 @@
   // Shared API helper — returns parsed JSON or throws with error message
   window.saFetch = async function (url, opts) {
     var r = await fetch(url, Object.assign({ credentials: 'include', headers: { 'Content-Type': 'application/json' } }, opts));
-    if (r.status === 401 || r.status === 403) { window.location.href = 'school-admin-login.html'; return; }
-    var data = await r.json();
+    var data = await r.json().catch(function () { return {}; });
+    // Only a lost session or lost admin access sends you back to sign in.
+    // Other 403s (a Read Only or Secondary admin pressing a button their level
+    // can't use) show their own message instead of bouncing to the login page.
+    var gateLost = r.status === 401 ||
+      (r.status === 403 && /access required|No active school administrator/i.test(data.error || ''));
+    if (gateLost) { window.location.href = 'school-admin-login.html'; return; }
     if (!r.ok) throw new Error(data.error || 'Request failed');
     return data;
   };

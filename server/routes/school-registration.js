@@ -75,7 +75,10 @@ router.post('/check', limiter({ name: 'schoolreg-check', windowMs: 3600000, max:
     );
 
     const [[{ used }]] = await conn.query(
-      'SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ?',
+      // Same rule as inviteTeacherToSeat: 'available' rows are unclaimed
+      // placeholders and 'revoked' ones are released, so neither is "used".
+      // Counting every row made a brand-new license look full.
+      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
       [schoolPurchase.id]
     );
 

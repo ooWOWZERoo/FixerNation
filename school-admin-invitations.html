@@ -29,7 +29,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=19"></script>
+  <script src="school-admin-nav.js?v=20"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -343,7 +343,12 @@ function handleCsvFile(input) {
   const reader = new FileReader();
   reader.onload = function (e) {
     const lines = e.target.result.split(/\r?\n/).filter(Boolean);
-    const headers = lines[0].split(',').map(function (h) { return h.trim().toLowerCase(); });
+    // Accept "first_name", "First Name" and the old "FirstName" template header alike.
+    const headerAlias = { firstname: 'first_name', lastname: 'last_name', gradelevel: 'grade_level', subjectarea: 'subject_area', roletitle: 'role' };
+    const headers = lines[0].split(',').map(function (h) {
+      const key = h.replace(/^﻿/, '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+      return headerAlias[key.replace(/_/g, '')] || key;
+    });
     const allRows = lines.slice(1).map(function (line) {
       const vals = line.split(',');
       const obj = {};
@@ -375,8 +380,16 @@ async function sendBulk() {
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     const d = await saFetch('/api/school-admin/invitations/bulk', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), invitations }) });
-    success.textContent = (d.sent || 0) + ' invitation(s) sent' + (d.skipped ? ', ' + d.skipped + ' skipped (already invited or registered).' : '.');
+    const sentN = (d.sent || []).length, skippedN = (d.skipped || []).length, failed = d.errors || [];
+    success.textContent = sentN + ' invitation(s) sent' +
+      (skippedN ? ', ' + skippedN + ' skipped (already invited or registered)' : '') +
+      (failed.length ? ', ' + failed.length + ' not sent' : '') + '.';
     success.style.display = 'flex';
+    if (failed.length) {
+      err.textContent = 'Not sent: ' + failed.slice(0, 5).map(function (f) { return f.email + ' (' + f.reason + ')'; }).join('; ') +
+        (failed.length > 5 ? '; and ' + (failed.length - 5) + ' more.' : '.');
+      err.style.display = 'flex';
+    }
     loadInvitations();
   } catch (e) { err.textContent = e.message; err.style.display = 'flex'; }
   finally { btn.disabled = false; btn.textContent = 'Send Invitations'; }
@@ -397,5 +410,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
+<script src="help-videos.js?v=1" defer></script>
 </body>
 </html>

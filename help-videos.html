@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Help Videos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:var(--teal-dark); text-decoration:none; font-weight:600;}
+  a:hover{text-decoration:underline;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 32px;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{background:var(--teal-dark); padding:72px 32px 64px; text-align:center;}
+  .hero h1{font-size:36px; color:#fff; line-height:1.13; max-width:700px; margin:0 auto 14px;}
+  .hero p{font-size:15.5px; color:rgba(255,255,255,0.8); max-width:640px; margin:0 auto; line-height:1.7;}
+
+  .jump{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:28px 0 8px;}
+  .jump a{background:#fff; border:1px solid rgba(22,79,74,0.15); border-radius:999px; padding:8px 16px; font-size:13.5px;}
+  .jump a:hover{background:var(--teal); color:#fff; text-decoration:none;}
+
+  .preview-note{background:#FFF4D6; border:1px solid var(--gold); border-radius:12px; padding:12px 16px; margin:24px 0 0; font-size:13.5px;}
+
+  .hv-group{padding:40px 0 8px; scroll-margin-top:90px;}
+  .hv-group h2{font-size:26px; margin-bottom:6px;}
+  .hv-group h3{font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-family:'Plus Jakarta Sans', sans-serif; font-weight:700; margin:20px 0 10px;}
+  .hv-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px;}
+  .hv-card{background:#fff; border-radius:var(--radius-md); padding:20px 20px 18px; box-shadow:0 8px 20px -14px rgba(22,79,74,0.25); display:flex; flex-direction:column; gap:10px;}
+  .hv-card h4{font-size:18px;}
+  .hv-card p{font-size:14px; color:var(--ink-soft); flex:1;}
+  .hv-watch{align-self:flex-start; background:var(--coral); color:#fff; border:0; border-radius:999px; padding:10px 18px; font:700 14px/1 'Plus Jakarta Sans', sans-serif; cursor:pointer;}
+  .hv-watch:hover{background:var(--coral-dark);}
+  .hv-watch:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+  .hv-planned{align-self:flex-start; font-size:12.5px; font-weight:700; color:var(--ink-soft); background:var(--cream-soft); border-radius:999px; padding:6px 12px;}
+  .hv-empty{text-align:center; font-size:16px; color:var(--ink-soft); padding:56px 0;}
+  noscript p{text-align:center; padding:40px 0;}
+</style>
+</head>
+<body>
+
+<header></header>
+
+<section class="hero">
+  <h1>Help videos</h1>
+  <p>Short walkthroughs for the people who run Fixer Nation Education in schools and districts, and for the teachers, students and parents they support. Each video covers one task.</p>
+</section>
+
+<div class="wrap">
+  <p class="preview-note" id="hvPreviewNote" hidden>Preview of the whole plan. Visitors only see the videos that have been recorded.</p>
+  <nav class="jump" aria-label="Jump to a group" id="hvJump"></nav>
+  <div id="hvRoot"></div>
+  <noscript><p>This page needs JavaScript to list the videos.</p></noscript>
+</div>
+
+<div style="padding:40px 0;"></div>
+
+<footer></footer>
+
+<script src="admin-common.js?v=17"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="help-videos.js?v=1"></script>
+<script>
+// Jump links for the groups that actually have something to show.
+(function () {
+  function build() {
+    var jump = document.getElementById('hvJump');
+    document.querySelectorAll('#hvRoot .hv-group').forEach(function (g) {
+      var a = document.createElement('a');
+      a.href = '#' + g.id;
+      a.textContent = g.querySelector('h2').textContent;
+      jump.appendChild(a);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(build, 0); });
+  else setTimeout(build, 0);
+})();
+</script>
+</body>
+</html>

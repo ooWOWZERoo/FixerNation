@@ -350,7 +350,18 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
     [purchaseId]
   );
 
-  res.json({ invitations: rows, total: Number(total), page, limit });
+  // paymentStatus drives the "not yet active" banner on the Invitations page;
+  // pages drives its pager (without it the page only ever showed the first 25).
+  const [[purchaseRow]] = await pool.query('SELECT payment_status FROM purchases WHERE id = ?', [purchaseId]);
+
+  res.json({
+    invitations: rows,
+    total: Number(total),
+    page,
+    limit,
+    pages: Math.max(1, Math.ceil(Number(total) / limit)),
+    paymentStatus: purchaseRow ? purchaseRow.payment_status : null,
+  });
 });
 
 // POST /api/school-admin/invitations — send a single invitation
@@ -451,7 +462,9 @@ router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
 router.get('/invitations/csv-template', requireSchoolAdmin, (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="teacher-invite-template.csv"');
-  res.send('Email,FirstName,LastName,GradeLevel,Role,Department,SubjectArea\n');
+  // Headers match what school-admin-invitations.html reads (snake_case); the
+  // old CamelCase header made every row of an unedited template get dropped.
+  res.send('email,first_name,last_name,grade_level,role,department,subject_area\n');
 });
 
 // PUT /api/school-admin/invitations/:id/resend

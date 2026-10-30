@@ -31,6 +31,8 @@
   .links{margin-top:18px;display:flex;flex-direction:column;gap:8px;text-align:center;font-size:13px;color:#6b7280;}
   .links a{color:#164F4A;font-weight:600;}
   .links a:hover{color:#0E3733;}
+  .note{display:none;font-size:13px;color:#166534;}
+  .note.bad{color:#ef4444;}
 </style>
 </head>
 <body>
@@ -60,7 +62,8 @@
   </form>
 
   <div class="links">
-    <div><a href="reset-password.html">Forgot your password?</a></div>
+    <div><a href="#" id="forgotLink" onclick="sendForgotPassword(event)">Forgot your password?</a></div>
+    <div class="note" id="forgotMsg"></div>
     <div>Not sure if you have an account? <a href="for-parents.html">Learn about the parent portal</a></div>
   </div>
 </div>
@@ -77,6 +80,7 @@
     var btn = document.getElementById('loginBtn');
     var err = document.getElementById('loginErr');
     err.style.display = 'none';
+    err.style.color = '';
     btn.disabled = true;
     btn.textContent = 'Logging in…';
 
@@ -94,6 +98,12 @@
       if (!r.ok) {
         err.textContent = d.error || 'Login failed. Check your email and password.';
         err.style.display = 'block';
+        if (/verify your email/i.test(d.error || '')) {
+          var rs = document.createElement('a');
+          rs.href = '#'; rs.textContent = ' Send the verification email again.';
+          rs.onclick = resendVerification;
+          err.appendChild(rs);
+        }
         btn.disabled = false;
         btn.textContent = 'Log In';
         return;
@@ -106,6 +116,37 @@
       btn.textContent = 'Log In';
     }
   });
+  window.sendForgotPassword = async function (e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value.trim();
+    var msg = document.getElementById('forgotMsg');
+    msg.style.display = 'block';
+    if (!email) { msg.className = 'note bad'; msg.textContent = 'Enter your email address above first.'; return; }
+    try {
+      await fetch('/api/site-auth/forgot-password', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, next: '/parent-portal.html' }),
+      });
+    } catch (ex) { /* same message either way, so this never reveals whether the email has an account */ }
+    msg.className = 'note';
+    msg.textContent = 'If that email has an account, a reset link is on its way.';
+  };
+
+  async function resendVerification(e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value.trim();
+    var err = document.getElementById('loginErr');
+    try {
+      await fetch('/api/site-auth/resend-verification', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
+      });
+    } catch (ex) { /* same message either way */ }
+    err.style.color = '#166534';
+    err.textContent = 'If that email needs verifying, a new link is on its way.';
+  }
 })();
 </script>
 </body>
