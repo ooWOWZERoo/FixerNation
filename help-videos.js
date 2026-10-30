@@ -36,7 +36,7 @@
       pages: ['school-admin-login.html', 'district-admin-login.html'], url: '' },
     { id: 'A3', group: 'getting-started', topic: 'Signing in', title: 'Which sign-in page do I use?',
       summary: 'Teachers, school administrators and district administrators each have their own sign-in page. Here is which one to use.',
-      pages: ['teacher-login.html'], url: '' },
+      pages: ['teacher-login.html', 'student-login.html', 'parent-login.html', 'school-admin-login.html', 'district-admin-login.html'], url: '' },
 
     // ---- School license administrators
     { id: 'B1', group: 'school-admins', topic: 'Your portal', title: 'A tour of the School Admin portal',
@@ -47,7 +47,7 @@
       pages: ['school-admin-org.html'], url: '' },
     { id: 'B10', group: 'school-admins', topic: 'Your portal', title: 'Why can\'t I invite teachers yet?',
       summary: 'What a pending payment, a purchase order or a trial license means for sending invitations.',
-      pages: [], url: '' },
+      pages: ['school-admin-invitations.html'], url: '' },
     { id: 'B2', group: 'school-admins', topic: 'Teachers and seats', title: 'Invite a teacher',
       summary: 'Add one teacher to your school and see what they receive.',
       pages: ['school-admin-invitations.html'], url: '' },
