@@ -28,6 +28,8 @@ export interface Storyboard {
   title: string;
   /** Who signs in off-camera before recording. Omit for a signed-out start. */
   as?: "school-admin" | "district-admin";
+  /** Sign in as this email instead of the default demo administrator for `as` (for a role the seed does not provide). */
+  asEmail?: string;
   /** Path to open first. */
   startPath: string;
   /** Opens the first screen yourself instead of going to startPath (e.g. to start on an email). */
@@ -196,7 +198,7 @@ export async function produce(board: Storyboard, outRoot = path.join(__dirname, 
   // 2. Set up the situation and sign in off-camera, then record.
   await board.setup?.();
   const storage = path.join(out, "storage-state.json");
-  if (board.as) await signIn(env.baseUrl, board.as === "school-admin" ? env.schoolAdmin : env.districtAdmin, storage);
+  if (board.as) await signIn(env.baseUrl, board.asEmail ?? (board.as === "school-admin" ? env.schoolAdmin : env.districtAdmin), storage);
 
   const browser = await chromium.launch();
   const ctx: BrowserContext = await browser.newContext({

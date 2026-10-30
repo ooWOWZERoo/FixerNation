@@ -211,6 +211,10 @@ async function loadBranding() {
     document.getElementById('pageContent').style.display = 'block';
   } catch (e) {
     saToast('Failed to load branding: ' + e.message, 'error');
+    // Replace the spinner with the reason, so the page doesn't sit on "Loading…" once the toast fades.
+    var box = document.getElementById('pageLoading');
+    box.className = 'sa-alert sa-alert-warn';
+    box.textContent = e.message;
   }
 }
 

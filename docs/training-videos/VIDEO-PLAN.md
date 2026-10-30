@@ -72,7 +72,7 @@ Decided 2026-10-29. Each video is a **storyboard**: a TypeScript file in `tests/
 
 The `.txt` files in `scripts/` are the first-draft narration for all 31 videos. Where a storyboard exists, the storyboard is the source of truth and the `.txt` is only a draft. `render-narration.sh` renders a draft's audio on its own and is only needed for videos that don't have a storyboard yet.
 
-Storyboards built so far (2026-10-29): A1, A2, B1, B2, B4, C1, C3, C4. Not yet: D1 (needs a quote set up in the test data), and the remaining admin videos and all of wave 2.
+Storyboards built so far (2026-10-30): A1, A2, B1 to B10, C1, C3, C4, D1. Not yet: A3, C2, C5 to C7, and all of wave 2.
 
 Spellings that help Ava: "P-I-N", "C-S-V", "P-O" (say "purchase order" first), "F-N-E", "user I-D", and "support at Fixer Nation Education dot com".
 
@@ -107,3 +107,5 @@ Known issues found but not fixed, so scripts should avoid them:
 - The district dashboard is a stub with one button, and ignores the district picker.
 - Student PIN length is only checked in the browser.
 - A PO school needs two FNE staff actions (Mark as Paid, then PO Received) before teachers can be invited.
+- The Roster page cannot show pending seats: none of its three filters includes `pending`, so the Revoke button in its pending-seat branch never appears. Pending invitations are managed on Invitations. (Found while storyboarding B5.)
+- The Organization page's co-administrator list includes the signed-in administrator. (Found while storyboarding B8 and B9.)
