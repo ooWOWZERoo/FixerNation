@@ -22,3 +22,4 @@ tests/howto/.uploads/
 tests/howto-out/
 howto-out/
 tests/howto/.env.cloudinary.local
+.DS_Store
