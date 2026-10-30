@@ -196,6 +196,9 @@ Design, rules, access matrix, phases: `docs/standards-crosswalk/DESIGN.md` — r
 ## Help videos
 
 `help-videos.js` is the single list of how-to videos (plan: `docs/training-videos/VIDEO-PLAN.md`). A video appears only once its `url` is set; each video's `pages` get a "How-to video" button, and `help-videos.html` (`?preview=1` shows unrecorded ones) lists them all. Any page named in a video's `pages` must load `<script src="help-videos.js?v=1" defer>`; bump that `?v=N` everywhere when the file changes. Record against the sales-demo account only, never a real school or district.
+
+**Video check on every commit.** Before committing anything, stage it and run `node server/scripts/videos-to-review.js`. It lists the help videos whose files changed (map: `docs/training-videos/video-watch.json`; which are recorded: the `url` fields in `help-videos.js`). For each **recorded** video listed, read what changed and say plainly whether the video is still correct or needs re-recording and why; record that in `docs/training-videos/VIDEO-STATUS.md` in the same commit and tell the user. For planned videos, just update the notes. A new page or feature that a video should cover (or a change to a flow a video walks through) means adding or editing a video entry and its `video-watch.json` files too. The script only reports; the decision is a person's.
+
 ## Infra gotchas (all previously bitten in this project)
 
 - **The Node app's error log is `/home/fixernat/repositories/fixernation/server/stderr.log`** (not `~/logs`, which only holds cron/PHP logs). It has **no timestamps** and keeps old entries, so judge recency from the file's modified time (`ls -l --time-style=long-iso`) and from stack-trace line numbers vs. the deployed file. To test whether it is still being written, send one deliberately malformed request tagged with a unique `User-Agent` and `grep` for it (done 2026-10-26 — the log is alive and was simply quiet).

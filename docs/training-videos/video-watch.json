@@ -1,0 +1,185 @@
+{
+  "_about": "Which files each help video depends on. A change to any listed file means the video may be out of date. A path ending in / matches everything under it. 'shared' lists files that affect every video in a group. Read by server/scripts/videos-to-review.js.",
+  "shared": {
+    "getting-started": [
+      "server/routes/site-auth.js",
+      "server/lib/site-tokens.js",
+      "server/lib/mailer.js",
+      "site-auth.js",
+      "nav.js"
+    ],
+    "school-admins": [
+      "school-admin-common.css",
+      "school-admin-nav.js",
+      "server/middleware/schoolAdminAuth.js",
+      "server/lib/school-admin-roles.js"
+    ],
+    "district-admins": [
+      "school-admin-common.css",
+      "district-admin-nav.js",
+      "server/middleware/districtAdminAuth.js"
+    ],
+    "teachers": [
+      "server/routes/classrooms.js",
+      "server/routes/classroom-auth.js"
+    ],
+    "students": [
+      "server/middleware/studentAuth.js",
+      "server/routes/student.js"
+    ],
+    "parents": [
+      "server/routes/parent.js",
+      "server/routes/parent-invite.js"
+    ]
+  },
+  "videos": {
+    "D1": [
+      "accept-quote.html",
+      "server/routes/quote-accept.js",
+      "server/routes/checkout.js"
+    ],
+    "A1": [
+      "reset-password.html",
+      "server/lib/school-admin-assignment.js",
+      "server/routes/admin-districts.js"
+    ],
+    "A2": [
+      "reset-password.html",
+      "school-admin-login.html",
+      "district-admin-login.html"
+    ],
+    "A3": [
+      "teacher-login.html",
+      "school-admin-login.html",
+      "district-admin-login.html",
+      "parent-login.html",
+      "student-login.html"
+    ],
+    "B1": [
+      "school-admin-dashboard.html",
+      "server/routes/school-admin.js"
+    ],
+    "B2": [
+      "school-admin-invitations.html",
+      "server/routes/school-admin.js",
+      "server/lib/teacher-invitations.js",
+      "school-invite-accept.html",
+      "server/routes/school-invite.js"
+    ],
+    "B3": [
+      "school-admin-invitations.html",
+      "server/routes/school-admin.js",
+      "server/lib/teacher-invitations.js"
+    ],
+    "B4": [
+      "school-admin-invitations.html",
+      "server/routes/school-admin.js",
+      "server/lib/teacher-invitations.js"
+    ],
+    "B5": [
+      "school-admin-roster.html",
+      "server/routes/school-admin.js"
+    ],
+    "B6": [
+      "school-admin-branding.html",
+      "server/routes/school-admin.js",
+      "server/lib/branding-editor.js",
+      "server/lib/branding.js"
+    ],
+    "B7": [
+      "school-admin-reports.html",
+      "server/routes/school-admin.js"
+    ],
+    "B8": [
+      "school-admin-org.html",
+      "server/routes/school-admin.js",
+      "server/lib/safety/"
+    ],
+    "B9": [
+      "school-admin-org.html",
+      "server/lib/school-admin-assignment.js"
+    ],
+    "B10": [
+      "school-admin-invitations.html",
+      "server/lib/teacher-invitations.js",
+      "server/routes/invoices.js"
+    ],
+    "C1": [
+      "district-admin-dashboard.html",
+      "server/routes/district-admin.js"
+    ],
+    "C2": [
+      "district-admin-branding.html",
+      "server/routes/district-admin.js",
+      "server/lib/branding-editor.js",
+      "server/lib/branding.js"
+    ],
+    "C3": [
+      "district-admin-schools.html",
+      "server/routes/district-admin.js"
+    ],
+    "C4": [
+      "district-admin-schools.html",
+      "server/routes/district-admin.js",
+      "server/lib/school-admin-assignment.js"
+    ],
+    "C5": [
+      "district-admin-standards.html",
+      "server/lib/district-standards.js",
+      "server/routes/district-admin-standards.js"
+    ],
+    "C6": [
+      "district-admin-standards.html",
+      "server/lib/district-standards.js",
+      "server/routes/district-admin-standards.js"
+    ],
+    "C7": [
+      "district-admin-standards.html",
+      "state-standards.html",
+      "state-onepager.html",
+      "server/lib/standards.js",
+      "server/routes/standards.js",
+      "server/routes/admin-standards.js"
+    ],
+    "T1": [
+      "school-invite-accept.html",
+      "server/routes/school-invite.js",
+      "server/lib/teacher-invitations.js"
+    ],
+    "T2": [
+      "education-schools.html",
+      "server/routes/school-registration.js"
+    ],
+    "T3": [
+      "teacher-classrooms.html",
+      "teacher-classroom.html"
+    ],
+    "T4": [
+      "teacher-classroom.html"
+    ],
+    "T5": [
+      "teacher-classroom-progress.html",
+      "teacher-game-report.html"
+    ],
+    "T6": [
+      "teacher-classroom.html"
+    ],
+    "S1": [
+      "student-login.html"
+    ],
+    "S2": [
+      "student-home.html",
+      "student-lesson.html",
+      "student-game.html"
+    ],
+    "S3": [
+      "student-achievements.html"
+    ],
+    "P1": [
+      "parent-invite-accept.html",
+      "parent-portal.html",
+      "parent-lesson.html",
+      "parent-login.html"
+    ]
+  }
+}
