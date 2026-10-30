@@ -27,7 +27,7 @@ export interface Storyboard {
   slug: string;
   title: string;
   /** Who signs in off-camera before recording. Omit for a signed-out start. */
-  as?: "school-admin" | "district-admin";
+  as?: "school-admin" | "district-admin" | "teacher";
   /** Sign in as this email instead of the default demo administrator for `as` (for a role the seed does not provide). */
   asEmail?: string;
   /** Path to open first. */
@@ -51,6 +51,8 @@ export const env = {
   password: process.env.HOWTO_PASSWORD ?? "",
   schoolAdmin: process.env.HOWTO_SCHOOL_ADMIN ?? "",
   districtAdmin: process.env.HOWTO_DISTRICT_ADMIN ?? "",
+  /** The demo teacher who owns the classrooms in the teacher and student videos (registered at Maple Elementary). */
+  teacher: process.env.HOWTO_TEACHER ?? "maria.lopez@maple.example.com",
   mailApi: process.env.HOWTO_MAIL_API ?? "http://localhost:8026",
 };
 
@@ -198,7 +200,7 @@ export async function produce(board: Storyboard, outRoot = path.join(__dirname, 
   // 2. Set up the situation and sign in off-camera, then record.
   await board.setup?.();
   const storage = path.join(out, "storage-state.json");
-  if (board.as) await signIn(env.baseUrl, board.asEmail ?? (board.as === "school-admin" ? env.schoolAdmin : env.districtAdmin), storage);
+  if (board.as) await signIn(env.baseUrl, board.asEmail ?? (board.as === "school-admin" ? env.schoolAdmin : board.as === "teacher" ? env.teacher : env.districtAdmin), storage);
 
   const browser = await chromium.launch();
   const ctx: BrowserContext = await browser.newContext({

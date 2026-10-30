@@ -72,7 +72,7 @@ Decided 2026-10-29. Each video is a **storyboard**: a TypeScript file in `tests/
 
 The `.txt` files in `scripts/` are the first-draft narration for all 31 videos. Where a storyboard exists, the storyboard is the source of truth and the `.txt` is only a draft. `render-narration.sh` renders a draft's audio on its own and is only needed for videos that don't have a storyboard yet.
 
-Storyboards built so far (2026-10-30): all of wave 1 (A1 to A3, B1 to B10, C1 to C7, D1) and T1. Not yet: T2 to T6, S1 to S3, P1.
+Storyboards built so far (2026-10-30): all of wave 1 (A1 to A3, B1 to B10, C1 to C7, D1) and T1 to T3. Not yet: T4 to T6, S1 to S3, P1.
 
 Spellings that help Ava: "P-I-N", "C-S-V", "P-O" (say "purchase order" first), "F-N-E", "user I-D", and "support at Fixer Nation Education dot com".
 
