@@ -124,6 +124,8 @@ async function load() {
     fetch('/api/classrooms/' + classroomId + '/assignments/' + curriculumId + '/progress', { credentials: 'include' }).then(function(r){ return r.ok ? r.json() : { students: [], reflections: [] }; }),
   ]);
 
+  // The lesson endpoint wraps the lesson as { curriculum: {...} }; the title and series below read the lesson itself.
+  if (cr && cr.curriculum) cr = cr.curriculum;
   lessonData = cr;
   progressData = pr;
 

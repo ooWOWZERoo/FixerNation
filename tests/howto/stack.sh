@@ -45,6 +45,9 @@ up() {
     node scripts/migrate.js
     node scripts/seed.js >/dev/null
     for f in seed-license-products seed-email-automations seed-content-safety-default-rules; do node "scripts/$f.js" >/dev/null; done
+    # Brain games for the teacher and student videos (each script adds one catalog entry; a failure here is not fatal).
+    for f in scripts/seed-*-catalog-entry.js; do node "$f" >/dev/null 2>&1 || true; done
+    node scripts/enable-tune-your-brain-pilot-flag.js >/dev/null 2>&1 || true  # production has this flag on; the games are hidden without it
   })
   (cd "$ROOT/server" && NODE_PATH="$ROOT/server/node_modules" node "$HERE/seed-demo.js")
   stop_site
