@@ -1,0 +1,16 @@
+# B7  Reports and exports  (page: school-admin-reports.html)
+# Record as: sales-demo school administrator. Have a few teachers, invitations and activity rows.
+# Verify before recording: what the Utilization tab actually shows on screen (it reads some fields the server does not return); keep the Utilization part short if it looks sparse.
+[SCREEN] Open Reports.
+[SAY] The Reports page answers the questions your principal or your district are most likely to ask. How many seats are in use, who has joined, and what has been happening in the account.
+[SCREEN] The four tabs.
+[SAY] There are four tabs: Utilization, Teachers, Invitations, and Activity Log.
+[SCREEN] Utilization tab.
+[SAY] Utilization shows how much of your license is in use.
+[SCREEN] Teachers tab and its export button.
+[SAY] The Teachers tab lists each teacher with a seat. Select the export button to download the list as a spreadsheet, a C-S-V file you can open in Excel or Google Sheets.
+[SCREEN] Invitations tab and its export button.
+[SAY] The Invitations tab lists every invitation, including teachers who started to register using a school email on their own. You can export this one too.
+[SCREEN] Activity Log tab, then page forward.
+[SAY] The Activity Log is the record of what has happened in your account: invitations sent, seats changed, and so on. It shows fifty entries at a time, so use the page buttons to go back further. It's handy when you want to know who made a change.
+[SAY] The activity log and the utilization tab don't have export buttons. If you need a copy, a screenshot works well.

@@ -1,0 +1,12 @@
+# B10  Why can't I invite teachers yet?  (no page of its own; link from Invitations later)
+# Record as: sales-demo school administrator. Show the payment banner by using a demo license whose invoice is not paid.
+[SCREEN] The Invitations page with the banner visible.
+[SAY] You've signed in, you press Invite Teacher, and it won't let you send. This video explains the three most common reasons, and what to do about each.
+[SCREEN] The payment pending banner.
+[SAY] The most common reason is a banner that says License payment pending. Invitations can't be sent until your school's invoice is marked paid.
+[SAY] If you paid by card, that happens right away. If you pay by purchase order, there are two steps on our side. We mark the invoice paid, and we record that the signed purchase order has arrived. Until both are done, invitations stay locked. Email us and we'll check where yours stands.
+[SCREEN] The dashboard seat warning.
+[SAY] The second reason is that your seats are full. Pending invitations count as used seats, so if you've invited as many people as you have seats, there's no room for more. Revoke an invitation you don't need, or email us to add seats.
+[SCREEN] A trial license's Branding or Organization message.
+[SAY] The third is a trial license. A trial license may not have a school domain attached yet, so a few features, such as branding and safety alert recipients, will say they aren't set up yet. When your school moves to a full license, we'll finish that setup for you.
+[SAY] If none of these fits, email support at Fixer Nation Education dot com and tell us the exact message you see on the screen.

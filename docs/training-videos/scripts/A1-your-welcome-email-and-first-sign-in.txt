@@ -1,0 +1,16 @@
+# A1  Your welcome email and first sign-in  (page: reset-password.html)
+# Record as: a new school administrator. Use the sales-demo account's mailbox. Record AFTER the deploy (the page says "Choose your password" only after it).
+# Verify before recording: the email subject and button wording in the real inbox.
+[SCREEN] Open the welcome email.
+[SAY] Welcome to Fixer Nation Education. In this video you'll open your welcome email, choose a password, and sign in to your portal for the first time.
+[SAY] Your welcome email comes from Fixer Nation. The subject line tells you that you're now an administrator for your school or your district. If you can't find it, check your spam folder.
+[SCREEN] Point at the Set Password and Access Portal button.
+[SAY] Select the button that says Set Password and Access Portal. The link works for seven days, and you can use it once.
+[SCREEN] The Choose your password page.
+[SAY] You'll land on a page called Choose your password. There's no separate user I-D to remember. You sign in with your email address and the password you choose here.
+[SAY] Type a password with at least eight characters. Type it again to confirm it, and select Save password.
+[SAY] That one step also verifies your email. There's no second email to open. Saving your password confirms your address and signs you in.
+[SCREEN] Select Continue and show the portal.
+[SAY] Select Continue and you'll arrive in your portal. Depending on how your account was created, you may land on the dashboard or on your teacher roster. The menu on the left is the same either way.
+[SAY] One more thing. If you already had a Fixer Nation account, your welcome email will have a sign in button instead of a password button. Use your usual password, or choose Forgot your password on the sign in page.
+[SAY] If your link has expired, or you can't find the email, the next video shows you how to get back in.

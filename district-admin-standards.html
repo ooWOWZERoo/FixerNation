@@ -35,7 +35,7 @@
 <body>
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
-  <script src="district-admin-nav.js?v=7"></script>
+  <script src="district-admin-nav.js?v=8"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -259,8 +259,10 @@
     if (act === 'del-std') return post('/items/' + id, 'DELETE').then(function () { daToast('Saved.', 'success'); return load(); }).catch(fail);
     if (act === 'withdraw') return post('/frameworks/' + id + '/withdraw', 'POST').then(function () { daToast('Back to draft.', 'success'); return load(); }).catch(fail);
     if (act === 'del-fw') {
-      if (!confirm('Delete this framework? It comes off the public site right away, and you can\'t undo it.')) return;
-      return post('/frameworks/' + id, 'DELETE').then(function () { daToast('Deleted.', 'success'); return load(); }).catch(fail);
+      return daConfirm('It comes off the public site right away, and you can\'t undo it.', { title: 'Delete this framework?', confirmText: 'Yes, delete it' }).then(function (ok) {
+        if (!ok) return;
+        return post('/frameworks/' + id, 'DELETE').then(function () { daToast('Deleted.', 'success'); return load(); }).catch(fail);
+      });
     }
     if (act === 'submit') {
       var box = card.querySelector('[data-attest="' + id + '"]');
@@ -274,6 +276,6 @@
   document.addEventListener('daDistrictChanged', load);
 })();
 </script>
-<script src="help-videos.js?v=1" defer></script>
+<script src="help-videos.js?v=2" defer></script>
 </body>
 </html>

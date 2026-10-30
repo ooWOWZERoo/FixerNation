@@ -1,0 +1,20 @@
+# B3  Invite many teachers with a CSV  (page: school-admin-invitations.html)
+# Record as: sales-demo school administrator. Use a file of 4 or 5 example.com addresses, one of them already invited.
+[SCREEN] Open Invitations, select Bulk Invite.
+[SAY] This video shows you how to invite many teachers at once with a spreadsheet file, called a C-S-V.
+[SAY] Open Invitations, and select Bulk Invite.
+[SCREEN] Select Download template.
+[SAY] Start by downloading the template. It's an empty file with the right column names already in it.
+[SCREEN] Open the template in a spreadsheet app and fill in rows.
+[SAY] Open it in your spreadsheet app. The columns are email, first name, last name, grade level, role, department, and subject area. Email, first name, and last name are required on every row. Any row missing a name will be skipped, so check those first.
+[SAY] Keep each value free of commas. A comma inside a cell will split it in two when the file is read.
+[SAY] You can invite up to two hundred teachers in one upload. If you have more, split them into two files.
+[SCREEN] Export as C-S-V, then drag the file into the box.
+[SAY] When you're done, save the file as a C-S-V. Then drag it into the box, or select the box to browse for it.
+[SCREEN] The preview line.
+[SAY] A line appears telling you how many emails are ready to invite, and how many rows were skipped for a missing name.
+[SCREEN] Select Send Invitations and show the result.
+[SAY] Select Send Invitations. When it finishes, you'll see a summary of how many were sent, how many were skipped, and how many couldn't be sent, with the reasons.
+[SAY] Skipped usually means the person was already invited, or already has a seat at your school. That's not a problem.
+[SCREEN] The list now shows the new rows.
+[SAY] The new invitations show up in your list right away, and each teacher gets the same email as in a single invitation. To keep track of them, see the video on managing invitations.

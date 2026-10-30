@@ -1,0 +1,15 @@
+# B8  Safety alert recipients  (page: school-admin-org.html)
+# Record as: sales-demo school administrator (Primary). Use example.com recipient addresses only.
+# Verify before recording: the category choices in the dropdown (read them off the screen rather than naming them).
+# Needs: the school's domain on the license. Trial licenses show "no domain set yet".
+[SCREEN] Open Organization, scroll to Safety Alert Recipients.
+[SAY] Students write short reflections and goals in their lessons. Fixer Nation checks that writing, and if something concerning comes up, an alert email goes out. In this video you'll choose who receives those emails at your school.
+[SAY] Open the Organization page, and scroll to Safety Alert Recipients.
+[SCREEN] Type an email address.
+[SAY] Type the email address of someone who should be told, such as a counselor or an assistant principal. Use an address that someone checks every day.
+[SCREEN] The category dropdown.
+[SAY] You can choose a category, so that person only receives alerts of that kind. Or leave it set to receive everything. A catch-all person is a good idea, so no alert falls through the cracks.
+[SCREEN] Select add and show the new row.
+[SAY] Select the add button, and the person appears in the list.
+[SAY] The rest of this page shows your license details, such as your school domain, plan, seats, and end date. It also lists your co-administrators. Those are read only here. To add or change an administrator, contact us.
+[SAY] Read only administrators can see this page, but can't change the recipients.

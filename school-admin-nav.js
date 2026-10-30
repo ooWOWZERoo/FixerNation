@@ -183,6 +183,47 @@
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 4000);
   };
 
+  // In-page confirmation, used instead of the browser's own confirm() box. The browser box is small, easy to
+  // miss and cannot be shown in a how-to video; this one is part of the page. Resolves true or false.
+  window.saConfirm = function (message, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var ov = document.createElement('div');
+      ov.className = 'sa-modal-overlay';
+      ov.style.display = 'flex';
+      var box = document.createElement('div');
+      box.className = 'sa-modal';
+      box.style.maxWidth = '440px';
+      box.setAttribute('role', 'alertdialog');
+      box.setAttribute('aria-modal', 'true');
+      var head = document.createElement('div');
+      head.className = 'sa-modal-head';
+      var h = document.createElement('h2');
+      h.textContent = opts.title || 'Please confirm';
+      head.appendChild(h);
+      var p = document.createElement('p');
+      p.style.cssText = 'font-size:14px;line-height:1.55;margin:4px 0 18px;';
+      p.textContent = message;
+      var foot = document.createElement('div');
+      foot.className = 'sa-modal-foot';
+      var no = document.createElement('button');
+      no.type = 'button'; no.className = 'sa-btn sa-btn-secondary'; no.textContent = opts.cancelText || 'Cancel';
+      var yes = document.createElement('button');
+      yes.type = 'button'; yes.className = 'sa-btn ' + (opts.danger === false ? 'sa-btn-primary' : 'sa-btn-danger'); yes.textContent = opts.confirmText || 'Yes, continue';
+      foot.appendChild(no); foot.appendChild(yes);
+      box.appendChild(head); box.appendChild(p); box.appendChild(foot);
+      ov.appendChild(box);
+      function done(v) { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); }
+      function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); done(false); } }
+      no.addEventListener('click', function () { done(false); });
+      yes.addEventListener('click', function () { done(true); });
+      ov.addEventListener('click', function (e) { if (e.target === ov) done(false); });
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(ov);
+      no.focus();
+    });
+  };
+
   // Shared API helper — returns parsed JSON or throws with error message
   window.saFetch = async function (url, opts) {
     var r = await fetch(url, Object.assign({ credentials: 'include', headers: { 'Content-Type': 'application/json' } }, opts));

@@ -1,0 +1,15 @@
+# S1  Join your class and sign in  (page: student-login.html)
+# Record as: a demo student. Fake name only. Use a demo classroom code.
+[SCREEN] Open the student sign in page.
+[SAY] Hi there. This video shows you how to join your class, and how to sign in the next time.
+[SAY] Your teacher will give you a class code. It's eight letters and numbers.
+[SCREEN] Type the code.
+[SAY] Type your class code on the first screen, and select continue.
+[SCREEN] Enter a name and choose a P-I-N.
+[SAY] Next, type your name, and choose a P-I-N. A P-I-N is a secret number, between four and six digits. Pick one you'll remember, and don't share it.
+[SCREEN] The username and P-I-N screen.
+[SAY] You'll see your username. Write down your username and your P-I-N right now, somewhere safe.
+[SCREEN] Return to the sign in page and sign in.
+[SAY] Next time, choose the sign in option, and type your username and your P-I-N. You don't need the class code again.
+[SAY] If you type the wrong P-I-N five times, you'll be locked out for a little while. If that happens, wait a few minutes and try again, or ask your teacher to give you a new P-I-N.
+[SAY] And try to type your name the same way each time. If you spell it differently, you could end up with a second account.

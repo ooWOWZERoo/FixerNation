@@ -1,0 +1,18 @@
+# A3  Which sign-in page do I use?  (page: teacher-login.html)
+# Record as: a visitor on the public site. Footer Access column and the Log In menu.
+[SCREEN] Home page, scroll to the footer Access column.
+[SAY] Fixer Nation Education has a few different sign in pages, and this video helps you pick the right one.
+[SAY] Look at the footer at the bottom of any page. The Access column lists Student Login, Teacher Login, Parent Portal, School Admin, and District Admin.
+[SCREEN] Open the Log In menu in the header.
+[SAY] The Log In menu at the top of the page has entries for teachers, students, parents, and school administrators. District administrators sign in from the footer link, or from their account menu once they're signed in.
+[SCREEN] Teacher Login page.
+[SAY] Teachers sign in with an email address and a password. After you sign in, you land on your classrooms.
+[SCREEN] School Admin page.
+[SAY] School license administrators use the School Admin page. It checks that your account really is set up as an administrator. If it isn't, you'll see a message that tells you to contact us.
+[SCREEN] District Admin page.
+[SAY] District administrators use the District Admin page, which works the same way.
+[SCREEN] Student Login page.
+[SAY] Students don't use an email at all. They sign in with a username and a P-I-N, and they join a class with a code from their teacher.
+[SCREEN] Parent login page.
+[SAY] Parents use the Parent Portal page, with the email address their child's teacher invited.
+[SAY] One email address can hold more than one role. If you're a teacher and also a school administrator, you use the same email and password. The page you choose decides where you land.

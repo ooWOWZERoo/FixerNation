@@ -29,7 +29,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=20"></script>
+  <script src="school-admin-nav.js?v=21"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -280,7 +280,7 @@ async function execRevoke() {
 }
 
 async function deleteInvitation(id, email) {
-  if (!confirm('Permanently delete the invitation for ' + email + '? This cannot be undone.')) return;
+  if (!await saConfirm('The invitation for ' + email + ' will be deleted for good. This cannot be undone.', { title: 'Delete this invitation?', confirmText: 'Yes, delete it' })) return;
   try {
     await saFetch('/api/school-admin/invitations/' + id, {
       method: 'DELETE',
@@ -410,6 +410,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
-<script src="help-videos.js?v=1" defer></script>
+<script src="help-videos.js?v=2" defer></script>
 </body>
 </html>

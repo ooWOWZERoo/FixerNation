@@ -1,0 +1,14 @@
+# B9  Permission levels and getting help  (page: school-admin-org.html)
+# Record as: sales-demo school administrator. Show the Co-administrators list on Organization.
+# Record AFTER the deploy (the blocked-button message is part of it).
+# Avoid: the "Full Access" label on the co-administrator list (it shows Primary and Secondary the same way; known issue).
+[SCREEN] Open Organization, show Co-administrators.
+[SAY] Not every administrator can do everything. This video explains the three permission levels, and who to contact when you need something this portal doesn't do.
+[SAY] A primary administrator can do it all: invite teachers, resend and extend invitations, revoke invitations, and remove teachers.
+[SAY] A secondary administrator can do day to day work like inviting teachers, resending, and extending. They can't revoke a seat or remove a teacher.
+[SAY] A read only administrator can look at everything, but can't change anything. It's a good fit for someone who just needs to see reports.
+[SCREEN] Press a blocked button as a read only admin, show the message.
+[SAY] If you press a button your level doesn't allow, you'll see a message that tells you why. You won't be sent to the sign in page.
+[SCREEN] The Co-administrators list.
+[SAY] The list of co-administrators on this page shows who else has access. Administrators are set up by Fixer Nation or by your district, not from this page. If you need to add someone, change a level, or remove someone, email us.
+[SAY] The same goes for adding seats, renewing your license, changing your school name, or anything about billing. Email support at Fixer Nation Education dot com, and tell us your school's name so we can find your account quickly.

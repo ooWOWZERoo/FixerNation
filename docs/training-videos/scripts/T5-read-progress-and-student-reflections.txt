@@ -1,0 +1,17 @@
+# T5  Read progress and student reflections  (pages: teacher-classroom-progress.html, teacher-game-report.html)
+# Record as: a sales-demo teacher. Demo students with example completions and reflections. NEVER real student writing.
+[SCREEN] The Progress tab in a classroom.
+[SAY] This video shows how to see who has done the work, and what they wrote.
+[SAY] In your classroom, open the Progress tab. You'll see a card for each assigned lesson, with how many students started it, and how many finished.
+[SCREEN] Open a lesson's progress page.
+[SAY] Select a lesson to see more. The top shows how many students started, how many completed, the average quiz score, and how many wrote a reflection.
+[SCREEN] The student table and an expanded reflection.
+[SAY] Below that is a table with each student's status and quiz score. Open a row to read their reflections, written before and after the lesson.
+[SCREEN] The pass mark selector.
+[SAY] The pass mark menu lets you highlight scores above or below a number you choose. It's saved in the browser you're using, so it won't follow you to another computer.
+[SCREEN] Select Reset on a student's quiz.
+[SAY] Students only get one try at a quiz. If a student needs another, select Reset next to their score.
+[SCREEN] Select Export CSV.
+[SAY] Select Export C-S-V to download the table as a spreadsheet.
+[SCREEN] A game results page.
+[SAY] A brain game has its own results page. It shows how many students finished, how many times it was played, and the average score, with a row for each student showing their first score and their latest. You can export that as well.

@@ -53,3 +53,7 @@ const show = (title, arr) => {
 show('RECORDED videos to re-check (still correct, or re-record):', rec);
 show('Planned videos affected (update the script notes before filming):', plan);
 if (!rec.length) console.log('\nNo recorded video is affected.');
+else {
+  const have = rec.filter(({ v }) => fs.existsSync(path.join(ROOT, 'tests/howto/storyboards', v.id + '.ts')));
+  if (have.length) console.log('\nRe-record with:  tests/howto/record.sh ' + have.map(({ v }) => v.id).join(' '));
+}

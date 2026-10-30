@@ -1,0 +1,20 @@
+# B6  Brand your school  (page: school-admin-branding.html)
+# Record as: sales-demo school administrator (Primary). Use a fake school logo (PNG, at least 200 by 100 pixels, under 2 MB).
+# Note: trial licenses have no school record yet and show a "contact support" message instead (see B10).
+[SCREEN] Open Branding.
+[SAY] In this video you'll add your school's logo and colors, so your teachers, students, and parents see your school's look.
+[SCREEN] Select Upload Logo and choose a file.
+[SAY] Select Upload Logo. You can use a P-N-G, J-P-G, WebP, or S-V-G file, up to two megabytes. It should be at least two hundred pixels wide and one hundred pixels tall, or it will look blurry.
+[SCREEN] The crop tool.
+[SAY] After you upload, select Edit Crop to trim the logo, so it fits neatly in the space it's shown in. Cropping never changes your original file.
+[SCREEN] The color fields.
+[SAY] Next, pick your colors. There's a primary color, a secondary color, and an optional accent. Choose from the color swatch, or type a hex code, such as pound sign one six four F four A.
+[SCREEN] The preview tabs.
+[SAY] The preview tabs show how your branding looks to an administrator, a teacher, a classroom, a student, and a parent. Click through them to make sure your logo and colors are easy to read.
+[SCREEN] Select Save Draft.
+[SAY] Select Save Draft to keep your work without showing it to anyone. A note at the top reminds you when you have changes that haven't been published.
+[SCREEN] Select Publish Branding and confirm.
+[SAY] When you're happy, select Publish Branding and confirm. Your branding goes live right away.
+[SCREEN] Point at Reset to FNE Default.
+[SAY] If you ever want to start over, Reset to FNE Default puts the standard look back.
+[SAY] Your school name is shown here, but it can't be changed on this page. Email support at Fixer Nation Education dot com if it needs a correction. Read only administrators can look at this page but can't make changes.

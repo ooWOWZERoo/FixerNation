@@ -1,0 +1,21 @@
+# B2  Invite a teacher  (page: school-admin-invitations.html)
+# Record as: sales-demo school administrator. Invite an example.com address you control.
+# Needs: the license invoice marked paid, otherwise the page shows the payment banner (see B10).
+[SCREEN] Open Invitations.
+[SAY] In this video you'll invite a teacher to your school. It takes about a minute.
+[SAY] Open Invitations from the menu, and select Invite Teacher.
+[SCREEN] The invite form.
+[SAY] Enter the teacher's email address, first name, and last name. Those three are required for every invitation.
+[SAY] You can also add a grade level, a department, a role title, and a subject area. They're optional, but they make your lists easier to read later.
+[SCREEN] Type an email that already has an account, to show the warning.
+[SAY] If the email already belongs to someone with a Fixer Nation account, you'll see a note about it. That's fine. They'll be able to accept your invitation with their existing account.
+[SCREEN] Type a short personal message.
+[SAY] The personal message is a nice touch. A line like, welcome to the team, shows up in the email the teacher receives.
+[SCREEN] Select Send Invitation.
+[SAY] Select Send Invitation. The teacher gets an email that says they're invited to join your school. The invitation is open for fourteen days.
+[SAY] A seat is held for the teacher the moment you send it, so pending invitations count toward your seat total.
+[SCREEN] The new row in the list with status Pending.
+[SAY] Your new invitation appears in the list with the status Pending. When the teacher opens the email, it changes to Opened. When they create their account, it changes to Registered, and you'll get an email letting you know they've joined.
+[SCREEN] Optionally show the teacher's side in a second window.
+[SAY] On their side, a new teacher only has to choose a password. Their email is confirmed automatically, because the invitation went to that address.
+[SAY] If you have a whole staff to invite, the next video shows how to do it with a spreadsheet.

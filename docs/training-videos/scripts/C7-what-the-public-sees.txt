@@ -1,0 +1,14 @@
+# C7  What the public sees  (page: district-admin-standards.html)
+# NOTE: the sales-demo district is never public, so the public page cannot be shown for it.
+# Show the public state page for a state that is already verified (New York or Ohio) and say a district page looks the same.
+# Record AFTER at least one real district framework has been published, if possible, and show that page instead.
+[SCREEN] The framework list with status badges.
+[SAY] This video explains what the status badges mean, and what visitors see once your framework is published.
+[SAY] Every framework has one of three statuses. Draft means it's yours alone. In review means you've sent it to us and we're working on it. Published means it's live on our website.
+[SAY] Editing a published framework takes it offline until we review it again, because we want everything people see to match your official source. If you edit one that's in review, you'll need to submit it again.
+[SCREEN] Open the public state standards page.
+[SAY] This is what a visitor sees on the public page. A state's standards appear with the lessons and games that connect to them, and a plain note that these are Fixer Nation's own matches.
+[SAY] Your published framework appears the same way, on a page for your district. It's also listed under your state, in a list called Districts in this state.
+[SCREEN] Back to the portal, point at Delete framework.
+[SAY] To take a framework off the website for good, select Delete framework. It asks you to confirm. There's no undo, so use Take back to draft if you only want to pause it.
+[SAY] We don't send an email when a framework is approved, so check back on this page to see the status change. If it's been a while, email us.

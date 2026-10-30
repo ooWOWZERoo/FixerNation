@@ -1,0 +1,21 @@
+# C4  Invite and manage school administrators  (page: district-admin-schools.html)
+# Record as: sales-demo district administrator. Invite example.com addresses only (demo accounts can only invite example.com or your own mailbox).
+# Record AFTER the deploy if you show the Reset Password flow from the setup page.
+[SCREEN] Open Schools, pick a school card.
+[SAY] In this video you'll invite a school license administrator, and learn how to resend, reset, edit, and remove one.
+[SCREEN] Select Invite Admin.
+[SAY] On the school's card, select Invite Admin.
+[SCREEN] Fill in the form.
+[SAY] Enter their first name, last name, and email. Choose a permission level. Primary and Secondary can both do the day to day work. Primary can also revoke seats and remove teachers. Read Only can see everything but change nothing. You can add a note for your own records.
+[SCREEN] Type an email that already has an account, show the note.
+[SAY] If the email already has an account, you'll see a note about it. That's fine.
+[SCREEN] Select Send Invitation.
+[SAY] Select Send Invitation. The person is an administrator right away, and they get a welcome email with a button to set their password.
+[SCREEN] The new person with the Pending Setup badge.
+[SAY] Until they've chosen a password, they show a Pending Setup badge. If they lose the email, select Resend Welcome and they'll get a fresh link.
+[SCREEN] A verified administrator, select Reset Password.
+[SAY] For someone who's already set up, the button says Reset Password instead. It sends them the standard reset email, with a link that lasts one hour.
+[SCREEN] Select Edit.
+[SAY] Select Edit to change their permission level.
+[SCREEN] Select Revoke and confirm.
+[SAY] And select Revoke to remove their administrator access. You'll be asked to confirm. Their account stays, but they can no longer manage that school.

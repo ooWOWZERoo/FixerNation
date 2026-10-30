@@ -1,0 +1,15 @@
+# B5  Manage your teacher roster  (page: school-admin-roster.html)
+# Record as: sales-demo school administrator (Primary). Have a few demo teachers with seats.
+[SCREEN] Open Roster.
+[SAY] The Roster page shows every teacher who has a seat in your license. Students aren't listed here. Teachers manage their own students inside their classrooms.
+[SCREEN] The Active, Inactive and All filter.
+[SAY] Use the filter at the top to show active teachers, inactive teachers, or everyone.
+[SCREEN] Select Edit Grades on a row.
+[SAY] Select Edit Grades to record which grade levels a teacher works with: elementary, middle, high school, or higher education.
+[SCREEN] Select Deactivate, then Reactivate.
+[SAY] If a teacher is on leave, select Deactivate. They keep their account but lose access, and the seat is reserved. Select Reactivate when they return.
+[SCREEN] Select Remove, show the reason box.
+[SAY] If a teacher leaves your school for good, select Remove. You'll be asked for a reason. Removing frees the seat so you can invite someone new, and it signs that teacher out. Only primary administrators can remove a teacher.
+[SCREEN] A pending seat, select Revoke.
+[SAY] A seat that's still waiting on a teacher shows a Revoke button instead. It does the same job as revoking from the Invitations page.
+[SAY] Your seat counts update after you make a change, so you can check the dashboard to see the effect.

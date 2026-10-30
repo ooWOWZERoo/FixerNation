@@ -1,0 +1,15 @@
+# T4  Assign lessons and brain games  (page: teacher-classroom.html)
+# Record as: a sales-demo teacher with a classroom. Needs an active teacher seat.
+[SCREEN] Open a classroom, select the Assignments tab.
+[SAY] In this video you'll choose lessons and brain games for your class.
+[SAY] Open your classroom, and select the Assignments tab.
+[SCREEN] Select Assign Lesson, search, pick one.
+[SAY] Select Assign Lesson. A picker opens. Search by name, or narrow it with the series buttons. Choose a lesson, set a due date if you'd like one, and confirm.
+[SCREEN] Select Assign Game.
+[SAY] To assign a brain game, select Assign Game. It starts with games that fit your classroom's grade. If you want to see all of them, tick the box to show every grade band.
+[SCREEN] The assignments list.
+[SAY] Each assignment shows how many students have finished it. Select Progress on a lesson, or Results on a game, to see the details. We cover those in another video.
+[SCREEN] Select Remove on an assignment.
+[SAY] If you change your mind, select Remove next to the assignment.
+[SCREEN] Open the student view in a second window.
+[SAY] Students see their assigned lessons and games the next time they sign in. They can only open what you've assigned.

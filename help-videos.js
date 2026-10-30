@@ -6,6 +6,8 @@
      the video has a url, and the page must load this file:  <script src="help-videos.js?v=1" defer></script>
    - `help-videos.html` lists every recorded video, grouped by audience and topic.
      `help-videos.html?preview=1` also lists the ones not recorded yet (the plan in docs/training-videos/).
+   - Optional per video: `captions` (a .vtt file on this site, e.g. /howto/B1.vtt) and `poster` (a still image,
+     https or on this site). Captions only apply to mp4 files; YouTube and Vimeo bring their own.
    - `url` can be a YouTube link, a Vimeo link, or a file on this site (https://... .mp4 or /uploads/....mp4).
      YouTube plays from youtube-nocookie.com so no tracking cookies are set for students and parents.
    - Bump the ?v=N on the script tags in the HTML files when this file changes. */
@@ -151,6 +153,8 @@
     }
     return null;
   }
+  function safeCaptions(u) { u = String(u || '').trim(); return /^\/(?!\/)[^\s"'<>\\]+\.vtt$/i.test(u) ? u : ''; }
+  function safePoster(u) { u = String(u || '').trim(); return /^(?:https:\/\/|\/(?!\/))[^\s"'<>\\]+\.(?:jpe?g|png|webp)(?:\?[^\s"'<>\\]*)?$/i.test(u) ? u : ''; }
   function recorded(v) { return !!embedFor(v.url); }
   function byId(id) { for (var i = 0; i < VIDEOS.length; i++) if (VIDEOS[i].id === id) return VIDEOS[i]; return null; }
   function groupOf(v) { for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].id === v.group) return GROUPS[i]; return GROUPS[0]; }
@@ -224,6 +228,9 @@
       stage.appendChild(f);
     } else {
       var vid = el('video', { src: emb.src, controls: '', playsinline: '', preload: 'metadata', title: v.title });
+      var poster = safePoster(v.poster); if (poster) vid.setAttribute('poster', poster);
+      var cap = safeCaptions(v.captions);
+      if (cap) vid.appendChild(el('track', { kind: 'captions', src: cap, srclang: 'en', label: 'English', default: '' }));
       stage.appendChild(vid);
     }
     box.appendChild(stage);

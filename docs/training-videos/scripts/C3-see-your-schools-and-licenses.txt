@@ -1,0 +1,15 @@
+# C3  See your schools and licenses  (page: district-admin-schools.html)
+# Record as: sales-demo district administrator. Demo district with two or three demo schools.
+[SCREEN] Open Schools.
+[SAY] The Schools page shows every licensed school in your district. This video covers what you'll see there, and what you won't.
+[SCREEN] One school card.
+[SAY] Each school has a card. At the top is the school's name, its plan, the number of seats purchased, and the payment status.
+[SCREEN] The administrators list on the card.
+[SAY] Below that are the school's license administrators. For each person you see a name and email, their permission level, which is Primary, Secondary, or Read Only, and a Pending Setup badge if they haven't chosen a password yet. You won't see your own name in this list.
+[SCREEN] A school with no administrators.
+[SAY] If a school has no one assigned, the card says so. That's your cue to invite an administrator, which the next video covers.
+[SCREEN] The license banner at the top of the menu.
+[SAY] License dates aren't shown on the cards. Instead, the banner at the top of the portal tells you how many schools are expired or expiring within thirty days.
+[SAY] What this page doesn't show: teacher lists, how many seats are used, or reports. Those belong to each school's own administrators.
+[SAY] A school appears here once it has a license and has been linked to your district. If a school is missing, email support at Fixer Nation Education dot com with its name, and we'll link it.
+[SAY] An empty page that says, no licensed schools in your district yet, means no school has been linked so far.

@@ -1,0 +1,19 @@
+# B1  A tour of the School Admin portal  (page: school-admin-dashboard.html)
+# Record as: the sales-demo school administrator (Primary). Demo school data only.
+[SCREEN] Sign in and land on the dashboard.
+[SAY] Welcome to the School Admin portal. In this tour you'll see where everything is, so you can find your way around in a couple of minutes.
+[SCREEN] Point at the menu on the left.
+[SAY] The menu on the left has six pages: Dashboard, Organization, Branding, Roster, Invitations, and Reports. At the bottom you'll find Help videos, a link to view the site, and Log Out.
+[SCREEN] If shown, the school selector at the top of the menu.
+[SAY] If you manage more than one school, a school selector appears at the top of the menu. Pick a school there, and every page switches to it.
+[SCREEN] Point at the license banner at the top.
+[SAY] The banner at the top shows your license end date. It turns yellow thirty days before your license ends, and red once it has expired, so you'll never be surprised by a renewal.
+[SCREEN] Dashboard numbers.
+[SAY] On the dashboard you'll see four things at a glance. The number of active teachers, the seats still available, the invitations waiting for an answer, and a bar showing how much of your license is in use. Your own seat as an administrator isn't counted.
+[SAY] Below that is a list of recent activity, such as invitations sent and teachers who've joined.
+[SCREEN] Show a warning, if one is visible, or describe it.
+[SAY] When you reach ninety percent of your seats, and again at one hundred percent, a warning appears. It tells you to email us if you need more seats.
+[SCREEN] Open Organization, then Roster, then Invitations, then Reports, pausing a moment on each.
+[SAY] Organization shows your license details and your co-administrators. Roster lists every teacher who has a seat. Invitations is where you invite teachers and track who has answered. Reports shows how your license is being used and gives you spreadsheet downloads.
+[SAY] Branding lets you add your school's logo and colors, so teachers and students see your school's look.
+[SAY] Each of those pages has its own short video. You can open them from the Help videos link, or from the how-to video button in the corner of the page.

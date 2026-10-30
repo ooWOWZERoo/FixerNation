@@ -12,3 +12,13 @@ server/scripts/data/
 
 # Playwright output when run from the repo root instead of tests/
 /test-results/
+
+# Narration audio is rendered on demand (docs/training-videos/render-narration.sh)
+docs/training-videos/audio/
+tests/howto/.env.howto.local
+tests/howto/.site.pid
+tests/howto/.site.log
+tests/howto/.uploads/
+tests/howto-out/
+howto-out/
+tests/howto/.env.cloudinary.local

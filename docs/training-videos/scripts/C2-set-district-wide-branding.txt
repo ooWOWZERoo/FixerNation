@@ -1,0 +1,16 @@
+# C2  Set district-wide branding  (page: district-admin-branding.html)
+# Record as: sales-demo district administrator. Fake district logo (PNG, at least 200 by 100 pixels, under 2 MB).
+[SCREEN] Open Branding.
+[SAY] In this video you'll set the logo and colors that every school in your district starts with.
+[SAY] Here's how it works. Whatever you publish here becomes the default look for each school in your district that hasn't published its own branding. If a school has its own, the school's look always wins.
+[SCREEN] Upload Logo and select a file.
+[SAY] Select Upload Logo. Use a P-N-G, J-P-G, WebP, or S-V-G file under two megabytes, at least two hundred pixels wide and one hundred tall. Then select Edit Crop to trim it to fit.
+[SCREEN] The color fields.
+[SAY] Set a primary color and a secondary color. An accent color is optional. Pick from the swatch, or type a six digit hex code. Restore F-N-E Colors puts the standard colors back in the boxes.
+[SCREEN] The preview tabs.
+[SAY] Use the preview tabs to see how it looks for an administrator, a teacher, a classroom, a student, and a parent.
+[SCREEN] Save Draft, then Publish Branding and confirm.
+[SAY] Select Save Draft to keep your work private. When it looks right, select Publish Branding and confirm. The schools using the district default pick it up.
+[SCREEN] Point at Reset to FNE Default.
+[SAY] Reset to F-N-E Default removes your district branding and goes back to the standard look. It asks you to confirm first.
+[SAY] Your district's name is shown here, but it can't be edited on this page. Email support at Fixer Nation Education dot com to change it.

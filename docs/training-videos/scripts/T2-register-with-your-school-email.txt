@@ -1,0 +1,15 @@
+# T2  Register with your school email  (page: education-schools.html)
+# Record as: a teacher using an example.com address that matches the sales-demo school's domain. Record AFTER the deploy (a seat-count fix is part of it).
+[SCREEN] Open the teacher registration page.
+[SAY] If your school has a Fixer Nation license but you haven't been sent an invitation, you can register yourself with your school email. Here's how.
+[SAY] Open the Teacher Registration page, and enter your first name, last name, and school email address.
+[SCREEN] Select the check button.
+[SAY] We match the part of your email after the at sign to your school's license. If your school has a seat available, we hold one for you right away.
+[SCREEN] The grade level choice.
+[SAY] You'll be asked to choose your grade level. This is optional, and you can skip it.
+[SCREEN] The success message and signup window.
+[SAY] You'll see a message that your seat is reserved, and a sign up window with your email filled in. Choose a password and create your account.
+[SCREEN] The verification email.
+[SAY] Then check your email for a message from us, and select the link inside. It works for twenty four hours. Once your address is verified, sign in on the Teacher Login page.
+[SCREEN] The not-eligible messages.
+[SAY] If your school doesn't have a license yet, or the license isn't active, or all the seats are in use, you'll see a message that says so. Select Notify School Admin, and we'll email your school's administrator for you. You can also buy a single teacher license of your own.

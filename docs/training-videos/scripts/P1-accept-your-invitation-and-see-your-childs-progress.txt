@@ -1,0 +1,16 @@
+# P1  Accept your invitation and see your child's progress  (pages: parent-invite-accept.html, parent-portal.html)
+# Record as: a demo parent invited by a demo teacher (example.com address). Demo child only.
+[SCREEN] Open the invitation email.
+[SAY] Your child's teacher has invited you to follow along in Fixer Nation Education. This video shows how to accept and what you'll see.
+[SAY] Open the email, and select the link. It works for fourteen days. The invitation is tied to the email address it was sent to, so use that same address.
+[SCREEN] The accept page for a new account.
+[SAY] If you're new, enter your first name, last name, and a password with at least eight characters, and select Create Account and Accept Invitation.
+[SCREEN] The accept page for existing accounts.
+[SAY] If you already have an account, sign in and accept. If you're signed in with a different email, you'll be asked to sign out first, because the invitation belongs to the address it was sent to.
+[SCREEN] The parent portal.
+[SAY] After that, you're taken to the Parent Portal. Next time, sign in from the Parent Portal page, with your email and password.
+[SCREEN] A child's lessons with status labels.
+[SAY] Your child is listed with their class. Each assigned lesson shows a label: Completed, In progress, or Not started. If the teacher set a due date, it shows here too.
+[SCREEN] Select View resources.
+[SAY] Select View resources on a lesson to see an overview, the objectives, the materials, and videos. You can also download the teacher copy, the student handout, and the classroom poster.
+[SAY] You'll see whether lessons are done, but not quiz answers or your child's writing. That stays between your child and their teacher.

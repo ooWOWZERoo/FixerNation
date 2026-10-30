@@ -1,0 +1,12 @@
+# S3  Goals and history  (page: student-achievements.html)
+# Record as: a demo student with a couple of goals and a completed lesson.
+[SCREEN] The My Goals box on the home page.
+[SAY] In this video you'll set goals, and look back at what you've done.
+[SAY] On your home page, there's a box called My Goals. Type something you want to work on, and add it. When you've done it, tick it off.
+[SCREEN] Select My Goals and History.
+[SAY] Select My Goals and History to see more. There are two tabs.
+[SCREEN] The My Goals tab.
+[SAY] My Goals shows your open goals, and the ones you've finished. It feels good to see that list grow.
+[SCREEN] The Lesson History tab.
+[SAY] Lesson History lists the lessons you've done. Select one to open it again, and look back at what you learned.
+[SAY] Keep your goals kind, and about you. There's a safety check on what's written. Great work. Keep going.

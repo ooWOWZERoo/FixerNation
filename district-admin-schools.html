@@ -16,7 +16,7 @@
 <body>
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
-  <script src="district-admin-nav.js?v=7"></script>
+  <script src="district-admin-nav.js?v=8"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -201,7 +201,7 @@ async function sendPasswordReset(assignmentId, btn) {
 }
 
 async function revokeAdmin(assignmentId, email) {
-  if (!confirm('Revoke ' + email + '\'s access to this school? Their account itself is not deleted.')) return;
+  if (!await daConfirm(email + ' will no longer be able to manage this school. Their account is not deleted.', { title: 'Remove this administrator\'s access?', confirmText: 'Yes, remove access' })) return;
   try {
     await daFetch('/api/district-admin/schools/admin-assignments/' + assignmentId, { method: 'DELETE' });
     daToast('Access revoked');
@@ -306,6 +306,6 @@ async function submitAssign() {
 
 function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
-<script src="help-videos.js?v=1" defer></script>
+<script src="help-videos.js?v=2" defer></script>
 </body>
 </html>

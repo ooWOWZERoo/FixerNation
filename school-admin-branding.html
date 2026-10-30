@@ -46,7 +46,7 @@
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
   <script src="logo-crop-widget.js?v=1"></script>
-  <script src="school-admin-nav.js?v=20"></script>
+  <script src="school-admin-nav.js?v=21"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -347,7 +347,7 @@ async function publishBranding() {
 }
 
 async function resetToDefault() {
-  if (!confirm('Reset your school branding to the FNE default look? This clears your logo and colors.')) return;
+  if (!await saConfirm('This clears your logo and colors and puts the standard Fixer Nation look back for your school.', { title: 'Reset your school branding?', confirmText: 'Yes, reset it' })) return;
   var purchaseId = window.saActivePurchaseId();
   try {
     await saFetch('/api/school-admin/branding/reset', {
@@ -361,6 +361,6 @@ async function resetToDefault() {
   }
 }
 </script>
-<script src="help-videos.js?v=1" defer></script>
+<script src="help-videos.js?v=2" defer></script>
 </body>
 </html>

@@ -58,6 +58,32 @@ Suggested first batch if we film in stages: A1, A2, B1, B2, B4, C1, C3, C4, D1.
 | S3 | Goals and history | student-achievements.html |
 | P1 | Accept your invitation and see your child's progress | parent-invite-accept.html, parent-portal.html |
 
+## How the videos are made (same approach as the Fixer Nation Org project)
+
+Decided 2026-10-29. Each video is a **storyboard**: a TypeScript file in `tests/howto/storyboards/<ID>.ts` listing steps. Every step has a line of narration and, optionally, a browser action.
+
+- **Narration:** the macOS voice **Ava (Premium)** at **165 words per minute** (agreed range 160 to 165; `HOWTO_RATE` overrides). One clip per step, so the on-screen action always lines up with what is being said.
+- **Recording:** Playwright records a 1280x720 browser with a visible cursor and click ripple, gliding mouse moves and readable typing. `tests/howto/pipeline.ts` is ported from the Org project.
+- **Assembly:** ffmpeg (the `ffmpeg-static` npm package, nothing to install) lays each clip at its step's start, compresses to 720p (about 2 MB a minute and a half), and writes a poster image and a WebVTT caption file from the same timings.
+- **Where it records:** a **local throwaway copy of the site** (`tests/howto/stack.sh up`: Docker MariaDB, the real server, and a mail catcher), never production. The fictional Riverbend School District data comes from `tests/howto/seed-demo.js`. Emails the site sends land in the mail catcher, and the pipeline shows them on screen from there. Production is never touched; the pipeline refuses a non-local address unless `HOWTO_ALLOW_PROD=1`.
+- **Record:** `tests/howto/record.sh B1 B2 ...` (starts a fresh site for each video, so every video starts from the same data). One video: `cd tests && npm run howto -- B1` after `stack.sh up`.
+- **Publish:** `cd tests && npm run howto:publish -- B1` copies the captions and poster into `help-assets/` (served by the site), uploads the mp4 to Cloudinary as `fne/help/<ID>`, and fills the video's `url`, `captions` and `poster` into `help-videos.js`. Needs `tests/howto/.env.cloudinary.local` (git-ignored) with the Cloudinary name, key and secret.
+- **When a video goes out of date:** `node server/scripts/videos-to-review.js` lists the videos a change could affect; re-run `tests/howto/record.sh <ID>` to remake one.
+
+The `.txt` files in `scripts/` are the first-draft narration for all 31 videos. Where a storyboard exists, the storyboard is the source of truth and the `.txt` is only a draft. `render-narration.sh` renders a draft's audio on its own and is only needed for videos that don't have a storyboard yet.
+
+Storyboards built so far (2026-10-29): A1, A2, B1, B2, B4, C1, C3, C4. Not yet: D1 (needs a quote set up in the test data), and the remaining admin videos and all of wave 2.
+
+Spellings that help Ava: "P-I-N", "C-S-V", "P-O" (say "purchase order" first), "F-N-E", "user I-D", and "support at Fixer Nation Education dot com".
+
+## Where the videos are stored
+
+Decided: **Cloudinary** (the existing account, shared with the Org project, so the free monthly credit pool is shared too; check current terms). The mp4 plays from Cloudinary; the captions and poster are small files in `help-assets/` on the site so captions load same-origin. Videos are recorded at about 2 MB for a minute and a half, so all 31 stay well under 1 GB stored.
+
+- Upload as `fne/help/<ID>` (done by `howto:publish`). Keep the original recordings out of git (`tests/howto-out/` is ignored).
+- Add `https://res.cloudinary.com` to `media-src` in the `.htaccess` Content-Security-Policy line (report-only today, so nothing breaks, but it must be there before the policy is enforced).
+- Credentials stay in `tests/howto/.env.cloudinary.local`, never in the repo.
+
 ## Optional: for FNE staff
 
 Setting up a district (create it, link schools, invite the district admin) and the concierge flow. Internal training, not customer-facing.

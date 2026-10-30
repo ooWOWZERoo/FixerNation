@@ -1,0 +1,15 @@
+# T1  Accept your school's invitation  (page: school-invite-accept.html)
+# Record as: a new teacher (use an example.com invitation sent from the sales-demo school). Show new and existing account if time allows.
+[SCREEN] Open the invitation email.
+[SAY] Your school has invited you to Fixer Nation Education. This video shows you how to accept the invitation and get started.
+[SAY] Open the email that says you're invited to join your school, and select the link. The invitation is open for fourteen days.
+[SCREEN] The accept page for a new account.
+[SAY] If you're new to Fixer Nation, you'll see a form. Enter your first name, last name, and a password with at least eight characters, type it again, and select Create Account and Accept Invitation. There's nothing to verify by email, because the invitation already went to your address.
+[SCREEN] The accept page for someone signed in.
+[SAY] If you already have an account with the same email, and you're signed in, you'll just see one button. Select Accept Invitation.
+[SCREEN] The accept page for someone not signed in.
+[SAY] If you have an account but you're not signed in, enter your password and select Sign In and Accept Invitation. If you've forgotten it, the Forgot your password link brings you back to the invitation afterward.
+[SCREEN] The success screen, then My Account.
+[SAY] When it's done, you'll see a confirmation. Select Go to My Account to see your license, and your seat at your school.
+[SAY] From now on, sign in on the Teacher Login page with your email and password. Your classrooms are waiting there.
+[SAY] If you see a message that the invitation has expired, been used, or been cancelled, ask your school administrator to send a new one.

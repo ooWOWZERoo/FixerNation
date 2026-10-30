@@ -1,0 +1,17 @@
+# C6  Suggest connections and submit for review (part 2)  (page: district-admin-standards.html)
+# Record as: sales-demo district administrator. Demo district sends no email to FNE staff when submitting.
+[SCREEN] Open a framework that already has standards.
+[SAY] In this video you'll suggest where Fixer Nation lessons and games fit your standards, and then send your framework to us for review.
+[SCREEN] On one standard, pick a lesson, game or program from the list.
+[SAY] On any standard, choose a lesson, a brain game, or our program as a whole from the list. Then add a short private note about why you think it fits.
+[SCREEN] Select Suggest connection.
+[SAY] Select Suggest connection. Your note stays private, and it's only seen by our team. We write the public explanation ourselves, so you don't have to.
+[SCREEN] Select Remove suggestion.
+[SAY] Changed your mind? Select Remove suggestion on a connection you added.
+[SCREEN] Scroll to the submit area, tick the confirmation.
+[SAY] When you're ready, find the submit area. You'll need to tick a box that says this is your district's official framework, and that you're authorized to submit it. You also need at least one standard in it.
+[SCREEN] Select Submit for review.
+[SAY] Select Submit for review. The status changes to In review, and our team is notified.
+[SAY] Our team compares your standards with your official link, confirms who you are, writes the explanation for each suggested connection, and then publishes.
+[SCREEN] Select Take back to draft.
+[SAY] If you spot a mistake after submitting, select Take back to draft, fix it, and submit again.

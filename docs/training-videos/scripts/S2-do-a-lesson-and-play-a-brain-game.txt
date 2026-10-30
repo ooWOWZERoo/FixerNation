@@ -1,0 +1,15 @@
+# S2  Do a lesson and play a brain game  (pages: student-home.html, student-lesson.html)
+# Record as: a demo student. Use a short demo lesson.
+[SCREEN] The student home page.
+[SAY] Let's do a lesson. After you sign in, you'll see your classroom home page.
+[SAY] Your teacher's assignments are here, as cards. Lessons are on top, and brain games are below. Select a lesson to begin.
+[SCREEN] Step through a lesson.
+[SAY] A lesson has steps. You might read a handout, watch a video, and write a short reflection before you start, to share what you already think.
+[SCREEN] The quiz.
+[SAY] Then there's a quiz. You can save your answers and come back, but you only get one try when you submit. Take your time.
+[SCREEN] The after-lesson reflection.
+[SAY] After the quiz, write another short reflection. Keep your writing kind and appropriate. Some messages can't be saved, and you'll see a note if that happens.
+[SCREEN] Set a goal, then Mark as Complete.
+[SAY] You can set a goal for yourself, and when you've finished everything, select Mark as Complete. Your teacher will see that you finished.
+[SCREEN] Open a brain game.
+[SAY] To play a brain game, select it from your home page. It opens right there. When you finish, your score is saved. Some older games ask you to select Mark as Done when you're finished.

@@ -1,0 +1,17 @@
+# T3  Create a classroom and add students  (pages: teacher-classrooms.html, teacher-classroom.html)
+# Record as: a sales-demo teacher. Fake student names only. NEVER show real students.
+# Record AFTER the deploy (roster import now shows each student's login). Use 3 imported students.
+[SCREEN] Open My Classrooms, select New Classroom.
+[SAY] In this video you'll set up your first classroom and add your students.
+[SAY] Open My Classrooms, and select New Classroom. Give it a name. Grade, subject, and school year are optional.
+[SCREEN] The classroom page with its join code.
+[SAY] Every classroom gets an eight character join code. Students use it to join. Keep it handy.
+[SCREEN] Select Add Student.
+[SAY] To add a student yourself, select Add Student. Type their name, and choose a P-I-N, which is four to six digits. A student I-D number is optional.
+[SAY] The username is made for you, from the student's first name, in lower case. If someone already has it, a number is added. Students never need an email address.
+[SCREEN] Select Import, paste three lines.
+[SAY] To add a whole class, select Import. Paste one student per line: name, then an optional student number, then an optional P-I-N. Leave the P-I-N off, and we'll make a six digit one for each student.
+[SCREEN] The student logins window.
+[SAY] When the import finishes, you'll see each student's username and P-I-N. Save them now, by copying the list. P-I-Ns are stored scrambled, so they can't be shown again.
+[SCREEN] Regenerate join code and Archive.
+[SAY] A couple of controls to know about. Regenerate Join Code stops the old code working for new students. Archive closes the classroom, and students can't sign in, until you bring it back.

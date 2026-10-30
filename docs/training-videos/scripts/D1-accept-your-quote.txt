@@ -1,0 +1,16 @@
+# D1  Accept your quote  (page: accept-quote.html)
+# Record as: a customer opening a quote email. Use a demo quote on example.com data. Do not accept a real quote.
+# Verify before recording: the exact tab and button labels on accept-quote.html (written from the code, not from the screen).
+[SCREEN] Open the quote email, then select the link to the quote page.
+[SAY] Welcome to Fixer Nation Education. This video walks you through accepting your school's license quote, so you can get your school set up.
+[SAY] Your quote arrives by email, with a subject line that mentions your license quote. Select the link in that email to open your quote page.
+[SCREEN] Scroll the quote: plan, seats, price.
+[SAY] Take a minute to review what's on the page: the plan, the number of teacher seats, and the price. If anything looks off, contact us before you accept.
+[SCREEN] Show the payment choices: purchase order and card.
+[SAY] You can pay in one of two ways. If your school pays by purchase order, choose the purchase order option and enter your P-O number. If you'd rather pay by card, choose the card option, and you'll be sent to a secure checkout page to finish.
+[SAY] A quick note for purchase order schools. Your license switches on after our team confirms the purchase order, so there can be a short wait before you can invite teachers. We'll cover that in a later video.
+[SCREEN] Show the success screen with the two choices.
+[SAY] Once your quote is accepted, you'll see a screen that asks who will run the school's account. If that's you, choose the option that says you're the School License Administrator.
+[SAY] If someone else will manage it, such as a technology coordinator or a principal, choose Invite someone else, and enter their details. They'll get an email with a link that works for seven days, and it can be used once.
+[SAY] Purchase order customers can set a password right away from this screen. If you paid by card, the link to set your password is in the email we send you.
+[SAY] Either way, the next step is your welcome email, which we cover in the next video. Thanks for choosing Fixer Nation Education.

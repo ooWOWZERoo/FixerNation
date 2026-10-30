@@ -1,0 +1,17 @@
+# C1  A tour of the District Admin portal  (page: district-admin-dashboard.html)
+# Record as: the sales-demo district administrator. Demo district only.
+[SCREEN] Sign in from the District Admin page and land on the dashboard.
+[SAY] Welcome to the District Admin portal. In this tour you'll see what's here and where to find it, in about two minutes.
+[SCREEN] Point at the menu on the left.
+[SAY] The menu on the left has four pages: Dashboard, Branding, Schools, and Portrait of a Graduate. At the bottom are Help videos, a link to view the site, and Log Out.
+[SCREEN] The district picker, if more than one district.
+[SAY] If you administer more than one district, a district picker appears at the top of the menu. Choose a district there to switch.
+[SCREEN] The Your District block at the bottom of the menu.
+[SAY] The block at the bottom of the menu shows your district and your name, so you always know which account you're in.
+[SCREEN] The license banner, if any school is expired or expiring.
+[SAY] A banner appears across the top when any school in your district has a license that has expired, or will expire within thirty days. It links to the Schools page, so you can see which one.
+[SCREEN] The dashboard.
+[SAY] The dashboard shows your district's name, and a button to manage your district branding.
+[SCREEN] Open Branding, then Schools, then Portrait of a Graduate.
+[SAY] Branding sets the default logo and colors for the schools in your district. Schools lists every licensed school and its administrators, and it's where you invite school administrators. Portrait of a Graduate is where you record your district's own graduate profile and send it to us for review.
+[SAY] Each of those has its own video. You can find them from the Help videos link, or from the how-to video button in the corner of the page.

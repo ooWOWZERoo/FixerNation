@@ -6,7 +6,8 @@
       "server/lib/site-tokens.js",
       "server/lib/mailer.js",
       "site-auth.js",
-      "nav.js"
+      "nav.js",
+      "tests/howto/pipeline.ts"
     ],
     "school-admins": [
       "school-admin-common.css",
@@ -30,7 +31,8 @@
     "parents": [
       "server/routes/parent.js",
       "server/routes/parent-invite.js"
-    ]
+    ],
+    "all": []
   },
   "videos": {
     "D1": [
@@ -41,12 +43,14 @@
     "A1": [
       "reset-password.html",
       "server/lib/school-admin-assignment.js",
-      "server/routes/admin-districts.js"
+      "server/routes/admin-districts.js",
+      "tests/howto/storyboards/A1.ts"
     ],
     "A2": [
       "reset-password.html",
       "school-admin-login.html",
-      "district-admin-login.html"
+      "district-admin-login.html",
+      "tests/howto/storyboards/A2.ts"
     ],
     "A3": [
       "teacher-login.html",
@@ -57,14 +61,16 @@
     ],
     "B1": [
       "school-admin-dashboard.html",
-      "server/routes/school-admin.js"
+      "server/routes/school-admin.js",
+      "tests/howto/storyboards/B1.ts"
     ],
     "B2": [
       "school-admin-invitations.html",
       "server/routes/school-admin.js",
       "server/lib/teacher-invitations.js",
       "school-invite-accept.html",
-      "server/routes/school-invite.js"
+      "server/routes/school-invite.js",
+      "tests/howto/storyboards/B2.ts"
     ],
     "B3": [
       "school-admin-invitations.html",
@@ -74,7 +80,8 @@
     "B4": [
       "school-admin-invitations.html",
       "server/routes/school-admin.js",
-      "server/lib/teacher-invitations.js"
+      "server/lib/teacher-invitations.js",
+      "tests/howto/storyboards/B4.ts"
     ],
     "B5": [
       "school-admin-roster.html",
@@ -106,7 +113,8 @@
     ],
     "C1": [
       "district-admin-dashboard.html",
-      "server/routes/district-admin.js"
+      "server/routes/district-admin.js",
+      "tests/howto/storyboards/C1.ts"
     ],
     "C2": [
       "district-admin-branding.html",
@@ -116,12 +124,14 @@
     ],
     "C3": [
       "district-admin-schools.html",
-      "server/routes/district-admin.js"
+      "server/routes/district-admin.js",
+      "tests/howto/storyboards/C3.ts"
     ],
     "C4": [
       "district-admin-schools.html",
       "server/routes/district-admin.js",
-      "server/lib/school-admin-assignment.js"
+      "server/lib/school-admin-assignment.js",
+      "tests/howto/storyboards/C4.ts"
     ],
     "C5": [
       "district-admin-standards.html",

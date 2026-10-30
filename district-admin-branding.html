@@ -47,7 +47,7 @@
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
   <script src="logo-crop-widget.js?v=1"></script>
-  <script src="district-admin-nav.js?v=7"></script>
+  <script src="district-admin-nav.js?v=8"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -345,7 +345,7 @@ async function publishBranding() {
 }
 
 async function resetToDefault() {
-  if (!confirm('Reset this district\'s branding to the FNE default look? This clears the logo and colors every school in this district would otherwise inherit.')) return;
+  if (!await daConfirm('This clears the logo and colors that schools in your district would otherwise start with, and puts the standard Fixer Nation look back.', { title: 'Reset your district branding?', confirmText: 'Yes, reset it' })) return;
   var districtId = window.daActiveDistrictId();
   try {
     await daFetch('/api/district-admin/branding/reset', {
@@ -359,6 +359,6 @@ async function resetToDefault() {
   }
 }
 </script>
-<script src="help-videos.js?v=1" defer></script>
+<script src="help-videos.js?v=2" defer></script>
 </body>
 </html>
