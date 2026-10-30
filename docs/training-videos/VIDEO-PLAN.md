@@ -72,7 +72,7 @@ Decided 2026-10-29. Each video is a **storyboard**: a TypeScript file in `tests/
 
 The `.txt` files in `scripts/` are the first-draft narration for all 31 videos. Where a storyboard exists, the storyboard is the source of truth and the `.txt` is only a draft. `render-narration.sh` renders a draft's audio on its own and is only needed for videos that don't have a storyboard yet.
 
-Storyboards built so far (2026-10-30): all 31 planned videos. All are recorded locally and none is published.
+Storyboards built so far (2026-10-30): all 31 planned videos. All are recorded, uploaded to Cloudinary (fne/help/<ID>) and linked in help-videos.js; they go live when the site is deployed.
 
 Spellings that help Ava: "P-I-N", "C-S-V", "P-O" (say "purchase order" first), "F-N-E", "user I-D", and "support at Fixer Nation Education dot com".
 

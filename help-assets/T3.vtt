@@ -1,0 +1,37 @@
+WEBVTT
+
+1
+00:00:00.855 --> 00:00:05.035
+In this video you'll set up your first classroom and add your students.
+
+2
+00:00:05.537 --> 00:00:13.347
+Open My Classrooms, and select New Classroom. Give it a name. Grade, subject, and school year are optional.
+
+3
+00:00:13.848 --> 00:00:23.918
+Select Create. Every classroom gets an eight character join code. Students use it to join, so keep it handy. You can copy it with the Copy button.
+
+4
+00:00:24.421 --> 00:00:34.631
+To add a student yourself, select Add Student. Type their name, and choose a P-I-N, which is four to six digits. A student I-D number is optional.
+
+5
+00:00:35.132 --> 00:00:45.652
+The username is made for you, from the student's first name, in lower case. If someone already has it, a number is added. Students never need an email address.
+
+6
+00:00:46.153 --> 00:01:00.503
+To add a whole class, select Import C-S-V. Paste one student per line: name, then an optional student number, then an optional P-I-N. Leave the P-I-N off, and we'll make a six digit one for each student.
+
+7
+00:01:01.005 --> 00:01:06.735
+Select Import. When it finishes, you'll see each student's username and P-I-N.
+
+8
+00:01:07.236 --> 00:01:20.016
+Save them now, by selecting Copy list. P-I-Ns are stored scrambled, so they can't be shown again. If a student forgets theirs, you can set a new one, which the next video covers.
+
+9
+00:01:20.516 --> 00:01:33.726
+A couple of controls to know about. Regenerate Join Code stops the old code working for new students. Archive Classroom closes the classroom, and students can't sign in, until you bring it back.

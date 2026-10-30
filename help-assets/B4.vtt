@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.847 --> 00:00:07.017
+In this video you'll learn how to keep track of your invitations, and what to do when a teacher hasn't answered.
+
+2
+00:00:07.519 --> 00:00:22.709
+Every invitation has a status. Pending means it's been sent. Opened means the teacher has looked at the email. Registered means they've joined. Expired means fourteen days passed with no answer. Revoked means you've cancelled it.
+
+3
+00:00:23.212 --> 00:00:28.932
+Use the filter to look at one status at a time, or search by a teacher's name or email.
+
+4
+00:00:29.434 --> 00:00:39.994
+If a teacher says they never got the email, select Resend. It sends a fresh email with a new link and a new fourteen day window. You can resend up to five times.
+
+5
+00:00:40.496 --> 00:00:48.036
+If the deadline is near, and the teacher is on vacation, select Extend to give them more time without sending another email.
+
+6
+00:00:48.538 --> 00:01:00.328
+Sent an invitation by mistake? Select Revoke. You'll be asked for a reason, and the seat that was being held is released for someone else. Only primary administrators can revoke.
+
+7
+00:01:00.829 --> 00:01:14.029
+An expired invitation can't be brought back to life. To invite that teacher again, delete the old row, then send a new invitation. Delete is permanent, and it's only offered for expired and revoked rows.
+
+8
+00:01:14.531 --> 00:01:22.801
+Registered invitations stay in the list as a record. You can change a teacher's seat from the Roster page, which the next video covers.
