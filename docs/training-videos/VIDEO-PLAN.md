@@ -72,7 +72,7 @@ Decided 2026-10-29. Each video is a **storyboard**: a TypeScript file in `tests/
 
 The `.txt` files in `scripts/` are the first-draft narration for all 31 videos. Where a storyboard exists, the storyboard is the source of truth and the `.txt` is only a draft. `render-narration.sh` renders a draft's audio on its own and is only needed for videos that don't have a storyboard yet.
 
-Storyboards built so far (2026-10-30): A1, A2, B1 to B10, C1 to C7, D1. Not yet: A3 and all of wave 2.
+Storyboards built so far (2026-10-30): all of wave 1 (A1 to A3, B1 to B10, C1 to C7, D1) and T1. Not yet: T2 to T6, S1 to S3, P1.
 
 Spellings that help Ava: "P-I-N", "C-S-V", "P-O" (say "purchase order" first), "F-N-E", "user I-D", and "support at Fixer Nation Education dot com".
 
@@ -109,3 +109,4 @@ Known issues found but not fixed, so scripts should avoid them:
 - A PO school needs two FNE staff actions (Mark as Paid, then PO Received) before teachers can be invited.
 - The Roster page cannot show pending seats: none of its three filters includes `pending`, so the Revoke button in its pending-seat branch never appears. Pending invitations are managed on Invitations. (Found while storyboarding B5.)
 - The Organization page's co-administrator list includes the signed-in administrator. (Found while storyboarding B8 and B9.)
+- My Licenses (`my-license.html`) shows a teacher who holds a school seat a green "active license" banner, then "Nothing on file yet", and a "School License Administrator?" box with an Admin Portal button. Seats granted by a school appear only for the purchaser, so the teacher's own seat is never listed. T1 avoids pointing at it. (Found while storyboarding T1.)
