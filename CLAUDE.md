@@ -165,6 +165,8 @@ Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo
    ```
    `migrate.js` silently no-ops on existing tables.
 
+**Every release comes with its push and deploy steps, unasked.** In the same message that says work is committed, give the full steps and the exact command blocks (push from the Mac; cPanel pull; the rsync; Node restart yes/no; alter/seed script yes/no, with its full text; `npm install` yes/no), worked out from the real delta (`git diff --name-only origin/main..HEAD`), not from habit. There is no push script: pushing is `git push` from the user's Mac. `deploy.sh` in the repo is a one-command server-side alternative (pull, rsync, and, if `server/` changed, npm install, migrate and restart), but give the explicit steps by default. Then, once the user says "deployed", check production with curl.
+
 When giving deploy instructions after a push, always specify:
 - Which HTML files to include in the `rsync` (or use the broad `rsync` above for large changes)
 - Whether a seed/alter script needs to be run
