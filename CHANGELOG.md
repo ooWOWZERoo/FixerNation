@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 65 — 2026-10-31 — Six more help videos, and fixes to the Brain Games progress dashboard
+
+- **Six new help videos** (Cloudinary, linked in `help-videos.js?v=6`): Sign in with Microsoft (`microsoft-confirm.html`), Build your lesson plan library (`teacher-lesson-plans-browse.html`, `teacher-lesson-plans.html`, `my-license.html`), Buy a teacher license and check out (`licenses.html`), Play and track brain games (`brain-games.html`, `brain-games-progress.html`, `brain-badges.html`), Join the affiliate program (`become-an-affiliate.html`, `affiliate-dashboard.html`), and See how Fixer Nation lines up with your state's standards (`state-standards.html`). Each page now shows the "How-to video" button. The Help Videos page has two new groups, Affiliate partners and Exploring Fixer Nation (37 videos in all).
+- **Fix: Brain Games progress dashboard (`brain-games-progress.html`).** It showed 0 Total XP, counted every game as played ("22 Games Played" after one round), and listed no recent sessions even right after a game. It now shows your real XP, only the games you have played, and your recent sessions with their scores.
+- No server code and no alter script in this release: pages and assets only, so no Node restart is needed.
+
 ## Release 64 — 2026-10-30 — Blog search, teacher confirmation dialogs, and onboarding bug fixes
 
 - **Search bar on the admin Blog Posts list** (`admin-blogs.html`). Type to narrow the list as you go; every word must match somewhere in the post (title, slug, category, tag, series, theme, author, excerpt, keywords, or its status such as draft, scheduled, featured). Shows "Showing X of Y", Escape clears it, and bulk actions only ever touch the rows you can see.

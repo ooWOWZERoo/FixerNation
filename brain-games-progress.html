@@ -177,7 +177,9 @@ async function loadPage() {
     if (!progRes.ok) { showNotLoggedIn(); return; }
 
     const prog = await progRes.json();
-    const hist = histRes.ok ? await histRes.json() : [];
+    // The history endpoint answers { sessions: [...] }; keep a plain list for the rendering below.
+    const histBody = histRes.ok ? await histRes.json() : {};
+    const hist = Array.isArray(histBody) ? histBody : (histBody.sessions || []);
     const streak = streakRes.ok ? await streakRes.json() : { currentStreak: 0 };
 
     document.getElementById('notLoggedIn').style.display = 'none';
@@ -220,14 +222,15 @@ function renderOverallStats(prog, hist) {
   const container = document.getElementById('overallStats');
   container.innerHTML = [
     { val: totalSessions, lbl: 'Total Sessions' },
-    { val: prog.totalXp || 0, lbl: 'Total XP' },
-    { val: games.length, lbl: 'Games Played' },
+    { val: prog.totalXP || 0, lbl: 'Total XP' },
+    { val: games.filter(g => (g.totalCompleted || 0) > 0).length, lbl: 'Games Played' },
     { val: gamesWithLevel, lbl: 'Games at Level 3+' },
   ].map(s => `<div class="o-stat"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`).join('');
 }
 
 function renderGameGrid(prog) {
-  const games = prog.games || [];
+  // The progress answer lists every game; the dashboard shows the ones this player has played.
+  const games = (prog.games || []).filter(g => (g.totalCompleted || 0) > 0 || (g.xp || 0) > 0);
   const grid = document.getElementById('gameProgressGrid');
   if (!games.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:32px;">Play your first game to see progress here!</div>';
@@ -276,7 +279,7 @@ function renderHistory(hist) {
         <div class="history-meta">${h.difficulty} · ${date}</div>
       </div>
       <div style="text-align:right;">
-        <div class="history-score">${h.normalizedScore}</div>
+        <div class="history-score">${h.score != null ? h.score : (h.normalizedScore != null ? h.normalizedScore : '')}</div>
         ${h.isPersonalBest ? '<div class="history-pb">★ PB</div>' : ''}
       </div>
     </div>`;
@@ -285,5 +288,6 @@ function renderHistory(hist) {
 
 loadPage();
 </script>
+<script src="help-videos.js?v=6" defer></script>
 </body>
 </html>

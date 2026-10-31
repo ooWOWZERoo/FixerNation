@@ -20,7 +20,9 @@
     { id: 'district-admins', title: 'District administrators' },
     { id: 'teachers', title: 'Teachers' },
     { id: 'students', title: 'Students' },
-    { id: 'parents', title: 'Parents' }
+    { id: 'parents', title: 'Parents' },
+    { id: 'partners', title: 'Affiliate partners' },
+    { id: 'explore', title: 'Exploring Fixer Nation' }
   ];
 
   var VIDEOS = [
@@ -37,6 +39,9 @@
     { id: 'A3', group: 'getting-started', topic: 'Signing in', title: 'Which sign-in page do I use?',
       summary: 'Teachers, school administrators and district administrators each have their own sign-in page. Here is which one to use.',
       pages: ['teacher-login.html', 'student-login.html', 'parent-login.html', 'school-admin-login.html', 'district-admin-login.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391620/fne/help/A3.mp4', captions: '/help-assets/A3.vtt', poster: '/help-assets/A3.jpg' },
+    { id: 'A4', group: 'getting-started', topic: 'Signing in', title: 'Sign in with Microsoft',
+      summary: 'Use your Microsoft account to sign in, and what to do the first time.',
+      pages: ['microsoft-confirm.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487235/fne/help/A4.mp4', captions: '/help-assets/A4.vtt', poster: '/help-assets/A4.jpg' },
 
     // ---- School license administrators
     { id: 'B1', group: 'school-admins', topic: 'Your portal', title: 'A tour of the School Admin portal',
@@ -106,6 +111,12 @@
     { id: 'T6', group: 'teachers', topic: 'Classrooms and students', title: 'Reset a student\'s PIN and invite a parent',
       summary: 'Reset a student\'s PIN and send a parent an invitation.',
       pages: ['teacher-classroom.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412327/fne/help/T6.mp4', captions: '/help-assets/T6.vtt', poster: '/help-assets/T6.jpg' },
+    { id: 'T7', group: 'teachers', topic: 'Getting started', title: 'Build your lesson plan library',
+      summary: 'Browse the catalogue and choose the lesson plans you will teach. Your picks are permanent for your license period.',
+      pages: ['teacher-lesson-plans-browse.html', 'teacher-lesson-plans.html', 'my-license.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487231/fne/help/T7.mp4', captions: '/help-assets/T7.vtt', poster: '/help-assets/T7.jpg' },
+    { id: 'T8', group: 'teachers', topic: 'Getting started', title: 'Buy a teacher license and check out',
+      summary: 'Choose a plan, pay by card on Stripe, then create your account and find your license.',
+      pages: ['licenses.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487232/fne/help/T8.mp4', captions: '/help-assets/T8.vtt', poster: '/help-assets/T8.jpg' },
     { id: 'T4', group: 'teachers', topic: 'Lessons and results', title: 'Assign lessons and brain games',
       summary: 'Choose lessons and brain games for your class.',
       pages: ['teacher-classroom.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412324/fne/help/T4.mp4', captions: '/help-assets/T4.vtt', poster: '/help-assets/T4.jpg' },
@@ -123,11 +134,24 @@
     { id: 'S3', group: 'students', topic: 'Learning', title: 'Goals and history',
       summary: 'Set goals and look back at what you\'ve done.',
       pages: ['student-achievements.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391659/fne/help/S3.mp4', captions: '/help-assets/S3.vtt', poster: '/help-assets/S3.jpg' },
+    { id: 'S4', group: 'students', topic: 'Brain games', title: 'Play and track brain games',
+      summary: 'Choose a game, play a round, and see your level, badges and progress.',
+      pages: ['brain-games.html', 'brain-games-progress.html', 'brain-badges.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487234/fne/help/S4.mp4', captions: '/help-assets/S4.vtt', poster: '/help-assets/S4.jpg' },
 
     // ---- Parents
     { id: 'P1', group: 'parents', topic: 'Getting started', title: 'Accept your invitation and see your child\'s progress',
       summary: 'Accept your invitation and see how your child is doing.',
-      pages: ['parent-invite-accept.html', 'parent-portal.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391655/fne/help/P1.mp4', captions: '/help-assets/P1.vtt', poster: '/help-assets/P1.jpg' }
+      pages: ['parent-invite-accept.html', 'parent-portal.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391655/fne/help/P1.mp4', captions: '/help-assets/P1.vtt', poster: '/help-assets/P1.jpg' },
+
+    // ---- Affiliate partners
+    { id: 'F1', group: 'partners', topic: 'Getting started', title: 'Join the affiliate program',
+      summary: 'Apply, get approved, and find your referral link and commission on your dashboard.',
+      pages: ['become-an-affiliate.html', 'affiliate-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487236/fne/help/F1.mp4', captions: '/help-assets/F1.vtt', poster: '/help-assets/F1.jpg' },
+
+    // ---- Exploring Fixer Nation
+    { id: 'E1', group: 'explore', topic: 'Standards', title: 'See how Fixer Nation lines up with your state\'s standards',
+      summary: 'Pick your state, see the connections to its SEL standards or Portrait of a Graduate, and print a one-page summary.',
+      pages: ['state-standards.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487237/fne/help/E1.mp4', captions: '/help-assets/E1.vtt', poster: '/help-assets/E1.jpg' }
   ];
 
   var TEXT = {

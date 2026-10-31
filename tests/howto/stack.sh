@@ -37,6 +37,9 @@ up() {
   # schema.sql alone is not a complete schema (classroom tables and others come from the alter-* scripts),
   # so build it the way production got it: apply, run every alter script, repeat until nothing new appears.
   (cd "$ROOT/server" && {
+    # The six original brain games and their badges are created only when this script makes the brain_games table itself, so
+    # it must run before migrate.js would create an empty one.
+    node scripts/alter-brain-games.js >/dev/null 2>&1 || true
     node scripts/migrate.js >/dev/null 2>&1 || true
     for pass in 1 2 3; do
       for f in scripts/alter-*.js; do node "$f" >/dev/null 2>&1 || true; done

@@ -70,3 +70,24 @@ export async function publish(frameworkId: number, itemIds: number[]) {
     await s("POST", `/alignments/${a.id}/verify`);
   }
 }
+
+/**
+ * Loads a state's real research file from server/data/standards/<CODE>.json into the throwaway test site (every row starts as a
+ * draft, like on the real site) and then does what FNE staff do to publish it: verify the state's coverage, each framework, and the
+ * connections. Needs the lesson catalogue first (catalog.ts), because the research names lessons by exact title.
+ */
+export async function loadAndVerifyState(code: string) {
+  const { execFileSync } = await import("child_process");
+  const path = await import("path");
+  execFileSync("node", ["scripts/import-standards.js", code], {
+    cwd: path.join(__dirname, "..", "..", "server"), stdio: "pipe",
+    env: { ...process.env, DB_HOST: "127.0.0.1", DB_PORT: "3307", DB_USER: "root", DB_PASSWORD: "howto", DB_NAME: "fne_howto" },
+  });
+  const s = await staff();
+  await s("POST", `/coverage/${code}/verify`);
+  const state = await s("GET", `/states/${code}`);
+  for (const fw of state.frameworks ?? []) {
+    await s("POST", `/frameworks/${fw.id}/verify`);
+    for (const item of fw.items ?? []) await s("POST", `/items/${item.id}/verify-alignments`);
+  }
+}

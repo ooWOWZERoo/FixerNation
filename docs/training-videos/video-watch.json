@@ -32,7 +32,13 @@
       "server/routes/parent.js",
       "server/routes/parent-invite.js"
     ],
-    "all": []
+    "all": [],
+    "partners": [
+      "tests/howto/pipeline.ts"
+    ],
+    "explore": [
+      "tests/howto/pipeline.ts"
+    ]
   },
   "videos": {
     "D1": [
@@ -190,6 +196,46 @@
       "parent-portal.html",
       "parent-lesson.html",
       "parent-login.html"
+    ],
+    "A4": [
+      "microsoft-confirm.html",
+      "site-auth.js",
+      "server/lib/microsoft-oauth.js",
+      "tests/howto/ms-link.js"
+    ],
+    "T7": [
+      "teacher-lesson-plans-browse.html",
+      "teacher-lesson-plans.html",
+      "my-license.html",
+      "server/routes/teacher-lesson-plans.js",
+      "tests/howto/catalog.ts"
+    ],
+    "T8": [
+      "licenses.html",
+      "my-license.html",
+      "server/routes/checkout.js",
+      "site-auth.js"
+    ],
+    "S4": [
+      "brain-games.html",
+      "brain-games-progress.html",
+      "brain-badges.html",
+      "brain-memory-match.html",
+      "brain-games.css",
+      "server/routes/brain-games.js"
+    ],
+    "F1": [
+      "become-an-affiliate.html",
+      "affiliate-dashboard.html",
+      "server/routes/affiliates.js",
+      "server/routes/affiliate-portal.js"
+    ],
+    "E1": [
+      "state-standards.html",
+      "state-onepager.html",
+      "server/lib/standards.js",
+      "server/routes/standards.js",
+      "tests/howto/catalog.ts"
     ]
   }
 }

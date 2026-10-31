@@ -143,13 +143,17 @@ export async function latestMail(to: string, subjectIncludes = "") {
 /** Show an email on screen as a plain, readable inbox view. Its links go to the real test site. */
 export async function showEmail(page: Page, mail: Awaited<ReturnType<typeof latestMail>>) {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  // Some site emails carry their links as plain text. A real mail app shows those as clickable links, so do the same here
+  // (only when the email has no links of its own).
+  const body = /<a\s/i.test(mail.HTML) ? mail.HTML
+    : mail.HTML.replace(/(^|[\s>])(https?:\/\/[^\s<]+)/g, (_m, pre, url) => `${pre}<a href="${url}" style="color:#1a56db;word-break:break-all;">${url}</a>`);
   const html = `<!doctype html><meta charset="utf-8"><title>Inbox</title>
 <body style="margin:0;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#f3f4f6">
 <div style="max-width:760px;margin:28px auto;background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.15);overflow:hidden">
 <div style="padding:16px 22px;border-bottom:1px solid #e5e7eb">
 <div style="font-size:20px;font-weight:600;margin-bottom:8px">${esc(mail.Subject)}</div>
 <div style="font-size:13px;color:#555"><b>${esc(mail.From.Name || mail.From.Address)}</b> &lt;${esc(mail.From.Address)}&gt;<br>to ${esc(mail.To.map((t) => t.Address).join(", "))}</div></div>
-<div style="padding:8px 22px 28px">${mail.HTML}</div></div></body>`;
+<div style="padding:8px 22px 28px">${body}</div></div></body>`;
   await page.route("**/__howto-inbox", (route) => route.fulfill({ contentType: "text/html", body: html }));
   await page.goto("/__howto-inbox");
 }

@@ -72,7 +72,7 @@ Decided 2026-10-29. Each video is a **storyboard**: a TypeScript file in `tests/
 
 The `.txt` files in `scripts/` are the first-draft narration for all 31 videos. Where a storyboard exists, the storyboard is the source of truth and the `.txt` is only a draft. `render-narration.sh` renders a draft's audio on its own and is only needed for videos that don't have a storyboard yet.
 
-Storyboards built so far (2026-10-30): all 31 planned videos. All are recorded, uploaded to Cloudinary (fne/help/<ID>) and linked in help-videos.js; they go live when the site is deployed.
+Storyboards built so far (2026-10-31): all 31 planned videos, plus six added later (A4, T7, T8, S4, F1, E1). All are recorded, uploaded to Cloudinary (fne/help/<ID>) and linked in help-videos.js; they go live when the site is deployed.
 
 Spellings that help Ava: "P-I-N", "C-S-V", "P-O" (say "purchase order" first), "F-N-E", "user I-D", and "support at Fixer Nation Education dot com".
 
@@ -120,3 +120,21 @@ Videos re-recorded for these: B1, B5, B8, B9, T1, T3, T4, T5, T6. Video check ou
 Note: `server/scripts/videos-to-review.js` read `help-videos.js` with a pattern that stopped matching once published entries gained captions and poster fields, so it silently reported nothing for a while (the 2026-10-30 publish commit onward). Fixed in the same commit as this note.
 
 2026-10-30: help-videos.js is now `?v=3` on every page. A3 (which sign-in page) is registered on all five sign-in pages, and B10 (why can't I invite teachers yet) on the Invitations page. parent-login.html now loads help-videos.js. Video check: the changes are only the version string and one added script tag, so no recorded video's content changed.
+
+
+## Added 2026-10-31 (a second set, chosen from the pages that still had no video)
+
+| ID | Video | Page it belongs to |
+|---|---|---|
+| A4 | Sign in with Microsoft | microsoft-confirm.html |
+| T7 | Build your lesson plan library | teacher-lesson-plans-browse.html, teacher-lesson-plans.html, my-license.html |
+| T8 | Buy a teacher license and check out | licenses.html |
+| S4 | Play and track brain games | brain-games.html, brain-games-progress.html, brain-badges.html |
+| F1 | Join the affiliate program | become-an-affiliate.html, affiliate-dashboard.html |
+| E1 | See how Fixer Nation lines up with your state's standards | state-standards.html |
+
+Two new groups on the Help Videos page: **Affiliate partners** and **Exploring Fixer Nation**. Not made: a separate Parent Portal lesson-view video (P1 already walks through it), the 25 individual game pages (S4 covers the library), and the marketing and policy pages. `help-videos.js` is `?v=6` on every page that loads it.
+
+Fixed while recording these: the Create-account-style gaps in the Brain Games progress dashboard (see S4), and the test site's missing original brain games.
+
+Video check 2026-10-31: every already-recorded video flagged was touched only by the `help-videos.js?v=6` version string (or by new buttons), so none needs re-recording. The change to `tests/howto/pipeline.ts` (plain-text links in the on-screen inbox now become clickable, only in emails with no links of their own) does not change any earlier video, since their emails already had real links. `tests/howto/stack.sh` now builds the six original brain games, so a re-recorded T4 would show a longer game picker; `classroom.ts` finds the demo game by name.

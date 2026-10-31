@@ -1,7 +1,7 @@
 // Off-camera helpers for the teacher, student and parent videos: build the demo classroom and the students' work through the same
 // routes the pages call (teacher signs in with the site login, students with username and PIN). Local test site only.
 // Every name is made up.
-import { env } from "./pipeline";
+import { env, sql } from "./pipeline";
 import { asUser } from "./api";
 
 export const STUDENTS = [
@@ -36,7 +36,8 @@ export async function seedClassroom(opts: { assign?: boolean; activity?: boolean
   const teacher = await asUser(env.teacher);
   const room = await teacher("POST", "/api/classrooms", { name: "Period 3 SEL", gradeLevel: "6th Grade", subject: "Social-Emotional Learning", academicYear: "2026–2027" });
   for (const s of STUDENTS) await teacher("POST", `/api/classrooms/${room.id}/students`, { displayName: s.name, pin: s.pin });
-  const out: Seeded = { id: room.id, joinCode: room.join_code, lessonId: 1, gameId: 5 };
+  // The game is looked up by name: its id depends on which games the test site was built with.
+  const out: Seeded = { id: room.id, joinCode: room.join_code, lessonId: 1, gameId: Number(sql("SELECT id FROM brain_games WHERE slug = 'feelings-detective'")) };
   if (!opts.assign) return out;
 
   await teacher("POST", `/api/classrooms/${room.id}/assignments`, { curriculumId: out.lessonId });
