@@ -247,7 +247,9 @@ function renderOrg(d) {
   } else {
     coEl.innerHTML = admins.map(function (a) {
       const init = ((a.first_name || '?')[0]).toUpperCase();
-      const perm = a.permission_level === 'read_only' ? '<span class="sa-badge" style="margin-left:auto;">Read Only</span>' : '<span class="sa-badge sa-badge-success" style="margin-left:auto;">Full Access</span>';
+      const perm = a.permission_level === 'read_only' ? '<span class="sa-badge" style="margin-left:auto;">Read Only</span>'
+        : a.permission_level === 'secondary' ? '<span class="sa-badge sa-badge-success" style="margin-left:auto;">Secondary</span>'
+        : '<span class="sa-badge sa-badge-success" style="margin-left:auto;">Primary</span>';
       return '<div class="co-admin-row"><div class="co-admin-av">' + init + '</div><div><div style="font-weight:600;">' + esc(a.first_name + ' ' + a.last_name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(a.email) + '</div></div>' + perm + '</div>';
     }).join('');
   }
@@ -259,6 +261,6 @@ function info(label, value) {
 
 function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
-<script src="help-videos.js?v=4" defer></script>
+<script src="help-videos.js?v=5" defer></script>
 </body>
 </html>

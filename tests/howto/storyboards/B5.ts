@@ -1,7 +1,7 @@
 // B5  Manage your teacher roster. Signed in as the demo school administrator (Primary) of Maple Elementary.
 // State-changing: restart the test site (tests/howto/stack.sh up) before recording.
-// Note: the Roster page lists registered, inactive and revoked seats only. Pending seats never appear here (no filter
-// includes them), so the video sends people to Invitations for those instead of showing a Revoke button.
+// The Roster filter has an "Invited, not joined yet" choice for pending seats (added 2026-10-30; before that, pending seats
+// could not be shown here at all).
 import { glideClick, glideTo, fillSlowly, type Storyboard } from "../pipeline";
 
 const row = (name: string) => `tr:has-text("${name}")`;
@@ -103,15 +103,21 @@ const board: Storyboard = {
       say: "Choose All teachers, and the removed teacher appears as Revoked, with your reason in the Notes column. It's a record of what happened and why.",
       run: async (p) => {
         await glideTo(p, "#statusFilter");
-        await p.selectOption("#statusFilter", "registered,inactive,revoked");
+        await p.selectOption("#statusFilter", "registered,inactive,pending,revoked");
         await p.waitForSelector(`${row("Luis Ortega")} .sa-badge-danger`);
         await p.waitForTimeout(1000);
         await glideTo(p, `${row("Luis Ortega")} td:nth-child(6)`);
       },
     },
     {
-      say: "Teachers who've been invited but haven't joined yet don't appear on this page. Select the Pending tile to jump to your invitations, where you can resend or revoke them.",
+      say: "To see teachers who've been invited but haven't joined yet, choose Invited, not joined yet. A seat that's still waiting on a teacher has a Revoke button. It does the same job as revoking from the Invitations page.",
       run: async (p) => {
+        await glideTo(p, "#statusFilter");
+        await p.selectOption("#statusFilter", "pending");
+        await p.waitForSelector('tr button:has-text("Revoke")');
+        await p.waitForTimeout(1500);
+        await glideTo(p, 'tr button:has-text("Revoke")');
+        await p.waitForTimeout(1500);
         await glideTo(p, 'a.rst-stat:has-text("Pending")');
       },
     },

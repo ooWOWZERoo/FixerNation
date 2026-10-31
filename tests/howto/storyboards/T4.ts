@@ -1,6 +1,6 @@
 // T4  Assign lessons and brain games. Signed in as the demo teacher (Maria Lopez). The classroom "Period 3 SEL" and its four made-up
-// students are created off-camera; nothing is assigned yet. Removing an assignment is pointed at, not used (it asks with a browser
-// pop-up, which does not show in a recording). Ends on the student's own view.
+// students are created off-camera; nothing is assigned yet. Removing an assignment opens an in-page confirmation, which the video cancels so
+// the assignment stays. Ends on the student's own view.
 // State-changing: restart the test site (tests/howto/stack.sh up) before recording.
 import { glideClick, glideTo, fillSlowly, type Storyboard } from "../pipeline";
 import { seedClassroom, STUDENTS } from "../classroom";
@@ -85,8 +85,14 @@ const board: Storyboard = {
       },
     },
     {
-      say: "If you change your mind, select Remove next to the assignment.",
-      run: (p) => glideTo(p, "#assignmentList button:has-text('Remove')"),
+      say: "If you change your mind, select Remove next to the assignment. You'll be asked to confirm, and students stop seeing it.",
+      run: async (p) => {
+        await glideClick(p, "#assignmentList button:has-text('Remove')");
+        await p.waitForSelector(".fncf-box");
+        await p.waitForTimeout(3000);
+        await glideClick(p, ".fncf-box button:has-text('Cancel')");
+        await p.waitForTimeout(600);
+      },
     },
     {
       say: "Students see their assigned lessons and games the next time they sign in. They can only open what you've assigned. Here's what a student sees.",

@@ -248,6 +248,7 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
      FROM school_license_admins sla
      JOIN site_users su ON su.id = sla.site_user_id
      WHERE sla.purchase_id = ?
+       AND sla.is_active = 1
        AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)
      ORDER BY sla.created_at`,
     [purchaseId]
@@ -467,6 +468,27 @@ router.get('/invitations/csv-template', requireSchoolAdmin, (req, res) => {
   res.send('email,first_name,last_name,grade_level,role,department,subject_area\n');
 });
 
+// An invitation that ran out frees its seat (the list marks it expired and revokes the seat). Resending or extending it
+// has to take a seat back, or the teacher would accept an invitation that no longer holds one. Returns false when every
+// seat is in use now, so the caller can say so instead of renewing an invitation that cannot be honored.
+async function reviveSeatForInvitation(inv) {
+  if (!inv.seat_id) return true;
+  const [[seat]] = await pool.query('SELECT id, status FROM license_seats WHERE id = ?', [inv.seat_id]);
+  if (!seat || seat.status !== 'revoked') return true;
+  const [[purchase]] = await pool.query('SELECT seat_count FROM purchases WHERE id = ?', [inv.purchase_id]);
+  const [[used]] = await pool.query(
+    `SELECT COUNT(*) AS n FROM license_seats WHERE purchase_id = ? AND status IN ('registered','inactive','pending') AND ${notAdminSeatClause('license_seats')}`,
+    [inv.purchase_id]
+  );
+  if (!purchase || Number(used.n) >= Number(purchase.seat_count)) return false;
+  await pool.query(
+    "UPDATE license_seats SET status = 'pending', revoked_at = NULL, revoked_by = NULL, revocation_reason = NULL WHERE id = ? AND status = 'revoked'",
+    [seat.id]
+  );
+  return true;
+}
+const NO_SEAT_FREE = { error: "Every seat is in use right now, so this invitation can't be renewed. Free a seat first, or contact us to add seats." };
+
 // PUT /api/school-admin/invitations/:id/resend
 router.put('/invitations/:id/resend', requireSchoolAdmin, async (req, res) => {
   const [[inv]] = await pool.query(
@@ -481,6 +503,7 @@ router.put('/invitations/:id/resend', requireSchoolAdmin, async (req, res) => {
   if (inv.resend_count >= RESEND_LIMIT) {
     return res.status(429).json({ error: `Resend limit (${RESEND_LIMIT}) reached for this invitation` });
   }
+  if (!(await reviveSeatForInvitation(inv))) return res.status(409).json(NO_SEAT_FREE);
 
   // Refresh token and extend expiry
   const newToken = makeToken();
@@ -571,6 +594,7 @@ router.put('/invitations/:id/extend', requireSchoolAdmin, async (req, res) => {
   if (['revoked', 'registered'].includes(inv.status)) {
     return res.status(409).json({ error: `Cannot extend a ${inv.status} invitation` });
   }
+  if (!(await reviveSeatForInvitation(inv))) return res.status(409).json(NO_SEAT_FREE);
 
   const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
   await pool.query(

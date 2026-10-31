@@ -1,6 +1,6 @@
 // T5  Read progress and student reflections. Signed in as the demo teacher (Maria Lopez). Off-camera, the classroom "Period 3 SEL" gets
 // four made-up students who do some of the work: Alex finishes everything, Sam finishes with one wrong answer, Jordan has started,
-// Taylor has not. Reflections are invented. Reset on a quiz is pointed at, not used (it asks with a browser pop-up).
+// Taylor has not. Reflections are invented. Reset on a quiz opens an in-page confirmation, which the video cancels.
 // State-changing: restart the test site (tests/howto/stack.sh up) before recording.
 import { glideClick, glideTo, type Storyboard } from "../pipeline";
 import { seedClassroom } from "../classroom";
@@ -62,8 +62,14 @@ const board: Storyboard = {
       },
     },
     {
-      say: "Students only get one try at a quiz. If a student needs another, select Reset next to their score.",
-      run: (p) => glideTo(p, ".reset-quiz-btn"),
+      say: "Students only get one try at a quiz. If a student needs another, select Reset next to their score, and confirm.",
+      run: async (p) => {
+        await glideClick(p, ".reset-quiz-btn >> nth=2");
+        await p.waitForSelector(".fncf-box");
+        await p.waitForTimeout(3000);
+        await glideClick(p, ".fncf-box button:has-text('Cancel')");
+        await p.waitForTimeout(600);
+      },
     },
     {
       say: "Select Export C-S-V to download the table as a spreadsheet.",

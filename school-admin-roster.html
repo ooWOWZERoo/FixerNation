@@ -81,7 +81,8 @@
         <select id="statusFilter" onchange="page=1;loadRoster()">
           <option value="registered" selected>Active teachers</option>
           <option value="inactive">Inactive</option>
-          <option value="registered,inactive,revoked">All teachers</option>
+          <option value="pending">Invited, not joined yet</option>
+          <option value="registered,inactive,pending,revoked">All teachers</option>
         </select>
       </div>
 
@@ -438,6 +439,6 @@ async function saveAudienceModal() {
   }
 }
 </script>
-<script src="help-videos.js?v=4" defer></script>
+<script src="help-videos.js?v=5" defer></script>
 </body>
 </html>

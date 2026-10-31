@@ -305,6 +305,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 
 <div class="toast" id="toast"></div>
 
+<script src="fn-confirm.js?v=1"></script>
 <script src="cart.js"></script>
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=16"></script>
@@ -377,9 +378,9 @@ function renderHeader() {
 async function toggleArchive() {
   var archiving = !classroom.archived_at;
   var msg = archiving
-    ? 'Archive this classroom? Students will no longer be able to sign in or see any lessons here. You can unarchive it later to restore their access.'
-    : 'Unarchive this classroom? Students will be able to sign in and see their lessons again.';
-  if (!confirm(msg)) return;
+    ? 'Students will no longer be able to sign in or see any lessons here. You can unarchive it later to restore their access.'
+    : 'Students will be able to sign in and see their lessons again.';
+  if (!await fnConfirm(msg, { title: archiving ? 'Archive this classroom?' : 'Unarchive this classroom?', confirmText: archiving ? 'Yes, archive it' : 'Yes, unarchive it', danger: archiving })) return;
   var r = await fetch('/api/classrooms/' + classroomId, {
     method: 'PUT', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -517,7 +518,7 @@ async function savePin() {
 }
 
 async function deactivateStudent(id) {
-  if (!confirm('Deactivate this student? They won\'t be able to log in until reactivated.')) return;
+  if (!await fnConfirm('They won\'t be able to log in until you reactivate them.', { title: 'Deactivate this student?', confirmText: 'Yes, deactivate' })) return;
   await fetch('/api/classrooms/' + classroomId + '/students/' + id, {
     method: 'DELETE', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -597,7 +598,7 @@ function renderParentInvites(invites) {
 }
 
 async function revokeParentInvite(id) {
-  if (!confirm('Revoke this invitation? The link in the parent\'s email will stop working.')) return;
+  if (!await fnConfirm('The link in the parent\'s email will stop working.', { title: 'Revoke this invitation?', confirmText: 'Yes, revoke it' })) return;
   var r = await fetch('/api/classrooms/' + classroomId + '/parent-invitations/' + id + '/revoke', {
     method: 'PUT', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -734,7 +735,7 @@ async function assignLesson() {
 }
 
 async function removeAssignment(cid) {
-  if (!confirm('Remove this lesson assignment?')) return;
+  if (!await fnConfirm('Students will no longer see this lesson in their classroom.', { title: 'Remove this lesson?', confirmText: 'Yes, remove it' })) return;
   await fetch('/api/classrooms/' + classroomId + '/assignments/' + cid, {
     method: 'DELETE', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -794,7 +795,7 @@ async function assignGame() {
 }
 
 async function removeGame(gaid) {
-  if (!confirm('Remove this game assignment?')) return;
+  if (!await fnConfirm('Students will no longer see this game in their classroom.', { title: 'Remove this game?', confirmText: 'Yes, remove it' })) return;
   await fetch('/api/classrooms/' + classroomId + '/game-assignments/' + gaid, {
     method: 'DELETE', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -840,7 +841,7 @@ function copyCode() {
 }
 
 async function regenCode() {
-  if (!confirm('Generate a new join code? The old code will no longer work for new students.')) return;
+  if (!await fnConfirm('The old code will no longer work for new students. Students already in the class are not affected.', { title: 'Make a new join code?', confirmText: 'Yes, make a new one' })) return;
   var r = await fetch('/api/classrooms/' + classroomId + '/regen-code', {
     method: 'PUT', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -887,6 +888,6 @@ async function saveClassroomEdit() {
 
 load();
 </script>
-<script src="help-videos.js?v=4" defer></script>
+<script src="help-videos.js?v=5" defer></script>
 </body>
 </html>

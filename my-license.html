@@ -72,7 +72,7 @@
     Nothing on file yet. If you've purchased a license, make sure you're logged in with the same email you used at checkout.
   </div>
 
-  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(22,79,74,0.04);border:1px solid var(--border);box-shadow:none;margin-top:28px;">
+  <div class="card" id="adminBox" style="display:none;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(22,79,74,0.04);border:1px solid var(--border);box-shadow:none;margin-top:28px;">
     <div>
       <div class="card-title">🏫 School License Administrator?</div>
       <div class="card-sub">Manage teacher seats, invitations, and usage reports for your school.</div>
@@ -230,6 +230,7 @@ async function submitConversion() {
   window.location.href = result.url;
 }
 
+// A teacher whose seat comes from a school has no purchase of their own to list here, so say that instead of "nothing on file".
 async function checkLessonPlanBanner() {
   try {
     const r = await fetch('/api/teacher/lesson-plans', { credentials: 'include' });
@@ -239,11 +240,25 @@ async function checkLessonPlanBanner() {
       const banner = document.getElementById('lessonPlansBanner');
       banner.style.display = 'flex';
     }
+    const empty = document.getElementById('emptyState');
+    empty.textContent = "Your license is provided by your school, so there is no purchase to list here. Your classrooms and lesson plans are ready to use.";
+    window.__hasSchoolSeat = true;
+    if (!document.getElementById('accountWrap').children.length) empty.style.display = 'block';
+  } catch (_) {}
+}
+
+// The School License Administrator shortcut is only useful to a school administrator.
+async function showAdminBoxIfAdmin() {
+  try {
+    const r = await fetch('/api/site-auth/me', { credentials: 'include' });
+    const me = await r.json();
+    if (me && me.isSchoolAdmin) document.getElementById('adminBox').style.display = 'flex';
   } catch (_) {}
 }
 
 loadData();
 checkLessonPlanBanner();
+showAdminBoxIfAdmin();
 </script>
 
 <!-- Convert Trial Modal -->

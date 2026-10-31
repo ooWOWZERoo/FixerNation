@@ -26,7 +26,7 @@ function changedFiles(args) {
 const watch = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/training-videos/video-watch.json'), 'utf8'));
 const registry = fs.readFileSync(path.join(ROOT, 'help-videos.js'), 'utf8');
 const videos = {};
-for (const m of registry.matchAll(/\{ id: '([A-Z]\d+)', group: '([a-z-]+)'[\s\S]*?title: '((?:[^'\\]|\\.)*)'[\s\S]*?url: '([^']*)' \}/g)) {
+for (const m of registry.matchAll(/\{ id: '([A-Z]\d+)', group: '([a-z-]+)'[\s\S]*?title: '((?:[^'\\]|\\.)*)'[\s\S]*?url: '([^']*)'[^}]*\}/g)) {
   videos[m[1]] = { id: m[1], group: m[2], title: m[3].replace(/\\'/g, "'"), recorded: m[4].trim() !== '' };
 }
 const hits = (list, file) => list.filter((p) => (p.endsWith('/') ? file.startsWith(p) : file === p));

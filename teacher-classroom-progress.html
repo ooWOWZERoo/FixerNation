@@ -91,6 +91,7 @@ table.data-table tr.expandable:hover td{background:#fafaf9;cursor:pointer;}
   <div id="progressTable"></div>
 </div>
 
+<script src="fn-confirm.js?v=1"></script>
 <script src="cart.js"></script>
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=16"></script>
@@ -137,7 +138,8 @@ async function load() {
   var students = pr.students || [];
   var started = students.filter(function(s){ return s.started_at; }).length;
   var completed = students.filter(function(s){ return s.completed_at; }).length;
-  var withQuiz = students.filter(function(s){ return s.quiz_total > 0; });
+  // Only students who have submitted the quiz count toward the average; the others have not scored 0%, they have not taken it.
+  var withQuiz = students.filter(function(s){ return s.quiz_total > 0 && s.quiz_answered > 0; });
   var avgScore = withQuiz.length
     ? Math.round(withQuiz.reduce(function(a, s){ return a + (s.quiz_correct / Math.max(s.quiz_total, 1)); }, 0) / withQuiz.length * 100)
     : null;
@@ -221,12 +223,12 @@ function savePassingPct(val) {
 }
 
 async function resetQuiz(studentId, displayName) {
-  if (!confirm('Reset quiz for ' + displayName + '? They will be able to retake it.')) return;
+  if (!await fnConfirm(displayName + ' will be able to take the quiz again. Their earlier answers are cleared.', { title: 'Reset this quiz?', confirmText: 'Yes, reset it' })) return;
   var res = await fetch('/api/classrooms/' + classroomId + '/assignments/' + curriculumId + '/quiz/' + studentId, {
     method: 'DELETE',
     credentials: 'include',
   });
-  if (!res.ok) { alert('Reset failed.'); return; }
+  if (!res.ok) { await fnNotice('The quiz could not be reset. Please try again.', { title: 'Reset failed' }); return; }
   var pr = await fetch('/api/classrooms/' + classroomId + '/assignments/' + curriculumId + '/progress', { credentials: 'include' });
   progressData = pr.ok ? await pr.json() : progressData;
   renderTable();
@@ -256,6 +258,6 @@ function exportCsv() {
 
 load();
 </script>
-<script src="help-videos.js?v=4" defer></script>
+<script src="help-videos.js?v=5" defer></script>
 </body>
 </html>

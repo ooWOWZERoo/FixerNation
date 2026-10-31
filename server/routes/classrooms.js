@@ -6,6 +6,7 @@ const { requireSiteAuth } = require('./site-auth');
 const { hasActiveLicense } = require('../lib/access');
 const { resolveSchoolIdForTeacher, getPublishedBranding } = require('../lib/branding');
 const { sendParentInvitationEmail } = require('../lib/mailer');
+const { isValidPin, PIN_ERROR } = require('../lib/pin');
 
 const PARENT_INVITE_EXPIRY_DAYS = 14;
 
@@ -200,6 +201,7 @@ router.post('/:id/students', requireSiteAuth, async (req, res) => {
 
   const { displayName, pin, studentNumber } = req.body;
   if (!displayName || !pin) return res.status(400).json({ error: 'displayName and pin required' });
+  if (!isValidPin(pin)) return res.status(400).json({ error: PIN_ERROR });
 
   const base = displayName.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'student';
   const [existing] = await pool.query('SELECT username FROM classroom_students WHERE username LIKE ?', [base + '%']);
@@ -239,7 +241,8 @@ router.post('/:id/students/bulk', requireSiteAuth, async (req, res) => {
     while (taken.has(username)) { username = base + n; n++; }
     taken.add(username);
 
-    const rawPin = s.pin || String(crypto.randomInt(100000, 1000000));
+    if (s.pin != null && s.pin !== '' && !isValidPin(s.pin)) { results.push({ error: PIN_ERROR, input: s }); continue; }
+    const rawPin = s.pin ? String(s.pin) : String(crypto.randomInt(100000, 1000000));
     const passwordHash = await bcrypt.hash(rawPin, 10);
     try {
       const [r] = await pool.query(
@@ -270,6 +273,7 @@ router.put('/:id/students/:sid', requireSiteAuth, async (req, res) => {
   let passwordHash = student.password_hash;
   let newPin;
   if (pin) {
+    if (!isValidPin(pin)) return res.status(400).json({ error: PIN_ERROR });
     newPin = String(pin);
     passwordHash = await bcrypt.hash(newPin, 10);
   }

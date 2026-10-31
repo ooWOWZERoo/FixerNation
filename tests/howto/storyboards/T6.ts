@@ -1,5 +1,5 @@
 // T6  Reset a student's PIN and invite a parent. Signed in as the demo teacher (Maria Lopez). The classroom and its four made-up
-// students are created off-camera. The parent address is on example.com. Revoke is pointed at, not used (it asks with a browser pop-up).
+// students are created off-camera. The parent address is on example.com. Revoke opens an in-page confirmation, which the video accepts.
 // State-changing: restart the test site (tests/howto/stack.sh up) before recording.
 import { glideClick, glideTo, fillSlowly, type Storyboard } from "../pipeline";
 import { seedClassroom } from "../classroom";
@@ -59,11 +59,15 @@ const board: Storyboard = {
       },
     },
     {
-      say: "Pending invitations are listed below the students. If you sent one to the wrong address, select Revoke. If it expires, send a new one.",
+      say: "Pending invitations are listed below the students. If you sent one to the wrong address, select Revoke, and confirm. The link in the parent's email stops working. If an invitation expires, send a new one.",
       run: async (p) => {
         await glideTo(p, "#parentInviteTable");
         await p.waitForTimeout(2000);
-        await glideTo(p, "#parentInviteTable button:has-text('Revoke')");
+        await glideClick(p, "#parentInviteTable button:has-text('Revoke')");
+        await p.waitForSelector(".fncf-box");
+        await p.waitForTimeout(2500);
+        await glideClick(p, ".fncf-box button:has-text('Yes, revoke it')");
+        await p.waitForTimeout(1500);
       },
     },
     { say: "Parents only see whether each lesson is done, and the lesson resources. They don't see quiz answers or what their child wrote." },

@@ -27,11 +27,14 @@ const board: Storyboard = {
         await p.waitForLoadState("domcontentloaded");
         await p.waitForSelector("#coAdmins .co-admin-row");
         await p.waitForTimeout(800);
+        // Bring the list up the screen, clear of the How-to video button in the bottom-right corner.
+        await p.evaluate(() => window.scrollBy(0, 300));
+        await p.waitForTimeout(500);
         await glideTo(p, "#coAdmins");
       },
     },
     {
-      say: "A primary administrator can do it all: invite teachers, resend and extend invitations, revoke invitations, and remove teachers.",
+      say: "The label beside each name shows their level. A primary administrator can do it all: invite teachers, resend and extend invitations, revoke invitations, and remove teachers.",
       run: (p) => glideTo(p, '#coAdmins .co-admin-row:has-text("Sam Carter")'),
     },
     {
@@ -39,7 +42,7 @@ const board: Storyboard = {
       run: (p) => glideTo(p, '#coAdmins .co-admin-row:has-text("Pat Nguyen")'),
     },
     {
-      say: "A read only administrator can look at everything, but can't change anything. It's a good fit for someone who just needs to see reports. You'll see a Read Only label next to their name here, like the one next to this account.",
+      say: "A read only administrator can look at everything, but can't change anything. It's a good fit for someone who just needs to see reports. Read Only is the label next to this account.",
       run: (p) => glideTo(p, '#coAdmins .co-admin-row:has-text("Robin Hale") .sa-badge'),
     },
     {

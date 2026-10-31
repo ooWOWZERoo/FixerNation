@@ -99,18 +99,24 @@ Setting up a district (create it, link schools, invite the district admin) and t
 - Teacher self-registration no longer treats a brand-new license as full (test: `server/test/school-registration.test.js`).
 
 Known issues found but not fixed, so scripts should avoid them:
-- Resend or Extend on an expired invitation leaves the seat revoked.
-- A Microsoft-only account has no password hash, and `accept-and-verify` (teacher and parent invites) runs `bcrypt.compare` on it without a null check.
-- The Organization page lists deactivated co-admins and labels Primary and Secondary both "Full Access".
-- The Licenses page "Active" filter returns nothing (it sends `active`, the status is `registered`).
-- Seat counts differ between the dashboard, roster and licenses pages.
+- Seat counts differ between the dashboard, roster and licenses pages. (Each counts a slightly different set of seat states; needs a decision on which count is the one to show.)
 - The district dashboard is a stub with one button, and ignores the district picker.
-- Student PIN length is only checked in the browser.
 - A PO school needs two FNE staff actions (Mark as Paid, then PO Received) before teachers can be invited.
-- The Roster page cannot show pending seats: none of its three filters includes `pending`, so the Revoke button in its pending-seat branch never appears. Pending invitations are managed on Invitations. (Found while storyboarding B5.)
-- The Organization page's co-administrator list includes the signed-in administrator. (Found while storyboarding B8 and B9.)
-- My Licenses (`my-license.html`) shows a teacher who holds a school seat a green "active license" banner, then "Nothing on file yet", and a "School License Administrator?" box with an Admin Portal button. Seats granted by a school appear only for the purchaser, so the teacher's own seat is never listed. T1 avoids pointing at it. (Found while storyboarding T1.)
-- The teacher classroom pages use browser pop-up `confirm()` boxes for Regenerate Join Code, Deactivate, Revoke parent invitation, Remove assignment, Remove game and Reset quiz. They do not show in recordings (the videos point at those buttons instead). Moving them to in-page dialogs, as the school and district portals now do, would let the videos show them.
-- The Progress page "Quiz Score (avg)" counts students who have not taken the quiz as 0%. (Found while storyboarding T5.)
+- The Organization page's co-administrator list includes the signed-in administrator.
+
+Fixed 2026-10-30 (Release 64):
+- Resend or Extend on an expired invitation now takes a seat back (and says so if every seat is in use).
+- `accept-and-verify` for teacher and parent invites no longer breaks on a Microsoft-only account; it says to sign in with Microsoft.
+- The Organization page lists only active co-administrators, labelled Primary, Secondary or Read Only.
+- The Licenses page Active filter works.
+- Student PINs are checked as 4 to 6 digits on the server (add student, import, reset PIN, join a class).
+- The Roster page has an "Invited, not joined yet" filter, and "All teachers" includes them.
+- My Licenses no longer says "Nothing on file yet" to a teacher whose seat comes from a school, and shows the School Admin shortcut only to school administrators.
+- The teacher classroom and progress pages use in-page dialogs (`fn-confirm.js`) in place of browser pop-ups, so they show in the videos (T3 to T6).
+- The Progress page quiz average counts only students who have taken the quiz.
+
+Videos re-recorded for these: B1, B5, B8, B9, T1, T3, T4, T5, T6. Video check outcome: every other flagged video was only touched by the `help-videos.js?v=5` version string or by server changes that show nothing on screen (seat renewal on expired invitations, null-password guard, PIN rules for valid PINs), so they are still correct.
+
+Note: `server/scripts/videos-to-review.js` read `help-videos.js` with a pattern that stopped matching once published entries gained captions and poster fields, so it silently reported nothing for a while (the 2026-10-30 publish commit onward). Fixed in the same commit as this note.
 
 2026-10-30: help-videos.js is now `?v=3` on every page. A3 (which sign-in page) is registered on all five sign-in pages, and B10 (why can't I invite teachers yet) on the Invitations page. parent-login.html now loads help-videos.js. Video check: the changes are only the version string and one added script tag, so no recorded video's content changed.

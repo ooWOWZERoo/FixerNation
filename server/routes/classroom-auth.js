@@ -8,6 +8,7 @@ const crypto = require('crypto');
 
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
+const { isValidPin, PIN_ERROR } = require('../lib/pin');
 const router = express.Router();
 
 // Student PINs are 6 digits (1,000,000 possibilities) and usernames are guessable
@@ -90,6 +91,7 @@ router.post('/join', joinLimit, async (req, res) => {
   const classroom = classrooms[0];
 
   if (!displayName) return res.status(400).json({ error: 'Display name required', classroomName: classroom.name });
+  if (pin && !isValidPin(pin)) return res.status(400).json({ error: PIN_ERROR, classroomName: classroom.name });
 
   let nameCollision = false;
   if (pin) {
@@ -125,7 +127,7 @@ router.post('/join', joinLimit, async (req, res) => {
     await conn.beginTransaction();
 
     const username = await generateUsername(conn, displayName.split(' ')[0] || displayName);
-    const rawPin = pin || generatePin();
+    const rawPin = pin ? String(pin) : generatePin();
     const passwordHash = await bcrypt.hash(rawPin, 10);
 
     await conn.query(

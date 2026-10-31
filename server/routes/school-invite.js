@@ -372,6 +372,8 @@ router.post('/accept-and-verify', async (req, res) => {
   const [[user]] = await pool.query('SELECT id, first_name, last_name, password_hash FROM site_users WHERE email = ?', [email]);
   if (!user) return res.status(404).json({ error: 'No account found for this email. Please use the "Create Account" form.' });
 
+  // A Microsoft-only account has no password at all, so there is nothing to compare against.
+  if (!user.password_hash) return res.status(401).json({ error: 'This account signs in with Microsoft. Use Continue with Microsoft on the sign-in page, then open this link again.' });
   const passwordOk = await bcrypt.compare(password, user.password_hash);
   if (!passwordOk) return res.status(401).json({ error: 'Incorrect password.' });
 

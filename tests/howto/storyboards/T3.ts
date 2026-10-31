@@ -1,6 +1,6 @@
 // T3  Create a classroom and add students. Signed in as the demo teacher (Maria Lopez, registered at Maple Elementary).
 // Every student name is made up. State-changing: restart the test site (tests/howto/stack.sh up) before recording.
-// Regenerate Join Code and Archive are pointed at, not used: the join-code button asks with a browser pop-up that does not show in recordings.
+// Regenerate Join Code and Archive each open an in-page confirmation; the video cancels both so the classroom stays as it is.
 import { glideClick, glideTo, fillSlowly, type Storyboard } from "../pipeline";
 
 const board: Storyboard = {
@@ -87,12 +87,23 @@ const board: Storyboard = {
       },
     },
     {
-      say: "A couple of controls to know about. Regenerate Join Code stops the old code working for new students. Archive Classroom closes the classroom, and students can't sign in, until you bring it back.",
+      say: "A couple of controls to know about. Regenerate Join Code stops the old code working for new students. You'll be asked to confirm first, and students already in the class aren't affected.",
       run: async (p) => {
         await p.evaluate(() => window.scrollTo(0, 0));
-        await glideTo(p, "button:has-text('Regenerate Join Code')");
-        await p.waitForTimeout(2500);
-        await glideTo(p, "#archiveBtn");
+        await glideClick(p, "button:has-text('Regenerate Join Code')");
+        await p.waitForSelector(".fncf-box");
+        await p.waitForTimeout(3500);
+        await glideClick(p, ".fncf-box button:has-text('Cancel')");
+        await p.waitForTimeout(600);
+      },
+    },
+    {
+      say: "Archive Classroom closes the classroom, and students can't sign in until you bring it back. It asks you to confirm too, and you can unarchive it any time.",
+      run: async (p) => {
+        await glideClick(p, "#archiveBtn");
+        await p.waitForSelector(".fncf-box");
+        await p.waitForTimeout(3500);
+        await glideClick(p, ".fncf-box button:has-text('Cancel')");
       },
     },
   ],
