@@ -42,6 +42,12 @@
           <h2>FN Blogs</h2>
           <button class="a-btn a-btn-primary" onclick="openPostModal()">+ Write New Post</button>
         </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:0 0 14px;">
+          <input type="search" id="postSearch" placeholder="Search posts by title, category, tag, series or author…" aria-label="Search blog posts" autocomplete="off"
+            oninput="applyPostSearch()" onkeydown="if(event.key==='Escape'){this.value='';applyPostSearch();}"
+            style="padding:9px 13px;border:1px solid var(--a-border);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);flex:1;min-width:220px;max-width:460px;">
+          <span id="postSearchCount" style="font-size:12.5px;color:var(--a-text-soft);"></span>
+        </div>
         <div class="a-bulk-bar" id="bulkBar" style="display:none;">
           <span class="a-bulk-count" id="bulkCount">0 selected</span>
           <button class="a-btn a-btn-sm" onclick="bulkPublish(true)">✅ Publish</button>
@@ -56,7 +62,7 @@
         </table>
         <div class="a-empty" id="postsEmpty" style="display:none;">
           <div class="big">📝</div>
-          No blog posts yet — click "Write New Post" to publish your first one.
+          <span id="postsEmptyText">No blog posts yet — click "Write New Post" to publish your first one.</span>
         </div>
       </div>
     </div>
@@ -282,14 +288,45 @@ async function fetchPosts() {
   return (await r.json()).posts || [];
 }
 
+// What a post is searched on: everything an admin might remember about it (not the body text, which is long).
+function postSearchText(p) {
+  const hasVideo = !!(p.videoUrl || p.videoFileName);
+  const isScheduled = p.published && p.publishDate && p.publishDate > new Date().toISOString().slice(0, 10);
+  const status = !p.published ? 'draft' : (isScheduled ? 'scheduled' : 'published');
+  return [p.title, p.slug, p.author, p.series, p.theme, p.excerpt, p.focusKeyword, p.metaDescription, p.category,
+          ...(p.categories || []), ...(p.tags || []), status, p.featured ? 'featured' : '', p.requiresMembership ? 'members membership locked' : '', hasVideo ? 'video' : '']
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
+// Every word typed must appear somewhere in the post (order does not matter), so "peer pressure draft" narrows as you add words.
+function filterPosts(posts) {
+  const words = (document.getElementById('postSearch').value || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return posts;
+  return posts.filter(p => { const t = postSearchText(p); return words.every(w => t.includes(w)); });
+}
+
+function applyPostSearch() { renderPostRows(); }
+
 async function renderPosts() {
-  const posts = postsCache = await fetchPosts();
+  postsCache = await fetchPosts();
   refreshSeriesChips();
+  renderPostRows();
+}
+
+function renderPostRows() {
+  const all = postsCache;
+  const posts = filterPosts(all);
+  const searching = posts.length !== all.length || !!(document.getElementById('postSearch').value || '').trim();
+  document.getElementById('postSearchCount').textContent = all.length && searching ? `Showing ${posts.length} of ${all.length}` : '';
   const tbody = document.querySelector('#postsTable tbody');
   tbody.innerHTML = '';
+  clearSelection();
   if (posts.length === 0) {
     document.getElementById('postsTable').style.display = 'none';
     document.getElementById('postsEmpty').style.display = 'block';
+    document.getElementById('postsEmptyText').textContent = all.length
+      ? 'No posts match that search. Try fewer or different words.'
+      : 'No blog posts yet — click "Write New Post" to publish your first one.';
     return;
   }
   document.getElementById('postsTable').style.display = 'table';
