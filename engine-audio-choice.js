@@ -13,9 +13,14 @@
 //     stimulusColor: '#3b82f6',         // optional — e.g. Stroop's ink color
 //     stimulusAudioUrl: null,           // optional real audio file
 //     transcript: 'the word red in blue ink',  // required for 'audio' items — screen-reader/no-audio equivalent
-//     choices: [{ id, label }],
+//     choices: [{ id, label, feedback? }],   // feedback: optional, shown when THIS choice is picked
 //     correctId,
+//     explanation?,                           // optional, shown after any answer
 // }] }
+//
+// Feedback that teaches: when a round supplies a choice's feedback and/or an explanation, that text replaces the
+// generic "Correct!" / "Not quite" line, is read aloud for audio rounds (so non-readers get it too), and stays on
+// screen a little longer. Rounds without either behave exactly as before.
 //
 // No countdown timer by design — per §5.5, speed shouldn't dominate
 // scoring unless it's the explicit learning objective; response time is
@@ -127,11 +132,13 @@
         if (!isCorrect && item.choices[i].id === item.correctId) c.classList.add('correct-choice');
       });
 
+      const custom = [choice.feedback, item.explanation].filter(Boolean).join(' ');
       feedbackHolder.innerHTML = '';
       feedbackHolder.appendChild(FnGameShell.renderFeedback(
         isCorrect ? 'correct' : 'incorrect',
-        isCorrect ? 'Correct!' : 'Not quite — take another look.'
+        custom || (isCorrect ? 'Correct!' : 'Not quite — take another look.')
       ));
+      if (custom && item.stimulusType === 'audio') speak(custom);
 
       setTimeout(() => {
         index++;
@@ -145,7 +152,7 @@
         } else {
           renderItem();
         }
-      }, isCorrect ? 600 : 1300);
+      }, custom ? Math.min(7000, 2200 + custom.length * 45) : (isCorrect ? 600 : 1300));
     }
   }
 
