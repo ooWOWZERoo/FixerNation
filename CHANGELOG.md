@@ -16,6 +16,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 67 — 2026-10-31 — Re-recorded help videos for the Roster and Reports pages
+
+- **Two help videos replaced:** "Manage your teacher roster" and "Reports and exports" were re-recorded so the seat numbers on screen match the Release 66 fix (a deactivated teacher keeps a seat, and the Reports legend now lists inactive teachers). Registry `help-videos.js` is now `?v=7` on all 40 pages that load it.
+- No server code and no alter script: pages and assets only, so no Node restart is needed.
+
 ## Release 66 — 2026-10-31 — Seat counts agree on every page
 
 - **Fix: the numbers a school admin sees for seats now match everywhere.** A deactivated teacher still holds a seat, but the Roster and Licenses pages left them out of "assigned" while still subtracting them from "available", so the figures did not add up and the percentage differed from the Dashboard. All pages now show the same assigned, available and percent-used.

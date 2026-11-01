@@ -64,7 +64,7 @@
       pages: ['school-admin-invitations.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391629/fne/help/B4.mp4', captions: '/help-assets/B4.vtt', poster: '/help-assets/B4.jpg' },
     { id: 'B5', group: 'school-admins', topic: 'Teachers and seats', title: 'Manage your teacher roster',
       summary: 'See who has a seat and set grade levels. Deactivate, reactivate or remove a teacher.',
-      pages: ['school-admin-roster.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412329/fne/help/B5.mp4', captions: '/help-assets/B5.vtt', poster: '/help-assets/B5.jpg' },
+      pages: ['school-admin-roster.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793497511/fne/help/B5.mp4', captions: '/help-assets/B5.vtt', poster: '/help-assets/B5.jpg' },
     { id: 'B6', group: 'school-admins', topic: 'Branding and settings', title: 'Brand your school',
       summary: 'Add your logo and colors, then preview and publish them.',
       pages: ['school-admin-branding.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391634/fne/help/B6.mp4', captions: '/help-assets/B6.vtt', poster: '/help-assets/B6.jpg' },
@@ -73,7 +73,7 @@
       pages: ['school-admin-org.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412331/fne/help/B8.mp4', captions: '/help-assets/B8.vtt', poster: '/help-assets/B8.jpg' },
     { id: 'B7', group: 'school-admins', topic: 'Reports', title: 'Reports and exports',
       summary: 'Utilization, teachers, invitations and the activity log, with CSV downloads.',
-      pages: ['school-admin-reports.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391636/fne/help/B7.mp4', captions: '/help-assets/B7.vtt', poster: '/help-assets/B7.jpg' },
+      pages: ['school-admin-reports.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793497513/fne/help/B7.mp4', captions: '/help-assets/B7.vtt', poster: '/help-assets/B7.jpg' },
 
     // ---- District administrators
     { id: 'C1', group: 'district-admins', topic: 'Your portal', title: 'A tour of the District Admin portal',
