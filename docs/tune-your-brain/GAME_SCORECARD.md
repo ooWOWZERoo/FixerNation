@@ -102,3 +102,46 @@ I measured it. In the six scenario games (Choice Quest, Team Pick, Decision Poin
 2. **Team Pick sensitivity:** are you comfortable with the "picked last" story as written?
 3. **Length balance:** may I add the length check to the audit script and make "balance the lengths" a standing rule for all new content?
 4. **Mappings for this wave:** accept as drafted?
+
+## Wave 3: Challenge (grades 6-8), four games
+
+| Game | 1 Complete | 2 Relevant (NY) | 3 Levelled | 4 Deep | 5 Replayable | Draft verdict |
+|---|---|---|---|---|---|---|
+| Decision Point | Passes | Pass: SEL 2A, 3B and 3C direct, 2C supporting; PoG GC direct, EC supporting | Grades 6-8 fits | Passes (b)(c)(e); fails (a) | Fails: one story | **Deepen (more stories); one answer to review** |
+| Group Chat Meltdown | Passes | Pass: SEL 1A and 2D direct, 3A supporting; PoG GC direct (digital communities), RF supporting | Grades 6-8 fits | Passes (b)(c)(e); fails (a) | Fails: one story | **Deepen (more stories)** |
+| Headline | Passes | PoG CT direct (weighing evidence); EC supporting; no SEL stretch needed | Reads below the band (my judgement) | Fails (a)(b) | Fails | **Deepen (rewrite)** |
+| Money Moves | Passes | SEL 1C direct (set and work toward a goal), 3B supporting; PoG RF direct, AP supporting | Grades 6-8 fits the goal; the maths is lighter than the title promises | Fails | Fails | **Rework** |
+
+### Decision Point and Group Chat Meltdown (the same fix as Choice Quest and Team Pick)
+- **What they are:** one story each, the same five-step cycle with per-choice feedback, a believable unsafe choice, a trusted-adult option and a private reflection. Decision Point: a classmate, Sam, quietly dropped from the project group chat. Group Chat Meltdown: a friend posts a video of you tripping and the chat laughs.
+- **Problems:** one story, so a second run is identical. Steps 1 to 3 are two options with a strawman ("It's probably nothing"). Decision Point's best answer is longest in 3 of 4 steps; Group Chat Meltdown's responsible answer is first in 3 of 4 authored slots (shuffling now hides that).
+- **For you to judge in Decision Point:** the option labelled "responsible" is to add Sam back into the chat yourself, and the option labelled "also good" is to ask Sam first whether he wants to be added. Many adults would say asking first is the more respectful move. I would swap the labels or make both "also good". This is your call as the SEL reviewer.
+- **Group Chat Meltdown sensitivity:** the topic is a humiliating video. It handles it well (pause, then respond to one friend, tell an adult if it keeps happening), but it is the most personal story in this band, so please read it once with that in mind.
+- **Fix:** three more stories each, built with the same writing rules as Explore (three options in steps 1 to 3, balanced lengths, a believable unsafe choice). Outline suggestions below once you say go.
+
+### Headline (`headline`, media literacy)
+- **Content:** four three-sentence news snippets; pick the headline that matches what happened, then the sentence that proves it.
+- **Relevance:** weighing evidence is Critical Thinker in New York's Portrait (direct), so it meets your every-game rule without stretching.
+- **Problems:**
+  - **A pattern a student can learn without reading:** in all four items the right headline is the careful middle one ("Small, Steady Increase") and the wrong ones are loud extremes ("Exploding", "Failing", "Total Disaster", "Instant Hit"). Pick the calm one and you pass.
+  - The right headline is also the longest in all 4 items.
+  - The proving sentence is the second sentence in 3 of 4 items.
+  - The passages are short, plain news sentences, easier than grades 6-8.
+- **Fix:** wrong headlines should be subtle and varied (one that overstates, one that understates, one that mixes up a number, one that leaves out the key fact), the right headline sometimes bold when the facts are bold, longer snippets with numbers that need a little arithmetic, evidence positions spread out, lengths balanced, and a pool of 12 or more.
+
+### Money Moves (`money-moves`, goals and budgeting)
+- **Content:** save $120 for a bike across four decisions (allowance, a movie, a bonus, a used bike vs. waiting), with Savings and Spending Money counters.
+- **What I found by playing out all 16 possible runs:**
+  - **The goal "keep enough spending money" is never checked.** The ending message looks only at Savings, so Spending Money has no consequence. Every run ends in one of three messages, all positive.
+  - **There is no percentage in a game whose skill is "Budgeting & Percentages".**
+  - **Four binary choices** with one obvious saver and one obvious spender each time, so there is no real tradeoff to weigh.
+  - The $120 goal is reachable only by skipping every fun purchase, which teaches "never spend" more than "balance".
+- **Relevance:** a goal and a plan is NY SEL 1C (direct) and 3B (supporting); PoG Reflective and Future Focused (sets goals) direct.
+- **Fix (rework):** a pool of 12 or more events with a mix of percentages (a 25 percent discount, 5 percent interest, a 10 percent savings habit), needs vs wants, and a small surprise cost; draw 6 per run; a ending that responds to both counters, with more than one successful way to finish and a gentle debrief when spending money runs out.
+
+### Decisions for this wave
+1. **Decision Point step 4:** swap the "responsible" and "also good" labels (ask Sam first is the best move), or leave it as written?
+2. **Money Moves:** OK to treat it as a rework (new events, percentages, an ending that uses both counters)?
+3. **Headline and the other two reading games:** see the design note in `READING_GAMES_DESIGN.md` (to be written next).
+4. **Go-ahead for outlines:** three more stories each for Decision Point and Group Chat Meltdown, in the same outline-first way?
+
