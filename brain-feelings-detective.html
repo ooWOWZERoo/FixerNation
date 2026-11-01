@@ -30,7 +30,7 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js?v=2"></script>
-<script src="engine-scenario-choice.js"></script>
+<script src="engine-scenario-choice.js?v=2"></script>
 <script>
   // Feelings Detective - Tune Your Brain SEL scaling slice (Discover band).
   // Closes the last CASEL gap: the first genuine Self-awareness game in
@@ -122,6 +122,27 @@
         reinforcement: 'Nervous and curious can both be true on a first day somewhere new - feelings are not always just one thing.',
       },
     ],
+    // After each story the child gets a private check-in about their own feelings (NY SEL 1A). Their answers are
+    // never logged or sent anywhere; see the note at the top of engine-scenario-choice.js.
+    selfCheck: {
+      prompt: 'Has something like this ever happened to you?',
+      options: [
+        { id: 'yes', text: 'Yes' },
+        { id: 'no', text: 'No' },
+        { id: 'not-sure', text: 'Not sure' },
+      ],
+      bodyPrompt: 'If you felt this way, where in your body would you notice it?',
+      bodyOptions: [
+        { id: 'tummy', text: 'My tummy' },
+        { id: 'chest', text: 'My chest' },
+        { id: 'face', text: 'My face' },
+        { id: 'hands', text: 'My hands' },
+        { id: 'elsewhere', text: 'Somewhere else' },
+      ],
+      closing: 'Nice job checking in with yourself. Your body gives you clues about how you feel, and no one else sees what you picked.',
+      privateNote: "Your answers here are private and aren't saved.",
+      summaryLabel: 'Times you checked in with yourself',
+    },
   };
 
   fetch('/api/brain-games/me/progress').then((r) => {
@@ -141,7 +162,7 @@
     header: {
       icon: '🕵️',
       title: 'Feelings Detective',
-      description: 'Notice what is happening, then think about how someone might be feeling.',
+      description: 'Notice what is happening, think about how someone might be feeling, then check in with yourself.',
     },
   });
 </script>

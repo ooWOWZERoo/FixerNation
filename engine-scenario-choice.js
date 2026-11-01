@@ -28,7 +28,21 @@
 //     feelings: [{ id, text, tag: 'plausible'|'less_fitting', note? }], // note shown only for less_fitting picks
 //     reinforcement: '...',               // shown when every pick is plausible
 //     seekHelp?: { prompt: '...', text: '...' },  // omitted when a scenario doesn't need it
-// }] }
+//     selfCheck?: null | {...},           // overrides (or, when null, turns off) the pack-level selfCheck below
+// }],
+//   selfCheck?: {                         // optional private self-check after the feelings stage, every scenario
+//     prompt: 'Has something like this ever happened to you?',
+//     options: [{ id, text }],            // e.g. Yes / No / Not sure
+//     bodyPrompt: 'Where in your body would you notice it?',
+//     bodyOptions: [{ id, text }],
+//     closing: '...',                     // shown after the second answer
+//     privateNote: '...',                 // screen-reader note
+//     summaryLabel: '...',                // label for the count on the summary screen
+//   } }
+//
+// The self-check is what makes a game about OTHER people's feelings also practise the child's own (NY SEL 1A).
+// It is private by design, exactly like Branching Scenario's reflection step: the child's answers are never
+// logged, sent or stored; the only thing recorded is that the step was reached.
 (function () {
   function speak(text) {
     if (!window.speechSynthesis || !text) return;
@@ -55,7 +69,10 @@
     container.append(progressHolder, contextBox, replayRow, promptBox, choiceHolder, confirmRow, feedbackHolder);
     renderScenario();
 
+    let selfNarration = '', selfChecks = 0;
+
     function narrationFor(scenario) {
+      if (stage === 'self_check') return selfNarration;
       if (stage === 'cues') {
         return [scenario.context, ...scenario.cues.map((c) => c.text)].join('. ');
       }
@@ -200,12 +217,73 @@
       feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', message));
 
       setTimeout(() => {
-        if (scenario.seekHelp) {
-          renderSeekHelp(scenario);
-        } else {
-          advance();
-        }
+        const check = selfCheckFor(scenario);
+        if (check) renderSelfCheck(scenario, check); else afterFeelings(scenario);
       }, 1800);
+    }
+
+    function afterFeelings(scenario) {
+      if (scenario.seekHelp) {
+        renderSeekHelp(scenario);
+      } else {
+        advance();
+      }
+    }
+
+    // A scenario's own selfCheck wins; null switches it off for that scenario; otherwise the pack's applies.
+    function selfCheckFor(scenario) {
+      if (scenario.selfCheck === null) return null;
+      return scenario.selfCheck || contentPack.selfCheck || null;
+    }
+
+    function renderSelfCheck(scenario, check) {
+      stage = 'self_check';
+      feedbackHolder.innerHTML = '';
+      confirmRow.innerHTML = '';
+      onEvidence('item_presented', { scenarioIndex: index, stage: 'self_check' });
+      askSelfCheck(check.prompt, check.options, () => {
+        // Deliberately NOT logging which option was picked: a young child's answer about their own life stays
+        // on the screen. Only the fact that the step was reached is recorded.
+        onEvidence('response_submitted', { scenarioIndex: index, stage: 'self_check' });
+        setTimeout(() => {
+          askSelfCheck(check.bodyPrompt, check.bodyOptions, () => {
+            selfChecks++;
+            onEvidence('response_submitted', { scenarioIndex: index, stage: 'self_check_body' });
+            feedbackHolder.innerHTML = '';
+            feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', check.closing || 'Nice job checking in with yourself.'));
+            setTimeout(() => afterFeelings(scenario), 2200);
+          }, check.privateNote);
+        }, 500);
+      }, check.privateNote);
+    }
+
+    function askSelfCheck(prompt, options, onPick, privateNote) {
+      promptBox.textContent = prompt;
+      selfNarration = [prompt].concat(options.map((o) => o.text)).join('. ');
+      renderReplay(null);
+      speak(selfNarration);
+      choiceHolder.innerHTML = '';
+      const list = document.createElement('div');
+      list.className = 'fn-choice-list long-text-list';
+      options.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fn-choice-btn band-aware tap-target long-text';
+        btn.textContent = opt.text;
+        btn.addEventListener('click', () => {
+          [...list.children].forEach((c) => { c.disabled = true; });
+          btn.classList.add('selected');
+          onPick();
+        });
+        list.appendChild(btn);
+      });
+      choiceHolder.appendChild(list);
+      if (privateNote) {
+        const note = document.createElement('p');
+        note.className = 'sr-only';
+        note.textContent = privateNote;
+        choiceHolder.appendChild(note);
+      }
     }
 
     function renderSeekHelp(scenario) {
@@ -239,7 +317,7 @@
           { value: scenarios.length, label: 'Scenarios explored' },
           { value: cuesNoticedTotal, label: 'Cues noticed' },
           { value: multiFeelingCount, label: 'Times you saw more than one feeling' },
-        ]);
+        ].concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : []));
       } else {
         renderScenario();
       }

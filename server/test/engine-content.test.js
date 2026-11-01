@@ -164,3 +164,24 @@ test('REAL GAMES: scenario step order is never shuffled', () => {
     for (let seed = 1; seed <= 10; seed++) assert.deepEqual(prep(g.pack, g.engineName, seed).pack.steps.map((s) => s.key), authored, g.slug);
   }
 });
+
+// Feelings Detective's private self-check (NY SEL 1A): present on every story, left in authored order, and never logged.
+test('SELF-CHECK: Feelings Detective carries a pack-level self-check that the SDK passes through untouched', () => {
+  const g = REAL.find((x) => x.slug === 'feelings-detective');
+  assert.ok(g && g.pack.selfCheck, 'selfCheck missing from the Feelings Detective pack');
+  const sc = g.pack.selfCheck;
+  assert.ok(sc.prompt && sc.bodyPrompt && sc.closing && sc.privateNote);
+  assert.equal(sc.options.map((o) => o.id).join(), 'yes,no,not-sure'); // joined: the pack comes from a vm context, so arrays are not the same realm
+  for (let seed = 1; seed <= 10; seed++) {
+    const out = prep(g.pack, g.engineName, seed).pack;
+    assert.equal(JSON.stringify(out.selfCheck), JSON.stringify(sc), 'self-check options must keep their order');
+  }
+});
+
+test('SELF-CHECK PRIVACY: the engine never sends which answer a child picked', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'engine-scenario-choice.js'), 'utf8');
+  const calls = src.split('\n').filter((l) => /onEvidence\(/.test(l) && /self_check/.test(l));
+  assert.ok(calls.length >= 3, 'expected the self-check evidence calls to be present');
+  calls.forEach((l) => assert.match(l, /\{ scenarioIndex: index, stage: 'self_check(_body)?' \}/, `self-check evidence must carry only the stage: ${l.trim()}`));
+  assert.ok(!/opt\.id|option\.id/.test(src.slice(src.indexOf('function askSelfCheck'))), 'askSelfCheck must not read the chosen option id');
+});

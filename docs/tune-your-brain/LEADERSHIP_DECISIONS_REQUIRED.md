@@ -8,6 +8,8 @@ Only decisions that materially change scope, policy, cost, architecture, data ac
 
 ## D1 — Is the ElevenLabs integration actually live?
 
+**Resolved 2026-10-31 (owner):** not needed for the brain games. Game audio will be pre-rendered with the macOS voice Ava (Premium), the same voice as the help videos, and served as audio files (see `GAME_REVERIFICATION_PLAN.md`, "Audio"). ElevenLabs remains only for Morning Boost voice-over.
+
 **Why it matters:** §7.8 requires professionally recorded audio for foundational-literacy content (Sound Safari, Word Builder). The pipeline (`morning_boost_audio_clips` table, `POST /generate-audio`, `GET /audio/:filename`) is real and reusable — but `CLAUDE.md`'s own env template still annotates `ELEVENLABS_API_KEY` as "not yet live; blocks Morning Boost voice-over." If it's still not live, Discover-band literacy content cannot ship with professional audio, and browser TTS alone is explicitly disallowed by §7.8 for phonics content.
 
 **Evidence:** `server/routes/morning-boost.js:300-350` (pipeline code, real and functioning against whatever key is configured); `CLAUDE.md` env-var comment (documentation claim, not independently re-verified live in this pass since it would require a real API call against a paid third-party service, outside this pass's read-only scope).

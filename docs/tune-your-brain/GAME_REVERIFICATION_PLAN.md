@@ -2,7 +2,7 @@
 
 Written 2026-10-31. Phase 0 (the static half) has been run; see "Phase 0 results" below. Nothing else is built.
 
-**Decided 2026-10-31:** every game, including the six legacy executive-function and maths games, must map to at least one CASEL competency or Portrait of a Graduate attribute, with a written rationale a teacher would accept. A game that cannot be mapped honestly is reworked or hidden, not waved through. Read `PHASE_STATUS.md` and `GAP_ANALYSIS_2026-09-17.md` first for how the catalog got here.
+**Decided 2026-10-31:** (a) the Portrait of a Graduate reference is **New York's** (the verified framework); (b) the **FNE admin (the owner) reviews and signs off all SEL content**; (c) **game audio uses the macOS voice Ava (Premium)**, pre-rendered to audio files, not ElevenLabs and not live browser text-to-speech (see "Audio" below); (d) every game, including the six legacy executive-function and maths games, must map to at least one CASEL competency or Portrait of a Graduate attribute, with a written rationale a teacher would accept. A game that cannot be mapped honestly is reworked or hidden, not waved through. Read `PHASE_STATUS.md` and `GAP_ANALYSIS_2026-09-17.md` first for how the catalog got here.
 
 ## Goal
 
@@ -94,12 +94,18 @@ Done in `engine-sdk.js` only: the SDK now builds a fresh copy of each game's con
 ## Decisions I need from you
 
 1. ~~Does every game need an SEL or PoG link, or only the SEL-domain ones?~~ **Settled: every game.** Original question: The legacy six are executive-function and maths games. Option A: they must map to a CASEL competency such as self-management or a PoG attribute such as critical thinking, with a rationale, or they are marked as "skills practice" and shown separately. Option B: they stay as they are, outside this requirement. I lean A, because you named SEL and PoG as the bar.
-2. **Which Portrait of a Graduate is the reference?** PoG is per state and per district here. Options: the verified NY and OH frameworks, any verified framework, or one neutral list of attributes common across them. I lean on the verified NY and OH ones, since those are the only ones a person has signed off.
+2. ~~Which Portrait of a Graduate is the reference?~~ **Settled: New York.** Original question: PoG is per state and per district here. Options: the verified NY and OH frameworks, any verified framework, or one neutral list of attributes common across them. I lean on the verified NY and OH ones, since those are the only ones a person has signed off.
 3. **Grade levels:** keep four bands, or add an explicit grade range per game (for example Grades 3 to 5)? I lean toward keeping the bands as the filter and adding the range as a label teachers see.
 4. **What happens to a game that fails?** Deepen it, rework it, or hide it. Does hiding need your sign-off each time? I lean on: hide only with your say-so, deepen by default.
-5. **Who reviews SEL content?** You, a teacher you trust, or an outside reviewer. This sets the pace of Phase 2 and 3.
+5. ~~Who reviews SEL content?~~ **Settled: the admin.** Original question: You, a teacher you trust, or an outside reviewer. This sets the pace of Phase 2 and 3.
 6. **The rubric numbers** (3 times the pool, half overlap, 8 decisions, 8 to 10 minutes): are those right for your standard?
-7. **D1 (ElevenLabs):** is the key live? It decides whether the audio games can pass test 1 or must carry a text transcript only.
+7. ~~D1 (ElevenLabs):~~ **Settled: not needed; Ava (Premium) instead.** Original question: is the key live? It decides whether the audio games can pass test 1 or must carry a text transcript only.
+
+## Audio (decision 7)
+
+The help videos are narrated with the macOS voice **Ava (Premium)** at 165 words per minute (`tests/howto/pipeline.ts`, `docs/training-videos/VIDEO-PLAN.md`). The games do not use that voice today: they speak with the visitor's own browser text-to-speech (`speechSynthesis` in `engine-audio-choice.js` and `engine-scenario-choice.js`), which sounds different on every device. The audio engine already accepts a real audio file per round (`stimulusAudioUrl`; no game uses it yet), so the fix is to pre-render each round's narration with `say -v "Ava (Premium)"`, convert to a small mp3 or m4a with ffmpeg, store the files in the repo, and point each round at its file. That makes the voice identical on every device, works offline once cached, and needs no vendor account or per-use fee. Cost: a small build script (modelled on `docs/training-videos/render-narration.sh`) and a re-render whenever a line of narration changes. The transcript stays on every audio round for screen readers.
+
+Two things to confirm before relying on it: the blueprint's section 7.8 asks for "professionally recorded" audio for phonics content, so you decide whether a premium neural voice meets that bar; and I have not read Apple's licence terms for redistributing audio made with its voices (the help videos already carry the same exposure), so that is worth a check before the games ship to paying schools.
 
 ## What this costs
 
