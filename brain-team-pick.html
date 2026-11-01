@@ -30,7 +30,7 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js?v=2"></script>
-<script src="engine-branching-scenario.js"></script>
+<script src="engine-branching-scenario.js?v=2"></script>
 <script>
   // Team Pick - Tune Your Brain SEL scaling slice (Explore band). Real
   // Issues-to-Answers 5-step cycle (section 6.6) on a being-picked-last
@@ -102,6 +102,340 @@
       },
     ],
   };
+
+  // Team Pick stories: picked last (above), the missed catch, the spelling test, the part in the play.
+  // Phase 3: the original story above plus three more. The game picks one whole story per run (FnEngineSDK variants).
+  // Step 4 offers four choices; steps 1 to 3 offer three. Option lengths are balanced on purpose (see server/scripts/audit-brain-games.js).
+  contentPack.variants = [
+    { steps: contentPack.steps },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "In kickball, your team loses by one run after you miss an easy catch. A few teammates groan, and your face feels hot.",
+        "choices": [
+          {
+            "id": "tp2-1-1",
+            "text": "Notice that you feel embarrassed, and maybe a bit angry too, and that this is a normal reaction.",
+            "type": "responsible",
+            "feedback": "Naming the feeling is the first step. It helps your thinking stay clear while the hot feeling passes."
+          },
+          {
+            "id": "tp2-1-2",
+            "text": "Tell yourself that you do not care at all, because it is only a game and nobody will remember.",
+            "type": "plausible_incomplete",
+            "feedback": "Saying you do not care can feel safer, but the feeling is still there, and it tends to show up some other way."
+          },
+          {
+            "id": "tp2-1-3",
+            "text": "Decide the miss was not your fault, because the sun was in your eyes and the ball was fast.",
+            "type": "plausible_incomplete",
+            "feedback": "Maybe the sun did make it harder. Still, deciding it was all outside you makes it hard to learn from it."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If the feeling takes over, what is likely to happen for the rest of recess?",
+        "choices": [
+          {
+            "id": "tp2-2-1",
+            "text": "You may snap at a teammate or walk off upset, and people may remember that more than the miss.",
+            "type": "responsible",
+            "feedback": "Yes. A strong feeling can make a small moment bigger than it needs to be."
+          },
+          {
+            "id": "tp2-2-2",
+            "text": "You will feel bad for a moment, then forget about it, so nothing about the rest of recess changes.",
+            "type": "plausible_incomplete",
+            "feedback": "Sometimes it fades fast. Feelings that are ignored often come back at a worse moment."
+          },
+          {
+            "id": "tp2-2-3",
+            "text": "Your teammates will stay annoyed with you, and there is nothing you can do to change that.",
+            "type": "plausible_incomplete",
+            "feedback": "How teammates react depends a lot on what you do next, so you have more say than it feels like."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could handle the feeling?",
+        "choices": [
+          {
+            "id": "tp2-3-1",
+            "text": "Take a few slow breaths and remember that one missed catch does not define you.",
+            "type": "responsible",
+            "feedback": "Calming your body first helps you choose what to do next instead of reacting."
+          },
+          {
+            "id": "tp2-3-2",
+            "text": "Stay quiet for the rest of recess so nobody has a chance to say anything more about it.",
+            "type": "plausible_incomplete",
+            "feedback": "Staying quiet may feel safe, but it leaves the hot feeling with you and the team without a word from you."
+          },
+          {
+            "id": "tp2-3-3",
+            "text": "Joke about it loudly so everyone laughs and the groaning moment is quickly forgotten.",
+            "type": "plausible_incomplete",
+            "feedback": "A joke can ease things for some people. If it covers up how you feel, the feeling may still be waiting afterward."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp2-4-1",
+            "text": "Take a breath, then say to the team, \"I missed that one, and I will get the next.\"",
+            "type": "responsible",
+            "feedback": "Owning the miss calmly shows your team you can handle mistakes, and it usually ends the groaning."
+          },
+          {
+            "id": "tp2-4-2",
+            "text": "Step aside for a minute to calm down, then rejoin the game when you feel ready.",
+            "type": "multiple_defensible",
+            "feedback": "A short break is a good tool, and rejoining shows you are ready to keep going."
+          },
+          {
+            "id": "tp2-4-3",
+            "text": "Say the ball was bad and the sun was too bright, so it was not your fault.",
+            "type": "unsafe",
+            "feedback": "Excuses may protect you for a moment, but they can make teammates feel you are not taking the game seriously."
+          },
+          {
+            "id": "tp2-4-4",
+            "text": "Tell the recess helper you are feeling upset and ask for a minute to calm down.",
+            "type": "seek_help",
+            "feedback": "Telling a helper is a strong move, and you can do it whenever a feeling feels too big."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What can you tell yourself the next time you make a mistake in front of other people?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "You studied all week, but your spelling test score is lower than you hoped. The friend next to you got every word right.",
+        "choices": [
+          {
+            "id": "tp3-1-1",
+            "text": "Notice that you feel disappointed, and maybe a bit jealous too, and that both are normal.",
+            "type": "responsible",
+            "feedback": "Naming both feelings is a good start. You can feel disappointed and still be happy for a friend."
+          },
+          {
+            "id": "tp3-1-2",
+            "text": "Decide that you are just bad at spelling, because all that studying did not help.",
+            "type": "plausible_incomplete",
+            "feedback": "That is a lot of weight to put on one test. One score tells you about this test, and not much else."
+          },
+          {
+            "id": "tp3-1-3",
+            "text": "Decide that spelling tests do not matter, so there is no reason to feel anything about it.",
+            "type": "plausible_incomplete",
+            "feedback": "It is a quick way to feel better, but you did study, which shows this mattered to you."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If you decide you are just bad at spelling, what is likely to happen?",
+        "choices": [
+          {
+            "id": "tp3-2-1",
+            "text": "You may study less next week, feel worse about spelling, and miss the chance to get better.",
+            "type": "responsible",
+            "feedback": "Yes. What we believe about ourselves changes how hard we try."
+          },
+          {
+            "id": "tp3-2-2",
+            "text": "You will feel better right away, and that will make it easier to focus on other subjects.",
+            "type": "plausible_incomplete",
+            "feedback": "It may feel better for a moment, but giving up on a skill usually makes it harder later."
+          },
+          {
+            "id": "tp3-2-3",
+            "text": "Your teacher will notice and give you extra help without you needing to ask for it.",
+            "type": "plausible_incomplete",
+            "feedback": "Teachers do notice, but they cannot always tell what a student needs. Asking is much more reliable."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could handle this?",
+        "choices": [
+          {
+            "id": "tp3-3-1",
+            "text": "Look at which words you missed and pick a few to practice again tonight.",
+            "type": "responsible",
+            "feedback": "A small, clear plan turns a disappointing score into something you can act on."
+          },
+          {
+            "id": "tp3-3-2",
+            "text": "Ask your friend to quiz you every day until you score as high as they did.",
+            "type": "plausible_incomplete",
+            "feedback": "Practicing with a friend can be fun and helpful. Trying to match their score can turn it into a race that adds pressure."
+          },
+          {
+            "id": "tp3-3-3",
+            "text": "Study twice as long next week, with no breaks, so that the same thing never happens again.",
+            "type": "plausible_incomplete",
+            "feedback": "Working harder may help, but a plan with no breaks is hard to keep up. A smaller, steady goal works better."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp3-4-1",
+            "text": "Pick three missed words to practice tonight and check how it goes on Friday.",
+            "type": "responsible",
+            "feedback": "A small goal that you can check is how people actually get better at things."
+          },
+          {
+            "id": "tp3-4-2",
+            "text": "Ask your teacher for ideas on how to study spelling in a different way.",
+            "type": "multiple_defensible",
+            "feedback": "Teachers know many ways to study, and asking shows you care about improving."
+          },
+          {
+            "id": "tp3-4-3",
+            "text": "Decide that spelling is not for you and stop trying on the next test.",
+            "type": "unsafe",
+            "feedback": "Stopping can feel like a relief, but it closes the door on getting better, and a spelling score is only one test."
+          },
+          {
+            "id": "tp3-4-4",
+            "text": "Tell your friend congratulations and ask how they like to study.",
+            "type": "seek_help",
+            "feedback": "Asking a friend how they study can give you ideas, and it turns a jealous feeling into something useful."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What is one small goal you could set after a result you did not expect?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "The class play parts are announced. Your friend Zoe gets the lead role you wanted, and you get a small part.",
+        "choices": [
+          {
+            "id": "tp4-1-1",
+            "text": "Notice that you feel let down and a little jealous, and also a bit happy for Zoe.",
+            "type": "responsible",
+            "feedback": "Mixed feelings are normal. You can be disappointed and still care about your friend."
+          },
+          {
+            "id": "tp4-1-2",
+            "text": "Tell yourself that it is not fair, and that the teacher picked Zoe for the wrong reasons.",
+            "type": "plausible_incomplete",
+            "feedback": "It is easy to feel that way. You do not know the teacher's reasons, though, and blaming them can keep you stuck."
+          },
+          {
+            "id": "tp4-1-3",
+            "text": "Tell yourself that you are fine and that it does not bother you at all.",
+            "type": "plausible_incomplete",
+            "feedback": "Saying you are fine can feel safer, but a feeling you do not look at tends to pop out later."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If you keep the feeling inside, what might happen?",
+        "choices": [
+          {
+            "id": "tp4-2-1",
+            "text": "You may pull away from Zoe, enjoy rehearsals less, and miss the fun of being in the play.",
+            "type": "responsible",
+            "feedback": "Yes. Feelings you hide can grow into distance between friends."
+          },
+          {
+            "id": "tp4-2-2",
+            "text": "It will probably fade on its own by the first rehearsal, so nothing else needs to happen.",
+            "type": "plausible_incomplete",
+            "feedback": "It might. If it does not, you may have already pulled away without meaning to."
+          },
+          {
+            "id": "tp4-2-3",
+            "text": "Zoe will notice you are upset and fix it by offering you a bigger part or a favor.",
+            "type": "plausible_incomplete",
+            "feedback": "Zoe cannot change the parts, and expecting her to fix it puts a lot on her. Telling her how you feel is fairer."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could handle this?",
+        "choices": [
+          {
+            "id": "tp4-3-1",
+            "text": "Say congratulations to Zoe, and then put your effort into making your own part great.",
+            "type": "responsible",
+            "feedback": "You protect the friendship and give yourself something good to work on."
+          },
+          {
+            "id": "tp4-3-2",
+            "text": "Tell Zoe you are upset, and ask her to turn down the lead so that you can have it.",
+            "type": "plausible_incomplete",
+            "feedback": "Being honest about feelings is good, but asking Zoe to give up her part is not fair to her."
+          },
+          {
+            "id": "tp4-3-3",
+            "text": "Keep your distance from Zoe at rehearsals until your feelings settle down.",
+            "type": "plausible_incomplete",
+            "feedback": "A little space can help for a day. A long distance can turn a hard feeling into a lasting gap."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp4-4-1",
+            "text": "Tell Zoe congratulations, and do your best with your own part in the play.",
+            "type": "responsible",
+            "feedback": "It shows kindness and gives you a clear job. Friends often remember who cheered for them."
+          },
+          {
+            "id": "tp4-4-2",
+            "text": "Tell a trusted friend how you feel first, then talk to Zoe when you feel calmer.",
+            "type": "multiple_defensible",
+            "feedback": "Talking it through first can help you say what you mean calmly. Just make sure you do get back to Zoe."
+          },
+          {
+            "id": "tp4-4-3",
+            "text": "Tell others that Zoe only got the lead because she is the teacher's favorite.",
+            "type": "unsafe",
+            "feedback": "Spreading that idea could hurt Zoe and make rehearsals tense for everyone, including you."
+          },
+          {
+            "id": "tp4-4-4",
+            "text": "Ask the teacher what you can work on to earn a bigger part next time.",
+            "type": "seek_help",
+            "feedback": "This turns a disappointment into a plan. Teachers usually like being asked."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What can you do with a feeling like jealousy so that it does not hurt a friendship?",
+        "freeReflection": true
+      }
+    ] }
+  ];
 
   fetch('/api/brain-games/me/progress').then((r) => {
     if (!r.ok) {

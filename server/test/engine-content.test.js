@@ -160,8 +160,8 @@ test('REAL GAMES: the right answer is no longer always first in any game that ha
 
 test('REAL GAMES: scenario step order is never shuffled', () => {
   for (const g of REAL.filter((x) => x.engineName === 'branchingScenario')) {
-    const authored = g.pack.steps.map((s) => s.key);
-    for (let seed = 1; seed <= 10; seed++) assert.deepEqual(prep(g.pack, g.engineName, seed).pack.steps.map((s) => s.key), authored, g.slug);
+    const authored = g.pack.steps.map((s) => s.key).join();  // joined: pack arrays come from a vm context, so compare as strings
+    for (let seed = 1; seed <= 10; seed++) assert.equal(prep(g.pack, g.engineName, seed).pack.steps.map((s) => s.key).join(), authored, g.slug);
   }
 });
 
@@ -185,3 +185,55 @@ test('SELF-CHECK PRIVACY: the engine never sends which answer a child picked', (
   calls.forEach((l) => assert.match(l, /\{ scenarioIndex: index, stage: 'self_check(_body)?' \}/, `self-check evidence must carry only the stage: ${l.trim()}`));
   assert.ok(!/opt\.id|option\.id/.test(src.slice(src.indexOf('function askSelfCheck'))), 'askSelfCheck must not read the chosen option id');
 });
+
+// Phase 3 stories for Choice Quest and Team Pick (approved outlines in docs/tune-your-brain/EXPLORE_STORY_OUTLINES.md).
+// Variant 0 is the original story, kept as written; variants 1-3 are new and must follow the writing rules.
+const CYCLE = ['recognize', 'impact', 'consider', 'choose', 'reflect'];
+for (const slug of ['choice-quest', 'team-pick']) {
+  test(`STORIES ${slug}: four stories, each a full five-step cycle`, () => {
+    const g = REAL.find((x) => x.slug === slug);
+    assert.equal(g.pack.variants.length, 4);
+    g.pack.variants.forEach((v, i) => assert.equal(v.steps.map((s) => s.key).join(), CYCLE.join(), `story ${i}`));
+    assert.equal(g.pack.variants[0].steps[0].prompt, g.pack.steps[0].prompt, 'story 0 is the original story');
+  });
+
+  test(`STORIES ${slug}: the three new stories follow the writing rules`, () => {
+    const g = REAL.find((x) => x.slug === slug);
+    g.pack.variants.slice(1).forEach((v, n) => {
+      const label = `${slug} story ${n + 1}`;
+      const ids = new Set();
+      v.steps.forEach((step, i) => {
+        const text = [step.prompt].concat((step.choices || []).flatMap((c) => [c.text, c.feedback])).join(' ');
+        assert.ok(!/[–—]/.test(text), `${label} step ${i + 1}: no dashes`);
+        if (step.key === 'reflect') { assert.equal(step.freeReflection, true); assert.ok(!step.choices); return; }
+        const types = step.choices.map((c) => c.type);
+        if (step.key === 'choose') {
+          assert.equal(types.slice().sort().join(), ['multiple_defensible', 'responsible', 'seek_help', 'unsafe'].join(), `${label}: final step needs one of each`);
+        } else {
+          assert.equal(step.choices.length, 3, `${label} step ${i + 1}: three options`);
+          assert.equal(types.filter((t) => t === 'responsible').length, 1);
+        }
+        step.choices.forEach((c) => {
+          assert.ok(c.feedback && c.feedback.length > 20, `${label}: every option explains its effect`);
+          assert.ok(!ids.has(c.id), `${label}: duplicate id ${c.id}`); ids.add(c.id);
+        });
+        const lens = step.choices.map((c) => c.text.length);
+        assert.ok(Math.max(...lens) / Math.min(...lens) <= 1.4, `${label} step ${i + 1}: option lengths too uneven`);
+      });
+      const judged = v.steps.filter((s) => s.choices);
+      const longest = judged.filter((s) => { const best = s.choices.find((c) => c.type === 'responsible'); return best.text.length === Math.max(...s.choices.map((c) => c.text.length)); }).length;
+      assert.ok(longest <= 2, `${label}: the best answer is the longest in ${longest} of 4 steps`);
+    });
+  });
+
+  test(`STORIES ${slug}: every story comes up across runs, in cycle order, with choices shuffled`, () => {
+    const g = REAL.find((x) => x.slug === slug);
+    const seen = new Set();
+    for (let seed = 1; seed <= 60; seed++) {
+      const r = prep(g.pack, g.engineName, seed);
+      seen.add(r.variant);
+      assert.equal(r.pack.steps.map((s) => s.key).join(), CYCLE.join());
+    }
+    assert.equal(seen.size, 4);
+  });
+}

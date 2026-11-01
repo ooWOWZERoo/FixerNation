@@ -61,7 +61,44 @@ Reference points used:
 ## Decisions I need for this wave
 
 1. ~~Feelings Detective: retag or add a self-reflection step?~~ **Settled: B, built; please review the wording** (in `brain-feelings-detective.html`, `selfCheck`).
-2. **Sound Safari:** is "Academically Prepared, supporting" acceptable under the every-game rule?
-3. **Mappings:** do you accept the NY SEL and PoG mappings in the table (direct and supporting as drafted)? These are drafts: I have not recorded them anywhere and they only become alignments when you verify them.
-4. **Audio-choice engine:** may I add optional per-choice feedback (shown after the answer) before Phase 3 content work, as the first change?
+2. ~~Sound Safari~~ **Decided 2026-10-31: keep as a reading-skills game.** It stays in the catalog under the Literacy domain with its loose New York link (PoG Academically Prepared, supporting) and is not counted as an SEL game. The audio blocker (the isolated /m/ sound) and the pool expansion still stand.
+3. ~~Mappings~~ **Accepted by the owner 2026-10-31** (all five Discover rows, as drafted). They are still not entered in the crosswalk: that needs the normal verify step on `admin-standards.html`, done when you want them public.
+4. ~~Audio-choice engine feedback~~ **Approved and built 2026-10-31** (`engine-audio-choice.js`): optional `feedback` on each choice and `explanation` on each round replace the generic "Correct!"/"Not quite", are read aloud for audio rounds, and stay on screen longer. No game uses it yet; writing the lines is Phase 3 content, for you to review.
 5. **Next wave:** Explore (Choice Quest, Team Pick, Reading Detective), then Challenge, then Advance, then the legacy six.
+
+## Wave 2: Explore (grades 3-5), three games
+
+| Game | 1 Complete | 2 Relevant (NY) | 3 Levelled | 4 Deep | 5 Replayable | Draft verdict |
+|---|---|---|---|---|---|---|
+| Choice Quest | Passes (text, no audio dependency) | Pass: SEL 3B and 2A direct, 2D supporting; PoG CT and EC supporting | Grades 3-5 fits | Best in the catalog: passes (b)(c)(e); fails (a) | Fails: one story | **Deepen (more stories): 3 new stories written, awaiting review** |
+| Team Pick | Passes | Pass: SEL 1A direct, 2C and 2D supporting; PoG RF direct | Grades 3-5 fits | Passes (b)(c)(e); fails (a) | Fails: one story | **Deepen (more stories): 3 new stories written, awaiting review** |
+| Reading Detective | Passes | PoG CT direct (it practises citing evidence); no SEL link beyond one item | Reads easier than Grades 3-5 (my judgement, not measured) | Fails (a)(b); passes (c) in part | Fails | **Deepen (harder passages, better wrong answers)** |
+
+### A finding that shuffling does not fix: the right answer is usually the longest
+I measured it. In the six scenario games (Choice Quest, Team Pick, Decision Point, Group Chat Meltdown, First Shift, The Post) the "responsible" choice is the longest or tied-longest option in **18 of 24** decision steps. In the three evidence games (Reading Detective, Headline, Critical Read) the correct answer is the longest option in **12 of 12** rounds. A child, or a quick reader, can pass by choosing the longest line. Phase 1 stopped the first-slot shortcut; this is the next one. The fix is in the writing, not the engine: wrong answers need the same length and detail as right ones, and some right answers should be short. I would make "balance the lengths" a rule when the pools are written, and add a check to the audit script so it can never come back unnoticed.
+
+### Choice Quest (`choice-quest`, empathy and responsible decisions)
+- **Content:** one story. A teammate, Mia, has not finished her part of a class diorama due tomorrow. Five steps in the Issues-to-Answers cycle: recognise, understand the impact, consider options, choose, reflect. Every choice has its own feedback that explains the effect, there are two defensible best moves at the final step, a "tell a trusted adult" option, and a private closing reflection.
+- **Strengths:** the strongest teaching design in the catalog. Wrong answers are explained ("a guess, find out first"), not just marked. It is the model the Discover games should grow toward.
+- **Relevance:** NY 3B (use decision-making skills to shape outcomes) and 2A (empathy: Mia may be stuck) direct; 2D (resolving conflict) supporting. PoG: Critical Thinker (weighs evidence before judging Mia) and Effective Communicator (the private check-in), both supporting.
+- **Problems:** a single story, so a second run is identical. Steps 1 to 3 offer two choices, and the wrong one is a strawman ("Mia is just lazy"), so the right one is guessable by tone and length. Only the final step has real alternatives.
+- **Fix:** three or four more stories using the `variants` support from Phase 1 (for example a friend left out of a game, a shared item broken, a rumour starting); give steps 1 to 3 three options each with a plausible wrong one.
+
+### Team Pick (`team-pick`, self-management)
+- **Content:** one story. In gym class your two best friends pick teams and you are chosen last. Same five-step cycle, with per-choice feedback and a private reflection ("what helps you calm down?").
+- **Relevance:** naming the feeling and choosing a response is NY 1A (direct); telling friends calmly without blame is 2C and 2D (supporting). PoG Reflective and Future Focused (reflects, keeps supportive relationships, makes responsible decisions) is a direct fit.
+- **Sensitivity (your call as SEL reviewer):** being picked last is a real experience for some children. The game handles it gently and offers a trusted-adult step, but this is the kind of story you should read once as the adult responsible for it.
+- **Problems:** one story; the "unsafe" choice ("never playing with them again") is melodramatic and the best answers are the longest.
+- **Fix:** more stories, a more believable wrong answer, balanced lengths.
+
+### Reading Detective (`reading-detective`, reading comprehension)
+- **Content:** four three-sentence passages (a lost lunchbox, a new student, chalk footprints, a picnic and clouds). The child picks an answer, then the sentence that proves it.
+- **Relevance:** the "show me where it says that" step is the Critical Thinker quality in New York's Portrait (analyzes information, weighs evidence), a direct fit, so it satisfies your every-game rule without any SEL stretch. One passage (Jordan, the new student) is a real social-emotional inference.
+- **Problems:** the passages are short and the sentences simple; they read closer to grade 2-3 than 3-5 (my judgement; I have not run a readability measure). Wrong answers are often silly ("School will be canceled", "chalk drawings are always messy"), so a child can eliminate them without reading. The correct answer is the longest in all four rounds.
+- **Fix:** longer passages (five to eight sentences) with some inference that needs two sentences, plausible wrong answers, a pool of 12 or more, and a measured reading level before each passage ships.
+
+### Decisions for this wave
+1. **Choice Quest and Team Pick:** may I draft three new stories for each (title and outline first, full text only after you approve the outline)?
+2. **Team Pick sensitivity:** are you comfortable with the "picked last" story as written?
+3. **Length balance:** may I add the length check to the audit script and make "balance the lengths" a standing rule for all new content?
+4. **Mappings for this wave:** accept as drafted?
