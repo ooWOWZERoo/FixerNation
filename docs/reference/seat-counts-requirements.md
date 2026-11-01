@@ -1,6 +1,6 @@
 # Seat counts: requirements
 
-Status: decision 1 confirmed by the owner 2026-10-31 (a deactivated teacher uses a seat). Decisions 2 to 4 were built as recommended (pending invitations use a seat, My Licenses says "assigned", district teacher count excludes admins). Built and tested 2026-10-31; not yet deployed. R1 ships without a batch form: add one when the district dashboard needs it. R4 also covers teacher self-registration (`routes/school-registration.js`). The invite and self-registration checks used to count admin-held seats; they no longer do.
+Status: decision 1 confirmed by the owner 2026-10-31 (a deactivated teacher uses a seat). Decisions 2 to 4 were built as recommended (pending invitations use a seat, My Licenses says "assigned", district teacher count excludes admins). Built, tested and deployed 2026-10-31 (Release 66). R1 ships without a batch form: add one when the district dashboard needs it. R4 also covers teacher self-registration (`routes/school-registration.js`). The invite and self-registration checks used to count admin-held seats; they no longer do.
 
 ## The problem
 

@@ -13,9 +13,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 ## Unreleased / Known pending work
 
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded, pushed, and — as of 2026-08-22 — confirmed configured and working end-to-end in Stripe's **test mode** (real e2e coverage, cart → Stripe Checkout → test card → webhook → paid/active license). **Still not live for real customer charges** — that requires swapping in the admin's real/live Stripe keys in place of the test ones. Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
-- **Seat counts now agree on every page** (coded and tested 2026-10-31, not yet deployed). A deactivated teacher still holds a seat, so the Roster and Licenses pages now count them as assigned like the Dashboard, Organization and Reports pages already did (they used to leave them out, so "assigned" and "available" did not add up). One shared function, `server/lib/seat-counts.js`, now does all the counting, including the "is there room to invite?" check and teacher self-registration; an admin who holds a seat no longer blocks an invitation. Licenses page gains an Inactive tile; Reports legend shows inactive; the school-license card on My Licenses says "assigned"; the district teacher count no longer includes admins. No alter script; needs a Node restart.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
+
+## Release 66 — 2026-10-31 — Seat counts agree on every page
+
+- **Fix: the numbers a school admin sees for seats now match everywhere.** A deactivated teacher still holds a seat, but the Roster and Licenses pages left them out of "assigned" while still subtracting them from "available", so the figures did not add up and the percentage differed from the Dashboard. All pages now show the same assigned, available and percent-used.
+- **One shared count** (`server/lib/seat-counts.js`) now feeds the Dashboard, Organization, Licenses and Reports pages, the "is there room to invite?" check, and teacher self-registration, so they cannot drift apart again.
+- **Fix: an admin holding a seat no longer blocks invitations.** The invite and self-registration checks counted admin-held seats while the pages did not, so a school could be told "No available licenses" while the screen showed a seat free.
+- Licenses page gains an Inactive tile; the Reports legend lists inactive teachers; the school-license card on My Licenses says "assigned"; the district teacher count no longer includes admins.
+- No alter script and no `npm install`; Node restart needed (done).
 
 ## Release 65 — 2026-10-31 — Six more help videos, and fixes to the Brain Games progress dashboard
 
