@@ -15,7 +15,9 @@ const db = new DatabaseSync(':memory:');
 db.exec(`
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, product_type TEXT NOT NULL DEFAULT 'group_license', school_domain TEXT,
   seat_count INTEGER NOT NULL DEFAULT 0, payment_status TEXT, license_status TEXT, contact_id INTEGER, purchased_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE license_seats (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER NOT NULL, invited_email TEXT, status TEXT NOT NULL DEFAULT 'pending');
+CREATE TABLE license_seats (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER NOT NULL, invited_email TEXT, status TEXT NOT NULL DEFAULT 'pending', registered_site_user_id INTEGER);
+CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, is_active INTEGER DEFAULT 1);
+CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, is_active INTEGER DEFAULT 1);
 CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER, purchase_id INTEGER, school_domain TEXT);
 `);
 const run = async (sql, params = []) => {

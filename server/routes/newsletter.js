@@ -7,6 +7,7 @@ const { createToken } = require('../lib/site-tokens');
 const { fireAutomation } = require('../lib/automations');
 const { attributePurchase } = require('../lib/affiliate-attribution');
 const { limiter, clientIp } = require('../lib/rate-limit');
+const { notAdminSeatClause } = require('../lib/seat-counts');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -416,10 +417,7 @@ async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
     `SELECT s.*, u.first_name, u.last_name FROM license_seats s
      LEFT JOIN site_users u ON u.id = s.registered_site_user_id
      WHERE s.purchase_id IN (?)
-     ${excludeAdminSeats ? `AND (s.registered_site_user_id IS NULL OR (
-       NOT EXISTS (SELECT 1 FROM school_license_admins sla WHERE sla.site_user_id = s.registered_site_user_id AND sla.is_active = 1)
-       AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = s.registered_site_user_id AND dla.is_active = 1)
-     ))` : ''}
+     ${excludeAdminSeats ? `AND ${notAdminSeatClause('s')}` : ''}
      ORDER BY s.id`,
     [ids]
   );

@@ -174,7 +174,7 @@ function renderUtilization(d) {
   const assigned = u.assigned || 0;
   const available = u.available || 0;
   const revoked = u.revoked || 0;
-  const pct = total > 0 ? Math.round(assigned / total * 100) : 0;
+  const pct = u.pctUsed || 0;
 
   // SVG donut (simple circle, radius 46, circumference ~289)
   const r = 46, circ = 2 * Math.PI * r;
@@ -192,7 +192,7 @@ function renderUtilization(d) {
         '<div class="donut-center"><span>' + pct + '%</span><span class="sub">used</span></div>' +
       '</div>' +
       '<div class="legend">' +
-        '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-accent);"></div><span><strong>' + assigned + '</strong> assigned (' + (u.registered || 0) + ' active, ' + (u.pending || 0) + ' pending)</span></div>' +
+        '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-accent);"></div><span><strong>' + assigned + '</strong> assigned (' + (u.registered || 0) + ' active, ' + (u.inactive || 0) + ' inactive, ' + (u.pending || 0) + ' pending)</span></div>' +
         '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-border);"></div><span><strong>' + available + '</strong> available</span></div>' +
         '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-danger);opacity:.5;"></div><span><strong>' + revoked + '</strong> revoked</span></div>' +
         '<div class="legend-row"><div class="legend-dot" style="background:var(--sa-text-soft);"></div><span><strong>' + total + '</strong> total licenses</span></div>' +

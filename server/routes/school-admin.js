@@ -17,6 +17,7 @@ const {
 } = require('../lib/mailer');
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
 const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
+const { getSeatCounts, notAdminSeatClause } = require('../lib/seat-counts');
 
 // school_audit_log is shared with the affiliate program (server/lib/audit.js).
 // Every purchase-scoped view below must exclude those rows explicitly — a
@@ -38,17 +39,7 @@ function makeToken() {
   return crypto.randomBytes(48).toString('hex');
 }
 
-// A seat is excluded from admin-facing seat counts/rosters/reports when its
-// registered site_user also holds an active school or district admin
-// assignment (anywhere, not just this school/district) — administrators
-// don't consume a license and shouldn't inflate "registered teacher" totals.
-// `alias` is the table name or alias the query's license_seats rows use.
-function notAdminSeatClause(alias) {
-  return `(${alias}.registered_site_user_id IS NULL OR (
-    NOT EXISTS (SELECT 1 FROM school_license_admins sla WHERE sla.site_user_id = ${alias}.registered_site_user_id AND sla.is_active = 1)
-    AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = ${alias}.registered_site_user_id AND dla.is_active = 1)
-  ))`;
-}
+// notAdminSeatClause and all seat arithmetic live in lib/seat-counts.js (imported above).
 
 // audit() moved to lib/audit.js (stage 3.5c) so the affiliate program could
 // reuse school_audit_log instead of duplicating it. Same function, same
@@ -108,17 +99,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
 
   if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
 
-  // Seat counts
-  const [[counts]] = await pool.query(
-    `SELECT
-       COUNT(*) AS total_seats_created,
-       SUM(CASE WHEN status = 'registered' THEN 1 ELSE 0 END) AS registered,
-       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
-       SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive,
-       SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) AS revoked
-     FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
-    [purchaseId]
-  );
+  const seatCounts = await getSeatCounts(purchaseId);
 
   // Invitation counts
   const [[invCounts]] = await pool.query(
@@ -155,11 +136,6 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
     [purchaseId, ...AFFILIATE_ENTITY_TYPES]
   );
 
-  const totalSeats = purchase.seat_count;
-  const assigned = Number(counts.registered || 0) + Number(counts.pending || 0) + Number(counts.inactive || 0);
-  const available = Math.max(0, totalSeats - assigned);
-  const pctUsed = totalSeats > 0 ? Math.round((assigned / totalSeats) * 100) : 0;
-
   res.json({
     purchase: {
       id: purchase.id,
@@ -171,15 +147,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
       paidAt: purchase.paid_at,
       purchasedAt: purchase.purchased_at,
     },
-    licenses: {
-      total: totalSeats,
-      assigned,
-      available,
-      registered: Number(counts.registered || 0),
-      pending: Number(counts.pending || 0),
-      revoked: Number(counts.revoked || 0),
-      pctUsed,
-    },
+    licenses: seatCounts,
     invitations: {
       pending: Number(invCounts.pending || 0),
       expired: Number(invCounts.expired || 0),
@@ -223,20 +191,7 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
 
   if (!row) return res.status(404).json({ error: 'Not found' });
 
-  // Seat utilization — same "assigned" definition (registered + pending +
-  // inactive seats) as the dashboard endpoint above, for a consistent number
-  // across both pages.
-  const [[counts]] = await pool.query(
-    `SELECT
-       SUM(CASE WHEN status = 'registered' THEN 1 ELSE 0 END) AS registered,
-       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
-       SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive
-     FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
-    [purchaseId]
-  );
-  const total = row.seat_count || 0;
-  const assigned = Number(counts.registered || 0) + Number(counts.pending || 0) + Number(counts.inactive || 0);
-  const pctUsed = total > 0 ? Math.round((assigned / total) * 100) : 0;
+  const seatCounts = await getSeatCounts(purchaseId);
 
   // Co-admins on this purchase -- excludes anyone who's also an active
   // district admin, same reasoning as district-admin.js's /schools list:
@@ -278,7 +233,7 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
       licenseStatus: row.license_status,
       notes: row.notes,
     },
-    utilization: { total, assigned, pctUsed },
+    utilization: seatCounts,
     coAdmins,
   });
 });
@@ -475,12 +430,8 @@ async function reviveSeatForInvitation(inv) {
   if (!inv.seat_id) return true;
   const [[seat]] = await pool.query('SELECT id, status FROM license_seats WHERE id = ?', [inv.seat_id]);
   if (!seat || seat.status !== 'revoked') return true;
-  const [[purchase]] = await pool.query('SELECT seat_count FROM purchases WHERE id = ?', [inv.purchase_id]);
-  const [[used]] = await pool.query(
-    `SELECT COUNT(*) AS n FROM license_seats WHERE purchase_id = ? AND status IN ('registered','inactive','pending') AND ${notAdminSeatClause('license_seats')}`,
-    [inv.purchase_id]
-  );
-  if (!purchase || Number(used.n) >= Number(purchase.seat_count)) return false;
+  const counts = await getSeatCounts(inv.purchase_id);
+  if (!counts.total || counts.available <= 0) return false;
   await pool.query(
     "UPDATE license_seats SET status = 'pending', revoked_at = NULL, revoked_by = NULL, revocation_reason = NULL WHERE id = ? AND status = 'revoked'",
     [seat.id]
@@ -921,18 +872,8 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
     [purchaseId]
   );
 
-  // Unfiltered counts (except for admins, excluded everywhere per license-total
-  // reporting rules) — always reflect the full pool regardless of search/filter
-  const [allSeats] = await pool.query(
-    `SELECT status FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
-    [purchaseId]
-  );
-  const total = purchase ? purchase.seat_count : 0;
-  const active   = allSeats.filter(s => s.status === 'registered').length;
-  const inactive = allSeats.filter(s => s.status === 'inactive').length;
-  const pending  = allSeats.filter(s => s.status === 'pending').length;
-  const revoked  = allSeats.filter(s => s.status === 'revoked').length;
-  const available = Math.max(0, total - active - inactive - pending);
+  // Unfiltered counts (admins excluded) — always reflect the full pool regardless of search/filter
+  const seatCounts = await getSeatCounts(purchaseId);
 
   // Filtered seat rows for display
   let where = `WHERE ls.purchase_id = ? AND ${notAdminSeatClause('ls')}`;
@@ -972,12 +913,7 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   const seatsWithAudiences = seats.map(s => ({ ...s, audiences: s.site_user_id ? (audByUser[s.site_user_id] || []) : [] }));
 
   res.json({
-    total,
-    active,
-    inactive,
-    pending,
-    revoked,
-    available,
+    ...seatCounts,
     paymentStatus: purchase ? purchase.payment_status : null,
     seats: seatsWithAudiences,
   });
@@ -1059,22 +995,9 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
   const type = req.query.type || 'teachers';
 
   if (type === 'utilization') {
-    const [[purchase]] = await pool.query('SELECT seat_count, payment_status FROM purchases WHERE id = ?', [purchaseId]);
-    const [[counts]] = await pool.query(
-      `SELECT SUM(status='registered') AS active, SUM(status='pending') AS pending,
-              SUM(status='inactive') AS inactive, SUM(status='revoked') AS revoked
-       FROM license_seats WHERE purchase_id = ? AND ${notAdminSeatClause('license_seats')}`,
-      [purchaseId]
-    );
-    const registered = Number(counts.active   || 0);
-    const pending    = Number(counts.pending  || 0);
-    const inactive   = Number(counts.inactive || 0);
-    const revoked    = Number(counts.revoked  || 0);
-    const total      = purchase ? purchase.seat_count : 0;
-    const assigned   = registered + pending + inactive;
-    const available  = Math.max(0, total - assigned);
+    const [[purchase]] = await pool.query('SELECT payment_status FROM purchases WHERE id = ?', [purchaseId]);
     return res.json({
-      utilization: { total, assigned, available, registered, pending, inactive, revoked },
+      utilization: await getSeatCounts(purchaseId),
       paymentStatus: purchase ? purchase.payment_status : null,
     });
   }

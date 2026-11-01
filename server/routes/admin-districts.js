@@ -16,6 +16,7 @@ const { createToken } = require('../lib/site-tokens');
 const { sendDistrictAdminWelcomeEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
 const { getSetting } = require('../lib/settings');
+const { notAdminSeatClause } = require('../lib/seat-counts');
 const crypto = require('crypto');
 const { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN } = require('../lib/sales-demo');
 
@@ -305,7 +306,7 @@ async function schoolLinkage(schoolId) {
      WHERE p.school_id = ? AND sla.is_active = 1`, [schoolId]);
   const [[tch]] = await pool.query(
     `SELECT COUNT(*) AS n FROM license_seats ls JOIN purchases p ON p.id = ls.purchase_id
-     WHERE p.school_id = ? AND ls.status = 'registered'`, [schoolId]);
+     WHERE p.school_id = ? AND ls.status = 'registered' AND ${notAdminSeatClause('ls')}`, [schoolId]);
   return { licenses: Number(lic.n), schoolAdmins: Number(adm.n), teachers: Number(tch.n) };
 }
 

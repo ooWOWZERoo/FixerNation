@@ -23,7 +23,7 @@ CREATE TABLE districts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, district_id INTEGER REFERENCES districts(id) ON DELETE SET NULL, display_name TEXT);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, product_type TEXT NOT NULL DEFAULT 'group_license', school_domain TEXT, school_id INTEGER);
 CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER NOT NULL, purchase_id INTEGER NOT NULL, is_active INTEGER NOT NULL DEFAULT 1);
-CREATE TABLE license_seats (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending');
+CREATE TABLE license_seats (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', registered_site_user_id INTEGER);
 CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER NOT NULL, district_id INTEGER NOT NULL, is_active INTEGER NOT NULL DEFAULT 1, notes TEXT, created_at TEXT);
 `);
 const pool = { async query(sql, params = []) {

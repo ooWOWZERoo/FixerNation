@@ -8,6 +8,7 @@
 const crypto = require('crypto');
 const pool = require('../db/pool');
 const { audit } = require('./audit');
+const { getSeatCounts } = require('./seat-counts');
 const { sendTeacherInvitationEmail } = require('./mailer');
 const { DEMO_SCHOOL_DOMAIN, demoInviteAllowed } = require('./sales-demo');
 
@@ -82,12 +83,10 @@ async function inviteTeacherToSeat({
   try {
     await conn.beginTransaction();
 
-    const [[locked]] = await conn.query('SELECT seat_count FROM purchases WHERE id = ? FOR UPDATE', [purchaseId]);
-    const [[{ used }]] = await conn.query(
-      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
-      [purchaseId]
-    );
-    if (used >= locked.seat_count) {
+    await conn.query('SELECT seat_count FROM purchases WHERE id = ? FOR UPDATE', [purchaseId]);
+    // Same count the admin pages show (lib/seat-counts.js): admins don't use a seat, released and unclaimed ones don't count.
+    const counts = await getSeatCounts(purchaseId, conn);
+    if (counts.available <= 0) {
       await conn.rollback();
       throw Object.assign(new Error('No available licenses. All seats are assigned or invited.'), { status: 422 });
     }

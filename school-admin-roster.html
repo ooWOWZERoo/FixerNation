@@ -188,14 +188,15 @@ async function loadRoster() {
 
     // Counts always reflect the full unfiltered pool
     document.getElementById('stTotal').textContent = d.total || 0;
-    document.getElementById('stActive').textContent = d.active || 0;
+    document.getElementById('stActive').textContent = d.registered || 0;
     document.getElementById('stInactive').textContent = d.inactive || 0;
     document.getElementById('stPending').textContent = d.pending || 0;
     document.getElementById('stAvail').textContent = d.available || 0;
     document.getElementById('stRevoked').textContent = d.revoked || 0;
 
-    var assigned = (d.active || 0) + (d.pending || 0);
-    var pct = d.total ? Math.round(assigned / d.total * 100) : 0;
+    // assigned and pctUsed come from the server (lib/seat-counts.js) so every page shows the same figures
+    var assigned = d.assigned || 0;
+    var pct = d.pctUsed || 0;
     var bar = document.getElementById('utilBar');
     bar.style.width = pct + '%';
     bar.className = 'sa-util-bar' + (pct >= 100 ? ' danger' : pct >= 75 ? ' warn' : '');

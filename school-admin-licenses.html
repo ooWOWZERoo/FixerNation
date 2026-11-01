@@ -46,6 +46,7 @@
       <div class="util-summary" id="utilSummary">
         <div class="util-card"><div class="lbl">Total Licenses</div><div class="val" id="sTotal">—</div></div>
         <div class="util-card"><div class="lbl">Active</div><div class="val" id="sActive" style="color:var(--sa-success);">—</div></div>
+        <div class="util-card"><div class="lbl">Inactive</div><div class="val" id="sInactive" style="color:var(--sa-warn);">—</div></div>
         <div class="util-card"><div class="lbl">Pending</div><div class="val" id="sPending" style="color:var(--sa-warn);">—</div></div>
         <div class="util-card"><div class="lbl">Available</div><div class="val" id="sAvail" style="color:var(--sa-accent);">—</div></div>
         <div class="util-card"><div class="lbl">Revoked</div><div class="val" id="sRevoked" style="color:var(--sa-danger);">—</div></div>
@@ -134,13 +135,15 @@ async function loadSeats() {
 
     // Summary stats
     document.getElementById('sTotal').textContent = d.total || 0;
-    document.getElementById('sActive').textContent = d.active || 0;
+    document.getElementById('sActive').textContent = d.registered || 0;
+    document.getElementById('sInactive').textContent = d.inactive || 0;
     document.getElementById('sPending').textContent = d.pending || 0;
     document.getElementById('sAvail').textContent = d.available || 0;
     document.getElementById('sRevoked').textContent = d.revoked || 0;
 
-    const assigned = (d.active || 0) + (d.pending || 0);
-    const pct = d.total ? Math.round(assigned / d.total * 100) : 0;
+    // assigned and pctUsed come from the server (lib/seat-counts.js) so every page shows the same figures
+    const assigned = d.assigned || 0;
+    const pct = d.pctUsed || 0;
     const bar = document.getElementById('utilBar');
     bar.style.width = pct + '%';
     bar.className = 'sa-util-bar' + (pct >= 100 ? ' danger' : pct >= 75 ? ' warn' : '');

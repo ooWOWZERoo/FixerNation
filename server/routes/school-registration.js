@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db/pool');
 const { sendContactFormEmail } = require('../lib/mailer');
 const { limiter } = require('../lib/rate-limit');
+const { getSeatCounts } = require('../lib/seat-counts');
 
 function domainFromEmail(email) {
   const at = (email || '').lastIndexOf('@');
@@ -69,20 +70,17 @@ router.post('/check', limiter({ name: 'schoolreg-check', windowMs: 3600000, max:
   try {
     await conn.beginTransaction();
 
-    const [[locked]] = await conn.query(
+    await conn.query(
       'SELECT seat_count FROM purchases WHERE id = ? FOR UPDATE',
       [schoolPurchase.id]
     );
 
-    const [[{ used }]] = await conn.query(
-      // Same rule as inviteTeacherToSeat: 'available' rows are unclaimed
-      // placeholders and 'revoked' ones are released, so neither is "used".
-      // Counting every row made a brand-new license look full.
-      "SELECT COUNT(*) AS used FROM license_seats WHERE purchase_id = ? AND status NOT IN ('revoked', 'available')",
-      [schoolPurchase.id]
-    );
+    // Same count as inviteTeacherToSeat and the admin pages (lib/seat-counts.js):
+    // 'available' rows are unclaimed placeholders and 'revoked' ones are released,
+    // so neither is "used". Counting every row made a brand-new license look full.
+    const counts = await getSeatCounts(schoolPurchase.id, conn);
 
-    if (used >= locked.seat_count) {
+    if (counts.available <= 0) {
       await conn.rollback();
       conn.release();
       return res.json({
@@ -90,8 +88,8 @@ router.post('/check', limiter({ name: 'schoolreg-check', windowMs: 3600000, max:
         reason: 'no_seats',
         purchaseId: schoolPurchase.id,
         adminContactId: schoolPurchase.contact_id,
-        totalSeats: locked.seat_count,
-        usedSeats: used,
+        totalSeats: counts.total,
+        usedSeats: counts.assigned,
       });
     }
 

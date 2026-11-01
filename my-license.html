@@ -164,9 +164,10 @@ function render(purchases) {
         <div class="card-sub">Purchased ${dateLabel} · ${status}</div>
       </div>`;
     }
-    const registeredCount = (p.seats || []).filter(s => s.status === 'registered').length;
+    // Same rule as the school admin pages: a deactivated teacher and a waiting invitation each still hold a seat.
+    const assignedCount = (p.seats || []).filter(s => ['registered', 'inactive', 'pending'].includes(s.status)).length;
     return `<div class="card">
-      <div class="card-title">🏫 ${p.licenseProductName || 'School License'} — ${registeredCount}/${p.seatCount} seats used</div>
+      <div class="card-title">🏫 ${p.licenseProductName || 'School License'} — ${assignedCount}/${p.seatCount} seats assigned</div>
       <div class="card-sub">Purchased ${dateLabel}${p.schoolDomain ? ' · ' + p.schoolDomain : ''}</div>
       <a href="school-admin-dashboard.html" style="display:inline-block;margin-top:12px;padding:9px 20px;border-radius:999px;background:var(--teal-dark);color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">Manage Seats →</a>
     </div>`;
