@@ -25,6 +25,87 @@
     return registry[name] || null;
   }
 
+  // ---- Per-run content preparation (Phase 1 of GAME_REVERIFICATION_PLAN.md) --------------------------------
+  // Authored content packs are fixed lists, so without this every run is identical and the right answer sits
+  // wherever the author put it. Before an engine mounts, the SDK builds a fresh copy of the pack for THIS run:
+  //   - choice order is shuffled in every round (opt out per pack or per round with shuffleChoices: false;
+  //     put pinLast: true on a choice such as "None of these" to keep it at the bottom);
+  //   - rounds are shuffled for the engines whose rounds are independent (audioChoice, evidenceHunt, scenarioChoice);
+  //     the sequential engines (branchingScenario steps, simulation events) keep their order;
+  //   - roundsPerRun: N draws N rounds at random from a larger pool, so a pool can be bigger than one run;
+  //   - variants: [{ steps | events | items | scenarios, ... }] picks one whole variant per run (a scenario
+  //     can have several versions); fields in the variant override the pack's own;
+  //   - shuffleRounds: true|false overrides the per-engine default above.
+  // Add ?seed=123 to a game's URL to replay the exact same run (for reviewers and tests). Learning events carry
+  // sourceIndex (the round's place in the authored list) and variant, so analytics still know which content ran.
+  // Engines are untouched: they receive an ordinary content pack.
+  const SHAPES = {
+    audioChoice: { list: 'items', arrays: ['choices'], ordered: false },
+    evidenceHunt: { list: 'items', arrays: ['choices'], ordered: false },
+    scenarioChoice: { list: 'scenarios', arrays: ['cues', 'feelings'], ordered: false },
+    branchingScenario: { list: 'steps', arrays: ['choices'], ordered: true },
+    simulation: { list: 'events', arrays: ['options'], ordered: true },
+  };
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function makeRandom() {
+    const m = typeof location !== 'undefined' && /[?&]seed=(\d+)/.exec(location.search || '');
+    return m ? mulberry32(Number(m[1])) : Math.random;
+  }
+
+  function shuffled(arr, rng) {
+    const out = arr.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = out[i]; out[i] = out[j]; out[j] = tmp;
+    }
+    return out;
+  }
+
+  // Shuffles a choice list but keeps any pinLast choice at the end, in its original order.
+  function shuffledChoices(list, rng) {
+    const pinned = list.filter((c) => c && c.pinLast);
+    return shuffled(list.filter((c) => !(c && c.pinLast)), rng).concat(pinned);
+  }
+
+  function prepareContentPack(pack, engineName, rng) {
+    const shape = SHAPES[engineName];
+    if (!shape || !pack) return { pack, order: null, variant: null };
+    let src = pack, variant = null;
+    if (Array.isArray(pack.variants) && pack.variants.length) {
+      variant = Math.floor(rng() * pack.variants.length);
+      src = Object.assign({}, pack, pack.variants[variant]);
+    }
+    const list = Array.isArray(src[shape.list]) ? src[shape.list] : [];
+    const shuffleRounds = src.shuffleRounds !== undefined ? !!src.shuffleRounds : !shape.ordered;
+    let order = list.map((_, i) => i);
+    if (Number.isInteger(src.roundsPerRun) && src.roundsPerRun > 0 && src.roundsPerRun < order.length) {
+      order = shuffled(order, rng).slice(0, src.roundsPerRun);
+      if (!shuffleRounds) order.sort((a, b) => a - b);
+    } else if (shuffleRounds) {
+      order = shuffled(order, rng);
+    }
+    const doShuffleChoices = src.shuffleChoices !== false;
+    const rounds = order.map((i) => {
+      const round = Object.assign({}, list[i]);
+      if (doShuffleChoices && round.shuffleChoices !== false) {
+        shape.arrays.forEach((key) => { if (Array.isArray(round[key])) round[key] = shuffledChoices(round[key], rng); });
+      }
+      return round;
+    });
+    return { pack: Object.assign({}, src, { [shape.list]: rounds }), order, variant };
+  }
+
   async function logEvent(eventType, metadata) {
     try {
       await fetch('/api/learning-events', {
@@ -46,6 +127,8 @@
     if (engineVersion && engine.version !== engineVersion) {
       console.warn(`[FnEngineSDK] requested v${engineVersion} but registered engine is v${engine.version} — using registered version.`);
     }
+
+    const prepared = prepareContentPack(contentPack, engineName, makeRandom());
 
     FnGameShell.setBand(band);
     container.innerHTML = '';
@@ -71,10 +154,15 @@
 
     return new Promise((resolve) => {
       engine.mount(playArea, {
-        contentPack, band,
-        onEvidence: (eventType, payload) => logEvent(eventType, {
-          engineName, sessionToken: sessionMeta.sessionToken, activityId, ...payload,
-        }),
+        contentPack: prepared.pack, band,
+        onEvidence: (eventType, payload) => {
+          const extra = {};
+          const data = payload || {};
+          const pos = [data.index, data.scenarioIndex, data.eventIndex].find((v) => Number.isInteger(v));
+          if (prepared.order && pos !== undefined && prepared.order[pos] !== undefined) extra.sourceIndex = prepared.order[pos];
+          if (prepared.variant !== null) extra.variant = prepared.variant;
+          return logEvent(eventType, { engineName, sessionToken: sessionMeta.sessionToken, activityId, ...data, ...extra });
+        },
         // scoreInfo is optional — engines that don't have a single
         // meaningful numeric score (Branching Scenario, Simulation) just
         // omit it; completion/duration still gets reported either way.
@@ -109,5 +197,7 @@
     });
   }
 
-  window.FnEngineSDK = { registerEngine, getEngine, run };
+  const api = { registerEngine, getEngine, run, prepareContentPack, mulberry32 };
+  if (typeof window !== 'undefined') window.FnEngineSDK = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; // for server/test
 })();
