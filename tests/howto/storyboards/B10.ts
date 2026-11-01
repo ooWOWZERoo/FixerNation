@@ -38,7 +38,7 @@ const board: Storyboard = {
       run: (p) => p.waitForTimeout(1500),
     },
     {
-      say: "If you paid by card, this clears right away. If you pay by purchase order, there are two steps on our side. We mark the invoice paid, and we record that the signed purchase order has arrived. Until both are done, invitations stay locked. Email us and we'll check where yours stands.",
+      say: "If you paid by card, this clears right away. If you pay by purchase order, invitations open as soon as we record that your signed purchase order has arrived. You don't have to wait for payment. Until then, the banner says we're waiting for your purchase order. Email us and we'll check where yours stands.",
       run: async (p) => {
         await glideClick(p, '.sa-modal-overlay:visible button:has-text("Cancel")');
         await glideTo(p, "#paymentBanner");

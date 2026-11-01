@@ -29,7 +29,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=21"></script>
+  <script src="school-admin-nav.js?v=22"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -187,7 +187,7 @@ async function loadInvitations() {
   try {
     const d = await saFetch(url);
     totalPages = d.pages || 1;
-    if (d.paymentStatus && d.paymentStatus !== 'paid') document.getElementById('paymentBanner').style.display = 'flex';
+    saApplyLicenseBanner(d);
     renderInvitations(d.invitations || []);
     const pg = document.getElementById('pagination');
     if (totalPages > 1) {

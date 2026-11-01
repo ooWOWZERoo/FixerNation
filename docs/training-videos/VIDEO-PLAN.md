@@ -101,7 +101,7 @@ Setting up a district (create it, link schools, invite the district admin) and t
 Known issues found but not fixed, so scripts should avoid them:
 - Seat counts differ between the dashboard, roster and licenses pages. (Each counts a slightly different set of seat states; needs a decision on which count is the one to show.)
 - The district dashboard is a stub with one button, and ignores the district picker.
-- A PO school needs two FNE staff actions (Mark as Paid, then PO Received) before teachers can be invited.
+- ~~A PO school needs two FNE staff actions (Mark as Paid, then PO Received) before teachers can be invited.~~ Fixed 2026-11-01: PO Received alone opens invitations (`lib/license-access.js`); Mark as Paid only records payment. Video B10's narration changed to match and needs re-recording.
 - The Organization page's co-administrator list includes the signed-in administrator.
 
 Fixed 2026-10-30 (Release 64):

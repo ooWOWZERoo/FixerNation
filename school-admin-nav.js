@@ -175,6 +175,27 @@
   toastContainer.id = 'sa-toast-container';
   document.body.appendChild(toastContainer);
 
+  // The "invitations are closed" banner, the same on every page that has one. The server decides (lib/license-access.js):
+  // a purchase-order school is open once its PO has been received; anyone else needs the invoice paid.
+  window.saApplyLicenseBanner = function (info) {
+    var el = document.getElementById('paymentBanner');
+    if (!el) return;
+    if (!info || info.licenseOpen !== false || info.licenseNotOpenReason === 'no_license') { el.style.display = 'none'; return; }
+    var po = info.licenseNotOpenReason === 'po_not_received';
+    var title = po ? 'Waiting for your purchase order' : 'License payment pending';
+    var text = po
+      ? 'We are waiting to receive your purchase order. Teachers can be invited as soon as we have it. Contact Fixer Nation Education if you have questions.'
+      : "Your school's group license is not yet active. Teachers cannot be invited or register until the associated invoice is marked as paid. Contact Fixer Nation Education for assistance.";
+    el.textContent = '';
+    var icon = document.createElement('span'); icon.className = 'icon'; icon.textContent = '\u26A0\uFE0F';
+    var box = document.createElement('div');
+    var strong = document.createElement('strong'); strong.textContent = title;
+    var para = document.createElement('p'); para.textContent = text;
+    box.appendChild(strong); box.appendChild(para);
+    el.appendChild(icon); el.appendChild(box);
+    el.style.display = 'flex';
+  };
+
   window.saToast = function (msg, type) {
     var t = document.createElement('div');
     t.className = 'sa-toast sa-toast-' + (type || 'info');

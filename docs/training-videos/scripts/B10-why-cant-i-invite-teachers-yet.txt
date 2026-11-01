@@ -4,7 +4,7 @@
 [SAY] You've signed in, you press Invite Teacher, and it won't let you send. This video explains the three most common reasons, and what to do about each.
 [SCREEN] The payment pending banner.
 [SAY] The most common reason is a banner that says License payment pending. Invitations can't be sent until your school's invoice is marked paid.
-[SAY] If you paid by card, that happens right away. If you pay by purchase order, there are two steps on our side. We mark the invoice paid, and we record that the signed purchase order has arrived. Until both are done, invitations stay locked. Email us and we'll check where yours stands.
+[SAY] If you paid by card, that happens right away. If you pay by purchase order, invitations open as soon as we record that your signed purchase order has arrived. You don't have to wait for payment. Until then, the banner says we're waiting for your purchase order. Email us and we'll check where yours stands.
 [SCREEN] The dashboard seat warning.
 [SAY] The second reason is that your seats are full. Pending invitations count as used seats, so if you've invited as many people as you have seats, there's no room for more. Revoke an invitation you don't need, or email us to add seats.
 [SCREEN] A trial license's Branding or Organization message.

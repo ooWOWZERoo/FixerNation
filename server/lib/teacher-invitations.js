@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const pool = require('../db/pool');
 const { audit } = require('./audit');
 const { getSeatCounts } = require('./seat-counts');
+const { licenseAccess, NOT_OPEN_MESSAGES } = require('./license-access');
 const { sendTeacherInvitationEmail } = require('./mailer');
 const { DEMO_SCHOOL_DOMAIN, demoInviteAllowed } = require('./sales-demo');
 
@@ -43,13 +44,14 @@ async function inviteTeacherToSeat({
   }
   const normalEmail = email.trim().toLowerCase();
 
-  // Payment gate — license allocation must be active (invoice paid)
+  // License gate (lib/license-access.js): paid, or a purchase order that has been received
   const [[purchase]] = await pool.query(
-    'SELECT id, seat_count, payment_status, school_domain FROM purchases WHERE id = ?',
+    'SELECT id, seat_count, payment_status, payment_method, license_status, school_domain FROM purchases WHERE id = ?',
     [purchaseId]
   );
-  if (!purchase || purchase.payment_status !== 'paid') {
-    throw Object.assign(new Error('School license is not yet active. The associated invoice must be marked as paid before invitations can be sent.'), { status: 422 });
+  const access = licenseAccess(purchase);
+  if (!access.open) {
+    throw Object.assign(new Error(NOT_OPEN_MESSAGES[access.reason]), { status: 422 });
   }
 
   // The demo school is fake. Inviting a REAL teacher into it would email them about a

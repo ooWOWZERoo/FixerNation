@@ -29,7 +29,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=21"></script>
+  <script src="school-admin-nav.js?v=22"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -250,7 +250,7 @@ function renderOrg(d) {
       const perm = a.permission_level === 'read_only' ? '<span class="sa-badge" style="margin-left:auto;">Read Only</span>'
         : a.permission_level === 'secondary' ? '<span class="sa-badge sa-badge-success" style="margin-left:auto;">Secondary</span>'
         : '<span class="sa-badge sa-badge-success" style="margin-left:auto;">Primary</span>';
-      return '<div class="co-admin-row"><div class="co-admin-av">' + init + '</div><div><div style="font-weight:600;">' + esc(a.first_name + ' ' + a.last_name) + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(a.email) + '</div></div>' + perm + '</div>';
+      return '<div class="co-admin-row"><div class="co-admin-av">' + init + '</div><div><div style="font-weight:600;">' + esc(a.first_name + ' ' + a.last_name) + (Number(a.is_you) ? ' <span style="font-weight:400;color:var(--sa-text-soft);">(you)</span>' : '') + '</div><div style="font-size:12px;color:var(--sa-text-soft);">' + esc(a.email) + '</div></div>' + perm + '</div>';
     }).join('');
   }
 }

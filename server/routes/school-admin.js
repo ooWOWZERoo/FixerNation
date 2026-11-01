@@ -18,6 +18,13 @@ const {
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
 const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
 const { getSeatCounts, notAdminSeatClause } = require('../lib/seat-counts');
+const { licenseAccess, NOT_OPEN_MESSAGES } = require('../lib/license-access');
+
+// What the six school-admin pages need to show the "invitations are closed" banner: one answer from one rule.
+function licenseBanner(purchase) {
+  const a = licenseAccess(purchase);
+  return { licenseOpen: a.open, licenseNotOpenReason: a.reason };
+}
 
 // school_audit_log is shared with the affiliate program (server/lib/audit.js).
 // Every purchase-scoped view below must exclude those rows explicitly — a
@@ -87,7 +94,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
   }
 
   const [[purchase]] = await pool.query(
-    `SELECT p.id, p.school_domain, p.seat_count, p.payment_status, p.payment_method,
+    `SELECT p.id, p.school_domain, p.seat_count, p.payment_status, p.payment_method, p.license_status,
             p.purchased_at, p.invoice_id, inv.status AS invoice_status, inv.paid_at,
             lp.name AS plan_name, lp.footer_note AS plan_term
      FROM purchases p
@@ -143,6 +150,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
       planName: purchase.plan_name || 'Group License',
       planTerm: purchase.plan_term,
       paymentStatus: purchase.payment_status,
+      ...licenseBanner(purchase),
       invoiceStatus: purchase.invoice_status,
       paidAt: purchase.paid_at,
       purchasedAt: purchase.purchased_at,
@@ -193,20 +201,23 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
 
   const seatCounts = await getSeatCounts(purchaseId);
 
-  // Co-admins on this purchase -- excludes anyone who's also an active
-  // district admin, same reasoning as district-admin.js's /schools list:
-  // that's a different tier of authority, not a school-level co-admin
-  // worth reporting here even if they technically also hold the assignment.
+  // Co-admins on this purchase. The admin who is looking at the page stays in the list but is
+  // flagged is_you, so the page can label that row "(you)" instead of leaving a reader to wonder
+  // whether they are their own co-administrator. Excludes anyone who's also an active district
+  // admin, same reasoning as district-admin.js's /schools list: that's a different tier of
+  // authority, not a school-level co-admin worth reporting here even if they technically also
+  // hold the assignment.
   const [coAdmins] = await pool.query(
     `SELECT sla.id, sla.permission_level, sla.is_active, sla.created_at,
-            su.first_name, su.last_name, su.email
+            su.first_name, su.last_name, su.email,
+            (sla.site_user_id = ?) AS is_you
      FROM school_license_admins sla
      JOIN site_users su ON su.id = sla.site_user_id
      WHERE sla.purchase_id = ?
        AND sla.is_active = 1
        AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)
      ORDER BY sla.created_at`,
-    [purchaseId]
+    [req.schoolAdmin.siteUserId, purchaseId]
   );
 
   res.json({
@@ -308,7 +319,7 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
 
   // paymentStatus drives the "not yet active" banner on the Invitations page;
   // pages drives its pager (without it the page only ever showed the first 25).
-  const [[purchaseRow]] = await pool.query('SELECT payment_status FROM purchases WHERE id = ?', [purchaseId]);
+  const [[purchaseRow]] = await pool.query('SELECT payment_status, payment_method, license_status FROM purchases WHERE id = ?', [purchaseId]);
 
   res.json({
     invitations: rows,
@@ -317,6 +328,7 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
     limit,
     pages: Math.max(1, Math.ceil(Number(total) / limit)),
     paymentStatus: purchaseRow ? purchaseRow.payment_status : null,
+    ...licenseBanner(purchaseRow),
   });
 });
 
@@ -365,11 +377,12 @@ router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
   }
 
   const [[purchase]] = await pool.query(
-    'SELECT id, seat_count, payment_status, school_domain FROM purchases WHERE id = ?',
+    'SELECT id, seat_count, payment_status, payment_method, license_status, school_domain FROM purchases WHERE id = ?',
     [purchaseId]
   );
-  if (!purchase || purchase.payment_status !== 'paid') {
-    return res.status(422).json({ error: 'School license is not yet active.' });
+  const access = licenseAccess(purchase);
+  if (!access.open) {
+    return res.status(422).json({ error: NOT_OPEN_MESSAGES[access.reason] });
   }
 
   const results = { sent: [], skipped: [], errors: [] };
@@ -658,8 +671,8 @@ router.get('/teachers', requireSchoolAdmin, async (req, res) => {
   audRows.forEach(r => { (audByUser[r.site_user_id] = audByUser[r.site_user_id] || []).push(r.audience); });
   const teachers = rows.map(r => ({ ...r, audiences: audByUser[r.site_user_id] || [] }));
 
-  const [[purchaseRow]] = await pool.query('SELECT payment_status FROM purchases WHERE id = ?', [purchaseId]);
-  res.json({ teachers, total: Number(total), page, limit, paymentStatus: purchaseRow ? purchaseRow.payment_status : null });
+  const [[purchaseRow]] = await pool.query('SELECT payment_status, payment_method, license_status FROM purchases WHERE id = ?', [purchaseId]);
+  res.json({ teachers, total: Number(total), page, limit, paymentStatus: purchaseRow ? purchaseRow.payment_status : null, ...licenseBanner(purchaseRow) });
 });
 
 // PUT /api/school-admin/teachers/:siteUserId/audiences
@@ -868,7 +881,7 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   const statusValues = statusParam ? statusParam.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   const [[purchase]] = await pool.query(
-    'SELECT id, seat_count, payment_status, school_domain FROM purchases WHERE id = ?',
+    'SELECT id, seat_count, payment_status, payment_method, license_status, school_domain FROM purchases WHERE id = ?',
     [purchaseId]
   );
 
@@ -915,6 +928,7 @@ router.get('/licenses', requireSchoolAdmin, async (req, res) => {
   res.json({
     ...seatCounts,
     paymentStatus: purchase ? purchase.payment_status : null,
+    ...licenseBanner(purchase),
     seats: seatsWithAudiences,
   });
 });

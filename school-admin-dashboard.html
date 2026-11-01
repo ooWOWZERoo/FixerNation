@@ -24,7 +24,7 @@
 <div class="sa-shell">
   <aside class="sa-sidebar"></aside>
   <script src="school-branding.js?v=1"></script>
-  <script src="school-admin-nav.js?v=21"></script>
+  <script src="school-admin-nav.js?v=22"></script>
 
   <div class="sa-main">
     <div class="sa-topbar">
@@ -110,12 +110,10 @@ function renderDashboard(d) {
   var u = d.licenses;
 
   // Payment gate banner
-  if (d.purchase && d.purchase.paymentStatus !== 'paid') {
-    document.getElementById('paymentBanner').style.display = 'flex';
-  }
+  saApplyLicenseBanner(d.purchase);
 
   // Utilization alerts — link to support email instead of removed org page
-  if (d.purchase && d.purchase.paymentStatus === 'paid') {
+  if (d.purchase && d.purchase.licenseOpen) {
     var pct = u.pctUsed;
     var alertHtml = '';
     if (pct >= 100) {

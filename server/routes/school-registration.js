@@ -4,6 +4,7 @@ const pool = require('../db/pool');
 const { sendContactFormEmail } = require('../lib/mailer');
 const { limiter } = require('../lib/rate-limit');
 const { getSeatCounts } = require('../lib/seat-counts');
+const { licenseOpenSql } = require('../lib/license-access');
 
 function domainFromEmail(email) {
   const at = (email || '').lastIndexOf('@');
@@ -133,13 +134,13 @@ router.post('/notify-admin', limiter({ name: 'schoolreg-notify', windowMs: 36000
   const domain = domainFromEmail(email);
   if (!domain) return res.status(400).json({ error: 'Invalid email address' });
 
-  // Find the paid school license (most recent)
+  // Find the open school license (most recent): paid, or a purchase order that has been received
   const [[schoolPurchase]] = await pool.query(
     `SELECT id, contact_id
      FROM purchases
      WHERE product_type = 'group_license'
        AND school_domain = ?
-       AND payment_status = 'paid'
+       AND ${licenseOpenSql('purchases')}
      ORDER BY purchased_at DESC
      LIMIT 1`,
     [domain]
@@ -182,7 +183,7 @@ router.post('/notify-admin', limiter({ name: 'schoolreg-notify', windowMs: 36000
         'Teacher Email': email,
         'School Domain': domain,
         'Issue': reasonLabel,
-        'Action Needed': 'Log in to the admin dashboard and either add available seats or mark the invoice as paid to allow teacher registration.',
+        'Action Needed': 'Log in to the admin dashboard and either add available seats, or make sure the license is open (the invoice is paid, or for a purchase order, that we have received it) to allow teacher registration.',
       },
       replyTo: email,
     });

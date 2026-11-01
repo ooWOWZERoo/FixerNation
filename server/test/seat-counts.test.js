@@ -143,3 +143,15 @@ test('EVERY PAGE AGREES: dashboard, org, licenses and reports return identical s
     }
   }
 });
+
+test('ORG PAGE: the co-administrator list flags the signed-in administrator as "you" and lists the others', async () => {
+  const id = license(10, { registered: 1 });
+  // the stub session is site user 1
+  db.prepare(`INSERT INTO site_users (id, first_name, last_name, email) VALUES (1, 'Sam', 'Carter', 'sam@example.com')`).run();
+  db.prepare(`INSERT INTO site_users (id, first_name, last_name, email) VALUES (2, 'Robin', 'Hale', 'robin@example.com')`).run();
+  db.prepare(`INSERT INTO school_license_admins (purchase_id, site_user_id, permission_level, is_active) VALUES (?, 1, 'primary', 1)`).run(id);
+  db.prepare(`INSERT INTO school_license_admins (purchase_id, site_user_id, permission_level, is_active) VALUES (?, 2, 'read_only', 1)`).run(id);
+  const org = await get(`/api/school-admin/org?purchaseId=${id}`);
+  const byEmail = Object.fromEntries(org.coAdmins.map((a) => [a.email, Number(a.is_you)]));
+  assert.deepEqual(byEmail, { 'sam@example.com': 1, 'robin@example.com': 0 });
+});
