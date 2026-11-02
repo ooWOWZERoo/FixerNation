@@ -52,7 +52,7 @@
       pages: ['school-admin-org.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412334/fne/help/B9.mp4', captions: '/help-assets/B9.vtt', poster: '/help-assets/B9.jpg' },
     { id: 'B10', group: 'school-admins', topic: 'Your portal', title: 'Why can\'t I invite teachers yet?',
       summary: 'What a pending payment, a purchase order or a trial license means for sending invitations.',
-      pages: ['school-admin-invitations.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391623/fne/help/B10.mp4', captions: '/help-assets/B10.vtt', poster: '/help-assets/B10.jpg' },
+      pages: ['school-admin-invitations.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793580512/fne/help/B10.mp4', captions: '/help-assets/B10.vtt', poster: '/help-assets/B10.jpg' },
     { id: 'B2', group: 'school-admins', topic: 'Teachers and seats', title: 'Invite a teacher',
       summary: 'Add one teacher to your school and see what they receive.',
       pages: ['school-admin-invitations.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391625/fne/help/B2.mp4', captions: '/help-assets/B2.vtt', poster: '/help-assets/B2.jpg' },
