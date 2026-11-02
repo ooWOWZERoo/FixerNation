@@ -193,7 +193,7 @@ Written 2026-11-01 (draft; every verdict needs the owner's confirmation). Same f
 - **Relevance:** they practise working memory, sequencing, arithmetic fluency, processing speed and inhibition. None has an honest New York SEL benchmark. Stroop Challenge (resisting the automatic answer) and Memory Match are the nearest to a self-management skill, but New York has no separate self-management benchmark, so a link would be a stretch. The only fair Portrait link is Academically Prepared (supporting) for the maths games.
 - **Verdict:** keep them as they are and label them as skills practice, the same decision you made for Sound Safari, so they sit in the Executive function and Maths filters and are not counted toward SEL or Portrait coverage. They are not part of the alignment gap; the gap is in the story and simulation games. The remaining legacy work (a band and a depth check per game) is low priority.
 
-### Decisions for this wave
+### Decisions for this wave (all four **approved by the owner 2026-11-01**)
 1. **Advance topics:** the Post moves off group chats and the Advance band gets new situations from the lists above (jobs, money, civic life). Agree?
 2. **Money Matters:** treat as a rework with real interest arithmetic, review document first?
 3. **Critical Read:** same outline-first plan as Headline?

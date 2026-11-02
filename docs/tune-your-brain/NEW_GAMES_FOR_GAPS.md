@@ -72,7 +72,11 @@ After all six, the projection in `SEL_POG_COVERAGE.md` shows 2B and 2C with two 
 
 Each game is roughly the size of the Choice Quest or Headline work: an outline of the pool, then your approval, then the full text, tests, a browser play-through and a review document.
 
-## What I need from you
+## Owner decision 2026-11-01
+
+All six concepts approved. Start with **Say It Another Way** (`SAY_IT_ANOTHER_WAY_OUTLINE.md`) and **Fix-It Workshop** (`FIX_IT_WORKSHOP_OUTLINE.md`); their outlines are written and await your edits. The other four wait their turn.
+
+## What I needed from you (answered)
 
 1. Approve, change or drop each of the six concepts (by number).
 2. Confirm the order, or tell me which to start with.
