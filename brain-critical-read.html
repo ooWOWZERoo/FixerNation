@@ -32,82 +32,395 @@
 <script src="engine-sdk.js?v=2"></script>
 <script src="engine-evidence-hunt.js"></script>
 <script>
-  // Critical Read - catalog scaling slice (Advance band). Same Evidence
-  // Hunt engine as Headline/Reading Detective, but content targets
-  // distinguishing fact/inference/opinion/uncertainty and source
-  // reasoning per roadmap section 14.4 ("does not reduce credibility to
-  // a simplistic single signal").
+  // Critical Read - grades 9-12 (Advance band). Same Evidence Hunt engine as
+  // Headline: read a short passage with a source, a claim and a gap, pick the
+  // conclusion it best supports, then pick the sentence that proves it.
+  // Content is deliberately non-partisan and uses fictional people, companies
+  // and products, per roadmap section 14.3's acceptance rule ("avoids partisan
+  // persuasion and presents sources/context fairly"). Design and approved
+  // outline: docs/tune-your-brain/READING_GAMES_DESIGN.md and
+  // CRITICAL_READ_OUTLINE.md. A pool of 12 items; 6 are drawn per run and the
+  // conclusions are shuffled.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'advance';
 
   const contentPack = {
-    title: 'Critical Read',
-    items: [
+    "title": "Critical Read",
+    "roundsPerRun": 6,
+    "items": [
       {
-        passage: [
-          'A recent school survey found that 62% of students reported getting less than 7 hours of sleep on school nights.',
-          'Many students said they stay up late finishing homework or using their phones.',
-          'Some researchers argue that later school start times could help, though the school has not proposed any schedule change.',
+        "passage": [
+          "VoltFizz, an energy-drink company, paid for a study of how its product affects test performance.",
+          "Sixty volunteer students each chose whether to drink a can of VoltFizz before taking the same short quiz.",
+          "Students who drank it averaged 8 percent higher scores, and the researchers did not check whether those students were stronger test takers to begin with.",
+          "The company wrote the summary that was shared with the public.",
+          "No independent researchers reviewed the results."
         ],
-        question: 'Which statement is a factual claim actually supported by the passage, rather than an opinion or an unstated assumption?',
-        choices: [
-          { id: 'survey-fact', text: '62% of surveyed students reported sleeping less than 7 hours on school nights.' },
-          { id: 'schedule-fact', text: 'The school is planning to change its start time this year.' },
-          { id: 'phones-cause', text: 'Phones are the main reason students are not getting enough sleep.' },
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "hedged-funder",
+            "text": "Volunteers who drank VoltFizz scored 8 percent higher, but who chose to drink and who paid for it limit the result."
+          },
+          {
+            "id": "naive",
+            "text": "VoltFizz raises quiz scores by 8 percent, so students who drink one before a test can expect to do noticeably better."
+          },
+          {
+            "id": "cynical",
+            "text": "The study is worthless, because a company that sells the drink paid for it and wrote the summary that was shared."
+          },
+          {
+            "id": "scope",
+            "text": "Energy drinks help all students perform better on tests, according to this research on 60 student volunteers."
+          }
         ],
-        correctChoiceId: 'survey-fact',
-        correctEvidenceIndex: 0,
-        explanation: 'The 62% figure is the one number the passage actually reports. The school has not proposed a schedule change, and the passage only says "many students said," not that phones are definitely the main reason.',
+        "correctChoiceId": "hedged-funder",
+        "correctEvidenceIndex": 2,
+        "explanation": "The 8 percent gain is real for the 60 volunteers, but they chose whether to drink and no one checked whether they were stronger students already. The company also paid for the study and wrote the summary. That limits the result without making it worthless, and it does not stretch to every student."
       },
       {
-        passage: [
-          'A local news article claimed that a new community center "has been a total failure since it opened."',
-          'City records show the center hosted 40 events in its first three months, more than any other public building in town.',
-          'The article did not mention attendance numbers or resident feedback.',
+        "passage": [
+          "A school counselor, Ms. Duarte, compared the records of 300 students to see whether library use matters.",
+          "Students who visited the library at least weekly had an average GPA of 3.4.",
+          "Students who visited less often averaged 2.9.",
+          "The weekly visitors were also more likely to belong to a club and to have a quiet place to study at home.",
+          "Ms. Duarte plans to propose longer library hours next semester."
         ],
-        question: 'What is the most reasonable conclusion about the article\'s claim?',
-        choices: [
-          { id: 'unsupported', text: 'The claim is not well supported. The article gives no evidence like attendance or feedback to back up "total failure."' },
-          { id: 'well-supported', text: 'The claim is well supported, since city records confirm the center exists.' },
-          { id: 'proven-false', text: 'The claim is completely proven false, since the center hosted the most events in town.' },
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "plain-correlation",
+            "text": "Weekly library visitors earn higher grades, but the records do not show that the visits themselves caused the difference."
+          },
+          {
+            "id": "cause",
+            "text": "Visiting the library every week raises a student's grade point average by about half a point, the records show."
+          },
+          {
+            "id": "cynical",
+            "text": "Library visits and grades have nothing to do with each other, since the records show many other differences too."
+          },
+          {
+            "id": "number",
+            "text": "Students who visit the library weekly earn grade point averages that are 3.4 points higher than other students."
+          }
         ],
-        correctChoiceId: 'unsupported',
-        correctEvidenceIndex: 1,
-        explanation: 'Hosting the most events does not automatically disprove "failure," since attendance and feedback are unknown, but the article also gives no real evidence for its own claim. The honest answer is "not well supported," not proven true or false either way.',
+        "correctChoiceId": "plain-correlation",
+        "correctEvidenceIndex": 3,
+        "explanation": "The visitors do have higher grades, and the gap is half a point, not 3.4. But they were also more likely to be in clubs and to have a quiet place to study at home, so the library may not be the reason. The records show that two things go together, which is different from showing that one causes the other."
       },
       {
-        passage: [
-          'An online post claims a new snack bar "cures fatigue instantly."',
-          'The post is written by the company that sells the snack bar.',
-          'No independent studies are cited or linked in the post.',
+        "passage": [
+          "A bike shop owner stopped 50 customers on their way out of his shop and asked whether the town needs more bike lanes.",
+          "Forty of those customers answered that they would like to see more bike lanes.",
+          "He posted the result in his window beneath the words \"Our town wants more bike lanes.\"",
+          "The town has about 12,000 residents spread across several neighborhoods.",
+          "The poll took place on a single Saturday morning in the spring."
         ],
-        question: 'What should a careful reader notice about this source?',
-        choices: [
-          { id: 'conflict', text: 'The source has a financial interest in the claim, and no independent evidence is provided.' },
-          { id: 'trustworthy', text: 'The claim is trustworthy because it appears in a public post online.' },
-          { id: 'irrelevant', text: 'Who wrote the post does not matter as long as the claim sounds believable.' },
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "plain-sample",
+            "text": "Forty of 50 bike-shop customers want more bike lanes, which does not show what the whole town wants."
+          },
+          {
+            "id": "scope",
+            "text": "Most residents of the town want more bike lanes, according to the poll that the owner took at his shop."
+          },
+          {
+            "id": "number",
+            "text": "Forty percent of the customers who were surveyed said that the town needs more bike lanes than it has now."
+          },
+          {
+            "id": "missing",
+            "text": "The poll was taken outside a bike shop on a single Saturday in the spring, with only 50 people asked."
+          }
         ],
-        correctChoiceId: 'conflict',
-        correctEvidenceIndex: 1,
-        explanation: 'A company promoting its own product, with no independent evidence cited, is exactly the kind of source that deserves a second look before believing an extreme claim like "instantly."',
+        "correctChoiceId": "plain-sample",
+        "correctEvidenceIndex": 0,
+        "explanation": "Forty of 50 is 80 percent of the people asked, but they were all leaving a bike shop, so they are not a fair sample of 12,000 residents. The 40 percent answer misreads the numbers. Where and when the poll happened is true, but it is not the main point."
       },
       {
-        passage: [
-          'A columnist wrote that a proposed park renovation is "a waste of taxpayer money."',
-          'The city\'s budget document lists the renovation cost at $200,000, funded by a grant that cannot be used for anything else.',
-          'The columnist\'s article did not mention the grant restriction.',
+        "passage": [
+          "Westfield High announced that suspensions dropped 50 percent this year.",
+          "Last year the school suspended 4 students, and this year it suspended 2.",
+          "Westfield enrolls about 1,100 students.",
+          "The principal credited a new advisory program that began in September.",
+          "The school has not shared any other discipline data."
         ],
-        question: 'What is the most accurate way to describe the columnist\'s statement?',
-        choices: [
-          { id: 'opinion-missing-context', text: 'It is an opinion that leaves out relevant context, like the grant restriction.' },
-          { id: 'objective-fact', text: 'It is an objective fact, since the dollar amount is correct.' },
-          { id: 'fully-informed', text: 'It is a fully informed judgment, since it is based on the real budget figure.' },
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "plain-counts",
+            "text": "Suspensions at Westfield fell from 4 students to 2, a large percentage drop in a very small number of students."
+          },
+          {
+            "id": "naive",
+            "text": "Westfield cut its discipline problems in half this year thanks to its new advisory program for students."
+          },
+          {
+            "id": "cynical",
+            "text": "The drop is meaningless, because a school that announces good news is probably hiding the real picture."
+          },
+          {
+            "id": "cause",
+            "text": "The advisory program is the reason that fewer Westfield students were suspended this year than last."
+          }
         ],
-        correctChoiceId: 'opinion-missing-context',
-        correctEvidenceIndex: 2,
-        explanation: 'A dollar figure can be accurate while the judgment built on top of it, "a waste," is still an opinion, especially one missing a key fact: this money could not have gone anywhere else anyway.',
+        "correctChoiceId": "plain-counts",
+        "correctEvidenceIndex": 1,
+        "explanation": "Going from 4 suspensions to 2 is a 50 percent drop, but it is only two students out of about 1,100. The principal's credit to the advisory program is a claim, and the passage gives no evidence for it. Calling the drop meaningless goes too far, because it is still a real change."
       },
-    ],
+      {
+        "passage": [
+          "A local news website published the headline \"Mayor Calls City Parks a Waste of Money.\"",
+          "In the article, Mayor Alvarez is quoted as saying, \"Parks are a waste of money when we refuse to maintain them.\"",
+          "She pointed out that the city has reduced park maintenance every year for the past ten years.",
+          "She then asked the city council to restore the maintenance budget.",
+          "The council will vote on the budget next month."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "bold-quote",
+            "text": "The mayor said unmaintained parks waste money and asked the council to restore their maintenance budget."
+          },
+          {
+            "id": "naive",
+            "text": "The mayor wants the city to spend less money on its parks, since she thinks that they are not worth it."
+          },
+          {
+            "id": "missing",
+            "text": "The mayor says that the city has cut park maintenance every year for ten years, and the council votes soon."
+          },
+          {
+            "id": "scope",
+            "text": "The mayor opposes city spending on public places in general, not only on the parks that need repairs."
+          }
+        ],
+        "correctChoiceId": "bold-quote",
+        "correctEvidenceIndex": 1,
+        "explanation": "The headline is shorter than what she said. Her full sentence says parks waste money when they are not maintained, and she then asked the council to restore the budget, so the headline gives the wrong idea. The ten years of cuts is true, but it is background, not her conclusion."
+      },
+      {
+        "passage": [
+          "StudyBuddy, a homework app, says that its users score 12 points higher on exams.",
+          "The company compared 500 users with 500 students who did not use the app.",
+          "The users signed up on their own, while the other students were picked from the same school.",
+          "Most of the users were already enrolled in honors classes.",
+          "The company did not compare any scores from before students joined."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "hedged-selection",
+            "text": "StudyBuddy users score higher, but they may have been stronger students before they signed up."
+          },
+          {
+            "id": "number",
+            "text": "StudyBuddy users score 12 percent higher on exams than students who do not use the app at their school."
+          },
+          {
+            "id": "cynical",
+            "text": "Study apps never help students, so the company's comparison of users and non-users should be ignored."
+          },
+          {
+            "id": "scope",
+            "text": "Any student who uses StudyBuddy can expect to gain about 12 points on an exam after signing up."
+          }
+        ],
+        "correctChoiceId": "hedged-selection",
+        "correctEvidenceIndex": 3,
+        "explanation": "The users did score 12 points higher, and it is 12 points, not 12 percent. But the users chose the app, and most were already in honors classes, so they may have been strong students before they joined. Without scores from before, the passage cannot say what the app did, and it cannot promise the same gain to anyone else."
+      },
+      {
+        "passage": [
+          "The average household income in the Riverside neighborhood rose from $50,000 to $60,000.",
+          "A technology company opened an office there last year.",
+          "A city report found that most households that lived in Riverside before the office opened earn about the same as they did before.",
+          "A few new residents who work at the office earn more than $100,000 a year.",
+          "The report did not say how many new households moved in."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "plain-average",
+            "text": "Riverside's average income rose mainly because a few high earners moved in, and most households stayed about the same."
+          },
+          {
+            "id": "cause",
+            "text": "The new technology office raised the pay of the families who already lived in Riverside, which lifted the average."
+          },
+          {
+            "id": "number",
+            "text": "Household incomes in Riverside rose by $60,000 after the technology company opened its office in the neighborhood."
+          },
+          {
+            "id": "missing",
+            "text": "Riverside's average household income rose from $50,000 to $60,000 after the technology office opened there."
+          }
+        ],
+        "correctChoiceId": "plain-average",
+        "correctEvidenceIndex": 2,
+        "explanation": "An average can rise when a few people earn a lot more, even if most people's pay does not change. The city report says most longtime households earn about the same. So the office did not raise their pay, the rise is $10,000 and not $60,000, and the new average alone leaves out the key fact."
+      },
+      {
+        "passage": [
+          "On a popular podcast, Dr. Kessler said that the supplement NeuroMax is \"completely safe.\"",
+          "Dr. Kessler is a physicist whose research is in astronomy.",
+          "The company that makes NeuroMax sponsors the podcast.",
+          "The episode did not mention any clinical trials of the supplement.",
+          "Listeners were offered a discount code at the end of the show."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "bold-expert",
+            "text": "A physicist's opinion is not evidence that NeuroMax is safe, because only testing could show that."
+          },
+          {
+            "id": "naive",
+            "text": "NeuroMax is completely safe, since a doctor of science said so on a podcast that many people listen to."
+          },
+          {
+            "id": "cynical",
+            "text": "Scientists should never comment on products outside their own research, because their opinions mislead listeners."
+          },
+          {
+            "id": "cause",
+            "text": "NeuroMax must be unsafe, because the company that makes it pays for the podcast where it was praised."
+          }
+        ],
+        "correctChoiceId": "bold-expert",
+        "correctEvidenceIndex": 1,
+        "explanation": "Dr. Kessler's field is astronomy, so his opinion about a supplement is not expert evidence, and no trials are mentioned. That does not make NeuroMax unsafe, and the sponsor does not prove it is. It simply means the passage gives no real support for the word \"safe.\""
+      },
+      {
+        "passage": [
+          "A tutoring program announced that 90 percent of its students passed the state exam.",
+          "Of the 140 students who signed up, 100 finished the program.",
+          "The announcement counted only those 100 students, and 90 of them passed.",
+          "The other 40 students left before finishing, and the program does not report how they did.",
+          "The program is free and open to any student in the district."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "hedged-denominator",
+            "text": "Ninety of the 100 finishers passed, but 40 who started are not counted, so the full pass rate is unknown."
+          },
+          {
+            "id": "naive",
+            "text": "Ninety percent of the students who join the tutoring program go on to pass the state exam, the program says."
+          },
+          {
+            "id": "number",
+            "text": "Ninety of the 140 students who signed up for the program passed the state exam when it was over."
+          },
+          {
+            "id": "missing",
+            "text": "The program says that 100 students finished the tutoring sessions, and that is the number that matters."
+          }
+        ],
+        "correctChoiceId": "hedged-denominator",
+        "correctEvidenceIndex": 2,
+        "explanation": "The 90 percent counts only the 100 students who finished. If all 140 who started are counted, the rate could be as low as about 64 percent, and the program does not say how the 40 who left did. The passage supports a pass rate for finishers, not for everyone who joins."
+      },
+      {
+        "passage": [
+          "A consumer group paid an independent laboratory to test the caffeine in a popular drink.",
+          "The lab bought 30 bottles from three different stores.",
+          "The label on each bottle says that it contains 20 milligrams of caffeine.",
+          "Every bottle measured between 19 and 21 milligrams.",
+          "The lab posted its full method and results online for anyone to check."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "bold-tested",
+            "text": "Independent testing found the labeled caffeine amount accurate in all 30 bottles that were tested."
+          },
+          {
+            "id": "source",
+            "text": "The results cannot be trusted, because the consumer group that paid for the testing may want a certain answer."
+          },
+          {
+            "id": "scope",
+            "text": "Every drink sold in every store is labeled accurately, based on what the lab found in its 30 bottles."
+          },
+          {
+            "id": "missing",
+            "text": "The label on each bottle says that the drink contains 20 milligrams of caffeine, as the bottles show."
+          }
+        ],
+        "correctChoiceId": "bold-tested",
+        "correctEvidenceIndex": 3,
+        "explanation": "Every one of the 30 bottles measured within 1 milligram of the label, and the lab shared its method so anyone can check it. A consumer group paying for a test of someone else's product is not a conflict of interest the way a company paying for its own study is. The result covers these 30 bottles, not every drink in every store."
+      },
+      {
+        "passage": [
+          "Over the past three years, Lakeview has averaged about the same number of burglaries each month.",
+          "This week the police chief announced that burglaries fell 30 percent this month.",
+          "The previous month included a holiday week in which burglaries spiked.",
+          "The chief credited a new neighborhood watch group that started in the spring.",
+          "The watch group has about 40 volunteers."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "hedged-timeframe",
+            "text": "Burglaries fell from a spike month, but over three years the monthly numbers have stayed about the same."
+          },
+          {
+            "id": "naive",
+            "text": "Lakeview's new neighborhood watch group has cut burglaries by 30 percent, according to the police chief."
+          },
+          {
+            "id": "cynical",
+            "text": "The police chief made up the numbers so that the new neighborhood watch group would look like it is working."
+          },
+          {
+            "id": "number",
+            "text": "Burglaries in Lakeview are down 30 percent when compared with the monthly numbers over the past three years."
+          }
+        ],
+        "correctChoiceId": "hedged-timeframe",
+        "correctEvidenceIndex": 0,
+        "explanation": "The 30 percent drop is measured against a month with a holiday spike, so it can look bigger than it is. Over three years the monthly average has not changed. Nothing says the chief made up the numbers, and nothing shows the watch group caused the drop."
+      },
+      {
+        "passage": [
+          "No scientific studies of the new dye in Zingo Snacks have been completed.",
+          "The company introduced the dye to its snacks last month.",
+          "The company says that the dye \"has not been linked to any health problems.\"",
+          "A company spokesperson described the dye as looking \"completely natural.\"",
+          "Zingo Snacks are sold in grocery stores across the region."
+        ],
+        "question": "Which conclusion does the passage best support?",
+        "choices": [
+          {
+            "id": "plain-no-evidence",
+            "text": "No harm has been shown, but the passage says that the dye has never been studied."
+          },
+          {
+            "id": "naive",
+            "text": "The dye in Zingo Snacks has been proven safe for people of every age, since no one has reported a problem."
+          },
+          {
+            "id": "scope",
+            "text": "Everything that the company adds to its snacks is safe to eat, based on what it says about this one dye."
+          },
+          {
+            "id": "missing",
+            "text": "The company added the new dye to its snacks about a month ago and sells them across the region."
+          }
+        ],
+        "correctChoiceId": "plain-no-evidence",
+        "correctEvidenceIndex": 0,
+        "explanation": "\"Not linked to any problems\" is not the same as \"shown to be safe.\" With no studies done, no one has looked. The dye is not proven safe, the claim cannot stretch to everything the company makes, and the month it was added is true but is not the main point."
+      }
+    ]
   };
 
   fetch('/api/brain-games/me/progress').then((r) => {

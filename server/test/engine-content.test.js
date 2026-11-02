@@ -554,3 +554,50 @@ test('MONEY MATTERS: simulated runs never go below zero, the card is never over-
   }
   assert.equal(seen.size, 5, `endings reached: ${[...seen].join(' | ')}`);
 });
+
+// Critical Read (reworked 2026-11-01, approved outline: docs/tune-your-brain/CRITICAL_READ_OUTLINE.md): a 12-item pool, 6 drawn per run.
+test('CRITICAL READ: twelve items, six per run, five sentences, four conclusions each', () => {
+  const g = REAL.find((x) => x.slug === 'critical-read');
+  assert.equal(g.pack.items.length, 12);
+  assert.equal(g.pack.roundsPerRun, 6);
+  g.pack.items.forEach((it, i) => {
+    assert.equal(it.choices.length, 4, `item ${i + 1}: one right conclusion and three wrong ones`);
+    assert.equal(new Set(it.choices.map((c) => c.id)).size, 4, `item ${i + 1}: unique ids`);
+    assert.ok(it.choices.some((c) => c.id === it.correctChoiceId), `item ${i + 1}: right answer present`);
+    assert.ok(it.passage.length >= 5 && it.passage.length <= 7, `item ${i + 1}: 5 to 7 sentences`);
+    assert.ok(it.correctEvidenceIndex >= 0 && it.correctEvidenceIndex < it.passage.length, `item ${i + 1}: evidence index in range`);
+    assert.ok(it.explanation && it.explanation.length > 80, `item ${i + 1}: explanation`);
+    assert.ok(!/[–—]/.test(it.passage.join(' ') + it.question + it.choices.map((c) => c.text).join(' ') + it.explanation), `item ${i + 1}: no dashes`);
+  });
+});
+
+test('CRITICAL READ: conclusion lengths are balanced, the right one is not usually the longest, the proving sentence is spread 3/3/3/3', () => {
+  const g = REAL.find((x) => x.slug === 'critical-read');
+  let longest = 0;
+  const count = [0, 0, 0, 0, 0, 0, 0];
+  g.pack.items.forEach((it, i) => {
+    const lens = it.choices.map((c) => c.text.length);
+    assert.ok(Math.max(...lens) / Math.min(...lens) <= 1.4, `item ${i + 1}: lengths ${lens.join('/')} are more than 1.4 times apart`);
+    if (it.choices.find((c) => c.id === it.correctChoiceId).text.length === Math.max(...lens)) longest++;
+    count[it.correctEvidenceIndex]++;
+  });
+  assert.ok(longest <= 4, `the right conclusion is the longest in ${longest} of 12 items`);
+  assert.equal(count.slice(0, 4).join(), '3,3,3,3');
+});
+
+test('CRITICAL READ: passages read at about grades 6 to 13, and runs differ', () => {
+  const g = REAL.find((x) => x.slug === 'critical-read');
+  g.pack.items.forEach((it, i) => {
+    const grade = fkGrade([...it.passage]);
+    assert.ok(grade >= 6 && grade <= 13, `item ${i + 1}: Flesch-Kincaid grade ${grade.toFixed(1)}`);
+  });
+  const sets = new Set(), slots = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 200; seed++) {
+    const out = prep(g.pack, 'evidenceHunt', seed).pack;
+    assert.equal(out.items.length, 6);
+    sets.add(out.items.map((it) => it.passage[0].slice(0, 14)).sort().join('|'));
+    out.items.forEach((it) => { slots[it.choices.findIndex((c) => c.id === it.correctChoiceId)]++; });
+  }
+  assert.ok(sets.size > 20, `only ${sets.size} different sets of items in 200 runs`);
+  slots.forEach((n, s) => assert.ok(n / 1200 > 0.18 && n / 1200 < 0.32, `slot ${s} holds ${Math.round(n / 12)}% of right conclusions`));
+});

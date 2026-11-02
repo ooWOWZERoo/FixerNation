@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 77 — 2026-11-01 — Critical Read rewritten
+
+- **Critical Read has a pool of 12 passages** (6 drawn per run, conclusions shuffled), each with a source, a claim and a gap, replacing four short ones. The right conclusion is sometimes firm, sometimes plain, sometimes hedged, and the proving sentence moves across the first four positions, so picking the longest or the most careful answer no longer works.
+- **Twelve reading skills**, one per passage: who paid for a study, correlation and cause, sample size, counts and percents, a headline against its quote, selection effects, averages, an expert outside the field, a missing denominator, independent testing, a time frame, and "no evidence of harm" versus "evidence of no harm".
+- Page and tests only; no server or engine changes.
+
 ## Release 76 — 2026-11-01 — Money Matters reworked
 
 - **Money Matters now has real money math.** A pool of 14 events for a young adult in a first apartment, 7 drawn per run, so no two plays match. The numbers can all be worked out: pay after withholding, a card at 24 percent a year, what a minimum payment really does, a better savings rate, insurance deductibles, a phone switching fee.
