@@ -515,3 +515,42 @@ test('SAME AND DIFFERENT: a wrong answer in a same or different round is true of
     });
   });
 });
+
+// Money Matters (reworked 2026-11-01): a 14-event pool, 7 drawn per run, an affordability floor, three counters (Checking,
+// Savings, Card Debt) and endings that use all of them. The card can never be paid below zero.
+test('MONEY MATTERS: fourteen events, each with a choice that needs no money, so a run can never get stuck', () => {
+  const g = REAL.find((x) => x.slug === 'money-matters');
+  assert.equal(g.pack.events.length, 14);
+  assert.equal(g.pack.roundsPerRun, 7);
+  assert.equal(g.pack.floor, 0);
+  g.pack.events.forEach((e, i) => {
+    assert.ok(e.options.length >= 2, `event ${i + 1}: at least two choices`);
+    assert.ok(e.options.some((o) => Object.values(o.delta || {}).every((v) => v >= 0)), `event ${i + 1}: at least one choice needs no money`);
+    assert.ok(!/[–—]/.test(e.prompt + e.options.map((o) => o.label).join(' ')), `event ${i + 1}: no dashes`);
+  });
+  const reductions = g.pack.events.map((e) => Math.max(0, ...e.options.map((o) => -(o.delta['Card Debt'] || 0))));
+  assert.ok(reductions.reduce((a, b) => a + b, 0) < g.pack.startingResources['Card Debt'], 'the pay-down choices add up to less than the starting card balance');
+});
+
+test('MONEY MATTERS: simulated runs never go below zero, the card is never over-paid, and every one of the five endings can be reached', () => {
+  const g = REAL.find((x) => x.slug === 'money-matters');
+  const pack = g.pack;
+  let seedN = 1;
+  const seen = new Set();
+  for (let run = 0; run < 4000; run++) {
+    const prepared = prep(pack, 'simulation', seedN++).pack;
+    assert.equal(prepared.events.length, 7);
+    const res = { ...pack.startingResources };
+    const pick = sdk.mulberry32(run + 91);
+    for (const e of prepared.events) {
+      const ok = e.options.filter((o) => Object.entries(o.delta || {}).every(([k, v]) => (res[k] || 0) + v >= 0));
+      assert.ok(ok.length >= 1, 'a free choice is always available');
+      e.options.forEach((o) => assert.ok((res['Card Debt'] || 0) + (o.delta['Card Debt'] || 0) >= 0, 'a choice is never greyed out for lack of card balance, only for lack of money'));
+      const o = ok[Math.floor(pick() * ok.length)];
+      Object.entries(o.delta || {}).forEach(([k, v]) => { res[k] = (res[k] || 0) + v; });
+      assert.ok(Object.values(res).every((v) => v >= 0), 'no counter goes negative');
+    }
+    seen.add(pack.debrief(res).split('.')[0]);
+  }
+  assert.equal(seen.size, 5, `endings reached: ${[...seen].join(' | ')}`);
+});

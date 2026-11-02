@@ -195,6 +195,6 @@ Written 2026-11-01 (draft; every verdict needs the owner's confirmation). Same f
 
 ### Decisions for this wave (all four **approved by the owner 2026-11-01**)
 1. **Advance topics:** the Post moves off group chats and the Advance band gets new situations from the lists above (jobs, money, civic life). Agree?
-2. **Money Matters:** treat as a rework with real interest arithmetic, review document first?
+2. **Money Matters:** treat as a rework with real interest arithmetic, review document first? (Rework built 2026-11-01; see `MONEY_MATTERS_FOR_REVIEW.md`.)
 3. **Critical Read:** same outline-first plan as Headline?
 4. **The six older games:** keep, label as skills practice, and leave out of SEL and Portrait coverage?

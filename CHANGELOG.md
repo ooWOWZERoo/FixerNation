@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 76 — 2026-11-01 — Money Matters reworked
+
+- **Money Matters now has real money math.** A pool of 14 events for a young adult in a first apartment, 7 drawn per run, so no two plays match. The numbers can all be worked out: pay after withholding, a card at 24 percent a year, what a minimum payment really does, a better savings rate, insurance deductibles, a phone switching fee.
+- **Three counters instead of made-up points.** Checking, Savings and Card Debt replace the old "Credit Score" number, which moved by arbitrary amounts.
+- **A real limit, and a way out.** A choice Jordan can't afford shows greyed out, and every event keeps one choice that needs no money, so nobody gets stuck.
+- **Five kind endings** that use all three counters. None treats a lower balance as a failure.
+- Page and tests only; no server or engine changes.
+
 ## Release 75 — 2026-11-01 — Two more new brain games: Strength Spotter and Same and Different
 
 - **New game: Strength Spotter** (grades 3 to 5). The child reads a short story, notices what really happens, then picks every strength that could fit (nothing is scored). A private check about their own strengths follows each story and is never saved or sent. 12 stories, 5 per run. It is the first game for New York SEL 1B (identity and agency).

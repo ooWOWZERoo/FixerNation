@@ -32,62 +32,399 @@
 <script src="engine-sdk.js?v=2"></script>
 <script src="engine-simulation.js?v=2"></script>
 <script>
-  // Money Matters — Tune Your Brain, Phase 5 pilot slice (Advance band).
-  // Budgeting/interest/credit/tradeoffs via a fictional persona, per
-  // roadmap §14.4. Per the acceptance rule, more than one financial path
-  // must read as a real success — the debrief() below never treats a
-  // lower cash balance or higher debt as a moral failing, only as a
-  // tradeoff, and never collects or references any real family finances.
+  // Money Matters (Advance band, grades 9-12). Reworked 2026-11-01 (docs/tune-your-brain/GAME_SCORECARD.md, Advance wave):
+  // a pool of 14 events with 7 drawn per run, real percent and interest arithmetic (take-home pay, a card at 24 percent a
+  // year, a savings rate, deductibles, switching fees), needs versus wants, an affordability rule, and an ending that uses
+  // all three counters, with several good endings. `floor: 0` means a choice you cannot afford is shown but cannot be
+  // picked. Every event has a choice that needs no money, so a run can never get stuck, and the card can never be paid
+  // below zero (the pay-down choices add up to less than the starting balance). Per the acceptance rule, more than one
+  // financial path reads as a real success, and the debrief never treats a lower balance as a moral failing. Fictional
+  // person and amounts; not financial advice; no real family finances are collected or referenced.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'advance';
 
   const contentPack = {
     title: 'Money Matters',
-    goal: 'Jordan just moved into a first apartment. Help Jordan get through the next few months without losing sight of the bigger financial picture.',
-    startingResources: { Cash: 800, Savings: 200, 'Credit Score': 650 },
+    goal: 'Jordan just moved into a first apartment, with $900 in checking, $400 in savings and a $500 card balance. Over the next few months, build savings to at least $800, keep at least $300 in checking, and bring the card balance down to $400 or less.',
+    startingResources: { Checking: 900, Savings: 400, 'Card Debt': 500 },
+    floor: 0,
+    roundsPerRun: 7,
     events: [
       {
-        prompt: 'Jordan’s car needs a $300 repair to keep getting to work. Pay from savings, or put it on a credit card that charges interest?',
-        options: [
-          { id: 'pay-savings', label: 'Pay the $300 from savings.', delta: { Savings: -300 } },
-          { id: 'pay-credit', label: 'Put the $300 on a credit card (adds interest later).', delta: { 'Credit Score': -10 } },
-        ],
+        "prompt": "Jordan's part-time paycheck is $750 before taxes. About 20 percent is withheld ($150), so $600 arrives. A common rule saves 20 percent of take-home pay, which is $120. What does Jordan do?",
+        "options": [
+          {
+            "id": "pay-rule",
+            "label": "Save $120 (20 percent) and keep $480 in checking.",
+            "delta": {
+              "Checking": 480,
+              "Savings": 120
+            }
+          },
+          {
+            "id": "pay-half",
+            "label": "Save half, $300, and keep $300 in checking.",
+            "delta": {
+              "Checking": 300,
+              "Savings": 300
+            }
+          },
+          {
+            "id": "pay-all",
+            "label": "Keep all $600 in checking.",
+            "delta": {
+              "Checking": 600
+            }
+          }
+        ]
       },
       {
-        prompt: 'Jordan is paying $45/month for three streaming subscriptions but only really watches one. Cancel the two unused ones, or keep all three "just in case"?',
-        options: [
-          { id: 'cancel-two', label: 'Cancel the two unused subscriptions, save $30/month.', delta: { Cash: 30 } },
-          { id: 'keep-all', label: 'Keep all three for now.', delta: {} },
-        ],
+        "prompt": "Jordan's car needs a $300 repair to keep getting to work. The card charges 24 percent a year. Paid off over 12 months, that adds about $40, so the repair would cost $340 in all.",
+        "options": [
+          {
+            "id": "car-check",
+            "label": "Pay $300 from checking.",
+            "delta": {
+              "Checking": -300
+            }
+          },
+          {
+            "id": "car-save",
+            "label": "Pay $300 from savings.",
+            "delta": {
+              "Savings": -300
+            }
+          },
+          {
+            "id": "car-card",
+            "label": "Put it on the card and pay it off over 12 months ($340 in all).",
+            "delta": {
+              "Card Debt": 340
+            }
+          },
+          {
+            "id": "car-ride",
+            "label": "Get rides from a coworker this month and fix the car later.",
+            "delta": {}
+          }
+        ]
       },
       {
-        prompt: 'A $150 work bonus shows up unexpectedly. Put it toward savings, or toward paying down the credit card balance?',
-        options: [
-          { id: 'bonus-savings', label: 'Add the $150 to savings.', delta: { Savings: 150 } },
-          { id: 'bonus-credit', label: 'Use the $150 to pay down the credit card.', delta: { 'Credit Score': 15 } },
-        ],
+        "prompt": "Jordan pays for three streaming services at $15 each, which is $45 a month, but only watches one. Over the next three months, what happens?",
+        "options": [
+          {
+            "id": "subs-two",
+            "label": "Cancel two services and keep $90 over three months.",
+            "delta": {
+              "Checking": 90
+            }
+          },
+          {
+            "id": "subs-one",
+            "label": "Cancel one service and keep $45 over three months.",
+            "delta": {
+              "Checking": 45
+            }
+          },
+          {
+            "id": "subs-keep",
+            "label": "Keep all three for now.",
+            "delta": {}
+          }
+        ]
       },
       {
-        prompt: 'Jordan’s savings account earns a little interest each month, and any credit card balance costs more the longer it sits unpaid. What’s the smartest move heading into next month?',
-        options: [
-          { id: 'keep-saving', label: 'Keep building the savings cushion steadily.', delta: { Savings: 40 } },
-          { id: 'focus-credit', label: 'Focus on protecting the credit score by keeping balances low.', delta: { 'Credit Score': 20 } },
-        ],
+        "prompt": "Groceries for the next four weeks: cooking at home costs about $60 a week ($240), and takeout costs about $140 a week ($560). A mix of two weeks each costs $400.",
+        "options": [
+          {
+            "id": "food-cook",
+            "label": "Cook at home all four weeks ($240).",
+            "delta": {
+              "Checking": -240
+            }
+          },
+          {
+            "id": "food-mix",
+            "label": "Cook two weeks and get takeout two weeks ($400).",
+            "delta": {
+              "Checking": -400
+            }
+          },
+          {
+            "id": "food-out",
+            "label": "Get takeout all four weeks ($560).",
+            "delta": {
+              "Checking": -560
+            }
+          },
+          {
+            "id": "food-pantry",
+            "label": "Eat what is already in the freezer and pantry this month.",
+            "delta": {}
+          }
+        ]
       },
+      {
+        "prompt": "Jordan gets a $400 tax refund. The card balance charges about 2 percent a month, so every $100 paid off saves about $2 a month in interest.",
+        "options": [
+          {
+            "id": "refund-save",
+            "label": "Put all $400 in savings.",
+            "delta": {
+              "Savings": 400
+            }
+          },
+          {
+            "id": "refund-split",
+            "label": "Pay $100 on the card and save $300.",
+            "delta": {
+              "Card Debt": -100,
+              "Savings": 300
+            }
+          },
+          {
+            "id": "refund-check",
+            "label": "Keep $400 in checking for everyday costs.",
+            "delta": {
+              "Checking": 400
+            }
+          }
+        ]
+      },
+      {
+        "prompt": "The card charges 24 percent a year, about 2 percent a month. On a $500 balance that is about $10 in interest each month. The minimum payment is $25, so only $15 of it lowers the balance.",
+        "options": [
+          {
+            "id": "card-extra",
+            "label": "Pay $100, which lowers the balance by $90 after the $10 interest.",
+            "delta": {
+              "Checking": -100,
+              "Card Debt": -90
+            }
+          },
+          {
+            "id": "card-min",
+            "label": "Pay the $25 minimum, which lowers the balance by $15.",
+            "delta": {
+              "Checking": -25,
+              "Card Debt": -15
+            }
+          },
+          {
+            "id": "card-skip",
+            "label": "Skip the payment and let $10 of interest add to the balance.",
+            "delta": {
+              "Card Debt": 10
+            }
+          }
+        ]
+      },
+      {
+        "prompt": "Experts often suggest saving one to three months of costs for emergencies. Jordan's costs are about $1,000 a month. Savings is still well under that. Move money from checking?",
+        "options": [
+          {
+            "id": "ef-200",
+            "label": "Move $200 from checking to savings.",
+            "delta": {
+              "Checking": -200,
+              "Savings": 200
+            }
+          },
+          {
+            "id": "ef-100",
+            "label": "Move $100 from checking to savings.",
+            "delta": {
+              "Checking": -100,
+              "Savings": 100
+            }
+          },
+          {
+            "id": "ef-none",
+            "label": "Leave it for now.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Friends invite Jordan to a concert. The ticket is $60, food is $15, and the ride is $10, so the night costs $85. Putting it on the card at 24 percent a year and paying it off over 12 months costs about $96.",
+        "options": [
+          {
+            "id": "fun-cash",
+            "label": "Go and pay $85 from checking.",
+            "delta": {
+              "Checking": -85
+            }
+          },
+          {
+            "id": "fun-card",
+            "label": "Go and put the night on the card ($96 in all).",
+            "delta": {
+              "Card Debt": 96
+            }
+          },
+          {
+            "id": "fun-free",
+            "label": "Suggest a free picnic at the park instead.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Jordan needs a way to get around town. A new bike costs $300, a used bike costs $180, and a monthly bus pass costs $40, which is $240 over six months.",
+        "options": [
+          {
+            "id": "bike-used",
+            "label": "Buy the used bike ($180).",
+            "delta": {
+              "Checking": -180
+            }
+          },
+          {
+            "id": "bike-new",
+            "label": "Buy the new bike ($300).",
+            "delta": {
+              "Checking": -300
+            }
+          },
+          {
+            "id": "bike-bus",
+            "label": "Buy a bus pass for six months ($240).",
+            "delta": {
+              "Checking": -240
+            }
+          },
+          {
+            "id": "bike-borrow",
+            "label": "Borrow a friend's bike for now.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Jordan's savings account pays 0.5 percent a year. Another bank pays 4 percent. On $400 that is $2 a year compared with $16 a year, so $14 more. Switching takes about 20 minutes.",
+        "options": [
+          {
+            "id": "bank-switch",
+            "label": "Switch banks and earn $14 more this year.",
+            "delta": {
+              "Savings": 14
+            }
+          },
+          {
+            "id": "bank-keep",
+            "label": "Stay where it is.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Jordan receives a $150 gift from a relative. Using it to pay down the card saves about $3 a month in interest, since 2 percent of $150 is $3.",
+        "options": [
+          {
+            "id": "gift-card",
+            "label": "Pay $150 toward the card.",
+            "delta": {
+              "Card Debt": -150
+            }
+          },
+          {
+            "id": "gift-save",
+            "label": "Put $150 in savings.",
+            "delta": {
+              "Savings": 150
+            }
+          },
+          {
+            "id": "gift-check",
+            "label": "Keep $150 in checking.",
+            "delta": {
+              "Checking": 150
+            }
+          }
+        ]
+      },
+      {
+        "prompt": "Jordan compares car insurance for the next three months. Plan A costs $120 a month ($360) with a $500 deductible. Plan B costs $95 a month ($285) with a $1,000 deductible, so a crash would cost more out of pocket.",
+        "options": [
+          {
+            "id": "ins-a",
+            "label": "Choose Plan A ($360).",
+            "delta": {
+              "Checking": -360
+            }
+          },
+          {
+            "id": "ins-b",
+            "label": "Choose Plan B ($285).",
+            "delta": {
+              "Checking": -285
+            }
+          },
+          {
+            "id": "ins-wait",
+            "label": "Stay on the old policy for now and compare again next month.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Jordan's phone plan: the old plan costs $45 a month ($135 for three months). A new plan costs $30 a month ($90 for three months) and has a one-time $25 switching fee.",
+        "options": [
+          {
+            "id": "phone-new",
+            "label": "Switch and pay $115 now ($90 plus the $25 fee).",
+            "delta": {
+              "Checking": -115
+            }
+          },
+          {
+            "id": "phone-old",
+            "label": "Keep the old plan and pay $135.",
+            "delta": {
+              "Checking": -135
+            }
+          },
+          {
+            "id": "phone-wait",
+            "label": "Look at plans again next month.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "A weekend shift pays $15 an hour for 8 hours, which is $120. About 10 percent is withheld ($12), so $108 arrives.",
+        "options": [
+          {
+            "id": "gig-check",
+            "label": "Take the shift and keep $108 in checking.",
+            "delta": {
+              "Checking": 108
+            }
+          },
+          {
+            "id": "gig-save",
+            "label": "Take the shift and save the $108.",
+            "delta": {
+              "Savings": 108
+            }
+          },
+          {
+            "id": "gig-rest",
+            "label": "Skip the shift and rest.",
+            "delta": {}
+          }
+        ]
+      }
     ],
     debrief(final) {
-      const savingsStrong = final.Savings >= 350;
-      const creditStrong = final['Credit Score'] >= 660;
-      if (savingsStrong && creditStrong) {
-        return 'Jordan built a real savings cushion while keeping credit healthy. A strong, balanced result.';
-      }
-      if (savingsStrong) {
-        return 'Jordan leaned into building savings. That’s a real strength, and keeping an eye on credit health next is a reasonable next step, not a failure.';
-      }
-      if (creditStrong) {
-        return 'Jordan prioritized protecting credit health. That’s a real strength, and building up a savings cushion next would round out the plan, not fix a mistake.';
-      }
-      return 'Jordan made it through some real tradeoffs. Every choice here had a reasonable case for it. The goal now is just noticing which one to lean into next.';
+      const SAVE_GOAL = 800, CHECK_MIN = 300, DEBT_GOAL = 400;
+      const s = final.Savings, c = final.Checking, d = final['Card Debt'];
+      const tally = ' Jordan finished with $' + s + ' in savings, $' + c + ' in checking and $' + d + ' on the card.';
+      if (s >= SAVE_GOAL && d <= DEBT_GOAL && c >= CHECK_MIN) return 'Jordan built savings, kept enough in checking, and brought the card balance down.' + tally + ' There is more than one way to get there, and Jordan found one.';
+      if (s >= SAVE_GOAL && c >= CHECK_MIN) return 'Jordan built a strong savings cushion and kept checking healthy.' + tally + ' The card balance is still there, and paying it down is a sensible next step.';
+      if (d <= DEBT_GOAL && c >= CHECK_MIN) return 'Jordan brought the card balance down and kept checking healthy.' + tally + ' Building savings is the next step, and a small cushion helps a lot.';
+      if (c < CHECK_MIN) return 'Jordan reached the end with checking running low.' + tally + ' That is a real tradeoff, and some people choose it on purpose. A bigger buffer in checking makes surprises easier.';
+      return 'Jordan is off to a slow start, and that is normal for a first apartment.' + tally + ' Try a different mix next time and see how it changes.';
     },
   };
 
@@ -108,7 +445,7 @@
     header: {
       icon: '💰',
       title: 'Money Matters',
-      description: 'Manage Jordan’s first few months on a budget. There’s more than one way to do it well.',
+      description: 'Manage Jordan\u2019s first few months on a budget. There is more than one way to do it well.',
     },
   });
 </script>
