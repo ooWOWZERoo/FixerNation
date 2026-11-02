@@ -408,6 +408,7 @@ router.get('/', async (req, res) => {
         id: g.id, name: g.name, slug: g.slug,
         description: g.description, icon: g.icon,
         primarySkill: g.primary_skill, band: g.band, domain: g.domain,
+        createdAt: g.created_at, // the games page marks recent additions with a "New" tag
         progress: progressMap[g.id] || null,
       }));
 

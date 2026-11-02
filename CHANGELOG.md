@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 84 — 2026-11-01 — Games page sorted by grade band, with a "New" tag
+
+- **The games page now groups games by grade band** (Discover, then Explore, Challenge and Advance), with the older skills games at the end, instead of listing them in the order they were added. New games used to sit at the bottom of a long list.
+- **Each card shows its grade band** (for example "Explore (3-5)") next to the "SEL & Character" or "Skills practice" tag.
+- **A gold "New" tag** marks games added in the last 30 days, so teachers can spot what changed.
+- The catalog now sends each game's date added to the page (one line in `routes/brain-games.js`), so it needs a Node restart. No database change.
+
 ## Release 83 — 2026-11-01 — Three more new brain games: Values Compass, Peace Table and Idea Lab
 
 - **New game: Values Compass** (grades 6 to 8). The student reads a short story, notices what really happens, and picks every value that could fit (nothing is scored, and no value is ranked). A private check about their own values follows and is never saved or sent. 12 stories, 5 per run. A second direct game for New York SEL 1B (identity and agency).
