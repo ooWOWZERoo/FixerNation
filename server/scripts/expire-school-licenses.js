@@ -3,6 +3,7 @@
 // registered seats inactive so hasActiveLicense() returns false immediately.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const pool = require('../db/pool');
+const { EXPIRED_REASON } = require('../lib/seat-renewal');
 const { fireAutomation } = require('../lib/automations');
 
 function formatDate(value) {
@@ -48,8 +49,8 @@ async function main() {
           [row.id]
         );
         await conn.query(
-          "UPDATE license_seats SET status = 'inactive' WHERE purchase_id = ? AND status IN ('registered', 'pending', 'available')",
-          [row.id]
+          "UPDATE license_seats SET status = 'inactive', inactive_reason = ? WHERE purchase_id = ? AND status IN ('registered', 'pending', 'available')",
+          [EXPIRED_REASON, row.id]
         );
         // hasActiveLicense() denies access immediately either way, but the
         // registered teachers' existing session cookies would otherwise

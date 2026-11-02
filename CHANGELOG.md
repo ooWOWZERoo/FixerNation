@@ -16,6 +16,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 90 — 2026-11-02 — Renewing a school license brings its teachers back
+
+- **When a school's license expires, every teacher's seat is switched off. Renewing the license now switches them back on.** Before, staff renewed the license but each teacher stayed locked out until the school administrator reactivated them one by one on the roster page. Classrooms, rosters, assigned lessons and each teacher's lesson picks were never deleted, so teachers pick up where they left off (after signing in again).
+- **Only seats the expiry switched off come back.** A teacher a school administrator deactivated by hand stays deactivated. Unaccepted invitations come back as invitations; unclaimed seats come back as open seats.
+- Staff see how many seats came back in the confirmation message on the Licenses page, and the school's activity log records it.
+- The same applies when staff extend an expired free trial.
+- Licenses that already expired before this release carry no record of why their seats are off, so their school administrators still use **Reactivate** on the roster after a renewal. The database script prints how many seats that affects.
+- Needs the one-time database script `alter-add-seat-inactive-reason.js` (run before restarting the Node app), a Node restart, and `admin-licenses.html` copied to the site. New tests in `server/test/seat-renewal.test.js`.
+
 ## Release 85 — 2026-11-02 — Each age group's games now have their own colors
 
 - **Four color themes for the brain games, one per learning group.** Discover has a warm page, thick dark outlines and a yellow button; Explore uses purple for "selected" and orange for the next step; Challenge is cool slate with blue and violet accents; Advance is a dark slate band with one cool accent. Before this, every game from Explore to Advance looked the same.

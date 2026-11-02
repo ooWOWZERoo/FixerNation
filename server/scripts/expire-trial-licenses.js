@@ -3,6 +3,7 @@
 // their seat so hasActiveLicense() returns false immediately.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const pool = require('../db/pool');
+const { EXPIRED_REASON } = require('../lib/seat-renewal');
 const { fireAutomation } = require('../lib/automations');
 
 async function main() {
@@ -51,8 +52,8 @@ async function main() {
         );
         registeredTeachers = seats.map(s => s.registered_site_user_id);
         await conn.query(
-          "UPDATE license_seats SET status = 'inactive' WHERE purchase_id = ? AND status IN ('registered', 'pending', 'available')",
-          [row.id]
+          "UPDATE license_seats SET status = 'inactive', inactive_reason = ? WHERE purchase_id = ? AND status IN ('registered', 'pending', 'available')",
+          [EXPIRED_REASON, row.id]
         );
         // Same reasoning as the manual admin revoke routes: hasActiveLicense()
         // denies access immediately either way, but the teacher's existing

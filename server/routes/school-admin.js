@@ -740,7 +740,8 @@ router.put('/teachers/:siteUserId/deactivate', requireSchoolAdmin, async (req, r
   // account: a teacher deactivated at School A showed as deactivated at
   // every other school they teach at too, since role has no per-purchase
   // concept at all.
-  await pool.query("UPDATE license_seats SET status = 'inactive' WHERE id = ?", [seat.id]);
+  // inactive_reason is cleared so a later license renewal never restores a seat the admin switched off on purpose.
+  await pool.query("UPDATE license_seats SET status = 'inactive', inactive_reason = NULL WHERE id = ?", [seat.id]);
 
   await audit(pool, {
     actorType: 'site_user', actorId: req.schoolAdmin.siteUserId,

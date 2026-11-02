@@ -301,6 +301,7 @@ CREATE TABLE IF NOT EXISTS license_seats (
   purchase_id INT UNSIGNED NOT NULL,
   invited_email VARCHAR(255) NULL,
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'registered' | 'inactive' | 'revoked' | 'available'
+  inactive_reason VARCHAR(32) NULL, -- 'license_expired' when the expiry job switched the seat off; lib/seat-renewal.js restores only those (alter-add-seat-inactive-reason.js on existing installs)
   registered_site_user_id INT UNSIGNED NULL,
   registered_at DATETIME NULL,
   invitation_id INT UNSIGNED NULL, -- added by scripts/alter-school-admin.js on existing installs

@@ -478,6 +478,8 @@ async function saveLicenseDates(purchaseId) {
   const saved = data.licenseStatus || licenseStatus;
   if (saved !== licenseStatus) {
     fnToast(`Saved — status set to "${LICENSE_STATUS_LABELS[saved] || saved}" (effective date is in the future)`);
+  } else if (data.seatsRestored) {
+    fnToast(`License settings saved. ${data.seatsRestored} teacher seat${data.seatsRestored === 1 ? ' is' : 's are'} active again.`);
   } else {
     fnToast('License settings saved');
   }

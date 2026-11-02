@@ -8,6 +8,7 @@ const { fireAutomation } = require('../lib/automations');
 const { attributePurchase } = require('../lib/affiliate-attribution');
 const { limiter, clientIp } = require('../lib/rate-limit');
 const { notAdminSeatClause } = require('../lib/seat-counts');
+const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -867,13 +868,28 @@ router.put('/purchases/:id/license-dates', requireAuth, async (req, res) => {
     }
   }
 
+  // Renewing an expired license: the nightly expiry job switched every seat off, so switch back on the ones it
+  // turned off. Seats a school admin deactivated by hand carry no expiry tag and stay off.
+  let seatsRestored = 0;
+  if (RENEWED_STATUSES.includes(licenseStatus)) {
+    seatsRestored = await restoreExpiredSeats(pool, rows[0].id);
+  }
+
+  const adminId = req.session && req.session.userId ? req.session.userId : null;
   pool.query(
     `INSERT INTO school_audit_log (actor_type, actor_id, action, entity_type, entity_id)
      VALUES ('admin', ?, 'license_dates_updated', 'purchase', ?)`,
-    [req.session && req.session.userId ? req.session.userId : null, rows[0].id]
+    [adminId, rows[0].id]
   ).catch(e => console.error('audit log error:', e.message));
+  if (seatsRestored) {
+    pool.query(
+      `INSERT INTO school_audit_log (actor_type, actor_id, action, entity_type, entity_id)
+       VALUES ('admin', ?, 'seats_restored_on_renewal', 'purchase', ?)`,
+      [adminId, rows[0].id]
+    ).catch(e => console.error('audit log error:', e.message));
+  }
 
-  res.json({ ok: true, licenseStatus });
+  res.json({ ok: true, licenseStatus, seatsRestored });
 });
 
 router.delete('/purchases/:id', requireAuth, async (req, res) => {
