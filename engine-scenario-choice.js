@@ -47,14 +47,25 @@
 // It is private by design, exactly like Branching Scenario's reflection step: the child's answers are never
 // logged, sent or stored; the only thing recorded is that the step was reached.
 (function () {
-  function speak(text) {
+  // Pictures are not read by the voice, so strip emoji and joiner characters from anything spoken.
+  const stripEmoji = (s) => String(s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
+  // Joins lines into one spoken run without doubling the full stops.
+  const sentenceJoin = (parts) => parts.map((x) => (/[.?!]$/.test(String(x).trim()) ? String(x).trim() : String(x).trim() + '.')).join(' ');
+  function speak(text, cancel) {
     if (!window.speechSynthesis || !text) return;
-    try { window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch {}
+    try {
+      if (cancel) window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(stripEmoji(text)));
+    } catch {}
   }
 
   function mount(container, { contentPack, band, onEvidence, onComplete }) {
     // Readers (Explore and up) see the story as text; Discover is audio-led, so its story stays spoken (and screen-reader) only.
     const showStory = band === 'explore' || band === 'challenge' || band === 'advance';
+    // Discover (Release 87) is audio-led: the prompts and feedback are spoken too, and a button shows the story words.
+    const voiced = band === 'discover';
+    const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
+    const holdFor = (msg, base) => (voiced ? Math.min(6500, 1500 + String(msg).length * 55) : base);
     const scenarios = contentPack.scenarios;
     // Wording defaults are the Feelings Detective ones, so a pack with no `prompts` plays exactly as before.
     const P = Object.assign({
@@ -88,9 +99,9 @@
     function narrationFor(scenario) {
       if (stage === 'self_check') return selfNarration;
       if (stage === 'cues') {
-        return [scenario.context, ...scenario.cues.map((c) => c.text)].join('. ');
+        return voiced ? sentenceJoin([scenario.context, P.cues, ...scenario.cues.map((c) => c.text)]) : [scenario.context, ...scenario.cues.map((c) => c.text)].join('. ');
       }
-      return scenario.feelings.map((f) => f.text).join(', ');
+      return voiced ? sentenceJoin([P.pick, ...scenario.feelings.map((f) => f.text)]) : scenario.feelings.map((f) => f.text).join(', ');
     }
 
     function renderReplay(scenario) {
@@ -101,9 +112,27 @@
       btn.textContent = '▶ Replay';
       btn.addEventListener('click', () => {
         onEvidence('hint_requested', { scenarioIndex: index, kind: 'narration_replay', stage });
-        speak(narrationFor(scenario));
+        speak(narrationFor(scenario), voiced);
       });
       replayRow.appendChild(btn);
+      if (voiced && scenario) {
+        const words = document.createElement('button');
+        words.type = 'button';
+        words.className = 'btn btn-outline btn-sm tap-target';
+        words.style.marginLeft = '8px';
+        words.textContent = t('showWords');
+        words.setAttribute('aria-expanded', 'false');
+        words.addEventListener('click', () => {
+          const story = contextBox.querySelector('.fn-story-text');
+          if (!story) return;
+          const show = story.hidden;
+          story.hidden = !show;
+          words.textContent = show ? t('hideWords') : t('showWords');
+          words.setAttribute('aria-expanded', String(show));
+          if (show) onEvidence('hint_requested', { scenarioIndex: index, kind: 'show_words', stage });
+        });
+        replayRow.appendChild(words);
+      }
     }
 
     function renderScenario() {
@@ -113,7 +142,9 @@
       progressHolder.innerHTML = '';
       progressHolder.appendChild(FnGameShell.renderProgress(index + 1, scenarios.length));
       contextBox.innerHTML = `<span aria-hidden="true" style="font-size:2.5em;display:block;text-align:center;">${scenario.illustration || ''}</span>` +
-        (showStory ? `<span class="fn-story-text">${scenario.context}</span>` : `<span class="sr-only">${scenario.context}</span>`);
+        (showStory ? `<span class="fn-story-text">${scenario.context}</span>`
+          : voiced ? `<span class="sr-only">${scenario.context}</span><span class="fn-story-text" aria-hidden="true" hidden>${scenario.context}</span>`
+          : `<span class="sr-only">${scenario.context}</span>`);
       onEvidence('item_presented', { scenarioIndex: index, stage: 'cues' });
       renderCueStage(scenario);
     }
@@ -122,7 +153,7 @@
       feedbackHolder.innerHTML = '';
       promptBox.textContent = P.cues;
       renderReplay(scenario);
-      speak(narrationFor(scenario));
+      speak(narrationFor(scenario), voiced);
 
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
@@ -165,7 +196,8 @@
 
       feedbackHolder.innerHTML = '';
       feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', P.afterCues));
-      setTimeout(() => renderFeelingsStage(scenario), 1200);
+      if (voiced) speak(P.afterCues, true);
+      setTimeout(() => renderFeelingsStage(scenario), holdFor(P.afterCues, 1200));
     }
 
     function renderFeelingsStage(scenario) {
@@ -175,7 +207,7 @@
       promptBox.textContent = P.pick;
       onEvidence('item_presented', { scenarioIndex: index, stage: 'feelings' });
       renderReplay(scenario);
-      speak(narrationFor(scenario));
+      speak(narrationFor(scenario), voiced);
 
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
@@ -230,11 +262,12 @@
 
       feedbackHolder.innerHTML = '';
       feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', message));
+      if (voiced) speak(message, true);
 
       setTimeout(() => {
         const check = selfCheckFor(scenario);
         if (check) renderSelfCheck(scenario, check); else afterFeelings(scenario);
-      }, 1800);
+      }, holdFor(message, 1800));
     }
 
     function afterFeelings(scenario) {
@@ -265,8 +298,10 @@
             selfChecks++;
             onEvidence('response_submitted', { scenarioIndex: index, stage: 'self_check_body' });
             feedbackHolder.innerHTML = '';
-            feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', check.closing || 'Nice job checking in with yourself.'));
-            setTimeout(() => afterFeelings(scenario), 2200);
+            const closing = check.closing || 'Nice job checking in with yourself.';
+            feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', closing));
+            if (voiced) speak(closing, true);
+            setTimeout(() => afterFeelings(scenario), holdFor(closing, 2200));
           }, check.privateNote);
         }, 500);
       }, check.privateNote);
@@ -274,9 +309,9 @@
 
     function askSelfCheck(prompt, options, onPick, privateNote) {
       promptBox.textContent = prompt;
-      selfNarration = [prompt].concat(options.map((o) => o.text)).join('. ');
+      selfNarration = voiced ? sentenceJoin([prompt].concat(options.map((o) => o.text))) : [prompt].concat(options.map((o) => o.text)).join('. ');
       renderReplay(null);
-      speak(selfNarration);
+      speak(selfNarration, voiced);
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
       list.className = 'fn-choice-list long-text-list';
@@ -329,8 +364,8 @@
       confirmRow.innerHTML = '';
       if (index >= scenarios.length) {
         onComplete([
-          { value: scenarios.length, label: 'Scenarios explored' },
-          { value: cuesNoticedTotal, label: 'Cues noticed' },
+          { value: scenarios.length, label: t('scLabelScenarios') },
+          { value: cuesNoticedTotal, label: t('scLabelCues') },
           { value: multiFeelingCount, label: P.multiLabel },
         ].concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : []));
       } else {

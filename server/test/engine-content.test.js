@@ -486,7 +486,8 @@ test('SCENARIO CHOICE PROMPTS: the wording override is optional, and Feelings De
   ['Which of these do you notice in this moment?', "I've noticed these", 'Which feeling(s) could this be? You can pick more than one.', "I've picked my feeling(s)", 'Times you saw more than one feeling']
     .forEach((s) => assert.ok(src.includes(s), `default wording kept: ${s}`));
   const fd = REAL.find((x) => x.slug === 'feelings-detective');
-  assert.equal(fd.pack.prompts, undefined, 'Feelings Detective passes no prompts, so it plays exactly as before');
+  // Release 87: Feelings Detective now supplies its own short Discover prompts (the engine defaults above stay for any pack that does not).
+  ['cues', 'afterCues', 'pick', 'confirmCues', 'confirmPick', 'multiLabel'].forEach((k) => assert.ok(fd.pack.prompts[k], `Feelings Detective prompts.${k}`));
 });
 
 test('STRENGTH SPOTTER: twelve stories, five per run, each with noticing cues and strengths', () => {
@@ -540,14 +541,14 @@ test('SAME AND DIFFERENT: twelve rounds in three kinds, four per run, with a spo
     assert.equal(it.choices.length, 3, `round ${i + 1}: three picture choices`);
     assert.ok(it.choices.some((c) => c.id === it.correctId), `round ${i + 1}: right answer present`);
     assert.equal(new Set(it.choices.map((c) => c.id)).size, 3, `round ${i + 1}: unique ids`);
-    it.choices.forEach((c) => { assert.ok(c.feedback && c.feedback.length > 20 && c.aria && c.label, `round ${i + 1}: feedback, label and aria on ${c.id}`); });
+    it.choices.forEach((c) => { assert.ok(c.feedback && c.feedback.length > 20 && c.aria && c.label && c.caption, `round ${i + 1}: feedback, picture, caption and aria on ${c.id}`); });
     assert.ok(it.explanation && it.explanation.length > 30, `round ${i + 1}: explanation`);
     assert.ok(/\?$/.test(it.stimulusText), `round ${i + 1}: the scene ends with the question, so it is read aloud`);
     assert.ok(it.stimulusText.length < 260, `round ${i + 1}: short enough to listen to`);
     assert.ok(!/[–—]/.test(it.stimulusText + it.explanation + it.choices.map((c) => c.label + c.feedback).join(' ')), `round ${i + 1}: no dashes`);
     kinds[(it.stimulusText.match(/What is the same|What is different|What could|What is a kind/) || [''])[0].replace(/What is the same/, 'same').replace(/What is different/, 'diff').replace(/What could|What is a kind/, 'kind')]++;
-    const lens = it.choices.map((c) => c.label.length);
-    if (it.choices.find((c) => c.id === it.correctId).label.length === Math.max(...lens)) longest++;
+    const lens = it.choices.map((c) => c.caption.length);
+    if (it.choices.find((c) => c.id === it.correctId).caption.length === Math.max(...lens)) longest++;
   });
   assert.equal(`${kinds.same},${kinds.diff},${kinds.kind}`, '4,4,4');
   assert.ok(longest <= 4, `the right label is the longest in ${longest} of 12 rounds`);

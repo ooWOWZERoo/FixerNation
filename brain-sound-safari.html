@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=4">
+<link rel="stylesheet" href="brain-games.css?v=5">
 </head>
 <body>
 <header></header>
@@ -29,8 +29,8 @@
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=3"></script>
-<script src="engine-audio-choice.js?v=2"></script>
+<script src="engine-sdk.js?v=4"></script>
+<script src="engine-audio-choice.js?v=3"></script>
 <script>
   // Sound Safari — Tune Your Brain, Phase 5 pilot slice (Discover band).
   // Placeholder content: phonemic-awareness (initial-sound) rounds, narrated
@@ -44,34 +44,54 @@
   const contentPack = {
     title: 'Sound Safari',
     items: [
-      { stimulusType: 'audio', stimulusText: 'Listen: the /m/ sound, like in "moon."',
-        transcript: 'The /m/ sound, like in "moon." Which picture starts with that same sound?',
+      {
+        stimulusType: 'audio',
+        stimulusText: "Mmm. Moon starts with mmm. Which picture starts with mmm?",
+        words: "Which picture starts with the same sound as \"moon\"?",
+        transcript: "Which picture starts with the same sound as \"moon\"?",
         choices: [
-          { id: 'monkey', label: '🐵', aria: 'monkey' },
-          { id: 'cat', label: '🐱', aria: 'cat' },
-          { id: 'fish', label: '🐟', aria: 'fish' },
-        ], correctId: 'monkey' },
-      { stimulusType: 'audio', stimulusText: 'Listen: the /s/ sound, like in "sun."',
-        transcript: 'The /s/ sound, like in "sun." Which picture starts with that same sound?',
+          { id: "monkey", label: "🐵", aria: "monkey" },
+          { id: "cat", label: "🐱", aria: "cat" },
+          { id: "fish", label: "🐟", aria: "fish" },
+        ],
+        correctId: "monkey",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Sss. Sun starts with sss. Which picture starts with sss?",
+        words: "Which picture starts with the same sound as \"sun\"?",
+        transcript: "Which picture starts with the same sound as \"sun\"?",
         choices: [
-          { id: 'dog', label: '🐶', aria: 'dog' },
-          { id: 'snake', label: '🐍', aria: 'snake' },
-          { id: 'bird', label: '🐦', aria: 'bird' },
-        ], correctId: 'snake' },
-      { stimulusType: 'audio', stimulusText: 'Listen: the /t/ sound, like in "turtle."',
-        transcript: 'The /t/ sound, like in "turtle." Which picture starts with that same sound?',
+          { id: "dog", label: "🐶", aria: "dog" },
+          { id: "snake", label: "🐍", aria: "snake" },
+          { id: "bird", label: "🐦", aria: "bird" },
+        ],
+        correctId: "snake",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Tuh. Tiger starts with tuh. Which picture starts with tuh?",
+        words: "Which picture starts with the same sound as \"tiger\"?",
+        transcript: "Which picture starts with the same sound as \"tiger\"?",
         choices: [
-          { id: 'turtle', label: '🐢', aria: 'turtle' },
-          { id: 'lion', label: '🦁', aria: 'lion' },
-          { id: 'frog', label: '🐸', aria: 'frog' },
-        ], correctId: 'turtle' },
-      { stimulusType: 'audio', stimulusText: 'Listen: the /b/ sound, like in "butterfly."',
-        transcript: 'The /b/ sound, like in "butterfly." Which picture starts with that same sound?',
+          { id: "turtle", label: "🐢", aria: "turtle" },
+          { id: "lion", label: "🦁", aria: "lion" },
+          { id: "frog", label: "🐸", aria: "frog" },
+        ],
+        correctId: "turtle",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Buh. Ball starts with buh. Which picture starts with buh?",
+        words: "Which picture starts with the same sound as \"ball\"?",
+        transcript: "Which picture starts with the same sound as \"ball\"?",
         choices: [
-          { id: 'butterfly', label: '🦋', aria: 'butterfly' },
-          { id: 'elephant', label: '🐘', aria: 'elephant' },
-          { id: 'owl', label: '🦉', aria: 'owl' },
-        ], correctId: 'butterfly' },
+          { id: "butterfly", label: "🦋", aria: "butterfly" },
+          { id: "elephant", label: "🐘", aria: "elephant" },
+          { id: "owl", label: "🦉", aria: "owl" },
+        ],
+        correctId: "butterfly",
+      },
     ],
   };
 
@@ -92,7 +112,7 @@
     header: {
       icon: '🦁',
       title: 'Sound Safari',
-      description: 'Listen for the sound, then find the picture that starts the same way.',
+      description: 'Listen. Find the picture that starts the same.',
     },
   });
 </script>

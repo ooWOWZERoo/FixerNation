@@ -25,6 +25,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - Licenses that already expired before this release carry no record of why their seats are off, so their school administrators still use **Reactivate** on the roster after a renewal. The database script prints how many seats that affects.
 - Needs the one-time database script `alter-add-seat-inactive-reason.js` (run before restarting the Node app), a Node restart, and `admin-licenses.html` copied to the site. New tests in `server/test/seat-renewal.test.js`.
 
+## Release 87 — 2026-11-02 — The six Discover games now talk to children aged 5 to 6
+
+- **The games now ask the question out loud.** Before, a child heard the story and was never asked anything, and the answers were bare pictures with no spoken meaning. Now the story, the question and each answer are read aloud, and replay plays all of it.
+- **Every result is spoken** ("You got it!" or "Try another one."), including in Calm Down Corner, Sharing Circle, Helper's Choice and Sound Safari, where it used to be silent.
+- **Short captions under the pictures** for children who are starting to read, and a **"Show the words" button** so deaf and hard-of-hearing children, and adults helping, can see the story.
+- **All six games rewritten in shorter, plainer words** (about 8 words a sentence; "mad" instead of "frustrated", "the right thing" instead of "responsible"). Feelings Detective gets pictures on its clues and feelings and larger rows; its private check-in is still never logged or saved.
+- **Sound Safari no longer repeats the answer as its example** (it said "like in turtle", then the turtle was the answer). Its spoken line also no longer includes "/m/" symbols.
+- A stand-in test now runs every game engine's first screen, and a new test holds the Discover games to the word limits.
+- Static files only (two engine scripts, the shared script, `brain-games.css`, six game pages, cache numbers). No Node restart, no database change. The browser voice still needs a listening check on a Chromebook and an iPad.
+
 ## Release 86 — 2026-11-02 — Wording around the games now fits each age group
 
 - **The words around a game now change with the age group.** The finished screen, the feedback in reading games, and the step names in scenario games were the same for a first grader and a high schooler ("Nice work!", "Recognize the Issue"). Each group now has its own: for example "You did it!" for Discover, "Level complete!" for Explore, "Run complete" for Challenge and "Debrief" for Advance.

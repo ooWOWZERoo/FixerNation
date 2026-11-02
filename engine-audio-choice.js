@@ -18,6 +18,11 @@
 //     explanation?,                           // optional, shown after any answer
 // }] }
 //
+// Release 87 (Discover): the whole item is read aloud in one go (stimulusText, which already ends with the question,
+// then each choice by its `say`, `caption` or `aria` text, left to right), replay plays all of it, feedback is always spoken,
+// a choice can carry a short `caption` shown under its picture, and an item can give separate on-screen `words`
+// (default: stimulusText) behind a "Show the words" button. A pack with none of these plays as before.
+//
 // Feedback that teaches: when a round supplies a choice's feedback and/or an explanation, that text replaces the
 // generic "Correct!" / "Not quite" line, is read aloud for audio rounds (so non-readers get it too), and stays on
 // screen a little longer. Rounds without either behave exactly as before.
@@ -27,12 +32,18 @@
 // still logged in evidence for a content author who DOES want it, without
 // visually pressuring every learner with a countdown by default.
 (function () {
-  function speak(text) {
-    if (!window.speechSynthesis) return;
-    try { window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch {}
+  // Pictures are not read by the voice, so strip emoji and joiner characters from anything spoken.
+  const stripEmoji = (s) => String(s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
+  function speak(text, cancel) {
+    if (!window.speechSynthesis || !text) return;
+    try {
+      if (cancel) window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(stripEmoji(text)));
+    } catch {}
   }
 
-  function mount(container, { contentPack, onEvidence, onComplete }) {
+  function mount(container, { contentPack, band, onEvidence, onComplete }) {
+    const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
     const items = contentPack.items;
     let index = 0, correct = 0, incorrect = 0, answered = false, qStart = null, replayCount = 0;
 
@@ -41,10 +52,13 @@
     stimulusBox.className = 'fn-stimulus-box band-aware';
     const replayRow = document.createElement('div');
     replayRow.style.textAlign = 'center'; replayRow.style.marginBottom = '8px';
+    const wordsBox = document.createElement('div');
+    wordsBox.className = 'fn-words-box band-aware';
+    wordsBox.hidden = true;
     const choiceHolder = document.createElement('div');
     const feedbackHolder = document.createElement('div');
 
-    container.append(progressHolder, stimulusBox, replayRow, choiceHolder, feedbackHolder);
+    container.append(progressHolder, stimulusBox, replayRow, wordsBox, choiceHolder, feedbackHolder);
     renderItem();
 
     function playStimulus(item) {
@@ -53,10 +67,13 @@
           const audio = new Audio(item.stimulusAudioUrl);
           audio.play().catch(() => {});
         } else {
-          speak(item.stimulusText || item.transcript);
+          // The story and its question, then each answer in order, so a child who cannot read the pictures hears them.
+          const answers = item.speakChoices === false ? [] : item.choices.map((c) => c.say || c.caption || c.aria).filter(Boolean);
+          speak([item.stimulusText || item.transcript].concat(answers).map((x) => (/[.?!]$/.test(x) ? x : x + '.')).join(' '), true);
         }
       }
     }
+    function wordsFor(item) { return item.words || item.stimulusText || item.transcript || ''; } // a declaration, so renderItem() above can call it on first paint
 
     function renderItem() {
       answered = false;
@@ -70,8 +87,9 @@
       onEvidence('item_presented', { index, stimulusType: item.stimulusType });
 
       if (item.stimulusType === 'audio') {
-        stimulusBox.innerHTML = `<span class="sr-only">${item.transcript || ''}</span><span aria-hidden="true">🔊</span>`;
+        stimulusBox.innerHTML = `<span class="sr-only">${wordsFor(item)}</span><span aria-hidden="true">🔊</span>`;
         replayRow.innerHTML = '';
+        wordsBox.hidden = true; wordsBox.textContent = '';
         const replayBtn = document.createElement('button');
         replayBtn.type = 'button';
         replayBtn.className = 'btn btn-outline btn-sm tap-target';
@@ -87,6 +105,23 @@
           playStimulus(item);
         });
         replayRow.appendChild(replayBtn);
+        if (item.showWords !== false && wordsFor(item)) {
+          const wordsBtn = document.createElement('button');
+          wordsBtn.type = 'button';
+          wordsBtn.className = 'btn btn-outline btn-sm tap-target';
+          wordsBtn.style.marginLeft = '8px';
+          wordsBtn.textContent = t('showWords');
+          wordsBtn.setAttribute('aria-expanded', 'false');
+          wordsBtn.addEventListener('click', () => {
+            const show = wordsBox.hidden;
+            wordsBox.hidden = !show;
+            wordsBox.textContent = show ? wordsFor(item) : '';
+            wordsBtn.textContent = show ? t('hideWords') : t('showWords');
+            wordsBtn.setAttribute('aria-expanded', String(show));
+            if (show) onEvidence('hint_requested', { index, kind: 'show_words' });
+          });
+          replayRow.appendChild(wordsBtn);
+        }
         playStimulus(item);
       } else {
         replayRow.innerHTML = '';
@@ -102,7 +137,14 @@
         btn.type = 'button';
         btn.className = 'fn-choice-btn band-aware tap-target';
         if (choice.color) btn.style.borderLeftColor = choice.color;
-        btn.textContent = choice.label;
+        if (choice.caption) {
+          const pic = document.createElement('span'); pic.className = 'choice-pic'; pic.setAttribute('aria-hidden', 'true'); pic.textContent = choice.label;
+          const cap = document.createElement('span'); cap.className = 'choice-caption'; cap.textContent = choice.caption;
+          btn.append(pic, cap);
+          btn.classList.add('has-caption');
+        } else {
+          btn.textContent = choice.label;
+        }
         // choice.aria lets a content pack give an emoji-only choice (no
         // reading required, per the Discover band's own design rule, §7.2)
         // a real text alternative instead of relying on the emoji glyph's
@@ -133,26 +175,25 @@
       });
 
       const custom = [choice.feedback, item.explanation].filter(Boolean).join(' ');
+      const message = custom || (isCorrect ? t('audRight') : t('audMiss'));
       feedbackHolder.innerHTML = '';
-      feedbackHolder.appendChild(FnGameShell.renderFeedback(
-        isCorrect ? 'correct' : 'incorrect',
-        custom || (isCorrect ? 'Correct!' : 'Not quite — take another look.')
-      ));
-      if (custom && item.stimulusType === 'audio') speak(custom);
+      feedbackHolder.appendChild(FnGameShell.renderFeedback(isCorrect ? 'correct' : 'incorrect', message));
+      // Audio rounds speak every outcome (and stop the story if the child answered early), so non-readers always hear it.
+      if (item.stimulusType === 'audio') speak(message, true);
 
       setTimeout(() => {
         index++;
         if (index >= items.length) {
           const total = correct + incorrect;
           onComplete([
-            { value: correct, label: 'Correct' },
-            { value: incorrect, label: 'Incorrect' },
-            { value: `${Math.round((correct / total) * 100)}%`, label: 'Accuracy' },
+            { value: correct, label: t('audLabelRight') },
+            { value: incorrect, label: t('audLabelWrong') },
+            { value: `${Math.round((correct / total) * 100)}%`, label: t('audLabelScore') },
           ], { score: correct, maxScore: total });
         } else {
           renderItem();
         }
-      }, custom ? Math.min(7000, 2200 + custom.length * 45) : (isCorrect ? 600 : 1300));
+      }, (custom || item.stimulusType === 'audio') ? Math.min(7000, 2200 + message.length * 45) : (isCorrect ? 600 : 1300));
     }
   }
 

@@ -535,10 +535,16 @@ html[data-band="advance"] {
   background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));
   font-size: calc(32px * var(--band-scale, 1)); font-weight: 800;
 }
+.fn-words-box {
+  background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm)); color: var(--ink);
+  padding: 16px 20px; margin: 8px 0 16px; font-size: calc(20px * var(--band-scale, 1)); font-weight: 700;
+  line-height: 1.45; text-align: left;
+}
 .fn-stimulus-box .fn-story-text {
   display: block; text-align: left; font-size: calc(16px * var(--band-scale, 1)); font-weight: 600;
   line-height: 1.6; margin-top: 12px; color: var(--ink);
 }
+.fn-stimulus-box .fn-story-text[hidden] { display: none; }
 .fn-passage-box {
   background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));
   padding: 16px 18px; font-size: 14px; line-height: 1.7; color: var(--ink);
@@ -606,8 +612,8 @@ html[data-band="discover"] .fn-choice-btn .choice-tag { display: none; }
    exact thing the game's own developmental-design rule prohibits).
    Reverts to the default block/left-aligned/band-scaled text button. */
 html[data-band="discover"] .fn-choice-btn.long-text {
-  display: block; width: 100%; text-align: left; min-height: 0;
-  font-size: calc(15px * var(--band-scale, 1)); box-shadow: none;
+  display: block; width: 100%; text-align: left; min-height: 64px; padding: 14px 20px;
+  font-size: 22px; line-height: 1.3; box-shadow: none;
 }
 html[data-band="discover"] .fn-choice-list.long-text-list {
   display: flex; flex-direction: column;
@@ -754,4 +760,11 @@ html[data-band="advance"] .game-frame {
 }
 html[data-band="advance"] .game-card-panel textarea {
   background: #0F172A; color: #E2E8F0; border-color: #64748B !important;
+}
+
+/* Discover answer tiles with a caption (Release 87): the picture on top, a short word under it for children who are starting to read. */
+html[data-band="discover"] .fn-choice-btn.has-caption { flex-direction: column; gap: 6px; min-height: 150px; }
+html[data-band="discover"] .fn-choice-btn .choice-pic { font-size: 60px; line-height: 1; }
+html[data-band="discover"] .fn-choice-btn .choice-caption {
+  font-size: 18px; font-weight: 800; line-height: 1.15; color: var(--ink); text-align: center;
 }

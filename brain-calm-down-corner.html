@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=4">
+<link rel="stylesheet" href="brain-games.css?v=5">
 </head>
 <body>
 <header></header>
@@ -29,8 +29,8 @@
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=3"></script>
-<script src="engine-audio-choice.js?v=2"></script>
+<script src="engine-sdk.js?v=4"></script>
+<script src="engine-audio-choice.js?v=3"></script>
 <script>
   // Calm Down Corner - first Tune Your Brain game targeting the
   // Self-management CASEL competency (roadmap section 6.4), and the
@@ -50,47 +50,47 @@
     items: [
       {
         stimulusType: 'audio',
-        stimulusText: 'Your tower just fell down and you feel frustrated.',
-        transcript: 'Your tower just fell down and you feel frustrated. Which one would help you feel calm?',
+        stimulusText: "Your tower fell down. You feel mad. What helps you feel calm?",
+        transcript: "Your tower fell down. You feel mad. What helps you feel calm?",
         choices: [
-          { id: 'breathe', label: '😮‍💨', aria: 'take slow deep breaths' },
-          { id: 'yell', label: '😠', aria: 'yell about it' },
-          { id: 'knock-more', label: '🧱', aria: 'knock down more blocks' },
+          { id: "breathe", label: "😮‍💨", caption: "Deep breaths", aria: "take slow deep breaths" },
+          { id: "yell", label: "😠", caption: "Yell", aria: "yell about it" },
+          { id: "knock-more", label: "🧱", caption: "Knock more down", aria: "knock down more blocks" },
         ],
-        correctId: 'breathe',
+        correctId: "breathe",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'A puzzle piece will not fit and you feel annoyed.',
-        transcript: 'A puzzle piece will not fit and you feel annoyed. Which one would help you feel calm?',
+        stimulusText: "A puzzle piece will not fit. You feel grumpy. What helps you feel calm?",
+        transcript: "A puzzle piece will not fit. You feel grumpy. What helps you feel calm?",
         choices: [
-          { id: 'count', label: '🔢', aria: 'count slowly to five' },
-          { id: 'throw', label: '😤', aria: 'throw the puzzle' },
-          { id: 'give-up', label: '🙅', aria: 'give up and stop trying' },
+          { id: "count", label: "🔢", caption: "Count to five", aria: "count slowly to five" },
+          { id: "throw", label: "😤", caption: "Throw it", aria: "throw the puzzle" },
+          { id: "give-up", label: "🙅", caption: "Give up", aria: "give up and stop trying" },
         ],
-        correctId: 'count',
+        correctId: "count",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'Someone took your turn on the swing and you feel upset.',
-        transcript: 'Someone took your turn on the swing and you feel upset. Which one would help you feel calm?',
+        stimulusText: "Someone took your turn on the swing. You feel upset. What helps you feel calm?",
+        transcript: "Someone took your turn on the swing. You feel upset. What helps you feel calm?",
         choices: [
-          { id: 'ask-help', label: '🙋', aria: 'ask a grown-up for help' },
-          { id: 'push', label: '😢', aria: 'push and cry loudly' },
-          { id: 'keep-inside', label: '🤐', aria: 'keep the feeling inside' },
+          { id: "ask-help", label: "🙋", caption: "Ask a grown-up", aria: "ask a grown-up for help" },
+          { id: "push", label: "😢", caption: "Push and cry", aria: "push and cry loudly" },
+          { id: "keep-inside", label: "🤐", caption: "Keep it inside", aria: "keep the feeling inside" },
         ],
-        correctId: 'ask-help',
+        correctId: "ask-help",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'You spilled your juice by accident and you feel embarrassed.',
-        transcript: 'You spilled your juice by accident and you feel embarrassed. Which one would help you feel calm?',
+        stimulusText: "You spilled your juice. Your face feels hot. What helps you feel calm?",
+        transcript: "You spilled your juice. Your face feels hot. What helps you feel calm?",
         choices: [
-          { id: 'calm-spot', label: '🪴', aria: 'take a break in a calm spot' },
-          { id: 'yell-unfair', label: '😭', aria: 'yell that it is not fair' },
-          { id: 'kick', label: '💥', aria: 'kick something' },
+          { id: "calm-spot", label: "🪴", caption: "Calm spot", aria: "take a break in a calm spot" },
+          { id: "yell-unfair", label: "😭", caption: "Yell \"Not fair\"", aria: "yell that it is not fair" },
+          { id: "kick", label: "💥", caption: "Kick something", aria: "kick something" },
         ],
-        correctId: 'calm-spot',
+        correctId: "calm-spot",
       },
     ],
   };
@@ -112,7 +112,7 @@
     header: {
       icon: '🐢',
       title: 'Calm Down Corner',
-      description: 'Listen to what happened, then pick what would help you feel calm.',
+      description: 'Listen. Pick what helps you feel calm.',
     },
   });
 </script>

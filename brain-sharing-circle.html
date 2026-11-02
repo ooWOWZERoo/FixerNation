@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=4">
+<link rel="stylesheet" href="brain-games.css?v=5">
 </head>
 <body>
 <header></header>
@@ -29,8 +29,8 @@
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=3"></script>
-<script src="engine-audio-choice.js?v=2"></script>
+<script src="engine-sdk.js?v=4"></script>
+<script src="engine-audio-choice.js?v=3"></script>
 <script>
   // Sharing Circle - Tune Your Brain SEL scaling slice (Discover band).
   // Targets Social awareness and Relationship skills - both had ZERO
@@ -49,47 +49,47 @@
     items: [
       {
         stimulusType: 'audio',
-        stimulusText: 'A classmate is crying because they lost their favorite toy at recess.',
-        transcript: 'A classmate is crying because they lost their favorite toy at recess. What is a kind thing to do?',
+        stimulusText: "A friend lost a toy. They are sad. What is kind?",
+        transcript: "A friend lost a toy. They are sad. What is kind?",
         choices: [
-          { id: 'comfort', label: '🤗', aria: 'ask if they are okay and help look' },
-          { id: 'walk-away', label: '🚶', aria: 'walk away' },
-          { id: 'laugh', label: '😂', aria: 'laugh' },
+          { id: "comfort", label: "🤗", caption: "Help look", aria: "ask if they are okay and help look" },
+          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away" },
+          { id: "laugh", label: "😂", caption: "Laugh", aria: "laugh" },
         ],
-        correctId: 'comfort',
+        correctId: "comfort",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'Your friend group is playing a game, and a new kid is standing alone watching.',
-        transcript: 'Your friend group is playing a game, and a new kid is standing alone watching. What is a kind thing to do?',
+        stimulusText: "A new kid stands alone. Your friends are playing. What is kind?",
+        transcript: "A new kid stands alone. Your friends are playing. What is kind?",
         choices: [
-          { id: 'invite', label: '🙋', aria: 'invite them to play' },
-          { id: 'ignore', label: '🙈', aria: 'ignore them' },
-          { id: 'whisper', label: '🤫', aria: 'point and whisper about them' },
+          { id: "invite", label: "🙋", caption: "Invite them", aria: "invite them to play" },
+          { id: "ignore", label: "🙈", caption: "Ignore them", aria: "ignore them" },
+          { id: "whisper", label: "🤫", caption: "Whisper", aria: "point and whisper about them" },
         ],
-        correctId: 'invite',
+        correctId: "invite",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'Your friend trips and drops their lunch tray, and other kids start laughing.',
-        transcript: 'Your friend trips and drops their lunch tray, and other kids start laughing. What is a kind thing to do?',
+        stimulusText: "Your friend dropped a tray. Kids laugh. What is kind?",
+        transcript: "Your friend dropped a tray. Kids laugh. What is kind?",
         choices: [
-          { id: 'help', label: '🤝', aria: 'help pick it up' },
-          { id: 'laugh-too', label: '😂', aria: 'laugh too' },
-          { id: 'walk-away', label: '🚶', aria: 'walk away' },
+          { id: "help", label: "🤝", caption: "Help pick up", aria: "help pick it up" },
+          { id: "laugh-too", label: "😂", caption: "Laugh too", aria: "laugh too" },
+          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away" },
         ],
-        correctId: 'help',
+        correctId: "help",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'Your little brother is scared of the thunderstorm outside.',
-        transcript: 'Your little brother is scared of the thunderstorm outside. What is a kind thing to do?',
+        stimulusText: "Your little brother is scared of the storm. What is kind?",
+        transcript: "Your little brother is scared of the storm. What is kind?",
         choices: [
-          { id: 'comfort', label: '🫂', aria: 'sit with him and comfort him' },
-          { id: 'ignore', label: '📵', aria: 'ignore him and keep playing' },
-          { id: 'dismiss', label: '😤', aria: 'tell him to stop being scared' },
+          { id: "comfort", label: "🫂", caption: "Sit with him", aria: "sit with him and comfort him" },
+          { id: "ignore", label: "📵", caption: "Keep playing", aria: "ignore him and keep playing" },
+          { id: "dismiss", label: "😤", caption: "Say \"Stop it\"", aria: "tell him to stop being scared" },
         ],
-        correctId: 'comfort',
+        correctId: "comfort",
       },
     ],
   };
@@ -111,7 +111,7 @@
     header: {
       icon: '🤗',
       title: 'Sharing Circle',
-      description: 'Listen to what happened, then pick the kind thing to do.',
+      description: 'Listen. Pick the kind thing.',
     },
   });
 </script>

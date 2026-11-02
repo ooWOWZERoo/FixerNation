@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=4">
+<link rel="stylesheet" href="brain-games.css?v=5">
 </head>
 <body>
 <header></header>
@@ -29,8 +29,8 @@
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=3"></script>
-<script src="engine-audio-choice.js?v=2"></script>
+<script src="engine-sdk.js?v=4"></script>
+<script src="engine-audio-choice.js?v=3"></script>
 <script>
   // Helper's Choice - Tune Your Brain SEL scaling slice (Discover band).
   // Targets Responsible decision-making, which had ZERO Discover-band
@@ -48,47 +48,47 @@
     items: [
       {
         stimulusType: 'audio',
-        stimulusText: 'You find a dollar bill on the classroom floor.',
-        transcript: 'You find a dollar bill on the classroom floor. What is the responsible thing to do?',
+        stimulusText: "You find a dollar on the floor. What is the right thing to do?",
+        transcript: "You find a dollar on the floor. What is the right thing to do?",
         choices: [
-          { id: 'give-teacher', label: '🙋', aria: 'give it to the teacher' },
-          { id: 'keep-quiet', label: '🤫', aria: 'keep it quietly' },
-          { id: 'pocket', label: '🎒', aria: 'put it in your own backpack' },
+          { id: "give-teacher", label: "🙋", caption: "Tell the teacher", aria: "give it to the teacher" },
+          { id: "keep-quiet", label: "🤫", caption: "Keep it quiet", aria: "keep it quietly" },
+          { id: "pocket", label: "🎒", caption: "Into your bag", aria: "put it in your own backpack" },
         ],
-        correctId: 'give-teacher',
+        correctId: "give-teacher",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'You accidentally knock over a cup of paint and it spills on the table.',
-        transcript: 'You accidentally knock over a cup of paint and it spills on the table. What is the responsible thing to do?',
+        stimulusText: "You spilled paint on the table. What is the right thing to do?",
+        transcript: "You spilled paint on the table. What is the right thing to do?",
         choices: [
-          { id: 'tell-clean', label: '🧽', aria: 'tell the teacher and help clean it up' },
-          { id: 'hide', label: '🙈', aria: 'hide it and walk away' },
-          { id: 'blame', label: '👉', aria: 'blame someone else' },
+          { id: "tell-clean", label: "🧽", caption: "Tell and clean up", aria: "tell the teacher and help clean it up" },
+          { id: "hide", label: "🙈", caption: "Hide it", aria: "hide it and walk away" },
+          { id: "blame", label: "👉", caption: "Blame someone", aria: "blame someone else" },
         ],
-        correctId: 'tell-clean',
+        correctId: "tell-clean",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'You promised to feed the class fish, but you are busy playing.',
-        transcript: 'You promised to feed the class fish, but you are busy playing. What is the responsible thing to do?',
+        stimulusText: "You said you would feed the fish. You are playing. What is the right thing to do?",
+        transcript: "You said you would feed the fish. You are playing. What is the right thing to do?",
         choices: [
-          { id: 'pause-feed', label: '⏸️', aria: 'pause and feed the fish first' },
-          { id: 'skip', label: '🙅', aria: 'skip it, someone else will do it' },
-          { id: 'upset', label: '😤', aria: 'get upset that you have to' },
+          { id: "pause-feed", label: "🐟", caption: "Feed the fish", aria: "pause and feed the fish first" },
+          { id: "skip", label: "🙅", caption: "Skip it", aria: "skip it, someone else will do it" },
+          { id: "upset", label: "😤", caption: "Get grumpy", aria: "get upset that you have to" },
         ],
-        correctId: 'pause-feed',
+        correctId: "pause-feed",
       },
       {
         stimulusType: 'audio',
-        stimulusText: 'Your friend wants you to say you both finished your worksheet, but you did not finish yours.',
-        transcript: 'Your friend wants you to say you both finished your worksheet, but you did not finish yours. What is the responsible thing to do?',
+        stimulusText: "Your friend says, \"Say we both finished.\" You did not finish. What is the right thing to do?",
+        transcript: "Your friend says, \"Say we both finished.\" You did not finish. What is the right thing to do?",
         choices: [
-          { id: 'tell-truth', label: '✋', aria: 'tell the truth that you are not done yet' },
-          { id: 'go-along', label: '🤐', aria: 'go along with it' },
-          { id: 'get-mad', label: '😠', aria: 'get mad at your friend' },
+          { id: "tell-truth", label: "✋", caption: "Tell the truth", aria: "tell the truth that you are not done yet" },
+          { id: "go-along", label: "🤐", caption: "Go along", aria: "go along with it" },
+          { id: "get-mad", label: "😠", caption: "Get mad", aria: "get mad at your friend" },
         ],
-        correctId: 'tell-truth',
+        correctId: "tell-truth",
       },
     ],
   };
@@ -110,7 +110,7 @@
     header: {
       icon: '✋',
       title: "Helper's Choice",
-      description: 'Listen to what happened, then pick the responsible thing to do.',
+      description: 'Listen. Pick the right thing to do.',
     },
   });
 </script>

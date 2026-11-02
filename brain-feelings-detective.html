@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=4">
+<link rel="stylesheet" href="brain-games.css?v=5">
 </head>
 <body>
 <header></header>
@@ -29,8 +29,8 @@
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=3"></script>
-<script src="engine-scenario-choice.js?v=4"></script>
+<script src="engine-sdk.js?v=4"></script>
+<script src="engine-scenario-choice.js?v=5"></script>
 <script>
   // Feelings Detective - Tune Your Brain SEL scaling slice (Discover band).
   // Closes the last CASEL gap: the first genuine Self-awareness game in
@@ -48,90 +48,100 @@
 
   const contentPack = {
     title: 'Feelings Detective',
+    // Discover wording (Release 87): short lines, pictures on the clues and feelings, everything spoken. Plain defaults for
+    // the shared prompts live in engine-scenario-choice.js; this game supplies its own.
+    prompts: {
+      cues: 'What do you see?',
+      afterCues: 'Good looking! Now think about the feeling.',
+      pick: 'How might they feel? Pick one or more.',
+      confirmCues: 'I see these',
+      confirmPick: 'I picked these',
+      multiLabel: 'Times you picked two feelings',
+    },
     scenarios: [
       {
-        context: "Maya's friend didn't save her a seat at lunch.",
+        context: "Maya's friend did not save her a seat.",
         illustration: '🍽️',
         cues: [
-          { id: 'looking-down', text: "She's looking down at her tray.", present: true },
-          { id: 'laughing', text: "She's laughing loudly.", present: false },
-          { id: 'sat-alone', text: 'She sat by herself at the end of the table.', present: true },
+          { id: 'looking-down', text: '👀 She looks down at her tray.', present: true },
+          { id: 'laughing', text: '😂 She laughs loudly.', present: false },
+          { id: 'sat-alone', text: '🪑 She sits all alone.', present: true },
         ],
         feelings: [
-          { id: 'sad', text: 'Sad', tag: 'plausible' },
-          { id: 'left-out', text: 'Left out', tag: 'plausible' },
-          { id: 'excited', text: 'Excited', tag: 'less_fitting',
-            note: 'Excited usually looks and sounds different, like smiling or moving around a lot.' },
+          { id: 'sad', text: '😢 Sad', tag: 'plausible' },
+          { id: 'left-out', text: '😔 Left out', tag: 'plausible' },
+          { id: 'excited', text: '🤩 Excited', tag: 'less_fitting',
+            note: 'Excited looks bouncy and loud.' },
         ],
-        reinforcement: "Sad and left out can both be true at the same time - there's often more than one right answer.",
+        reinforcement: 'Sad and left out can both be true.',
         seekHelp: {
-          prompt: 'If a friend leaves you out and it keeps happening, what could you do?',
-          text: 'Telling a trusted grown-up, like a teacher or family member, is always a good option.',
+          prompt: 'If a friend leaves you out again, what could you do?',
+          text: 'Tell a grown-up you trust, like a teacher.',
         },
       },
       {
-        context: "Sam just found out his family is getting a new puppy this weekend.",
+        context: 'Sam is getting a puppy this weekend!',
         illustration: '🐶',
         cues: [
-          { id: 'jumping', text: "He's jumping up and down.", present: true },
-          { id: 'covering-ears', text: "He's covering his ears.", present: false },
-          { id: 'talking-fast', text: "He's talking really fast and smiling big.", present: true },
+          { id: 'jumping', text: '🦘 He jumps up and down.', present: true },
+          { id: 'covering-ears', text: '🙉 He covers his ears.', present: false },
+          { id: 'talking-fast', text: '😁 He talks fast and smiles big.', present: true },
         ],
         feelings: [
-          { id: 'excited', text: 'Excited', tag: 'plausible' },
-          { id: 'happy', text: 'Happy', tag: 'plausible' },
-          { id: 'nervous', text: 'Nervous', tag: 'less_fitting',
-            note: "Nervous often looks quieter or more still - Sam's whole body is full of energy here." },
+          { id: 'excited', text: '😆 Excited', tag: 'plausible' },
+          { id: 'happy', text: '😊 Happy', tag: 'plausible' },
+          { id: 'nervous', text: '😟 Nervous', tag: 'less_fitting',
+            note: 'Nervous looks quiet and still. Sam is full of energy.' },
         ],
-        reinforcement: 'Excited and happy often go together - noticing more than one feeling is normal.',
+        reinforcement: 'Excited and happy can go together.',
       },
       {
-        context: "Jordan's team lost the game in the last few seconds.",
+        context: "Jordan's team lost the game.",
         illustration: '🏀',
         cues: [
-          { id: 'slumped', text: 'His shoulders are slumped.', present: true },
-          { id: 'kicked-ground', text: 'He kicked the ground.', present: true },
-          { id: 'high-fives', text: "He's giving high-fives to the other team.", present: false },
+          { id: 'slumped', text: '😞 His shoulders slump.', present: true },
+          { id: 'kicked-ground', text: '🦶 He kicks the ground.', present: true },
+          { id: 'high-fives', text: '🤝 He high-fives the other team.', present: false },
         ],
         feelings: [
-          { id: 'frustrated', text: 'Frustrated', tag: 'plausible' },
-          { id: 'disappointed', text: 'Disappointed', tag: 'plausible' },
-          { id: 'proud', text: 'Proud', tag: 'less_fitting',
-            note: "Proud usually shows up after doing something well - right now Jordan's body looks more frustrated than proud." },
+          { id: 'frustrated', text: '😠 Frustrated', tag: 'plausible' },
+          { id: 'disappointed', text: '😢 Disappointed', tag: 'plausible' },
+          { id: 'proud', text: '😎 Proud', tag: 'less_fitting',
+            note: 'Proud feels good. Jordan looks upset.' },
         ],
-        reinforcement: 'Frustrated and disappointed can both show up after losing - that is normal, and it usually fades.',
+        reinforcement: 'Frustrated and disappointed can both happen after a loss. It fades.',
         seekHelp: {
-          prompt: 'If losing a game makes you feel like giving up on trying, what could help?',
-          text: 'Talking to a coach, teacher, or family member about how you are feeling is a good next step.',
+          prompt: 'If losing makes you want to quit, what could help?',
+          text: 'Talk to a coach, a teacher or a family member.',
         },
       },
       {
-        context: 'Priya is starting at a brand new school today.',
+        context: 'Priya starts at a new school today.',
         illustration: '🎒',
         cues: [
-          { id: 'holding-hand', text: "She's holding her mom's hand tightly.", present: true },
-          { id: 'looking-around', text: 'She keeps looking around at everything.', present: true },
-          { id: 'running-ahead', text: "She's running ahead by herself.", present: false },
+          { id: 'holding-hand', text: "🤝 She holds her mom's hand tight.", present: true },
+          { id: 'looking-around', text: '👀 She looks at everything.', present: true },
+          { id: 'running-ahead', text: '🏃 She runs ahead alone.', present: false },
         ],
         feelings: [
-          { id: 'nervous', text: 'Nervous', tag: 'plausible' },
-          { id: 'curious', text: 'Curious', tag: 'plausible' },
-          { id: 'bored', text: 'Bored', tag: 'less_fitting',
-            note: 'Bored usually looks less alert - Priya is paying close attention to everything around her.' },
+          { id: 'nervous', text: '😬 Nervous', tag: 'plausible' },
+          { id: 'curious', text: '🧐 Curious', tag: 'plausible' },
+          { id: 'bored', text: '🥱 Bored', tag: 'less_fitting',
+            note: 'Bored looks sleepy. Priya is watching closely.' },
         ],
-        reinforcement: 'Nervous and curious can both be true on a first day somewhere new - feelings are not always just one thing.',
+        reinforcement: 'Nervous and curious can both be true on a first day.',
       },
     ],
     // After each story the child gets a private check-in about their own feelings (NY SEL 1A). Their answers are
     // never logged or sent anywhere; see the note at the top of engine-scenario-choice.js.
     selfCheck: {
-      prompt: 'Has something like this ever happened to you?',
+      prompt: 'Has this happened to you?',
       options: [
         { id: 'yes', text: 'Yes' },
         { id: 'no', text: 'No' },
         { id: 'not-sure', text: 'Not sure' },
       ],
-      bodyPrompt: 'If you felt this way, where in your body would you notice it?',
+      bodyPrompt: 'Where would you feel it in your body?',
       bodyOptions: [
         { id: 'tummy', text: 'My tummy' },
         { id: 'chest', text: 'My chest' },
@@ -139,9 +149,9 @@
         { id: 'hands', text: 'My hands' },
         { id: 'elsewhere', text: 'Somewhere else' },
       ],
-      closing: 'Nice job checking in with yourself. Your body gives you clues about how you feel, and no one else sees what you picked.',
-      privateNote: "Your answers here are private and aren't saved.",
-      summaryLabel: 'Times you checked in with yourself',
+      closing: 'You checked in with yourself! No one sees what you picked.',
+      privateNote: 'Only you see your answers.',
+      summaryLabel: 'Times you checked in',
     },
   };
 
@@ -162,7 +172,7 @@
     header: {
       icon: '🕵️',
       title: 'Feelings Detective',
-      description: 'Notice what is happening, think about how someone might be feeling, then check in with yourself.',
+      description: 'Look at the clues. Then pick how they feel.',
     },
   });
 </script>
