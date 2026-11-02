@@ -35,7 +35,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Calm Down Corner', 'calm-down-corner',
-        'Listen to a frustrating moment, then pick what would help you feel calm. A Tune Your Brain SEL experience.',
+        'Listen to what happened, then pick what helps you feel calm.',
         '🐢', 'Self-Regulation', (maxOrder?.m || 0) + 1,
         'discover', 'sel', 'self_management',
       ]

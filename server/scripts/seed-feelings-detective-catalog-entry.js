@@ -33,7 +33,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Feelings Detective', 'feelings-detective',
-        'Notice real cues in a scene, then pick every feeling that plausibly fits. A Tune Your Brain SEL experience.',
+        'Look at the clues in a scene, then pick every feeling that fits.',
         '🕵️', 'Self-Awareness', (maxOrder?.m || 0) + 1,
         'discover', 'sel', 'self_awareness',
       ]

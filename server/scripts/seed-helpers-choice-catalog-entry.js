@@ -34,7 +34,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         "Helper's Choice", 'helpers-choice',
-        'Listen to what happened, then pick the responsible thing to do. A Tune Your Brain SEL experience.',
+        'Listen to what happened, then pick the right thing to do.',
         '✋', 'Responsibility', (maxOrder?.m || 0) + 1,
         'discover', 'sel', 'responsible_decision_making',
       ]

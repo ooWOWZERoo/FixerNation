@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 </head>
 <body>
 <header></header>
@@ -28,7 +28,7 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js?v=2"></script>
+<script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
 <script src="engine-branching-scenario.js?v=6"></script>
 <script>
@@ -50,7 +50,7 @@
         prompt: 'You notice a classmate, Sam, has quietly been left out of the group chat where your class project team plans everything. No one said anything mean, but Sam just isn’t in the chat anymore, and hasn’t been added to the last two planning messages.',
         choices: [
           { id: 'notice-pattern', text: 'That’s worth paying attention to. Sam is being left out of something that affects the whole team.', type: 'responsible',
-            feedback: 'Right. Noticing the pattern, not just one moment, is the first step before deciding what to do.' },
+            feedback: 'Noticing the pattern, not just one moment, is the first step before deciding what to do.' },
           { id: 'not-my-business', text: 'It’s probably nothing, not really my business.', type: 'plausible_incomplete',
             feedback: 'It’s true you don’t know the full story yet, but a teammate being quietly cut out of planning is worth understanding before deciding it’s nothing.' },
         ],
@@ -80,7 +80,7 @@
         prompt: 'What’s the most constructive next step right now?',
         choices: [
           { id: 'add-back-quietly', text: 'Add Sam back into the chat yourself and quietly mention the last two updates.', type: 'multiple_defensible',
-            feedback: 'Also a reasonable move, and it keeps things low drama. The catch is that Sam may have left on purpose, or may not want to be added without being asked, and you may not be allowed to add people at all. Asking first is usually safer.' },
+            feedback: 'Reasonable and quiet. But Sam may have left on purpose, and you may not be allowed to add people. Asking first is safer.' },
           { id: 'ask-sam-directly', text: 'Ask Sam directly: "Hey, I noticed you’re not in the chat, want me to add you back?"', type: 'responsible',
             feedback: 'A strong first move. Asking respects Sam’s side of the story instead of assuming you already know it, and it lets Sam decide whether to come back.' },
           { id: 'call-out-publicly', text: 'Call it out loudly in front of the whole team so everyone knows what happened.', type: 'unsafe',
@@ -114,7 +114,7 @@
     header: {
       icon: '🧭',
       title: 'Decision Point',
-      description: 'Work through what’s happening, who it affects, and what to do about it.',
+      description: 'A classmate is being left out. Decide what you notice and what to do.',
     },
   });
 </script>

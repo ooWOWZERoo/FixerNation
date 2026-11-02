@@ -27,7 +27,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Money Moves', 'money-moves',
-        'Manage allowance and chore money toward a savings goal, with real tradeoffs along the way. A Tune Your Brain catalog experience.',
+        'Save toward a goal and keep some spending money. More than one path works.',
         '🚲', 'Budgeting & Percentages', (maxOrder?.m || 0) + 1,
       ]
     );

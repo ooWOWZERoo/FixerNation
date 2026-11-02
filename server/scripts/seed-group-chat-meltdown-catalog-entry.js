@@ -33,7 +33,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Group Chat Meltdown', 'group-chat-meltdown',
-        'Work through a real Issues-to-Answers cycle on an online group-chat conflict. A Tune Your Brain SEL experience.',
+        'The chat turned on you. Decide how to answer before you type.',
         '💬', 'Self-Management', (maxOrder?.m || 0) + 1,
         'challenge', 'sel', 'self_management,responsible_decision_making',
       ]

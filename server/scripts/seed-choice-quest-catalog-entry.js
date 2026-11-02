@@ -33,7 +33,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Choice Quest', 'choice-quest',
-        'Work through a real Issues-to-Answers cycle on a team-project situation. A Tune Your Brain catalog experience.',
+        'Work through a team-project problem: see what is happening, who it affects and what to do.',
         '🗺️', 'Empathy & Responsible Decision-Making', (maxOrder?.m || 0) + 1,
       ]
     );

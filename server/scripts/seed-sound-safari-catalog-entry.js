@@ -32,7 +32,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Sound Safari', 'sound-safari',
-        'Listen for a sound, then find the picture that starts with the same sound. A Tune Your Brain pilot experience (Phase 5).',
+        'Listen for a sound, then find the picture that starts with the same sound.',
         '🦁', 'Phonemic Awareness', (maxOrder?.m || 0) + 1,
       ]
     );

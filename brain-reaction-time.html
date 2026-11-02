@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 <style>
   .rt-target {
     width: 220px; height: 220px; border-radius: 50%;
@@ -56,7 +56,7 @@
   <div class="game-page-header">
     <span class="game-icon">⚡</span>
     <h1>Reaction Time</h1>
-    <p>Wait for green — then tap as fast as you can. Don't click early!</p>
+    <p>Wait for green, then tap as fast as you can. Don't click early!</p>
   </div>
 
   <!-- INTRO -->
@@ -213,7 +213,7 @@ function handleClick() {
     target.className = 'rt-target early';
     document.getElementById('targetEmoji').textContent = '❌';
     document.getElementById('targetLabel').textContent = 'Too early!';
-    document.getElementById('statusMsg').textContent = 'False start — try to wait for green.';
+    document.getElementById('statusMsg').textContent = 'False start. Wait for green.';
     addAttemptChip('false', null);
     markDot(round, 'false');
     round++;
@@ -229,7 +229,7 @@ function handleClick() {
     target.className = 'rt-target waiting';
     document.getElementById('targetEmoji').textContent = '✅';
     document.getElementById('targetLabel').textContent = `${rt} ms`;
-    document.getElementById('statusMsg').textContent = rt < 250 ? '⚡ Lightning fast!' : rt < 350 ? '👍 Nice!' : '🙂 Good';
+    document.getElementById('statusMsg').textContent = rt < 250 ? 'Top tier' : rt < 350 ? 'Solid' : 'Average';
     addAttemptChip('valid', rt);
     markDot(round, 'valid');
     round++;

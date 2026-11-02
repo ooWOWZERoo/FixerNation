@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 <style>
   .hero-badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
   .hero-badge { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); }
@@ -141,7 +141,7 @@ function isNew(g) {
   return !isNaN(t) && (Date.now() - t) < NEW_DAYS * 24 * 60 * 60 * 1000;
 }
 function bandTag(g) {
-  return g.band ? '<span class="game-kind">' + esc(BAND_LABELS[g.band]) + ' (' + BAND_GRADES[g.band] + ')</span> ' : '';
+  return g.band ? '<span class="game-kind band-' + esc(g.band) + '">' + esc(BAND_LABELS[g.band]) + ' (' + BAND_GRADES[g.band] + ')</span> ' : '';
 }
 function newTag(g) { return isNew(g) ? '<span class="game-kind is-new">New</span> ' : ''; }
 function kindTag(g) {
@@ -173,7 +173,7 @@ function renderGameCard(g) {
   const played = p?.totalCompleted || 0;
 
   return `
-    <div class="game-card">
+    <div class="game-card${g.band ? ' band-' + esc(g.band) : ''}">
       <div class="game-card-header">
         <span class="game-card-icon">${esc(g.icon)}</span>
         <h2>${esc(g.name)}</h2>

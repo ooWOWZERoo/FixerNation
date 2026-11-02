@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 </head>
 <body>
 <header></header>
@@ -28,7 +28,7 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js?v=2"></script>
+<script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
 <script src="engine-simulation.js?v=4"></script>
 <script>
@@ -424,7 +424,7 @@
       if (s >= SAVE_GOAL && c >= CHECK_MIN) return 'Jordan built a strong savings cushion and kept checking healthy.' + tally + ' The card balance is still there, and paying it down is a sensible next step.';
       if (d <= DEBT_GOAL && c >= CHECK_MIN) return 'Jordan brought the card balance down and kept checking healthy.' + tally + ' Building savings is the next step, and a small cushion helps a lot.';
       if (c < CHECK_MIN) return 'Jordan reached the end with checking running low.' + tally + ' That is a real tradeoff, and some people choose it on purpose. A bigger buffer in checking makes surprises easier.';
-      return 'Jordan is off to a slow start, and that is normal for a first apartment.' + tally + ' Try a different mix next time and see how it changes.';
+      return 'Jordan is off to a slow start. Savings are $' + (SAVE_GOAL - s) + ' short of the goal, and the card is $' + (d - DEBT_GOAL) + ' above the target.' + tally + ' Try a different mix next time and see how it changes.';
     },
   };
 
@@ -445,7 +445,7 @@
     header: {
       icon: '💰',
       title: 'Money Matters',
-      description: 'Manage Jordan\u2019s first few months on a budget. There is more than one way to do it well.',
+      description: 'Manage Jordan\u2019s first months on a budget. More than one path works.',
     },
   });
 </script>

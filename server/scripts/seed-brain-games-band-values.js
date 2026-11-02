@@ -2,12 +2,13 @@
 // new games, using each game's own already-chosen default band (the
 // `band = params.get('band') || 'X'` line in its brain-{slug}.html file)
 // so the stored value matches what the page actually renders by default.
-// The 6 legacy games are deliberately left NULL — see
-// alter-add-brain-games-band.js's header comment.
+// The 6 legacy games were left NULL until Release 89, which gave them a band (lib/brain-game-copy.js LEGACY_BANDS) so the
+// games page tags, filters and sorts them like the rest; they keep their own look. See alter-add-brain-games-band.js's header comment.
 //
 // Safe to re-run: idempotent UPDATE, always sets the same values.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mysql = require('mysql2/promise');
+const { LEGACY_BANDS } = require('../lib/brain-game-copy');
 
 const BANDS = {
   'sound-safari': 'discover',
@@ -18,6 +19,7 @@ const BANDS = {
   'money-moves': 'challenge',
   'money-matters': 'advance',
   'critical-read': 'advance',
+  ...LEGACY_BANDS,
 };
 
 async function main() {

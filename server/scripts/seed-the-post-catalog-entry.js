@@ -31,7 +31,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'The Post', 'the-post',
-        'Work through a real Issues-to-Answers cycle on a digital-citizenship and peer-reputation situation. A Tune Your Brain SEL experience.',
+        'A rumor is spreading. Decide what you would share and what you would report.',
         '📱', 'Digital Citizenship', (maxOrder?.m || 0) + 1,
         'advance', 'sel', 'social_awareness,relationship_skills,self_management',
       ]

@@ -25,7 +25,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Values Compass', 'values-compass',
-        'Notice what someone does, spot the values it shows, then think about your own. A Tune Your Brain SEL experience.',
+        'Notice what someone does, name the values behind it, then think about your own.',
         '🧭', 'Values and Identity', (maxOrder?.m || 0) + 1,
         'challenge', 'sel', 'self_awareness,responsible_decision_making',
       ]

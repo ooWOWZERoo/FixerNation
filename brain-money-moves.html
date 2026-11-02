@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 </head>
 <body>
 <header></header>
@@ -28,7 +28,7 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js?v=2"></script>
+<script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
 <script src="engine-simulation.js?v=4"></script>
 <script>
@@ -252,7 +252,7 @@
         ]
       },
       {
-        "prompt": "Your lunch box broke. A plain one costs $10. A cartoon one costs $18.",
+        "prompt": "Your phone case cracked. A plain one costs $10. One with a design costs $18.",
         "options": [
           {
             "id": "plain",
@@ -263,14 +263,14 @@
           },
           {
             "id": "cartoon",
-            "label": "Buy the cartoon one ($18).",
+            "label": "Buy the one with a design ($18).",
             "delta": {
               "Spending Money": -18
             }
           },
           {
             "id": "paper-bag",
-            "label": "Use a paper bag for now.",
+            "label": "Use the cracked one for now.",
             "delta": {}
           }
         ]
@@ -303,7 +303,7 @@
         ]
       },
       {
-        "prompt": "A $20 toy is 30 percent off, so it costs $14. It was not on your list.",
+        "prompt": "A $20 pair of headphones is 30 percent off, so it costs $14. They were not on your list.",
         "options": [
           {
             "id": "toy",
@@ -352,7 +352,7 @@
         ]
       },
       {
-        "prompt": "You sell old toys and books at a garage sale and earn $15.",
+        "prompt": "You sell old clothes and games at a garage sale and earn $15.",
         "options": [
           {
             "id": "sale-save",
@@ -413,7 +413,7 @@
       if (saved >= GOAL) return 'You reached your goal, and spending money got tight along the way.' + tally + ' That is a real tradeoff, and some people would choose it on purpose.';
       if (saved >= GOAL * 2 / 3) return 'You are close to your goal.' + tally + ' A little more saving next season would get you there.';
       if (fun >= 30) return 'You kept plenty to spend and built a smaller bike fund.' + tally + ' If the bike matters most, try moving a bit more to savings next time.';
-      return 'You are off to a slow start, and that is normal for a first season.' + tally + ' Try a different mix and see how it changes.';
+      return 'You are off to a slow start. Your bike fund is $' + (GOAL - saved) + ' short of the goal.' + tally + ' Try a different mix and see how it changes.';
     },
   };
 
@@ -434,7 +434,7 @@
     header: {
       icon: '🚲',
       title: 'Money Moves',
-      description: 'Manage your allowance and odd-job money toward a savings goal. Every run brings different choices, and there is more than one way to do it well.',
+      description: 'Save toward a goal and keep some spending money. More than one path works.',
     },
   });
 </script>

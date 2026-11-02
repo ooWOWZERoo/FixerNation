@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Community Voice', 'community-voice',
-        'Listen, check the facts, plan a respectful ask, and speak up for a change at school or in town. A Tune Your Brain SEL experience.',
+        'Pick a problem you can change, then make an ask people can say yes to.',
         '📣', 'Civic Voice', (maxOrder?.m || 0) + 1,
         'advance', 'sel', 'responsible_decision_making,relationship_skills',
       ]

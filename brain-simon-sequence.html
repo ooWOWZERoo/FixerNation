@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 <style>
   .simon-grid {
     display: grid; grid-template-columns: 1fr 1fr;
@@ -63,7 +63,7 @@
     <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
     <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;">
       Watch which colored buttons light up. Then press them in the <strong>same order</strong>.
-      Each round the sequence gets one step longer. See how far you can go!
+      Each round the sequence gets one step longer. How far can you get?
     </p>
     <div style="margin-bottom:20px;">
       <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
@@ -90,7 +90,7 @@
         <button class="simon-btn" data-c="yellow" onclick="userPress('yellow')">🟨</button>
       </div>
       <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-top:4px;">
-        Round <span id="roundNum">1</span> — Score: <span id="liveScore">0</span>
+        Round <span id="roundNum">1</span> · Score: <span id="liveScore">0</span>
       </p>
     </div>
   </div>
@@ -233,7 +233,7 @@ function userPress(color) {
     gameOver = true;
     accepting = false;
     setButtonsEnabled(false);
-    document.getElementById('simonStatus').textContent = '❌ Wrong! Game over.';
+    document.getElementById('simonStatus').textContent = 'Not that one. You reached round ' + sequence.length + '.';
     setTimeout(() => endGame(), 1200);
     return;
   }

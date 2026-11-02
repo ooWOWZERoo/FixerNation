@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Say It Another Way', 'say-it-another-way',
-        'Read a real situation, pick the message this person would hear best, then find the sentence that shows why. A Tune Your Brain SEL experience.',
+        'Read a situation, pick the message this person would hear best, then find the sentence that shows why.',
         '💬', 'Communication', (maxOrder?.m || 0) + 1,
         'challenge', 'sel', 'relationship_skills,social_awareness',
       ]

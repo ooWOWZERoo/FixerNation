@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Fix-It Workshop', 'fix-it-workshop',
-        'Find a problem at school, listen to the people it affects, and try a small fix. A Tune Your Brain experience.',
+        'Find a problem at school, listen to the people it affects, and try a small fix.',
         '🛠️', 'Creative Problem-Solving', (maxOrder?.m || 0) + 1,
         'explore', 'sel', 'responsible_decision_making,social_awareness',
       ]

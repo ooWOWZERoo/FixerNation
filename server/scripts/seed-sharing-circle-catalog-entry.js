@@ -34,7 +34,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Sharing Circle', 'sharing-circle',
-        'Listen to what happened, then pick the kind thing to do. A Tune Your Brain SEL experience.',
+        'Listen to what happened, then pick the kind thing to do.',
         '🤗', 'Kindness', (maxOrder?.m || 0) + 1,
         'discover', 'sel', 'social_awareness,relationship_skills',
       ]

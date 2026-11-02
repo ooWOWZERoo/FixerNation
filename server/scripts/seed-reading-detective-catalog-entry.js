@@ -32,7 +32,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Reading Detective', 'reading-detective',
-        'Read the clues in a short mystery, pick your answer, then prove it with evidence from the text. A Tune Your Brain pilot experience (Phase 5).',
+        'Read the clues in a short mystery, pick your answer, then prove it with the text.',
         '🔍', 'Reading Comprehension', (maxOrder?.m || 0) + 1,
       ]
     );

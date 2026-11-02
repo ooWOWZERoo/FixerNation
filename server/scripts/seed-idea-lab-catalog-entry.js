@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Idea Lab', 'idea-lab',
-        'Find the real need, weigh three workable ideas, and test one small before you launch. A Tune Your Brain experience.',
+        'Find the real need, then test one small idea before you launch.',
         '💡', 'Creative Problem-Solving', (maxOrder?.m || 0) + 1,
         'advance', 'sel', 'responsible_decision_making,relationship_skills',
       ]

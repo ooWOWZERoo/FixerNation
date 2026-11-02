@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 </head>
 <body>
 <header></header>
@@ -28,7 +28,7 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js?v=2"></script>
+<script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
 <script src="engine-branching-scenario.js?v=6"></script>
 <script>
@@ -56,7 +56,7 @@
         prompt: 'You are in a group chat with friends after gym class. Someone posts a video of you tripping during a game, with laughing emojis. A few friends are joking along.',
         choices: [
           { id: 'notice-embarrassed', text: 'Notice that you are starting to feel embarrassed and a little angry, and want to respond right away.', type: 'responsible',
-            feedback: 'That is a completely normal reaction - recognizing it is the first step.' },
+            feedback: 'Anger and embarrassment arrive fast. Spotting them is the first step.' },
           { id: 'just-a-joke', text: 'It is just a joke, so there is nothing to think about.', type: 'plausible_incomplete',
             feedback: 'It might be meant as a joke, but that does not mean it is fine to ignore how it actually makes you feel.' },
         ],
@@ -66,9 +66,9 @@
         prompt: 'If you fire back an angry reply right now, what could happen?',
         choices: [
           { id: 'escalate-public', text: 'The joke could turn into a bigger argument in front of everyone in the chat, and it might be hard to walk back what you said.', type: 'responsible',
-            feedback: 'Group chats make things public fast - an angry reply can escalate quickly and stick around.' },
+            feedback: 'Group chats make things public fast. An angry reply can escalate and stick around.' },
           { id: 'forget-quickly', text: 'Nothing, everyone will just forget about it in a few minutes.', type: 'plausible_incomplete',
-            feedback: 'Maybe, but a heated reply can also get screenshotted or genuinely escalate - "they will forget" is not guaranteed.' },
+            feedback: 'Maybe, but a heated reply can get screenshotted or escalate. "They will forget" is not guaranteed.' },
         ],
       },
       {
@@ -120,7 +120,7 @@
     header: {
       icon: '💬',
       title: 'Group Chat Meltdown',
-      description: 'Work through what happened in the chat, how you are feeling, and what to do about it.',
+      description: 'The chat turned on you. Decide how to answer before you type.',
     },
   });
 </script>

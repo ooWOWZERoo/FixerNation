@@ -25,7 +25,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Same and Different', 'same-and-different',
-        'Listen to the story, then tap what is the same, what is different, or the kind thing to do. A Tune Your Brain SEL experience.',
+        'Listen to the story, then tap what is the same, what is different, or the kind thing to do.',
         '🤝', 'Social Awareness', (maxOrder?.m || 0) + 1,
         'discover', 'sel', 'social_awareness',
       ]

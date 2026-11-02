@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Perspective Swap', 'perspective-swap',
-        'See a group plan from two teammates sides, then choose how the group can adjust so everyone can take part. A Tune Your Brain SEL experience.',
+        'Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.',
         '🔄', 'Perspective-taking', (maxOrder?.m || 0) + 1,
         'advance', 'sel', 'social_awareness,relationship_skills',
       ]

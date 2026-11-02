@@ -32,7 +32,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Decision Point', 'decision-point',
-        'Work through a real Issues-to-Answers cycle on a peer situation — recognize, understand impact, consider options, choose, and reflect. A Tune Your Brain pilot experience (Phase 5).',
+        'A classmate is being left out. Decide what you notice and what to do.',
         '🧭', 'Responsible Decision-Making', (maxOrder?.m || 0) + 1,
       ]
     );

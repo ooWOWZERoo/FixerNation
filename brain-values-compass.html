@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=6">
+<link rel="stylesheet" href="brain-games.css?v=7">
 </head>
 <body>
 <header></header>
@@ -28,7 +28,7 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js?v=2"></script>
+<script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
 <script src="engine-scenario-choice.js?v=6"></script>
 <script>
@@ -52,10 +52,10 @@
     "roundsPerRun": 5,
     "prompts": {
       "cues": "What do you notice in this story?",
-      "afterCues": "Good noticing. Now think about the values this shows.",
+      "afterCues": "Now name the values behind it.",
       "pick": "Which values could this show? You can pick more than one.",
-      "confirmCues": "I've noticed these",
-      "confirmPick": "I've picked my values",
+      "confirmCues": "These are my clues",
+      "confirmPick": "These are my values",
       "multiLabel": "Times you saw more than one value"
     },
     "scenarios": [
@@ -722,7 +722,7 @@
     header: {
       icon: '🧭',
       title: 'Values Compass',
-      description: 'Notice what someone does, spot the values it shows, then think about your own.',
+      description: 'Notice what someone does, name the values behind it, then think about your own.',
     },
   });
 </script>

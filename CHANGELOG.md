@@ -25,6 +25,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - Licenses that already expired before this release carry no record of why their seats are off, so their school administrators still use **Reactivate** on the roster after a renewal. The database script prints how many seats that affects.
 - Needs the one-time database script `alter-add-seat-inactive-reason.js` (run before restarting the Node app), a Node restart, and `admin-licenses.html` copied to the site. New tests in `server/test/seat-renewal.test.js`.
 
+## Release 89 — 2026-11-02 — Final polish for the older games, and a clearer games page
+
+- **Each Challenge and Advance game now has its own header line** instead of sharing one template, and a handful of lines were tidied: dashes written as spaced hyphens, a few "Good catch." and "Right." openers, and soothing "that is normal" lines (the money games now give numbers). Decision Point's longest feedback line was cut to a third of its length; Values Compass sounds like a game for 11 to 13 year olds; three Money Moves events now use older items (a phone case, headphones, old clothes and games) with the same numbers.
+- **Challenge and Advance show a step count** ("Step 2 of 5", and a quiet "2 / 5" in Advance), as Explore does.
+- **The six older games** (Memory Match, Simon Sequence, Number Sequence, Quick Math, Reaction Time, Stroop Challenge) got plainer result lines ("Not that one. You reached round 5.", "Top tier / Solid / Average") and now have a grade band, so they are tagged, filtered and sorted with the rest. They keep their own look. **A class now sees them by default only for the matching grade band** (a teacher can still tick "Show games for all grade bands").
+- **The games page shows each group's color** on a stripe and a tag, and all 25 card descriptions lost internal wording ("A Tune Your Brain pilot experience (Phase 5)"). Needs a one-off script: `node scripts/update-brain-game-copy.js` (safe to run twice).
+- Static files plus that one script. No Node restart, no schema change.
+
 ## Release 88 — 2026-11-02 — The Explore games are shorter and easier to scan for ages 7 to 10
 
 - **Choice Quest, Team Pick, Peace Table and Fix-It Workshop rewritten shorter.** Answer choices went from about 16 words to about 11, feedback from about 19 to about 13, and the hardest story setups (Fix-It Workshop) from up to 39 words to 22 or fewer. The stories, the best answers and the feedback types are the same. Thinking words like "constructive" and "overwhelmed" are gone; feeling words stay.

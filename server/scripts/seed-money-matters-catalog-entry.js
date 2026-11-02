@@ -32,7 +32,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Money Matters', 'money-matters',
-        'Manage a fictional first budget through real tradeoffs — savings, credit, and unexpected costs. A Tune Your Brain pilot experience (Phase 5).',
+        'Manage a first budget through real tradeoffs: savings, credit and surprise costs.',
         '💰', 'Financial Literacy', (maxOrder?.m || 0) + 1,
       ]
     );

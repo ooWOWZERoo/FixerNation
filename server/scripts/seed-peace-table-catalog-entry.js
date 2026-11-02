@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Peace Table', 'peace-table',
-        'Two kids disagree. Say what happened, listen, and find a fair plan together. A Tune Your Brain SEL experience.',
+        'Two kids disagree. Say what happened, listen, and find a fair plan together.',
         '🕊️', 'Conflict Resolution', (maxOrder?.m || 0) + 1,
         'explore', 'sel', 'relationship_skills,social_awareness',
       ]

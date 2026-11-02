@@ -26,7 +26,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Headline', 'headline',
-        'Read a short story, pick the most accurate headline, then prove it with evidence from the text. A Tune Your Brain catalog experience.',
+        'Read a short story, pick the most accurate headline, then prove it with the text.',
         '📰', 'Media Literacy', (maxOrder?.m || 0) + 1,
       ]
     );

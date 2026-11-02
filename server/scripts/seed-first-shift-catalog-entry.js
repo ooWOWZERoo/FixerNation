@@ -31,7 +31,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'First Shift', 'first-shift',
-        'Work through a real Issues-to-Answers cycle on a workplace integrity situation. A Tune Your Brain SEL experience.',
+        'A coworker asks you to cover for them. Decide what you owe the team and the truth.',
         '🧑‍💼', 'Workplace Ethics', (maxOrder?.m || 0) + 1,
         'advance', 'sel', 'responsible_decision_making,relationship_skills',
       ]

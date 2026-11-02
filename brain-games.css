@@ -769,3 +769,16 @@ html[data-band="discover"] .fn-choice-btn .choice-pic { font-size: 60px; line-he
 html[data-band="discover"] .fn-choice-btn .choice-caption {
   font-size: 18px; font-weight: 800; line-height: 1.15; color: var(--ink); text-align: center;
 }
+
+/* Games page (Release 89): each card carries its learning group's color, a thin stripe across the top and a tinted tag.
+   Colors are the R85 palette; each tag pair is contrast-tested in server/test/band-themes.test.js. */
+.game-card { border-top: 6px solid transparent; }
+.game-card.band-discover { border-top-color: #FFD21F; }
+.game-card.band-explore { border-top-color: #7C3AED; }
+.game-card.band-challenge { border-top-color: #2563EB; }
+.game-card.band-advance { border-top-color: #38BDF8; }
+.game-kind.band-discover { background: #FFD21F; color: #2A2420; border-color: #FFD21F; }
+.game-kind.band-explore { background: #EDE9FE; color: #4C1D95; border-color: #EDE9FE; }
+.game-kind.band-challenge { background: #DBEAFE; color: #1E3A8A; border-color: #DBEAFE; }
+.game-kind.band-advance { background: #0F172A; color: #E2E8F0; border-color: #38BDF8; }
+

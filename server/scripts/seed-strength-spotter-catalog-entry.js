@@ -25,7 +25,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Strength Spotter', 'strength-spotter',
-        'Notice what someone does, spot the strengths it shows, then think about your own. A Tune Your Brain SEL experience.',
+        'Notice what someone does, spot the strengths it shows, then think about your own.',
         '🌟', 'Self-awareness', (maxOrder?.m || 0) + 1,
         'explore', 'sel', 'self_awareness',
       ]

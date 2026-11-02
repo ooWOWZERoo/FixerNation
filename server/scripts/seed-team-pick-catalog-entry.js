@@ -33,7 +33,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Team Pick', 'team-pick',
-        'Work through a real Issues-to-Answers cycle on being picked last for a team. A Tune Your Brain SEL experience.',
+        'Work through being picked last for a team: what you feel, what could happen and what to do.',
         '🙋', 'Self-Management', (maxOrder?.m || 0) + 1,
         'explore', 'sel', 'self_management,relationship_skills',
       ]

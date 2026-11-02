@@ -27,7 +27,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         'Critical Read', 'critical-read',
-        'Judge real claims for evidence, bias, and source reasoning, then prove your judgment from the text. A Tune Your Brain catalog experience.',
+        'Judge real claims for evidence, bias and sources, then prove your judgment from the text.',
         '🧐', 'Critical Comprehension', (maxOrder?.m || 0) + 1,
       ]
     );

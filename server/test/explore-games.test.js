@@ -42,10 +42,10 @@ test('MILESTONES: Explore shows "Steps finished" and "Smart choices"; every othe
   assert.match(src, /label: t\('brLabelSteps'\)/); assert.match(src, /label: t\('brLabelHelped'\)/);
 });
 
-test('STEP COUNT: the shell shows "Step 2 of 5" only in Explore, and every engine passes its word', () => {
+test('STEP COUNT: the shell shows "Step 2 of 5" in Explore and Challenge, and every engine passes its word', () => {
   const shell = read('game-shell.js');
   assert.match(shell, /function renderProgress\(current, total, word\)/);
-  assert.match(shell, /word && getBand\(\) === 'explore'/);
+  assert.match(shell, /word && \['explore', 'challenge'\]\.includes\(getBand\(\)\)/);
   const words = { 'engine-evidence-hunt.js': 'Question', 'engine-branching-scenario.js': 'Step', 'engine-scenario-choice.js': 'Story', 'engine-audio-choice.js': 'Question', 'engine-simulation.js': 'Decision' };
   for (const [file, word] of Object.entries(words)) assert.match(read(file), new RegExp(`renderProgress\\([^)]*'${word}'\\)`), `${file} passes '${word}'`);
   assert.match(read('brain-games.css'), /\.fn-progress-count/);
@@ -55,6 +55,6 @@ test('PAGES: game pages load the new shell and engine versions', () => {
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const html = read(f);
     const tag = /<script[^>]+src="game-shell\.js[^"]*"[^>]*>/.exec(html);
-    if (tag) assert.ok(tag[0].includes('game-shell.js?v=2'), `${f} loads an old game-shell`);
+    if (tag) assert.ok(tag[0].includes('game-shell.js?v=3'), `${f} loads an old game-shell`);
   }
 });
