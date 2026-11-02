@@ -101,7 +101,9 @@ Done in `engine-sdk.js` only: the SDK now builds a fresh copy of each game's con
 6. **The rubric numbers** (3 times the pool, half overlap, 8 decisions, 8 to 10 minutes): are those right for your standard?
 7. ~~D1 (ElevenLabs):~~ **Settled: not needed; Ava (Premium) instead.** Original question: is the key live? It decides whether the audio games can pass test 1 or must carry a text transcript only.
 
-## Audio (decision 7)
+## Audio (decision 7) - SUPERSEDED 2026-11-01: see OWNER_DECISIONS_RECOMMENDATIONS.md
+
+**Correction and owner decision (2026-11-01):** Apple's macOS licence (section 2.F) does not permit public or commercial use of its system voices. The owner has decided to **keep using Ava (Premium) for now** with that understood, and to revisit it later; it remains a known licence risk. The plan below stands for narration lines; phonics sounds still need a human recording. The original recommendation was human recordings for phonics and a licensed voice for narration. The text below is the original reasoning.
 
 The help videos are narrated with the macOS voice **Ava (Premium)** at 165 words per minute (`tests/howto/pipeline.ts`, `docs/training-videos/VIDEO-PLAN.md`). The games do not use that voice today: they speak with the visitor's own browser text-to-speech (`speechSynthesis` in `engine-audio-choice.js` and `engine-scenario-choice.js`), which sounds different on every device. The audio engine already accepts a real audio file per round (`stimulusAudioUrl`; no game uses it yet), so the fix is to pre-render each round's narration with `say -v "Ava (Premium)"`, convert to a small mp3 or m4a with ffmpeg, store the files in the repo, and point each round at its file. That makes the voice identical on every device, works offline once cached, and needs no vendor account or per-use fee. Cost: a small build script (modelled on `docs/training-videos/render-narration.sh`) and a re-render whenever a line of narration changes. The transcript stays on every audio round for screen readers.
 

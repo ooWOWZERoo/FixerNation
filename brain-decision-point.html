@@ -30,7 +30,7 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js?v=2"></script>
-<script src="engine-branching-scenario.js"></script>
+<script src="engine-branching-scenario.js?v=3"></script>
 <script>
   // Decision Point — Tune Your Brain, Phase 5 pilot slice (Challenge band).
   // The real Issues-to-Answers 5-step cycle (§6.6) on a peer/digital
@@ -79,10 +79,10 @@
         key: 'choose',
         prompt: 'What’s the most constructive next step right now?',
         choices: [
-          { id: 'add-back-quietly', text: 'Add Sam back into the chat yourself and quietly mention the last two updates.', type: 'responsible',
-            feedback: 'This fixes the immediate problem without making it a big public deal. A solid, low-drama first move.' },
-          { id: 'ask-sam-directly', text: 'Ask Sam directly: "Hey, I noticed you’re not in the chat, want me to add you back?"', type: 'multiple_defensible',
-            feedback: 'Also a good move. Asking directly respects Sam’s side of the story instead of assuming you already know it.' },
+          { id: 'add-back-quietly', text: 'Add Sam back into the chat yourself and quietly mention the last two updates.', type: 'multiple_defensible',
+            feedback: 'Also a reasonable move, and it keeps things low drama. The catch is that Sam may have left on purpose, or may not want to be added without being asked, and you may not be allowed to add people at all. Asking first is usually safer.' },
+          { id: 'ask-sam-directly', text: 'Ask Sam directly: "Hey, I noticed you’re not in the chat, want me to add you back?"', type: 'responsible',
+            feedback: 'A strong first move. Asking respects Sam’s side of the story instead of assuming you already know it, and it lets Sam decide whether to come back.' },
           { id: 'call-out-publicly', text: 'Call it out loudly in front of the whole team so everyone knows what happened.', type: 'unsafe',
             feedback: 'This could embarrass Sam even more and put them on the spot. A quieter, direct approach protects Sam better while still fixing the problem.' },
           { id: 'tell-teacher-now', text: 'This feels bigger than you can fix alone. Tell a teacher what you’ve noticed and let them help.', type: 'seek_help',

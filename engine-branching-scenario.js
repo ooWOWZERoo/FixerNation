@@ -119,7 +119,7 @@
         const responsible = responseTypes.filter((t) => t === 'responsible' || t === 'multiple_defensible').length;
         onComplete([
           { value: steps.length, label: 'Steps completed' },
-          { value: responsible, label: 'Responsible choices' },
+          { value: responsible, label: 'Choices that helped' },
         ]);
       } else {
         renderStep();

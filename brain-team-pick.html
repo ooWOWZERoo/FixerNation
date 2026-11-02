@@ -30,7 +30,7 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js?v=2"></script>
-<script src="engine-branching-scenario.js?v=2"></script>
+<script src="engine-branching-scenario.js?v=3"></script>
 <script>
   // Team Pick - Tune Your Brain SEL scaling slice (Explore band). Real
   // Issues-to-Answers 5-step cycle (section 6.6) on a being-picked-last
@@ -52,54 +52,112 @@
     title: 'Team Pick',
     steps: [
       {
-        key: 'recognize',
-        prompt: 'In gym class, your two best friends are picking teams for four-square. They pick almost everyone else first, and you are the last one left standing.',
-        choices: [
-          { id: 'notice-feeling', text: 'Notice that you are starting to feel hurt and frustrated, and that is a normal reaction to have.', type: 'responsible',
-            feedback: 'Naming what you are feeling is the first step to handling it well.' },
-          { id: 'not-a-big-deal', text: 'It is just a game, so there is no real reason to feel anything about it.', type: 'plausible_incomplete',
-            feedback: 'It is okay to feel something even about "just a game" - pretending you do not feel anything does not make the feeling go away.' },
-        ],
+        "key": "recognize",
+        "prompt": "At recess, your two best friends are picking teams for four-square. They pick almost everyone else first, and you are the last one left standing.",
+        "choices": [
+          {
+            "id": "notice-feeling",
+            "text": "Notice that you feel hurt and frustrated, and that this is a normal reaction to have.",
+            "type": "responsible",
+            "feedback": "Naming what you are feeling is the first step to handling it well."
+          },
+          {
+            "id": "not-a-big-deal",
+            "text": "It is just a game of four-square, so there is no real reason to feel anything about it.",
+            "type": "plausible_incomplete",
+            "feedback": "It is okay to feel something even about \"just a game\". Pretending you do not feel anything does not make the feeling go away."
+          },
+          {
+            "id": "push-away",
+            "text": "Your friends probably did not mean it, so you should push the feeling away and move on.",
+            "type": "plausible_incomplete",
+            "feedback": "They may not have meant it. Even so, pushing the feeling away does not make it disappear, and it can come back later."
+          }
+        ]
       },
       {
-        key: 'impact',
-        prompt: 'If you let the frustration build up without doing anything about it, what might happen?',
-        choices: [
-          { id: 'snap-later', text: 'The rest of gym class could feel worse than it needs to, and your friends might not even realize how you feel unless you find a way to tell them.', type: 'responsible',
-            feedback: 'Both are true: the feeling can grow, and your friends may never know unless you find a way to say something.' },
-          { id: 'goes-away', text: 'Nothing really, feelings like that just go away on their own in a few minutes.', type: 'plausible_incomplete',
-            feedback: 'Sometimes they fade fast, but sometimes they do not - assuming it will always just disappear is not really a plan.' },
-        ],
+        "key": "impact",
+        "prompt": "If you let the frustration build up without doing anything about it, what might happen?",
+        "choices": [
+          {
+            "id": "snap-later",
+            "text": "The rest of recess could feel worse, and your friends may never know how you feel unless you tell them.",
+            "type": "responsible",
+            "feedback": "Both are true: the feeling can grow, and your friends may never know unless you find a way to say something."
+          },
+          {
+            "id": "goes-away",
+            "text": "Nothing much, since feelings like that go away on their own in a few minutes, and recess will be over soon.",
+            "type": "plausible_incomplete",
+            "feedback": "Sometimes they fade fast, but sometimes they do not. Assuming it will always just disappear is not really a plan."
+          },
+          {
+            "id": "friends-notice",
+            "text": "Your friends will notice something is wrong and come over to ask what happened, without being asked.",
+            "type": "plausible_incomplete",
+            "feedback": "Some friends might. Many do not see how you feel unless you say so, so waiting for them to notice is a risky plan."
+          }
+        ]
       },
       {
-        key: 'consider',
-        prompt: 'What are some ways you could handle feeling left out?',
-        choices: [
-          { id: 'breathe-reframe', text: 'Take a few slow breaths and remind yourself that this one moment does not mean your friends do not like you.', type: 'responsible',
-            feedback: 'A calming strategy like this helps you think clearly before you react.' },
-          { id: 'stay-quiet-hope', text: 'Just stay quiet and hope the feeling passes on its own by lunch.', type: 'plausible_incomplete',
-            feedback: 'That might work sometimes, but it does not give you a real plan if the feeling sticks around or happens again.' },
-        ],
+        "key": "consider",
+        "prompt": "What are some ways you could handle feeling left out?",
+        "choices": [
+          {
+            "id": "breathe-reframe",
+            "text": "Take a few slow breaths and remind yourself that one moment does not mean your friends dislike you.",
+            "type": "responsible",
+            "feedback": "A calming strategy like this helps you think clearly before you react."
+          },
+          {
+            "id": "stay-quiet-hope",
+            "text": "Stay quiet through the rest of recess and hope the feeling passes on its own by lunch.",
+            "type": "plausible_incomplete",
+            "feedback": "That might work sometimes, but it does not give you a real plan if the feeling sticks around or happens again."
+          },
+          {
+            "id": "sit-out",
+            "text": "Walk off to the side and sit out the rest of recess so you do not have to see your friends.",
+            "type": "plausible_incomplete",
+            "feedback": "Taking a break can help sometimes. Sitting out the whole recess just to avoid your friends can make it feel even more like being left out."
+          }
+        ]
       },
       {
-        key: 'choose',
-        prompt: 'What is the most constructive thing to do right now?',
-        choices: [
-          { id: 'never-play-again', text: 'Loudly tell your friends you are never playing with them again.', type: 'unsafe',
-            feedback: 'Reacting in the heat of the moment like this could hurt a friendship over something that might not have even been personal.' },
-          { id: 'play-then-mention', text: 'Take a breath, join the game anyway, and bring it up with your friends later when everyone is calm.', type: 'multiple_defensible',
-            feedback: 'Reasonable. You manage the moment now and still address it later, when it is easier to talk about.' },
-          { id: 'calm-honest', text: 'Take a breath, then tell your friends calmly that it felt bad being picked last, without blaming them.', type: 'responsible',
-            feedback: 'This manages your own reaction and still opens the door for your friends to understand your side.' },
-          { id: 'ask-trusted-adult', text: 'If the feeling does not go away, talk to a trusted adult, like a teacher or family member, about how to handle it.', type: 'seek_help',
-            feedback: 'Getting another perspective is always a reasonable option, especially if this keeps happening.' },
-        ],
+        "key": "choose",
+        "prompt": "What is the most constructive thing to do right now?",
+        "choices": [
+          {
+            "id": "never-play-again",
+            "text": "Say, \"Fine, whatever, I did not want to play anyway,\" and walk off angrily without explaining.",
+            "type": "unsafe",
+            "feedback": "That protects you for a moment, but your friends will only hear the anger. They still will not know why you are upset."
+          },
+          {
+            "id": "play-then-mention",
+            "text": "Take a breath, join the game anyway, and bring it up with your friends later when everyone is calm.",
+            "type": "multiple_defensible",
+            "feedback": "Reasonable. You manage the moment now and still address it later, when it is easier to talk about."
+          },
+          {
+            "id": "calm-honest",
+            "text": "Take a breath, then tell your friends calmly that being picked last felt bad, with no blame.",
+            "type": "responsible",
+            "feedback": "This manages your own reaction and still opens the door for your friends to understand your side."
+          },
+          {
+            "id": "ask-trusted-adult",
+            "text": "If the feeling does not go away, talk to a teacher or family member about how to handle it.",
+            "type": "seek_help",
+            "feedback": "Getting another perspective is always a reasonable option, especially if this keeps happening."
+          }
+        ]
       },
       {
-        key: 'reflect',
-        prompt: 'What is one thing that helps you calm down when you are feeling left out or frustrated?',
-        freeReflection: true,
-      },
+        "key": "reflect",
+        "prompt": "What is one thing that helps you calm down when you are feeling left out or frustrated?",
+        "freeReflection": true
+      }
     ],
   };
 

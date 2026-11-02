@@ -30,7 +30,7 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js?v=2"></script>
-<script src="engine-branching-scenario.js?v=2"></script>
+<script src="engine-branching-scenario.js?v=3"></script>
 <script>
   // Choice Quest - catalog scaling slice (Explore band). The same
   // Issues-to-Answers 5-step cycle as Decision Point, adventure-framed
@@ -44,54 +44,112 @@
     title: 'Choice Quest',
     steps: [
       {
-        key: 'recognize',
-        prompt: 'Your team is building a diorama for the class project. Mia has not finished her part, and the project is due tomorrow.',
-        choices: [
-          { id: 'notice-mia', text: 'Notice that Mia might need help or might be stuck, not just "not trying."', type: 'responsible',
-            feedback: 'Good noticing. There could be more going on than it first looks like.' },
-          { id: 'assume-lazy', text: 'Mia is just being lazy and does not care about the project.', type: 'plausible_incomplete',
-            feedback: 'Maybe, but that is a guess. It is worth finding out what is really going on first.' },
-        ],
+        "key": "recognize",
+        "prompt": "Your team is building a diorama for the class project. Mia has not finished her part, and the project is due tomorrow.",
+        "choices": [
+          {
+            "id": "notice-mia",
+            "text": "Notice that Mia might be stuck or need help, not just that she is not trying.",
+            "type": "responsible",
+            "feedback": "Good noticing. There could be more going on than it first looks like."
+          },
+          {
+            "id": "assume-lazy",
+            "text": "Mia is being lazy and does not really care about how the project turns out.",
+            "type": "plausible_incomplete",
+            "feedback": "Maybe, but that is a guess. It is worth finding out what is really going on first."
+          },
+          {
+            "id": "only-deadline",
+            "text": "The project is due soon, so the only thing that matters is getting it finished.",
+            "type": "plausible_incomplete",
+            "feedback": "Finishing matters. If you only look at the deadline, though, you miss what is going on with Mia and how the team can get there together."
+          }
+        ]
       },
       {
-        key: 'impact',
-        prompt: 'If Mia\'s part is not finished, what happens?',
-        choices: [
-          { id: 'team-and-mia', text: 'The whole team\'s project could be incomplete, and Mia might feel embarrassed or stressed too.', type: 'responsible',
-            feedback: 'Right. This affects the whole team, including Mia.' },
-          { id: 'only-mia', text: 'Only Mia will get in trouble, so it is not really the team\'s problem.', type: 'plausible_incomplete',
-            feedback: 'A team project usually means a team result. It is everyone\'s problem, not just Mia\'s.' },
-        ],
+        "key": "impact",
+        "prompt": "If Mia's part is not finished, what happens?",
+        "choices": [
+          {
+            "id": "team-and-mia",
+            "text": "The whole team's project could be unfinished, and Mia might feel embarrassed or stressed too.",
+            "type": "responsible",
+            "feedback": "Right. This affects the whole team, including Mia."
+          },
+          {
+            "id": "only-mia",
+            "text": "Only Mia will be in trouble for it, so this is not really a problem for the rest of the team.",
+            "type": "plausible_incomplete",
+            "feedback": "A team project usually means a team result. It is everyone's problem, not just Mia's."
+          },
+          {
+            "id": "more-time",
+            "text": "The teacher will probably give the team more time, so there is nothing to worry about yet.",
+            "type": "plausible_incomplete",
+            "feedback": "A teacher might. Counting on extra time is a guess, though, and the team and Mia would still have the same problem tomorrow."
+          }
+        ]
       },
       {
-        key: 'consider',
-        prompt: 'What are some ways your team could handle this?',
-        choices: [
-          { id: 'ask-and-plan', text: 'Ask Mia if she needs help, and figure out a plan together.', type: 'responsible',
-            feedback: 'Having a real plan, made together, beats guessing what to do.' },
-          { id: 'do-it-quietly', text: 'Just finish her part without telling her.', type: 'plausible_incomplete',
-            feedback: 'This solves the deadline, but it skips Mia entirely and does not find out what she actually needs.' },
-        ],
+        "key": "consider",
+        "prompt": "What are some ways your team could handle this?",
+        "choices": [
+          {
+            "id": "ask-and-plan",
+            "text": "Ask Mia if she needs help, and work out a plan together that fits the time left.",
+            "type": "responsible",
+            "feedback": "Having a real plan, made together, beats guessing what to do."
+          },
+          {
+            "id": "do-it-quietly",
+            "text": "Finish her part yourself tonight so the project is done on time, without telling her.",
+            "type": "plausible_incomplete",
+            "feedback": "This solves the deadline, but it skips Mia entirely and does not find out what she actually needs."
+          },
+          {
+            "id": "tell-team",
+            "text": "Tell the whole team that Mia has not finished, so everyone knows who is holding things up.",
+            "type": "plausible_incomplete",
+            "feedback": "Everyone would know, but it puts Mia on the spot before anyone has asked what is wrong, and it does not give the team a way forward."
+          }
+        ]
       },
       {
-        key: 'choose',
-        prompt: 'What is the most constructive next step right now?',
-        choices: [
-          { id: 'check-in-privately', text: 'Ask Mia privately if everything is okay and offer to help with her part.', type: 'responsible',
-            feedback: 'A private check-in respects Mia and gets you real information before anyone decides anything.' },
-          { id: 'team-redivide', text: 'Suggest to the whole team that you divide up Mia\'s remaining work fairly, with her input.', type: 'multiple_defensible',
-            feedback: 'Also a solid move. Fair redivision, with Mia included, keeps this from feeling like a punishment.' },
-          { id: 'blame-to-teacher', text: 'Tell the teacher Mia is ruining the project without talking to her first.', type: 'unsafe',
-            feedback: 'Going straight to blame, without ever asking Mia what is going on, could embarrass her for something that might not even be her fault.' },
-          { id: 'flag-if-overwhelmed', text: 'If Mia seems really overwhelmed or upset, let the teacher know so an adult can help find a plan.', type: 'seek_help',
-            feedback: 'Asking a trusted adult for help is a reasonable choice, especially if something bigger than a school project seems to be going on.' },
-        ],
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "check-in-privately",
+            "text": "Ask Mia privately if everything is okay and offer to help with her part of the project.",
+            "type": "responsible",
+            "feedback": "A private check-in respects Mia and gets you real information before anyone decides anything."
+          },
+          {
+            "id": "team-redivide",
+            "text": "Suggest that the team divide up Mia's remaining work fairly, with her input.",
+            "type": "multiple_defensible",
+            "feedback": "Also a solid move. Fair redivision, with Mia included, keeps this from feeling like a punishment."
+          },
+          {
+            "id": "blame-to-teacher",
+            "text": "Tell the teacher that Mia is ruining the project before you have talked to her.",
+            "type": "unsafe",
+            "feedback": "Going straight to blame, without ever asking Mia what is going on, could embarrass her for something that might not even be her fault."
+          },
+          {
+            "id": "flag-if-overwhelmed",
+            "text": "If Mia seems really upset or overwhelmed, let the teacher know so an adult can help.",
+            "type": "seek_help",
+            "feedback": "Asking a trusted adult for help is a reasonable choice, especially if something bigger than a school project seems to be going on."
+          }
+        ]
       },
       {
-        key: 'reflect',
-        prompt: 'What is one way you could check in with a teammate who seems stuck, next time it happens?',
-        freeReflection: true,
-      },
+        "key": "reflect",
+        "prompt": "What is one way you could check in with a teammate who seems stuck, next time it happens?",
+        "freeReflection": true
+      }
     ],
   };
 

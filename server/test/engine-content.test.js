@@ -187,19 +187,19 @@ test('SELF-CHECK PRIVACY: the engine never sends which answer a child picked', (
 });
 
 // Phase 3 stories for Choice Quest and Team Pick (approved outlines in docs/tune-your-brain/EXPLORE_STORY_OUTLINES.md).
-// Variant 0 is the original story, kept as written; variants 1-3 are new and must follow the writing rules.
+// All four stories (the original, rebalanced on 2026-10-31, and the three new ones) must follow the writing rules.
 const CYCLE = ['recognize', 'impact', 'consider', 'choose', 'reflect'];
 for (const slug of ['choice-quest', 'team-pick']) {
   test(`STORIES ${slug}: four stories, each a full five-step cycle`, () => {
     const g = REAL.find((x) => x.slug === slug);
     assert.equal(g.pack.variants.length, 4);
     g.pack.variants.forEach((v, i) => assert.equal(v.steps.map((s) => s.key).join(), CYCLE.join(), `story ${i}`));
-    assert.equal(g.pack.variants[0].steps[0].prompt, g.pack.steps[0].prompt, 'story 0 is the original story');
+    assert.equal(g.pack.variants[0].steps[0].prompt, g.pack.steps[0].prompt, 'story 1 is the original story');
   });
 
-  test(`STORIES ${slug}: the three new stories follow the writing rules`, () => {
+  test(`STORIES ${slug}: every story follows the writing rules`, () => {
     const g = REAL.find((x) => x.slug === slug);
-    g.pack.variants.slice(1).forEach((v, n) => {
+    g.pack.variants.forEach((v, n) => {
       const label = `${slug} story ${n + 1}`;
       const ids = new Set();
       v.steps.forEach((step, i) => {

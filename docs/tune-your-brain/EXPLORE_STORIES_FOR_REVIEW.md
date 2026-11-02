@@ -1,52 +1,56 @@
-# Explore stories: full text for your review (generated from the game pages)
+# Explore stories: full text (generated from the game pages)
 
-Written 2026-10-31. Stories 2 to 4 of each game are new; story 1 is the existing one, unchanged. **You review all SEL content.** Tell me, in plain words, any line to change (quote a few words and the story number). Nothing here is live until you approve it and it is deployed.
+All eight stories approved by the owner 2026-11-01: stories 2 to 4 of each game on 2026-10-31; the rewritten story 1 of each game on 2026-11-01, with Team Pick moved from gym class to recess and the summary count renamed "Choices that helped".
 
-Each step shows the choices a child sees (their order is shuffled every time), the label I gave each (the child never sees the label), and the feedback the child reads after picking.
-
-**Please look hardest at:** Story 4 of Choice Quest, the choice marked "Also good" (a grey-area answer, with feedback that says why a plain "I'm not sure" is not quite honest); Team Pick stories 3 and 4 (comparing yourself to a friend, and jealousy); and the final step of every story, which includes one believable "Not safe" answer.
+Each step shows the choices a child sees (their order is shuffled every time), the label I gave each (the child never sees it), and the feedback shown after picking.
 
 ---
 
 ## Choice Quest
 
-### Story 1 (existing): Mia and the diorama
+### Story 1: Mia and the diorama
 
 **1. Recognize.** Your team is building a diorama for the class project. Mia has not finished her part, and the project is due tomorrow.
 
-- [Best] Notice that Mia might need help or might be stuck, not just "not trying."
+- [Best] Notice that Mia might be stuck or need help, not just that she is not trying.
   - Feedback: Good noticing. There could be more going on than it first looks like.
-- [Plausible but incomplete] Mia is just being lazy and does not care about the project.
+- [Plausible but incomplete] Mia is being lazy and does not really care about how the project turns out.
   - Feedback: Maybe, but that is a guess. It is worth finding out what is really going on first.
+- [Plausible but incomplete] The project is due soon, so the only thing that matters is getting it finished.
+  - Feedback: Finishing matters. If you only look at the deadline, though, you miss what is going on with Mia and how the team can get there together.
 
 **2. Impact.** If Mia's part is not finished, what happens?
 
-- [Best] The whole team's project could be incomplete, and Mia might feel embarrassed or stressed too.
+- [Best] The whole team's project could be unfinished, and Mia might feel embarrassed or stressed too.
   - Feedback: Right. This affects the whole team, including Mia.
-- [Plausible but incomplete] Only Mia will get in trouble, so it is not really the team's problem.
+- [Plausible but incomplete] Only Mia will be in trouble for it, so this is not really a problem for the rest of the team.
   - Feedback: A team project usually means a team result. It is everyone's problem, not just Mia's.
+- [Plausible but incomplete] The teacher will probably give the team more time, so there is nothing to worry about yet.
+  - Feedback: A teacher might. Counting on extra time is a guess, though, and the team and Mia would still have the same problem tomorrow.
 
 **3. Consider.** What are some ways your team could handle this?
 
-- [Best] Ask Mia if she needs help, and figure out a plan together.
+- [Best] Ask Mia if she needs help, and work out a plan together that fits the time left.
   - Feedback: Having a real plan, made together, beats guessing what to do.
-- [Plausible but incomplete] Just finish her part without telling her.
+- [Plausible but incomplete] Finish her part yourself tonight so the project is done on time, without telling her.
   - Feedback: This solves the deadline, but it skips Mia entirely and does not find out what she actually needs.
+- [Plausible but incomplete] Tell the whole team that Mia has not finished, so everyone knows who is holding things up.
+  - Feedback: Everyone would know, but it puts Mia on the spot before anyone has asked what is wrong, and it does not give the team a way forward.
 
 **4. Choose.** What is the most constructive next step right now?
 
-- [Best] Ask Mia privately if everything is okay and offer to help with her part.
+- [Best] Ask Mia privately if everything is okay and offer to help with her part of the project.
   - Feedback: A private check-in respects Mia and gets you real information before anyone decides anything.
-- [Also good] Suggest to the whole team that you divide up Mia's remaining work fairly, with her input.
+- [Also good] Suggest that the team divide up Mia's remaining work fairly, with her input.
   - Feedback: Also a solid move. Fair redivision, with Mia included, keeps this from feeling like a punishment.
-- [Not safe] Tell the teacher Mia is ruining the project without talking to her first.
+- [Not safe] Tell the teacher that Mia is ruining the project before you have talked to her.
   - Feedback: Going straight to blame, without ever asking Mia what is going on, could embarrass her for something that might not even be her fault.
-- [Ask for help] If Mia seems really overwhelmed or upset, let the teacher know so an adult can help find a plan.
+- [Ask for help] If Mia seems really upset or overwhelmed, let the teacher know so an adult can help.
   - Feedback: Asking a trusted adult for help is a reasonable choice, especially if something bigger than a school project seems to be going on.
 
 **5. Reflect.** What is one way you could check in with a teammate who seems stuck, next time it happens?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ### Story 2: The borrowed markers
 
@@ -90,7 +94,7 @@ _(Private reflection: the child types or thinks it through; it is never saved or
 
 **5. Reflect.** What is one thing you could say to someone when you have made a mistake with something that is not yours?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ### Story 3: The rules that keep changing
 
@@ -134,7 +138,7 @@ _(Private reflection: the child types or thinks it through; it is never saved or
 
 **5. Reflect.** What is one fair way to decide the rules before a game starts?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ### Story 4: A secret that is not yours
 
@@ -178,49 +182,55 @@ _(Private reflection: the child types or thinks it through; it is never saved or
 
 **5. Reflect.** What helps you know whether something is yours to share?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ---
 
 ## Team Pick
 
-### Story 1 (existing): Picked last in gym
+### Story 1: Picked last at recess
 
-**1. Recognize.** In gym class, your two best friends are picking teams for four-square. They pick almost everyone else first, and you are the last one left standing.
+**1. Recognize.** At recess, your two best friends are picking teams for four-square. They pick almost everyone else first, and you are the last one left standing.
 
-- [Best] Notice that you are starting to feel hurt and frustrated, and that is a normal reaction to have.
+- [Best] Notice that you feel hurt and frustrated, and that this is a normal reaction to have.
   - Feedback: Naming what you are feeling is the first step to handling it well.
-- [Plausible but incomplete] It is just a game, so there is no real reason to feel anything about it.
-  - Feedback: It is okay to feel something even about "just a game" - pretending you do not feel anything does not make the feeling go away.
+- [Plausible but incomplete] It is just a game of four-square, so there is no real reason to feel anything about it.
+  - Feedback: It is okay to feel something even about "just a game". Pretending you do not feel anything does not make the feeling go away.
+- [Plausible but incomplete] Your friends probably did not mean it, so you should push the feeling away and move on.
+  - Feedback: They may not have meant it. Even so, pushing the feeling away does not make it disappear, and it can come back later.
 
 **2. Impact.** If you let the frustration build up without doing anything about it, what might happen?
 
-- [Best] The rest of gym class could feel worse than it needs to, and your friends might not even realize how you feel unless you find a way to tell them.
+- [Best] The rest of recess could feel worse, and your friends may never know how you feel unless you tell them.
   - Feedback: Both are true: the feeling can grow, and your friends may never know unless you find a way to say something.
-- [Plausible but incomplete] Nothing really, feelings like that just go away on their own in a few minutes.
-  - Feedback: Sometimes they fade fast, but sometimes they do not - assuming it will always just disappear is not really a plan.
+- [Plausible but incomplete] Nothing much, since feelings like that go away on their own in a few minutes, and recess will be over soon.
+  - Feedback: Sometimes they fade fast, but sometimes they do not. Assuming it will always just disappear is not really a plan.
+- [Plausible but incomplete] Your friends will notice something is wrong and come over to ask what happened, without being asked.
+  - Feedback: Some friends might. Many do not see how you feel unless you say so, so waiting for them to notice is a risky plan.
 
 **3. Consider.** What are some ways you could handle feeling left out?
 
-- [Best] Take a few slow breaths and remind yourself that this one moment does not mean your friends do not like you.
+- [Best] Take a few slow breaths and remind yourself that one moment does not mean your friends dislike you.
   - Feedback: A calming strategy like this helps you think clearly before you react.
-- [Plausible but incomplete] Just stay quiet and hope the feeling passes on its own by lunch.
+- [Plausible but incomplete] Stay quiet through the rest of recess and hope the feeling passes on its own by lunch.
   - Feedback: That might work sometimes, but it does not give you a real plan if the feeling sticks around or happens again.
+- [Plausible but incomplete] Walk off to the side and sit out the rest of recess so you do not have to see your friends.
+  - Feedback: Taking a break can help sometimes. Sitting out the whole recess just to avoid your friends can make it feel even more like being left out.
 
 **4. Choose.** What is the most constructive thing to do right now?
 
-- [Not safe] Loudly tell your friends you are never playing with them again.
-  - Feedback: Reacting in the heat of the moment like this could hurt a friendship over something that might not have even been personal.
+- [Not safe] Say, "Fine, whatever, I did not want to play anyway," and walk off angrily without explaining.
+  - Feedback: That protects you for a moment, but your friends will only hear the anger. They still will not know why you are upset.
 - [Also good] Take a breath, join the game anyway, and bring it up with your friends later when everyone is calm.
   - Feedback: Reasonable. You manage the moment now and still address it later, when it is easier to talk about.
-- [Best] Take a breath, then tell your friends calmly that it felt bad being picked last, without blaming them.
+- [Best] Take a breath, then tell your friends calmly that being picked last felt bad, with no blame.
   - Feedback: This manages your own reaction and still opens the door for your friends to understand your side.
-- [Ask for help] If the feeling does not go away, talk to a trusted adult, like a teacher or family member, about how to handle it.
+- [Ask for help] If the feeling does not go away, talk to a teacher or family member about how to handle it.
   - Feedback: Getting another perspective is always a reasonable option, especially if this keeps happening.
 
 **5. Reflect.** What is one thing that helps you calm down when you are feeling left out or frustrated?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ### Story 2: The missed catch
 
@@ -264,7 +274,7 @@ _(Private reflection: the child types or thinks it through; it is never saved or
 
 **5. Reflect.** What can you tell yourself the next time you make a mistake in front of other people?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ### Story 3: The spelling test
 
@@ -308,7 +318,7 @@ _(Private reflection: the child types or thinks it through; it is never saved or
 
 **5. Reflect.** What is one small goal you could set after a result you did not expect?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
 ### Story 4: The part in the play
 
@@ -352,5 +362,5 @@ _(Private reflection: the child types or thinks it through; it is never saved or
 
 **5. Reflect.** What can you do with a feeling like jealousy so that it does not hurt a friendship?
 
-_(Private reflection: the child types or thinks it through; it is never saved or sent.)_
+_(Private reflection: never saved or sent.)_
 
