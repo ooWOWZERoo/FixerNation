@@ -197,4 +197,4 @@ Written 2026-11-01 (draft; every verdict needs the owner's confirmation). Same f
 1. **Advance topics:** the Post moves off group chats (rewrite built 2026-11-01; see `THE_POST_FOR_REVIEW.md`) and the Advance band gets new situations from the lists above (jobs, money, civic life). Agree?
 2. **Money Matters:** treat as a rework with real interest arithmetic, review document first? (Rework built 2026-11-01; see `MONEY_MATTERS_FOR_REVIEW.md`.)
 3. **Critical Read:** same outline-first plan as Headline?
-4. **The six older games:** keep, label as skills practice, and leave out of SEL and Portrait coverage?
+4. **The six older games:** keep, label as skills practice, and leave out of SEL and Portrait coverage? (Done 2026-11-01: `brain-games.html` shows a "Skills practice" tag on every non-SEL card, and `SEL_POG_COVERAGE.md` already leaves them out.)

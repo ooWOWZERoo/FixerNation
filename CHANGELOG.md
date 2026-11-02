@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 80 — 2026-11-01 — Games catalog shows which games are SEL and which are skills practice
+
+- **Each game card now says what kind of game it is.** "SEL & Character" for the social-emotional games, "Skills practice" for the reading, math and thinking-skills games (including the six older games: Memory Match, Simon Sequence, Number Sequence, Quick Math, Reaction Time and Stroop Challenge), and "Wellness & Life Skills" when a wellness game is added.
+- **Why it matters:** teachers and districts looking for social-emotional learning can see at a glance which games are meant for it. Skills practice games are not counted toward SEL or Portrait of a Graduate coverage.
+- Page only; no server changes. The games themselves are unchanged.
+
 ## Release 79 — 2026-11-01 — First Shift rewritten with four first-job situations
 
 - **First Shift now has four situations instead of one.** The original (a coworker breaks equipment and asks you to cover) stays, now rebalanced. New: a shift you promised to two people, a rude customer and a new coworker, and pay in cash with no paperwork. One story per run.
