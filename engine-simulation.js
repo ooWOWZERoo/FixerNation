@@ -42,7 +42,7 @@
     function renderEvent() {
       feedbackHolder.innerHTML = '';
       progressHolder.innerHTML = '';
-      progressHolder.appendChild(FnGameShell.renderProgress(eventIndex + 1, contentPack.events.length));
+      progressHolder.appendChild(FnGameShell.renderProgress(eventIndex + 1, contentPack.events.length, 'Decision'));
 
       const event = contentPack.events[eventIndex];
       promptBox.textContent = event.prompt;

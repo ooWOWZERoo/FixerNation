@@ -140,7 +140,7 @@
       selectedCues = new Set();
       const scenario = scenarios[index];
       progressHolder.innerHTML = '';
-      progressHolder.appendChild(FnGameShell.renderProgress(index + 1, scenarios.length));
+      progressHolder.appendChild(FnGameShell.renderProgress(index + 1, scenarios.length, 'Story'));
       contextBox.innerHTML = `<span aria-hidden="true" style="font-size:2.5em;display:block;text-align:center;">${scenario.illustration || ''}</span>` +
         (showStory ? `<span class="fn-story-text">${scenario.context}</span>`
           : voiced ? `<span class="sr-only">${scenario.context}</span><span class="fn-story-text" aria-hidden="true" hidden>${scenario.context}</span>`

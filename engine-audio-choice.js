@@ -79,7 +79,7 @@
       answered = false;
       feedbackHolder.innerHTML = '';
       progressHolder.innerHTML = '';
-      progressHolder.appendChild(FnGameShell.renderProgress(index + 1, items.length));
+      progressHolder.appendChild(FnGameShell.renderProgress(index + 1, items.length, 'Question'));
 
       const item = items[index];
       qStart = Date.now();

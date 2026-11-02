@@ -44,7 +44,7 @@
     function renderStep() {
       feedbackHolder.innerHTML = '';
       progressHolder.innerHTML = '';
-      progressHolder.appendChild(FnGameShell.renderProgress(stepIndex + 1, steps.length));
+      progressHolder.appendChild(FnGameShell.renderProgress(stepIndex + 1, steps.length, 'Step'));
 
       const step = steps[stepIndex];
       stepLabel.textContent = STEP_LABELS[step.key] || step.key;
@@ -116,8 +116,8 @@
       if (stepIndex >= steps.length) {
         const responsible = responseTypes.filter((t) => t === 'responsible' || t === 'multiple_defensible').length;
         onComplete([
-          { value: steps.length, label: 'Steps completed' },
-          { value: responsible, label: 'Choices that helped' },
+          { value: steps.length, label: t('brLabelSteps') },
+          { value: responsible, label: t('brLabelHelped') },
         ]);
       } else {
         renderStep();

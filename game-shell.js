@@ -53,7 +53,8 @@
   // 2026-09-21): every game's progress bar had role="progressbar" with no
   // accessible name at all, since the sr-only text next to it was never
   // actually associated with it.
-  function renderProgress(current, total) {
+  // `word` (optional, e.g. 'Step') adds a visible "Step 2 of 5" count for the Explore band, as a milestone for readers.
+  function renderProgress(current, total, word) {
     const el = document.createElement('div');
     el.className = 'fn-shell-progress';
     const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
@@ -63,6 +64,7 @@
         <span class="fn-shell-progress-fill" style="width:${pct}%"></span>
       </span>
       <span class="sr-only" id="${labelId}">Item ${current} of ${total}</span>
+      ${word && getBand() === 'explore' ? `<span class="fn-progress-count" aria-hidden="true">${word} ${current} of ${total}</span>` : ''}
     `;
     return el;
   }

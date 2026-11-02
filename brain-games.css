@@ -454,6 +454,7 @@ html[data-band="advance"] {
 .fn-shell-feedback.partial { background: var(--g-partial-bg); color: var(--g-partial-text); border: 2px solid var(--g-partial-border); }
 .fn-shell-feedback.neutral { background: var(--cream-soft); color: var(--ink); border: 2px solid var(--border); }
 .fn-shell-feedback.incorrect { background: var(--g-bad-bg); color: var(--g-bad-text); border: 2px solid var(--g-bad-border); }
+.fn-progress-count { font-size: 13px; font-weight: 800; color: var(--g-accent); white-space: nowrap; }
 .fn-shell-hint-btn {
   background: transparent; border: 2px dashed var(--border); color: var(--ink-soft);
   border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;

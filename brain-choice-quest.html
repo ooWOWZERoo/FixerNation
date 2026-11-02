@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=5">
+<link rel="stylesheet" href="brain-games.css?v=6">
 </head>
 <body>
 <header></header>
@@ -28,9 +28,9 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=4"></script>
-<script src="engine-branching-scenario.js?v=5"></script>
+<script src="game-shell.js?v=2"></script>
+<script src="engine-sdk.js?v=5"></script>
+<script src="engine-branching-scenario.js?v=6"></script>
 <script>
   // Choice Quest - catalog scaling slice (Explore band). The same
   // Issues-to-Answers 5-step cycle as Decision Point, adventure-framed
@@ -45,25 +45,25 @@
     steps: [
       {
         "key": "recognize",
-        "prompt": "Your team is building a diorama for the class project. Mia has not finished her part, and the project is due tomorrow.",
+        "prompt": "Your team is making a diorama. Mia has not finished her part, and it is due tomorrow.",
         "choices": [
           {
             "id": "notice-mia",
-            "text": "Notice that Mia might be stuck or need help, not just that she is not trying.",
+            "text": "Maybe Mia is stuck and needs some help with her part.",
             "type": "responsible",
-            "feedback": "Good noticing. There could be more going on than it first looks like."
+            "feedback": "Good noticing. There may be more going on than you can see."
           },
           {
             "id": "assume-lazy",
-            "text": "Mia is being lazy and does not really care about how the project turns out.",
+            "text": "Mia is lazy and does not care about the project.",
             "type": "plausible_incomplete",
-            "feedback": "Maybe, but that is a guess. It is worth finding out what is really going on first."
+            "feedback": "Maybe, but that is only a guess. Ask her first."
           },
           {
             "id": "only-deadline",
-            "text": "The project is due soon, so the only thing that matters is getting it finished.",
+            "text": "The project is due soon, so only finishing it matters.",
             "type": "plausible_incomplete",
-            "feedback": "Finishing matters. If you only look at the deadline, though, you miss what is going on with Mia and how the team can get there together."
+            "feedback": "Finishing matters, but you would miss what is going on with Mia."
           }
         ]
       },
@@ -73,81 +73,81 @@
         "choices": [
           {
             "id": "team-and-mia",
-            "text": "The whole team's project could be unfinished, and Mia might feel embarrassed or stressed too.",
+            "text": "The project stays unfinished, and Mia may feel upset.",
             "type": "responsible",
-            "feedback": "Right. This affects the whole team, including Mia."
+            "feedback": "Right. It hurts the whole team, including Mia."
           },
           {
             "id": "only-mia",
-            "text": "Only Mia will be in trouble for it, so this is not really a problem for the rest of the team.",
+            "text": "Only Mia is in trouble, so it is not the team's problem.",
             "type": "plausible_incomplete",
-            "feedback": "A team project usually means a team result. It is everyone's problem, not just Mia's."
+            "feedback": "A team project means a team result. It is everyone's problem."
           },
           {
             "id": "more-time",
-            "text": "The teacher will probably give the team more time, so there is nothing to worry about yet.",
+            "text": "The teacher will give more time, so nobody needs to worry.",
             "type": "plausible_incomplete",
-            "feedback": "A teacher might. Counting on extra time is a guess, though, and the team and Mia would still have the same problem tomorrow."
+            "feedback": "Maybe, but extra time is only a guess. The problem would still be there."
           }
         ]
       },
       {
         "key": "consider",
-        "prompt": "What are some ways your team could handle this?",
+        "prompt": "What could your team do about this?",
         "choices": [
           {
             "id": "ask-and-plan",
-            "text": "Ask Mia if she needs help, and work out a plan together that fits the time left.",
+            "text": "Ask Mia if she needs help and make a plan together.",
             "type": "responsible",
-            "feedback": "Having a real plan, made together, beats guessing what to do."
+            "feedback": "A plan made together beats guessing what to do."
           },
           {
             "id": "do-it-quietly",
-            "text": "Finish her part yourself tonight so the project is done on time, without telling her.",
+            "text": "Finish her part tonight yourself and do not tell her.",
             "type": "plausible_incomplete",
-            "feedback": "This solves the deadline, but it skips Mia entirely and does not find out what she actually needs."
+            "feedback": "That solves the deadline, but it skips Mia and what she needs."
           },
           {
             "id": "tell-team",
-            "text": "Tell the whole team that Mia has not finished, so everyone knows who is holding things up.",
+            "text": "Tell the team that Mia is the one holding things up.",
             "type": "plausible_incomplete",
-            "feedback": "Everyone would know, but it puts Mia on the spot before anyone has asked what is wrong, and it does not give the team a way forward."
+            "feedback": "It puts Mia on the spot and gives no way forward."
           }
         ]
       },
       {
         "key": "choose",
-        "prompt": "What is the most constructive next step right now?",
+        "prompt": "What is the best next step?",
         "choices": [
           {
             "id": "check-in-privately",
-            "text": "Ask Mia privately if everything is okay and offer to help with her part of the project.",
+            "text": "Ask Mia privately if she is okay and offer to help.",
             "type": "responsible",
-            "feedback": "A private check-in respects Mia and gets you real information before anyone decides anything."
+            "feedback": "A private check-in is kind and tells you what is really wrong."
           },
           {
             "id": "team-redivide",
-            "text": "Suggest that the team divide up Mia's remaining work fairly, with her input.",
+            "text": "Suggest the team share Mia's work fairly, with her say.",
             "type": "multiple_defensible",
-            "feedback": "Also a solid move. Fair redivision, with Mia included, keeps this from feeling like a punishment."
+            "feedback": "Also a good move. Including Mia keeps it from feeling like a punishment."
           },
           {
             "id": "blame-to-teacher",
-            "text": "Tell the teacher that Mia is ruining the project before you have talked to her.",
+            "text": "Tell the teacher Mia is ruining it before you talk to her.",
             "type": "unsafe",
-            "feedback": "Going straight to blame, without ever asking Mia what is going on, could embarrass her for something that might not even be her fault."
+            "feedback": "Blaming her before asking could embarrass her for no reason."
           },
           {
             "id": "flag-if-overwhelmed",
-            "text": "If Mia seems really upset or overwhelmed, let the teacher know so an adult can help.",
+            "text": "If Mia seems very upset, tell the teacher to get her help.",
             "type": "seek_help",
-            "feedback": "Asking a trusted adult for help is a reasonable choice, especially if something bigger than a school project seems to be going on."
+            "feedback": "Asking a trusted adult is wise when something bigger may be wrong."
           }
         ]
       },
       {
         "key": "reflect",
-        "prompt": "What is one way you could check in with a teammate who seems stuck, next time it happens?",
+        "prompt": "How can you check in with a stuck teammate?",
         "freeReflection": true
       }
     ],
@@ -161,321 +161,321 @@
     { steps: [
       {
         "key": "recognize",
-        "prompt": "You borrowed Dev's brand-new marker set to finish a poster. When you open the case at home, one marker has been left uncapped and it has dried out.",
+        "prompt": "You borrowed Dev's new markers for a poster. At home, you find one uncapped and dried out.",
         "choices": [
           {
             "id": "cq2-1-1",
-            "text": "Notice that you feel worried, and that Dev will probably find the dried marker.",
+            "text": "You feel worried, and Dev will probably find the dry marker.",
             "type": "responsible",
-            "feedback": "Good noticing. Worry is a clue that this matters to you, and facing it early gives you more choices."
+            "feedback": "Good noticing. Worry tells you this matters, and facing it early helps."
           },
           {
             "id": "cq2-1-2",
-            "text": "It is only one marker out of many in a big set, so it probably will not matter to Dev.",
+            "text": "It is one marker in a big set. Dev will not mind.",
             "type": "plausible_incomplete",
-            "feedback": "It might be small, but the set is new and it is Dev's. How big a mistake feels depends on whose thing it is."
+            "feedback": "It may be small, but it is Dev's new set."
           },
           {
             "id": "cq2-1-3",
-            "text": "Maybe the marker was already dry when Dev lent you the set, so it is not your problem.",
+            "text": "Maybe it was dry when Dev lent it. Not your problem.",
             "type": "plausible_incomplete",
-            "feedback": "That could be true, but you do not know it. Guessing that the blame belongs somewhere else can keep you from checking."
+            "feedback": "That could be true, but you do not know it. Check first."
           }
         ]
       },
       {
         "key": "impact",
-        "prompt": "If you say nothing and return the set, what is likely to happen?",
+        "prompt": "If you return the set and say nothing, what could happen?",
         "choices": [
           {
             "id": "cq2-2-1",
-            "text": "Dev may find it later and wonder what happened, and lending you things could get harder.",
+            "text": "Dev may find it later, and lending you things gets harder.",
             "type": "responsible",
-            "feedback": "Yes. Trust grows when people are honest about small things, and it gets harder to rebuild after a surprise."
+            "feedback": "Yes. Honesty about small things builds trust, and surprises break it."
           },
           {
             "id": "cq2-2-2",
-            "text": "Nothing much, since Dev has other markers and probably will not check every one in the case.",
+            "text": "Nothing much, since Dev has other markers and will not check.",
             "type": "plausible_incomplete",
-            "feedback": "He might not check. But you would be carrying the secret, and the next time he looks, it could be a bigger deal."
+            "feedback": "He might not check. But you would carry the secret."
           },
           {
             "id": "cq2-2-3",
-            "text": "Dev will be upset for a day, but things will go back to normal once he forgets about it.",
+            "text": "Dev will be upset for a day, then he will forget it.",
             "type": "plausible_incomplete",
-            "feedback": "He may forget. It is more likely he would remember that you knew and said nothing."
+            "feedback": "He may forget. He is more likely to remember you said nothing."
           }
         ]
       },
       {
         "key": "consider",
-        "prompt": "What are some ways you could handle this?",
+        "prompt": "What could you do about it?",
         "choices": [
           {
             "id": "cq2-3-1",
-            "text": "Tell Dev what happened, say sorry, and ask what he would like you to do about it.",
+            "text": "Tell Dev what happened, say sorry, and ask how to fix it.",
             "type": "responsible",
-            "feedback": "Telling him first lets Dev feel respected, and it gives the two of you a chance to fix it together."
+            "feedback": "Telling him first shows respect and lets you fix it together."
           },
           {
             "id": "cq2-3-2",
-            "text": "Buy a new marker and slip it into the case so Dev never has to know.",
+            "text": "Buy a new marker and slip it in so Dev never knows.",
             "type": "plausible_incomplete",
-            "feedback": "Replacing it is kind, but doing it in secret skips the honest part. Dev still does not get to hear it from you."
+            "feedback": "Replacing it is kind, but Dev never hears it from you."
           },
           {
             "id": "cq2-3-3",
-            "text": "Return the set, say it was great to use, and let Dev notice the marker on his own.",
+            "text": "Return the set and let Dev find the marker on his own.",
             "type": "plausible_incomplete",
-            "feedback": "This sounds friendly, but it leaves Dev to find the problem alone, and it may feel like you hid it."
+            "feedback": "That leaves Dev to find the problem alone. It may feel like hiding."
           }
         ]
       },
       {
         "key": "choose",
-        "prompt": "What is the most constructive thing to do right now?",
+        "prompt": "What is the best thing to do now?",
         "choices": [
           {
             "id": "cq2-4-1",
-            "text": "Tell Dev about the dried marker when you return the set, and say sorry.",
+            "text": "Tell Dev about the dry marker, and say you are sorry.",
             "type": "responsible",
-            "feedback": "You are honest, you take responsibility, and Dev hears it from you. That is hard to do and it builds trust."
+            "feedback": "You are honest and Dev hears it from you. That builds trust."
           },
           {
             "id": "cq2-4-2",
-            "text": "Offer to replace the marker, and ask Dev if he wants the same color.",
+            "text": "Offer to buy a new marker and ask which color he wants.",
             "type": "multiple_defensible",
-            "feedback": "Also a good move. Offering to make it right, and asking what Dev wants, treats him as the owner of the decision."
+            "feedback": "Also good. Offering to fix it and asking Dev shows you respect his choice."
           },
           {
             "id": "cq2-4-3",
-            "text": "Return the set quietly and hope he never opens that particular marker.",
+            "text": "Return the set quietly and hope Dev never finds the marker.",
             "type": "unsafe",
-            "feedback": "Hoping nobody notices a mistake rarely works, and if Dev finds it first, the silence looks worse than the dried marker."
+            "feedback": "Hoping nobody notices rarely works. If Dev finds it first, silence looks worse."
           },
           {
             "id": "cq2-4-4",
-            "text": "Ask a parent or a teacher how to start the conversation with Dev about it.",
+            "text": "Ask a parent or teacher how to start talking to Dev.",
             "type": "seek_help",
-            "feedback": "Asking a trusted adult for help finding the words is a good idea, especially when you feel nervous about it."
+            "feedback": "A trusted adult can help you find words when you feel nervous."
           }
         ]
       },
       {
         "key": "reflect",
-        "prompt": "What is one thing you could say to someone when you have made a mistake with something that is not yours?",
+        "prompt": "What could you say after a mistake with something not yours?",
         "freeReflection": true
       }
     ] },
     { steps: [
       {
         "key": "recognize",
-        "prompt": "At recess you are playing tag. Ravi keeps changing the rules so that he is never \"it\". A couple of friends are getting annoyed, and one has started to walk away.",
+        "prompt": "At recess you play tag. Ravi keeps changing the rules so he is never \"it\". Friends are annoyed, and one walks away.",
         "choices": [
           {
             "id": "cq3-1-1",
-            "text": "Notice that the game feels unfair to several people at once, and not only to one of them.",
+            "text": "The game feels unfair to several friends at once.",
             "type": "responsible",
-            "feedback": "Good noticing. When more than one person feels the same way, it is worth taking seriously."
+            "feedback": "Good noticing. When many people feel the same, it matters."
           },
           {
             "id": "cq3-1-2",
-            "text": "Ravi is just very competitive, so this is how he always plays and there is nothing to do.",
+            "text": "Ravi is just competitive, so that is how he plays.",
             "type": "plausible_incomplete",
-            "feedback": "Some people play hard to win. A rule that changes for only one person is a different thing, though."
+            "feedback": "Some people play hard to win. Changing rules for one person is different."
           },
           {
             "id": "cq3-1-3",
-            "text": "It is only a game, so the best thing is to stop thinking about it and play something else.",
+            "text": "It is only a game, so just play something else.",
             "type": "plausible_incomplete",
-            "feedback": "Leaving is one choice. It leaves the problem for the friends who stay and for Ravi, who may not see it."
+            "feedback": "Leaving is one choice. But it leaves the problem for friends who stay."
           }
         ]
       },
       {
         "key": "impact",
-        "prompt": "If the rules keep changing, what is likely to happen to the game?",
+        "prompt": "If the rules keep changing, what will happen to the game?",
         "choices": [
           {
             "id": "cq3-2-1",
-            "text": "More friends may quit, the game may fall apart, and Ravi may never learn why people are upset.",
+            "text": "More friends may quit, and Ravi may never learn why.",
             "type": "responsible",
-            "feedback": "Yes. Both the game and the friendships are affected, and Ravi cannot fix what he does not know about."
+            "feedback": "Yes. The game suffers, and Ravi cannot fix what he does not know."
           },
           {
             "id": "cq3-2-2",
-            "text": "Ravi will notice sooner or later and fix it himself, so nobody needs to do anything yet.",
+            "text": "Ravi will notice soon and fix it, so nobody needs to act.",
             "type": "plausible_incomplete",
-            "feedback": "He might. People often do not see their own habits unless someone tells them kindly."
+            "feedback": "He might. People often miss their own habits unless someone kindly says so."
           },
           {
             "id": "cq3-2-3",
-            "text": "The annoyed friends will get over it, because tag is over in a few minutes anyway.",
+            "text": "The friends will get over it, since tag ends in minutes.",
             "type": "plausible_incomplete",
-            "feedback": "The feeling may fade, but it can come back the next time, and this happens at recess most days."
+            "feedback": "The feeling may fade, but it can return. Recess happens most days."
           }
         ]
       },
       {
         "key": "consider",
-        "prompt": "What are some ways you could handle this?",
+        "prompt": "What could you do about it?",
         "choices": [
           {
             "id": "cq3-3-1",
-            "text": "Suggest that the group agrees on the rules before the next round starts.",
+            "text": "Suggest the group agree on the rules before the next round.",
             "type": "responsible",
-            "feedback": "Agreeing on rules ahead of time takes the blame off one person and helps every game after this one."
+            "feedback": "Agreeing first takes blame off one person and helps every game."
           },
           {
             "id": "cq3-3-2",
-            "text": "Tell everyone loudly that Ravi is cheating so that he has to stop right now.",
+            "text": "Say loudly that Ravi is cheating so he has to stop.",
             "type": "plausible_incomplete",
-            "feedback": "It would be noticed, but calling someone out in front of others often makes them defend themselves instead of listen."
+            "feedback": "Calling someone out makes them defend themselves instead of listening."
           },
           {
             "id": "cq3-3-3",
-            "text": "Quietly start a different game with the friends who are annoyed and leave Ravi out.",
+            "text": "Start a new game with the annoyed friends and leave Ravi out.",
             "type": "plausible_incomplete",
-            "feedback": "That fixes today's game, but Ravi is left out without knowing why, and the problem may come back with someone else."
+            "feedback": "That fixes today's game. But Ravi is left out and does not know why."
           }
         ]
       },
       {
         "key": "choose",
-        "prompt": "What is the most constructive next step right now?",
+        "prompt": "What is the best next step?",
         "choices": [
           {
             "id": "cq3-4-1",
             "text": "Say, \"Can we pick the rules together before we start again?\"",
             "type": "responsible",
-            "feedback": "A clear request that includes everyone gives Ravi a way to say yes without feeling attacked."
+            "feedback": "A request that includes everyone lets Ravi say yes without feeling attacked."
           },
           {
             "id": "cq3-4-2",
-            "text": "Talk to Ravi alone later and tell him how the rule changes felt.",
+            "text": "Talk to Ravi alone later and tell him how it felt.",
             "type": "multiple_defensible",
-            "feedback": "A private talk can work well, since Ravi will not feel embarrassed. It is slower, and the game may be over by then."
+            "feedback": "A private talk spares Ravi embarrassment. It is slower, though, and the game may be over."
           },
           {
             "id": "cq3-4-3",
-            "text": "Tell the group that Ravi is a cheater and nobody should play with him.",
+            "text": "Tell the group Ravi is a cheater and nobody should play.",
             "type": "unsafe",
-            "feedback": "Labeling Ravi turns a rule problem into a problem about who he is, and a label like that can follow him around."
+            "feedback": "Labeling Ravi turns a rule problem into a personal one."
           },
           {
             "id": "cq3-4-4",
             "text": "Ask the recess helper to help the group agree on fair rules.",
             "type": "seek_help",
-            "feedback": "A helper can keep things calm and fair when a group cannot settle it alone. That is a good use of an adult."
+            "feedback": "A helper keeps things calm and fair when a group is stuck."
           }
         ]
       },
       {
         "key": "reflect",
-        "prompt": "What is one fair way to decide the rules before a game starts?",
+        "prompt": "How can a group fairly decide the rules before a game?",
         "freeReflection": true
       }
     ] },
     { steps: [
       {
         "key": "recognize",
-        "prompt": "Your friend Lena tells you she is nervous about reading aloud tomorrow. At lunch, another classmate asks you, \"Is Lena scared about the reading?\"",
+        "prompt": "Lena told you she is nervous about reading aloud tomorrow. At lunch, a classmate asks if she is scared.",
         "choices": [
           {
             "id": "cq4-1-1",
-            "text": "Notice that Lena told you this in trust, and that the question asks you to pass it on.",
+            "text": "Lena told you in trust, and you are asked to share.",
             "type": "responsible",
-            "feedback": "Good noticing. Spotting that something was shared in trust is the first step to keeping it that way."
+            "feedback": "Good noticing. Seeing that it was shared in trust helps you keep it."
           },
           {
             "id": "cq4-1-2",
-            "text": "It is only a feeling about reading, so it is not really a secret and sharing it would be fine.",
+            "text": "It is only a feeling about reading, so sharing it is fine.",
             "type": "plausible_incomplete",
-            "feedback": "Lena did not say it was a secret, but she chose you to tell. Feelings like nerves are personal."
+            "feedback": "Lena chose you to tell. Feelings like nerves are personal."
           },
           {
             "id": "cq4-1-3",
-            "text": "The classmate probably just wants to help, so it is nice to tell them what you know.",
+            "text": "The classmate wants to help, so it is nice to tell them.",
             "type": "plausible_incomplete",
-            "feedback": "They might mean well. Even so, how Lena feels is hers to share, and you would be answering for her."
+            "feedback": "They may mean well. Even so, how Lena feels is hers to share."
           }
         ]
       },
       {
         "key": "impact",
-        "prompt": "If Lena finds out you told, what is likely to happen?",
+        "prompt": "If Lena finds out you told, what could happen?",
         "choices": [
           {
             "id": "cq4-2-1",
-            "text": "Lena may feel embarrassed, stop telling you things, and feel more nervous about reading tomorrow.",
+            "text": "Lena may feel embarrassed and stop telling you things.",
             "type": "responsible",
-            "feedback": "Yes. Trust is hard to rebuild, and sharing her feeling could make tomorrow harder for her."
+            "feedback": "Yes. Trust is hard to rebuild, and tomorrow could feel harder."
           },
           {
             "id": "cq4-2-2",
-            "text": "Lena will probably not mind, since lots of people feel nervous about reading aloud.",
+            "text": "Lena will not mind, since many kids feel nervous too.",
             "type": "plausible_incomplete",
-            "feedback": "It is common to feel nervous, but that does not mean she wants other people to know."
+            "feedback": "Many people feel nervous. That does not mean she wants others to know."
           },
           {
             "id": "cq4-2-3",
-            "text": "Lena may be upset for a bit, but she will understand that you were only trying to help.",
+            "text": "Lena may be upset, but she will know you meant to help.",
             "type": "plausible_incomplete",
-            "feedback": "She might forgive you. She might also wonder what else you will share, and good intentions do not undo the hurt."
+            "feedback": "She might forgive you. She might also wonder what else you will share."
           }
         ]
       },
       {
         "key": "consider",
-        "prompt": "What are some ways you could answer the classmate?",
+        "prompt": "How could you answer the classmate?",
         "choices": [
           {
             "id": "cq4-3-1",
-            "text": "Say, \"That is Lena's to share,\" and then change the subject kindly.",
+            "text": "Say, \"That is Lena's to share,\" and kindly change the subject.",
             "type": "responsible",
-            "feedback": "It is honest and kind. You are not hiding anything, and you are not speaking for Lena."
+            "feedback": "It is honest and kind, and you do not speak for Lena."
           },
           {
             "id": "cq4-3-2",
-            "text": "Say, \"I don't know,\" even though you do, so the classmate stops asking.",
+            "text": "Say \"I don't know\" even though you do, so they stop asking.",
             "type": "plausible_incomplete",
-            "feedback": "It ends the question, but it is not true. Being honest and protecting a friend can go together."
+            "feedback": "That ends the questions, but it is untrue. You can be honest and protect her."
           },
           {
             "id": "cq4-3-3",
-            "text": "Say a little, like \"She is a bit worried,\" so it feels like you are being honest.",
+            "text": "Say a little, like \"She is a bit worried,\" to seem honest.",
             "type": "plausible_incomplete",
-            "feedback": "A little still counts as telling. Once part of it is out, the rest is easy to guess."
+            "feedback": "A little still counts as telling. The rest is easy to guess."
           }
         ]
       },
       {
         "key": "choose",
-        "prompt": "What is the most constructive next step right now?",
+        "prompt": "What is the best next step?",
         "choices": [
           {
             "id": "cq4-4-1",
-            "text": "Tell the classmate it is Lena's to share, then ask Lena if she wants help practicing.",
+            "text": "Say it is Lena's to share, then offer her practice help.",
             "type": "responsible",
-            "feedback": "You protect her privacy, you stay honest, and you offer help. That is what a trusted friend does."
+            "feedback": "That protects her privacy, keeps you honest, and offers help."
           },
           {
             "id": "cq4-4-2",
-            "text": "Tell the classmate you are not sure, then let Lena know someone was asking about her.",
+            "text": "Say you are not sure, then tell Lena someone asked about her.",
             "type": "multiple_defensible",
-            "feedback": "This keeps her feelings private and lets Lena decide what to do. Saying \"That is Lena's to share\" would be more honest than \"I'm not sure.\""
+            "feedback": "Her feelings stay private, and Lena can decide. Saying it is hers to share is more honest."
           },
           {
             "id": "cq4-4-3",
-            "text": "Tell the classmate that Lena is nervous, since it is probably not a big deal anyway.",
+            "text": "Tell the classmate Lena is nervous, since it is no big deal.",
             "type": "unsafe",
-            "feedback": "Deciding it is not a big deal is making a choice for Lena. She trusted you to keep it."
+            "feedback": "Calling it no big deal decides for Lena. She trusted you to keep it."
           },
           {
             "id": "cq4-4-4",
-            "text": "Ask a teacher for ideas on how to support Lena without sharing her feelings with anyone.",
+            "text": "Ask a teacher how to support Lena without sharing her feelings.",
             "type": "seek_help",
-            "feedback": "A teacher can help you support Lena in ways that keep her feelings private. Asking is a smart move."
+            "feedback": "A teacher can help you support her and keep her feelings private."
           }
         ]
       },

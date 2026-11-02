@@ -43,7 +43,7 @@
       stage = 'answer'; selectedAnswer = null;
       feedbackHolder.innerHTML = '';
       progressHolder.innerHTML = '';
-      progressHolder.appendChild(FnGameShell.renderProgress(index + 1, items.length));
+      progressHolder.appendChild(FnGameShell.renderProgress(index + 1, items.length, 'Question'));
 
       const item = items[index];
       onEvidence('item_presented', { index });
@@ -100,7 +100,7 @@
         onEvidence('item_correct', { index, evidenceSupported: true });
       } else if (answerCorrect && !evidenceCorrect) {
         correctNoEvidence++;
-        resultKind = 'incorrect';
+        resultKind = t('evWeakKind'); // right answer, weaker proof: amber for the older bands, red where no band is set
         message = `${t('evWeak')} ${item.explanation || ''}`;
         onEvidence('item_correct', { index, evidenceSupported: false });
       } else {

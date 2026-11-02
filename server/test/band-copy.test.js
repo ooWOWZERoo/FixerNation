@@ -118,8 +118,8 @@ test('STORY TEXT: readers see the scenario story on screen; Discover keeps it sp
 });
 
 test('PAGES: every page that loads a changed script has the new version number', () => {
-  const want = [[/engine-sdk\.js/, 'engine-sdk.js?v=4'], [/engine-simulation\.js/, 'engine-simulation.js?v=3'],
-    [/engine-scenario-choice\.js/, 'engine-scenario-choice.js?v=5'], [/engine-evidence-hunt\.js/, 'engine-evidence-hunt.js?v=1']];
+  const want = [[/engine-sdk\.js/, 'engine-sdk.js?v=5'], [/engine-simulation\.js/, 'engine-simulation.js?v=4'],
+    [/engine-scenario-choice\.js/, 'engine-scenario-choice.js?v=6'], [/engine-evidence-hunt\.js/, 'engine-evidence-hunt.js?v=2']];
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const html = read(f);
     for (const [re, versioned] of want) {

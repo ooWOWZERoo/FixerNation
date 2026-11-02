@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="brain-games.css?v=5">
+<link rel="stylesheet" href="brain-games.css?v=6">
 </head>
 <body>
 <header></header>
@@ -28,9 +28,9 @@
 <script src="site-auth.js?v=10"></script>
 <script src="footer.js?v=9"></script>
 <script src="accessibility-utils.js"></script>
-<script src="game-shell.js"></script>
-<script src="engine-sdk.js?v=4"></script>
-<script src="engine-evidence-hunt.js?v=1"></script>
+<script src="game-shell.js?v=2"></script>
+<script src="engine-sdk.js?v=5"></script>
+<script src="engine-evidence-hunt.js?v=2"></script>
 <script>
   // Reading Detective — Tune Your Brain, Phase 5 pilot slice (Explore band).
   // Main idea / inference / evidence via short mystery-style passages, per
@@ -57,11 +57,11 @@
         ],
         correctChoiceId: 'left-outside',
         correctEvidenceIndex: 2,
-        explanation: 'The grass smell on her backpack is the clue that points back outside, not to her locker.',
+        explanation: 'The grass smell is the clue. It points back outside, not to her locker.',
       },
       {
         passage: [
-          'A new student, Jordan, sat alone at the end of the lunch table.',
+          'A new student, Jordan, sat alone at the lunch table.',
           'Jordan kept looking around at the other tables without saying anything.',
           'When a classmate waved, Jordan smiled and waved back right away.',
         ],
@@ -73,28 +73,28 @@
         ],
         correctChoiceId: 'hopeful-nervous',
         correctEvidenceIndex: 2,
-        explanation: 'Waving right back the moment Jordan was noticed is the clue. That’s what hopeful looks like, not uninterested or angry.',
+        explanation: 'Jordan waves back right away. That looks hopeful, not uninterested or angry.',
       },
       {
         passage: [
-          'Ms. Patel found chalk dust footprints leading from the art room to the library.',
+          'Ms. Patel found chalk footprints from the art room to the library.',
           'The footprints stopped right at the librarian’s desk.',
           'A half-finished chalk drawing sat on the art room table, still wet.',
         ],
         question: 'What is the main idea of this passage?',
         choices: [
-          { id: 'trail-leads', text: 'A trail of clues can show where someone went, even if you didn’t see them leave.' },
+          { id: 'trail-leads', text: 'A trail of clues can show where someone went.' },
           { id: 'art-messy', text: 'Chalk drawings are always messy.' },
           { id: 'library-quiet', text: 'The library is usually a quiet place.' },
         ],
         correctChoiceId: 'trail-leads',
         correctEvidenceIndex: 0,
-        explanation: 'That’s the main idea right there: a trail of footprints lets you follow someone’s path even when you didn’t see them walk it.',
+        explanation: 'The footprints are a trail. A trail shows where someone went.',
       },
       {
         passage: [
           'The class had planned a picnic for recess all week.',
-          'By lunchtime, thick gray clouds had rolled in and the wind picked up.',
+          'By lunchtime, thick gray clouds came in and the wind picked up.',
           'The teacher checked the weather app and frowned.',
         ],
         question: 'What will most likely happen next?',
@@ -105,7 +105,7 @@
         ],
         correctChoiceId: 'moved-inside',
         correctEvidenceIndex: 1,
-        explanation: 'Gray clouds, rising wind, and that frown at the weather app are all pointing the same direction. The plan is about to change.',
+        explanation: 'Gray clouds, strong wind and a frown all point one way. The plan will change.',
       },
     ],
   };

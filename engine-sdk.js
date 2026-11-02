@@ -34,6 +34,8 @@
       audLabelRight: 'Correct', audLabelWrong: 'Incorrect', audLabelScore: 'Accuracy',
       scLabelScenarios: 'Scenarios explored', scLabelCues: 'Cues noticed',
       showWords: 'Show the words', hideWords: 'Hide the words',
+      evWeakKind: 'incorrect',
+      brLabelSteps: 'Steps completed', brLabelHelped: 'Choices that helped',
       brFallback: 'Thanks for choosing.',
       brReflectPlaceholder: "Type a few words about what you'd take away from this...",
       brReflectAria: 'Your reflection. Private, not saved.',
@@ -57,6 +59,8 @@
       evMiss: 'Not yet. Look at the story again.',
       evAsk: 'Which sentence proves your answer?',
       evLabelSupported: 'Found the proof', evLabelWeak: 'Right, weak proof', evLabelMissed: 'Not yet',
+      evWeakKind: 'partial',
+      brLabelSteps: 'Steps finished', brLabelHelped: 'Smart choices',
       brFallback: 'Thanks for picking.',
       brReflectPlaceholder: 'What will you remember?',
       stepLabels: {
@@ -70,6 +74,7 @@
       evWeak: 'Right answer, but another sentence proves it better.',
       evMiss: 'Not quite. Reread the passage.',
       simNext: 'Decision locked in. Next up.', simNextKind: 'neutral',
+      evWeakKind: 'partial',
       brFallback: 'Choice recorded.',
       brReflectPlaceholder: 'What is your takeaway?',
       stepLabels: {
@@ -85,6 +90,7 @@
       evAsk: 'Which sentence best supports your conclusion?',
       evLabelSupported: 'Supported', evLabelWeak: 'Weakly supported', evLabelMissed: 'Not supported',
       simNext: 'Noted. Next decision.', simNextKind: 'neutral',
+      evWeakKind: 'partial',
       brFallback: 'Noted.',
       brReflectPlaceholder: 'Your takeaway. Private, not saved.',
       stepLabels: {

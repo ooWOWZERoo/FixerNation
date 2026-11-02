@@ -25,6 +25,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - Licenses that already expired before this release carry no record of why their seats are off, so their school administrators still use **Reactivate** on the roster after a renewal. The database script prints how many seats that affects.
 - Needs the one-time database script `alter-add-seat-inactive-reason.js` (run before restarting the Node app), a Node restart, and `admin-licenses.html` copied to the site. New tests in `server/test/seat-renewal.test.js`.
 
+## Release 88 — 2026-11-02 — The Explore games are shorter and easier to scan for ages 7 to 10
+
+- **Choice Quest, Team Pick, Peace Table and Fix-It Workshop rewritten shorter.** Answer choices went from about 16 words to about 11, feedback from about 19 to about 13, and the hardest story setups (Fix-It Workshop) from up to 39 words to 22 or fewer. The stories, the best answers and the feedback types are the same. Thinking words like "constructive" and "overwhelmed" are gone; feeling words stay.
+- **Reading Detective and Strength Spotter trimmed** (shorter explanations and stories).
+- **A right answer with weaker proof now shows amber, not red** (Explore, Challenge and Advance), so it no longer looks like a wrong answer.
+- **Explore shows a step count** ("Step 2 of 5", "Question 1 of 4") and ends with "Steps finished" and "Smart choices".
+- A checker (`server/scripts/explore-limits.js`) and a new test hold all six games to the limits.
+- Static files only (the games, five engine scripts, `game-shell.js`, `brain-games.css`, cache numbers). No Node restart, no database change.
+
 ## Release 87 — 2026-11-02 — The six Discover games now talk to children aged 5 to 6
 
 - **The games now ask the question out loud.** Before, a child heard the story and was never asked anything, and the answers were bare pictures with no spoken meaning. Now the story, the question and each answer are read aloud, and replay plays all of it.
