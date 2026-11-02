@@ -74,7 +74,7 @@ Each game is roughly the size of the Choice Quest or Headline work: an outline o
 
 ## Owner decision 2026-11-01
 
-All six concepts approved. Start with **Say It Another Way** (`SAY_IT_ANOTHER_WAY_OUTLINE.md`) and **Fix-It Workshop** (`FIX_IT_WORKSHOP_OUTLINE.md`); their outlines are written and await your edits. The other four wait their turn.
+All six concepts approved. Start with **Say It Another Way** (`SAY_IT_ANOTHER_WAY_OUTLINE.md`) and **Fix-It Workshop** (`FIX_IT_WORKSHOP_OUTLINE.md`); both were approved, written and deployed as Release 74. Outlines for **Strength Spotter** (`STRENGTH_SPOTTER_OUTLINE.md`) and **Same and Different** (`SAME_AND_DIFFERENT_OUTLINE.md`) are written 2026-11-01 and await your edits. Perspective Swap and Community Voice wait their turn.
 
 ## What I needed from you (answered)
 
