@@ -32,15 +32,20 @@
 <script src="engine-sdk.js?v=2"></script>
 <script src="engine-branching-scenario.js?v=3"></script>
 <script>
-  // The Post - Tune Your Brain SEL scaling slice (Advance band). The real
-  // Issues-to-Answers 5-step cycle (section 6.6) on a digital-citizenship
-  // and peer-reputation scenario, per section 6.5's Advance progression.
-  // Second SEL & Character game for the Advance band, alongside First
-  // Shift - see docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's SEL x
-  // band table. Per the sensitive-scenario rules, this stays non-graphic,
-  // never treats the game choice as evidence of real online behavior, and
-  // offers a trusted-adult/escalation option without promising
-  // confidentiality the platform cannot provide.
+  // The Post - Tune Your Brain (Advance band, grades 9-12). The real
+  // Issues-to-Answers 5-step cycle (section 6.6) on four digital-citizenship
+  // situations, per section 6.5's Advance progression: a rumor about a
+  // teacher on a public account, a group project partner and an AI tool, a
+  // giveaway that asks for a login, and a tagged photo and your digital
+  // footprint. Reworked 2026-11-01 (docs/tune-your-brain/THE_POST_OUTLINE.md) so
+  // the Advance band no longer repeats the group-chat situation that Decision
+  // Point and Group Chat Meltdown already cover. The game picks one whole story
+  // per run (FnEngineSDK variants). Per the scenario-scoring rule, the
+  // "choose" step's options span unsafe / plausible-incomplete / responsible /
+  // multiple-defensible / seek-help, never scored as trivia. Per the
+  // sensitive-scenario rules, this stays non-graphic, never treats the game
+  // choice as evidence of real online behavior, and offers a trusted-adult
+  // option without promising confidentiality the platform cannot provide.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'advance';
 
@@ -48,56 +53,447 @@
     title: 'The Post',
     steps: [
       {
-        key: 'recognize',
-        prompt: 'A friend in your group chat wants to repost an embarrassing video of a classmate that has already started spreading around school.',
-        choices: [
-          { id: 'notice-spread', text: 'Notice that reposting it would spread it further and could really hurt that classmate, even if it feels like a joke.', type: 'responsible',
-            feedback: 'Right. Every repost is a real choice, not a neutral one.' },
-          { id: 'already-out', text: 'It is already out there anyway, so reposting it does not really change anything.', type: 'plausible_incomplete',
-            feedback: 'It is already circulating, but each repost still adds to how far and how fast it spreads.' },
-        ],
+        "key": "recognize",
+        "prompt": "A post on an anonymous school meme account says that Mr. Bell, a teacher, \"got fired for something awful.\" The comments are filling up, and your friend Dev nudges you to add \"lol true.\" What do you notice?",
+        "choices": [
+          {
+            "id": "tp1-1",
+            "text": "The post is probably false, and it could really hurt a real person, even if it is meant as a joke.",
+            "type": "responsible",
+            "feedback": "Good catch. A rumor about a real person can do real damage, and a joke label does not change that."
+          },
+          {
+            "id": "tp1-2",
+            "text": "The account is anonymous and always posts jokes, so nobody can really be hurt by one more post.",
+            "type": "plausible_incomplete",
+            "feedback": "Anonymous accounts can still reach everyone at school. A joke about a real person still lands on that person."
+          },
+          {
+            "id": "tp1-3",
+            "text": "The post is probably true, since so many people are commenting and nobody is arguing with it.",
+            "type": "plausible_incomplete",
+            "feedback": "Many comments show that a post is popular, not that it is true. People often pile on without checking."
+          }
+        ]
       },
       {
-        key: 'impact',
-        prompt: 'If the video keeps spreading, what could happen?',
-        choices: [
-          { id: 'lasting-harm', text: 'The classmate could feel humiliated for a long time, and it could affect how new friends, teachers, or schools see them later.', type: 'responsible',
-            feedback: 'Online moments can follow someone much longer than the moment itself lasted.' },
-          { id: 'blows-over', text: 'It will probably just blow over in a day or two like everything else online.', type: 'plausible_incomplete',
-            feedback: 'Some things do fade fast, but assuming that in advance is a guess, not something you actually know.' },
-        ],
+        "key": "impact",
+        "prompt": "If the rumor keeps spreading, what could happen?",
+        "choices": [
+          {
+            "id": "tp1-4",
+            "text": "It could harm his job and his family, and students who share it could get into serious trouble.",
+            "type": "responsible",
+            "feedback": "Rumors can move faster than the truth, and the people who pass them along become part of what happens."
+          },
+          {
+            "id": "tp1-5",
+            "text": "Teachers rarely read these accounts, so the post will fade in a day without causing any harm.",
+            "type": "plausible_incomplete",
+            "feedback": "It may fade, but you cannot count on it. Parents, students and staff often see these posts sooner than you think."
+          },
+          {
+            "id": "tp1-6",
+            "text": "He is an adult, so he can handle it, and it matters less than if the post were about a student.",
+            "type": "plausible_incomplete",
+            "feedback": "Adults can be hurt by false stories too, and a rumor about a job can follow someone around for a long time."
+          }
+        ]
       },
       {
-        key: 'consider',
-        prompt: 'What are some ways you could respond?',
-        choices: [
-          { id: 'decide-and-talk', text: 'Decide not to repost it, and think about whether to say something to your friend about it.', type: 'responsible',
-            feedback: 'Having a real plan, not just reacting in the moment, makes it easier to follow through.' },
-          { id: 'stay-quiet', text: 'Just stay quiet and let everyone else decide what to do.', type: 'plausible_incomplete',
-            feedback: 'Staying quiet still shapes what happens. Not reposting is itself a real choice worth making on purpose.' },
-        ],
+        "key": "consider",
+        "prompt": "What are some ways you could respond?",
+        "choices": [
+          {
+            "id": "tp1-7",
+            "text": "Do not comment or share the post, and report it to the platform as false and harmful.",
+            "type": "responsible",
+            "feedback": "Staying out and reporting keeps you from adding to it and asks the platform to deal with it."
+          },
+          {
+            "id": "tp1-8",
+            "text": "Reply in the comments that it is false, so that everyone can see the truth right away.",
+            "type": "plausible_incomplete",
+            "feedback": "Correcting people feels right, but replies can push a post higher and spread it even further. Reporting works better."
+          },
+          {
+            "id": "tp1-9",
+            "text": "Wait to see whether someone else reports it before deciding whether to do anything yourself.",
+            "type": "plausible_incomplete",
+            "feedback": "Waiting means leaving it up longer. Each person can assume that someone else will report it, and then nobody does."
+          }
+        ]
       },
       {
-        key: 'choose',
-        prompt: 'What is the most constructive next step right now?',
-        choices: [
-          { id: 'ask-friend-stop', text: 'Tell your friend you are not comfortable reposting it, and ask them not to send it to you again.', type: 'responsible',
-            feedback: 'A clear, direct boundary, without needing to make a bigger scene out of it.' },
-          { id: 'quiet-support', text: 'Do not repost it, and privately let the classmate know you are on their side without turning it into a bigger public moment.', type: 'multiple_defensible',
-            feedback: 'Also a solid option. Quiet support can matter as much as a public statement.' },
-          { id: 'repost-anyway', text: 'Repost it anyway since everyone else already has.', type: 'unsafe',
-            feedback: 'Following the crowd here still adds real harm, even if it feels like it does not matter individually.' },
-          { id: 'escalate-if-harassment', text: 'If the video starts turning into real harassment, tell a trusted adult, like a counselor or teacher, so they can help.', type: 'seek_help',
-            feedback: 'Once something crosses into ongoing harassment, bringing in an adult who can actually act is a reasonable, responsible move.' },
-        ],
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp1-10",
+            "text": "Report the post and do not comment. If Dev asks, say that you would rather not add to it.",
+            "type": "responsible",
+            "feedback": "This keeps you out of the spread, uses the tools that exist for this, and does not require a fight with your friend."
+          },
+          {
+            "id": "tp1-11",
+            "text": "Tell Dev privately that you will not add to the post and say why, and then report it too.",
+            "type": "multiple_defensible",
+            "feedback": "Also a solid option. A private word can help your friend think twice, and reporting still protects Mr. Bell."
+          },
+          {
+            "id": "tp1-12",
+            "text": "Add a comment such as \"heard he is leaving\" so that you are not the only one staying quiet.",
+            "type": "unsafe",
+            "feedback": "Joining in feels safer in the moment, but it spreads a false story about a real person and could get you in trouble."
+          },
+          {
+            "id": "tp1-13",
+            "text": "If the rumor keeps growing, tell a counselor or teacher so that someone who can act knows about it.",
+            "type": "seek_help",
+            "feedback": "Once a rumor keeps spreading, bringing in an adult who can act is a responsible move, and you do not have to carry it alone."
+          }
+        ]
       },
       {
-        key: 'reflect',
-        prompt: 'What is one thing you could say to a friend who wants you to share something that might hurt someone else?',
-        freeReflection: true,
-      },
+        "key": "reflect",
+        "prompt": "What would you want people to do if a rumor about you were spreading?",
+        "freeReflection": true
+      }
     ],
   };
+
+  // Four situations: the rumor about a teacher (above), the AI tool and a group project, the giveaway scam, and the tagged photo.
+  // Steps 1 to 3 offer three options; step 4 offers four. Option lengths are balanced on purpose (see server/scripts/audit-brain-games.js).
+  contentPack.variants = [
+    { steps: contentPack.steps },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "You and your partner Maya split a history project. When she turns in her part, you notice that it reads exactly like text from an AI tool. Your teacher's policy says that the tool may not write the work, and the grade is shared. What do you notice?",
+        "choices": [
+          {
+            "id": "tp2-1",
+            "text": "Your grade and hers may be at risk, and you could be wrong about where her text came from.",
+            "type": "responsible",
+            "feedback": "Both things are true, so it helps to stay open to being wrong while still taking the risk seriously."
+          },
+          {
+            "id": "tp2-2",
+            "text": "It is her part, so it is not your business, and you should focus on finishing your own section.",
+            "type": "plausible_incomplete",
+            "feedback": "It is her section, but the grade is shared, so it does affect you. Looking away does not make the risk go away."
+          },
+          {
+            "id": "tp2-3",
+            "text": "Everyone uses these tools now, so the teacher's policy probably does not matter very much.",
+            "type": "plausible_incomplete",
+            "feedback": "Many people do use them, but the policy is the policy, and a shared grade can be marked down because of it."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If nothing changes, what could happen?",
+        "choices": [
+          {
+            "id": "tp2-4",
+            "text": "It could count as cheating for both of you, and Maya would miss the chance to learn the topic.",
+            "type": "responsible",
+            "feedback": "A shared grade means shared consequences, and she loses the learning that the project was meant to give her."
+          },
+          {
+            "id": "tp2-5",
+            "text": "Nothing, because the teacher cannot tell the difference, and plenty of projects get through.",
+            "type": "plausible_incomplete",
+            "feedback": "Teachers often can tell, and tools exist to check. Hoping not to be caught is a risky plan for a shared grade."
+          },
+          {
+            "id": "tp2-6",
+            "text": "Only Maya is affected, since her part is the one that the teacher might flag as a problem.",
+            "type": "plausible_incomplete",
+            "feedback": "With a shared project, one flagged part can affect the whole grade. You are part of this, even though you did not write it."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could handle this?",
+        "choices": [
+          {
+            "id": "tp2-7",
+            "text": "Talk to Maya first, privately, and ask about the writing without accusing her of anything.",
+            "type": "responsible",
+            "feedback": "Asking first gives her a chance to explain, and it keeps the problem between the two of you for now."
+          },
+          {
+            "id": "tp2-8",
+            "text": "Quietly rewrite her section yourself so that the project is safe and she never finds out.",
+            "type": "plausible_incomplete",
+            "feedback": "It protects the grade this once, but it hides the problem and puts extra work on you. She may do it again."
+          },
+          {
+            "id": "tp2-9",
+            "text": "Say nothing, turn in the project and hope that the teacher does not notice anything odd.",
+            "type": "plausible_incomplete",
+            "feedback": "That leaves the risk in place for both of you. It is easier today and much harder if it comes up later."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp2-10",
+            "text": "Ask Maya in private about the writing, and suggest that she redo her part in her own words.",
+            "type": "responsible",
+            "feedback": "This is direct and kind. It gives her a way to fix it before the teacher ever sees it."
+          },
+          {
+            "id": "tp2-11",
+            "text": "Offer to outline her section with her, so that the ideas and the words come from her.",
+            "type": "multiple_defensible",
+            "feedback": "Also a good choice. Helping her start in her own voice fixes the problem and keeps the project on schedule."
+          },
+          {
+            "id": "tp2-12",
+            "text": "Turn in the project as it is and say nothing, since you cannot prove where her text came from.",
+            "type": "unsafe",
+            "feedback": "Not being sure is a reason to ask, not a reason to ignore it. Staying silent leaves both grades at risk."
+          },
+          {
+            "id": "tp2-13",
+            "text": "Ask your teacher how to handle it, if you are not sure what the policy on the tool covers.",
+            "type": "seek_help",
+            "feedback": "If the policy is unclear, asking your teacher is smart. You can ask a question without accusing anyone."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "How would you want a teammate to tell you something hard?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "A friend reposts a \"free concert tickets\" giveaway. To enter, you must share the post, tag five friends and \"verify\" with your school email and password. The account is new, but it has thousands of followers. What do you notice?",
+        "choices": [
+          {
+            "id": "tp3-1",
+            "text": "Asking for your password is a warning sign, and your friend may have been fooled too.",
+            "type": "responsible",
+            "feedback": "Real giveaways do not need your password. Spotting that is the most important clue."
+          },
+          {
+            "id": "tp3-2",
+            "text": "It has thousands of followers, so it must be real, and the tickets are probably worth the effort.",
+            "type": "plausible_incomplete",
+            "feedback": "Followers can be bought, and a new account with a big following is a common sign of a scam."
+          },
+          {
+            "id": "tp3-3",
+            "text": "Free tickets are worth a small risk, and nothing bad has happened to your friend so far.",
+            "type": "plausible_incomplete",
+            "feedback": "Nothing bad happening yet does not mean it is safe. Scams often take a while to show up."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If you enter your login, what could happen?",
+        "choices": [
+          {
+            "id": "tp3-4",
+            "text": "Someone could take over your account, message your contacts and use your school email.",
+            "type": "responsible",
+            "feedback": "A stolen login can be used to scam your friends and to reach your school accounts."
+          },
+          {
+            "id": "tp3-5",
+            "text": "At worst you would lose some followers, and you could easily make a new account for yourself.",
+            "type": "plausible_incomplete",
+            "feedback": "Losing the account is the smaller problem. Your contacts, photos and school email could all be affected."
+          },
+          {
+            "id": "tp3-6",
+            "text": "Only you would be affected, so it is your own choice and nobody else needs to worry about it.",
+            "type": "plausible_incomplete",
+            "feedback": "Your friends would get messages that look like they come from you, so they are affected too."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could respond?",
+        "choices": [
+          {
+            "id": "tp3-7",
+            "text": "Do not enter, and check whether the real artist or venue posted this giveaway on its own page.",
+            "type": "responsible",
+            "feedback": "The official page is the quick way to check, and a real giveaway will be listed there."
+          },
+          {
+            "id": "tp3-8",
+            "text": "Enter with a fake password just to see what happens, since the account may not check it.",
+            "type": "plausible_incomplete",
+            "feedback": "Even a fake login can be a way for scammers to test your accounts and collect your email address."
+          },
+          {
+            "id": "tp3-9",
+            "text": "Share the post without entering, so that your friends can decide for themselves what to do.",
+            "type": "plausible_incomplete",
+            "feedback": "Sharing helps the scam spread to your friends, and some of them will enter even if you do not."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp3-10",
+            "text": "Do not enter or share, and message your friend kindly to say that you think it is a scam.",
+            "type": "responsible",
+            "feedback": "This protects you and gives your friend a chance to take their own post down."
+          },
+          {
+            "id": "tp3-11",
+            "text": "Look up the venue's real account, and show your friend that the giveaway is not listed there.",
+            "type": "multiple_defensible",
+            "feedback": "Also good. Showing the proof can be more convincing than just saying that it looks wrong."
+          },
+          {
+            "id": "tp3-12",
+            "text": "Enter your real login to get the tickets, since the account has so many followers anyway.",
+            "type": "unsafe",
+            "feedback": "This hands your account to a stranger, and your friends could be the next targets."
+          },
+          {
+            "id": "tp3-13",
+            "text": "Report the account to the platform, and tell a parent or staff member if you already entered.",
+            "type": "seek_help",
+            "feedback": "Reporting helps other people, and an adult can help you secure any account that was affected."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What helps you slow down before you share something?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "A friend posts a photo from the class trip of you making a silly face and tags you in a public post. You are about to apply for a summer job and a scholarship, and people are leaving jokes in the comments. What do you notice?",
+        "choices": [
+          {
+            "id": "tp4-1",
+            "text": "The photo is public and can be found later, and your friend probably meant it kindly.",
+            "type": "responsible",
+            "feedback": "Both things are true. Keeping them together helps you handle it without starting a fight."
+          },
+          {
+            "id": "tp4-2",
+            "text": "It is just a joke and everyone has seen worse, so there is nothing here to worry about.",
+            "type": "plausible_incomplete",
+            "feedback": "It may be harmless, but public posts can be found for years, so it is worth a second look."
+          },
+          {
+            "id": "tp4-3",
+            "text": "Your friend posted it on purpose to embarrass you, and you should treat it that way.",
+            "type": "plausible_incomplete",
+            "feedback": "That is a guess. Most people post photos like this because they thought it was funny or fond."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If the photo stays up, what could happen?",
+        "choices": [
+          {
+            "id": "tp4-4",
+            "text": "Employers and schools often look people up, and a public photo can be found for a long time.",
+            "type": "responsible",
+            "feedback": "A silly photo is rarely a problem on its own, but you get to choose what shows up first."
+          },
+          {
+            "id": "tp4-5",
+            "text": "Nobody checks social media for jobs or scholarships, so it will not matter either way.",
+            "type": "plausible_incomplete",
+            "feedback": "Many do check, and some applications ask for your profiles. It is better to plan for it."
+          },
+          {
+            "id": "tp4-6",
+            "text": "You can delete everything later and it will disappear, so there is no real hurry to act.",
+            "type": "plausible_incomplete",
+            "feedback": "Deleting helps, but photos can be saved or shared before they are removed. Earlier is better."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could respond?",
+        "choices": [
+          {
+            "id": "tp4-7",
+            "text": "Ask your friend, privately, to take the tag off or to take the post down.",
+            "type": "responsible",
+            "feedback": "A private, friendly request is easy to say yes to, and it keeps the comments from growing."
+          },
+          {
+            "id": "tp4-8",
+            "text": "Comment a joke back so that you look relaxed, and hope that people soon forget about it.",
+            "type": "plausible_incomplete",
+            "feedback": "A joke may feel easier, but more comments keep the post active and visible for longer."
+          },
+          {
+            "id": "tp4-9",
+            "text": "Say nothing and hope that the post gets buried under newer ones, so that you make no fuss.",
+            "type": "plausible_incomplete",
+            "feedback": "It might sink, but it stays findable. A short, calm message would solve it with no fuss at all."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp4-10",
+            "text": "Message your friend, say that you liked the day, and ask them to remove the post or the tag.",
+            "type": "responsible",
+            "feedback": "This is kind and clear. Most friends will say yes, and it keeps the friendship in good shape."
+          },
+          {
+            "id": "tp4-11",
+            "text": "Remove the tag yourself and change your settings so that you must approve any future tags.",
+            "type": "multiple_defensible",
+            "feedback": "Also a solid option. You control what is linked to your name, even if the post stays up."
+          },
+          {
+            "id": "tp4-12",
+            "text": "Post an embarrassing photo of your friend in return, so that the two of you are even.",
+            "type": "unsafe",
+            "feedback": "Getting even makes the problem bigger for both of you, and it puts another photo online."
+          },
+          {
+            "id": "tp4-13",
+            "text": "Talk to a parent or counselor about privacy settings if the photo keeps spreading around.",
+            "type": "seek_help",
+            "feedback": "An adult can help you with settings and with reports if the photo keeps going around."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What would you want your public profile to say about you in a few years?",
+        "freeReflection": true
+      }
+    ] },
+  ];
 
   fetch('/api/brain-games/me/progress').then((r) => {
     if (!r.ok) {
