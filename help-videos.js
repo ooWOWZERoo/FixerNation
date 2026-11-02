@@ -78,7 +78,7 @@
     // ---- District administrators
     { id: 'C1', group: 'district-admins', topic: 'Your portal', title: 'A tour of the District Admin portal',
       summary: 'The dashboard, the menu, the license banner and switching districts.',
-      pages: ['district-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391643/fne/help/C1.mp4', captions: '/help-assets/C1.vtt', poster: '/help-assets/C1.jpg' },
+      pages: ['district-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793579769/fne/help/C1.mp4', captions: '/help-assets/C1.vtt', poster: '/help-assets/C1.jpg' },
     { id: 'C2', group: 'district-admins', topic: 'Branding', title: 'Set district-wide branding',
       summary: 'Set the logo and colors every school in your district starts with.',
       pages: ['district-admin-branding.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391645/fne/help/C2.mp4', captions: '/help-assets/C2.vtt', poster: '/help-assets/C2.jpg' },
