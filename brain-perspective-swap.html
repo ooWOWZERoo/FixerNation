@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Perspective Swap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-branching-scenario.js?v=3"></script>
+<script>
+  // Perspective Swap - Tune Your Brain (Advance band, grades 9-12). The five-step
+  // story engine used as a perspective cycle: see the situation from one
+  // teammate's side, then from another's, then think about how the group could
+  // adjust, act, and reflect. Practises NY SEL 2B (similarities and differences)
+  // and 2C (communicating across differences), with 2A and 2D supporting, and the
+  // Global Citizen attribute. Four situations, one per run (FnEngineSDK variants),
+  // drawn from faith and family, communication style, money and access, always
+  // written without naming a real group and never treating a difference as a
+  // problem. In this game "unsafe" means a move that makes one person carry the
+  // whole cost of the difference. Design and approved outline:
+  // docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and PERSPECTIVE_SWAP_OUTLINE.md.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'advance';
+
+  const contentPack = {
+    title: 'Perspective Swap',
+    steps: [
+      {
+        "key": "recognize",
+        "prompt": "Your group plans a final practice for Saturday morning before a Monday presentation. Amira says that Saturday is a family celebration of a holiday that matters a great deal to them, and she will be away until Sunday night. What do you notice from her side?",
+        "choices": [
+          {
+            "id": "tp1-1",
+            "text": "The day matters to her family, and she may feel that she has to choose between them and the group.",
+            "type": "responsible",
+            "feedback": "That is the real weight of it. Seeing the choice she is facing helps you respond to her, not just to the schedule."
+          },
+          {
+            "id": "tp1-2",
+            "text": "It is only one practice, so it should not be hard for her to move her plans around.",
+            "type": "plausible_incomplete",
+            "feedback": "A single practice can matter a lot when the other side is a family occasion. What looks small to you may not be small to her."
+          },
+          {
+            "id": "tp1-3",
+            "text": "She should have said so earlier, so the group should not have to change anything now.",
+            "type": "plausible_incomplete",
+            "feedback": "It would have been easier earlier, but she is telling you now. Blaming her for the timing does not solve the problem."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "Two others say that the group should keep Saturday because it is the only day everyone else is free. What do you notice from their side?",
+        "choices": [
+          {
+            "id": "tp1-4",
+            "text": "They are worried about time and want the presentation to go well, which is a fair worry.",
+            "type": "responsible",
+            "feedback": "Their concern is real too. Seeing it fairly makes it easier to find a plan that respects everyone."
+          },
+          {
+            "id": "tp1-5",
+            "text": "They are being selfish and only care about their own schedules and the grade.",
+            "type": "plausible_incomplete",
+            "feedback": "Calling them selfish ends the conversation. They are worried about the presentation, and that is understandable."
+          },
+          {
+            "id": "tp1-6",
+            "text": "Their schedule is the only one that counts, because most of the group can come on Saturday.",
+            "type": "plausible_incomplete",
+            "feedback": "Most of the group matters, but a plan that leaves one teammate out is a weaker plan for the whole group."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways the group could adjust?",
+        "choices": [
+          {
+            "id": "tp1-7",
+            "text": "Look for a time that works for everyone, such as Friday or Sunday night, before anyone gives something up.",
+            "type": "responsible",
+            "feedback": "Searching for a new time first treats both concerns as real, and often turns up an option nobody had tried."
+          },
+          {
+            "id": "tp1-8",
+            "text": "Keep Saturday, since most people can come, and let Amira catch up with the group later.",
+            "type": "plausible_incomplete",
+            "feedback": "It saves time for most people, but it leaves Amira to do the catching up and may leave her feeling like an afterthought."
+          },
+          {
+            "id": "tp1-9",
+            "text": "Let Amira join by message on Saturday and share her part in writing without being there.",
+            "type": "plausible_incomplete",
+            "feedback": "Joining by message is better than nothing, but she would miss the practice, and the group would miss her."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What do you say or do now?",
+        "choices": [
+          {
+            "id": "tp1-10",
+            "text": "Propose a Friday or Sunday practice, and ask everyone what works before deciding.",
+            "type": "responsible",
+            "feedback": "This keeps the group together and shows that every schedule matters. It also gives people a say."
+          },
+          {
+            "id": "tp1-11",
+            "text": "Offer to practice her part with her separately, and share notes with the group afterward.",
+            "type": "multiple_defensible",
+            "feedback": "Also a solid idea. It keeps the group's plan and still gives Amira real practice, though she misses the group time."
+          },
+          {
+            "id": "tp1-12",
+            "text": "Go ahead on Saturday, and tell Amira that she will have to catch up on her own.",
+            "type": "unsafe",
+            "feedback": "This makes Amira pay the whole cost of the plan. It also risks a weaker presentation without her."
+          },
+          {
+            "id": "tp1-13",
+            "text": "Ask your teacher whether the date can move, if no time works for everyone in the group.",
+            "type": "seek_help",
+            "feedback": "If no time works, a teacher may have room to help, and asking is a reasonable step."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "When has a plan that worked for you been hard for someone else?",
+        "freeReflection": true
+      }
+    ],
+  };
+
+  // Four situations: a deadline on a day that matters to a teammate's family (above), a fast discussion and a teammate who waits for a pause, a dinner some cannot afford, and a video with no captions.
+  // Steps 1 to 3 offer three options; step 4 offers four. Option lengths are balanced on purpose (see server/scripts/audit-brain-games.js).
+  contentPack.variants = [
+    { steps: contentPack.steps },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "Your group's discussions move quickly, and people often talk over each other. Kenji grew up where interrupting is considered rude, so he waits for a pause that never comes. He has said very little in three meetings. What do you notice from his side?",
+        "choices": [
+          {
+            "id": "tp2-1",
+            "text": "He may be waiting for his turn out of respect, and quiet does not mean he does not care.",
+            "type": "responsible",
+            "feedback": "That is a generous and likely reading. It keeps you from deciding something about him that may not be true."
+          },
+          {
+            "id": "tp2-2",
+            "text": "He just does not care about the project, or he would have said something by now.",
+            "type": "plausible_incomplete",
+            "feedback": "That is a guess, and it may be wrong. Waiting politely can look like not caring when it is really good manners."
+          },
+          {
+            "id": "tp2-3",
+            "text": "He is shy, so it is his job to speak up, and the group should not have to change.",
+            "type": "plausible_incomplete",
+            "feedback": "He may be shy, but the group's way of talking is part of the problem. Expecting him to change alone is not fair."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "The group has started to say that Kenji is \"not into it.\" What do you notice from the group's side?",
+        "choices": [
+          {
+            "id": "tp2-4",
+            "text": "They move fast to finish, and they may not realize that they are shutting someone out.",
+            "type": "responsible",
+            "feedback": "Their intentions are probably good. Seeing that helps you ask for a change without blaming them."
+          },
+          {
+            "id": "tp2-5",
+            "text": "The group is doing nothing wrong, because fast, overlapping talk is simply how meetings work.",
+            "type": "plausible_incomplete",
+            "feedback": "Plenty of meetings run that way, and it works for some people. It does not work for everyone, and that matters here."
+          },
+          {
+            "id": "tp2-6",
+            "text": "Everyone should speak up if they want to be heard, so there is nothing for the group to fix here.",
+            "type": "plausible_incomplete",
+            "feedback": "Speaking up is easier for some people than for others. A group can make room for both kinds of people."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways the group could adjust?",
+        "choices": [
+          {
+            "id": "tp2-7",
+            "text": "Agree on a simple way to take turns, such as going around the table, and invite written ideas.",
+            "type": "responsible",
+            "feedback": "Turns and written ideas give quieter people a clear way in, and they often help everyone listen better."
+          },
+          {
+            "id": "tp2-8",
+            "text": "Ask Kenji to speak up more, and tell him that the group would like to hear his ideas.",
+            "type": "plausible_incomplete",
+            "feedback": "The invitation is kind, but it asks him to change how he behaves in a room that has not changed."
+          },
+          {
+            "id": "tp2-9",
+            "text": "Keep the meetings the same, and add a note at the end asking for any ideas by message.",
+            "type": "plausible_incomplete",
+            "feedback": "A message after the meeting helps a little, but the real conversation still happens without him."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What do you say or do now?",
+        "choices": [
+          {
+            "id": "tp2-10",
+            "text": "Suggest that the group go around the table for each topic, and explain why it helps everyone.",
+            "type": "responsible",
+            "feedback": "This gives everyone a turn, and it is easy to say yes to because it benefits the whole group."
+          },
+          {
+            "id": "tp2-11",
+            "text": "Ask Kenji privately how he likes to share ideas, and offer to bring them to the group.",
+            "type": "multiple_defensible",
+            "feedback": "Also a thoughtful choice. It respects how he likes to work, though the group still needs a better way to talk."
+          },
+          {
+            "id": "tp2-12",
+            "text": "Tell the group that Kenji is not pulling his weight, and suggest that his part go to someone else.",
+            "type": "unsafe",
+            "feedback": "This judges him without asking, and it puts the blame on one person for something the whole group shaped."
+          },
+          {
+            "id": "tp2-13",
+            "text": "Ask your teacher or advisor to help the group set up norms for how discussions will work.",
+            "type": "seek_help",
+            "feedback": "A teacher can help the whole group agree on a fair way to talk, which takes the pressure off any one person."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What helps you speak up, and what helps you listen?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "Your group is planning a celebration dinner at a restaurant that costs $45 each. Lucia quietly tells you that she cannot afford it this month and will skip it. What do you notice from her side?",
+        "choices": [
+          {
+            "id": "tp3-1",
+            "text": "She may feel embarrassed, and she told you because she trusts you to be kind about it.",
+            "type": "responsible",
+            "feedback": "That is a gentle way to see it. Her trust is something to protect, not something to share."
+          },
+          {
+            "id": "tp3-2",
+            "text": "She should just find the money, since it is a small price for a nice night with friends.",
+            "type": "plausible_incomplete",
+            "feedback": "What is small for one person can be big for another. You cannot know what her month looks like."
+          },
+          {
+            "id": "tp3-3",
+            "text": "She is making a big deal out of nothing, since she could just come and order water.",
+            "type": "plausible_incomplete",
+            "feedback": "Ordering water still means sitting at a table where everyone else eats. It may not feel simple to her."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "Two others say that splitting the cost equally is only fair and that everyone can manage $45. What do you notice from their side?",
+        "choices": [
+          {
+            "id": "tp3-4",
+            "text": "They may assume that everyone has the same budget, and not realize that this leaves someone out.",
+            "type": "responsible",
+            "feedback": "Most people do not mean to exclude anyone. They just have not thought about it yet."
+          },
+          {
+            "id": "tp3-5",
+            "text": "Splitting equally is always fair, so there is nothing more to think about here.",
+            "type": "plausible_incomplete",
+            "feedback": "Equal can feel fair, but it is not fair if one person cannot take part at all."
+          },
+          {
+            "id": "tp3-6",
+            "text": "They are being unkind on purpose, and they do not care about Lucia at all.",
+            "type": "plausible_incomplete",
+            "feedback": "That is a harsh guess. They are more likely to be thinking about their own budgets."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways the group could adjust?",
+        "choices": [
+          {
+            "id": "tp3-7",
+            "text": "Look for a plan that costs less or that lets people choose, without asking Lucia to explain her money.",
+            "type": "responsible",
+            "feedback": "A lower-cost plan helps everyone and spares Lucia from explaining. She gets to stay private."
+          },
+          {
+            "id": "tp3-8",
+            "text": "Ask Lucia to explain why she cannot pay, so that the group understands and can decide.",
+            "type": "plausible_incomplete",
+            "feedback": "Asking her to explain puts her on the spot, and her money is her own business."
+          },
+          {
+            "id": "tp3-9",
+            "text": "Have the group chip in for Lucia in front of everyone, so that she can come along.",
+            "type": "plausible_incomplete",
+            "feedback": "It is a kind impulse, but doing it in front of others can leave her feeling like a charity case."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What do you say or do now?",
+        "choices": [
+          {
+            "id": "tp3-10",
+            "text": "Suggest a lower-cost option for everyone, such as a potluck or a cheaper restaurant.",
+            "type": "responsible",
+            "feedback": "Everyone can join, nobody has to explain, and the evening still feels like a celebration."
+          },
+          {
+            "id": "tp3-11",
+            "text": "Ask the group to set a spending limit before choosing a place, and offer a few options.",
+            "type": "multiple_defensible",
+            "feedback": "Also a good approach. A limit set early keeps the plan open to everyone without singling anyone out."
+          },
+          {
+            "id": "tp3-12",
+            "text": "Collect money from the group to cover Lucia, and announce it so that she knows it was handled.",
+            "type": "unsafe",
+            "feedback": "Announcing it draws attention to the thing she wanted kept private, even if you meant well."
+          },
+          {
+            "id": "tp3-13",
+            "text": "Ask your advisor whether the celebration can have a set budget that works for the whole group.",
+            "type": "seek_help",
+            "feedback": "An advisor can help set a budget and keep the focus on the group, which takes pressure off any one person."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "How can a group plan something fun that does not depend on how much money people have?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "Your group is planning a video presentation. Marcus is hard of hearing, and he says that without captions he cannot follow the videos the group plans to watch together for research. What do you notice from his side?",
+        "choices": [
+          {
+            "id": "tp4-1",
+            "text": "He wants to take part in the research on equal terms, not hear about it afterward.",
+            "type": "responsible",
+            "feedback": "That is the heart of it. Being included at the same time is different from catching up later."
+          },
+          {
+            "id": "tp4-2",
+            "text": "He can catch up from a written transcript later, so there is no problem to solve.",
+            "type": "plausible_incomplete",
+            "feedback": "A transcript helps, but he would still miss the discussion while the group watches."
+          },
+          {
+            "id": "tp4-3",
+            "text": "He should ask the teacher for a special arrangement, since it is not the group's job.",
+            "type": "plausible_incomplete",
+            "feedback": "The teacher may help, but the group can solve this faster, and it is better to solve it together."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "Two teammates say that captions would take too much time. What do you notice from their side?",
+        "choices": [
+          {
+            "id": "tp4-4",
+            "text": "They are worried about time, and may not know how quick it is to turn on or add captions.",
+            "type": "responsible",
+            "feedback": "Their worry is real, and the fix is often smaller than it seems. Sharing that can ease the concern."
+          },
+          {
+            "id": "tp4-5",
+            "text": "Captions are a favor for one person, so the group should not be asked to change.",
+            "type": "plausible_incomplete",
+            "feedback": "Captions help many people, such as anyone watching without sound. It is not just one person's need."
+          },
+          {
+            "id": "tp4-6",
+            "text": "The group should not have to change plans for one teammate when most people can hear fine.",
+            "type": "plausible_incomplete",
+            "feedback": "A small change that lets everyone take part is usually worth it, and it makes the group stronger."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways the group could adjust?",
+        "choices": [
+          {
+            "id": "tp4-7",
+            "text": "Pick videos that already have captions, or turn on automatic captions and check them together.",
+            "type": "responsible",
+            "feedback": "Many videos already have captions, and checking automatic ones takes only a few minutes."
+          },
+          {
+            "id": "tp4-8",
+            "text": "Skip the videos that Marcus cannot follow, and use only the ones that the group can all hear.",
+            "type": "plausible_incomplete",
+            "feedback": "That avoids the problem, but it limits the research, and Marcus may feel that he is the reason."
+          },
+          {
+            "id": "tp4-9",
+            "text": "Have Marcus watch the videos separately, and share his notes with the group afterward.",
+            "type": "plausible_incomplete",
+            "feedback": "It lets him see the videos, but he misses the shared conversation and works alone."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What do you say or do now?",
+        "choices": [
+          {
+            "id": "tp4-10",
+            "text": "Pick videos with captions, and turn on captions in the video that the group makes.",
+            "type": "responsible",
+            "feedback": "This includes Marcus now and makes the final video easier for anyone to follow."
+          },
+          {
+            "id": "tp4-11",
+            "text": "Suggest that the group watch together with captions on, and share notes after each video.",
+            "type": "multiple_defensible",
+            "feedback": "Also good. Everyone sees the same thing at the same time, and the notes help anyone who missed a detail."
+          },
+          {
+            "id": "tp4-12",
+            "text": "Go ahead without captions, and tell Marcus that he can read the transcript later.",
+            "type": "unsafe",
+            "feedback": "This puts the whole cost on Marcus and makes him a spectator in his own project."
+          },
+          {
+            "id": "tp4-13",
+            "text": "Ask your teacher about caption tools that the school provides, if you are not sure where to start.",
+            "type": "seek_help",
+            "feedback": "Schools often have tools and help for this, and a teacher can point you to them."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What small change could make something easier for more people than the one it was made for?",
+        "freeReflection": true
+      }
+    ] },
+  ];
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'perspective-swap-2b-2c',
+    header: {
+      icon: '🔄',
+      title: 'Perspective Swap',
+      description: 'See a group plan from two teammates\u2019 sides, then choose how the group can adjust so everyone can take part.',
+    },
+  });
+</script>
+</body>
+</html>

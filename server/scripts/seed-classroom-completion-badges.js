@@ -70,6 +70,10 @@ const BADGES = [
     description: 'Completed Strength Spotter through a classroom assignment.' },
   { gameSlug: 'same-and-different', slug: 'curious-friend', name: 'Curious Friend', emoji: '🤝',
     description: 'Completed Same and Different through a classroom assignment.' },
+  { gameSlug: 'perspective-swap', slug: 'open-minded', name: 'Open Minded', emoji: '🔄',
+    description: 'Completed Perspective Swap through a classroom assignment.' },
+  { gameSlug: 'community-voice', slug: 'voice-for-change', name: 'Voice for Change', emoji: '📣',
+    description: 'Completed Community Voice through a classroom assignment.' },
 ];
 
 async function main() {

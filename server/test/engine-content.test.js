@@ -123,8 +123,8 @@ const REAL = auditAll().filter((r) => r.engine !== 'legacy' && !r.note).map((r) 
   return { slug: r.slug, engineName, pack: extractPack(src) };
 }).filter((g) => g.pack && g.engineName);
 
-test('REAL GAMES: all 20 engine games are found and parse', () => {
-  assert.equal(REAL.length, 20, REAL.map((g) => g.slug).join(', '));
+test('REAL GAMES: all 22 engine games are found and parse', () => {
+  assert.equal(REAL.length, 22, REAL.map((g) => g.slug).join(', '));
 });
 
 test('REAL GAMES: after preparation each round keeps its choices and its right answer', () => {
@@ -189,7 +189,7 @@ test('SELF-CHECK PRIVACY: the engine never sends which answer a child picked', (
 // Phase 3 stories for Choice Quest and Team Pick (approved outlines in docs/tune-your-brain/EXPLORE_STORY_OUTLINES.md).
 // All four stories (the original, rebalanced on 2026-10-31, and the three new ones) must follow the writing rules.
 const CYCLE = ['recognize', 'impact', 'consider', 'choose', 'reflect'];
-for (const slug of ['choice-quest', 'team-pick', 'the-post', 'first-shift']) {
+for (const slug of ['choice-quest', 'team-pick', 'the-post', 'first-shift', 'perspective-swap', 'community-voice']) {
   test(`STORIES ${slug}: four stories, each a full five-step cycle`, () => {
     const g = REAL.find((x) => x.slug === slug);
     assert.equal(g.pack.variants.length, 4);

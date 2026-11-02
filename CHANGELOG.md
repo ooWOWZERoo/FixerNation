@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 81 — 2026-11-01 — Two more new brain games: Perspective Swap and Community Voice
+
+- **New game: Perspective Swap** (grades 9 to 12). A group plan works for most people and not for one teammate. The student sees each side, then chooses how the group can adjust. Four situations, one per run: a deadline on a day that matters to a teammate's family, a fast discussion and a teammate who waits for a pause, a dinner some cannot afford, and a video with no captions. A second direct game for New York SEL 2B and 2C.
+- **New game: Community Voice** (grades 9 to 12). The student listens to who is affected, checks the facts, plans a respectful ask, and handles a "no." Four situations, one per run: a later activity bus, a quiet study space, fresh cafeteria options, and a crosswalk near the school. A second direct game for SEL 3C and for the Effective Communicator attribute. Non-partisan; no party, candidate or real organization.
+- **Both appear in the games catalog and classroom assignments** once their catalog entries are added (two small scripts), and each earns a classroom completion badge (Open Minded, Voice for Change).
+- Pages, seed scripts and tests only; no server route changes and no engine changes.
+
+
 ## Release 80 — 2026-11-01 — Games catalog shows which games are SEL and which are skills practice
 
 - **Each game card now says what kind of game it is.** "SEL & Character" for the social-emotional games, "Skills practice" for the reading, math and thinking-skills games (including the six older games: Memory Match, Simon Sequence, Number Sequence, Quick Math, Reaction Time and Stroop Challenge), and "Wellness & Life Skills" when a wellness game is added.

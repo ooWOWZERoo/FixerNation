@@ -29,11 +29,11 @@ const LIVE = [
   { slug: 'say-it-another-way', band: 'Challenge', sel: { '2C': 'D', '2D': 'S', '1A': 'S' }, pog: { EC: 'D', GC: 'S' } },
   { slug: 'same-and-different', band: 'Discover', sel: { '2B': 'D', '2A': 'S' }, pog: { GC: 'S' } },
   { slug: 'strength-spotter', band: 'Explore', sel: { '1B': 'D', '1C': 'S' }, pog: { RF: 'D', CI: 'S' } },
+  { slug: 'perspective-swap', band: 'Advance', sel: { '2B': 'D', '2C': 'D', '2A': 'S', '2D': 'S' }, pog: { GC: 'D', CT: 'S' } },
+  { slug: 'community-voice', band: 'Advance', sel: { '3C': 'D', '2C': 'S', '3B': 'S' }, pog: { GC: 'D', EC: 'D', CT: 'S' } },
 ];
 const LEGACY = ['memory-match', 'simon-sequence', 'number-sequence', 'quick-math', 'reaction-time', 'stroop-challenge'];
 const PROPOSED = [
-  { slug: 'perspective-swap', band: 'Advance', sel: { '2B': 'D', '2C': 'D', '2A': 'S' }, pog: { GC: 'D', CT: 'S' } },
-  { slug: 'community-voice', band: 'Advance', sel: { '3C': 'D', '2C': 'S' }, pog: { GC: 'D', EC: 'D', CT: 'S' } },
 ];
 
 const cell = (v) => (v === 'D' ? 'D' : v === 'S' ? 's' : '');
@@ -82,17 +82,21 @@ ${gaps(LIVE, 'pog', Object.keys(POG), POG)}
 |---|---|---|
 ${bands.map((b) => { const gs = LIVE.filter((g) => g.band === b && !g.skills); const ks = Object.keys(SEL).filter((k) => gs.some((g) => g.sel[k] === 'D')); return `| ${b} | ${gs.length} | ${ks.join(', ') || 'none'} |`; }).join('\n')}
 
-## If the two remaining proposed games were built (projection)
+${PROPOSED.length ? `## If the remaining proposed games were built (projection)
 
 ${table(PROPOSED, 'sel', Object.keys(SEL), SEL)}
 ${table(PROPOSED, 'pog', Object.keys(POG), POG)}
-**After building the two remaining, remaining thin spots (fewer than 2 direct games, live plus proposed):**
+**Remaining thin spots after building them (fewer than 2 direct games, live plus proposed):**
 
 SEL:
 ${gaps(all, 'sel', Object.keys(SEL), SEL) || '- none'}
 
 Portrait of a Graduate:
-${gaps(all, 'pog', Object.keys(POG), POG) || '- none'}
+${gaps(all, 'pog', Object.keys(POG), POG) || '- none'}` : `## What is left
+
+No further games are proposed. The thin spots listed above are the ones a future game would need to cover: a second direct game for each benchmark or attribute with fewer than two.
+
+**Note on the two money games:** Money Matters and Money Moves are mapped here to SEL 1C and 3B (and Reflective and Future Focused), as in \`GAME_SCORECARD.md\`, but the games catalog files them under Wellness & Life Skills. Until that is settled they are counted here and labeled "Wellness & Life Skills" on the site.`}
 `;
   return md;
 }
