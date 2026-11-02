@@ -145,3 +145,56 @@ I measured it. In the six scenario games (Choice Quest, Team Pick, Decision Poin
 3. **Headline and the other two reading games:** see the design note in `READING_GAMES_DESIGN.md` (to be written next).
 4. **Go-ahead for outlines:** three more stories each for Decision Point and Group Chat Meltdown, in the same outline-first way?
 
+
+## Wave 4: Advance (grades 9-12), four games, and the six older games
+
+Written 2026-11-01 (draft; every verdict needs the owner's confirmation). Same five tests as the earlier waves. The generated coverage view is in `SEL_POG_COVERAGE.md`.
+
+| Game | 1 Complete | 2 Relevant (NY) | 3 Levelled | 4 Deep | 5 Replayable | Draft verdict |
+|---|---|---|---|---|---|---|
+| First Shift | Passes | Pass: SEL 3A and 3B direct, 1C and 2C supporting; PoG GC direct (acts ethically), RF supporting | Fits 9-12 (a first job); vocabulary is plain | Passes (b)(c)(e); fails (a) | Fails: one story | **Deepen (more stories, rebalance)** |
+| The Post | Passes | Pass: SEL 2A and 3A direct, 2C and 3C supporting; PoG GC direct (digital citizenship), CT supporting | Reads closer to grades 6-8 than 9-12 | Passes (b)(c)(e); fails (a) | Fails: one story | **Deepen, and change the topic mix** |
+| Critical Read | Passes | PoG CT direct, GC supporting; no SEL link, and none is needed | Passages are three plain sentences, below the band | Fails (a)(b) | Fails: four fixed items | **Rewrite (same plan as Headline)** |
+| Money Matters | Passes | SEL 3B direct, 1C supporting; PoG RF and AP supporting | The maths is lighter than Money Moves, which is a grades 6-8 game | Fails | Fails: four fixed events | **Rework** |
+
+### First Shift and The Post (the same fix as the other story games)
+- **What they are:** one story each in the five-step cycle, with per-choice feedback, a believable unsafe choice, a trusted-adult option and a private free reflection. First Shift: a coworker asks you to cover for broken equipment. The Post: a friend wants to repost an embarrassing video of a classmate.
+- **Problems:**
+  - Steps 1 to 3 give two options, and the wrong one is a strawman ("nothing happens", "it will blow over"), so tone gives it away.
+  - The responsible answer is the longest or tied for longest in 3 of 4 steps in both games, and option lengths differ by up to 1.8 times (First Shift) and 2.5 times (The Post).
+  - **Topic overlap.** Three games in the catalog are about group chats and spreading embarrassing content: Decision Point, Group Chat Meltdown and The Post. A student who plays the Challenge band and then Advance meets the same situation again. The Post should keep digital citizenship but move to a different situation (for example a screenshot of a private message, or a rumour about a teacher), or become one story of several.
+  - The Advance band has the least to say about the people it is for. Grades 9 to 12 face jobs, money, driving, dating, college and civic life, and only First Shift touches one of those.
+- **Relevance note for The Post:** the strongest link is empathy for the classmate (2A) and weighing harm (3A). NY 3C (acting for community well-being) is supporting only, because the best move is a private boundary, not a visible act.
+- **Fix:** the same writing rules as Explore (three options in steps 1 to 3, balanced lengths, believable wrong answers), three more stories each. Suggested First Shift stories: a shift swap you promised twice, a customer who is rude to a coworker, an offer of cash pay off the books. Suggested Post stories: a leaked private message, a rumour about a teacher, a group project partner who used an AI tool to write their part.
+
+### Critical Read (`critical-read`, media and source evaluation)
+- **Content:** four three-sentence passages: a sleep survey, a community-center claim, a snack-bar post, a columnist. Each asks what the text supports, or what a careful reader should notice.
+- **Relevance:** the strongest Critical Thinker fit in the catalog (analyses sources, separates fact from opinion). Global Citizen supporting. Treating this as a PoG-only game is honest; stretching it to SEL is not needed.
+- **Problems:**
+  - The right answer is the longest option in all 4 rounds, and options differ by up to 1.6 times.
+  - The same pattern as Headline: the right answer is always the careful middle ("not well supported"), the wrong ones are the naive reading and the cynical over-correction, so a student can pass by tone.
+  - The proving sentence is the first, second, second and third sentence, so the spread is better than Headline's, but there are only three sentences to choose from.
+  - The passages are shorter and plainer than the grade 9 to 12 band.
+- **Fix:** the design in `READING_GAMES_DESIGN.md`: 12 items, 6 per run, five to seven sentences with a source, a claim and a gap, the right answer sometimes the plain one, balanced lengths, a measured reading level. Outline first, as with Headline.
+
+### Money Matters (`money-matters`, personal finance)
+- **Content:** Jordan has just moved into a first apartment. Four events (a $300 car repair, three streaming subscriptions, a $150 bonus, "the smartest move next month"), two options each, and counters for Cash, Savings and Credit Score.
+- **Relevance:** a plan and a tradeoff is NY 3B (direct) and 1C (supporting); PoG Reflective and Future Focused and Academically Prepared supporting.
+- **Problems:**
+  - **No real arithmetic.** The credit card "adds interest later" but the interest is never calculated; credit score moves by arbitrary amounts (minus 10, plus 15, plus 20); the bonus and the subscriptions give a fixed number with no month-to-month effect.
+  - **It is easier than the Challenge-band Money Moves**, which now has percentages, sales tax, a savings match and a loan with 10 percent extra. An Advance game should come after it, not below it.
+  - **Four binary choices** with one obvious sensible option each. The last event's two options are both fine, which is good, but it is the only real tradeoff.
+  - Fixed content, so a second run is identical.
+  - The debrief is already kind (it never treats a lower balance as a moral failing), which should be kept.
+- **Fix (rework, in the same spirit as Money Moves):** a pool of 12 or more events for a young adult (rent and a deposit, a paycheck with deductions, an interest rate on a card or loan, a car insurance quote, a gift versus an emergency fund, a phone plan), real percent and compound-interest arithmetic with the numbers verified, needs versus wants, a floor so a choice you cannot afford is greyed out, and endings that respond to more than one counter. Draw 6 to 8 per run. Review document first, as with Money Moves.
+
+### The six older games (Memory Match, Simon Sequence, Number Sequence, Quick Math, Reaction Time, Stroop Challenge)
+- **What they are:** the oldest code. They generate content at runtime, randomise every run and have easy, medium and hard pickers, so they already pass the replayability test. Their catalog domain is executive function or maths, with a one-line primary skill, and no band.
+- **Relevance:** they practise working memory, sequencing, arithmetic fluency, processing speed and inhibition. None has an honest New York SEL benchmark. Stroop Challenge (resisting the automatic answer) and Memory Match are the nearest to a self-management skill, but New York has no separate self-management benchmark, so a link would be a stretch. The only fair Portrait link is Academically Prepared (supporting) for the maths games.
+- **Verdict:** keep them as they are and label them as skills practice, the same decision you made for Sound Safari, so they sit in the Executive function and Maths filters and are not counted toward SEL or Portrait coverage. They are not part of the alignment gap; the gap is in the story and simulation games. The remaining legacy work (a band and a depth check per game) is low priority.
+
+### Decisions for this wave
+1. **Advance topics:** the Post moves off group chats and the Advance band gets new situations from the lists above (jobs, money, civic life). Agree?
+2. **Money Matters:** treat as a rework with real interest arithmetic, review document first?
+3. **Critical Read:** same outline-first plan as Headline?
+4. **The six older games:** keep, label as skills practice, and leave out of SEL and Portrait coverage?
