@@ -214,6 +214,9 @@ Each: id 🔑 · post_id 🔗→blog_posts (CASCADE) · category/tag
 ### `blog_tags`
 id 🔑 · tag ⭐
 
+### `blog_post_favorites` (Release 91)
+🔑 (site_user_id 🔗→site_users, post_id 🔗→blog_posts) · created_at — both CASCADE. A signed-in site user's starred posts; private to that user. Created by `scripts/alter-add-blog-post-favorites.js` and in `schema.sql`. Route: `routes/blog-favorites.js`.
+
 ### `morning_boost_calendar`
 id 🔑 · boost_date date ⭐ · theme, series · blog_post_id 🔗→blog_posts (SET NULL) · created_at
 

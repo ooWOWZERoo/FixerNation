@@ -523,6 +523,18 @@ CREATE TABLE IF NOT EXISTS blog_post_tags (
   FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Posts a signed-in site user has starred (Release 91). Private to the user; deleting a user or a post removes the row.
+-- Server rules (routes/blog-favorites.js): own rows only, published and not future-dated posts only, locked posts need a license to add, 500 per user.
+CREATE TABLE IF NOT EXISTS blog_post_favorites (
+  site_user_id INT UNSIGNED NOT NULL,
+  post_id INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (site_user_id, post_id),
+  KEY idx_blog_fav_post (post_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Every category a post belongs to (a Morning Boost post is typically in
 -- several at once: Morning Boost + Health + Positivity + Wellness, etc.) —
 -- backfilled from each post's single `category` column when this table was

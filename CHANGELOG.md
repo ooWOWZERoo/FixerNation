@@ -16,6 +16,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 91 — 2026-11-02 — Favorites on the Morning Boost page
+
+- **Readers can star Morning Boost posts and come back to them.** A star on the featured post, on each card and inside the open post saves it to the reader's account, so favorites follow them to any phone or computer. A filter above the list switches between "All posts" and "Favorites (N)"; the count only counts saved posts that are live now. Un-starring in the Favorites view offers Undo.
+- **Signing in is needed to save.** A signed-out visitor who taps a star sees the sign-in box; the post they tapped is saved as soon as they sign in. Locked posts can't be saved (they still show their license button), and nobody can see anyone else's favorites.
+- **The Morning Boost email link now opens its post** (it used to land on the list and ignore the post), and a "My Favorites" link joins the signed-in menu.
+- Built so any future blog category page can use the same script. Up to 500 favorites per person.
+- **Needs a one-off script and a Node restart:** `node scripts/alter-add-blog-post-favorites.js` (safe to run twice) creates the table; the restart loads the new route. The shared sign-in script has a new version number on all 71 public pages.
+- Requirements, access rules and checks: `docs/reference/blog-favorites-requirements.md`.
+
 ## Release 90 — 2026-11-02 — Renewing a school license brings its teachers back
 
 - **When a school's license expires, every teacher's seat is switched off. Renewing the license now switches them back on.** Before, staff renewed the license but each teacher stayed locked out until the school administrator reactivated them one by one on the roster page. Classrooms, rosters, assigned lessons and each teacher's lesson picks were never deleted, so teachers pick up where they left off (after signing in again).

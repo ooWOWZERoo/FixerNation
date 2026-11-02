@@ -128,6 +128,7 @@
 
 <section class="section">
   <div class="wrap">
+    <div id="favChips"></div>
     <div id="featuredPostSlot"></div>
     <div class="blog-grid" id="blogGrid"></div>
     <div id="blogEmpty" style="display:none;" class="empty-state">
@@ -146,6 +147,7 @@
         <span class="eyebrow" id="postReadCategory"></span>
         <h2 id="postReadTitle"></h2>
         <div class="post-meta" id="postReadMeta"></div>
+        <div id="postReadFav" style="margin:-6px 0 18px;"></div>
         <div class="post-content" id="postReadBody"></div>
       </div>
     </div>
@@ -164,10 +166,13 @@
 <footer></footer>
 
 <script src="admin-common.js?v=17"></script>
+<script src="blog-favorites.js?v=1"></script>
 <script>fnTrackPageview();</script>
 <script>
 const MB_CATEGORY = 'Morning Boost';
 let postsCache = [];
+let favStore = null;      // favorites state (blog-favorites.js)
+let currentPostId = null; // the post open in the read modal, so its star can follow changes
 
 // admin-common.js's fnHandleVideoError shows an admin-facing message — not
 // appropriate on a public page. Override it: featured slot falls back to the
@@ -214,31 +219,32 @@ function renderFeatured(posts) {
         <span class="eyebrow">${MB_CATEGORY}</span>
         <h2>${featured.title || ''}</h2>
         <p>${truncate(featured.excerpt || '', 180)}</p>
-        <a href="#" class="btn btn-primary" style="align-self:flex-start;" onclick="openPostRead(${featured.id}); return false;">Watch the post</a>
+        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+          <a href="#" class="btn btn-primary" onclick="openPostRead(${featured.id}); return false;">Watch the post</a>
+          ${FnFavorites.starHtml(featured, favStore && favStore.isFav(featured.id), 'text')}
+        </div>
         <div class="meta-row"><div class="avatar"></div> ${featured.author || 'Fixer Nation Education'} &middot; ${fnFormatDate(featured.publishDate)}</div>
       </div>
     </div>
   `;
 }
 
-function renderGrid(posts) {
-  const featuredId = (posts.find(p => p.featured) || posts[0] || {}).id;
+function renderGrid(posts, includeFeatured) {
+  const featuredId = includeFeatured ? null : (posts.find(p => p.featured) || posts[0] || {}).id;
   const gridPosts = posts.filter(p => p.id !== featuredId);
   const grid = document.getElementById('blogGrid');
-  const empty = document.getElementById('blogEmpty');
 
   if (!gridPosts.length) {
     grid.innerHTML = '';
     grid.style.display = 'none';
-    if (!posts.length) empty.style.display = 'block';
     return;
   }
   grid.style.display = 'grid';
-  empty.style.display = 'none';
   grid.innerHTML = gridPosts.map(p => `
     <div class="blog-card">
       <div class="blog-thumb">
         <img src="${p.featuredImage || ''}" alt="${p.title || ''}">
+        ${FnFavorites.starHtml(p, favStore && favStore.isFav(p.id), 'icon')}
         ${(p.videoUrl || p.videoFileName) ? '<span class="video-badge">&#9654; Video</span>' : ''}
       </div>
       <div class="blog-body">
@@ -254,6 +260,8 @@ function renderGrid(posts) {
 function openPostRead(id) {
   const post = postsCache.find(p => p.id === id);
   if (!post) return;
+  currentPostId = id;
+  updateModalStar();
   document.getElementById('postReadImg').innerHTML = post.featuredImage
     ? `<img src="${post.featuredImage}" alt="${post.title || ''}">`
     : '';
@@ -287,6 +295,7 @@ function openPostRead(id) {
 }
 
 function closePostRead() {
+  currentPostId = null;
   document.getElementById('postReadOverlay').classList.remove('show');
 }
 
@@ -297,15 +306,84 @@ document.addEventListener('contextmenu', function(e) {
   }
 }, false);
 
-fetch('/api/blog/posts', { credentials: 'include' })
-  .then(r => r.json())
-  .then(data => {
-    postsCache = (data.posts || []).filter(p =>
-      (p.categories || [p.category]).includes(MB_CATEGORY)
-    );
+// ---- Favorites (Release 91) ------------------------------------------------------------------------------------------
+function setEmpty(kind) {
+  const empty = document.getElementById('blogEmpty');
+  if (!kind) { empty.style.display = 'none'; return; }
+  const text = {
+    posts: ['No posts yet', 'Morning Boost content is on its way. Check back soon.', ''],
+    none: ['Nothing saved yet', 'Tap the star on a post to keep it here.', ''],
+    signedout: ['Sign in to see your favorites', 'Your saved posts follow you to any device.', '<button type="button" class="btn btn-primary" style="margin-top:18px;" onclick="openSignIn(FnFavorites.MSG.signIn)">Sign in</button>'],
+  }[kind];
+  empty.innerHTML = `<h3>${text[0]}</h3><p>${text[1]}</p>${text[2]}`;
+  empty.style.display = 'block';
+}
+
+// The post modal sits above the sign-in box, so close it first; the star tap is remembered and saved after sign-in.
+function openSignIn(message) {
+  closePostRead();
+  fnAuthOpenModal('login');
+  fnAuthShowMessage(message || FnFavorites.MSG.signIn, 'success');
+}
+
+function updateModalStar() {
+  const slot = document.getElementById('postReadFav');
+  const post = currentPostId === null ? null : postsCache.find(p => p.id === currentPostId);
+  slot.innerHTML = post && favStore ? FnFavorites.starHtml(post, favStore.isFav(post.id), 'text') : '';
+}
+
+function render() {
+  if (!favStore) return;
+  document.getElementById('favChips').innerHTML = FnFavorites.chipsHtml(favStore.view, favStore.count(postsCache));
+  const slot = document.getElementById('featuredPostSlot');
+  if (favStore.view === 'favorites') {
+    slot.innerHTML = '';
+    const mine = favStore.signedIn ? favStore.filter(postsCache) : [];
+    renderGrid(mine, true);
+    setEmpty(!favStore.signedIn ? 'signedout' : (mine.length ? null : 'none'));
+  } else {
     renderFeatured(postsCache);
-    renderGrid(postsCache);
-  });
+    renderGrid(postsCache, false);
+    setEmpty(postsCache.length ? null : 'posts');
+  }
+  updateModalStar();
+}
+
+// An email link opens its post (?post=<slug>); a slug that is not on this page says so kindly.
+function openLinkedPost() {
+  const slug = new URLSearchParams(location.search).get('post');
+  if (!slug) return;
+  const post = postsCache.find(p => p.slug === slug);
+  if (post) openPostRead(post.id); else FnFavorites.showToast(FnFavorites.MSG.gone);
+}
+
+async function startPage() {
+  const [postsRes] = await Promise.all([
+    fetch('/api/blog/posts', { credentials: 'include' }).then(r => r.json()).catch(() => ({ posts: [] })),
+    favStore.load(),
+  ]);
+  postsCache = (postsRes.posts || []).filter(p =>
+    (p.categories || [p.category]).includes(MB_CATEGORY)
+  );
+  const saved = await favStore.applyPending(postsCache); // a star tapped before sign-in (also after the Microsoft redirect)
+  render();
+  if (saved !== null) FnFavorites.showToast(FnFavorites.MSG.added);
+  openLinkedPost();
+}
+
+favStore = FnFavorites.createStore();
+FnFavorites.bind({ store: favStore, rerender: render, signIn: openSignIn });
+
+// Signing in from the login box does not reload the page: pick up the person's favorites and the star they tapped.
+document.addEventListener('fn-auth-changed', async () => {
+  if (!favStore) return;
+  await favStore.load();
+  const saved = await favStore.applyPending(postsCache);
+  render();
+  if (saved !== null) FnFavorites.showToast(FnFavorites.MSG.added);
+});
+
+startPage();
 </script>
 
 <!-- Log In / Sign Up modal (site-auth.js) -->
@@ -363,7 +441,7 @@ fetch('/api/blog/posts', { credentials: 'include' })
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=16"></script>
-<script src="site-auth.js?v=10"></script>
+<script src="site-auth.js?v=11"></script>
 <script src="cart.js"></script>
 <script src="footer.js?v=9"></script>
 </body>
