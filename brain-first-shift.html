@@ -32,18 +32,19 @@
 <script src="engine-sdk.js?v=2"></script>
 <script src="engine-branching-scenario.js?v=3"></script>
 <script>
-  // First Shift - Tune Your Brain SEL scaling slice (Advance band). The
-  // real Issues-to-Answers 5-step cycle (section 6.6) on a workplace
-  // integrity scenario, per section 6.5's Advance progression (school,
-  // work, relationship, financial, leadership, digital-life decisions).
-  // First SEL & Character game for the Advance band, which had zero
-  // coverage before this - see docs/tune-your-brain/GAP_ANALYSIS_2026-09-17.md's
-  // SEL x band table. Per the scenario-scoring rule, the "choose" step's
-  // options span unsafe / plausible-incomplete / responsible /
-  // multiple-defensible / seek-help, never scored as trivia. Per the
-  // sensitive-scenario rules, this stays non-graphic, offers a
-  // trusted-adult option, and never puts the student solely on the hook
-  // for fixing it.
+  // First Shift - Tune Your Brain (Advance band, grades 9-12). The real
+  // Issues-to-Answers 5-step cycle (section 6.6) on four first-job situations,
+  // per section 6.5's Advance progression (school, work, relationship,
+  // financial, leadership, digital-life decisions): a coworker asks you to cover
+  // for broken equipment, a shift you promised to two people, a rude customer and
+  // a new coworker, and pay in cash with no paperwork. Reworked 2026-11-01
+  // (docs/tune-your-brain/FIRST_SHIFT_OUTLINE.md); the original story is story 1,
+  // rebalanced. The game picks one whole story per run (FnEngineSDK variants).
+  // Per the scenario-scoring rule, the "choose" step's options span unsafe /
+  // plausible-incomplete / responsible / multiple-defensible / seek-help, never
+  // scored as trivia. Per the sensitive-scenario rules, this stays non-graphic,
+  // offers a trusted-adult option, never puts the student solely on the hook for
+  // fixing it, and gives no legal advice.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'advance';
 
@@ -51,56 +52,447 @@
     title: 'First Shift',
     steps: [
       {
-        key: 'recognize',
-        prompt: 'It is your second week at your new part-time job. A coworker, Jordan, quietly broke a piece of equipment and asks you to tell the manager you did not see anything, or say it was already broken before your shift.',
-        choices: [
-          { id: 'notice-coverup', text: 'Notice that Jordan is asking you to cover up something that could affect the whole team, not just do a small favor.', type: 'responsible',
-            feedback: 'Right. This is bigger than one favor between coworkers.' },
-          { id: 'small-favor', text: 'Jordan is just asking for a small favor between coworkers, it is not a big deal.', type: 'plausible_incomplete',
-            feedback: 'It might feel small, but being asked to give false information to a manager is more than a casual favor.' },
-        ],
+        "key": "recognize",
+        "prompt": "It is your second week at your new part-time job. Your coworker Jordan quietly breaks a piece of equipment and asks you to tell the manager that you saw nothing, or that it was already broken before your shift. What do you notice?",
+        "choices": [
+          {
+            "id": "tp1-1",
+            "text": "Jordan is asking you to give false information to a manager, which is bigger than a small favor.",
+            "type": "responsible",
+            "feedback": "Right. This is more than a favor between coworkers, because it involves the truth and the whole team."
+          },
+          {
+            "id": "tp1-2",
+            "text": "It is just a small favor between coworkers, so it is not a big deal and you can help out.",
+            "type": "plausible_incomplete",
+            "feedback": "It might feel small, but being asked to give false information to a manager is more than a casual favor."
+          },
+          {
+            "id": "tp1-3",
+            "text": "It is Jordan's problem, so you should stay out of it and let Jordan sort it out alone.",
+            "type": "plausible_incomplete",
+            "feedback": "It is Jordan's mistake, but you are the one being asked to say something. Staying out is not really possible."
+          }
+        ]
       },
       {
-        key: 'impact',
-        prompt: 'If you go along with it, what could happen?',
-        choices: [
-          { id: 'wrong-info-credibility', text: 'The manager could make decisions based on wrong information, and your own credibility could suffer if the truth comes out later.', type: 'responsible',
-            feedback: 'Both are real risks, for the workplace and for you personally.' },
-          { id: 'nothing-happens', text: 'Nothing really. Equipment breaks all the time and nobody will ever know.', type: 'plausible_incomplete',
-            feedback: 'Maybe nobody finds out, but "probably fine" is not the same as actually fine if it does come out.' },
-        ],
+        "key": "impact",
+        "prompt": "If you go along with it, what could happen?",
+        "choices": [
+          {
+            "id": "tp1-4",
+            "text": "The manager could decide on wrong information, and your credibility could suffer if the truth comes out.",
+            "type": "responsible",
+            "feedback": "Both are real risks, one for the workplace and one for you personally."
+          },
+          {
+            "id": "tp1-5",
+            "text": "Nothing really, because equipment breaks all the time and nobody will ever find out about it or care.",
+            "type": "plausible_incomplete",
+            "feedback": "Maybe nobody finds out, but \"probably fine\" is not the same as fine if the truth does come out."
+          },
+          {
+            "id": "tp1-6",
+            "text": "Jordan will be grateful, and it will all be forgotten by next week, so it is a safe favor to do.",
+            "type": "plausible_incomplete",
+            "feedback": "Jordan may be grateful, but a favor built on a lie can come back, and then you are part of it."
+          }
+        ]
       },
       {
-        key: 'consider',
-        prompt: 'What are some ways you could handle this?',
-        choices: [
-          { id: 'talk-to-jordan', text: 'Talk to Jordan directly about telling the manager together, or decide what you will say if asked.', type: 'responsible',
-            feedback: 'Having a real plan, instead of just hoping it does not come up, is a much stronger position.' },
-          { id: 'avoid-manager', text: 'Just avoid the manager for the rest of the shift and hope nobody asks.', type: 'plausible_incomplete',
-            feedback: 'Avoiding the situation does not actually resolve anything, it just delays it.' },
-        ],
+        "key": "consider",
+        "prompt": "What are some ways you could handle this?",
+        "choices": [
+          {
+            "id": "tp1-7",
+            "text": "Talk to Jordan about telling the manager together, or decide ahead what you will say if asked.",
+            "type": "responsible",
+            "feedback": "Having a real plan is a much stronger position than hoping that it never comes up."
+          },
+          {
+            "id": "tp1-8",
+            "text": "Avoid the manager for the rest of the shift and hope that nobody asks you any questions at all.",
+            "type": "plausible_incomplete",
+            "feedback": "Avoiding the situation does not resolve anything. It only delays it, and you could be caught off guard."
+          },
+          {
+            "id": "tp1-9",
+            "text": "Tell Jordan you will say nothing unless someone asks you directly, and see what happens.",
+            "type": "plausible_incomplete",
+            "feedback": "That is closer, but if you are asked, you are still deciding on the spot. A plan made earlier is easier to keep."
+          }
+        ]
       },
       {
-        key: 'choose',
-        prompt: 'What is the most constructive next step right now?',
-        choices: [
-          { id: 'no-lie-support', text: 'Tell Jordan you cannot lie for them, but offer to be there if they want to tell the manager together.', type: 'responsible',
-            feedback: 'This protects your own integrity while still supporting Jordan as a person.' },
-          { id: 'honest-no-extra', text: 'Tell the manager honestly what you saw, without volunteering extra detail if not asked.', type: 'multiple_defensible',
-            feedback: 'Also reasonable. Being honest does not require offering more than what you are actually asked.' },
-          { id: 'lie-for-jordan', text: 'Tell the manager it was already broken before your shift, exactly like Jordan asked.', type: 'unsafe',
-            feedback: 'This puts your own job and trustworthiness at risk to cover for someone else\'s mistake.' },
-          { id: 'ask-trusted-adult', text: 'If you feel pressured or unsure, talk to a trusted adult, like a family member or a former teacher, about how to handle it before your next shift.', type: 'seek_help',
-            feedback: 'Getting an outside perspective before you decide is a reasonable choice, especially in a new job.' },
-        ],
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp1-10",
+            "text": "Tell Jordan that you cannot lie for them, and offer to be there if Jordan tells the manager.",
+            "type": "responsible",
+            "feedback": "This protects your own integrity while still supporting Jordan as a person."
+          },
+          {
+            "id": "tp1-11",
+            "text": "If the manager asks, tell the truth about what you saw, without offering more than you are asked.",
+            "type": "multiple_defensible",
+            "feedback": "Also reasonable. Being honest does not require volunteering every detail, only not saying anything false."
+          },
+          {
+            "id": "tp1-12",
+            "text": "Tell the manager it was already broken before your shift, exactly as Jordan asked you to.",
+            "type": "unsafe",
+            "feedback": "This puts your own job and your trustworthiness at risk to cover for someone else's mistake."
+          },
+          {
+            "id": "tp1-13",
+            "text": "If you feel pressured or unsure, talk to a family member or a former teacher before your next shift.",
+            "type": "seek_help",
+            "feedback": "Getting an outside view before you decide is a good choice, especially at a new job."
+          }
+        ]
       },
       {
-        key: 'reflect',
-        prompt: 'What is one thing you would want a coworker to do for you if you made a mistake at work?',
-        freeReflection: true,
-      },
+        "key": "reflect",
+        "prompt": "What would you want a coworker to do for you if you made a mistake at work?",
+        "freeReflection": true
+      }
     ],
   };
+
+  // Four situations: covering for broken equipment (above), a double-booked shift, a rude customer, and pay in cash with no paperwork.
+  // Steps 1 to 3 offer three options; step 4 offers four. Option lengths are balanced on purpose (see server/scripts/audit-brain-games.js).
+  contentPack.variants = [
+    { steps: contentPack.steps },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "You told your coworker Priya that you would cover her Saturday shift. Two days later, a friend invites you on a trip that same day, and you say yes before you remember. Priya is counting on you, and the schedule posts tonight. What do you notice?",
+        "choices": [
+          {
+            "id": "tp2-1",
+            "text": "You made two promises that cannot both be kept, and Priya has planned around yours.",
+            "type": "responsible",
+            "feedback": "That is the real situation. Saying it plainly is the first step to fixing it."
+          },
+          {
+            "id": "tp2-2",
+            "text": "It is only a shift swap, so it is not a big deal, and someone else can easily cover it.",
+            "type": "plausible_incomplete",
+            "feedback": "A swap can matter a lot to the person who planned around it, and the manager counts on the schedule."
+          },
+          {
+            "id": "tp2-3",
+            "text": "Your friend asked second, so the trip should not count, and you can just skip it.",
+            "type": "plausible_incomplete",
+            "feedback": "Which promise came first matters, but the trip still matters to your friend. You owe both of them a straight answer."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If you say nothing, what could happen?",
+        "choices": [
+          {
+            "id": "tp2-4",
+            "text": "Priya could be left without cover and in trouble, and coworkers may stop trusting your word.",
+            "type": "responsible",
+            "feedback": "Your word is part of how coworkers decide who to rely on, and Priya would take the hit first."
+          },
+          {
+            "id": "tp2-5",
+            "text": "Someone else will probably cover the shift, so it will work out without anyone ever knowing.",
+            "type": "plausible_incomplete",
+            "feedback": "It might work out, but you would be leaving it to luck, and Priya would find out at the worst moment."
+          },
+          {
+            "id": "tp2-6",
+            "text": "Priya probably forgot that you agreed, so nobody will notice that you did not show up at all.",
+            "type": "plausible_incomplete",
+            "feedback": "People rarely forget a promise they are counting on, and a missing person on the schedule gets noticed quickly."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could handle this?",
+        "choices": [
+          {
+            "id": "tp2-7",
+            "text": "Tell Priya as early as you can, say sorry, and help find someone else to cover the shift.",
+            "type": "responsible",
+            "feedback": "Early notice gives Priya time to fix it, and helping find cover shows that you take it seriously."
+          },
+          {
+            "id": "tp2-8",
+            "text": "Wait until the last minute in case your plans change, so you do not have to say anything yet.",
+            "type": "plausible_incomplete",
+            "feedback": "Waiting only shrinks the time Priya has to find cover. Plans rarely change in your favor at the last minute."
+          },
+          {
+            "id": "tp2-9",
+            "text": "Ask your friend to cancel the trip, since you promised Priya first and the job is more important.",
+            "type": "plausible_incomplete",
+            "feedback": "It is fair to keep your first promise, but asking your friend to cancel is a lot. You could talk to both of them."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp2-10",
+            "text": "Tell Priya today that you cannot cover Saturday, say sorry, and offer to trade another shift.",
+            "type": "responsible",
+            "feedback": "Honest, early and with a fix. That is the best way to rebuild trust after a mistake."
+          },
+          {
+            "id": "tp2-11",
+            "text": "Keep your promise to Priya, and tell your friend that you cannot go on the trip this time.",
+            "type": "multiple_defensible",
+            "feedback": "Also a fair choice. You keep your word at work, and you are honest with your friend about why."
+          },
+          {
+            "id": "tp2-12",
+            "text": "Say nothing to anyone, and skip the shift to go on the trip, hoping nobody makes a big deal of it.",
+            "type": "unsafe",
+            "feedback": "This leaves Priya with no cover and no warning, and it can cost you your job and your coworkers' trust."
+          },
+          {
+            "id": "tp2-13",
+            "text": "Ask a parent or the manager how to handle a scheduling conflict, if you are unsure about the rules.",
+            "type": "seek_help",
+            "feedback": "If you are not sure how shift swaps work, asking is smart, and a manager can often solve it quickly."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What helps you keep track of promises when you say yes quickly?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "A customer is raising their voice at Sam, a coworker in his first week, over a mistake on an order. Sam looks shaken, and the line behind the customer is growing. You are standing a few steps away. What do you notice?",
+        "choices": [
+          {
+            "id": "tp3-1",
+            "text": "Sam is upset, the situation could get worse, and you do not have to handle it alone.",
+            "type": "responsible",
+            "feedback": "Seeing it clearly helps you choose a calm response, and knowing you can get help takes some pressure off."
+          },
+          {
+            "id": "tp3-2",
+            "text": "Customers are like this sometimes, so Sam will get used to it, and you should stay out of it.",
+            "type": "plausible_incomplete",
+            "feedback": "Sam may learn that over time, but his first week is hard, and a coworker nearby can make a real difference."
+          },
+          {
+            "id": "tp3-3",
+            "text": "It is not your register, so it is not your job to get involved in what happens at his counter.",
+            "type": "plausible_incomplete",
+            "feedback": "You are part of the same team, and a calm word from you can help. It may not be your task, but it is your workplace."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If nobody steps in, what could happen?",
+        "choices": [
+          {
+            "id": "tp3-4",
+            "text": "Sam could lose confidence, the customer could get angrier, and other customers could be affected too.",
+            "type": "responsible",
+            "feedback": "A tense moment can spread, and Sam is the one who feels it most in his first week."
+          },
+          {
+            "id": "tp3-5",
+            "text": "The customer will calm down by themselves, so it is best to leave them alone and wait.",
+            "type": "plausible_incomplete",
+            "feedback": "Some customers do calm down, but waiting leaves Sam alone with it while the line keeps growing."
+          },
+          {
+            "id": "tp3-6",
+            "text": "Sam needs to learn to deal with it, and stepping in would only make him look weak.",
+            "type": "plausible_incomplete",
+            "feedback": "Getting help is not weakness. Most workplaces expect teammates to help each other with a hard customer."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could respond?",
+        "choices": [
+          {
+            "id": "tp3-7",
+            "text": "Stay calm, offer to help, and bring in a manager if the customer does not settle down.",
+            "type": "responsible",
+            "feedback": "A calm voice often lowers the temperature, and a manager can take over if it keeps going."
+          },
+          {
+            "id": "tp3-8",
+            "text": "Argue with the customer so that they stop shouting at Sam and understand how rude they are.",
+            "type": "plausible_incomplete",
+            "feedback": "Arguing usually raises the temperature and can put both of you in trouble with the manager."
+          },
+          {
+            "id": "tp3-9",
+            "text": "Step in and take over the order without asking Sam, so that he does not have to deal with it.",
+            "type": "plausible_incomplete",
+            "feedback": "It may feel helpful, but Sam might feel pushed aside. Checking in with him first is kinder."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp3-10",
+            "text": "Calmly offer to help the customer, and ask a manager to step in if the customer does not settle.",
+            "type": "responsible",
+            "feedback": "This keeps the focus on solving the problem and brings in someone with authority if it is needed."
+          },
+          {
+            "id": "tp3-11",
+            "text": "Check in with Sam quietly, and offer to take the next customer so that he can catch his breath.",
+            "type": "multiple_defensible",
+            "feedback": "Also a thoughtful choice. It supports Sam directly, and the manager can still be told afterward."
+          },
+          {
+            "id": "tp3-12",
+            "text": "Argue back with the customer, or film the scene on your phone so that you can post it later.",
+            "type": "unsafe",
+            "feedback": "This makes things worse, and filming a customer or a coworker could break rules and embarrass Sam."
+          },
+          {
+            "id": "tp3-13",
+            "text": "Tell the manager about it afterward, and ask what you should do if a customer is rude again.",
+            "type": "seek_help",
+            "feedback": "Telling the manager is a good habit, and asking for a plan helps everyone handle the next time."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What helps you stay calm when someone around you is upset?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "It is the end of the month, and your manager says he will pay your last two weeks in cash and skip the paperwork, \"so that you do not lose money to taxes.\" Several coworkers say that it is normal. You are not sure what it means for you. What do you notice?",
+        "choices": [
+          {
+            "id": "tp4-1",
+            "text": "You are not sure what it means, and being paid without a record could affect you later.",
+            "type": "responsible",
+            "feedback": "Saying \"I am not sure\" is a smart place to start. It is a reason to ask questions, not to guess."
+          },
+          {
+            "id": "tp4-2",
+            "text": "Everyone does it, so it must be fine, and asking questions would only make you look difficult.",
+            "type": "plausible_incomplete",
+            "feedback": "Other people doing something does not make it safe. Asking a polite question is normal and shows care."
+          },
+          {
+            "id": "tp4-3",
+            "text": "More money in your pocket right away is simply better, so there is nothing else to think about.",
+            "type": "plausible_incomplete",
+            "feedback": "Cash today can look good, but a missing record can cost you later in ways that are hard to see now."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "If you agree without asking, what could happen?",
+        "choices": [
+          {
+            "id": "tp4-4",
+            "text": "You could lose pay records that you need for taxes or a future job, and have no protection.",
+            "type": "responsible",
+            "feedback": "Pay records help you prove your income, and they matter for many things you will need later."
+          },
+          {
+            "id": "tp4-5",
+            "text": "Nothing will happen, because nobody checks, and the manager probably knows what he is doing.",
+            "type": "plausible_incomplete",
+            "feedback": "Maybe nobody checks, but you would have no proof of your pay if a problem came up, and you cannot know the rules."
+          },
+          {
+            "id": "tp4-6",
+            "text": "It is the manager's business, not yours, so any trouble would be his problem and not yours.",
+            "type": "plausible_incomplete",
+            "feedback": "It is his decision, but it is your pay, your records and your name, so it affects you too."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "What are some ways you could respond?",
+        "choices": [
+          {
+            "id": "tp4-7",
+            "text": "Ask questions calmly and learn what the rules are before you agree to anything.",
+            "type": "responsible",
+            "feedback": "Calm questions get you real answers and keep your relationship with your manager in good shape."
+          },
+          {
+            "id": "tp4-8",
+            "text": "Accept the cash today and sort out the paperwork later, once you know more about how it works.",
+            "type": "plausible_incomplete",
+            "feedback": "It is easier to ask first than to undo it later, and the paperwork may be harder to fix afterward."
+          },
+          {
+            "id": "tp4-9",
+            "text": "Refuse angrily and tell the manager that he is breaking the law, so that he knows you will not take it.",
+            "type": "plausible_incomplete",
+            "feedback": "You may be right to be careful, but an angry accusation is risky, and you may not have all the facts yet."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the most constructive next step right now?",
+        "choices": [
+          {
+            "id": "tp4-10",
+            "text": "Politely ask for your regular paycheck, and say that you would like your pay on the record.",
+            "type": "responsible",
+            "feedback": "This is clear, calm and fair, and it protects your records without accusing anyone."
+          },
+          {
+            "id": "tp4-11",
+            "text": "Ask the manager to explain, then check with a parent or your school's work-permit office before deciding.",
+            "type": "multiple_defensible",
+            "feedback": "Also a solid choice. Getting the facts from someone who knows the rules helps you decide with confidence."
+          },
+          {
+            "id": "tp4-12",
+            "text": "Take the cash and agree to keep it a secret, since the manager says it is better for you.",
+            "type": "unsafe",
+            "feedback": "Keeping it secret leaves you with no record and no help if a problem comes up. It is a risk for you."
+          },
+          {
+            "id": "tp4-13",
+            "text": "Talk to a parent, a guardian or a school counselor about what to do next, before the next pay day.",
+            "type": "seek_help",
+            "feedback": "An adult who knows the rules can help you decide, and you do not have to work this out alone."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "Who could you ask when you are not sure that something at work is okay?",
+        "freeReflection": true
+      }
+    ] },
+  ];
 
   fetch('/api/brain-games/me/progress').then((r) => {
     if (!r.ok) {

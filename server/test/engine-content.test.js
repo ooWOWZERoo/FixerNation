@@ -189,7 +189,7 @@ test('SELF-CHECK PRIVACY: the engine never sends which answer a child picked', (
 // Phase 3 stories for Choice Quest and Team Pick (approved outlines in docs/tune-your-brain/EXPLORE_STORY_OUTLINES.md).
 // All four stories (the original, rebalanced on 2026-10-31, and the three new ones) must follow the writing rules.
 const CYCLE = ['recognize', 'impact', 'consider', 'choose', 'reflect'];
-for (const slug of ['choice-quest', 'team-pick', 'the-post']) {
+for (const slug of ['choice-quest', 'team-pick', 'the-post', 'first-shift']) {
   test(`STORIES ${slug}: four stories, each a full five-step cycle`, () => {
     const g = REAL.find((x) => x.slug === slug);
     assert.equal(g.pack.variants.length, 4);

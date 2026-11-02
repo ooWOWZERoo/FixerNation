@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 79 — 2026-11-01 — First Shift rewritten with four first-job situations
+
+- **First Shift now has four situations instead of one.** The original (a coworker breaks equipment and asks you to cover) stays, now rebalanced. New: a shift you promised to two people, a rude customer and a new coworker, and pay in cash with no paperwork. One story per run.
+- **The first job gets real variety.** It is the only game in the Advance band about work, so students no longer see the same scene on every play.
+- **Better wrong answers.** Steps 1 to 3 now offer three options instead of two, each believable but incomplete, and option lengths are balanced so the careful answer is no longer the longest.
+- Page and tests only; no server or engine changes.
+
 ## Release 78 — 2026-11-01 — The Post rewritten with four new situations
 
 - **The Post now has four situations instead of one.** A rumor about a teacher on a public account, a group project partner and an AI tool, a giveaway that asks for your login, and a tagged photo that affects your digital footprint. One story per run.
