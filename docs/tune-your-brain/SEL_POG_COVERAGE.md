@@ -87,4 +87,4 @@ Attributes: AP Academically Prepared · CI Creative Innovator · CT Critical Thi
 
 No further games are proposed. The thin spots listed above are the ones a future game would need to cover: a second direct game for each benchmark or attribute with fewer than two.
 
-**Note on the two money games:** Money Matters and Money Moves are mapped here to SEL 1C and 3B (and Reflective and Future Focused), as in `GAME_SCORECARD.md`, but the games catalog files them under Wellness & Life Skills. Until that is settled they are counted here and labeled "Wellness & Life Skills" on the site.
+**The two money games** (Money Matters and Money Moves) are counted as SEL here and in the games catalog (moved from Wellness & Life Skills on 2026-11-01): they practise setting and working toward a goal (NY SEL 1C) and weighing tradeoffs (3B).

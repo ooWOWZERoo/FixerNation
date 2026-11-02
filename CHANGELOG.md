@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 82 — 2026-11-01 — Money Matters and Money Moves are now listed as SEL & Character games
+
+- **The two money games now carry the "SEL & Character" tag and filter** in the games catalog, instead of "Wellness & Life Skills". They practise setting a goal, making a plan and weighing tradeoffs, which are social-emotional skills, so the catalog now matches the standards mapping.
+- **Competencies added:** self-management and responsible decision-making.
+- Catalog data only (one existing script re-run); no page or server code changes.
+
 ## Release 81 — 2026-11-01 — Two more new brain games: Perspective Swap and Community Voice
 
 - **New game: Perspective Swap** (grades 9 to 12). A group plan works for most people and not for one teammate. The student sees each side, then chooses how the group can adjust. Four situations, one per run: a deadline on a day that matters to a teammate's family, a fast discussion and a teammate who waits for a pause, a dinner some cannot afford, and a video with no captions. A second direct game for New York SEL 2B and 2C.

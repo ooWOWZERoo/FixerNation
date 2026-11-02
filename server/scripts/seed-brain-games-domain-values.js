@@ -1,6 +1,9 @@
-// Tune Your Brain — populates brain_games.domain (all 14 games) and
-// brain_games.casel_competencies (the 2 SEL & Character games) per
+// Tune Your Brain — populates brain_games.domain (the 14 original games) and
+// brain_games.casel_competencies (Decision Point, Choice Quest and the two money games) per
 // roadmap §6.1/§6.4. See alter-add-brain-games-domain.js's header comment.
+// 2026-11-01: Money Matters and Money Moves moved from 'wellness' to 'sel' (the owner decided
+// they are SEL games: goals and plans, NY SEL 1C and 3B), with CASEL competencies added. Games
+// added later set their own domain and competencies in their seed-*-catalog-entry.js scripts.
 //
 // Safe to re-run: idempotent UPDATEs, always sets the same values.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
@@ -19,13 +22,15 @@ const DOMAINS = {
   'critical-read': 'literacy',
   'decision-point': 'sel',
   'choice-quest': 'sel',
-  'money-matters': 'wellness',
-  'money-moves': 'wellness',
+  'money-matters': 'sel',
+  'money-moves': 'sel',
 };
 
 const CASEL_COMPETENCIES = {
   'decision-point': 'social_awareness,relationship_skills,responsible_decision_making',
   'choice-quest': 'social_awareness,relationship_skills,responsible_decision_making',
+  'money-matters': 'self_management,responsible_decision_making',
+  'money-moves': 'self_management,responsible_decision_making',
 };
 
 async function main() {
