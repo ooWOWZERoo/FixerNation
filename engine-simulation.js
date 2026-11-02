@@ -12,7 +12,8 @@
 // debrief function decides that from the content pack's own logic, not a
 // hardcoded pass/fail the engine imposes.
 (function () {
-  function mount(container, { contentPack, onEvidence, onComplete }) {
+  function mount(container, { contentPack, band, onEvidence, onComplete }) {
+    const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
     const resources = { ...contentPack.startingResources };
     const decisionLog = [];
     let eventIndex = 0;
@@ -81,7 +82,7 @@
       onEvidence('response_submitted', { eventIndex, optionId: opt.id, delta: opt.delta });
 
       feedbackHolder.innerHTML = '';
-      feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', 'Logged. Moving to the next decision...'));
+      feedbackHolder.appendChild(FnGameShell.renderFeedback(t('simNextKind'), t('simNext')));
 
       setTimeout(() => {
         eventIndex++;

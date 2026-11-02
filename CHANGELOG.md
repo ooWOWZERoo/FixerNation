@@ -25,6 +25,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - Licenses that already expired before this release carry no record of why their seats are off, so their school administrators still use **Reactivate** on the roster after a renewal. The database script prints how many seats that affects.
 - Needs the one-time database script `alter-add-seat-inactive-reason.js` (run before restarting the Node app), a Node restart, and `admin-licenses.html` copied to the site. New tests in `server/test/seat-renewal.test.js`.
 
+## Release 86 — 2026-11-02 — Wording around the games now fits each age group
+
+- **The words around a game now change with the age group.** The finished screen, the feedback in reading games, and the step names in scenario games were the same for a first grader and a high schooler ("Nice work!", "Recognize the Issue"). Each group now has its own: for example "You did it!" for Discover, "Level complete!" for Explore, "Run complete" for Challenge and "Debrief" for Advance.
+- **The two money games stop saying "correct" after every choice.** Older players now see a plain "Noted. Next decision." instead of a green success box, even after a poor pick.
+- **Story text now shows on screen** in Strength Spotter and Values Compass for Explore and older (it was only read aloud before). Discover stays audio-led.
+- **Idea Lab, Community Voice, Perspective Swap and Fix-It Workshop have their own step names** that fit how those games work.
+- The reflection box no longer says "this demo" to screen readers.
+- A game can still set its own wording, and a page without an age group keeps the old wording exactly. A new test (`server/test/band-copy.test.js`) guards both.
+- Static files only (engine scripts, `brain-games.css`, cache numbers on the game pages). No Node restart, no database change.
+
 ## Release 85 — 2026-11-02 — Each age group's games now have their own colors
 
 - **Four color themes for the brain games, one per learning group.** Discover has a warm page, thick dark outlines and a yellow button; Explore uses purple for "selected" and orange for the next step; Challenge is cool slate with blue and violet accents; Advance is a dark slate band with one cool accent. Before this, every game from Explore to Advance looked the same.

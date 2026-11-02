@@ -452,6 +452,7 @@ html[data-band="advance"] {
 }
 .fn-shell-feedback.correct { background: var(--g-ok-bg); color: var(--g-ok-text); border: 2px solid var(--g-ok-border); }
 .fn-shell-feedback.partial { background: var(--g-partial-bg); color: var(--g-partial-text); border: 2px solid var(--g-partial-border); }
+.fn-shell-feedback.neutral { background: var(--cream-soft); color: var(--ink); border: 2px solid var(--border); }
 .fn-shell-feedback.incorrect { background: var(--g-bad-bg); color: var(--g-bad-text); border: 2px solid var(--g-bad-border); }
 .fn-shell-hint-btn {
   background: transparent; border: 2px dashed var(--border); color: var(--ink-soft);
@@ -533,6 +534,10 @@ html[data-band="advance"] {
   text-align: center; padding: 28px 16px; margin: 16px 0;
   background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));
   font-size: calc(32px * var(--band-scale, 1)); font-weight: 800;
+}
+.fn-stimulus-box .fn-story-text {
+  display: block; text-align: left; font-size: calc(16px * var(--band-scale, 1)); font-weight: 600;
+  line-height: 1.6; margin-top: 12px; color: var(--ink);
 }
 .fn-passage-box {
   background: var(--cream-soft); border-radius: var(--band-radius, var(--radius-sm));

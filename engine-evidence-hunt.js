@@ -16,7 +16,8 @@
 //     explanation: '...'         // shown after, regardless of correctness
 // }] }
 (function () {
-  function mount(container, { contentPack, onEvidence, onComplete }) {
+  function mount(container, { contentPack, band, onEvidence, onComplete }) {
+    const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
     const items = contentPack.items;
     let index = 0, stage = 'answer', selectedAnswer = null;
     let evidenceSupported = 0, correctNoEvidence = 0, incorrectCount = 0;
@@ -72,7 +73,7 @@
 
       stage = 'evidence';
       renderPassage(item);
-      promptBox.textContent = 'Which sentence best supports your answer?';
+      promptBox.textContent = t('evAsk');
       choiceHolder.innerHTML = '';
       if (window.FnA11y) FnA11y.announce('Now select the sentence that supports your answer.');
 
@@ -95,17 +96,17 @@
       if (answerCorrect && evidenceCorrect) {
         evidenceSupported++;
         resultKind = 'correct';
-        message = 'Correct, and well-supported by the text!';
+        message = t('evRight');
         onEvidence('item_correct', { index, evidenceSupported: true });
       } else if (answerCorrect && !evidenceCorrect) {
         correctNoEvidence++;
         resultKind = 'incorrect';
-        message = `Right answer, but that's not the strongest evidence. ${item.explanation || ''}`;
+        message = `${t('evWeak')} ${item.explanation || ''}`;
         onEvidence('item_correct', { index, evidenceSupported: false });
       } else {
         incorrectCount++;
         resultKind = 'incorrect';
-        message = item.explanation || 'Not quite — take another look at the passage.';
+        message = item.explanation || t('evMiss');
         onEvidence('item_incorrect', { index });
       }
 
@@ -116,9 +117,9 @@
         index++;
         if (index >= items.length) {
           onComplete([
-            { value: evidenceSupported, label: 'Evidence-supported' },
-            { value: correctNoEvidence, label: 'Right answer, weak evidence' },
-            { value: incorrectCount, label: 'Missed' },
+            { value: evidenceSupported, label: t('evLabelSupported') },
+            { value: correctNoEvidence, label: t('evLabelWeak') },
+            { value: incorrectCount, label: t('evLabelMissed') },
           ], { score: evidenceSupported, maxScore: items.length });
         } else {
           renderItem();

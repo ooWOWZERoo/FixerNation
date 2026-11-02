@@ -14,6 +14,89 @@
 (function () {
   const registry = {};
 
+  // ---- Band wording (Release 86) --------------------------------------------------------------------------
+  // The words around the content (finished screen, evidence feedback, branching step labels, ...) used to be
+  // written once inside each engine, so a ninth grader read the same lines as a first grader. They live here
+  // now. Lookup order for t(key, band, contentPack): the game's own contentPack.copy[key], then the band's
+  // string, then COPY.default (today's wording), so an unbanded page, an unknown band or a key a band does not
+  // set plays exactly as before. Branching step labels merge the same way (contentPack.stepLabels wins, per key).
+  // Plain and short on purpose; a test (server/test/band-copy.test.js) keeps the band strings free of dashes.
+  const COPY = {
+    default: {
+      summaryTitle: 'Nice work!', summaryButton: 'Play again',
+      evRight: 'Correct, and well-supported by the text!',
+      evWeak: "Right answer, but that's not the strongest evidence.",
+      evMiss: 'Not quite — take another look at the passage.',
+      evAsk: 'Which sentence best supports your answer?',
+      evLabelSupported: 'Evidence-supported', evLabelWeak: 'Right answer, weak evidence', evLabelMissed: 'Missed',
+      simNext: 'Logged. Moving to the next decision...', simNextKind: 'correct',
+      brFallback: 'Thanks for choosing.',
+      brReflectPlaceholder: "Type a few words about what you'd take away from this...",
+      brReflectAria: 'Your reflection. Private, not saved.',
+      brReflectNote: 'This reflection is private and is not sent anywhere.',
+      stepLabels: {
+        recognize: 'Recognize the Issue', impact: 'Understand the Impact',
+        consider: 'Consider Possible Answers', choose: 'Choose a Responsible Response',
+        reflect: 'Reflect and Reinforce',
+      },
+    },
+    discover: { summaryTitle: 'You did it!' },
+    explore: {
+      summaryTitle: 'Level complete!',
+      evRight: 'Right, and you found the proof!',
+      evWeak: 'Right answer. Look for a stronger clue.',
+      evMiss: 'Not yet. Look at the story again.',
+      evAsk: 'Which sentence proves your answer?',
+      evLabelSupported: 'Found the proof', evLabelWeak: 'Right, weak proof', evLabelMissed: 'Not yet',
+      brFallback: 'Thanks for picking.',
+      brReflectPlaceholder: 'What will you remember?',
+      stepLabels: {
+        recognize: 'What is happening?', impact: 'Who does it affect?', consider: 'What could you do?',
+        choose: 'Pick your best move', reflect: 'Think it over',
+      },
+    },
+    challenge: {
+      summaryTitle: 'Run complete', summaryButton: 'Run it again',
+      evRight: 'Correct. The text backs it up.',
+      evWeak: 'Right answer, but another sentence proves it better.',
+      evMiss: 'Not quite. Reread the passage.',
+      simNext: 'Decision locked in. Next up.', simNextKind: 'neutral',
+      brFallback: 'Choice recorded.',
+      brReflectPlaceholder: 'What is your takeaway?',
+      stepLabels: {
+        recognize: 'Spot the issue', impact: 'Weigh the impact', consider: 'List your options',
+        choose: 'Make the call', reflect: 'Reflect',
+      },
+    },
+    advance: {
+      summaryTitle: 'Debrief', summaryButton: 'Try again',
+      evRight: 'Sound judgment. The passage supports it.',
+      evWeak: 'Right conclusion, weaker evidence. Another sentence is stronger.',
+      evMiss: 'That does not hold up. Reread the passage.',
+      evAsk: 'Which sentence best supports your conclusion?',
+      evLabelSupported: 'Supported', evLabelWeak: 'Weakly supported', evLabelMissed: 'Not supported',
+      simNext: 'Noted. Next decision.', simNextKind: 'neutral',
+      brFallback: 'Noted.',
+      brReflectPlaceholder: 'Your takeaway. Private, not saved.',
+      stepLabels: {
+        recognize: 'Situation', impact: 'Stakes', consider: 'Options', choose: 'Decision', reflect: 'Debrief',
+      },
+    },
+  };
+
+  function t(key, band, contentPack) {
+    const own = contentPack && contentPack.copy;
+    if (own && own[key] !== undefined) return own[key];
+    const b = COPY[band];
+    if (b && b[key] !== undefined) return b[key];
+    return COPY.default[key];
+  }
+
+  function stepLabels(band, contentPack) {
+    const b = COPY[band];
+    return Object.assign({}, COPY.default.stepLabels, (b && b.stepLabels) || {}, (contentPack && contentPack.stepLabels) || {});
+  }
+
   function registerEngine(def) {
     if (!def || !def.name || typeof def.mount !== 'function') {
       throw new Error('registerEngine requires {name, version, mount}');
@@ -171,9 +254,9 @@
           logEvent('session_completed', { engineName, sessionToken: sessionMeta.sessionToken, activityId, durationMs });
           sessionStorage.removeItem(storeKey);
           container.appendChild(FnGameShell.renderSummary({
-            title: 'Nice work!',
+            title: t('summaryTitle', band, contentPack),
             lines: summaryLines || [],
-            continueLabel: 'Play again',
+            continueLabel: t('summaryButton', band, contentPack),
             onContinue: () => location.reload(),
           }));
 
@@ -197,7 +280,7 @@
     });
   }
 
-  const api = { registerEngine, getEngine, run, prepareContentPack, mulberry32 };
+  const api = { registerEngine, getEngine, run, prepareContentPack, mulberry32, t, stepLabels, COPY };
   if (typeof window !== 'undefined') window.FnEngineSDK = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api; // for server/test
 })();

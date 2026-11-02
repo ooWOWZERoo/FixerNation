@@ -52,7 +52,9 @@
     try { window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch {}
   }
 
-  function mount(container, { contentPack, onEvidence, onComplete }) {
+  function mount(container, { contentPack, band, onEvidence, onComplete }) {
+    // Readers (Explore and up) see the story as text; Discover is audio-led, so its story stays spoken (and screen-reader) only.
+    const showStory = band === 'explore' || band === 'challenge' || band === 'advance';
     const scenarios = contentPack.scenarios;
     // Wording defaults are the Feelings Detective ones, so a pack with no `prompts` plays exactly as before.
     const P = Object.assign({
@@ -110,7 +112,8 @@
       const scenario = scenarios[index];
       progressHolder.innerHTML = '';
       progressHolder.appendChild(FnGameShell.renderProgress(index + 1, scenarios.length));
-      contextBox.innerHTML = `<span aria-hidden="true" style="font-size:2.5em;display:block;text-align:center;">${scenario.illustration || ''}</span><span class="sr-only">${scenario.context}</span>`;
+      contextBox.innerHTML = `<span aria-hidden="true" style="font-size:2.5em;display:block;text-align:center;">${scenario.illustration || ''}</span>` +
+        (showStory ? `<span class="fn-story-text">${scenario.context}</span>` : `<span class="sr-only">${scenario.context}</span>`);
       onEvidence('item_presented', { scenarioIndex: index, stage: 'cues' });
       renderCueStage(scenario);
     }

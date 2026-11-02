@@ -120,7 +120,7 @@ test('the branching engine step label follows the band accent, and every page th
   const root2 = path.join(__dirname, '..', '..');
   for (const f of fs.readdirSync(root2).filter((n) => n.endsWith('.html'))) {
     const html = fs.readFileSync(path.join(root2, f), 'utf8');
-    if (/<script[^>]+engine-branching-scenario\.js/.test(html)) assert.match(html, /engine-branching-scenario\.js\?v=4/, `${f} still loads an old engine version`);
-    if (/<link[^>]+brain-games\.css/.test(html)) assert.match(html, /brain-games\.css\?v=3/, `${f} still loads the old stylesheet`);
+    if (/<script[^>]+engine-branching-scenario\.js/.test(html)) assert.match(html, /engine-branching-scenario\.js\?v=5/, `${f} still loads an old engine version`);
+    if (/<link[^>]+brain-games\.css/.test(html)) assert.match(html, /brain-games\.css\?v=4/, `${f} still loads the old stylesheet`);
   }
 });

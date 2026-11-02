@@ -21,13 +21,11 @@
 // server/lib/safety/gateway.js into student_reflections, like
 // server.js's existing reflection paths — not through this demo engine.
 (function () {
-  const STEP_LABELS = {
-    recognize: 'Recognize the Issue', impact: 'Understand the Impact',
-    consider: 'Consider Possible Answers', choose: 'Choose a Responsible Response',
-    reflect: 'Reflect and Reinforce',
-  };
-
-  function mount(container, { contentPack, onEvidence, onComplete }) {
+  // Step labels and the small wording around the choices come from FnEngineSDK.t / stepLabels (engine-sdk.js),
+  // so each age group reads its own words and a game can override them with contentPack.stepLabels / copy.
+  function mount(container, { contentPack, band, onEvidence, onComplete }) {
+    const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
+    const STEP_LABELS = window.FnEngineSDK.stepLabels(band, contentPack);
     const steps = contentPack.steps;
     let stepIndex = 0;
     const responseTypes = [];
@@ -87,19 +85,19 @@
       // on its own terms (impact/tradeoffs), even "plausible_incomplete".
       const kind = choice.type === 'unsafe' ? 'incorrect' : 'correct';
       feedbackHolder.innerHTML = '';
-      feedbackHolder.appendChild(FnGameShell.renderFeedback(kind, choice.feedback || 'Thanks for choosing.'));
+      feedbackHolder.appendChild(FnGameShell.renderFeedback(kind, choice.feedback || t('brFallback')));
 
       setTimeout(advance, 1600);
     }
 
     function renderReflection(step) {
       const textarea = document.createElement('textarea');
-      textarea.setAttribute('aria-label', 'Your reflection (private — not saved in this demo)');
+      textarea.setAttribute('aria-label', t('brReflectAria'));
       textarea.style.cssText = 'width:100%;min-height:80px;padding:12px;border-radius:var(--band-radius,var(--radius-sm));border:2px solid var(--border);font-family:inherit;font-size:14px;margin-bottom:12px;';
-      textarea.placeholder = 'Type a few words about what you\'d take away from this...';
+      textarea.placeholder = t('brReflectPlaceholder');
       const note = document.createElement('p');
       note.className = 'sr-only';
-      note.textContent = 'This reflection is private and is not sent anywhere in this demo.';
+      note.textContent = t('brReflectNote');
       const doneBtn = document.createElement('button');
       doneBtn.type = 'button';
       doneBtn.className = 'btn btn-primary tap-target';
