@@ -81,3 +81,10 @@ All six concepts approved. Start with **Say It Another Way** (`SAY_IT_ANOTHER_WA
 1. Approve, change or drop each of the six concepts (by number).
 2. Confirm the order, or tell me which to start with.
 3. Confirm that new games enter the catalog with draft SEL and Portrait links only, with the crosswalk entries added later through the normal verify step on `admin-standards.html`.
+
+## Second round, 2026-11-01
+
+All six first-round games are built and deployed (Releases 74, 75 and 81). The remaining thin spots in `SEL_POG_COVERAGE.md` each had one direct game, so outlines for a second game for each are written and await your edits:
+- **SEL 1B Identity and agency:** `VALUES_COMPASS_OUTLINE.md` (grades 6-8, 12 stories, private check, same engine as Strength Spotter).
+- **SEL 2D Resolving conflict:** `PEACE_TABLE_OUTLINE.md` (grades 3-5, four situations, the story engine as a peace-table cycle).
+- **Creative Innovator:** `IDEA_LAB_OUTLINE.md` (grades 9-12, four situations, three workable ideas per story, no single best idea).
