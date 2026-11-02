@@ -66,6 +66,10 @@ const BADGES = [
     description: 'Completed Say It Another Way through a classroom assignment.' },
   { gameSlug: 'fix-it-workshop', slug: 'idea-builder', name: 'Idea Builder', emoji: '🛠️',
     description: 'Completed Fix-It Workshop through a classroom assignment.' },
+  { gameSlug: 'strength-spotter', slug: 'strength-finder', name: 'Strength Finder', emoji: '🌟',
+    description: 'Completed Strength Spotter through a classroom assignment.' },
+  { gameSlug: 'same-and-different', slug: 'curious-friend', name: 'Curious Friend', emoji: '🤝',
+    description: 'Completed Same and Different through a classroom assignment.' },
 ];
 
 async function main() {

@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 75 — 2026-11-01 — Two more new brain games: Strength Spotter and Same and Different
+
+- **New game: Strength Spotter** (grades 3 to 5). The child reads a short story, notices what really happens, then picks every strength that could fit (nothing is scored). A private check about their own strengths follows each story and is never saved or sent. 12 stories, 5 per run. It is the first game for New York SEL 1B (identity and agency).
+- **New game: Same and Different** (grades K to 2). A scene is read aloud and the child taps a picture: what is the same, what is different, or the kind choice. Every choice has a spoken line that explains it. 12 rounds, 4 per run. It is the first game for SEL 2B (similarities and differences).
+- **Small engine change:** the story-and-strengths engine now accepts its own wording for prompts. Feelings Detective is unchanged.
+- **Both appear in the games catalog and classroom assignments** once their catalog entries are added (two small scripts), and each earns a classroom completion badge (Strength Finder, Curious Friend).
+- Pages, seed scripts and tests only; no server route changes.
+
 ## Release 74 — 2026-11-01 — Headline rewritten, and two new brain games
 
 - **Headline has a pool of 12 news snippets with numbers** (6 drawn per run, headlines shuffled). The right headline is sometimes bold, sometimes plain, sometimes hedged, and the sentence that proves it moves between the first, second and third sentence, so picking the "careful one" no longer works.

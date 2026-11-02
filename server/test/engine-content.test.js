@@ -123,8 +123,8 @@ const REAL = auditAll().filter((r) => r.engine !== 'legacy' && !r.note).map((r) 
   return { slug: r.slug, engineName, pack: extractPack(src) };
 }).filter((g) => g.pack && g.engineName);
 
-test('REAL GAMES: all 18 engine games are found and parse', () => {
-  assert.equal(REAL.length, 18, REAL.map((g) => g.slug).join(', '));
+test('REAL GAMES: all 20 engine games are found and parse', () => {
+  assert.equal(REAL.length, 20, REAL.map((g) => g.slug).join(', '));
 });
 
 test('REAL GAMES: after preparation each round keeps its choices and its right answer', () => {
@@ -430,5 +430,88 @@ test('FIX-IT WORKSHOP: every problem follows the writing rules', () => {
     assert.ok(longest <= 2, `${label}: the best answer is the longest in ${longest} of 3 steps`);
     const idea = v.steps.find((s) => s.key === 'consider');
     idea.choices.forEach((c) => assert.ok(/\b(needs?|costs?|only|takes?|not)\b/.test(c.feedback), `${label}: the idea feedback names a cost or limit: ${c.id}`));
+  });
+});
+
+// Strength Spotter (new 2026-11-01, approved outline: docs/tune-your-brain/STRENGTH_SPOTTER_OUTLINE.md): 12 stories, 5 per run.
+test('SCENARIO CHOICE PROMPTS: the wording override is optional, and Feelings Detective keeps its original wording', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'engine-scenario-choice.js'), 'utf8');
+  assert.match(src, /Object\.assign\(\{[\s\S]*contentPack\.prompts \|\| \{\}\)/);
+  ['Which of these do you notice in this moment?', "I've noticed these", 'Which feeling(s) could this be? You can pick more than one.', "I've picked my feeling(s)", 'Times you saw more than one feeling']
+    .forEach((s) => assert.ok(src.includes(s), `default wording kept: ${s}`));
+  const fd = REAL.find((x) => x.slug === 'feelings-detective');
+  assert.equal(fd.pack.prompts, undefined, 'Feelings Detective passes no prompts, so it plays exactly as before');
+});
+
+test('STRENGTH SPOTTER: twelve stories, five per run, each with noticing cues and strengths', () => {
+  const g = REAL.find((x) => x.slug === 'strength-spotter');
+  assert.equal(g.pack.scenarios.length, 12);
+  assert.equal(g.pack.roundsPerRun, 5);
+  ['cues', 'afterCues', 'pick', 'confirmCues', 'confirmPick', 'multiLabel'].forEach((k) => assert.ok(g.pack.prompts[k], `prompts.${k}`));
+  const sets = new Set(), ids = new Set();
+  g.pack.scenarios.forEach((s, i) => {
+    assert.equal(s.cues.length, 4, `story ${i + 1}: four cues`);
+    assert.equal(s.cues.filter((c) => c.present).length, 3, `story ${i + 1}: three cues really happen`);
+    assert.equal(s.feelings.length, 4, `story ${i + 1}: four strengths`);
+    assert.equal(s.feelings.filter((f) => f.tag === 'plausible').length, 3, `story ${i + 1}: three strengths fit`);
+    const less = s.feelings.filter((f) => f.tag === 'less_fitting');
+    assert.equal(less.length, 1, `story ${i + 1}: one strength fits less`);
+    assert.ok(less[0].note && less[0].note.length > 20, `story ${i + 1}: a gentle note explains it`);
+    assert.ok(s.reinforcement && s.illustration && s.context.length > 60, `story ${i + 1}: context, picture and a closing line`);
+    const text = [s.context, s.reinforcement].concat(s.cues.map((c) => c.text), s.feelings.map((f) => f.text + (f.note || ''))).join(' ');
+    assert.ok(!/[–—]/.test(text), `story ${i + 1}: no dashes`);
+    [...s.cues, ...s.feelings].forEach((x) => { assert.ok(!ids.has(x.id), `duplicate id ${x.id}`); ids.add(x.id); });
+    sets.add(s.feelings.filter((f) => f.tag === 'plausible').map((f) => f.text).sort().join('|'));
+  });
+  assert.equal(sets.size, 12, 'no two stories share the same set of strengths');
+});
+
+test('STRENGTH SPOTTER: the private check is present, in order, and never logged; runs differ', () => {
+  const g = REAL.find((x) => x.slug === 'strength-spotter');
+  const sc = g.pack.selfCheck;
+  assert.ok(sc.prompt && sc.bodyPrompt && sc.closing && sc.privateNote && sc.summaryLabel);
+  assert.equal(sc.options.map((o) => o.id).join(), 'yes,no,not-sure');
+  assert.equal(sc.bodyOptions.length, 5);
+  assert.ok(!/[–—]/.test(JSON.stringify(sc)));
+  const sets = new Set();
+  for (let seed = 1; seed <= 100; seed++) {
+    const out = prep(g.pack, 'scenarioChoice', seed).pack;
+    assert.equal(out.scenarios.length, 5);
+    assert.equal(JSON.stringify(out.selfCheck), JSON.stringify(sc), 'the private check keeps its order');
+    sets.add(out.scenarios.map((s) => s.context.slice(0, 10)).sort().join('|'));
+  }
+  assert.ok(sets.size > 20, `only ${sets.size} different sets of stories in 100 runs`);
+});
+
+// Same and Different (new 2026-11-01, approved outline: docs/tune-your-brain/SAME_AND_DIFFERENT_OUTLINE.md): 12 rounds, 4 per run.
+test('SAME AND DIFFERENT: twelve rounds in three kinds, four per run, with a spoken line on every choice', () => {
+  const g = REAL.find((x) => x.slug === 'same-and-different');
+  assert.equal(g.pack.items.length, 12);
+  assert.equal(g.pack.roundsPerRun, 4);
+  const kinds = { same: 0, diff: 0, kind: 0 };
+  let longest = 0;
+  g.pack.items.forEach((it, i) => {
+    assert.equal(it.choices.length, 3, `round ${i + 1}: three picture choices`);
+    assert.ok(it.choices.some((c) => c.id === it.correctId), `round ${i + 1}: right answer present`);
+    assert.equal(new Set(it.choices.map((c) => c.id)).size, 3, `round ${i + 1}: unique ids`);
+    it.choices.forEach((c) => { assert.ok(c.feedback && c.feedback.length > 20 && c.aria && c.label, `round ${i + 1}: feedback, label and aria on ${c.id}`); });
+    assert.ok(it.explanation && it.explanation.length > 30, `round ${i + 1}: explanation`);
+    assert.ok(/\?$/.test(it.stimulusText), `round ${i + 1}: the scene ends with the question, so it is read aloud`);
+    assert.ok(it.stimulusText.length < 260, `round ${i + 1}: short enough to listen to`);
+    assert.ok(!/[–—]/.test(it.stimulusText + it.explanation + it.choices.map((c) => c.label + c.feedback).join(' ')), `round ${i + 1}: no dashes`);
+    kinds[(it.stimulusText.match(/What is the same|What is different|What could|What is a kind/) || [''])[0].replace(/What is the same/, 'same').replace(/What is different/, 'diff').replace(/What could|What is a kind/, 'kind')]++;
+    const lens = it.choices.map((c) => c.label.length);
+    if (it.choices.find((c) => c.id === it.correctId).label.length === Math.max(...lens)) longest++;
+  });
+  assert.equal(`${kinds.same},${kinds.diff},${kinds.kind}`, '4,4,4');
+  assert.ok(longest <= 4, `the right label is the longest in ${longest} of 12 rounds`);
+});
+
+test('SAME AND DIFFERENT: a wrong answer in a same or different round is true of one child or of both, never a made-up fact', () => {
+  const g = REAL.find((x) => x.slug === 'same-and-different');
+  g.pack.items.filter((it) => /What is (the same|different)/.test(it.stimulusText)).forEach((it, i) => {
+    it.choices.filter((c) => c.id !== it.correctId).forEach((c) => {
+      assert.match(c.feedback, /(so that is the same|but |look for something|Look for something)/i, `round ${i + 1}: ${c.id} feedback says why it is not the answer`);
+    });
   });
 });

@@ -27,11 +27,11 @@ const LIVE = [
   { slug: 'money-matters', band: 'Advance', sel: { '3B': 'D', '1C': 'S' }, pog: { RF: 'S', AP: 'S' } },
   { slug: 'fix-it-workshop', band: 'Explore', sel: { '3C': 'D', '2A': 'S', '3B': 'S' }, pog: { CI: 'D', CT: 'S', EC: 'S', GC: 'S' } },
   { slug: 'say-it-another-way', band: 'Challenge', sel: { '2C': 'D', '2D': 'S', '1A': 'S' }, pog: { EC: 'D', GC: 'S' } },
+  { slug: 'same-and-different', band: 'Discover', sel: { '2B': 'D', '2A': 'S' }, pog: { GC: 'S' } },
+  { slug: 'strength-spotter', band: 'Explore', sel: { '1B': 'D', '1C': 'S' }, pog: { RF: 'D', CI: 'S' } },
 ];
 const LEGACY = ['memory-match', 'simon-sequence', 'number-sequence', 'quick-math', 'reaction-time', 'stroop-challenge'];
 const PROPOSED = [
-  { slug: 'same-and-different', band: 'Discover', sel: { '2B': 'D', '2A': 'S' }, pog: { GC: 'S' } },
-  { slug: 'strength-spotter', band: 'Explore', sel: { '1B': 'D', '1C': 'S' }, pog: { RF: 'D', CI: 'S' } },
   { slug: 'perspective-swap', band: 'Advance', sel: { '2B': 'D', '2C': 'D', '2A': 'S' }, pog: { GC: 'D', CT: 'S' } },
   { slug: 'community-voice', band: 'Advance', sel: { '3C': 'D', '2C': 'S' }, pog: { GC: 'D', EC: 'D', CT: 'S' } },
 ];
@@ -82,11 +82,11 @@ ${gaps(LIVE, 'pog', Object.keys(POG), POG)}
 |---|---|---|
 ${bands.map((b) => { const gs = LIVE.filter((g) => g.band === b && !g.skills); const ks = Object.keys(SEL).filter((k) => gs.some((g) => g.sel[k] === 'D')); return `| ${b} | ${gs.length} | ${ks.join(', ') || 'none'} |`; }).join('\n')}
 
-## If the four remaining proposed games were built (projection)
+## If the two remaining proposed games were built (projection)
 
 ${table(PROPOSED, 'sel', Object.keys(SEL), SEL)}
 ${table(PROPOSED, 'pog', Object.keys(POG), POG)}
-**After building all four remaining, remaining thin spots (fewer than 2 direct games, live plus proposed):**
+**After building the two remaining, remaining thin spots (fewer than 2 direct games, live plus proposed):**
 
 SEL:
 ${gaps(all, 'sel', Object.keys(SEL), SEL) || '- none'}

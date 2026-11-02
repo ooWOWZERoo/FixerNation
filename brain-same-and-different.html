@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Same and Different</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-audio-choice.js?v=2"></script>
+<script>
+  // Same and Different - Tune Your Brain (Discover band, grades K-2). Same Audio
+  // Choice engine as Sharing Circle: a short scene is read aloud, the child taps
+  // one of three picture choices, and a spoken line explains each choice. Three
+  // kinds of round, four of each: what is the same, what is different, and what
+  // is a kind choice. Practises NY SEL 2B (similarities and differences), with 2A
+  // supporting. Design and approved outline:
+  // docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and SAME_AND_DIFFERENT_OUTLINE.md.
+  // A pool of 12 rounds; 4 are drawn per run and the picture choices are shuffled.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'discover';
+
+  const contentPack = {
+    "title": "Same and Different",
+    "roundsPerRun": 4,
+    "items": [
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Ana loves soccer, and she has a dog. Ben loves drawing, and he has a dog too. What is the same about Ana and Ben?",
+        "transcript": "Ana loves soccer, and she has a dog. Ben loves drawing, and he has a dog too. What is the same about Ana and Ben?",
+        "choices": [
+          {
+            "id": "dog",
+            "label": "🐕 A dog",
+            "aria": "a dog",
+            "feedback": "Yes! Ana and Ben both have a dog."
+          },
+          {
+            "id": "soccer",
+            "label": "⚽ Soccer",
+            "aria": "soccer",
+            "feedback": "Ana loves soccer, but Ben loves drawing. Look for something they both have."
+          },
+          {
+            "id": "drawing",
+            "label": "🎨 Drawing",
+            "aria": "drawing",
+            "feedback": "Ben loves drawing, but Ana loves soccer. Look for something they both have."
+          }
+        ],
+        "correctId": "dog",
+        "explanation": "Friends are the same in some ways and different in others. Both are okay."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Mia wears glasses to help her see. Leo does not wear glasses. They both like the color red, and they are in the same class. What is different about Mia and Leo?",
+        "transcript": "Mia wears glasses to help her see. Leo does not wear glasses. They both like the color red, and they are in the same class. What is different about Mia and Leo?",
+        "choices": [
+          {
+            "id": "glasses",
+            "label": "👓 Glasses",
+            "aria": "glasses",
+            "feedback": "Yes! Mia wears glasses and Leo does not."
+          },
+          {
+            "id": "red",
+            "label": "❤️ Red",
+            "aria": "red",
+            "feedback": "They both like red, so that is the same. Look for something that is not the same."
+          },
+          {
+            "id": "class",
+            "label": "🏫 Same class",
+            "aria": "same class",
+            "feedback": "They are in the same class, so that is the same too."
+          }
+        ],
+        "correctId": "glasses",
+        "explanation": "Glasses help Mia see. Being different is okay, and friends can still play together."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Kofi eats rice for lunch. Lena eats a sandwich. They both have a little sister. What is the same about Kofi and Lena?",
+        "transcript": "Kofi eats rice for lunch. Lena eats a sandwich. They both have a little sister. What is the same about Kofi and Lena?",
+        "choices": [
+          {
+            "id": "sister",
+            "label": "👧 Little sister",
+            "aria": "little sister",
+            "feedback": "Yes! Kofi and Lena both have a little sister."
+          },
+          {
+            "id": "rice",
+            "label": "🍚 Eating rice",
+            "aria": "eating rice",
+            "feedback": "Kofi eats rice, but Lena eats a sandwich. Look for something they both have."
+          },
+          {
+            "id": "sandwich",
+            "label": "🥪 Sandwiches",
+            "aria": "sandwiches",
+            "feedback": "Lena eats a sandwich, but Kofi eats rice. Look for something they both have."
+          }
+        ],
+        "correctId": "sister",
+        "explanation": "Their lunches are different, and having a little sister is the same."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Sam is new in the class. At home, Sam speaks Spanish. Ana wants to play with him. What could Ana do?",
+        "transcript": "Sam is new in the class. At home, Sam speaks Spanish. Ana wants to play with him. What could Ana do?",
+        "choices": [
+          {
+            "id": "teach",
+            "label": "🗣️ Ask for a word",
+            "aria": "ask for a word",
+            "feedback": "Yes! Asking Sam to teach you a word is kind, and you learn something too."
+          },
+          {
+            "id": "wait",
+            "label": "⏳ Wait and see",
+            "aria": "wait and see",
+            "feedback": "If you wait, Sam plays alone. You can play together right now."
+          },
+          {
+            "id": "skip",
+            "label": "🙈 Play without him",
+            "aria": "play without him",
+            "feedback": "That leaves Sam out. Asking him to join is kinder."
+          }
+        ],
+        "correctId": "teach",
+        "explanation": "You can play with a friend who speaks a different language, and you can learn words from each other."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Nina has noodles for lunch. Omar has bread and cheese. They are both hungry, and they sit at the same table. What is different about Nina and Omar?",
+        "transcript": "Nina has noodles for lunch. Omar has bread and cheese. They are both hungry, and they sit at the same table. What is different about Nina and Omar?",
+        "choices": [
+          {
+            "id": "lunch",
+            "label": "🍜 Their lunches",
+            "aria": "their lunches",
+            "feedback": "Yes! Nina has noodles, and Omar has bread and cheese."
+          },
+          {
+            "id": "hungry",
+            "label": "😋 Being hungry",
+            "aria": "being hungry",
+            "feedback": "They are both hungry, so that is the same."
+          },
+          {
+            "id": "table",
+            "label": "🪑 The same table",
+            "aria": "the same table",
+            "feedback": "They sit at the same table, so that is the same."
+          }
+        ],
+        "correctId": "lunch",
+        "explanation": "People eat different foods, and that is okay. You can still share a table."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Leo uses a wheelchair to get around. His class is playing tag. What could the class do?",
+        "transcript": "Leo uses a wheelchair to get around. His class is playing tag. What could the class do?",
+        "choices": [
+          {
+            "id": "change",
+            "label": "🔁 Change the game",
+            "aria": "change the game",
+            "feedback": "Yes! The class can change the rules so everybody can play."
+          },
+          {
+            "id": "watch",
+            "label": "👀 Let Leo watch",
+            "aria": "let leo watch",
+            "feedback": "Watching leaves Leo out. He wants to play too."
+          },
+          {
+            "id": "same",
+            "label": "🏃 Play as usual",
+            "aria": "play as usual",
+            "feedback": "If the game stays the same, Leo may not be able to join. Change it so everybody can play."
+          }
+        ],
+        "correctId": "change",
+        "explanation": "Games can change so that everyone can play. Everybody belongs."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Zuri has braids in her hair. Eli has short hair. They both love to dance. What is the same about Zuri and Eli?",
+        "transcript": "Zuri has braids in her hair. Eli has short hair. They both love to dance. What is the same about Zuri and Eli?",
+        "choices": [
+          {
+            "id": "dance",
+            "label": "💃 Dancing",
+            "aria": "dancing",
+            "feedback": "Yes! Zuri and Eli both love to dance."
+          },
+          {
+            "id": "braids",
+            "label": "💇 Braids",
+            "aria": "braids",
+            "feedback": "Zuri has braids, but Eli has short hair. Look for something they both have."
+          },
+          {
+            "id": "short",
+            "label": "✂️ Short hair",
+            "aria": "short hair",
+            "feedback": "Eli has short hair, but Zuri has braids. Look for something they both have."
+          }
+        ],
+        "correctId": "dance",
+        "explanation": "Hair can look different, and friends can love the same things."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Priya lives with her grandma and her dad. Tom lives with his two moms. They both have people who love them. What is different about Priya and Tom?",
+        "transcript": "Priya lives with her grandma and her dad. Tom lives with his two moms. They both have people who love them. What is different about Priya and Tom?",
+        "choices": [
+          {
+            "id": "live",
+            "label": "🏠 Who they live with",
+            "aria": "who they live with",
+            "feedback": "Yes! Priya and Tom live with different people."
+          },
+          {
+            "id": "love",
+            "label": "🤗 People who love them",
+            "aria": "people who love them",
+            "feedback": "They both have people who love them, so that is the same."
+          },
+          {
+            "id": "family",
+            "label": "👪 Having a family",
+            "aria": "having a family",
+            "feedback": "They both have a family, so that is the same."
+          }
+        ],
+        "correctId": "live",
+        "explanation": "Families look different from each other. Every family can love a child."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Ben is quiet and likes calm games. Ana likes loud, running games. Ana wants to play with Ben. What could Ana do?",
+        "transcript": "Ben is quiet and likes calm games. Ana likes loud, running games. Ana wants to play with Ben. What could Ana do?",
+        "choices": [
+          {
+            "id": "quiet",
+            "label": "🧩 A quiet game",
+            "aria": "a quiet game",
+            "feedback": "Yes! Asking Ben what he likes shows that you care."
+          },
+          {
+            "id": "louder",
+            "label": "📢 Be much louder",
+            "aria": "be much louder",
+            "feedback": "Ben likes quiet games. He does not have to change."
+          },
+          {
+            "id": "alone",
+            "label": "🏃 Play loud alone",
+            "aria": "play loud alone",
+            "feedback": "Then Ana plays alone, and Ben is left out. You can play together."
+          }
+        ],
+        "correctId": "quiet",
+        "explanation": "Friends can try a game one of them likes, and then a game the other one likes."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Hana grew up in a big city. Raul grew up in a small town. On the first day of school, they both feel nervous. What is the same about Hana and Raul?",
+        "transcript": "Hana grew up in a big city. Raul grew up in a small town. On the first day of school, they both feel nervous. What is the same about Hana and Raul?",
+        "choices": [
+          {
+            "id": "nervous",
+            "label": "😟 Feeling nervous",
+            "aria": "feeling nervous",
+            "feedback": "Yes! They both feel nervous. Lots of kids do on the first day."
+          },
+          {
+            "id": "city",
+            "label": "🌆 Grew up in a city",
+            "aria": "grew up in a city",
+            "feedback": "Hana grew up in a city, but Raul grew up in a town."
+          },
+          {
+            "id": "town",
+            "label": "🏡 Grew up in a town",
+            "aria": "grew up in a town",
+            "feedback": "Raul grew up in a town, but Hana grew up in a city."
+          }
+        ],
+        "correctId": "nervous",
+        "explanation": "Feelings can be the same even when the places are different."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Ada's family puts candles on a birthday cake. Jin's family eats long noodles on a birthday, for a long life. They both have a birthday and get a special treat. What is different about Ada and Jin?",
+        "transcript": "Ada's family puts candles on a birthday cake. Jin's family eats long noodles on a birthday, for a long life. They both have a birthday and get a special treat. What is different about Ada and Jin?",
+        "choices": [
+          {
+            "id": "celebrate",
+            "label": "🎂 Candles or noodles",
+            "aria": "candles or noodles",
+            "feedback": "Yes! Ada has candles, and Jin has long noodles."
+          },
+          {
+            "id": "birthday",
+            "label": "🎉 Having a birthday",
+            "aria": "having a birthday",
+            "feedback": "They both have a birthday, so that is the same."
+          },
+          {
+            "id": "treat",
+            "label": "🍬 Getting a special treat",
+            "aria": "getting a special treat",
+            "feedback": "They both get a special treat, so that is the same."
+          }
+        ],
+        "correctId": "celebrate",
+        "explanation": "Families celebrate in different ways, and every way is special."
+      },
+      {
+        "stimulusType": "audio",
+        "stimulusText": "Maya wants to play with blocks. Dev wants to play tag. They both want to play together. What is a kind way to decide?",
+        "transcript": "Maya wants to play with blocks. Dev wants to play tag. They both want to play together. What is a kind way to decide?",
+        "choices": [
+          {
+            "id": "turns",
+            "label": "🔄 Take turns",
+            "aria": "take turns",
+            "feedback": "Yes! Taking turns means both friends get a game they like."
+          },
+          {
+            "id": "pick",
+            "label": "👆 Pick your favorite",
+            "aria": "pick your favorite",
+            "feedback": "Then Dev does not get a turn. Taking turns is fairer."
+          },
+          {
+            "id": "stop",
+            "label": "🛑 Stop playing",
+            "aria": "stop playing",
+            "feedback": "Then nobody gets to play. Taking turns is better."
+          }
+        ],
+        "correctId": "turns",
+        "explanation": "Taking turns is a kind way to play when friends like different things."
+      }
+    ]
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'audioChoice',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'same-and-different-2b',
+    header: {
+      icon: '🤝',
+      title: 'Same and Different',
+      description: 'Listen to the story, then tap what is the same, what is different, or the kind thing to do.',
+    },
+  });
+</script>
+</body>
+</html>

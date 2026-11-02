@@ -30,6 +30,9 @@
 //     seekHelp?: { prompt: '...', text: '...' },  // omitted when a scenario doesn't need it
 //     selfCheck?: null | {...},           // overrides (or, when null, turns off) the pack-level selfCheck below
 // }],
+//   prompts?: {                           // optional wording for games that are not about feelings (e.g. Strength Spotter)
+//     cues, afterCues, pick, confirmCues, confirmPick, multiLabel   // each falls back to the Feelings Detective wording
+//   },
 //   selfCheck?: {                         // optional private self-check after the feelings stage, every scenario
 //     prompt: 'Has something like this ever happened to you?',
 //     options: [{ id, text }],            // e.g. Yes / No / Not sure
@@ -51,6 +54,15 @@
 
   function mount(container, { contentPack, onEvidence, onComplete }) {
     const scenarios = contentPack.scenarios;
+    // Wording defaults are the Feelings Detective ones, so a pack with no `prompts` plays exactly as before.
+    const P = Object.assign({
+      cues: 'Which of these do you notice in this moment?',
+      afterCues: "Good noticing — now let's think about how this might feel.",
+      pick: 'Which feeling(s) could this be? You can pick more than one.',
+      confirmCues: "I've noticed these",
+      confirmPick: "I've picked my feeling(s)",
+      multiLabel: 'Times you saw more than one feeling',
+    }, contentPack.prompts || {});
     let index = 0, stage = 'cues', selectedCues = new Set(), selectedFeelings = new Set();
     let cuesNoticedTotal = 0, multiFeelingCount = 0;
 
@@ -105,7 +117,7 @@
 
     function renderCueStage(scenario) {
       feedbackHolder.innerHTML = '';
-      promptBox.textContent = 'Which of these do you notice in this moment?';
+      promptBox.textContent = P.cues;
       renderReplay(scenario);
       speak(narrationFor(scenario));
 
@@ -133,7 +145,7 @@
       const confirmBtn = document.createElement('button');
       confirmBtn.type = 'button';
       confirmBtn.className = 'btn btn-primary tap-target';
-      confirmBtn.textContent = "I've noticed these";
+      confirmBtn.textContent = P.confirmCues;
       confirmBtn.disabled = true;
       confirmBtn.addEventListener('click', () => submitCues(scenario));
       confirmRow.appendChild(confirmBtn);
@@ -149,7 +161,7 @@
       });
 
       feedbackHolder.innerHTML = '';
-      feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', `Good noticing — now let's think about how this might feel.`));
+      feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', P.afterCues));
       setTimeout(() => renderFeelingsStage(scenario), 1200);
     }
 
@@ -157,7 +169,7 @@
       stage = 'feelings';
       selectedFeelings = new Set();
       feedbackHolder.innerHTML = '';
-      promptBox.textContent = 'Which feeling(s) could this be? You can pick more than one.';
+      promptBox.textContent = P.pick;
       onEvidence('item_presented', { scenarioIndex: index, stage: 'feelings' });
       renderReplay(scenario);
       speak(narrationFor(scenario));
@@ -186,7 +198,7 @@
       const confirmBtn = document.createElement('button');
       confirmBtn.type = 'button';
       confirmBtn.className = 'btn btn-primary tap-target';
-      confirmBtn.textContent = "I've picked my feeling(s)";
+      confirmBtn.textContent = P.confirmPick;
       confirmBtn.disabled = true;
       confirmBtn.addEventListener('click', () => submitFeelings(scenario));
       confirmRow.appendChild(confirmBtn);
@@ -316,7 +328,7 @@
         onComplete([
           { value: scenarios.length, label: 'Scenarios explored' },
           { value: cuesNoticedTotal, label: 'Cues noticed' },
-          { value: multiFeelingCount, label: 'Times you saw more than one feeling' },
+          { value: multiFeelingCount, label: P.multiLabel },
         ].concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : []));
       } else {
         renderScenario();

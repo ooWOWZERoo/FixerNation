@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Strength Spotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-scenario-choice.js?v=3"></script>
+<script>
+  // Strength Spotter - Tune Your Brain (Explore band, grades 3-5). Same
+  // Scenario Choice engine as Feelings Detective: notice what really happens in
+  // a short story, then pick every strength that could fit (more than one is
+  // usually right; nothing is scored). Then a private check about the child's
+  // own strengths, which is never logged, sent or saved. Practises NY SEL 1B
+  // (identity and agency), with 1C supporting, and the Reflective and Future
+  // Focused attribute. The engine's `feelings` list holds the strengths here,
+  // and `contentPack.prompts` replaces the feelings wording. Design and
+  // approved outline: docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and
+  // STRENGTH_SPOTTER_OUTLINE.md. A pool of 12 stories; 5 are drawn per run.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'explore';
+
+  const contentPack = {
+    "title": "Strength Spotter",
+    "roundsPerRun": 5,
+    "prompts": {
+      "cues": "What do you notice in this story?",
+      "afterCues": "Good noticing. Now think about the strengths this shows.",
+      "pick": "Which strengths could this show? You can pick more than one.",
+      "confirmCues": "I've noticed these",
+      "confirmPick": "I've picked my strengths",
+      "multiLabel": "Times you saw more than one strength"
+    },
+    "scenarios": [
+      {
+        "context": "Maya's little brother has a necklace knotted into a tight tangle. Maya sits down with him and works on it. It takes ten minutes, and she stays calm the whole time.",
+        "illustration": "📿",
+        "cues": [
+          {
+            "id": "s1-c1",
+            "text": "She sits down and works slowly.",
+            "present": true
+          },
+          {
+            "id": "s1-c4",
+            "text": "She gives up and puts it in a drawer.",
+            "present": false
+          },
+          {
+            "id": "s1-c2",
+            "text": "She keeps trying when the knot will not come loose.",
+            "present": true
+          },
+          {
+            "id": "s1-c3",
+            "text": "She talks in a calm voice.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s1-f1",
+            "text": "Patience",
+            "tag": "plausible"
+          },
+          {
+            "id": "s1-f2",
+            "text": "Persistence",
+            "tag": "plausible"
+          },
+          {
+            "id": "s1-f3",
+            "text": "Caring",
+            "tag": "plausible"
+          },
+          {
+            "id": "s1-f4",
+            "text": "Being the fastest",
+            "tag": "less_fitting",
+            "note": "Maya took her time. Speed is not what the story is about."
+          }
+        ],
+        "reinforcement": "Maya shows more than one strength at once. That is how strengths usually work."
+      },
+      {
+        "context": "Diego sees a puddle by the playground in the morning. By afternoon it is gone. He wonders where the water went, so he asks his teacher and writes a note in his notebook.",
+        "illustration": "💧",
+        "cues": [
+          {
+            "id": "s2-c1",
+            "text": "He checks the puddle again after school.",
+            "present": true
+          },
+          {
+            "id": "s2-c2",
+            "text": "He asks his teacher a question.",
+            "present": true
+          },
+          {
+            "id": "s2-c4",
+            "text": "He stomps through the puddle and runs off.",
+            "present": false
+          },
+          {
+            "id": "s2-c3",
+            "text": "He writes what he sees in his notebook.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s2-f1",
+            "text": "Curiosity",
+            "tag": "plausible"
+          },
+          {
+            "id": "s2-f2",
+            "text": "Noticing",
+            "tag": "plausible"
+          },
+          {
+            "id": "s2-f3",
+            "text": "Careful thinking",
+            "tag": "plausible"
+          },
+          {
+            "id": "s2-f4",
+            "text": "Being loud",
+            "tag": "less_fitting",
+            "note": "Nothing in the story is loud. Diego is quiet and careful, so this one fits less."
+          }
+        ],
+        "reinforcement": "Diego wonders, notices and thinks carefully, all in one morning."
+      },
+      {
+        "context": "A new boy named Tomas joins Priya's class. When his eraser breaks, Priya gives him hers. She walks him to the library and introduces him to two classmates.",
+        "illustration": "✏️",
+        "cues": [
+          {
+            "id": "s3-c1",
+            "text": "She gives him an eraser.",
+            "present": true
+          },
+          {
+            "id": "s3-c4",
+            "text": "She tells him to find his own way.",
+            "present": false
+          },
+          {
+            "id": "s3-c2",
+            "text": "She walks with him to the library.",
+            "present": true
+          },
+          {
+            "id": "s3-c3",
+            "text": "She introduces him to two classmates.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s3-f1",
+            "text": "Kindness",
+            "tag": "plausible"
+          },
+          {
+            "id": "s3-f2",
+            "text": "Noticing others",
+            "tag": "plausible"
+          },
+          {
+            "id": "s3-f3",
+            "text": "Sharing",
+            "tag": "plausible"
+          },
+          {
+            "id": "s3-f4",
+            "text": "Winning",
+            "tag": "less_fitting",
+            "note": "Nothing in the story is about winning."
+          }
+        ],
+        "reinforcement": "Priya notices what Tomas needs and shares what she has."
+      },
+      {
+        "context": "At recess, Jo's block tower falls over, and Jo looks upset. Sam says, \"That tower was so tall it touched the clouds!\" Jo laughs, and then they start building again.",
+        "illustration": "🧱",
+        "cues": [
+          {
+            "id": "s4-c1",
+            "text": "Sam jokes about the tower, not about Jo.",
+            "present": true
+          },
+          {
+            "id": "s4-c2",
+            "text": "Jo laughs.",
+            "present": true
+          },
+          {
+            "id": "s4-c4",
+            "text": "Sam laughs at Jo.",
+            "present": false
+          },
+          {
+            "id": "s4-c3",
+            "text": "They build the tower again together.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s4-f1",
+            "text": "Humor",
+            "tag": "plausible"
+          },
+          {
+            "id": "s4-f2",
+            "text": "Kindness",
+            "tag": "plausible"
+          },
+          {
+            "id": "s4-f3",
+            "text": "Encouraging others",
+            "tag": "plausible"
+          },
+          {
+            "id": "s4-f4",
+            "text": "Showing off",
+            "tag": "less_fitting",
+            "note": "Sam's joke was meant to help Jo feel better, so this one fits less."
+          }
+        ],
+        "reinforcement": "Humor can be a way to be kind. Sam used it to cheer Jo up."
+      },
+      {
+        "context": "Zoe wants to make a free throw in basketball. For three weeks she practices every day after school, and she misses a lot. One day she tries a new way to hold the ball, and it goes in.",
+        "illustration": "🏀",
+        "cues": [
+          {
+            "id": "s5-c1",
+            "text": "She practices every day.",
+            "present": true
+          },
+          {
+            "id": "s5-c4",
+            "text": "She quits after the first week.",
+            "present": false
+          },
+          {
+            "id": "s5-c2",
+            "text": "She keeps going after she misses.",
+            "present": true
+          },
+          {
+            "id": "s5-c3",
+            "text": "She tries a new way to hold the ball.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s5-f1",
+            "text": "Persistence",
+            "tag": "plausible"
+          },
+          {
+            "id": "s5-f2",
+            "text": "Hard work",
+            "tag": "plausible"
+          },
+          {
+            "id": "s5-f3",
+            "text": "Hope",
+            "tag": "plausible"
+          },
+          {
+            "id": "s5-f4",
+            "text": "Luck",
+            "tag": "less_fitting",
+            "note": "Zoe made the shot after weeks of practice, so luck is only a small part of this story."
+          }
+        ],
+        "reinforcement": "Zoe kept trying, and she kept believing it could work."
+      },
+      {
+        "context": "Omar's friend Lee is sad because his dog is sick. Omar sits next to him and does not say much. Then he asks, \"What happened?\" and listens to the whole story.",
+        "illustration": "🐕",
+        "cues": [
+          {
+            "id": "s6-c1",
+            "text": "He sits next to Lee.",
+            "present": true
+          },
+          {
+            "id": "s6-c2",
+            "text": "He asks what happened.",
+            "present": true
+          },
+          {
+            "id": "s6-c4",
+            "text": "He tells Lee to stop being sad.",
+            "present": false
+          },
+          {
+            "id": "s6-c3",
+            "text": "He lets Lee finish talking.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s6-f1",
+            "text": "Listening",
+            "tag": "plausible"
+          },
+          {
+            "id": "s6-f2",
+            "text": "Caring",
+            "tag": "plausible"
+          },
+          {
+            "id": "s6-f3",
+            "text": "Patience",
+            "tag": "plausible"
+          },
+          {
+            "id": "s6-f4",
+            "text": "Fixing it fast",
+            "tag": "less_fitting",
+            "note": "Omar did not rush to fix anything. He listened first, so this one fits less."
+          }
+        ],
+        "reinforcement": "Listening is a strength, and so is giving a friend time."
+      },
+      {
+        "context": "Lila finds three empty cardboard boxes. She cuts a door in one, draws signs on another, and makes up prices for her toys. Then she makes a rule: every customer says hello first.",
+        "illustration": "📦",
+        "cues": [
+          {
+            "id": "s7-c1",
+            "text": "She cuts a door in a box.",
+            "present": true
+          },
+          {
+            "id": "s7-c4",
+            "text": "She waits for someone to tell her what to build.",
+            "present": false
+          },
+          {
+            "id": "s7-c2",
+            "text": "She makes signs and prices.",
+            "present": true
+          },
+          {
+            "id": "s7-c3",
+            "text": "She makes up her own rule.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s7-f1",
+            "text": "Creativity",
+            "tag": "plausible"
+          },
+          {
+            "id": "s7-f2",
+            "text": "Imagination",
+            "tag": "plausible"
+          },
+          {
+            "id": "s7-f3",
+            "text": "Problem-solving",
+            "tag": "plausible"
+          },
+          {
+            "id": "s7-f4",
+            "text": "Following directions exactly",
+            "tag": "less_fitting",
+            "note": "Lila made up her own plan, so this one fits less."
+          }
+        ],
+        "reinforcement": "Lila saw a box and imagined a store. She also solved small problems as she built it."
+      },
+      {
+        "context": "Teo's grandfather gets a letter in English. Teo reads it out loud. Then he explains it again in the language they speak at home. His grandfather smiles and says thank you.",
+        "illustration": "✉️",
+        "cues": [
+          {
+            "id": "s8-c1",
+            "text": "He reads the letter out loud.",
+            "present": true
+          },
+          {
+            "id": "s8-c2",
+            "text": "He explains it in the language they speak at home.",
+            "present": true
+          },
+          {
+            "id": "s8-c4",
+            "text": "He hides the letter.",
+            "present": false
+          },
+          {
+            "id": "s8-c3",
+            "text": "His grandfather smiles.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s8-f1",
+            "text": "Helpfulness",
+            "tag": "plausible"
+          },
+          {
+            "id": "s8-f2",
+            "text": "Speaking two languages",
+            "tag": "plausible"
+          },
+          {
+            "id": "s8-f3",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "s8-f4",
+            "text": "Being shy",
+            "tag": "less_fitting",
+            "note": "The story is about helping. Teo never seems shy."
+          }
+        ],
+        "reinforcement": "Teo uses two languages to help someone he loves."
+      },
+      {
+        "context": "Ava's group has to make a poster. She asks each person which part they want. She writes the plan down, and when the poster is done she says, \"We all did this.\"",
+        "illustration": "🖼️",
+        "cues": [
+          {
+            "id": "s9-c1",
+            "text": "She asks each person to choose a part.",
+            "present": true
+          },
+          {
+            "id": "s9-c4",
+            "text": "She picks all the best parts for herself.",
+            "present": false
+          },
+          {
+            "id": "s9-c2",
+            "text": "She writes down the plan.",
+            "present": true
+          },
+          {
+            "id": "s9-c3",
+            "text": "She thanks everyone at the end.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s9-f1",
+            "text": "Teamwork",
+            "tag": "plausible"
+          },
+          {
+            "id": "s9-f2",
+            "text": "Leadership",
+            "tag": "plausible"
+          },
+          {
+            "id": "s9-f3",
+            "text": "Fairness",
+            "tag": "plausible"
+          },
+          {
+            "id": "s9-f4",
+            "text": "Doing everything alone",
+            "tag": "less_fitting",
+            "note": "Ava shared the work, so this one fits less."
+          }
+        ],
+        "reinforcement": "Ava led by making sure everyone had a part."
+      },
+      {
+        "context": "At recess, Ben wants to join a game, but his voice shakes because he feels nervous. He walks over and says, \"Can I play?\" When they say yes, he says thank you.",
+        "illustration": "⚽",
+        "cues": [
+          {
+            "id": "s10-c1",
+            "text": "His voice shakes.",
+            "present": true
+          },
+          {
+            "id": "s10-c2",
+            "text": "He walks over and asks to play.",
+            "present": true
+          },
+          {
+            "id": "s10-c4",
+            "text": "He walks away without asking.",
+            "present": false
+          },
+          {
+            "id": "s10-c3",
+            "text": "He says thank you.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s10-f1",
+            "text": "Courage",
+            "tag": "plausible"
+          },
+          {
+            "id": "s10-f2",
+            "text": "Asking for what you need",
+            "tag": "plausible"
+          },
+          {
+            "id": "s10-f3",
+            "text": "Being polite",
+            "tag": "plausible"
+          },
+          {
+            "id": "s10-f4",
+            "text": "Not being afraid",
+            "tag": "less_fitting",
+            "note": "Ben felt nervous and asked anyway. That is what courage looks like."
+          }
+        ],
+        "reinforcement": "Ben did something hard, and he did it politely."
+      },
+      {
+        "context": "Nora packs her school bag the night before. She checks her list. Then she remembers that her friend Kit needs a permission slip signed, and she reminds her.",
+        "illustration": "🎒",
+        "cues": [
+          {
+            "id": "s11-c1",
+            "text": "She checks her list.",
+            "present": true
+          },
+          {
+            "id": "s11-c4",
+            "text": "She leaves everything until the morning.",
+            "present": false
+          },
+          {
+            "id": "s11-c2",
+            "text": "She packs the night before.",
+            "present": true
+          },
+          {
+            "id": "s11-c3",
+            "text": "She reminds Kit about the permission slip.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s11-f1",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "s11-f2",
+            "text": "Planning",
+            "tag": "plausible"
+          },
+          {
+            "id": "s11-f3",
+            "text": "Caring",
+            "tag": "plausible"
+          },
+          {
+            "id": "s11-f4",
+            "text": "Being the oldest",
+            "tag": "less_fitting",
+            "note": "Nothing in the story is about age."
+          }
+        ],
+        "reinforcement": "Nora planned ahead, and she thought about a friend too."
+      },
+      {
+        "context": "Kai buys a snack, and the cashier gives him too much change. Kai counts it. He says, \"This is too much,\" and hands it back.",
+        "illustration": "🪙",
+        "cues": [
+          {
+            "id": "s12-c1",
+            "text": "He counts the change.",
+            "present": true
+          },
+          {
+            "id": "s12-c2",
+            "text": "He says it is too much.",
+            "present": true
+          },
+          {
+            "id": "s12-c4",
+            "text": "He puts it in his pocket and leaves.",
+            "present": false
+          },
+          {
+            "id": "s12-c3",
+            "text": "He hands it back.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "s12-f1",
+            "text": "Honesty",
+            "tag": "plausible"
+          },
+          {
+            "id": "s12-f2",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "s12-f3",
+            "text": "Courage",
+            "tag": "plausible"
+          },
+          {
+            "id": "s12-f4",
+            "text": "Being the best at math",
+            "tag": "less_fitting",
+            "note": "Kai counted the change, but the strength here is doing the right thing. Math is a smaller part."
+          }
+        ],
+        "reinforcement": "It can take courage to be honest when nobody would notice."
+      }
+    ],
+    "selfCheck": {
+      "prompt": "Do you use a strength like this?",
+      "options": [
+        {
+          "id": "yes",
+          "text": "Yes"
+        },
+        {
+          "id": "no",
+          "text": "No"
+        },
+        {
+          "id": "not-sure",
+          "text": "Not sure"
+        }
+      ],
+      "bodyPrompt": "Where do you use it?",
+      "bodyOptions": [
+        {
+          "id": "school",
+          "text": "At school"
+        },
+        {
+          "id": "home",
+          "text": "At home"
+        },
+        {
+          "id": "friends",
+          "text": "With friends"
+        },
+        {
+          "id": "elsewhere",
+          "text": "Somewhere else"
+        },
+        {
+          "id": "not-sure",
+          "text": "Not sure"
+        }
+      ],
+      "closing": "Everyone has strengths, and they can grow. No one else sees what you picked.",
+      "privateNote": "Your answers here are private and are not saved.",
+      "summaryLabel": "Times you thought about your own strengths"
+    }
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'scenarioChoice',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'strength-spotter-identity',
+    header: {
+      icon: '🌟',
+      title: 'Strength Spotter',
+      description: 'Notice what someone does, spot the strengths it shows, then think about your own.',
+    },
+  });
+</script>
+</body>
+</html>
