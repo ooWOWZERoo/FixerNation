@@ -34,7 +34,7 @@
 
     const progressHolder = document.createElement('div');
     const stepLabel = document.createElement('div');
-    stepLabel.style.cssText = 'text-align:center;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--coral);margin-bottom:8px;';
+    stepLabel.style.cssText = 'text-align:center;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--g-accent, var(--coral));margin-bottom:8px;';
     const promptBox = document.createElement('p');
     promptBox.style.cssText = 'font-weight:700;margin-bottom:8px;font-size:calc(16px * var(--band-scale,1));';
     const bodyHolder = document.createElement('div');

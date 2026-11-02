@@ -138,6 +138,8 @@ Six public mini-games (`brain-memory-match.html`, `brain-number-sequence.html`, 
 
 **Tune Your Brain, Phase 2 shared design system + accessibility, deployed 2026-09-16** (Release 40): `accessibility-utils.js` (reduced-motion toggle, screen-reader live region, keyboard-activation helper, floating settings panel) and `game-shell.js` (band-aware header/instructions/progress/feedback/hint/summary builders), plus four experience-band tokens added to `brain-games.css` (cache-busted to `?v=1`). Demoed at `tune-your-brain-shells-demo.html` (internal-only, not linked from nav) — one sample activity rendered across all four bands. None of this is wired into the 6 live games yet.
 
+**Band color themes (Release 85):** each game page sets `data-band` on `<html>`, and `brain-games.css` carries one theme block per band (`html[data-band="..."] .game-frame`) that sets the `--g-*` color hooks (Discover: bold outlines, yellow button; Explore: purple and orange; Challenge: cool slate and blue; Advance: dark slate). Pages with no band (the six legacy games, the catalog) keep the original colors. Contrast is enforced by `server/test/band-themes.test.js`. Current cache version `brain-games.css?v=3`, `engine-branching-scenario.js?v=4`.
+
 **Tune Your Brain, Phase 1 foundation, deployed 2026-09-16** (Release 39): a real feature-flag mechanism (`feature_flags`/`feature_flag_schools`), empty `skills`/`skill_prerequisites` tables for a future content-governance phase to seed, and a new `learning_events` table (separate from the anonymous `analytics_events`) with a provisional retention purge cron. None of Phases 1-3 are wired into any live *feature* yet beyond Sound Safari — mostly additive groundwork plus the one real game.
 
 ## Admin backend

@@ -16,6 +16,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 85 — 2026-11-02 — Each age group's games now have their own colors
+
+- **Four color themes for the brain games, one per learning group.** Discover has a warm page, thick dark outlines and a yellow button; Explore uses purple for "selected" and orange for the next step; Challenge is cool slate with blue and violet accents; Advance is a dark slate band with one cool accent. Before this, every game from Explore to Advance looked the same.
+- **The band behind each game fills the page width** (between the site header and footer, which keep their look).
+- **After you answer, the options you did not pick grey out** so the right and wrong ones stand out; their text stays readable.
+- Every color pair is checked for contrast by a new test (`server/test/band-themes.test.js`). The six older games and the games page are unchanged.
+- Static files only (`brain-games.css`, one line in `engine-branching-scenario.js`, cache numbers on the game pages). No Node restart, no database change.
+- Audit behind it: `docs/tune-your-brain/GAME_LANGUAGE_COLOR_AUDIT.md` (wording changes follow in Releases 86 to 89).
+
 ## Release 84 — 2026-11-01 — Games page sorted by grade band, with a "New" tag
 
 - **The games page now groups games by grade band** (Discover, then Explore, Challenge and Advance), with the older skills games at the end, instead of listing them in the order they were added. New games used to sit at the bottom of a long list.
