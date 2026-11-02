@@ -123,8 +123,8 @@ const REAL = auditAll().filter((r) => r.engine !== 'legacy' && !r.note).map((r) 
   return { slug: r.slug, engineName, pack: extractPack(src) };
 }).filter((g) => g.pack && g.engineName);
 
-test('REAL GAMES: all 22 engine games are found and parse', () => {
-  assert.equal(REAL.length, 22, REAL.map((g) => g.slug).join(', '));
+test('REAL GAMES: all 25 engine games are found and parse', () => {
+  assert.equal(REAL.length, 25, REAL.map((g) => g.slug).join(', '));
 });
 
 test('REAL GAMES: after preparation each round keeps its choices and its right answer', () => {
@@ -189,7 +189,7 @@ test('SELF-CHECK PRIVACY: the engine never sends which answer a child picked', (
 // Phase 3 stories for Choice Quest and Team Pick (approved outlines in docs/tune-your-brain/EXPLORE_STORY_OUTLINES.md).
 // All four stories (the original, rebalanced on 2026-10-31, and the three new ones) must follow the writing rules.
 const CYCLE = ['recognize', 'impact', 'consider', 'choose', 'reflect'];
-for (const slug of ['choice-quest', 'team-pick', 'the-post', 'first-shift', 'perspective-swap', 'community-voice']) {
+for (const slug of ['choice-quest', 'team-pick', 'the-post', 'first-shift', 'perspective-swap', 'community-voice', 'peace-table']) {
   test(`STORIES ${slug}: four stories, each a full five-step cycle`, () => {
     const g = REAL.find((x) => x.slug === slug);
     assert.equal(g.pack.variants.length, 4);
@@ -433,6 +433,52 @@ test('FIX-IT WORKSHOP: every problem follows the writing rules', () => {
   });
 });
 
+
+// Idea Lab (new 2026-11-01, approved outline: docs/tune-your-brain/IDEA_LAB_OUTLINE.md): four situations, one per run; like Fix-It Workshop the idea step has no single best answer.
+test('IDEA LAB: four problems, each a full five-step idea cycle', () => {
+  const g = REAL.find((x) => x.slug === 'idea-lab');
+  assert.equal(g.pack.variants.length, 4);
+  g.pack.variants.forEach((v, i) => assert.equal(v.steps.map((s) => s.key).join(), CYCLE.join(), `problem ${i + 1}`));
+  assert.equal(g.pack.variants[0].steps[0].prompt, g.pack.steps[0].prompt, 'problem 1 is the base pack');
+  const seen = new Set();
+  for (let seed = 1; seed <= 60; seed++) seen.add(prep(g.pack, 'branchingScenario', seed).pack.steps[0].prompt);
+  assert.equal(seen.size, 4);
+});
+
+test('IDEA LAB: every problem follows the writing rules', () => {
+  const g = REAL.find((x) => x.slug === 'idea-lab');
+  g.pack.variants.forEach((v, n) => {
+    const label = `idea lab problem ${n + 1}`;
+    const ids = new Set();
+    v.steps.forEach((step, i) => {
+      const text = [step.prompt].concat((step.choices || []).flatMap((c) => [c.text, c.feedback])).join(' ');
+      assert.ok(!/[–—]/.test(text), `${label} step ${i + 1}: no dashes`);
+      if (step.key === 'reflect') { assert.equal(step.freeReflection, true); assert.ok(!step.choices); return; }
+      const types = step.choices.map((c) => c.type);
+      if (step.key === 'choose') {
+        assert.equal(types.slice().sort().join(), ['multiple_defensible', 'responsible', 'seek_help', 'unsafe'].join(), `${label}: final step needs one of each`);
+      } else if (step.key === 'consider') {
+        assert.equal(types.join(), 'multiple_defensible,multiple_defensible,multiple_defensible', `${label}: the idea step has no single best idea`);
+      } else {
+        assert.equal(step.choices.length, 3, `${label} step ${i + 1}: three options`);
+        assert.equal(types.filter((t) => t === 'responsible').length, 1);
+        assert.equal(types.filter((t) => t === 'plausible_incomplete').length, 2);
+      }
+      step.choices.forEach((c) => {
+        assert.ok(c.feedback && c.feedback.length > 20, `${label}: every option explains its effect`);
+        assert.ok(!ids.has(c.id), `${label}: duplicate id ${c.id}`); ids.add(c.id);
+      });
+      const lens = step.choices.map((c) => c.text.length);
+      assert.ok(Math.max(...lens) / Math.min(...lens) <= 1.4, `${label} step ${i + 1}: option lengths too uneven`);
+    });
+    const judged = v.steps.filter((s) => s.choices && s.choices.some((c) => c.type === 'responsible'));
+    const longest = judged.filter((s) => s.choices.find((c) => c.type === 'responsible').text.length === Math.max(...s.choices.map((c) => c.text.length))).length;
+    assert.ok(longest <= 2, `${label}: the best answer is the longest in ${longest} of 3 steps`);
+    const idea = v.steps.find((s) => s.key === 'consider');
+    idea.choices.forEach((c) => assert.ok(/\b(needs?|costs?|only|takes?|not)\b/.test(c.feedback), `${label}: the idea feedback names a cost or limit: ${c.id}`));
+  });
+});
+
 // Strength Spotter (new 2026-11-01, approved outline: docs/tune-your-brain/STRENGTH_SPOTTER_OUTLINE.md): 12 stories, 5 per run.
 test('SCENARIO CHOICE PROMPTS: the wording override is optional, and Feelings Detective keeps its original wording', () => {
   const src = fs.readFileSync(path.join(ROOT, 'engine-scenario-choice.js'), 'utf8');
@@ -600,4 +646,45 @@ test('CRITICAL READ: passages read at about grades 6 to 13, and runs differ', ()
   }
   assert.ok(sets.size > 20, `only ${sets.size} different sets of items in 200 runs`);
   slots.forEach((n, s) => assert.ok(n / 1200 > 0.18 && n / 1200 < 0.32, `slot ${s} holds ${Math.round(n / 12)}% of right conclusions`));
+});
+
+// Values Compass (new 2026-11-01, approved outline: docs/tune-your-brain/VALUES_COMPASS_OUTLINE.md): 12 stories, 5 per run.
+test('VALUES COMPASS: twelve stories, five per run, each with noticing cues and values', () => {
+  const g = REAL.find((x) => x.slug === 'values-compass');
+  assert.equal(g.pack.scenarios.length, 12);
+  assert.equal(g.pack.roundsPerRun, 5);
+  ['cues', 'afterCues', 'pick', 'confirmCues', 'confirmPick', 'multiLabel'].forEach((k) => assert.ok(g.pack.prompts[k], `prompts.${k}`));
+  const sets = new Set(), ids = new Set();
+  g.pack.scenarios.forEach((s, i) => {
+    assert.equal(s.cues.length, 4, `story ${i + 1}: four cues`);
+    assert.equal(s.cues.filter((c) => c.present).length, 3, `story ${i + 1}: three cues really happen`);
+    assert.equal(s.feelings.length, 4, `story ${i + 1}: four values`);
+    assert.equal(s.feelings.filter((f) => f.tag === 'plausible').length, 3, `story ${i + 1}: three values fit`);
+    const less = s.feelings.filter((f) => f.tag === 'less_fitting');
+    assert.equal(less.length, 1, `story ${i + 1}: one value fits less`);
+    assert.ok(less[0].note && less[0].note.length > 20, `story ${i + 1}: a gentle note explains it`);
+    assert.ok(s.reinforcement && s.illustration && s.context.length > 60, `story ${i + 1}: context, picture and a closing line`);
+    const text = [s.context, s.reinforcement].concat(s.cues.map((c) => c.text), s.feelings.map((f) => f.text + (f.note || ''))).join(' ');
+    assert.ok(!/[–—]/.test(text), `story ${i + 1}: no dashes`);
+    [...s.cues, ...s.feelings].forEach((x) => { assert.ok(!ids.has(x.id), `duplicate id ${x.id}`); ids.add(x.id); });
+    sets.add(s.feelings.filter((f) => f.tag === 'plausible').map((f) => f.text).sort().join('|'));
+  });
+  assert.equal(sets.size, 12, 'no two stories share the same set of values');
+});
+
+test('VALUES COMPASS: the private check is present, in order, and never logged; runs differ', () => {
+  const g = REAL.find((x) => x.slug === 'values-compass');
+  const sc = g.pack.selfCheck;
+  assert.ok(sc.prompt && sc.bodyPrompt && sc.closing && sc.privateNote && sc.summaryLabel);
+  assert.equal(sc.options.map((o) => o.id).join(), 'yes,little,not-sure');
+  assert.equal(sc.bodyOptions.length, 5);
+  assert.ok(!/[–—]/.test(JSON.stringify(sc)));
+  const sets = new Set();
+  for (let seed = 1; seed <= 100; seed++) {
+    const out = prep(g.pack, 'scenarioChoice', seed).pack;
+    assert.equal(out.scenarios.length, 5);
+    assert.equal(JSON.stringify(out.selfCheck), JSON.stringify(sc), 'the private check keeps its order');
+    sets.add(out.scenarios.map((s) => s.context.slice(0, 10)).sort().join('|'));
+  }
+  assert.ok(sets.size > 20, `only ${sets.size} different sets of stories in 100 runs`);
 });

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Idea Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-branching-scenario.js?v=3"></script>
+<script>
+  // Idea Lab - Tune Your Brain (Advance band, grades 9-12). The five-step
+  // story engine used as an idea cycle: find the real need, see what exists,
+  // weigh three workable directions, test small, and reflect. Practises the
+  // Creative Innovator attribute (the second game for it; the first, Fix-It
+  // Workshop, is grades 3-5), with Effective Communicator, Critical Thinker
+  // and Global Citizen supporting. Like Fix-It Workshop, the idea step
+  // (consider) has no single best answer: all three directions are workable and
+  // the feedback names each one's strength and cost. A multiple-choice game
+  // teaches the process and the trade-offs; it cannot judge a student's own
+  // original idea. Four situations, one per run (FnEngineSDK variants). In this
+  // game "unsafe" means a move that hurts the idea or other people: launching
+  // without asking, copying without credit, or skipping approval. Design and
+  // approved outline: docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and
+  // IDEA_LAB_OUTLINE.md.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'advance';
+
+  const contentPack = {
+    title: 'Idea Lab',
+    steps: [
+      {
+        "key": "recognize",
+        "prompt": "Students at your school struggle in different subjects, and many do not ask for help. You want to set up a way for students to help each other, with three weeks and no budget. What do you do first?",
+        "choices": [
+          {
+            "id": "tp1-1",
+            "text": "Ask a wide group of students what holds them back from asking for help.",
+            "type": "responsible",
+            "feedback": "Hearing the real reasons keeps you from solving the wrong problem, and a wide group shows what most people need."
+          },
+          {
+            "id": "tp1-2",
+            "text": "Assume that students are too proud to ask, and design something that pushes them to do it.",
+            "type": "plausible_incomplete",
+            "feedback": "Pride may be part of it, but it is a guess. If the real reason is something else, the idea will miss."
+          },
+          {
+            "id": "tp1-3",
+            "text": "Ask only the students who already tutor, since they know the most about helping.",
+            "type": "plausible_incomplete",
+            "feedback": "They know about helping, but not about why others do not ask. The people who do not ask hold the answer."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "What do you need to know before you design anything?",
+        "choices": [
+          {
+            "id": "tp1-4",
+            "text": "What the school already offers, and what students say is still missing.",
+            "type": "responsible",
+            "feedback": "Knowing what exists keeps you from repeating it, and what is missing shows where an idea would matter."
+          },
+          {
+            "id": "tp1-5",
+            "text": "Nothing more, since tutoring is obviously good and the idea does not need any research.",
+            "type": "plausible_incomplete",
+            "feedback": "Tutoring is good, but your version needs to fit your school. Quick research saves weeks of work."
+          },
+          {
+            "id": "tp1-6",
+            "text": "How another school ran its program, so that you can copy it exactly as it was.",
+            "type": "plausible_incomplete",
+            "feedback": "Another school's program can inspire you, but copying it exactly ignores what your students need."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You have three directions in mind. Which one would you try first?",
+        "choices": [
+          {
+            "id": "tp1-7",
+            "text": "A sign-up board for 20-minute help sessions at lunch, which is simple and fast to start.",
+            "type": "multiple_defensible",
+            "feedback": "This is quick to launch and easy to understand. It reaches only some students, and it depends on people showing up at lunch."
+          },
+          {
+            "id": "tp1-8",
+            "text": "A short video library made by students that answers the most common questions.",
+            "type": "multiple_defensible",
+            "feedback": "This is original and always available. It takes weeks to make, and it only helps with questions that you have thought of."
+          },
+          {
+            "id": "tp1-9",
+            "text": "A swap board where each student lists one subject to help with and one that they need.",
+            "type": "multiple_defensible",
+            "feedback": "This is bolder and shows that everyone has something to offer. It needs a coordinator, and it takes time to match people."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the best next step?",
+        "choices": [
+          {
+            "id": "tp1-10",
+            "text": "Try one version with one grade for two weeks, count the sessions, and ask users what to change.",
+            "type": "responsible",
+            "feedback": "A small trial shows what works before you spend more time, and users tell you what you missed."
+          },
+          {
+            "id": "tp1-11",
+            "text": "Ask two teachers to review a draft before you launch, and then adjust it.",
+            "type": "multiple_defensible",
+            "feedback": "Also good. Teachers can spot problems early, though you still need real users to try it."
+          },
+          {
+            "id": "tp1-12",
+            "text": "Launch school-wide without asking anyone, and use classmates' grades to match students.",
+            "type": "unsafe",
+            "feedback": "Using grades without permission breaks privacy, and launching without asking can end the project before it starts."
+          },
+          {
+            "id": "tp1-13",
+            "text": "Ask a teacher or counselor to help you set it up safely and fairly for every student.",
+            "type": "seek_help",
+            "feedback": "An adult can help with privacy and fairness, and they may know of students who would help."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What is one idea of yours that got better because someone gave you honest feedback?",
+        "freeReflection": true
+      }
+    ],
+  };
+
+  // Four situations: a peer tutoring exchange (above), less waste at snack sales, announcements that reach everyone, and a low-cost fundraiser for a garden.
+  // Steps 1 to 3 offer three options; step 4 offers four. Option lengths are balanced on purpose (see server/scripts/audit-brain-games.js).
+  contentPack.variants = [
+    { steps: contentPack.steps },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "The after-school snack sales leave a pile of single-use wrappers and cups. You want an idea that cuts the waste without ending the sales. The student council has $100 and two months. What do you do first?",
+        "choices": [
+          {
+            "id": "tp2-1",
+            "text": "Watch a few sales, count what is thrown away, and ask students and staff what they think.",
+            "type": "responsible",
+            "feedback": "Counting and asking give you real facts, and the people who run the sales know what is practical."
+          },
+          {
+            "id": "tp2-2",
+            "text": "Assume that students do not care about waste, and plan a campaign to make them care.",
+            "type": "plausible_incomplete",
+            "feedback": "That is a guess, and it may be unfair. Many students may care but have no easy alternative."
+          },
+          {
+            "id": "tp2-3",
+            "text": "Guess at what is thrown away, since it is probably mostly wrappers and cups.",
+            "type": "plausible_incomplete",
+            "feedback": "Your guess may be right, but a count is much more convincing. It also shows where to aim."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "What do you need to know before you design anything?",
+        "choices": [
+          {
+            "id": "tp2-4",
+            "text": "What the sales earn and what alternatives would cost, so that the idea can work in practice.",
+            "type": "responsible",
+            "feedback": "An idea that cuts waste but loses the sales will not last, so you need both numbers."
+          },
+          {
+            "id": "tp2-5",
+            "text": "Nothing about costs, because it is for a good cause and the money will sort itself out in time.",
+            "type": "plausible_incomplete",
+            "feedback": "A good cause helps, but a $100 budget is a real limit. Ignoring cost can sink a good idea."
+          },
+          {
+            "id": "tp2-6",
+            "text": "Whether you can ban single-use items outright, since that would end the waste at once.",
+            "type": "plausible_incomplete",
+            "feedback": "A ban is simple, but it might end the sales or upset people. A plan that people want to follow works better."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You have three directions in mind. Which one would you try first?",
+        "choices": [
+          {
+            "id": "tp2-7",
+            "text": "A \"bring your own cup\" discount, which costs little and relies on students building the habit.",
+            "type": "multiple_defensible",
+            "feedback": "This is cheap and easy to start. It only works if students remember their cups, and it may not change habits fast."
+          },
+          {
+            "id": "tp2-8",
+            "text": "Reusable cups with a small deposit, which lasts longer but needs a way to wash them.",
+            "type": "multiple_defensible",
+            "feedback": "This cuts waste for a long time. It needs space and people to wash the cups, and it costs more to start."
+          },
+          {
+            "id": "tp2-9",
+            "text": "A switch to compostable cups and wrappers, which is easy for students but costs more.",
+            "type": "multiple_defensible",
+            "feedback": "Students do not have to change anything, so more people take part. It costs more each sale and needs a place to compost."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the best next step?",
+        "choices": [
+          {
+            "id": "tp2-10",
+            "text": "Test one idea at two sales, count the waste again, and share the results.",
+            "type": "responsible",
+            "feedback": "Before-and-after counts show whether it worked, and sharing them helps the council decide what to do next."
+          },
+          {
+            "id": "tp2-11",
+            "text": "Ask the club that runs the sales to try it for a month, and ask for their feedback.",
+            "type": "multiple_defensible",
+            "feedback": "Also good. The club knows the sales best, and their buy-in makes it more likely to last."
+          },
+          {
+            "id": "tp2-12",
+            "text": "Change the sale without asking anyone, and tell students that it is now required.",
+            "type": "unsafe",
+            "feedback": "Skipping the people who run the sales and making it a rule can cause anger. Your idea may be dropped."
+          },
+          {
+            "id": "tp2-13",
+            "text": "Ask a teacher or the custodian what the school allows before you test anything.",
+            "type": "seek_help",
+            "feedback": "Rules about food and waste are real, and a teacher or custodian can tell you what is possible."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "What small change in your own habits would make a difference to someone else?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "Students miss school announcements because they are read aloud in a noisy hall, and some students cannot hear or read them easily. You want a way for announcements to reach everyone. What do you do first?",
+        "choices": [
+          {
+            "id": "tp3-1",
+            "text": "Ask students who miss announcements why, including students who use captions or read more slowly.",
+            "type": "responsible",
+            "feedback": "The people who miss them can tell you what is in the way, and different students will name different problems."
+          },
+          {
+            "id": "tp3-2",
+            "text": "Assume that students are not paying attention, and plan a way to get their attention.",
+            "type": "plausible_incomplete",
+            "feedback": "Attention may be part of it, but it is a guess. If the problem is access, a louder message will not help."
+          },
+          {
+            "id": "tp3-3",
+            "text": "Ask only the students who already follow the news, since they know what is important.",
+            "type": "plausible_incomplete",
+            "feedback": "They are easy to ask, but they are not the ones who miss things. You need the others."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "What do you need to know before you design anything?",
+        "choices": [
+          {
+            "id": "tp3-4",
+            "text": "How announcements are made now, and which formats would be easy to add.",
+            "type": "responsible",
+            "feedback": "Knowing the current process and its limits shows where a small change would help the most."
+          },
+          {
+            "id": "tp3-5",
+            "text": "Nothing, because an app would fix everything and the old way is out of date anyway.",
+            "type": "plausible_incomplete",
+            "feedback": "An app might help, but it can leave out students without phones. Check what already works first."
+          },
+          {
+            "id": "tp3-6",
+            "text": "How to replace the current way entirely, since a new system is better than a patch.",
+            "type": "plausible_incomplete",
+            "feedback": "A full replacement is a big job. A change that fits into what the school already does is easier to adopt."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You have three directions in mind. Which one would you try first?",
+        "choices": [
+          {
+            "id": "tp3-7",
+            "text": "A weekly one-page summary posted in homerooms and online, which is simple and reaches many.",
+            "type": "multiple_defensible",
+            "feedback": "This is easy to make and read. It only comes out weekly, so urgent news may not fit."
+          },
+          {
+            "id": "tp3-8",
+            "text": "A short daily video with captions, which is more engaging but takes more work each day.",
+            "type": "multiple_defensible",
+            "feedback": "A video grabs attention and works for many learners. It takes someone to make it every day, and it needs captions that are checked."
+          },
+          {
+            "id": "tp3-9",
+            "text": "A text or email digest that students opt into, which reaches phones but needs permission.",
+            "type": "multiple_defensible",
+            "feedback": "This reaches students where they are. It needs a sign-up and school permission, and it leaves out students without phones."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the best next step?",
+        "choices": [
+          {
+            "id": "tp3-10",
+            "text": "Try one format for two weeks, ask a mix of students if it helped, and adjust.",
+            "type": "responsible",
+            "feedback": "A short trial with different students shows what works for whom, and you can change it before it spreads."
+          },
+          {
+            "id": "tp3-11",
+            "text": "Ask the office to review the first draft before it goes out, and then fix anything they flag.",
+            "type": "multiple_defensible",
+            "feedback": "Also good. The office knows what must be included, and they can help it reach the right people."
+          },
+          {
+            "id": "tp3-12",
+            "text": "Send the messages from a school list without approval, so that it starts right away.",
+            "type": "unsafe",
+            "feedback": "Using a school list without permission can break rules and get your project shut down."
+          },
+          {
+            "id": "tp3-13",
+            "text": "Ask the office or a teacher about the school's communication rules before you start anything.",
+            "type": "seek_help",
+            "feedback": "Asking first shows that you respect the rules, and the office may help you do it properly."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "How do you decide whether an idea is good for people who are different from you?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "Your class wants to raise $200 in three weeks for a school garden. The first idea in the group is a bake sale, but another class already held one last month. What do you do first?",
+        "choices": [
+          {
+            "id": "tp4-1",
+            "text": "Ask who might give and what they would value, not only what you would enjoy making.",
+            "type": "responsible",
+            "feedback": "Starting with what givers value shows you what would actually bring in money."
+          },
+          {
+            "id": "tp4-2",
+            "text": "Assume that people will buy anything for a good cause, so any event will work.",
+            "type": "plausible_incomplete",
+            "feedback": "A good cause helps, but people still choose. An event that people want will raise much more."
+          },
+          {
+            "id": "tp4-3",
+            "text": "Repeat the bake sale, since it worked for others and it is easy to run.",
+            "type": "plausible_incomplete",
+            "feedback": "It is easy, but another class just did one, so buyers may be tired of it."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "What do you need to know before you design anything?",
+        "choices": [
+          {
+            "id": "tp4-4",
+            "text": "What past fundraisers at the school raised and cost, so that you can aim higher.",
+            "type": "responsible",
+            "feedback": "Past results show what is realistic, and costs show how much of the money you will actually keep."
+          },
+          {
+            "id": "tp4-5",
+            "text": "Nothing about past events, because yours will be different and better than theirs.",
+            "type": "plausible_incomplete",
+            "feedback": "It may be, but past results tell you what to expect. Ignoring them is guessing."
+          },
+          {
+            "id": "tp4-6",
+            "text": "Whether a new event would raise more, because new things always bring in more money.",
+            "type": "plausible_incomplete",
+            "feedback": "New can help, but it can also fail. You need a reason, not only a hope."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You have three directions in mind. Which one would you try first?",
+        "choices": [
+          {
+            "id": "tp4-7",
+            "text": "A plant swap and sale with cuttings from students' homes, which is original and low cost.",
+            "type": "multiple_defensible",
+            "feedback": "This is unusual and costs little. It depends on donations, so how much you raise is hard to predict."
+          },
+          {
+            "id": "tp4-8",
+            "text": "A garden-themed game night with a small entry fee, which is fun but needs planning.",
+            "type": "multiple_defensible",
+            "feedback": "A game night draws families and can raise a lot. It needs an adult to run it and a date that works for everyone."
+          },
+          {
+            "id": "tp4-9",
+            "text": "A \"sponsor a seedling\" drive, where families fund one plant at a time, which is simple but slow.",
+            "type": "multiple_defensible",
+            "feedback": "This is easy to explain and run. It only grows slowly, so reaching $200 in three weeks is a stretch."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "What is the best next step?",
+        "choices": [
+          {
+            "id": "tp4-10",
+            "text": "Pilot one idea on a small scale, track the money, and give credit to everyone who helped.",
+            "type": "responsible",
+            "feedback": "A small test shows what works before you commit, and giving credit keeps helpers wanting to come back."
+          },
+          {
+            "id": "tp4-11",
+            "text": "Ask last month's class for tips on what worked and what did not.",
+            "type": "multiple_defensible",
+            "feedback": "Also good. They learned things that you do not know yet, and it avoids repeating their mistakes."
+          },
+          {
+            "id": "tp4-12",
+            "text": "Use another group's idea and name without asking, and take the credit for it yourself.",
+            "type": "unsafe",
+            "feedback": "Copying without asking or giving credit is unfair to them, and it could damage your own reputation."
+          },
+          {
+            "id": "tp4-13",
+            "text": "Ask your advisor or the principal about the rules for collecting money at school.",
+            "type": "seek_help",
+            "feedback": "Rules about money are strict, and asking first prevents trouble later."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "When you build on someone else's idea, how do you want to give credit?",
+        "freeReflection": true
+      }
+    ] },
+  ];
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'idea-lab-creative-innovator',
+    header: {
+      icon: '💡',
+      title: 'Idea Lab',
+      description: 'Find the real need, weigh three workable ideas, and test one small before you launch.',
+    },
+  });
+</script>
+</body>
+</html>

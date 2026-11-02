@@ -31,6 +31,9 @@ const LIVE = [
   { slug: 'strength-spotter', band: 'Explore', sel: { '1B': 'D', '1C': 'S' }, pog: { RF: 'D', CI: 'S' } },
   { slug: 'perspective-swap', band: 'Advance', sel: { '2B': 'D', '2C': 'D', '2A': 'S', '2D': 'S' }, pog: { GC: 'D', CT: 'S' } },
   { slug: 'community-voice', band: 'Advance', sel: { '3C': 'D', '2C': 'S', '3B': 'S' }, pog: { GC: 'D', EC: 'D', CT: 'S' } },
+  { slug: 'values-compass', band: 'Challenge', sel: { '1B': 'D', '1C': 'S' }, pog: { RF: 'D', CT: 'S' } },
+  { slug: 'peace-table', band: 'Explore', sel: { '2D': 'D', '1A': 'S', '2A': 'S', '2C': 'S' }, pog: { GC: 'S', EC: 'S' } },
+  { slug: 'idea-lab', band: 'Advance', sel: { '3B': 'S', '3C': 'S' }, pog: { CI: 'D', EC: 'S', CT: 'S', GC: 'S' } },
 ];
 const LEGACY = ['memory-match', 'simon-sequence', 'number-sequence', 'quick-math', 'reaction-time', 'stroop-challenge'];
 const PROPOSED = [

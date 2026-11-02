@@ -74,6 +74,12 @@ const BADGES = [
     description: 'Completed Perspective Swap through a classroom assignment.' },
   { gameSlug: 'community-voice', slug: 'voice-for-change', name: 'Voice for Change', emoji: '📣',
     description: 'Completed Community Voice through a classroom assignment.' },
+  { gameSlug: 'values-compass', slug: 'true-north', name: 'True North', emoji: '🧭',
+    description: 'Completed Values Compass through a classroom assignment.' },
+  { gameSlug: 'peace-table', slug: 'peacemaker', name: 'Peacemaker', emoji: '🕊️',
+    description: 'Completed Peace Table through a classroom assignment.' },
+  { gameSlug: 'idea-lab', slug: 'bright-idea', name: 'Bright Idea', emoji: '💡',
+    description: 'Completed Idea Lab through a classroom assignment.' },
 ];
 
 async function main() {

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Values Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-scenario-choice.js?v=3"></script>
+<script>
+  // Values Compass - Tune Your Brain (Challenge band, grades 6-8). Same Scenario
+  // Choice engine as Strength Spotter and Feelings Detective: notice what really
+  // happens in a short story, then pick every value that could fit (more than one
+  // is usually right; nothing is scored and no value is ranked). Then a private
+  // check about the student's own values, which is never logged, sent or saved.
+  // The second direct game for NY SEL 1B (identity and agency), with 1C supporting,
+  // and the Reflective and Future Focused attribute. At grades 3-5 the question is
+  // "what am I good at?"; at grades 6-8 it is "what do I care about, and what do I
+  // do when it costs something?" The engine's `feelings` list holds the values
+  // here, and `contentPack.prompts` replaces the feelings wording. Design and
+  // approved outline: docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and
+  // VALUES_COMPASS_OUTLINE.md. A pool of 12 stories; 5 are drawn per run.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+
+  const contentPack = {
+    "title": "Values Compass",
+    "roundsPerRun": 5,
+    "prompts": {
+      "cues": "What do you notice in this story?",
+      "afterCues": "Good noticing. Now think about the values this shows.",
+      "pick": "Which values could this show? You can pick more than one.",
+      "confirmCues": "I've noticed these",
+      "confirmPick": "I've picked my values",
+      "multiLabel": "Times you saw more than one value"
+    },
+    "scenarios": [
+      {
+        "context": "Rin's group chat keeps making jokes about a quiet classmate. Rin writes, \"I'm out,\" and leaves the chat. She tells one friend why, and she keeps saying hi to the classmate in the hallway.",
+        "illustration": "💬",
+        "cues": [
+          {
+            "id": "v1-c1",
+            "text": "She tells the group that she is out.",
+            "present": true
+          },
+          {
+            "id": "v1-c4",
+            "text": "She joins in on the jokes.",
+            "present": false
+          },
+          {
+            "id": "v1-c2",
+            "text": "She explains it once to a friend.",
+            "present": true
+          },
+          {
+            "id": "v1-c3",
+            "text": "She keeps being friendly to the classmate.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v1-f1",
+            "text": "Fairness",
+            "tag": "plausible"
+          },
+          {
+            "id": "v1-f2",
+            "text": "Courage",
+            "tag": "plausible"
+          },
+          {
+            "id": "v1-f3",
+            "text": "Respect",
+            "tag": "plausible"
+          },
+          {
+            "id": "v1-f4",
+            "text": "Popularity",
+            "tag": "less_fitting",
+            "note": "Rin gave up being popular in this story, so this one fits less."
+          }
+        ],
+        "reinforcement": "Rin acted on what she thought was fair, and it took courage."
+      },
+      {
+        "context": "Dara is stuck on her science project the night before it is due. A friend offers to send her the answers. Dara says no thanks, stays up to finish it herself, and hands it in the next day.",
+        "illustration": "✏️",
+        "cues": [
+          {
+            "id": "v2-c1",
+            "text": "She says no to the offered answers.",
+            "present": true
+          },
+          {
+            "id": "v2-c2",
+            "text": "She stays up to finish her own work.",
+            "present": true
+          },
+          {
+            "id": "v2-c4",
+            "text": "She copies her friend's answers.",
+            "present": false
+          },
+          {
+            "id": "v2-c3",
+            "text": "She hands in her own project.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v2-f1",
+            "text": "Honesty",
+            "tag": "plausible"
+          },
+          {
+            "id": "v2-f2",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "v2-f3",
+            "text": "Perseverance",
+            "tag": "plausible"
+          },
+          {
+            "id": "v2-f4",
+            "text": "Winning",
+            "tag": "less_fitting",
+            "note": "The story is about doing the work, and winning is a smaller part of it."
+          }
+        ],
+        "reinforcement": "Dara's choice shows more than one value at once."
+      },
+      {
+        "context": "Eli promised to help his sister move into her first apartment on Saturday. Then his friends invite him to a big game that same day. Eli thanks his friends, says no, and shows up with boxes.",
+        "illustration": "📦",
+        "cues": [
+          {
+            "id": "v3-c1",
+            "text": "He tells his friends no, kindly.",
+            "present": true
+          },
+          {
+            "id": "v3-c4",
+            "text": "He skips the move without telling anyone.",
+            "present": false
+          },
+          {
+            "id": "v3-c2",
+            "text": "He shows up on Saturday as promised.",
+            "present": true
+          },
+          {
+            "id": "v3-c3",
+            "text": "He carries boxes all morning.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v3-f1",
+            "text": "Loyalty",
+            "tag": "plausible"
+          },
+          {
+            "id": "v3-f2",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "v3-f3",
+            "text": "Caring for family",
+            "tag": "plausible"
+          },
+          {
+            "id": "v3-f4",
+            "text": "Pleasing everyone",
+            "tag": "less_fitting",
+            "note": "Eli could not please everyone, so he chose. This one fits less."
+          }
+        ],
+        "reinforcement": "Keeping a promise can mean giving something up."
+      },
+      {
+        "context": "At the science museum, Mina reads every sign in the room about the stars. She asks the guide two questions, writes notes on her phone, and stays until closing time.",
+        "illustration": "🔭",
+        "cues": [
+          {
+            "id": "v4-c1",
+            "text": "She reads every sign.",
+            "present": true
+          },
+          {
+            "id": "v4-c2",
+            "text": "She asks the guide questions.",
+            "present": true
+          },
+          {
+            "id": "v4-c4",
+            "text": "She leaves after five minutes.",
+            "present": false
+          },
+          {
+            "id": "v4-c3",
+            "text": "She writes notes on her phone.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v4-f1",
+            "text": "Curiosity",
+            "tag": "plausible"
+          },
+          {
+            "id": "v4-f2",
+            "text": "Love of learning",
+            "tag": "plausible"
+          },
+          {
+            "id": "v4-f3",
+            "text": "Initiative",
+            "tag": "plausible"
+          },
+          {
+            "id": "v4-f4",
+            "text": "Being the best",
+            "tag": "less_fitting",
+            "note": "Nothing in the story is about being the best."
+          }
+        ],
+        "reinforcement": "Mina wanted to know more, and she went after it herself."
+      },
+      {
+        "context": "Omar starts learning the trumpet and sounds terrible at first. He practices every day, records himself to hear what to fix, and laughs when he hits a wrong note.",
+        "illustration": "🎺",
+        "cues": [
+          {
+            "id": "v5-c1",
+            "text": "He practices every day.",
+            "present": true
+          },
+          {
+            "id": "v5-c4",
+            "text": "He quits after the first week.",
+            "present": false
+          },
+          {
+            "id": "v5-c2",
+            "text": "He records himself to hear what to fix.",
+            "present": true
+          },
+          {
+            "id": "v5-c3",
+            "text": "He laughs at his mistakes.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v5-f1",
+            "text": "Perseverance",
+            "tag": "plausible"
+          },
+          {
+            "id": "v5-f2",
+            "text": "Humility",
+            "tag": "plausible"
+          },
+          {
+            "id": "v5-f3",
+            "text": "Growth",
+            "tag": "plausible"
+          },
+          {
+            "id": "v5-f4",
+            "text": "Natural talent",
+            "tag": "less_fitting",
+            "note": "Omar was not good at first. The story is about practice."
+          }
+        ],
+        "reinforcement": "Omar treats mistakes as information, and that helps him grow."
+      },
+      {
+        "context": "Ana's friends all join the soccer team, but Ana likes drawing more. She tells her friends kindly that she is joining the art club, and she still sits with them at lunch.",
+        "illustration": "🎨",
+        "cues": [
+          {
+            "id": "v6-c1",
+            "text": "She tells her friends kindly.",
+            "present": true
+          },
+          {
+            "id": "v6-c2",
+            "text": "She joins the art club.",
+            "present": true
+          },
+          {
+            "id": "v6-c4",
+            "text": "She stops talking to her friends.",
+            "present": false
+          },
+          {
+            "id": "v6-c3",
+            "text": "She still sits with her friends at lunch.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v6-f1",
+            "text": "Independence",
+            "tag": "plausible"
+          },
+          {
+            "id": "v6-f2",
+            "text": "Creativity",
+            "tag": "plausible"
+          },
+          {
+            "id": "v6-f3",
+            "text": "Self-awareness",
+            "tag": "plausible"
+          },
+          {
+            "id": "v6-f4",
+            "text": "Not caring about friends",
+            "tag": "less_fitting",
+            "note": "Ana still sits with her friends, so this one fits less."
+          }
+        ],
+        "reinforcement": "Ana made her own choice and kept her friendships."
+      },
+      {
+        "context": "In a class debate, Jin argues one side, then hears a good point from the other team. He says, \"I was wrong about that,\" thanks the other student, and asks a question.",
+        "illustration": "🗣️",
+        "cues": [
+          {
+            "id": "v7-c1",
+            "text": "He says that he was wrong.",
+            "present": true
+          },
+          {
+            "id": "v7-c4",
+            "text": "He keeps arguing no matter what.",
+            "present": false
+          },
+          {
+            "id": "v7-c2",
+            "text": "He thanks the other student.",
+            "present": true
+          },
+          {
+            "id": "v7-c3",
+            "text": "He asks a question.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v7-f1",
+            "text": "Humility",
+            "tag": "plausible"
+          },
+          {
+            "id": "v7-f2",
+            "text": "Honesty",
+            "tag": "plausible"
+          },
+          {
+            "id": "v7-f3",
+            "text": "Respect",
+            "tag": "plausible"
+          },
+          {
+            "id": "v7-f4",
+            "text": "Giving up easily",
+            "tag": "less_fitting",
+            "note": "Jin did not give up. He changed his mind for a reason, so this one fits less."
+          }
+        ],
+        "reinforcement": "Changing your mind for a good reason is a strength."
+      },
+      {
+        "context": "A classmate misses a week of school. Sofia, who is competing with her for the top grade, copies her notes and hands them over without being asked.",
+        "illustration": "📓",
+        "cues": [
+          {
+            "id": "v8-c1",
+            "text": "She copies her notes.",
+            "present": true
+          },
+          {
+            "id": "v8-c2",
+            "text": "She hands them over without being asked.",
+            "present": true
+          },
+          {
+            "id": "v8-c4",
+            "text": "She says that she is too busy.",
+            "present": false
+          },
+          {
+            "id": "v8-c3",
+            "text": "She does it even though they are competing.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v8-f1",
+            "text": "Generosity",
+            "tag": "plausible"
+          },
+          {
+            "id": "v8-f2",
+            "text": "Fairness",
+            "tag": "plausible"
+          },
+          {
+            "id": "v8-f3",
+            "text": "Community",
+            "tag": "plausible"
+          },
+          {
+            "id": "v8-f4",
+            "text": "Showing off",
+            "tag": "less_fitting",
+            "note": "Sofia shares quietly, so this one fits less."
+          }
+        ],
+        "reinforcement": "Sofia put the classmate first, even in a contest."
+      },
+      {
+        "context": "At a sleepover, someone dares Leo to prank a teacher by hiding her keys on Monday. Leo says, \"Not for me,\" suggests a card game, and walks away calmly.",
+        "illustration": "🃏",
+        "cues": [
+          {
+            "id": "v9-c1",
+            "text": "He says, \"Not for me.\"",
+            "present": true
+          },
+          {
+            "id": "v9-c4",
+            "text": "He agrees to do the prank.",
+            "present": false
+          },
+          {
+            "id": "v9-c2",
+            "text": "He suggests a card game.",
+            "present": true
+          },
+          {
+            "id": "v9-c3",
+            "text": "He stays calm.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v9-f1",
+            "text": "Self-respect",
+            "tag": "plausible"
+          },
+          {
+            "id": "v9-f2",
+            "text": "Good judgment",
+            "tag": "plausible"
+          },
+          {
+            "id": "v9-f3",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "v9-f4",
+            "text": "Fear of everyone",
+            "tag": "less_fitting",
+            "note": "Leo stays calm the whole time, so this one fits less."
+          }
+        ],
+        "reinforcement": "Leo knew what he would not do, and he said it without a fight."
+      },
+      {
+        "context": "After a busy week of tests and practices, Noor skips the weekend party. She turns off her phone, reads for an hour, and goes to bed early.",
+        "illustration": "📖",
+        "cues": [
+          {
+            "id": "v10-c1",
+            "text": "She turns off her phone.",
+            "present": true
+          },
+          {
+            "id": "v10-c2",
+            "text": "She reads for an hour.",
+            "present": true
+          },
+          {
+            "id": "v10-c4",
+            "text": "She stays up all night studying.",
+            "present": false
+          },
+          {
+            "id": "v10-c3",
+            "text": "She goes to bed early.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v10-f1",
+            "text": "Self-care",
+            "tag": "plausible"
+          },
+          {
+            "id": "v10-f2",
+            "text": "Balance",
+            "tag": "plausible"
+          },
+          {
+            "id": "v10-f3",
+            "text": "Self-awareness",
+            "tag": "plausible"
+          },
+          {
+            "id": "v10-f4",
+            "text": "Laziness",
+            "tag": "less_fitting",
+            "note": "Resting after a busy week is a way of taking care of yourself."
+          }
+        ],
+        "reinforcement": "Noor noticed what she needed and gave it to herself."
+      },
+      {
+        "context": "After the town festival, litter covers the park. Nobody asks him, but Theo brings a bag, starts picking it up, and asks a friend to join him.",
+        "illustration": "🌳",
+        "cues": [
+          {
+            "id": "v11-c1",
+            "text": "He brings a bag.",
+            "present": true
+          },
+          {
+            "id": "v11-c4",
+            "text": "He walks past and goes home.",
+            "present": false
+          },
+          {
+            "id": "v11-c2",
+            "text": "He starts picking up litter without being asked.",
+            "present": true
+          },
+          {
+            "id": "v11-c3",
+            "text": "He asks a friend to join him.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v11-f1",
+            "text": "Community",
+            "tag": "plausible"
+          },
+          {
+            "id": "v11-f2",
+            "text": "Responsibility",
+            "tag": "plausible"
+          },
+          {
+            "id": "v11-f3",
+            "text": "Initiative",
+            "tag": "plausible"
+          },
+          {
+            "id": "v11-f4",
+            "text": "Getting rewarded",
+            "tag": "less_fitting",
+            "note": "Nobody rewarded Theo, so this one fits less."
+          }
+        ],
+        "reinforcement": "Theo saw a need and acted on it."
+      },
+      {
+        "context": "Priya sees a friend being left out of a group at lunch. She speaks up once, then asks her friend how she wants to handle it. Her friend says that she would like to talk to the group herself.",
+        "illustration": "🍽️",
+        "cues": [
+          {
+            "id": "v12-c1",
+            "text": "She speaks up once.",
+            "present": true
+          },
+          {
+            "id": "v12-c2",
+            "text": "She asks her friend what she wants.",
+            "present": true
+          },
+          {
+            "id": "v12-c4",
+            "text": "She yells at the group.",
+            "present": false
+          },
+          {
+            "id": "v12-c3",
+            "text": "She lets her friend talk to the group herself.",
+            "present": true
+          }
+        ],
+        "feelings": [
+          {
+            "id": "v12-f1",
+            "text": "Loyalty",
+            "tag": "plausible"
+          },
+          {
+            "id": "v12-f2",
+            "text": "Respect",
+            "tag": "plausible"
+          },
+          {
+            "id": "v12-f3",
+            "text": "Listening",
+            "tag": "plausible"
+          },
+          {
+            "id": "v12-f4",
+            "text": "Taking control",
+            "tag": "less_fitting",
+            "note": "Priya asked first, so she did not take over."
+          }
+        ],
+        "reinforcement": "Standing up for someone can include letting them lead."
+      }
+    ],
+    "selfCheck": {
+      "prompt": "Does this matter to you?",
+      "options": [
+        {
+          "id": "yes",
+          "text": "Yes"
+        },
+        {
+          "id": "little",
+          "text": "A little"
+        },
+        {
+          "id": "not-sure",
+          "text": "Not sure"
+        }
+      ],
+      "bodyPrompt": "Where does it show up in your life?",
+      "bodyOptions": [
+        {
+          "id": "school",
+          "text": "At school"
+        },
+        {
+          "id": "home",
+          "text": "At home"
+        },
+        {
+          "id": "friends",
+          "text": "With friends"
+        },
+        {
+          "id": "elsewhere",
+          "text": "Somewhere else"
+        },
+        {
+          "id": "not-sure",
+          "text": "Not sure"
+        }
+      ],
+      "closing": "What you care about can change as you grow. No one else sees what you picked.",
+      "privateNote": "Your answers here are private and are not saved.",
+      "summaryLabel": "Times you thought about your own values"
+    }
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'scenarioChoice',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'values-compass-identity',
+    header: {
+      icon: '🧭',
+      title: 'Values Compass',
+      description: 'Notice what someone does, spot the values it shows, then think about your own.',
+    },
+  });
+</script>
+</body>
+</html>

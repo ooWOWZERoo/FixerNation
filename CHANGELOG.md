@@ -16,6 +16,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 83 — 2026-11-01 — Three more new brain games: Values Compass, Peace Table and Idea Lab
+
+- **New game: Values Compass** (grades 6 to 8). The student reads a short story, notices what really happens, and picks every value that could fit (nothing is scored, and no value is ranked). A private check about their own values follows and is never saved or sent. 12 stories, 5 per run. A second direct game for New York SEL 1B (identity and agency).
+- **New game: Peace Table** (grades 3 to 5). Two kids disagree, and the student works through saying what happened, listening, finding a fair plan and trying it. Four situations, one per run: a shared turn, a broken borrowed thing, a hurtful misunderstanding, and an argument about a call. A second direct game for SEL 2D (resolving conflict) and the first below grade 6.
+- **New game: Idea Lab** (grades 9 to 12). The student finds the real need, weighs three workable ideas (none is called best), and tests one small. Four situations, one per run: peer tutoring, snack-sale waste, announcements that reach everyone, and a garden fundraiser. A second direct game for the Creative Innovator attribute.
+- **All three appear in the games catalog and classroom assignments** once their catalog entries are added (three small scripts), and each earns a classroom completion badge (True North, Peacemaker, Bright Idea).
+- Pages, seed scripts and tests only; no server route changes and no engine changes.
+
+
 ## Release 82 — 2026-11-01 — Money Matters and Money Moves are now listed as SEL & Character games
 
 - **The two money games now carry the "SEL & Character" tag and filter** in the games catalog, instead of "Wellness & Life Skills". They practise setting a goal, making a plan and weighing tradeoffs, which are social-emotional skills, so the catalog now matches the standards mapping.
