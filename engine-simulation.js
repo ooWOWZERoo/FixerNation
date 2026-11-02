@@ -3,7 +3,7 @@
 // Matters.
 //
 // contentPack shape:
-// { title, goal, startingResources: {label: value, ...},
+// { title, goal, startingResources: {label: value, ...}, floor?: number, // floor: choices that would go below it are disabled
 //   events: [{ prompt, options: [{ id, label, delta: {label: number} }] }],
 //   debrief: (finalResources) => string }   // plain function — no server
 //   round-trip needed since this is a bounded, deterministic scenario
@@ -50,11 +50,19 @@
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
       list.className = 'fn-choice-list';
+      // Optional contentPack.floor (e.g. 0): a choice that would take a resource below it is shown but cannot be picked.
+      // Every event should keep one choice that costs nothing so a run can never get stuck.
+      const floor = typeof contentPack.floor === 'number' ? contentPack.floor : null;
       event.options.forEach((opt) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'fn-choice-btn band-aware tap-target';
         btn.textContent = opt.label;
+        const short = floor === null ? null : Object.entries(opt.delta || {}).find(([k, v]) => (resources[k] || 0) + v < floor);
+        if (short) {
+          btn.disabled = true;
+          btn.textContent = String(opt.label).replace(/[.]$/, '') + ' (not enough ' + short[0].toLowerCase() + ')';
+        }
         btn.addEventListener('click', () => pickOption(opt, btn, list, event));
         list.appendChild(btn);
       });

@@ -30,59 +30,390 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js"></script>
 <script src="engine-sdk.js?v=2"></script>
-<script src="engine-simulation.js"></script>
+<script src="engine-simulation.js?v=2"></script>
 <script>
-  // Money Moves - catalog scaling slice (Challenge band). Same Simulation
-  // engine as Money Matters, but a simpler resource set appropriate for
-  // grades 6-8 (no credit-score concept) per roadmap section 14.3. Amounts
-  // are chosen so every path stays non-negative regardless of earlier
-  // choices (min possible Savings before the last event is 65, and the
-  // used-bike option costs 60).
+  // Money Moves (Challenge band, grades 6-8). Reworked 2026-11-01 (docs/reference/OWNER_DECISIONS_RECOMMENDATIONS.md):
+  // a pool of 14 events with 6 drawn per run, percent and arithmetic in the choices (discounts, sales tax, a savings match,
+  // a loan with 10 percent extra), needs versus wants, and an ending that uses BOTH counters, with several good endings.
+  // `floor: 0` means a choice you cannot afford is shown but cannot be picked. Every event has a free option, so a run can
+  // never get stuck. Fictional person and amounts; not financial advice.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'challenge';
 
   const contentPack = {
     title: 'Money Moves',
-    goal: 'Save $120 total for the bike you want, while keeping enough spending money for things you enjoy along the way.',
-    startingResources: { Savings: 30, 'Spending Money': 20 },
+    goal: 'Your goal this season is to build your bike fund from $20 to $60 while keeping at least $10 of spending money.',
+    startingResources: { Savings: 20, 'Spending Money': 20 },
+    floor: 0,
+    roundsPerRun: 6,
     events: [
       {
-        prompt: 'Your $40 monthly allowance arrives. How much goes toward the bike?',
-        options: [
-          { id: 'save-all', label: 'Save the full $40 toward the bike.', delta: { Savings: 40 } },
-          { id: 'save-half', label: 'Save $20 and keep $20 as spending money.', delta: { Savings: 20, 'Spending Money': 20 } },
-        ],
+        "prompt": "Your $40 allowance arrives. The 10 percent rule says to save 10 percent first, which is $4. What do you do?",
+        "options": [
+          {
+            "id": "rule",
+            "label": "Save $4 (10 percent) and keep $36 to spend.",
+            "delta": {
+              "Savings": 4,
+              "Spending Money": 36
+            }
+          },
+          {
+            "id": "half",
+            "label": "Save half, $20, and keep $20 to spend.",
+            "delta": {
+              "Savings": 20,
+              "Spending Money": 20
+            }
+          },
+          {
+            "id": "all",
+            "label": "Save all $40.",
+            "delta": {
+              "Savings": 40
+            }
+          }
+        ]
       },
       {
-        prompt: 'A friend invites you to a $20 movie night. Do you go?',
-        options: [
-          { id: 'go-movie', label: 'Go to the movie ($20 from spending money).', delta: { 'Spending Money': -20 } },
-          { id: 'skip-movie', label: 'Skip it and add $20 more to savings instead.', delta: { Savings: 20 } },
-        ],
+        "prompt": "A $32 helmet is 25 percent off at the bike shop, so it costs $24. Your old helmet still fits.",
+        "options": [
+          {
+            "id": "helmet-spend",
+            "label": "Buy the new helmet with spending money ($24).",
+            "delta": {
+              "Spending Money": -24
+            }
+          },
+          {
+            "id": "keep-old",
+            "label": "Keep your old helmet and skip the sale.",
+            "delta": {}
+          },
+          {
+            "id": "helmet-save",
+            "label": "Buy the new helmet with savings ($24).",
+            "delta": {
+              "Savings": -24
+            }
+          }
+        ]
       },
       {
-        prompt: 'You take on extra chores and earn a $30 bonus. Where does it go?',
-        options: [
-          { id: 'bonus-save', label: 'Put the whole $30 toward the bike.', delta: { Savings: 30 } },
-          { id: 'bonus-split', label: 'Split it: $15 to savings, $15 to spending money.', delta: { Savings: 15, 'Spending Money': 15 } },
-        ],
+        "prompt": "Two shops sell the same $40 sneakers. Shop A takes 25 percent off, so they cost $30. Shop B takes $8 off, so they cost $32. Your sneakers are worn out.",
+        "options": [
+          {
+            "id": "shop-a",
+            "label": "Buy at Shop A for $30.",
+            "delta": {
+              "Spending Money": -30
+            }
+          },
+          {
+            "id": "shop-b",
+            "label": "Buy at Shop B for $32.",
+            "delta": {
+              "Spending Money": -32
+            }
+          },
+          {
+            "id": "used",
+            "label": "Buy a used pair for $12.",
+            "delta": {
+              "Spending Money": -12
+            }
+          },
+          {
+            "id": "wait-shoes",
+            "label": "Keep wearing your old pair for now.",
+            "delta": {}
+          }
+        ]
       },
       {
-        prompt: 'You are getting close. A good used bike is available right now for $60, or you can keep saving for the $120 bike you really want.',
-        options: [
-          { id: 'buy-used', label: 'Buy the $60 used bike now with your savings.', delta: { Savings: -60 } },
-          { id: 'keep-saving', label: 'Keep saving for the bike you really want.', delta: {} },
-        ],
+        "prompt": "A $25 game has 8 percent sales tax, so you would pay $27 at the register.",
+        "options": [
+          {
+            "id": "game",
+            "label": "Buy the game ($27).",
+            "delta": {
+              "Spending Money": -27
+            }
+          },
+          {
+            "id": "wait-game",
+            "label": "Wait a month and decide then.",
+            "delta": {}
+          },
+          {
+            "id": "gift",
+            "label": "Ask for it as a birthday present.",
+            "delta": {}
+          }
+        ]
       },
+      {
+        "prompt": "Your family will add 10 percent to whatever you move into savings this month. If you move $20, they add $2.",
+        "options": [
+          {
+            "id": "match20",
+            "label": "Move $20 into savings and get $22 there.",
+            "delta": {
+              "Savings": 22,
+              "Spending Money": -20
+            }
+          },
+          {
+            "id": "match10",
+            "label": "Move $10 into savings and get $11 there.",
+            "delta": {
+              "Savings": 11,
+              "Spending Money": -10
+            }
+          },
+          {
+            "id": "no-match",
+            "label": "Skip it this month.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Your bike tire goes flat. A repair costs $12.",
+        "options": [
+          {
+            "id": "repair-spend",
+            "label": "Pay from spending money.",
+            "delta": {
+              "Spending Money": -12
+            }
+          },
+          {
+            "id": "repair-save",
+            "label": "Pay from savings.",
+            "delta": {
+              "Savings": -12
+            }
+          },
+          {
+            "id": "repair-chores",
+            "label": "Do extra chores to earn the $12, then pay it.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "Your class is collecting $5 each for a teacher's gift.",
+        "options": [
+          {
+            "id": "chip-in",
+            "label": "Chip in $5.",
+            "delta": {
+              "Spending Money": -5
+            }
+          },
+          {
+            "id": "card",
+            "label": "Make a card instead, with about $1 of supplies.",
+            "delta": {
+              "Spending Money": -1
+            }
+          },
+          {
+            "id": "skip-gift",
+            "label": "Skip it this time.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "A game app costs $4 a month. You played it twice this month.",
+        "options": [
+          {
+            "id": "keep-app",
+            "label": "Keep it for another month.",
+            "delta": {
+              "Spending Money": -4
+            }
+          },
+          {
+            "id": "cancel",
+            "label": "Cancel it.",
+            "delta": {}
+          },
+          {
+            "id": "cancel-save",
+            "label": "Cancel it and move the $4 into savings.",
+            "delta": {
+              "Savings": 4,
+              "Spending Money": -4
+            }
+          }
+        ]
+      },
+      {
+        "prompt": "Your lunch box broke. A plain one costs $10. A cartoon one costs $18.",
+        "options": [
+          {
+            "id": "plain",
+            "label": "Buy the plain one ($10).",
+            "delta": {
+              "Spending Money": -10
+            }
+          },
+          {
+            "id": "cartoon",
+            "label": "Buy the cartoon one ($18).",
+            "delta": {
+              "Spending Money": -18
+            }
+          },
+          {
+            "id": "paper-bag",
+            "label": "Use a paper bag for now.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "A neighbor pays you $30 for raking leaves.",
+        "options": [
+          {
+            "id": "rake-save",
+            "label": "Save all $30.",
+            "delta": {
+              "Savings": 30
+            }
+          },
+          {
+            "id": "rake-split",
+            "label": "Save $20 and keep $10 to spend.",
+            "delta": {
+              "Savings": 20,
+              "Spending Money": 10
+            }
+          },
+          {
+            "id": "rake-spend",
+            "label": "Keep all $30 to spend.",
+            "delta": {
+              "Spending Money": 30
+            }
+          }
+        ]
+      },
+      {
+        "prompt": "A $20 toy is 30 percent off, so it costs $14. It was not on your list.",
+        "options": [
+          {
+            "id": "toy",
+            "label": "Buy it ($14).",
+            "delta": {
+              "Spending Money": -14
+            }
+          },
+          {
+            "id": "toy-save",
+            "label": "Skip it and move the $14 you would have spent into savings.",
+            "delta": {
+              "Savings": 14,
+              "Spending Money": -14
+            }
+          },
+          {
+            "id": "toy-wait",
+            "label": "Wait a week and see if you still want it.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "School lunch costs $4 a day. Packing lunch from home costs about $2. That is a school week of 5 days.",
+        "options": [
+          {
+            "id": "pack5",
+            "label": "Pack lunch all week and save the $10 difference.",
+            "delta": {
+              "Savings": 10
+            }
+          },
+          {
+            "id": "pack3",
+            "label": "Pack three days and buy two, saving $6.",
+            "delta": {
+              "Savings": 6
+            }
+          },
+          {
+            "id": "buy5",
+            "label": "Buy lunch every day.",
+            "delta": {}
+          }
+        ]
+      },
+      {
+        "prompt": "You sell old toys and books at a garage sale and earn $15.",
+        "options": [
+          {
+            "id": "sale-save",
+            "label": "Save it all.",
+            "delta": {
+              "Savings": 15
+            }
+          },
+          {
+            "id": "sale-split",
+            "label": "Save $8 and keep $7 to spend.",
+            "delta": {
+              "Savings": 8,
+              "Spending Money": 7
+            }
+          },
+          {
+            "id": "sale-spend",
+            "label": "Keep it all to spend.",
+            "delta": {
+              "Spending Money": 15
+            }
+          }
+        ]
+      },
+      {
+        "prompt": "A cousin offers to lend you $20 today if you pay back 10 percent extra later, which is $22.",
+        "options": [
+          {
+            "id": "borrow20",
+            "label": "Borrow $20 now and pay back $22 from savings.",
+            "delta": {
+              "Spending Money": 20,
+              "Savings": -22
+            }
+          },
+          {
+            "id": "borrow10",
+            "label": "Borrow $10 now and pay back $11 from savings.",
+            "delta": {
+              "Spending Money": 10,
+              "Savings": -11
+            }
+          },
+          {
+            "id": "no-borrow",
+            "label": "Do not borrow.",
+            "delta": {}
+          }
+        ]
+      }
     ],
     debrief(final) {
-      if (final.Savings >= 120) {
-        return 'You saved enough for the exact bike you wanted. Steady saving got you all the way there.';
-      }
-      if (final.Savings < 65) {
-        return 'You got a good bike sooner by choosing the more affordable one. Getting what you need now is its own kind of smart choice.';
-      }
-      return 'You are building real savings toward the bike you want. There is more than one smart way to get there, and steady saving is one of them.';
+      const GOAL = 60, MIN_FUN = 10;
+      const saved = final.Savings, fun = final['Spending Money'];
+      const tally = ' You finished with $' + saved + ' in your bike fund and $' + fun + ' to spend.';
+      if (saved >= GOAL && fun >= MIN_FUN) return 'You reached your goal and still have money to enjoy.' + tally + ' There is more than one way to get there, and you found one.';
+      if (saved >= GOAL) return 'You reached your goal, and spending money got tight along the way.' + tally + ' That is a real tradeoff, and some people would choose it on purpose.';
+      if (saved >= GOAL * 2 / 3) return 'You are close to your goal.' + tally + ' A little more saving next season would get you there.';
+      if (fun >= 30) return 'You kept plenty to spend and built a smaller bike fund.' + tally + ' If the bike matters most, try moving a bit more to savings next time.';
+      return 'You are off to a slow start, and that is normal for a first season.' + tally + ' Try a different mix and see how it changes.';
     },
   };
 
@@ -103,7 +434,7 @@
     header: {
       icon: '🚲',
       title: 'Money Moves',
-      description: 'Manage your allowance and chore money toward a savings goal. There is more than one way to do it well.',
+      description: 'Manage your allowance and odd-job money toward a savings goal. Every run brings different choices, and there is more than one way to do it well.',
     },
   });
 </script>

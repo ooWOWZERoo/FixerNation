@@ -237,3 +237,39 @@ for (const slug of ['choice-quest', 'team-pick']) {
     assert.equal(seen.size, 4);
   });
 }
+
+// Money Moves (reworked 2026-11-01): a 14-event pool, 6 drawn per run, an affordability floor, and endings that use both counters.
+test('MONEY MOVES: every event has a free choice, so a run can never get stuck on the affordability floor', () => {
+  const g = REAL.find((x) => x.slug === 'money-moves');
+  assert.equal(g.pack.events.length, 14);
+  assert.equal(g.pack.roundsPerRun, 6);
+  assert.equal(g.pack.floor, 0);
+  g.pack.events.forEach((e, i) => {
+    assert.ok(e.options.length >= 3, `event ${i + 1}: three or more choices`);
+    assert.ok(e.options.some((o) => Object.values(o.delta || {}).every((v) => v >= 0)), `event ${i + 1}: at least one choice costs nothing`);
+    assert.ok(!/[–—]/.test(e.prompt + e.options.map((o) => o.label).join(' ')), `event ${i + 1}: no dashes`);
+  });
+});
+
+test('MONEY MOVES: simulated runs never go below zero, and every one of the five endings can be reached', () => {
+  const g = REAL.find((x) => x.slug === 'money-moves');
+  const pack = g.pack;
+  let seedN = 1;
+  const seen = new Set();
+  for (let run = 0; run < 4000; run++) {
+    const prepared = prep(pack, 'simulation', seedN++).pack;
+    assert.equal(prepared.events.length, 6);
+    const res = { ...pack.startingResources };
+    // a different "player" each run: random affordable choice
+    const pick = sdk.mulberry32(run + 77);
+    for (const e of prepared.events) {
+      const ok = e.options.filter((o) => Object.entries(o.delta || {}).every(([k, v]) => (res[k] || 0) + v >= 0));
+      assert.ok(ok.length >= 1, 'a free choice is always available');
+      const o = ok[Math.floor(pick() * ok.length)];
+      Object.entries(o.delta || {}).forEach(([k, v]) => { res[k] = (res[k] || 0) + v; });
+      assert.ok(Object.values(res).every((v) => v >= 0), 'no counter goes negative');
+    }
+    seen.add(pack.debrief(res).split('.')[0]);
+  }
+  assert.equal(seen.size, 5, `endings reached: ${[...seen].join(' | ')}`);
+});

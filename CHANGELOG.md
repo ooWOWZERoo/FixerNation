@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 72 — 2026-11-01 — Money Moves reworked
+
+- **Money Moves is a different game each run.** A pool of 14 events with 6 drawn per run, so no two plays match. The math is real: discounts, sales tax, a savings match and a loan with 10 percent extra to pay back.
+- **Needs versus wants, with a real limit.** A choice you can't afford shows greyed out with a note about what is short, and every event keeps one choice that costs nothing, so nobody gets stuck.
+- **Five kind endings** that use both counters (Savings and Spending Money), so the ending reflects how the child balanced them.
+
 ## Release 71 — 2026-11-01 — District dashboard, rewritten first stories, and a clearer count in scenario games
 
 - **District administrators now land on a real dashboard.** It shows schools, seats in use, active teachers and school administrators, plus a "needs your attention" list (a purchase order not yet received, a license ending within 90 days, a school with no administrator, few seats in use 60 days after a start, a school nearly full), a table of schools, and a Portrait of a Graduate summary. Counts only: no teacher names or student data. Seat counts for a district's schools now come from one batch query that matches the single-school rule.
