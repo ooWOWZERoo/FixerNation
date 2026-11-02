@@ -37,7 +37,7 @@ const board: Storyboard = {
       run: (p) => glideTo(p, "#daLicenseBanner"),
     },
     {
-      say: "The dashboard shows your district's name, and a button to manage your district branding.",
+      say: "The dashboard shows how your district is doing: how many schools you have, how many seats are in use, and how many teachers are active. Below that is a short list of anything that needs your attention, a table of your schools, and a summary of your Portrait of a Graduate.",
       run: (p) => glideTo(p, "main, .sa-content"),
     },
     {

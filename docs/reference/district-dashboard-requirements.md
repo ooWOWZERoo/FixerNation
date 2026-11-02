@@ -1,6 +1,6 @@
-# District dashboard (requirements, DRAFT awaiting confirmation)
+# District dashboard (requirements)
 
-Written 2026-10-31. Nothing is built. Access-related, so the rules are confirmed first and the code is written once.
+Written 2026-10-31. **Decisions confirmed by the owner 2026-11-01 (counts only; expiring flagged at 90 days, not 60; nearly-full kept as good news; a low-adoption alert added; the Portrait of a Graduate tile included). Built and tested 2026-11-01, not yet deployed.** Final thresholds in code (`lib/district-dashboard.js`): ends within 90 days; seats in use 90 percent or more; under 25 percent of seats in use 60 days after the license started. Access-related, so the rules are confirmed first and the code is written once.
 
 ## The problem
 

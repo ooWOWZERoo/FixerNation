@@ -30,13 +30,37 @@
     <div class="sa-content">
       <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
       <div id="pageContent" style="display:none;">
-        <div class="sa-card" style="max-width:560px;">
-          <div class="sa-card-head"><h2 id="welcomeDistrictName">Your District</h2></div>
-          <p style="font-size:13.5px;color:var(--sa-text-soft);margin-bottom:16px;">
-            As a District Administrator, you can set default branding — a logo and colors — that every school in your
-            district inherits automatically, unless that school has published its own branding.
+        <h2 id="welcomeDistrictName" style="font-size:20px;margin-bottom:14px;">Your District</h2>
+
+        <div id="emptyDistrict" class="sa-card" style="display:none;margin-bottom:20px;">
+          <p style="font-size:13.5px;color:var(--sa-text-soft);">No licensed schools in this district yet. When a school in your district buys a group license, it appears here. Questions? Email <a href="mailto:support@fixernationeducation.com">support@fixernationeducation.com</a>.</p>
+        </div>
+
+        <div id="statCards" class="sa-stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:20px;"></div>
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>Needs your attention</h2></div>
+          <div id="attention"></div>
+        </div>
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>Your schools</h2><a class="sa-btn sa-btn-ghost sa-btn-sm" href="district-admin-schools.html">Manage schools and administrators</a></div>
+          <div id="schoolsTable"></div>
+        </div>
+
+        <div class="sa-card" style="margin-bottom:20px;">
+          <div class="sa-card-head"><h2>Portrait of a Graduate</h2><a class="sa-btn sa-btn-ghost sa-btn-sm" href="district-admin-standards.html">Open</a></div>
+          <div id="portrait" style="font-size:13.5px;color:var(--sa-text-soft);"></div>
+        </div>
+
+        <div class="sa-card">
+          <div class="sa-card-head"><h2>Quick links</h2></div>
+          <p style="font-size:13.5px;line-height:2;">
+            <a href="district-admin-branding.html">Set district branding</a> ·
+            <a href="district-admin-schools.html">Schools and administrators</a> ·
+            <a href="district-admin-standards.html">Portrait of a Graduate</a> ·
+            <a href="help-videos.html">Help videos</a>
           </p>
-          <a class="sa-btn sa-btn-primary" href="district-admin-branding.html">Manage District Branding</a>
         </div>
       </div>
     </div>
@@ -44,13 +68,75 @@
 </div>
 
 <script>
+function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\'/g, '&#39;'); }
+
 document.addEventListener('daReady', function (e) {
   var data = e.detail;
   var name = (data.districts && data.districts[0] && data.districts[0].districtName) || 'Your District';
   document.getElementById('welcomeDistrictName').textContent = name;
+  loadDashboard();
+});
+document.addEventListener('daDistrictChanged', loadDashboard);
+
+async function loadDashboard() {
+  try {
+    var id = window.daActiveDistrictId ? window.daActiveDistrictId() : null;
+    var d = await daFetch('/api/district-admin/dashboard' + (id ? '?districtId=' + id : ''));
+    if (window.daPortalData && window.daPortalData.districts) {
+      var match = window.daPortalData.districts.filter(function (x) { return x.districtId === id; })[0];
+      if (match) document.getElementById('welcomeDistrictName').textContent = match.districtName;
+    }
+    render(d);
+  } catch (err) {
+    daToast('Could not load the dashboard: ' + err.message, 'error');
+  }
   document.getElementById('pageLoading').style.display = 'none';
   document.getElementById('pageContent').style.display = 'block';
-});
+}
+
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+function render(d) {
+  var s = d.stats;
+  document.getElementById('emptyDistrict').style.display = d.schools.length ? 'none' : 'block';
+  document.getElementById('statCards').innerHTML =
+    card('Schools', s.schools, 'with a group license', '') +
+    card('Seats in use', s.seatsAssigned + ' of ' + s.seatsTotal, s.pctUsed + '% of purchased seats', 'accent') +
+    card('Active teachers', s.activeTeachers, 'signed up and using a seat', 'success') +
+    card('School administrators', s.schoolAdmins, 'across your schools', '');
+
+  var a = d.attention, items = [];
+  a.awaitingPO.forEach(function (x) { items.push('<strong>' + esc(x.school) + '</strong> is waiting for its purchase order. Teachers can be invited as soon as we have it.'); });
+  a.expiring.forEach(function (x) { items.push('<strong>' + esc(x.school) + '</strong> ends in ' + plural(x.daysLeft, 'day', 'days') + ' (' + esc(x.expires) + '). <a href="mailto:support@fixernationeducation.com">Contact us about renewing.</a>'); });
+  a.noAdmin.forEach(function (x) { items.push('<strong>' + esc(x.school) + '</strong> has no school administrator yet. <a href="district-admin-schools.html">Invite one.</a>'); });
+  a.lowAdoption.forEach(function (x) { items.push('<strong>' + esc(x.school) + '</strong> has ' + x.assigned + ' of ' + x.total + ' seats in use. A reminder to teachers about their invitations may help.'); });
+  a.nearlyFull.forEach(function (x) { items.push('<strong>' + esc(x.school) + '</strong> has ' + x.assigned + ' of ' + x.total + ' seats in use, so it is nearly full. <a href="mailto:support@fixernationeducation.com">Ask us to add seats.</a>'); });
+  document.getElementById('attention').innerHTML = items.length
+    ? '<ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.9;">' + items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>'
+    : '<p style="font-size:13.5px;color:var(--sa-text-soft);">Nothing needs your attention right now.</p>';
+
+  document.getElementById('schoolsTable').innerHTML = d.schools.length
+    ? '<div style="overflow-x:auto;"><table class="sa-table" style="width:100%;font-size:13px;min-width:560px;"><thead><tr><th style="text-align:left;">School</th><th style="text-align:left;">Plan</th><th style="text-align:left;">Seats in use</th><th style="text-align:left;">Ends</th><th style="text-align:left;">Status</th><th style="text-align:left;">Admins</th></tr></thead><tbody>' +
+      d.schools.map(function (r) {
+        return '<tr><td>' + esc(r.school) + '</td><td>' + esc(r.plan) + '</td><td>' + r.seats.assigned + ' of ' + r.seats.total + ' (' + r.seats.pctUsed + '%)</td><td>' + esc(r.expires || '') + '</td><td>' + esc(r.status) + '</td><td>' + r.admins + '</td></tr>';
+      }).join('') + '</tbody></table></div>'
+    : '';
+
+  var p = d.portrait, el = document.getElementById('portrait');
+  if (p.published) {
+    el.innerHTML = '<strong style="color:var(--sa-text);">' + p.attributesWithVerifiedConnection + ' of ' + p.attributes + '</strong> attributes in your published Portrait of a Graduate have a Fixer Nation connection we have verified.';
+  } else if (p.inReview) {
+    el.textContent = 'Your Portrait of a Graduate is with Fixer Nation for review. We will publish it once we have written and checked the connections.';
+  } else if (p.draft) {
+    el.textContent = 'Your Portrait of a Graduate is saved as a draft. Submit it when you are ready and we will review it.';
+  } else {
+    el.textContent = 'Record your district\'s Portrait of a Graduate and we will show how Fixer Nation lines up with it.';
+  }
+}
+
+function card(label, value, sub, cls) {
+  return '<div class="sa-stat-card ' + cls + '"><div class="label">' + esc(label) + '</div><div class="value">' + esc(value) + '</div><div class="sub">' + esc(sub) + '</div></div>';
+}
 </script>
 <script src="help-videos.js?v=7" defer></script>
 </body>

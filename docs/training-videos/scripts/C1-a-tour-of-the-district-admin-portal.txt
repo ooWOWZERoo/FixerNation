@@ -11,7 +11,7 @@
 [SCREEN] The license banner, if any school is expired or expiring.
 [SAY] A banner appears across the top when any school in your district has a license that has expired, or will expire within thirty days. It links to the Schools page, so you can see which one.
 [SCREEN] The dashboard.
-[SAY] The dashboard shows your district's name, and a button to manage your district branding.
+[SAY] The dashboard shows how your district is doing: how many schools you have, how many seats are in use, and how many teachers are active. Below that is a short list of anything that needs your attention, a table of your schools, and a summary of your Portrait of a Graduate.
 [SCREEN] Open Branding, then Schools, then Portrait of a Graduate.
 [SAY] Branding sets the default logo and colors for the schools in your district. Schools lists every licensed school and its administrators, and it's where you invite school administrators. Portrait of a Graduate is where you record your district's own graduate profile and send it to us for review.
 [SAY] Each of those has its own video. You can find them from the Help videos link, or from the how-to video button in the corner of the page.

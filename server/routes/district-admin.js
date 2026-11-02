@@ -23,6 +23,8 @@ const {
   updateSchoolAdminAssignment,
 } = require('../lib/school-admin-assignment');
 
+const { loadDashboard } = require('../lib/district-dashboard');
+
 const router = express.Router();
 
 function resolveDistrictId(req) {
@@ -44,6 +46,14 @@ function pickBranding(row, prefix) {
   });
   return out;
 }
+
+// GET /api/district-admin/dashboard?districtId= -- the landing page: counts and school-level facts for this district
+// only (lib/district-dashboard.js). Never teacher names or student data.
+router.get('/dashboard', requireDistrictAdmin, async (req, res) => {
+  const districtId = resolveDistrictId(req);
+  if (!districtId) return res.status(403).json({ error: 'Access denied' });
+  res.json(await loadDashboard(req.districtAdmin.districtIds, districtId));
+});
 
 // GET /api/district-admin/me
 router.get('/me', requireDistrictAdmin, (req, res) => {
