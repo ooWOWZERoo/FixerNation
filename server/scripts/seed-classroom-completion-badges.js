@@ -62,6 +62,10 @@ const BADGES = [
     description: 'Completed Sharing Circle through a classroom assignment.' },
   { gameSlug: 'helpers-choice', slug: 'honest-helper', name: 'Honest Helper', emoji: '✋',
     description: "Completed Helper's Choice through a classroom assignment." },
+  { gameSlug: 'say-it-another-way', slug: 'clear-communicator', name: 'Clear Communicator', emoji: '💬',
+    description: 'Completed Say It Another Way through a classroom assignment.' },
+  { gameSlug: 'fix-it-workshop', slug: 'idea-builder', name: 'Idea Builder', emoji: '🛠️',
+    description: 'Completed Fix-It Workshop through a classroom assignment.' },
 ];
 
 async function main() {

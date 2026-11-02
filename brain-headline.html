@@ -32,79 +32,234 @@
 <script src="engine-sdk.js?v=2"></script>
 <script src="engine-evidence-hunt.js"></script>
 <script>
-  // Headline - catalog scaling slice (Challenge band). Same Evidence Hunt
-  // engine as Reading Detective. Content is deliberately non-partisan
-  // school-news style items per roadmap section 14.3's acceptance rule
-  // ("avoids partisan persuasion and presents sources/context fairly").
+  // Headline - grades 6-8. Same Evidence Hunt engine as Reading Detective.
+  // Content is deliberately non-partisan school-news style items per roadmap
+  // section 14.3's acceptance rule ("avoids partisan persuasion and presents
+  // sources/context fairly").
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'challenge';
 
   const contentPack = {
     title: 'Headline',
+    // A pool of 12 news snippets with numbers; 6 are drawn per run and the headlines are shuffled each time.
+    // Design and approved outline: docs/tune-your-brain/READING_GAMES_DESIGN.md and HEADLINE_OUTLINE.md.
+    roundsPerRun: 6,
     items: [
       {
         passage: [
-          'The school\'s recycling program collected 200 pounds of paper this month.',
-          'That is about 20 pounds more than last month.',
-          'Ms. Rivera said the increase came from the new classroom bins.',
+          'The student council at Pine Hill Middle School conducted a survey to learn how students usually travel to school each morning.',
+          'This year, 54 of the 120 students who answered the survey said that they walk.',
+          'Last year, 45 of the 90 students who answered the survey said that they walk.',
+          'The council plans to repeat the survey in the spring to see whether habits change.',
         ],
-        question: 'Which headline best matches what actually happened?',
+        question: 'Which headline is most accurate?',
         choices: [
-          { id: 'steady', text: 'Recycling Program Sees Small, Steady Increase' },
-          { id: 'exploding', text: 'Recycling Numbers Are Exploding School-Wide' },
-          { id: 'failing', text: 'School Recycling Program Is Failing Students' },
+          { id: 'share', text: 'Smaller Share of Surveyed Students Walk to School Than Last Year' },
+          { id: 'count', text: 'More Students Walk to School This Year Than Last Year, Survey Finds' },
+          { id: 'half', text: 'Nearly Half of Students Say They Walk to School Every Single Day' },
+          { id: 'spring', text: 'Student Council Plans a Spring Survey About How Students Get to School' },
         ],
-        correctChoiceId: 'steady',
-        correctEvidenceIndex: 1,
-        explanation: '20 pounds more is a real increase, but it is a small, steady one, not an explosion and not a failure.',
+        correctChoiceId: 'share',
+        correctEvidenceIndex: 2,
+        explanation: 'This year 54 of 120 is 45 percent. Last year 45 of 90 was 50 percent. The count went up, but the share went down. Nothing says the students walk every day, and the spring survey is true but not the main fact.',
       },
       {
         passage: [
-          'The chess club\'s bake sale raised $85 for new chess sets.',
-          'That is less than the $150 goal the club had hoped for.',
-          'Club president Adam said they plan to try again next month.',
+          'In the month after evening hours began at the Lakeview Library, there were 180 visits, compared with 120 visits the month before.',
+          'Evening hours are the only change the library made during those two months.',
+          'The library counts a visit each time someone scans a card at the door.',
+          'Librarian Ms. Okafor said staff will keep counting through the spring.',
         ],
-        question: 'Which headline best matches what actually happened?',
+        question: 'Which headline is most accurate?',
         choices: [
-          { id: 'short', text: 'Bake Sale Falls Short of Goal, Club Plans Another Try' },
-          { id: 'disaster', text: 'Chess Club Bake Sale a Total Disaster' },
-          { id: 'success', text: 'Chess Club Reaches Fundraising Goal' },
+          { id: 'fifty', text: 'Library Visits Rise 50 Percent After Evening Hours Begin' },
+          { id: 'double', text: 'Library Visits Double Once the Doors Stay Open Later' },
+          { id: 'small', text: 'Library Sees Only a Small Bump After Adding Evening Hours' },
+          { id: 'read', text: 'Longer Hours Are the Reason Students Are Reading More' },
         ],
-        correctChoiceId: 'short',
-        correctEvidenceIndex: 1,
-        explanation: '$85 is real progress toward $150, not a disaster, and it is not the full goal either, so "reached the goal" is not accurate.',
-      },
-      {
-        passage: [
-          'The cafeteria tried a new vegetarian lunch option this week.',
-          'About a third of students who tried it said they would order it again.',
-          'The cafeteria manager said they will keep testing new options each month.',
-        ],
-        question: 'Which headline best matches what actually happened?',
-        choices: [
-          { id: 'mixed', text: 'New Lunch Option Gets Mixed Reactions, More Tests Ahead' },
-          { id: 'hated', text: 'Students Hate New Cafeteria Food' },
-          { id: 'loved', text: 'New Lunch Option Is an Instant Hit' },
-        ],
-        correctChoiceId: 'mixed',
-        correctEvidenceIndex: 1,
-        explanation: 'A third of students wanting it again is a mixed result, not universal hate and not an instant hit.',
-      },
-      {
-        passage: [
-          'Spirit Week had more students dress up than last year.',
-          'Tuesday\'s theme had the highest turnout of the week.',
-          'Teachers said hallway noise was also louder than usual.',
-        ],
-        question: 'Which headline best matches what actually happened?',
-        choices: [
-          { id: 'grew', text: 'Spirit Week Participation Grows From Last Year' },
-          { id: 'record', text: 'Spirit Week Sets All-Time School Record' },
-          { id: 'chaos', text: 'Spirit Week Turns Into Total Chaos' },
-        ],
-        correctChoiceId: 'grew',
+        correctChoiceId: 'fifty',
         correctEvidenceIndex: 0,
-        explanation: 'More than last year is real growth. There is no evidence here about an all-time record, and louder hallways is not the same as chaos.',
+        explanation: '180 is 60 more than 120, and 60 is half of 120, so visits rose 50 percent. That is not double, and it is not a small bump. The passage counts visits, not books read, so it cannot say students are reading more.',
+      },
+      {
+        passage: [
+          'Members of the Garden Club held a bake sale in the front hall of the school on Friday afternoon.',
+          'The sale raised $85 toward the club\'s goal of $150 for new gardening tools.',
+          'Treasurer Priya said the club will hold a second sale in two weeks to raise more money.',
+          'Most of the baked goods had sold out before the end of the afternoon.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'half', text: 'Bake Sale Raises Over Half Its Goal, and Club Plans Another' },
+          { id: 'goal', text: 'Garden Club Bake Sale Reaches Its Goal for New Garden Tools' },
+          { id: 'little', text: 'Garden Club Bake Sale Raises Very Little Toward Its Goal' },
+          { id: 'full', text: 'Garden Club Raises the Full $150 in One Day for New Tools' },
+        ],
+        correctChoiceId: 'half',
+        correctEvidenceIndex: 1,
+        explanation: '$85 out of $150 is a little more than half. The club did not reach its goal, and it did not raise very little either. The $150 is the goal, not the amount raised.',
+      },
+      {
+        passage: [
+          'The Westbrook Science Fair had 48 projects this year.',
+          'Last year it had 60 projects.',
+          'This year only students in grades 4 to 8 could enter, while last year students in grades 3 to 8 could.',
+          'The organizers will decide in June whether to let third graders enter again.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'fewer', text: 'Fewer Projects This Year, but Fewer Grades Could Enter' },
+          { id: 'fading', text: 'Science Fair Interest Is Fading Among Students' },
+          { id: 'half', text: 'Science Fair Loses Half of Its Projects in One Year' },
+          { id: 'forty', text: 'Westbrook Science Fair Opens With 48 Projects This Year' },
+        ],
+        correctChoiceId: 'fewer',
+        correctEvidenceIndex: 2,
+        explanation: '48 is 12 fewer than 60, which is 20 percent fewer, not half. But a whole grade could not enter this year, so the drop may not mean less interest. The 48 is true, but it leaves out the comparison.',
+      },
+      {
+        passage: [
+          'After a share table began in the cafeteria, the average food waste fell from 6 ounces per tray to 4.5 ounces per tray.',
+          'A share table lets students leave unopened food for others to take.',
+          'Trays were weighed on ten school days before the table and ten school days after.',
+          'Cafeteria manager Mr. Dang said the table may also save a little money.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'quarter', text: 'Food Waste Falls 25 Percent After Share Table Begins' },
+          { id: 'half', text: 'Food Waste Is Cut in Half by the New Cafeteria Share Table' },
+          { id: 'slight', text: 'Food Waste Falls Only a Little After the Share Table Begins' },
+          { id: 'eat', text: 'Share Table Is the Reason Students Are Eating More Lunch' },
+        ],
+        correctChoiceId: 'quarter',
+        correctEvidenceIndex: 0,
+        explanation: '6 down to 4.5 is 1.5 ounces, and 1.5 is a quarter of 6. That is more than a slight drop and less than half. The passage weighs waste, not how much students eat.',
+      },
+      {
+        passage: [
+          'Students voted on the next special lunch.',
+          'Of the 200 votes, 40 percent were for pizza, 35 percent were for tacos, and 25 percent were for salad.',
+          'The cafeteria will serve the winner on the first Friday of next month.',
+          'Each student could vote only once.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'narrow', text: 'Pizza Narrowly Leads Lunch Vote, With Tacos Close Behind' },
+          { id: 'overwhelming', text: 'Students Overwhelmingly Choose Pizza for the Special Lunch' },
+          { id: 'tacos', text: 'Tacos Win Lunch Vote With 40 Percent of the Votes' },
+          { id: 'salad', text: 'A Quarter of Voting Students Choose Salad for Lunch' },
+        ],
+        correctChoiceId: 'narrow',
+        correctEvidenceIndex: 1,
+        explanation: 'Pizza got 40 percent and tacos got 35 percent, a gap of only 5 points. That is a narrow lead, not an overwhelming one. The 40 percent belongs to pizza, not tacos, and the salad figure is true but not the main result.',
+      },
+      {
+        passage: [
+          'The staff of the school paper wanted to find out how many students actually read it each month.',
+          'To get an idea, they gave a short survey to 40 sixth graders during homeroom.',
+          'Of those 40 students, 12 said that they read the paper.',
+          'Students from other grades were not included in the survey.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'threeten', text: 'Three in Ten Surveyed Sixth Graders Read the Paper' },
+          { id: 'most', text: 'Most Students at the School Skip Reading the Paper' },
+          { id: 'third', text: 'One in Three Students at the School Reads the Paper' },
+          { id: 'redesign', text: 'School Paper Needs a Redesign to Win Back Readers' },
+        ],
+        correctChoiceId: 'threeten',
+        correctEvidenceIndex: 2,
+        explanation: '12 of 40 is 30 percent, or three in ten. Only sixth graders were asked, so the result cannot speak for all students. One in three is a different number, and the passage never says why students read or skip it.',
+      },
+      {
+        passage: [
+          'The Hawks soccer team completed its eight-game season at the end of last week.',
+          'The team won 5 of its 8 games, but it lost 3 of the last 4.',
+          'Across the whole season, the Hawks scored a total of 12 goals.',
+          'Coach Reyes said the team will practice twice a week during the offseason to prepare for next fall.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'slumped', text: 'Soccer Team Wins Most Games but Has Slumped Lately' },
+          { id: 'perfect', text: 'Perfect Season Ends With a Disappointing Defeat for Hawks' },
+          { id: 'losing', text: 'Hawks Struggle All Season Long Without Many Wins' },
+          { id: 'twelve', text: 'Hawks Score 12 Goals in a Row to Finish the Season' },
+        ],
+        correctChoiceId: 'slumped',
+        correctEvidenceIndex: 1,
+        explanation: 'Winning 5 of 8 is most of the games, and losing 3 of the last 4 is a slump. The season was not perfect, and it was not a losing one. The 12 goals were scored over the whole season, not in a row.',
+      },
+      {
+        passage: [
+          'The fundraiser at Maple Street School collected $1,200 in donations, and its goal had been $1,000.',
+          'One class, Room 12, contributed $300 of the total amount.',
+          'The money will be used to buy new playground equipment for the younger students.',
+          'Students collected donations from neighbors and family members over two weeks.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'twenty', text: 'Fundraiser Beats Its Goal by 20 Percent' },
+          { id: 'twentyfive', text: 'Fundraiser Beats Its Goal by 25 Percent' },
+          { id: 'class', text: 'One Class Raises a Quarter of the Fundraiser Money' },
+          { id: 'reach', text: 'Fundraiser Just Reaches Its Goal for Playground Gear' },
+        ],
+        correctChoiceId: 'twenty',
+        correctEvidenceIndex: 0,
+        explanation: '$1,200 is $200 more than $1,000, and $200 is 20 percent of $1,000. The 25 percent figure uses the wrong base. Room 12 giving a quarter is true, but it is not the main fact. And the fundraiser passed its goal instead of just reaching it.',
+      },
+      {
+        passage: [
+          'Over a period of 10 school days, staff members counted the bikes in the rack each morning.',
+          'On dry days there were 24 bikes in the rack on average, and on rainy days there were 9.',
+          'Principal Alvarez said that the school may install a covered rack next year.',
+          'The counts were always taken at 8:00 in the morning, before classes began.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'fewer', text: 'Fewer Bikes in the Rack on Rainy Days Than Dry Days' },
+          { id: 'nobody', text: 'Students Stop Biking to School Whenever It Rains Outside' },
+          { id: 'unsafe', text: 'Rain Makes Biking to School Too Unsafe for Students' },
+          { id: 'counts', text: 'Bike Counts Are Taken Each Morning at the School' },
+        ],
+        correctChoiceId: 'fewer',
+        correctEvidenceIndex: 1,
+        explanation: '24 on dry days and 9 on rainy days is a clear drop, but 9 bikes still came. So students did not stop. The passage never says why fewer biked, so it cannot say rain is unsafe. When the counts are taken is true but not the point.',
+      },
+      {
+        passage: [
+          'After new floors were installed, the average hallway noise measured 70 decibels, up from 65 decibels before.',
+          'The measurements were taken at the same time each day for a week.',
+          'Principal Mensah said teachers may ask for rugs to soften the sound.',
+          'The floors were installed over winter break.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'five', text: 'Hallway Noise Measures 5 Decibels Higher After New Floors' },
+          { id: 'twice', text: 'New Floors Make the Hallways Twice as Loud as Before' },
+          { id: 'learn', text: 'New Floors Are Too Loud for Students to Learn Well' },
+          { id: 'rugs', text: 'Teachers May Ask for Rugs to Soften the Hallway Sound' },
+        ],
+        correctChoiceId: 'five',
+        correctEvidenceIndex: 0,
+        explanation: '70 minus 65 is 5 decibels. Decibels do not add up like ordinary numbers, so 5 more does not mean twice as loud. The passage does not say anything about learning. The rugs are true, but they are not the main fact.',
+      },
+      {
+        passage: [
+          'This year, 300 students registered for the school reading challenge.',
+          'Of those students, 180 finished all of their assigned books.',
+          'Last year, 150 of the 250 students who registered finished all of their books.',
+          'The librarian, Ms. Ito, hopes to offer a prize for students who finish.',
+        ],
+        question: 'Which headline is most accurate?',
+        choices: [
+          { id: 'same', text: 'Same Share Finish the Reading Challenge, Though More Joined' },
+          { id: 'ever', text: 'More Students Finish the Reading Challenge Than Ever Before' },
+          { id: 'harder', text: 'Reading Challenge Is Getting Harder for Students to Finish Books' },
+          { id: 'fewer', text: 'Fewer Students Finish the Reading Challenge This Year' },
+        ],
+        correctChoiceId: 'same',
+        correctEvidenceIndex: 2,
+        explanation: '180 of 300 is 60 percent, and 150 of 250 is also 60 percent. More students finished, but only because more signed up. "Than ever before" goes past what two years can show, and nothing says the challenge got harder.',
       },
     ],
   };

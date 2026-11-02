@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 74 — 2026-11-01 — Headline rewritten, and two new brain games
+
+- **Headline has a pool of 12 news snippets with numbers** (6 drawn per run, headlines shuffled). The right headline is sometimes bold, sometimes plain, sometimes hedged, and the sentence that proves it moves between the first, second and third sentence, so picking the "careful one" no longer works.
+- **New game: Say It Another Way** (grades 6 to 8). The child reads a situation, picks the message the person would hear best, then finds the sentence that shows what that person needs. 12 situations, 6 per run. It is the first game that practises how to say something (New York SEL 2C and the Effective Communicator attribute).
+- **New game: Fix-It Workshop** (grades 3 to 5). Four school problems (a long lunch line, a quiet playground corner, a lost-and-found, new students finding their way), one per run, played as a design cycle: listen, name the real problem, brainstorm, try a small test, private reflection. No single "best" idea. It is the first game aimed at Creative Innovator and SEL 3C (acting for school and community well-being).
+- **Both new games appear in the games catalog and in classroom assignments** once their catalog entries are added (two small scripts), and each earns a classroom completion badge (Clear Communicator, Idea Builder).
+- Pages, seed scripts and tests only; no server route changes.
+
 ## Release 73 — 2026-11-01 — Help video B10 re-recorded for the purchase-order rule
 
 - **B10 now explains that a purchase-order school can invite teachers as soon as the PO is marked received**, matching Release 70. The old video said payment was needed first.

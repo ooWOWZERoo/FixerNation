@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Fix-It Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-branching-scenario.js?v=3"></script>
+<script>
+  // Fix-It Workshop - Tune Your Brain (Explore band, grades 3-5). The five-step
+  // story engine used as a design cycle: listen, name the real problem,
+  // brainstorm, try a small test, reflect. Practises the Creative Innovator
+  // attribute and NY SEL 3C (acting for school and community well-being), with
+  // 2A (empathy) and 3B (decisions) supporting. Design and approved outline:
+  // docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and FIX_IT_WORKSHOP_OUTLINE.md.
+  // Unlike the other story games, the idea step (consider) has no single best
+  // answer: all three ideas are workable and the feedback names each one's
+  // strength and cost. Per the sensitive-scenario rules, nothing here names a
+  // child who is left out, and a trusted-adult option is always offered.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'explore';
+
+  const contentPack = {
+    title: 'Fix-It Workshop',
+    steps: [
+      {
+        "key": "recognize",
+        "prompt": "At lunch, the line to pay and get your tray is so long that you only have ten minutes left to eat. Other kids are rushing too, and you want to help fix it. What do you do first?",
+        "choices": [
+          {
+            "id": "fw1-1",
+            "text": "Watch the line for a few days, time how long it takes, and ask kids and the lunch staff what they notice.",
+            "type": "responsible",
+            "feedback": "Timing the line and asking people gives you real facts. The lunch staff see things you cannot."
+          },
+          {
+            "id": "fw1-2",
+            "text": "Ask only your best friends what they think, since they will probably agree with your ideas.",
+            "type": "plausible_incomplete",
+            "feedback": "Your friends' ideas matter, but they see the line from the same spot you do. Other kids and the lunch staff may notice something different."
+          },
+          {
+            "id": "fw1-3",
+            "text": "Decide that kids are just too slow, and plan to tell everyone to hurry up next week.",
+            "type": "plausible_incomplete",
+            "feedback": "That is a guess, and it blames kids before you know the cause. Looking first usually leads to a better answer."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "After a week of timing, you see that the line moves slowly at the start of lunch, when everyone arrives at once. Only one register is open. What is the real problem?",
+        "choices": [
+          {
+            "id": "fw1-4",
+            "text": "The line is slow at the start because everyone arrives together and only one register is open.",
+            "type": "responsible",
+            "feedback": "That is what is really happening, so your ideas can aim right at it."
+          },
+          {
+            "id": "fw1-5",
+            "text": "Kids take too long choosing their food, so the real problem is how they behave at lunch time every day.",
+            "type": "plausible_incomplete",
+            "feedback": "You timed it, and the register was what slowed things down. Blaming kids would not fix that."
+          },
+          {
+            "id": "fw1-6",
+            "text": "The cafeteria is just too small, so there is nothing anyone can do about the line.",
+            "type": "plausible_incomplete",
+            "feedback": "The room may be small, but you found a part you can change. Giving up too early skips the best ideas."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You think of three ideas for fixing the line. Which one would you try first?",
+        "choices": [
+          {
+            "id": "fw1-7",
+            "text": "Open a second register for the first ten minutes of lunch, so two lines move at once.",
+            "type": "multiple_defensible",
+            "feedback": "This works fast because more people can pay at once. It needs a staff member for those ten minutes, so someone would have to agree."
+          },
+          {
+            "id": "fw1-8",
+            "text": "Send classes to lunch in two groups, five minutes apart, so fewer kids arrive at the same moment.",
+            "type": "multiple_defensible",
+            "feedback": "This costs no money and fixes the crowd at its start. It changes the schedule, so teachers would need to agree."
+          },
+          {
+            "id": "fw1-9",
+            "text": "Add a grab-and-go cart with packaged lunches and snacks that kids can pay for very quickly.",
+            "type": "multiple_defensible",
+            "feedback": "This helps kids who want something fast. It does not help everyone, because only some foods fit on a cart."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "Before you change lunch for the whole school, what is the best next step?",
+        "choices": [
+          {
+            "id": "fw1-10",
+            "text": "Try your idea for one week with one grade, then time the line again and ask kids and staff what they think.",
+            "type": "responsible",
+            "feedback": "A small test shows whether the idea works before you change things for everyone, and it lets you fix problems early."
+          },
+          {
+            "id": "fw1-11",
+            "text": "Draw your plan on paper and show it to two kids and one lunch worker before you try anything.",
+            "type": "multiple_defensible",
+            "feedback": "A paper test can catch mistakes cheaply. You will still need a real trial to know for sure."
+          },
+          {
+            "id": "fw1-12",
+            "text": "Tell your class to follow your new plan on Monday without asking anyone, because you are sure it will work out well.",
+            "type": "unsafe",
+            "feedback": "This skips the people who run lunch, and your plan could cause new problems. Even a good idea needs permission and a test."
+          },
+          {
+            "id": "fw1-13",
+            "text": "Share your idea with the principal or the lunch manager, who can say yes and help set up a trial.",
+            "type": "seek_help",
+            "feedback": "Asking the adults who can approve a change is smart, because they can make a real trial happen."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "Think about the people who felt the long line. What did you learn from listening to them that surprised you?",
+        "freeReflection": true
+      }
+    ],
+  };
+
+  // Four school problems: the lunch line (above), the quiet playground corner, the lost-and-found, and new students finding their way.
+  // The game picks one whole problem per run (FnEngineSDK variants). Steps 1 to 3 offer three options; step 4 offers four.
+  contentPack.variants = [
+    { steps: contentPack.steps },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "At recess, the corner of the playground by the fence is always empty, while the big games are loud and crowded. You wonder why nobody goes to the corner. What do you do first?",
+        "choices": [
+          {
+            "id": "fw2-1",
+            "text": "Watch recess for two days, and ask a few kids what they do instead of going to the corner.",
+            "type": "responsible",
+            "feedback": "Watching and asking shows you what is really happening on the playground."
+          },
+          {
+            "id": "fw2-2",
+            "text": "Decide the kids are lazy, and plan to tell them to use the whole playground.",
+            "type": "plausible_incomplete",
+            "feedback": "That blames kids before you know the reason. They may have a good reason for staying away from the corner."
+          },
+          {
+            "id": "fw2-3",
+            "text": "Ask only the kids who are already in the big games, since they are the easiest to find.",
+            "type": "plausible_incomplete",
+            "feedback": "They are easy to find, but they are not the kids who skip the corner. You need to hear from the ones who stay away."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "You learn that the corner has no shade and nothing to do. Some kids who do not like loud games stay inside at recess. What is the real problem?",
+        "choices": [
+          {
+            "id": "fw2-4",
+            "text": "The corner has no shade and nothing to do, so kids who want something calm have nowhere to go.",
+            "type": "responsible",
+            "feedback": "That is the real gap, so your ideas can fill it."
+          },
+          {
+            "id": "fw2-5",
+            "text": "Kids today just do not like quiet places, so the corner is not worth the trouble of fixing.",
+            "type": "plausible_incomplete",
+            "feedback": "Some kids you talked to said they wanted something calm. The corner is missing something, not the kids."
+          },
+          {
+            "id": "fw2-6",
+            "text": "The loud games are the problem, so the best fix is to stop the games that make noise.",
+            "type": "plausible_incomplete",
+            "feedback": "Many kids love those games. Taking them away would help some kids and hurt others."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You think of three ideas for the corner. Which one would you try first?",
+        "choices": [
+          {
+            "id": "fw2-7",
+            "text": "Set up a chalk and drawing station with a small table, so kids can make something calm.",
+            "type": "multiple_defensible",
+            "feedback": "This gives kids a quiet activity right away. It needs chalk and a dry day, so it would not work in the rain."
+          },
+          {
+            "id": "fw2-8",
+            "text": "Start a reading nook with donated books and a few mats for kids who want to sit quietly.",
+            "type": "multiple_defensible",
+            "feedback": "This is peaceful and lasts a long time. It needs books and mats, plus a dry place to keep them."
+          },
+          {
+            "id": "fw2-9",
+            "text": "Bring out a calm game box with cards and puzzles that a teacher keeps and shares with kids.",
+            "type": "multiple_defensible",
+            "feedback": "This is easy to store and has something for everyone. It needs a grown-up to look after it."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "Before you change the corner for everyone, what is the best next step?",
+        "choices": [
+          {
+            "id": "fw2-10",
+            "text": "Open the corner for one week, count who uses it, and ask them what they would change.",
+            "type": "responsible",
+            "feedback": "A short trial shows whether kids really use it, and their answers tell you what to fix next."
+          },
+          {
+            "id": "fw2-11",
+            "text": "Try just one thing first, like the chalk station on dry days, and add more if kids like it.",
+            "type": "multiple_defensible",
+            "feedback": "Starting small costs less, and you learn which ideas kids like best."
+          },
+          {
+            "id": "fw2-12",
+            "text": "Move the benches and mats to the corner yourself during recess, without asking any adult.",
+            "type": "unsafe",
+            "feedback": "Moving school things on your own could cause a mess or an accident, and it skips the people in charge."
+          },
+          {
+            "id": "fw2-13",
+            "text": "Ask a recess helper or your teacher if you can set it up, and who could keep an eye on the corner.",
+            "type": "seek_help",
+            "feedback": "Asking an adult is a good move. They can say yes and find supplies, and they can keep an eye on everyone."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "Think about a time you wanted a calm place and could not find one. What did you do, and what would have helped?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "The lost-and-found box by the office is overflowing with coats and lunch boxes, and kids keep losing new things. You want to fix it. What do you do first?",
+        "choices": [
+          {
+            "id": "fw3-1",
+            "text": "Look at what is in the box, ask a few classes what they have lost, and ask the custodian how often it gets emptied.",
+            "type": "responsible",
+            "feedback": "Each person tells you a different piece of the story. Together they show what is really going on."
+          },
+          {
+            "id": "fw3-2",
+            "text": "Say that kids are careless, and plan to remind everyone to keep track of their things.",
+            "type": "plausible_incomplete",
+            "feedback": "Reminders may help a little, but you have not found out why things stay in the box. Looking first leads to better ideas."
+          },
+          {
+            "id": "fw3-3",
+            "text": "Ask only the kids in your own class, since they are the easiest ones for you to reach.",
+            "type": "plausible_incomplete",
+            "feedback": "Your class can help, but the box holds things from the whole school. Other classes may know things yours does not."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "You find that most things sit in the box all year, because nobody knows what is in there. What is the real problem?",
+        "choices": [
+          {
+            "id": "fw3-4",
+            "text": "Nobody can see what is in the box, so kids do not know that their things are there.",
+            "type": "responsible",
+            "feedback": "If kids cannot see their things, they cannot get them back. Now your ideas can aim at that."
+          },
+          {
+            "id": "fw3-5",
+            "text": "Kids lose too many things, so the real problem is that they do not care about their stuff.",
+            "type": "plausible_incomplete",
+            "feedback": "Kids told you they wanted their things back. The trouble is finding them, not caring."
+          },
+          {
+            "id": "fw3-6",
+            "text": "The box is too small, so a bigger box would fix everything and make the problem go away.",
+            "type": "plausible_incomplete",
+            "feedback": "A bigger box would hold more lost things, but it would not help kids find them."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You think of three ideas for helping kids find their things. Which one would you try first?",
+        "choices": [
+          {
+            "id": "fw3-7",
+            "text": "Take photos of the items and make a photo board in the hallway, so kids can spot their things.",
+            "type": "multiple_defensible",
+            "feedback": "This lets everyone see what is lost, all week. It takes time to take the photos and keep the board up to date."
+          },
+          {
+            "id": "fw3-8",
+            "text": "Set up a Friday table at dismissal where kids can look through the lost things for ten minutes.",
+            "type": "multiple_defensible",
+            "feedback": "This is simple and gives kids a real chance to look. It only works on Fridays, so things could wait all week."
+          },
+          {
+            "id": "fw3-9",
+            "text": "Hold a name-label day with stickers, so more things find their way back to their owners.",
+            "type": "multiple_defensible",
+            "feedback": "This helps stop the problem before it starts. It will not help with the things already in the box."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "Before you change how the whole school does this, what is the best next step?",
+        "choices": [
+          {
+            "id": "fw3-10",
+            "text": "Try the photo board for two weeks, count how many things get claimed, and ask kids if it helped.",
+            "type": "responsible",
+            "feedback": "Counting shows whether the idea really works, and the kids' answers tell you what to improve."
+          },
+          {
+            "id": "fw3-11",
+            "text": "Try the Friday table for three weeks first, then compare how many things get picked up each time.",
+            "type": "multiple_defensible",
+            "feedback": "A few weeks of counting gives you real numbers, and you can switch ideas if it does not work."
+          },
+          {
+            "id": "fw3-12",
+            "text": "Throw away everything that looks old so the box looks cleaner, and then start fresh.",
+            "type": "unsafe",
+            "feedback": "Those things belong to someone, and some kids may still be looking. Never throw away other people's things without asking."
+          },
+          {
+            "id": "fw3-13",
+            "text": "Ask the office staff and the custodian if you can put a board on the wall, and who could help take photos.",
+            "type": "seek_help",
+            "feedback": "Asking the adults who run the office is wise, because they can approve a spot and help make it work."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "Think about something you lost and got back. How did it feel, and how could the school make that happen more often?",
+        "freeReflection": true
+      }
+    ] },
+    { steps: [
+      {
+        "key": "recognize",
+        "prompt": "A new student in your class, Ana, got lost twice on her first day because the hallways all look alike. You want to make the school easier for new kids. What do you do first?",
+        "choices": [
+          {
+            "id": "fw4-1",
+            "text": "Ask two students who joined this year what was hard and what helped, and listen to their answers.",
+            "type": "responsible",
+            "feedback": "Kids who joined recently remember what it felt like, and they can tell you what helped."
+          },
+          {
+            "id": "fw4-2",
+            "text": "Ask only the kids who have been here since kindergarten, since they know the school best.",
+            "type": "plausible_incomplete",
+            "feedback": "They know the building well, but they may have forgotten what it was like to be new. New kids can tell you more."
+          },
+          {
+            "id": "fw4-3",
+            "text": "Decide that new kids should just ask for help, and plan to tell them so on their first day.",
+            "type": "plausible_incomplete",
+            "feedback": "Asking is hard when everything is new and you do not know who to ask. Telling them does not fix what makes it hard."
+          }
+        ]
+      },
+      {
+        "key": "impact",
+        "prompt": "You learn that the signs and maps only make sense if you already know the building. What is the real problem?",
+        "choices": [
+          {
+            "id": "fw4-4",
+            "text": "The signs and maps only work for kids who already know the school, so new kids feel lost.",
+            "type": "responsible",
+            "feedback": "That is what is really going wrong, so your ideas can make the school clearer for new kids."
+          },
+          {
+            "id": "fw4-5",
+            "text": "New kids are too shy to ask questions, so the real problem is how they feel inside.",
+            "type": "plausible_incomplete",
+            "feedback": "Feeling shy is real, but the new kids said the signs were confusing. A clearer school would help them feel less shy."
+          },
+          {
+            "id": "fw4-6",
+            "text": "Teachers do not give enough directions, so the problem belongs to the teachers to fix.",
+            "type": "plausible_incomplete",
+            "feedback": "Teachers help a lot, but they cannot walk every new student around. Better signs would help every day."
+          }
+        ]
+      },
+      {
+        "key": "consider",
+        "prompt": "You think of three ideas for helping new kids. Which one would you try first?",
+        "choices": [
+          {
+            "id": "fw4-7",
+            "text": "Draw a colorful map with each hallway in its own color, so new kids can find their way.",
+            "type": "multiple_defensible",
+            "feedback": "A map helps right away and anyone can use it. It only works if kids can read it and carry it around."
+          },
+          {
+            "id": "fw4-8",
+            "text": "Pair each new student with a buddy for the first week who can walk with them to each place.",
+            "type": "multiple_defensible",
+            "feedback": "A buddy gives kindness as well as directions. It needs kids who are ready to help and a way to match them."
+          },
+          {
+            "id": "fw4-9",
+            "text": "Make a first-week passport with a stamp from each place, like the library and the gym.",
+            "type": "multiple_defensible",
+            "feedback": "This makes learning the school feel like a game. It takes time to make, and kids have to remember to bring it."
+          }
+        ]
+      },
+      {
+        "key": "choose",
+        "prompt": "Before you change things for every new student, what is the best next step?",
+        "choices": [
+          {
+            "id": "fw4-10",
+            "text": "Ask one new student to try your map for a day, then write down what is missing and fix it.",
+            "type": "responsible",
+            "feedback": "A real test with a real new student shows what you missed, and fixing it makes the map better for everyone."
+          },
+          {
+            "id": "fw4-11",
+            "text": "Ask a buddy to walk a new student through the passport for one day, and tell you what happened.",
+            "type": "multiple_defensible",
+            "feedback": "You learn what works and what is confusing, and the buddy gets to practice being helpful."
+          },
+          {
+            "id": "fw4-12",
+            "text": "Paint colored lines on the hallway floors during lunch, so that the map matches the building.",
+            "type": "unsafe",
+            "feedback": "Painting a school floor without permission could cause damage and trouble. Big changes need an adult to say yes first."
+          },
+          {
+            "id": "fw4-13",
+            "text": "Ask the counselor, who knows when new kids arrive, if you can match buddies and try your map.",
+            "type": "seek_help",
+            "feedback": "Asking the counselor is a good move. They know the new students and can help your idea reach the right kids."
+          }
+        ]
+      },
+      {
+        "key": "reflect",
+        "prompt": "Think about a time you were new somewhere. What helped you feel welcome, and what do you wish someone had done?",
+        "freeReflection": true
+      }
+    ] },
+  ];
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'branchingScenario',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'fix-it-workshop-design-cycle',
+    header: {
+      icon: '🛠️',
+      title: 'Fix-It Workshop',
+      description: 'Find a problem at school, listen to the people it affects, and try a small fix.',
+    },
+  });
+</script>
+</body>
+</html>

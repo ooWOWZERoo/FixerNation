@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Say It Another Way</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="brain-games.css?v=1">
+</head>
+<body>
+<header></header>
+
+<div class="game-frame">
+  <p id="loginHint" style="font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:12px;"></p>
+  <div id="mount" class="game-card-panel band-aware"></div>
+</div>
+
+<footer></footer>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=16"></script>
+<script src="site-auth.js?v=10"></script>
+<script src="footer.js?v=9"></script>
+<script src="accessibility-utils.js"></script>
+<script src="game-shell.js"></script>
+<script src="engine-sdk.js?v=2"></script>
+<script src="engine-evidence-hunt.js"></script>
+<script>
+  // Say It Another Way - grades 6-8 (Challenge band). Same Evidence Hunt engine as
+  // Headline: read a situation, pick the message this person would hear best,
+  // then pick the sentence that shows what they need. Practises NY SEL 2C
+  // (communicating across differences) and the Effective Communicator
+  // attribute. Design and approved outline:
+  // docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and SAY_IT_ANOTHER_WAY_OUTLINE.md.
+  // A pool of 12 situations; 6 are drawn per run and the drafts are shuffled.
+  const params = new URLSearchParams(location.search);
+  const band = params.get('band') || 'challenge';
+
+  const contentPack = {
+    "title": "Say It Another Way",
+    "roundsPerRun": 6,
+    "items": [
+      {
+        "passage": [
+          "Dev has to cancel movie night with his friend Lena because his family planned a dinner for Saturday.",
+          "Lena has talked about the movie all week and has already picked out the snacks.",
+          "She has told Dev that changed plans bother her most when nobody offers a new one.",
+          "Dev plans to send her a text tonight."
+        ],
+        "question": "Which text would Lena hear best?",
+        "choices": [
+          {
+            "id": "warm-new-date",
+            "text": "I am sorry to cancel on Saturday. I know you were looking forward to it. Can we watch it on Sunday or next Friday instead?"
+          },
+          {
+            "id": "blunt",
+            "text": "I can't do Saturday. My family planned a dinner and I have to go. We will do the movie some other time, okay? Sorry about that."
+          },
+          {
+            "id": "vague",
+            "text": "Hey, sorry about Saturday. Maybe we could do something sometime soon? I hope you are not mad at me."
+          },
+          {
+            "id": "blame",
+            "text": "I have to cancel on Saturday. It is not my fault my family planned a dinner, so please do not be upset."
+          }
+        ],
+        "correctChoiceId": "warm-new-date",
+        "correctEvidenceIndex": 2,
+        "explanation": "Lena said changed plans bother her most when nobody offers a new one. The best text says sorry, shows Dev knows what she is missing, and offers two new days. The first wrong text gives no new plan, the second never names a day, and the third blames his family and tells her how to feel."
+      },
+      {
+        "passage": [
+          "Priya has a science report due on Friday.",
+          "Her family will be away from Wednesday to Friday for a cousin's wedding.",
+          "Mr. Ortiz allows extensions if students ask at least one day early and say when they will turn the work in.",
+          "Priya plans to email him tonight."
+        ],
+        "question": "Which email would be easiest for Mr. Ortiz to say yes to?",
+        "choices": [
+          {
+            "id": "direct-date",
+            "text": "Dear Mr. Ortiz, I will be away from Wednesday to Friday for a family wedding. May I turn in my science report on Monday? The draft is already finished."
+          },
+          {
+            "id": "buried",
+            "text": "Dear Mr. Ortiz, I am so sorry to bother you. My family has a wedding, and my phone broke, and I also got behind this week, and I hope that is okay with you."
+          },
+          {
+            "id": "pressure",
+            "text": "Mr. Ortiz, I need an extension on the science report. I will not be here on Friday, so I cannot turn it in on time."
+          },
+          {
+            "id": "vague",
+            "text": "Dear Mr. Ortiz, I might need a little more time on the science report this week. Would that be all right? Thank you for your help."
+          }
+        ],
+        "correctChoiceId": "direct-date",
+        "correctEvidenceIndex": 2,
+        "explanation": "Mr. Ortiz's rule asks for notice and a new date, so the best email gives both and says what is already done. The long email buries the request under excuses, the demand gives no date, and the vague one never says how much time or why."
+      },
+      {
+        "passage": [
+          "Sam rarely speaks up during group meetings, but he writes thoughtful comments in the shared document every day.",
+          "His group is making a poster about renewable energy, and they need his idea for the layout.",
+          "They will meet in person on Thursday afternoon to finish the design.",
+          "Maya, the group leader, wants to ask him before then."
+        ],
+        "question": "Which message would Sam answer most comfortably?",
+        "choices": [
+          {
+            "id": "question-choice",
+            "text": "Sam, I liked your comment about the timeline. Would you like to share your layout idea in the document, or tell us on Thursday?"
+          },
+          {
+            "id": "pressure",
+            "text": "Sam, you have not said anything yet. What do you think about the layout? Everyone will be waiting for your answer on Thursday."
+          },
+          {
+            "id": "vague",
+            "text": "Does anyone have ideas for the layout? If you do, please share them with the group before our meeting on Thursday."
+          },
+          {
+            "id": "fake-peace",
+            "text": "Sam seems fine with whatever we pick, so I will choose the layout myself and tell everyone about it on Thursday."
+          }
+        ],
+        "correctChoiceId": "question-choice",
+        "correctEvidenceIndex": 0,
+        "explanation": "Sam is more comfortable writing than speaking, so the best message names something he wrote and lets him choose how to answer. Putting him on the spot adds pressure, a message to the whole group never reaches him, and deciding for him means his idea is never heard."
+      },
+      {
+        "passage": [
+          "Jordan thinks the school day should begin later so that students can get more sleep.",
+          "Cam says he will change his mind if someone gives him reasons that he has not heard before.",
+          "Cam walks to school and likes the early start because it leaves extra time for sports practice.",
+          "The two classmates are talking after the last class of the day."
+        ],
+        "question": "Which reply would Cam hear best from Jordan?",
+        "choices": [
+          {
+            "id": "question-reasons",
+            "text": "Here is one reason I think later is better: many of us are tired in first period. What are your reasons?"
+          },
+          {
+            "id": "fake-peace",
+            "text": "Sure, whatever you think is fine. It does not really matter to me either way, so we can just leave it alone for now, okay?"
+          },
+          {
+            "id": "blame",
+            "text": "That is a selfish idea. You only care about sports, and you do not think about anyone else at all, which is really unfair."
+          },
+          {
+            "id": "blunt",
+            "text": "That will not work. A later start is clearly better, and I do not see any point in talking about it any more than this."
+          }
+        ],
+        "correctChoiceId": "question-reasons",
+        "correctEvidenceIndex": 1,
+        "explanation": "Cam said he will change his mind for good reasons, so the best reply offers one and asks for his in return. Agreeing just to avoid the issue ends the talk, calling him selfish attacks him instead of his idea, and saying it will not work gives him nothing to think about."
+      },
+      {
+        "passage": [
+          "Mateo is a new student at school, and he is still learning English.",
+          "He understands more of what people say when they speak slowly and use gestures.",
+          "He sits alone at lunch, but he smiles whenever classmates show him something interesting.",
+          "Ruben is walking toward the table with his lunch tray."
+        ],
+        "question": "Which invitation would Mateo understand and enjoy most?",
+        "choices": [
+          {
+            "id": "warm-slow",
+            "text": "Slowly, with a smile and a point to the empty seat: \"Hi, Mateo. Sit with us? Teach me a word in your language.\""
+          },
+          {
+            "id": "talking-down",
+            "text": "In a loud, slow voice, as if Mateo were much younger: \"Hello, Mateo. You. Sit. Eat. Good. Okay? Yes? Okay?\""
+          },
+          {
+            "id": "vague",
+            "text": "From across the room, with a quick wave: \"You can sit with us if you want to, or whatever. It is up to you.\""
+          },
+          {
+            "id": "fake-peace",
+            "text": "Walking past with a kind face: \"It is okay, Mateo. We will leave you alone so that you do not feel awkward.\""
+          }
+        ],
+        "correctChoiceId": "warm-slow",
+        "correctEvidenceIndex": 1,
+        "explanation": "Mateo follows better when people speak slowly and use gestures, and he smiles when others show him things. The best invitation does both and asks him to share something too. Talking down treats him as younger than he is, a wave from far away is easy to miss, and leaving him alone takes away the chance to join."
+      },
+      {
+        "passage": [
+          "Ayesha borrowed her friend Rosa's favorite book for a week, and now the cover is bent.",
+          "Rosa has not noticed the damage yet.",
+          "Rosa's grandmother gave her the book as a special gift.",
+          "Ayesha will return the book at lunch today."
+        ],
+        "question": "Which message would Rosa hear best from Ayesha?",
+        "choices": [
+          {
+            "id": "warm-fix",
+            "text": "Your book's cover got bent in my bag, and I am sorry. I know your grandmother gave it to you. I can replace it or fix it."
+          },
+          {
+            "id": "buried",
+            "text": "I am so sorry, I really am. It was raining, and my bag was too full, and my brother bumped it, and it just happened. Please do not be mad."
+          },
+          {
+            "id": "blunt",
+            "text": "Your book's cover got bent in my bag. It is only a book, though, and you can probably find another copy somewhere."
+          },
+          {
+            "id": "blame",
+            "text": "The cover was already a little bent when you gave it to me, so I do not think this is all my fault. It happens."
+          }
+        ],
+        "correctChoiceId": "warm-fix",
+        "correctEvidenceIndex": 2,
+        "explanation": "The book was a gift from Rosa's grandmother, so it matters more than an ordinary book. The best message says what happened, says it matters, and offers to fix it. A pile of excuses hides the point, calling it only a book ignores the gift, and blaming Rosa is not true or fair."
+      },
+      {
+        "passage": [
+          "Marcus laughs it off when his friend Tyler uses a nickname about his height, so Tyler does not know it bothers him.",
+          "The joke started a month ago, and now it comes up in front of the whole team.",
+          "Marcus has decided to talk to Tyler after practice.",
+          "No one else is nearby."
+        ],
+        "question": "Which words would Tyler hear best from Marcus?",
+        "choices": [
+          {
+            "id": "direct-private",
+            "text": "Tyler, when you use that nickname in front of the team, it bothers me. I laugh, but I do not like it. Please stop."
+          },
+          {
+            "id": "vague",
+            "text": "Hey, so, about the name thing. It is kind of, you know. Never mind. It is whatever. Forget I said anything."
+          },
+          {
+            "id": "blame",
+            "text": "You are so mean. You always make fun of me, and you do it on purpose because you like seeing me upset."
+          },
+          {
+            "id": "fake-peace",
+            "text": "It is fine, Tyler. I do not mind the nickname at all. I only wanted to say that you played a good game today."
+          }
+        ],
+        "correctChoiceId": "direct-private",
+        "correctEvidenceIndex": 0,
+        "explanation": "Tyler does not know it bothers Marcus, because Marcus laughs. The best message says what happens, how it feels, and what to do, and it says so privately. A hint he can miss, an accusation, or saying it is fine all leave Tyler where he started."
+      },
+      {
+        "passage": [
+          "Nia designed the slides for the group's science project, and she worked very hard on them.",
+          "She asked her teammates for honest suggestions before the presentation in two days.",
+          "The slides have excellent photographs, but the writing is small and crowded.",
+          "Chen is writing his suggestions for her right now."
+        ],
+        "question": "Which note would Nia find most useful?",
+        "choices": [
+          {
+            "id": "question-help",
+            "text": "The photos are great. The text is hard to read because it is small. Could we cut some words and make it bigger? I can help."
+          },
+          {
+            "id": "fake-peace",
+            "text": "These look fine to me. I would not change anything. I think they are ready, and we should stop working on them right now."
+          },
+          {
+            "id": "blunt",
+            "text": "The text is too small and the whole thing looks messy and crowded. People in the back of the room will not be able to read anything."
+          },
+          {
+            "id": "pressure",
+            "text": "The text is a problem, so I will redo the slides myself tonight. You do not need to do anything or to say anything about it."
+          }
+        ],
+        "correctChoiceId": "question-help",
+        "correctEvidenceIndex": 1,
+        "explanation": "Nia asked for honest notes, so \"fine\" would not help her. The best note says what works, names one change with a reason, and offers help. A harsh list of faults hurts without showing a way forward, and taking over the slides tells her she cannot fix them."
+      },
+      {
+        "passage": [
+          "The weekend trip costs $60, and Lucia's family has very little extra money to spend this month.",
+          "Her friends have been planning the weekend together for several weeks.",
+          "They would love for her to come along.",
+          "Lucia is writing a reply in the group chat."
+        ],
+        "question": "Which reply would Lucia's friends hear best?",
+        "choices": [
+          {
+            "id": "warm-honest",
+            "text": "I really want to come, but $60 is too much for me this time. Can we plan something free for another weekend?"
+          },
+          {
+            "id": "fake-peace",
+            "text": "I would love to, but I think I am getting a cold. Maybe next time! Have a great weekend, everybody, and send pictures."
+          },
+          {
+            "id": "vague",
+            "text": "Thanks for asking! It sounds really fun. I will see how things go and let you know closer to the weekend, maybe."
+          },
+          {
+            "id": "buried",
+            "text": "I want to come, but my family has a lot of bills, and my mom said the budget is tight, and the car needs a repair this month, so I do not think I can."
+          }
+        ],
+        "correctChoiceId": "warm-honest",
+        "correctEvidenceIndex": 0,
+        "explanation": "Lucia can say the real reason in a few kind words, and she can suggest a plan that works for her. Making up a cold is not honest, a maybe leaves friends waiting, and explaining the whole family budget gives more than anyone asked for."
+      },
+      {
+        "passage": [
+          "Kofi has an important family event on Tuesday and will miss basketball practice.",
+          "The team has a big tournament in three weeks.",
+          "Coach Dunn likes at least a week of notice and a plan for catching up.",
+          "Kofi will talk to the coach after practice today."
+        ],
+        "question": "Which message would Coach Dunn respond to best?",
+        "choices": [
+          {
+            "id": "direct-plan",
+            "text": "Coach, I will miss practice next Tuesday for a family event. I will work on drills at home and ask a teammate to show me the new plays."
+          },
+          {
+            "id": "blunt",
+            "text": "Coach, I am not coming on Tuesday. It is family stuff, and I cannot change it, so I guess I will see you on Thursday."
+          },
+          {
+            "id": "buried",
+            "text": "Coach, this week has been really hard. We have so much going on with family, and I have homework, and I am tired. I probably cannot come."
+          },
+          {
+            "id": "vague",
+            "text": "Coach, I might miss practice at some point next week, depending on how everything goes. I will try to let you know when I find out."
+          }
+        ],
+        "correctChoiceId": "direct-plan",
+        "correctEvidenceIndex": 2,
+        "explanation": "Coach Dunn wants notice and a plan. The best message gives the day, the reason in a few words, and a way to catch up. A short note with no plan, a long list of troubles, or a maybe each leave the coach guessing."
+      },
+      {
+        "passage": [
+          "Sana sent her friend Noor a joke by text, and Noor answered \"wow ok\" and then stopped replying.",
+          "Text messages have no tone of voice, so a joke can easily sound like an insult.",
+          "Noor also had a difficult day, and Sana knows it.",
+          "Sana wants to repair things before school tomorrow."
+        ],
+        "question": "Which message would Noor hear best?",
+        "choices": [
+          {
+            "id": "question-care",
+            "text": "I meant that as a joke, but I can see how it sounded rude. I am sorry. How was your day? I am here if you want to talk."
+          },
+          {
+            "id": "blame",
+            "text": "You are overreacting. It was obviously a joke, so I do not know why you are so upset about one little text from me."
+          },
+          {
+            "id": "vague",
+            "text": "Sorry if you got offended. Anyway, I will see you tomorrow, I guess. Let me know if there is anything else you need."
+          },
+          {
+            "id": "fake-peace",
+            "text": "Never mind, forget it. It is not a big deal, and we do not need to talk about it. Let us just not text for a while."
+          }
+        ],
+        "correctChoiceId": "question-care",
+        "correctEvidenceIndex": 1,
+        "explanation": "A text has no tone, so Noor may have heard the joke as unkind. The best message says what Sana meant, accepts how it sounded, and checks on Noor. Saying she is overreacting makes things worse, \"sorry if\" avoids owning it, and dropping the subject leaves the hurt in place."
+      },
+      {
+        "passage": [
+          "Eli did not seem to notice that he interrupted Ivy while she was halfway through her idea at the club meeting.",
+          "The club has a rule that everyone gets a chance to finish.",
+          "Ivy wants to speak up now, in front of the group.",
+          "The meeting is about to move on to the next topic."
+        ],
+        "question": "What should Ivy say to Eli?",
+        "choices": [
+          {
+            "id": "direct-finish",
+            "text": "Eli, I was in the middle of my idea. Could I finish, and then you can go next? I would like to hear yours too."
+          },
+          {
+            "id": "blame",
+            "text": "Rude much? You always talk over people, and you never listen to anyone else in this club, so maybe try it sometime."
+          },
+          {
+            "id": "fake-peace",
+            "text": "Oh, never mind. It was not important anyway. Go ahead with your idea, and we can just forget about mine for today."
+          },
+          {
+            "id": "pressure",
+            "text": "Stop talking! I am speaking right now, so be quiet and let me finish, because everybody here knows it is my turn."
+          }
+        ],
+        "correctChoiceId": "direct-finish",
+        "correctEvidenceIndex": 0,
+        "explanation": "Eli did not notice, so a calm, clear request is enough. The best reply asks to finish and offers him a turn next. An insult makes him defensive, giving up loses the idea, and shouting turns a small mistake into a fight."
+      }
+    ]
+  };
+
+  fetch('/api/brain-games/me/progress').then((r) => {
+    if (!r.ok) {
+      document.getElementById('loginHint').textContent =
+        'Playing without an account or classroom login, so progress won\'t be saved.';
+    }
+  }).catch(() => {});
+
+  FnEngineSDK.run({
+    container: document.getElementById('mount'),
+    engineName: 'evidenceHunt',
+    engineVersion: 1,
+    contentPack,
+    band,
+    activityId: 'say-it-another-way-message',
+    header: {
+      icon: '💬',
+      title: 'Say It Another Way',
+      description: 'Read the situation, pick the message this person would hear best, then find the sentence that shows why.',
+    },
+  });
+</script>
+</body>
+</html>

@@ -123,8 +123,8 @@ const REAL = auditAll().filter((r) => r.engine !== 'legacy' && !r.note).map((r) 
   return { slug: r.slug, engineName, pack: extractPack(src) };
 }).filter((g) => g.pack && g.engineName);
 
-test('REAL GAMES: all 16 engine games are found and parse', () => {
-  assert.equal(REAL.length, 16, REAL.map((g) => g.slug).join(', '));
+test('REAL GAMES: all 18 engine games are found and parse', () => {
+  assert.equal(REAL.length, 18, REAL.map((g) => g.slug).join(', '));
 });
 
 test('REAL GAMES: after preparation each round keeps its choices and its right answer', () => {
@@ -272,4 +272,163 @@ test('MONEY MOVES: simulated runs never go below zero, and every one of the five
     seen.add(pack.debrief(res).split('.')[0]);
   }
   assert.equal(seen.size, 5, `endings reached: ${[...seen].join(' | ')}`);
+});
+
+// Headline (reworked 2026-11-01, approved outline: docs/tune-your-brain/HEADLINE_OUTLINE.md): a 12-item pool, 6 drawn per run.
+// Syllables are estimated by counting vowel groups; good enough for a Flesch-Kincaid grade check on short school-news snippets.
+function fkGrade(sentences) {
+  const words = sentences.join(' ').split(/\s+/).filter(Boolean);
+  const syll = (w) => Math.max(1, (w.toLowerCase().replace(/[^a-z]/g, '').replace(/e$/, '').match(/[aeiouy]+/g) || []).length);
+  const syllables = words.reduce((n, w) => n + syll(w), 0);
+  return 0.39 * (words.length / sentences.length) + 11.8 * (syllables / words.length) - 15.59;
+}
+
+test('HEADLINE: twelve items, six per run, a full set of choices each', () => {
+  const g = REAL.find((x) => x.slug === 'headline');
+  assert.equal(g.pack.items.length, 12);
+  assert.equal(g.pack.roundsPerRun, 6);
+  g.pack.items.forEach((it, i) => {
+    assert.equal(it.choices.length, 4, `item ${i + 1}: one right headline and three wrong ones`);
+    assert.equal(new Set(it.choices.map((c) => c.id)).size, 4, `item ${i + 1}: unique ids`);
+    assert.ok(it.choices.some((c) => c.id === it.correctChoiceId), `item ${i + 1}: right answer present`);
+    assert.ok(it.passage.length >= 4 && it.passage.length <= 6, `item ${i + 1}: 4 to 6 sentences`);
+    assert.ok(it.correctEvidenceIndex >= 0 && it.correctEvidenceIndex < it.passage.length, `item ${i + 1}: evidence index in range`);
+    assert.ok(/\d/.test(it.passage[it.correctEvidenceIndex]), `item ${i + 1}: the proving sentence carries a number`);
+    assert.ok(it.explanation && it.explanation.length > 60, `item ${i + 1}: explanation`);
+    assert.ok(!/[–—]/.test(it.passage.join(' ') + it.choices.map((c) => c.text).join(' ') + it.explanation), `item ${i + 1}: no dashes`);
+  });
+});
+
+test('HEADLINE: option lengths are balanced and the right headline is not usually the longest', () => {
+  const g = REAL.find((x) => x.slug === 'headline');
+  let longest = 0;
+  g.pack.items.forEach((it, i) => {
+    const lens = it.choices.map((c) => c.text.length);
+    assert.ok(Math.max(...lens) / Math.min(...lens) <= 1.4, `item ${i + 1}: lengths ${lens.join('/')} are more than 1.4 times apart`);
+    const right = it.choices.find((c) => c.id === it.correctChoiceId).text.length;
+    if (right === Math.max(...lens)) longest++;
+  });
+  assert.ok(longest <= 4, `the right headline is the longest in ${longest} of 12 items`);
+});
+
+test('HEADLINE: the proving sentence is spread across the first, second and third sentence', () => {
+  const g = REAL.find((x) => x.slug === 'headline');
+  const count = [0, 0, 0];
+  g.pack.items.forEach((it) => { count[it.correctEvidenceIndex]++; });
+  assert.equal(count.join(), '4,4,4');
+});
+
+test('HEADLINE: passages are written at about grades 6 to 8', () => {
+  const g = REAL.find((x) => x.slug === 'headline');
+  g.pack.items.forEach((it, i) => {
+    const grade = fkGrade([...it.passage]);
+    assert.ok(grade >= 5 && grade <= 9, `item ${i + 1}: Flesch-Kincaid grade ${grade.toFixed(1)}`);
+  });
+});
+
+test('HEADLINE: runs draw different sets of items, and the right headline moves around', () => {
+  const g = REAL.find((x) => x.slug === 'headline');
+  const sets = new Set(), slots = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 200; seed++) {
+    const out = prep(g.pack, 'evidenceHunt', seed).pack;
+    assert.equal(out.items.length, 6);
+    sets.add(out.items.map((it) => it.correctChoiceId + it.passage[0].slice(0, 12)).sort().join('|'));
+    out.items.forEach((it) => { slots[it.choices.findIndex((c) => c.id === it.correctChoiceId)]++; });
+  }
+  assert.ok(sets.size > 20, `only ${sets.size} different sets of items in 200 runs`);
+  slots.forEach((n, s) => assert.ok(n / 1200 > 0.18 && n / 1200 < 0.32, `slot ${s} holds ${Math.round(n / 12)}% of right answers`));
+});
+
+// Say It Another Way (new 2026-11-01, approved outline: docs/tune-your-brain/SAY_IT_ANOTHER_WAY_OUTLINE.md): 12 situations, 6 per run.
+test('SAY IT ANOTHER WAY: twelve situations, six per run, four drafts each', () => {
+  const g = REAL.find((x) => x.slug === 'say-it-another-way');
+  assert.equal(g.pack.items.length, 12);
+  assert.equal(g.pack.roundsPerRun, 6);
+  g.pack.items.forEach((it, i) => {
+    assert.equal(it.choices.length, 4, `item ${i + 1}: one right draft and three wrong ones`);
+    assert.equal(new Set(it.choices.map((c) => c.id)).size, 4, `item ${i + 1}: unique ids`);
+    assert.ok(it.choices.some((c) => c.id === it.correctChoiceId), `item ${i + 1}: right answer present`);
+    assert.ok(it.passage.length >= 4 && it.passage.length <= 6, `item ${i + 1}: 4 to 6 sentences`);
+    assert.ok(it.correctEvidenceIndex >= 0 && it.correctEvidenceIndex < it.passage.length, `item ${i + 1}: evidence index in range`);
+    assert.ok(it.explanation && it.explanation.length > 60, `item ${i + 1}: explanation`);
+    assert.ok(!/[–—]/.test(it.passage.join(' ') + it.question + it.choices.map((c) => c.text).join(' ') + it.explanation), `item ${i + 1}: no dashes`);
+  });
+});
+
+test('SAY IT ANOTHER WAY: draft lengths are balanced, the right draft is not usually the longest, the proving sentence is spread', () => {
+  const g = REAL.find((x) => x.slug === 'say-it-another-way');
+  let longest = 0;
+  const count = [0, 0, 0, 0];
+  g.pack.items.forEach((it, i) => {
+    const lens = it.choices.map((c) => c.text.length);
+    assert.ok(Math.max(...lens) / Math.min(...lens) <= 1.4, `item ${i + 1}: lengths ${lens.join('/')} are more than 1.4 times apart`);
+    if (it.choices.find((c) => c.id === it.correctChoiceId).text.length === Math.max(...lens)) longest++;
+    count[it.correctEvidenceIndex]++;
+  });
+  assert.ok(longest <= 4, `the right draft is the longest in ${longest} of 12 items`);
+  assert.equal(count.slice(0, 3).join(), '4,4,4');
+  assert.equal(count[3], 0);
+});
+
+test('SAY IT ANOTHER WAY: passages read at about grades 5 to 9, and runs differ', () => {
+  const g = REAL.find((x) => x.slug === 'say-it-another-way');
+  g.pack.items.forEach((it, i) => {
+    const grade = fkGrade([...it.passage]);
+    assert.ok(grade >= 5 && grade <= 9, `item ${i + 1}: Flesch-Kincaid grade ${grade.toFixed(1)}`);
+  });
+  const sets = new Set(), slots = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 200; seed++) {
+    const out = prep(g.pack, 'evidenceHunt', seed).pack;
+    assert.equal(out.items.length, 6);
+    sets.add(out.items.map((it) => it.passage[0].slice(0, 14)).sort().join('|'));
+    out.items.forEach((it) => { slots[it.choices.findIndex((c) => c.id === it.correctChoiceId)]++; });
+  }
+  assert.ok(sets.size > 20, `only ${sets.size} different sets of situations in 200 runs`);
+  slots.forEach((n, s) => assert.ok(n / 1200 > 0.18 && n / 1200 < 0.32, `slot ${s} holds ${Math.round(n / 12)}% of right drafts`));
+});
+
+// Fix-It Workshop (new 2026-11-01, approved outline: docs/tune-your-brain/FIX_IT_WORKSHOP_OUTLINE.md): four school problems, one per run.
+// The idea step (consider) deliberately has no single best answer: all three ideas are workable.
+test('FIX-IT WORKSHOP: four problems, each a full five-step design cycle', () => {
+  const g = REAL.find((x) => x.slug === 'fix-it-workshop');
+  assert.equal(g.pack.variants.length, 4);
+  g.pack.variants.forEach((v, i) => assert.equal(v.steps.map((s) => s.key).join(), CYCLE.join(), `problem ${i + 1}`));
+  assert.equal(g.pack.variants[0].steps[0].prompt, g.pack.steps[0].prompt, 'problem 1 is the base pack');
+  const seen = new Set();
+  for (let seed = 1; seed <= 60; seed++) seen.add(prep(g.pack, 'branchingScenario', seed).pack.steps[0].prompt);
+  assert.equal(seen.size, 4);
+});
+
+test('FIX-IT WORKSHOP: every problem follows the writing rules', () => {
+  const g = REAL.find((x) => x.slug === 'fix-it-workshop');
+  g.pack.variants.forEach((v, n) => {
+    const label = `fix-it problem ${n + 1}`;
+    const ids = new Set();
+    v.steps.forEach((step, i) => {
+      const text = [step.prompt].concat((step.choices || []).flatMap((c) => [c.text, c.feedback])).join(' ');
+      assert.ok(!/[–—]/.test(text), `${label} step ${i + 1}: no dashes`);
+      if (step.key === 'reflect') { assert.equal(step.freeReflection, true); assert.ok(!step.choices); return; }
+      const types = step.choices.map((c) => c.type);
+      if (step.key === 'choose') {
+        assert.equal(types.slice().sort().join(), ['multiple_defensible', 'responsible', 'seek_help', 'unsafe'].join(), `${label}: final step needs one of each`);
+      } else if (step.key === 'consider') {
+        assert.equal(types.join(), 'multiple_defensible,multiple_defensible,multiple_defensible', `${label}: the idea step has no single best idea`);
+      } else {
+        assert.equal(step.choices.length, 3, `${label} step ${i + 1}: three options`);
+        assert.equal(types.filter((t) => t === 'responsible').length, 1);
+        assert.equal(types.filter((t) => t === 'plausible_incomplete').length, 2);
+      }
+      step.choices.forEach((c) => {
+        assert.ok(c.feedback && c.feedback.length > 20, `${label}: every option explains its effect`);
+        assert.ok(!ids.has(c.id), `${label}: duplicate id ${c.id}`); ids.add(c.id);
+      });
+      const lens = step.choices.map((c) => c.text.length);
+      assert.ok(Math.max(...lens) / Math.min(...lens) <= 1.4, `${label} step ${i + 1}: option lengths too uneven`);
+    });
+    const judged = v.steps.filter((s) => s.choices && s.choices.some((c) => c.type === 'responsible'));
+    const longest = judged.filter((s) => s.choices.find((c) => c.type === 'responsible').text.length === Math.max(...s.choices.map((c) => c.text.length))).length;
+    assert.ok(longest <= 2, `${label}: the best answer is the longest in ${longest} of 3 steps`);
+    const idea = v.steps.find((s) => s.key === 'consider');
+    idea.choices.forEach((c) => assert.ok(/\b(needs?|costs?|only|takes?|not)\b/.test(c.feedback), `${label}: the idea feedback names a cost or limit: ${c.id}`));
+  });
 });
