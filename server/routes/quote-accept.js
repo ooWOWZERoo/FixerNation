@@ -1,6 +1,7 @@
 const express = require('express');
 const Stripe = require('stripe');
 const pool = require('../db/pool');
+const { insertInvoice } = require('../lib/invoice-parties');
 const { createPurchase } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { createSetPasswordUrl } = require('./checkout');
@@ -194,10 +195,11 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   let invoiceId;
   try {
     await connection.beginTransaction();
-    const [result] = await connection.query(
-      'INSERT INTO invoices (contact_id, po_number, total_cents, status, paid_at) VALUES (?, ?, ?, ?, ?)',
-      [contactId, poNumber || null, amountCents, requiresPO ? 'unpaid' : 'paid', requiresPO ? null : new Date()]
-    );
+    // The invoice saves its own Bill To and Ship To, copied from the quote (lib/invoice-parties.js).
+    const result = await insertInvoice(connection, {
+      contact_id: contactId, po_number: poNumber || null, total_cents: amountCents,
+      status: requiresPO ? 'unpaid' : 'paid', paid_at: requiresPO ? null : new Date(),
+    }, quote);
     invoiceId = result.insertId;
     await generateInvoiceNumber(connection, invoiceId);
     await connection.commit();

@@ -5,6 +5,7 @@ const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 const { limiter } = require('../lib/rate-limit');
+const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-parties');
 
 const router = express.Router();
 
@@ -306,7 +307,7 @@ router.get('/quotes', requireAuth, async (req, res) => {
 router.put('/quotes/:id', requireAuth, async (req, res) => {
   const { status, notes, firstName, lastName, email, school, phone, quotedProductId, quotedProductName,
           quotedSeatCount, quotedAmountCents, quotedTierName, quotedAddonSeats, quotedProrationFactor,
-          quotedTermYears, quotedValidUntil, quotedSchoolDomain, contentProfileId } = req.body || {};
+          quotedTermYears, quotedValidUntil, quotedSchoolDomain, contentProfileId, billTo, shipTo } = req.body || {};
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
@@ -315,6 +316,22 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   }
   const [existing] = await pool.query('SELECT id FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!existing.length) return res.status(404).json({ error: 'Not found' });
+
+  // Bill To address (the quote's own name, school and email are the rest of Bill To) and Ship To: lib/invoice-parties.js
+  let partyColumns = [];
+  try {
+    if (billTo !== undefined) {
+      const b = cleanParty(billTo, 'bill');
+      partyColumns.push(...['street', 'city', 'state', 'zip'].map((k) => [`bill_to_${k}`, b[k] || null]));
+    }
+    if (shipTo !== undefined) {
+      const sh = cleanParty(shipTo, 'ship');
+      partyColumns.push(...['name', 'company', 'street', 'city', 'state', 'zip'].map((k) => [`ship_to_${k}`, sh[k] || null]));
+    }
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
 
   if (contentProfileId !== undefined && contentProfileId !== null) {
     const [[profile]] = await pool.query('SELECT id FROM quote_content_profiles WHERE id = ?', [contentProfileId]);
@@ -342,6 +359,7 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   if (contentProfileId      !== undefined) { updates.push('content_profile_id = ?');      params.push(contentProfileId || null); }
 
   if (quotedValidUntil !== undefined) { updates.push('quote_valid_until = ?'); params.push(quotedValidUntil || null); }
+  for (const [col, val] of partyColumns) { updates.push(`${col} = ?`); params.push(val); }
 
   if (quotedAmountCents !== undefined && !updates.includes('quoted_at = ?')) {
     updates.push('quoted_at = NOW()');
@@ -409,12 +427,17 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   // genuinely emailed one. quote_sent_via distinguishes the two so the list
   // page doesn't falsely claim an email went out.
   if (!noEmail) {
+    // Bill To and Ship To as the quote has them saved (falling back to the CRM contact's address), the same way the invoice will copy them.
+    const [[quoteContact]] = await pool.query('SELECT * FROM newsletter_contacts WHERE email = ?', [quote.email]);
+    const emailBillTo = billFromQuote(quote, quoteContact);
+    const emailShipTo = shipFromQuote(quote, quoteContact);
     await sendQuoteEmail({
       to: quote.email,
       firstName: quote.first_name,
       lastName: quote.last_name,
       school: quote.school,
       quoteNumber: quote.quote_number || null,
+      billTo: emailBillTo, shipTo: emailShipTo,
       productName: quotedProductName,
       seatCount: quotedSeatCount || null,
       amountDollars: quotedAmountCents / 100,
@@ -482,8 +505,10 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
            (quote_number, first_name, last_name, email, school, phone, message,
             quoted_product_id, quoted_product_name, quoted_tier_name,
             quoted_seat_count, quoted_amount_cents, quoted_addon_seats,
-            quoted_term_years, quoted_school_domain, quote_valid_until, content_profile_id, origin, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin', 'new')`,
+            quoted_term_years, quoted_school_domain, quote_valid_until, content_profile_id,
+            bill_to_street, bill_to_city, bill_to_state, bill_to_zip,
+            ship_to_name, ship_to_company, ship_to_street, ship_to_city, ship_to_state, ship_to_zip, origin, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin', 'new')`,
         [
           generateQuoteNumber(),
           firstName, lastName, email, school, phone,
@@ -493,6 +518,9 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
           src.quoted_amount_cents || null, src.quoted_addon_seats || null,
           src.quoted_term_years || null, src.quoted_school_domain || null, src.quote_valid_until || null,
           src.content_profile_id || null,
+          src.bill_to_street || null, src.bill_to_city || null, src.bill_to_state || null, src.bill_to_zip || null,
+          src.ship_to_name || null, src.ship_to_company || null, src.ship_to_street || null,
+          src.ship_to_city || null, src.ship_to_state || null, src.ship_to_zip || null,
         ]
       );
       newId = result.insertId;

@@ -128,6 +128,17 @@
           <div class="a-field"><label>City</label><input type="text" id="contactCity"></div>
           <div class="a-field"><label>State</label><input type="text" id="contactState"></div>
         </div>
+        <div class="a-field" style="margin-top:6px;"><label>Ship To <span style="font-weight:400;color:var(--a-text-soft);font-size:12px;">optional shipping address (the address above is the Bill To address)</span></label></div>
+        <div class="a-form-row">
+          <div class="a-field"><label>Ship To name</label><input type="text" id="contactShipName"></div>
+          <div class="a-field"><label>Ship To company</label><input type="text" id="contactShipCompany"></div>
+        </div>
+        <div class="a-field"><label>Ship To street</label><input type="text" id="contactShipStreet"></div>
+        <div class="a-form-row">
+          <div class="a-field"><label>Ship To city</label><input type="text" id="contactShipCity"></div>
+          <div class="a-field"><label>Ship To state</label><input type="text" id="contactShipState"></div>
+          <div class="a-field" style="max-width:160px;"><label>Ship To ZIP</label><input type="text" id="contactShipZip"></div>
+        </div>
         <div class="a-form-row">
           <div class="a-field" style="max-width:160px;"><label>ZIP</label><input type="text" id="contactZip"></div>
           <div class="a-field">
@@ -660,6 +671,13 @@ async function editContact(id) {
   document.getElementById('contactCity').value = (c.address && c.address.city) || '';
   document.getElementById('contactState').value = (c.address && c.address.state) || '';
   document.getElementById('contactZip').value = (c.address && c.address.zip) || '';
+  const sh = c.shipTo || {};
+  document.getElementById('contactShipName').value = sh.name || '';
+  document.getElementById('contactShipCompany').value = sh.company || '';
+  document.getElementById('contactShipStreet').value = sh.street || '';
+  document.getElementById('contactShipCity').value = sh.city || '';
+  document.getElementById('contactShipState').value = sh.state || '';
+  document.getElementById('contactShipZip').value = sh.zip || '';
   document.getElementById('contactSource').value = c.source || 'Manual Entry';
   document.getElementById('contactStatus').value = c.status || 'Subscribed';
   document.getElementById('contactNotes').value = c.notes || '';
@@ -848,6 +866,14 @@ async function saveContact() {
     state: document.getElementById('contactState').value.trim(),
     zip: document.getElementById('contactZip').value.trim(),
   };
+  const shipTo = {
+    name: document.getElementById('contactShipName').value.trim(),
+    company: document.getElementById('contactShipCompany').value.trim(),
+    street: document.getElementById('contactShipStreet').value.trim(),
+    city: document.getElementById('contactShipCity').value.trim(),
+    state: document.getElementById('contactShipState').value.trim(),
+    zip: document.getElementById('contactShipZip').value.trim(),
+  };
   const notes = document.getElementById('contactNotes').value.trim();
   const groupIds = getCheckedGroupIds();
 
@@ -856,7 +882,7 @@ async function saveContact() {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone, company, source, status, address, notes, groupIds }),
+      body: JSON.stringify({ name, email, phone, company, source, status, address, shipTo, notes, groupIds }),
     });
     if (fnHandleUnauthorized(r)) return;
     if (!r.ok) { fnToast('Could not save contact'); return; }
@@ -870,7 +896,7 @@ async function saveContact() {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, phone, company, source, status, address, notes, groupIds }),
+    body: JSON.stringify({ name, email, phone, company, source, status, address, shipTo, notes, groupIds }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json();

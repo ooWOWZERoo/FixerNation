@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db/pool');
+const { cleanParty } = require('../lib/invoice-parties');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
 const { unsubscribeToken, sendVerificationEmail, esc } = require('../lib/mailer');
 const crypto = require('crypto');
@@ -67,6 +68,7 @@ function serialize(row) {
     phone: row.phone || '',
     company: row.company || '',
     address: { street: row.street || '', city: row.city || '', state: row.state || '', zip: row.zip || '' },
+    shipTo: { name: row.ship_to_name || '', company: row.ship_to_company || '', street: row.ship_to_street || '', city: row.ship_to_city || '', state: row.ship_to_state || '', zip: row.ship_to_zip || '' },
     signupDate: row.signup_date,
     source: row.source,
     status: row.status,
@@ -123,6 +125,13 @@ router.post('/contacts', newsletterSignupLimit, async (req, res) => {
     if (Array.isArray(b.groupIds) && b.groupIds.length) {
       await setContactGroups(pool, result.insertId, b.groupIds);
     }
+    if (b.shipTo !== undefined) {
+      const sh = cleanParty(b.shipTo, 'ship');
+      await pool.query(
+        'UPDATE newsletter_contacts SET ship_to_name=?, ship_to_company=?, ship_to_street=?, ship_to_city=?, ship_to_state=?, ship_to_zip=? WHERE id=?',
+        [sh.name || null, sh.company || null, sh.street || null, sh.city || null, sh.state || null, sh.zip || null, result.insertId]
+      );
+    }
     const [rows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [result.insertId]);
     const [contact] = await attachSiteUserInfo(await attachGroups(rows));
     res.status(201).json({ ok: true, contact: serialize(contact) });
@@ -161,6 +170,11 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
 
   const b = req.body || {};
   const address = b.address || {};
+  let shipTo = null;
+  if (b.shipTo !== undefined) {
+    try { shipTo = cleanParty(b.shipTo, 'ship'); }
+    catch (err) { if (err.status) return res.status(err.status).json({ error: err.message }); throw err; }
+  }
   const merged = {
     name: b.name !== undefined ? b.name : existing.name,
     email: b.email !== undefined ? b.email.trim() : existing.email,
@@ -182,6 +196,12 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
       'UPDATE newsletter_contacts SET name=?, email=?, phone=?, company=?, street=?, city=?, state=?, zip=?, source=?, status=?, notes=? WHERE id=?',
       [merged.name, merged.email, merged.phone, merged.company, merged.street, merged.city, merged.state, merged.zip, merged.source, merged.status, merged.notes, req.params.id]
     );
+    if (shipTo) {
+      await connection.query(
+        'UPDATE newsletter_contacts SET ship_to_name=?, ship_to_company=?, ship_to_street=?, ship_to_city=?, ship_to_state=?, ship_to_zip=? WHERE id=?',
+        [shipTo.name || null, shipTo.company || null, shipTo.street || null, shipTo.city || null, shipTo.state || null, shipTo.zip || null, req.params.id]
+      );
+    }
     if (b.groupIds !== undefined) {
       await setContactGroups(connection, req.params.id, b.groupIds);
     }
@@ -442,6 +462,17 @@ async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
   const licenseProductNameById = {};
   licenseProductRows.forEach(lp => { licenseProductNameById[lp.id] = lp.name; });
 
+  // Each purchase's invoice, with its Ship To in one line, so the Licenses page can show it and link to the Bill To / Ship To editor.
+  const invoiceIds = [...new Set(purchases.map(p => p.invoice_id).filter(Boolean))];
+  const [invoiceRows] = invoiceIds.length
+    ? await pool.query('SELECT id, invoice_number, ship_to_name, ship_to_company, ship_to_street, ship_to_city, ship_to_state, ship_to_zip FROM invoices WHERE id IN (?)', [invoiceIds])
+    : [[]];
+  const invoiceById = {};
+  invoiceRows.forEach(i => {
+    const cityLine = [[i.ship_to_city, i.ship_to_state].filter(Boolean).join(', '), i.ship_to_zip].filter(Boolean).join(' ');
+    invoiceById[i.id] = { number: i.invoice_number, shipTo: [i.ship_to_company || i.ship_to_name, i.ship_to_street, cityLine].filter(Boolean).join(', ') };
+  });
+
   const registeredUserIds = seatRows.map(s => s.registered_site_user_id).filter(Boolean);
   const [audRows] = registeredUserIds.length
     ? await pool.query('SELECT site_user_id, audience FROM site_user_audiences WHERE site_user_id IN (?)', [registeredUserIds])
@@ -479,6 +510,8 @@ async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
     paymentStatus: p.payment_status,
     poNumber: p.po_number,
     invoiceId: p.invoice_id,
+    invoiceNumber: p.invoice_id && invoiceById[p.invoice_id] ? invoiceById[p.invoice_id].number : null,
+    shipToSummary: p.invoice_id && invoiceById[p.invoice_id] ? invoiceById[p.invoice_id].shipTo : '',
     amount: p.amount_cents === null ? null : Number(p.amount_cents) / 100,
     licenseStatus: p.license_status || 'active',
     effectiveDate: p.effective_date ? new Date(p.effective_date).toISOString().slice(0, 10) : null,

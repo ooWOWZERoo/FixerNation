@@ -6,6 +6,7 @@ const { sendInvoiceEmail } = require('../lib/mailer');
 const { fireAutomation } = require('../lib/automations');
 const { approveForInvoice, reverseForInvoice } = require('../lib/affiliate-attribution');
 const { audit } = require('../lib/audit');
+const { cleanParty, isEmptyParty, invoiceBillTo, invoiceShipTo, invoiceColumns } = require('../lib/invoice-parties');
 
 const router = express.Router();
 
@@ -20,7 +21,8 @@ function serialize(row, contact, paymentMethod, quoteNumber) {
     id: row.id,
     invoiceNumber: row.invoice_number,
     contactId: row.contact_id,
-    buyer: contact ? { name: contact.name, email: contact.email, company: contact.company } : null,
+    // The invoice's own Bill To (or, for an older invoice, the contact's details as before).
+    buyer: (contact || row.bill_to_saved_at) ? (({ name, email, company }) => ({ name, email, company }))(invoiceBillTo(row, contact)) : null,
     poNumber: row.po_number,
     paymentMethod: paymentMethod || null,
     poReceivedDate: row.po_received_date || null,
@@ -65,20 +67,21 @@ async function fetchInvoiceWithLineItems(id) {
     ? await pool.query('SELECT quote_number FROM quote_requests WHERE id = ?', [quoteId])
     : [[null]];
 
+  const billTo = invoiceBillTo(invoice, contactRows[0]);
+  const shipTo = invoiceShipTo(invoice);
+
   return {
     ...serialize(invoice, contactRows[0], purchaseRows[0] && purchaseRows[0].payment_method, quoteRow && quoteRow.quote_number),
     renewalDate,
-    buyer: contactRows[0] ? {
-      name: contactRows[0].name,
-      email: contactRows[0].email,
-      company: contactRows[0].company,
-      address: {
-        street: contactRows[0].street || '',
-        city: contactRows[0].city || '',
-        state: contactRows[0].state || '',
-        zip: contactRows[0].zip || '',
-      },
+    buyer: contactRows[0] || invoice.bill_to_saved_at ? {
+      name: billTo.name,
+      email: billTo.email,
+      company: billTo.company,
+      address: { street: billTo.street, city: billTo.city, state: billTo.state, zip: billTo.zip },
     } : null,
+    billTo,
+    shipTo,
+    billToIsOwn: !!invoice.bill_to_saved_at,
     lineItems: lineItems.map(li => ({
       description: li.productType === 'book'
         ? `📗 ${li.bookTitle || 'Book'}`
@@ -154,6 +157,8 @@ router.post('/:id/resend', requireAuth, async (req, res) => {
 
   await sendInvoiceEmail({
     to: invoice.buyer.email,
+    billTo: invoice.billTo,
+    shipTo: invoice.shipTo,
     buyerName: invoice.buyer.company || invoice.buyer.name,
     invoiceNumber: invoice.invoiceNumber,
     poNumber: invoice.poNumber,
@@ -162,6 +167,47 @@ router.post('/:id/resend', requireAuth, async (req, res) => {
     lineItems: invoice.lineItems,
   });
   res.json({ ok: true });
+});
+
+// PUT /api/invoices/:id/addresses  { billTo?: {...}, shipTo?: {...} }
+// Changes this invoice's own Bill To and/or Ship To. The CRM contact and the buyer's other invoices are never touched.
+// Saving a Bill To on an older invoice (one that still read it from the contact) makes it the invoice's own from then on.
+// Allowed on any status: correcting an address is not a money change. Every edit is written to the audit trail.
+router.put('/:id/addresses', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
+  const invoice = rows[0];
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  const body = req.body || {};
+  if (body.billTo === undefined && body.shipTo === undefined) return res.status(400).json({ error: 'Send billTo and/or shipTo' });
+
+  let billTo, shipTo;
+  try {
+    if (body.billTo !== undefined) {
+      billTo = cleanParty(body.billTo, 'bill');
+      if (!billTo.name && !billTo.company) return res.status(400).json({ error: 'Bill To needs a name or a company' });
+    }
+    if (body.shipTo !== undefined) shipTo = cleanParty(body.shipTo, 'ship');
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+
+  const [contactRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [invoice.contact_id]);
+  const before = { billTo: invoiceBillTo(invoice, contactRows[0]), shipTo: invoiceShipTo(invoice) };
+  const changes = invoiceColumns({ billTo, shipTo });
+  await pool.query(
+    `UPDATE invoices SET ${changes.map((c) => `${c.col} = ?`).join(', ')} WHERE id = ?`,
+    [...changes.map((c) => c.val), invoice.id]
+  );
+  const after = { billTo: billTo || before.billTo, shipTo: shipTo || before.shipTo };
+  if (JSON.stringify(before) !== JSON.stringify(after)) {
+    await audit(pool, {
+      actorType: 'admin', actorId: req.user && req.user.userId, actorEmail: req.user && req.user.username,
+      action: 'invoice_addresses_updated', entityType: 'invoice', entityId: invoice.id,
+      prevValue: before, newValue: after, ipAddress: req.ip,
+    });
+  }
+  res.json({ ok: true, invoice: await fetchInvoiceWithLineItems(invoice.id) });
 });
 
 // Marks the whole invoice paid/unpaid and cascades that status to every

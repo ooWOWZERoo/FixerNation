@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 97 — 2026-11-03 — Invoice Bill To and Ship To
+
+- **Staff can change an invoice's Bill To.** On the Invoices page, the new 📍 button opens Bill To (name, company, email, address) and Ship To for that invoice. Saving changes that invoice only: the CRM contact and the buyer's other invoices stay as they were. Paid and cancelled invoices can be corrected too, and every edit is recorded with the old and new values.
+- **Ship To is new.** The printed invoice and the invoice email show a Ship To block next to Bill To when one is filled in ("Same as Bill To" copies it across). The quote builder has Bill To address and Ship To fields (on the quote email too), and the CRM contact form has an optional Ship To address. A new invoice copies its Bill To and Ship To from its quote, or from the contact for a cart order, so a later contact edit doesn't rewrite it. The Licenses page and the contact's purchases show the invoice number and Ship To with a link to the editor.
+- **Older invoices are untouched.** They keep reading Bill To from the contact until someone edits them.
+- **Fix: lowering Additional Seats back to 0 on a quote now saves.** It used to keep the old number (Release 95 follow-up). The Invoices page also now escapes the buyer's name, company and email.
+- **Needs a one-off script and a Node restart:** `node scripts/alter-add-bill-ship-to.js` (safe to run twice) adds the columns; run it before the restart. Not included: a shipping address at card checkout for books (a book bought by card has no invoice). Rules: `docs/reference/invoice-bill-ship-to-requirements.md`. 318 server tests pass (19 new).
+
 ## Release 96 — 2026-11-03 — Five help videos re-recorded and republished
 
 - **Re-recorded to match the new screens:** "Invite a teacher" (B2) and "Invite many teachers with a CSV" (B3) now show the grade-level checkboxes and the ES;MS rule; "Why can't I invite teachers yet?" (B10) fills in the new form; "Register with your school email" (T2) says the grade-level step is required; "Build your lesson plan library" (T7) now covers swaps and the new popups instead of saying picks are permanent.

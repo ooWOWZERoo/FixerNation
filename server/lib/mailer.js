@@ -186,7 +186,27 @@ async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel }) 
 // There's no customer-facing invoice page (admin-invoice-print.html requires
 // admin login), so the invoice contents are embedded directly in the email
 // body rather than linked to.
-async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total, status, lineItems }) {
+// Lines of an address block for an email: name, company, street, "city, state zip", then the email (Bill To only). Empty parts are left out.
+function addressLines(p) {
+  if (!p) return [];
+  const cityLine = [[p.city, p.state].filter(Boolean).join(', '), p.zip].filter(Boolean).join(' ');
+  return [p.name, p.company, p.street, cityLine, p.email].map((v) => String(v || '').trim()).filter(Boolean);
+}
+
+// Bill To / Ship To as an HTML table row and as plain text. Either block is left out when it is empty.
+function addressBlocks(billTo, shipTo) {
+  const billLines = addressLines(billTo);
+  const shipLines = addressLines(shipTo);
+  const blockHtml = (title, lines) => `<td style="vertical-align:top; padding:0 24px 12px 0;"><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#6b7280;">${title}</div><div style="font-size:14px; line-height:1.5;">${lines.map(esc).join('<br>')}</div></td>`;
+  const html = (billLines.length || shipLines.length)
+    ? `<table style="border-collapse:collapse; margin:0 0 12px;"><tr>${billLines.length ? blockHtml('Bill To', billLines) : ''}${shipLines.length ? blockHtml('Ship To', shipLines) : ''}</tr></table>`
+    : '';
+  const text = [billLines.length ? `Bill To:\n  ${billLines.join('\n  ')}` : '', shipLines.length ? `Ship To:\n  ${shipLines.join('\n  ')}` : ''].filter(Boolean).join('\n\n');
+  return { html, text };
+}
+
+async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total, status, lineItems, billTo, shipTo }) {
+  const { html: addressHtml, text: addressText } = addressBlocks(billTo, shipTo);
   const rows = lineItems.map(li =>
     `<tr><td style="padding:6px 10px;">${esc(li.description)}${li.seatCount ? ` (${li.seatCount} seats)` : ''}</td><td style="padding:6px 10px; text-align:right;">${li.amount !== null ? '$' + li.amount.toFixed(2) : '—'}</td></tr>`
   ).join('');
@@ -199,9 +219,10 @@ async function sendInvoiceEmail({ to, buyerName, invoiceNumber, poNumber, total,
     from: systemFromAddress(),
     to,
     subject: `Invoice ${invoiceNumber} — Fixer Nation`,
-    text: `Hi ${buyerName || 'there'},\n\nHere is invoice ${invoiceNumber}${poNumber ? ` (PO ${poNumber})` : ''}, status: ${statusLabel}.\n\n${textRows}\n\nTotal: $${total.toFixed(2)}\n\nQuestions? Just reply to this email.`,
+    text: `Hi ${buyerName || 'there'},\n\nHere is invoice ${invoiceNumber}${poNumber ? ` (PO ${poNumber})` : ''}, status: ${statusLabel}.\n\n${addressText ? addressText + '\n\n' : ''}${textRows}\n\nTotal: $${total.toFixed(2)}\n\nQuestions? Just reply to this email.`,
     html: `<p>Hi ${esc(buyerName || 'there')},</p>
       <p>Here is invoice <strong>${esc(invoiceNumber)}</strong>${poNumber ? ` (PO ${esc(poNumber)})` : ''} — status: <strong>${statusLabel}</strong>.</p>
+      ${addressHtml}
       <table style="border-collapse:collapse; width:100%; max-width:480px;">${rows}
         <tr><td style="padding:10px; font-weight:700; border-top:2px solid #ddd;">Total</td><td style="padding:10px; font-weight:700; text-align:right; border-top:2px solid #ddd;">$${total.toFixed(2)}</td></tr>
       </table>
@@ -369,7 +390,7 @@ function renderSectionPlain(text) {
   return text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
 }
 
-async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, termYears, discountPct, quoteValidUntil, acceptUrl, contentSections }) {
+async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school, quoteNumber, productName, seatCount, amountDollars, replyTo, fromEmail, addonSeats, termYears, discountPct, quoteValidUntil, acceptUrl, contentSections }) {
   const name = [firstName, lastName].filter(Boolean).join(' ') || 'there';
   const total = `$${Number(amountDollars).toFixed(2)}`;
   const fromAddr = fromEmail ? `"Fixer Nation Education" <${fromEmail}>` : systemFromAddress();
@@ -388,6 +409,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
   }
 
   // Build itemized rows when breakdown data is present
+  const { html: quoteAddressHtml, text: quoteAddressText } = addressBlocks(billTo, shipTo);
   const hasBreakdown = addonSeats != null && termYears != null;
 
   let htmlRows = '';
@@ -468,6 +490,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
       `Thank you for your interest in Fixer Nation Education. Here is the quote for ${school || 'your school'}:`,
       sectionsText,
       ``,
+      quoteAddressText ? quoteAddressText + '\n' : '',
       textLines,
       ``,
       acceptCtaText,
@@ -478,6 +501,7 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
       <p>Hi ${esc(name)},</p>
       <p>Thank you for your interest in Fixer Nation Education. Here is the quote for <strong>${esc(school || 'your school')}</strong>:</p>
       ${sectionsHtml}
+      ${quoteAddressHtml}
       <table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;">${htmlRows}</table>
       ${acceptCtaHtml}
       <p style="margin-top:20px;">Fixer Nation Education</p>
@@ -485,4 +509,4 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
   });
 }
 
-module.exports = { sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail };
+module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail };

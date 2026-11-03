@@ -171,6 +171,13 @@ CREATE TABLE IF NOT EXISTS newsletter_contacts (
   city VARCHAR(128),
   state VARCHAR(64),
   zip VARCHAR(16),
+  -- optional shipping address (Release 97); the address above is the Bill To address
+  ship_to_name VARCHAR(255) NULL,
+  ship_to_company VARCHAR(255) NULL,
+  ship_to_street VARCHAR(255) NULL,
+  ship_to_city VARCHAR(128) NULL,
+  ship_to_state VARCHAR(64) NULL,
+  ship_to_zip VARCHAR(32) NULL,
   signup_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   source VARCHAR(128) NOT NULL DEFAULT 'Homepage',
   status VARCHAR(32) NOT NULL DEFAULT 'Subscribed',
@@ -266,6 +273,21 @@ CREATE TABLE IF NOT EXISTS invoices (
   status VARCHAR(16) NOT NULL DEFAULT 'unpaid', -- 'unpaid' | 'paid' | 'cancelled'
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   paid_at DATETIME NULL,
+  -- Bill To and Ship To are this invoice's own copy (Release 97). bill_to_saved_at NULL = an older invoice that still reads Bill To from the contact.
+  bill_to_name VARCHAR(255) NULL,
+  bill_to_company VARCHAR(255) NULL,
+  bill_to_email VARCHAR(255) NULL,
+  bill_to_street VARCHAR(255) NULL,
+  bill_to_city VARCHAR(128) NULL,
+  bill_to_state VARCHAR(64) NULL,
+  bill_to_zip VARCHAR(32) NULL,
+  bill_to_saved_at DATETIME NULL,
+  ship_to_name VARCHAR(255) NULL,
+  ship_to_company VARCHAR(255) NULL,
+  ship_to_street VARCHAR(255) NULL,
+  ship_to_city VARCHAR(128) NULL,
+  ship_to_state VARCHAR(64) NULL,
+  ship_to_zip VARCHAR(32) NULL,
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -668,6 +690,17 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   email VARCHAR(255) NOT NULL,
   school VARCHAR(255),
   phone VARCHAR(64),
+  -- Bill To address and Ship To on the quote (Release 97); copied onto the invoice when the quote is accepted
+  bill_to_street VARCHAR(255) NULL,
+  bill_to_city VARCHAR(128) NULL,
+  bill_to_state VARCHAR(64) NULL,
+  bill_to_zip VARCHAR(32) NULL,
+  ship_to_name VARCHAR(255) NULL,
+  ship_to_company VARCHAR(255) NULL,
+  ship_to_street VARCHAR(255) NULL,
+  ship_to_city VARCHAR(128) NULL,
+  ship_to_state VARCHAR(64) NULL,
+  ship_to_zip VARCHAR(32) NULL,
   message TEXT,
   quote_valid_until DATE NULL,
   expiring_reminder_sent_at DATETIME NULL, -- dedup flag for quote-expiring-reminder.js, same pattern as purchases.renewal_reminder_sent_at

@@ -578,6 +578,30 @@ function openModal(id) {
       <label class="q-label" for="qPhone">Phone</label>
       <input type="tel" id="qPhone" class="q-input" placeholder="(xxx) xxx-xxxx" value="${fnEscape(q.phone || '')}">
     </div>
+    <div class="q-field">
+      <div class="q-label">Bill To address</div>
+      <input type="text" id="qBillStreet" class="q-input" placeholder="Street" maxlength="255" value="${fnEscape(q.bill_to_street || '')}">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:6px;">
+        <input type="text" id="qBillCity" class="q-input" placeholder="City" maxlength="128" value="${fnEscape(q.bill_to_city || '')}">
+        <input type="text" id="qBillState" class="q-input" placeholder="State" maxlength="64" value="${fnEscape(q.bill_to_state || '')}">
+        <input type="text" id="qBillZip" class="q-input" placeholder="Zip" maxlength="32" value="${fnEscape(q.bill_to_zip || '')}">
+      </div>
+      <div class="a-note" style="margin-top:4px;">Leave blank to use the address on the CRM contact. The name, school and email above are the rest of Bill To.</div>
+    </div>
+    <div class="q-field">
+      <div class="q-label">Ship To <span style="font-weight:400;color:var(--a-text-soft);font-size:11px;">optional</span>
+        <button type="button" class="a-btn a-btn-outline" style="font-size:11px;padding:2px 8px;margin-left:8px;" onclick="quoteShipSameAsBill()">Same as Bill To</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input type="text" id="qShipName" class="q-input" placeholder="Name" maxlength="255" value="${fnEscape(q.ship_to_name || '')}">
+        <input type="text" id="qShipCompany" class="q-input" placeholder="Company" maxlength="255" value="${fnEscape(q.ship_to_company || '')}">
+      </div>
+      <input type="text" id="qShipStreet" class="q-input" placeholder="Street" maxlength="255" style="margin-top:6px;" value="${fnEscape(q.ship_to_street || '')}">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:6px;">
+        <input type="text" id="qShipCity" class="q-input" placeholder="City" maxlength="128" value="${fnEscape(q.ship_to_city || '')}">
+        <input type="text" id="qShipState" class="q-input" placeholder="State" maxlength="64" value="${fnEscape(q.ship_to_state || '')}">
+        <input type="text" id="qShipZip" class="q-input" placeholder="Zip" maxlength="32" value="${fnEscape(q.ship_to_zip || '')}">
+      </div>
+    </div>
     ${(!creatingQuote && q.message) ? `<div class="q-field"><div class="q-label">Message</div><div class="q-msg">${fnEscape(q.message)}</div></div>` : ''}
 
     <div class="q-field">
@@ -973,6 +997,16 @@ async function ensureQuoteSaved() {
 // Pushes everything currently in the modal (contact info, status, notes,
 // content profile, pricing) to the given quote id. Shared by Save and by
 // Send (which persists any last-second edits before actually emailing).
+function quoteShipSameAsBill() {
+  const g = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
+  document.getElementById('qShipName').value = [g('qFirstName'), g('qLastName')].filter(Boolean).join(' ');
+  document.getElementById('qShipCompany').value = g('qSchoolName');
+  document.getElementById('qShipStreet').value = g('qBillStreet');
+  document.getElementById('qShipCity').value = g('qBillCity');
+  document.getElementById('qShipState').value = g('qBillState');
+  document.getElementById('qShipZip').value = g('qBillZip');
+}
+
 async function putQuoteFields(id) {
   const contact = getContactPayload();
   if (!contact.email) { fnToast('Email is required'); return null; }
@@ -986,10 +1020,15 @@ async function putQuoteFields(id) {
   if (seatCount   !== null) body.quotedSeatCount   = seatCount;
   if (amountCents !== null) body.quotedAmountCents = amountCents;
   if (tierName    !== null) body.quotedTierName    = tierName;
-  if (addonSeats   >    0)  body.quotedAddonSeats  = addonSeats;
+  // On the Annual tab, lowering Additional Seats back to 0 has to be saved too (it used to keep the old number).
+  const annualBuilt = document.getElementById('tabAddon').style.display === 'none' && document.getElementById('tabPilot').style.display === 'none';
+  if (addonSeats > 0 || annualBuilt) body.quotedAddonSeats = addonSeats;
   if (termYears    >    1)  body.quotedTermYears   = termYears;
   if (quotedValidUntil)     body.quotedValidUntil  = quotedValidUntil;
   body.quotedSchoolDomain = quotedSchoolDomain;
+  const val = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
+  body.billTo = { street: val('qBillStreet'), city: val('qBillCity'), state: val('qBillState'), zip: val('qBillZip') };
+  body.shipTo = { name: val('qShipName'), company: val('qShipCompany'), street: val('qShipStreet'), city: val('qShipCity'), state: val('qShipState'), zip: val('qShipZip') };
   const profileEl = document.getElementById('qContentProfile');
   if (profileEl) body.contentProfileId = Number(profileEl.value) || null;
 

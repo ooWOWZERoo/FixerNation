@@ -3,6 +3,7 @@ const Stripe = require('stripe');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
+const { insertInvoice } = require('../lib/invoice-parties');
 const { createPurchase } = require('./newsletter');
 const { fireAutomation } = require('../lib/automations');
 const { getSiteUser } = require('../lib/access');
@@ -323,10 +324,7 @@ router.post('/create-po-order', limiter({ name: 'checkout-po', windowMs: 3600000
   let invoiceId, invoiceNumber;
   try {
     await connection.beginTransaction();
-    const [result] = await connection.query(
-      'INSERT INTO invoices (contact_id, po_number, total_cents, status) VALUES (?, ?, ?, ?)',
-      [contactId, poNumber, totalCents, 'unpaid']
-    );
+    const result = await insertInvoice(connection, { contact_id: contactId, po_number: poNumber, total_cents: totalCents, status: 'unpaid' }, null);
     invoiceId = result.insertId;
     invoiceNumber = await generateInvoiceNumber(connection, invoiceId);
     await connection.commit();

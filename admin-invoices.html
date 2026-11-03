@@ -52,6 +52,35 @@
   </div>
 </div>
 
+<style>.addr-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}</style>
+<!-- Bill To / Ship To modal -->
+<div class="a-modal-overlay" id="addressesOverlay" style="display:none;">
+  <div class="a-modal" style="max-width:640px;">
+    <div class="a-modal-head">
+      <h3 id="addressesTitle">Bill To and Ship To</h3>
+      <button class="a-modal-close" onclick="closeAddressesModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-error" id="addressesError"></div>
+      <div class="a-note" style="margin-bottom:12px;">Changes apply to this invoice only. The contact record and the buyer's other invoices are not changed.</div>
+      <h4 style="margin:0 0 8px;">Bill To</h4>
+      <div class="addr-row"><div class="a-field"><label>Name</label><input type="text" id="billName" maxlength="255"></div><div class="a-field"><label>Company</label><input type="text" id="billCompany" maxlength="255"></div></div>
+      <div class="a-field"><label>Email</label><input type="email" id="billEmail" maxlength="255"></div>
+      <div class="a-field"><label>Street</label><input type="text" id="billStreet" maxlength="255"></div>
+      <div class="addr-row"><div class="a-field"><label>City</label><input type="text" id="billCity" maxlength="128"></div><div class="a-field"><label>State</label><input type="text" id="billState" maxlength="64"></div><div class="a-field"><label>Zip</label><input type="text" id="billZip" maxlength="32"></div></div>
+      <h4 style="margin:16px 0 8px;">Ship To <span style="font-weight:400;color:var(--a-text-soft);font-size:12px;">optional</span>
+        <button type="button" class="a-btn a-btn-outline" style="font-size:12px;padding:3px 10px;margin-left:8px;" onclick="shipSameAsBill()">Same as Bill To</button></h4>
+      <div class="addr-row"><div class="a-field"><label>Name</label><input type="text" id="shipName" maxlength="255"></div><div class="a-field"><label>Company</label><input type="text" id="shipCompany" maxlength="255"></div></div>
+      <div class="a-field"><label>Street</label><input type="text" id="shipStreet" maxlength="255"></div>
+      <div class="addr-row"><div class="a-field"><label>City</label><input type="text" id="shipCity" maxlength="128"></div><div class="a-field"><label>State</label><input type="text" id="shipState" maxlength="64"></div><div class="a-field"><label>Zip</label><input type="text" id="shipZip" maxlength="32"></div></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeAddressesModal()">Cancel</button>
+      <button class="a-btn a-btn-primary" id="addressesSaveBtn" onclick="saveAddresses()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="admin-common.js?v=17"></script>
 <script>
 fnRequireAuth();
@@ -91,7 +120,7 @@ async function loadInvoices(status) {
     tr.innerHTML = `
       <td class="a-cell-title"><a href="admin-invoice-print.html?id=${inv.id}" target="_blank">${fnEscape(inv.invoiceNumber)}</a></td>
       <td>${inv.quoteNumber ? `#${inv.quoteNumber}` : '—'}</td>
-      <td>${(inv.buyer && (inv.buyer.company || inv.buyer.name)) || '—'}<div class="a-note">${(inv.buyer && inv.buyer.email) || ''}</div></td>
+      <td>${fnEscape((inv.buyer && (inv.buyer.company || inv.buyer.name)) || '—')}<div class="a-note">${fnEscape((inv.buyer && inv.buyer.email) || '')}</div></td>
       <td>${fnEscape(inv.poNumber || '—')}</td>
       <td>${inv.itemCount}</td>
       <td>${fnFormatCurrency(inv.total)}</td>
@@ -100,6 +129,7 @@ async function loadInvoices(status) {
       <td>
         <div class="a-row-actions">
           <a class="a-icon-btn" title="View / Print" href="admin-invoice-print.html?id=${inv.id}" target="_blank">🖨️</a>
+          <button class="a-icon-btn" title="Edit Bill To / Ship To" onclick="openAddressesModal(${inv.id})">📍</button>
           <button class="a-icon-btn" title="Resend invoice email" onclick="resendInvoice(${inv.id})">📧</button>
           ${cancelled ? '' : `<button class="a-icon-btn" title="${paid ? 'Mark unpaid' : 'Mark paid'}" onclick="toggleInvoiceStatus(${inv.id}, '${paid ? 'unpaid' : 'paid'}')">${paid ? '↺' : '✅'}</button>`}
           ${(!cancelled && inv.paymentMethod === 'po' && !inv.poReceivedDate) ? `<button class="a-icon-btn" title="Mark PO received — activates the school license" onclick="markPoReceived(${inv.id})">📬</button>` : ''}
@@ -197,6 +227,47 @@ async function deleteInvoice(id) {
   fnToast('Invoice deleted');
 }
 
+// ---- Bill To / Ship To (this invoice only) ----
+let addressesInvoiceId = null;
+const BILL_FIELDS = { name: 'billName', company: 'billCompany', email: 'billEmail', street: 'billStreet', city: 'billCity', state: 'billState', zip: 'billZip' };
+const SHIP_FIELDS = { name: 'shipName', company: 'shipCompany', street: 'shipStreet', city: 'shipCity', state: 'shipState', zip: 'shipZip' };
+function readFields(map) { const out = {}; Object.keys(map).forEach(k => { out[k] = document.getElementById(map[k]).value.trim(); }); return out; }
+function writeFields(map, party) { Object.keys(map).forEach(k => { document.getElementById(map[k]).value = (party && party[k]) || ''; }); }
+
+async function openAddressesModal(id) {
+  const r = await fetch(`/api/invoices/${id}`, { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not load that invoice'); return; }
+  const { invoice } = await r.json();
+  addressesInvoiceId = id;
+  document.getElementById('addressesTitle').textContent = `Bill To and Ship To — ${invoice.invoiceNumber}`;
+  showAddressesError('');
+  writeFields(BILL_FIELDS, invoice.billTo);
+  writeFields(SHIP_FIELDS, invoice.shipTo);
+  document.getElementById('addressesOverlay').style.display = 'flex';
+}
+function showAddressesError(t) { const e = document.getElementById('addressesError'); e.textContent = t; e.classList.toggle('show', !!t); }
+function closeAddressesModal() { document.getElementById('addressesOverlay').style.display = 'none'; addressesInvoiceId = null; }
+function shipSameAsBill() { const b = readFields(BILL_FIELDS); delete b.email; writeFields(SHIP_FIELDS, b); }
+
+async function saveAddresses() {
+  showAddressesError('');
+  const btn = document.getElementById('addressesSaveBtn');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/invoices/${addressesInvoiceId}/addresses`, {
+      method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ billTo: readFields(BILL_FIELDS), shipTo: readFields(SHIP_FIELDS) }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { showAddressesError(d.error || 'Could not save'); return; }
+    closeAddressesModal();
+    fnToast('Addresses saved');
+    loadInvoices(document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : undefined);
+  } finally { btn.disabled = false; }
+}
+
 function applyStatusFilter() {
   const status = document.getElementById('statusFilter').value;
   loadInvoices(status);
@@ -206,6 +277,9 @@ function applyStatusFilter() {
   const status = new URLSearchParams(window.location.search).get('status') || '';
   document.getElementById('statusFilter').value = status;
   loadInvoices(status);
+  // Linked from the Licenses page: ?addresses=<invoice id> opens that invoice's Bill To / Ship To editor.
+  const editId = parseInt(new URLSearchParams(window.location.search).get('addresses'), 10);
+  if (editId) openAddressesModal(editId);
 })();
 </script>
 

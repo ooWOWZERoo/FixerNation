@@ -58,7 +58,7 @@ const fakePool = {
     return [{ insertId: 1, affectedRows: 1 }];
   },
   async getConnection() {
-    return { query: async () => [{ insertId: 1 }], beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {} };
+    return { query: async (sql) => (/^\s*SELECT/i.test(sql) ? [[]] : [{ insertId: 1 }]), beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {} };
   },
 };
 const stubs = {

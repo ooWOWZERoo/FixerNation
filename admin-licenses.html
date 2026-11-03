@@ -417,7 +417,8 @@ function licenseCard(p) {
         </div>
         <button type="button" class="a-btn a-btn-danger" data-domain="${fnEscape(p.schoolDomain)}" onclick="deleteSchool(this.dataset.domain, ${registered.length})">🗑️ Delete School</button>
       </div>
-      <div class="a-note" style="margin-bottom:16px;">Purchased by ${buyerLine} · ${fnFormatDate(p.purchasedAt)}${p.notes ? ' · ' + p.notes : ''}</div>
+      <div class="a-note" style="margin-bottom:6px;">Purchased by ${buyerLine} · ${fnFormatDate(p.purchasedAt)}${p.notes ? ' · ' + p.notes : ''}</div>
+      ${p.invoiceId ? `<div class="a-note" style="margin-bottom:16px;">Invoice ${fnEscape(p.invoiceNumber || '#' + p.invoiceId)} · Ship To: ${fnEscape(p.shipToSummary || 'none')} · <a href="admin-invoices.html?addresses=${Number(p.invoiceId)}">Edit Bill To / Ship To</a></div>` : '<div style="margin-bottom:10px;"></div>'}
 
       <div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:18px;">
         <div class="a-stat-card"><div class="label">Total Seats</div><div class="value">${p.seatCount}</div></div>

@@ -94,9 +94,15 @@ function renderInvoice(inv, branding) {
   const brandMark = branding.logoUrl
     ? `<img src="${fnEscape(branding.logoUrl)}" style="width:40px; height:40px; border-radius:12px; object-fit:contain;">`
     : `<img src="logo-fne.png?v=2" alt="Fixer Nation Education" style="height:80px; width:auto; object-fit:contain;">`;
-  const buyer = inv.buyer || {};
-  const address = buyer.address || {};
-  const addressLine = [address.street, [address.city, address.state].filter(Boolean).join(', '), address.zip].filter(Boolean).join(' · ');
+  // Bill To and Ship To are this invoice's own copy (an older invoice reads Bill To from the contact; the server decides).
+  const partyHtml = (p, withEmail) => {
+    if (!p) return '';
+    const cityLine = [[p.city, p.state].filter(Boolean).join(', '), p.zip].filter(Boolean).join(' ');
+    const lines = [p.company || p.name, p.company ? p.name : '', p.street, cityLine, withEmail ? p.email : ''].filter(Boolean);
+    return lines.map(fnEscape).join('<br>');
+  };
+  const billHtml = partyHtml(inv.billTo, true) || '—';
+  const shipHtml = partyHtml(inv.shipTo, false);
   const paid = inv.status === 'paid';
 
   const rows = inv.lineItems.map(li => `
@@ -117,16 +123,15 @@ function renderInvoice(inv, branding) {
     </div>
     ${paid ? '<div class="paid-stamp">Paid<br>in full</div>' : ''}
 
-    <div class="meta-grid">
+    <div class="meta-grid"${shipHtml ? ' style="grid-template-columns:1fr 1fr 1fr;"' : ''}>
       <div class="meta-block">
         <h3>Bill To</h3>
-        <p>
-          ${buyer.company || buyer.name || '—'}<br>
-          ${buyer.name && buyer.company ? buyer.name + '<br>' : ''}
-          ${fnEscape(buyer.email || '')}<br>
-          ${addressLine}
-        </p>
+        <p>${billHtml}</p>
       </div>
+      ${shipHtml ? `<div class="meta-block">
+        <h3>Ship To</h3>
+        <p>${shipHtml}</p>
+      </div>` : ''}
       <div class="meta-block">
         <h3>Invoice Details</h3>
         <p>

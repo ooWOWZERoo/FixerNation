@@ -46,7 +46,7 @@ id 🔑 · site_user_id 🔗→site_users (CASCADE) · audience varchar(64) · �
 ## 2. CRM
 
 ### `newsletter_contacts` — the CRM contact record (buyer of record for every purchase)
-id 🔑 · name · email ⭐ NOT NULL · street/city/state/zip · signup_date · source (default 'Homepage') · status (default 'Subscribed') · phone · company · notes text · morning_boost_unsubscribed_at
+id 🔑 · name · email ⭐ NOT NULL · street/city/state/zip (the Bill To address) · ship_to_name/company/street/city/state/zip (optional shipping address) · signup_date · source (default 'Homepage') · status (default 'Subscribed') · phone · company · notes text · morning_boost_unsubscribed_at
 
 ### `contact_groups` — CRM segments
 id 🔑 · name varchar(128) ⭐ · created_at · system_key varchar(50) ⭐ nullable (marks a group as a reserved system category)
@@ -110,7 +110,7 @@ id 🔑 · purchase_id 🔗→purchases (CASCADE) · invited_email · status (pe
 id 🔑 · purchase_id · threshold_pct · sent_at
 
 ### `invoices` — PO-order grouping (Stripe/card checkouts never create one)
-id 🔑 · invoice_number varchar(32) ⭐ · contact_id 🔗→newsletter_contacts (CASCADE) · po_number · po_received_date · total_cents · status (unpaid/paid/cancelled) · created_at · paid_at
+id 🔑 · invoice_number varchar(32) ⭐ · contact_id 🔗→newsletter_contacts (CASCADE) · po_number · po_received_date · total_cents · status (unpaid/paid/cancelled) · created_at · paid_at · bill_to_name/company/email/street/city/state/zip + bill_to_saved_at (this invoice's own Bill To; null saved_at = older invoice, read from the contact) · ship_to_name/company/street/city/state/zip
 
 ### `trial_curriculum_accesses` — trial-tier preview cap tracking
 🔑 (purchase_id, curriculum_id) · purchase_id 🔗→purchases (CASCADE) · first_accessed_at
@@ -148,6 +148,7 @@ id 🔑 · school_domain · reason · teacher_email · admin_contact_id · sent_
 ### `quote_requests`
 | Column | Type | Notes |
 |---|---|---|
+| bill_to_street/city/state/zip, ship_to_name/company/street/city/state/zip | varchar | Release 97: the quote's Bill To address and Ship To, copied onto the invoice on acceptance |
 | id | int unsigned | 🔑 |
 | quote_number | varchar(6) | ⭐ |
 | quote_valid_until | date | nullable |
