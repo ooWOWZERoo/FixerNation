@@ -217,6 +217,29 @@
       "server/routes/checkout.js",
       "site-auth.js"
     ],
+    "M1": [
+      "social.html",
+      "server/routes/social.js",
+      "server/lib/social-groups.js",
+      "tests/howto/community.ts"
+    ],
+    "M2": [
+      "social.html",
+      "server/routes/social.js",
+      "server/lib/upload-safety.js",
+      "tests/howto/community.ts"
+    ],
+    "M3": [
+      "social.html",
+      "server/routes/social.js",
+      "tests/howto/community.ts"
+    ],
+    "M4": [
+      "social-profile.html",
+      "social.html",
+      "server/routes/social.js",
+      "tests/howto/community.ts"
+    ],
     "S4": [
       "brain-games.html",
       "brain-games-progress.html",

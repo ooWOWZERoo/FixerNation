@@ -138,3 +138,18 @@ Two new groups on the Help Videos page: **Affiliate partners** and **Exploring F
 Fixed while recording these: the Create-account-style gaps in the Brain Games progress dashboard (see S4), and the test site's missing original brain games.
 
 Video check 2026-10-31: every already-recorded video flagged was touched only by the `help-videos.js?v=6` version string (or by new buttons), so none needs re-recording. The change to `tests/howto/pipeline.ts` (plain-text links in the on-screen inbox now become clickable, only in emails with no links of their own) does not change any earlier video, since their emails already had real links. `tests/howto/stack.sh` now builds the six original brain games, so a re-recorded T4 would show a longer game picker; `classroom.ts` finds the demo game by name.
+
+## Added 2026-11-03 (the community)
+
+Four short videos for people who use the community (licensed teachers and school or district administrators; students and parents have no access). They sit under Teachers, in a Community topic. Each is one task. Demo data comes from `tests/howto/community.ts` (fictional groups, posts and people), never real content.
+
+| ID | Video | Page it belongs to |
+|---|---|---|
+| M1 | Find and join your community groups | social.html |
+| M2 | Post, reply and react | social.html |
+| M3 | Message a colleague privately | social.html |
+| M4 | Your community profile | social-profile.html |
+
+Facts the scripts must respect: hashtags are shown highlighted in a post but clicking one does nothing yet, so no video says you can search by hashtag; comments are a flat list, not threaded; a reaction is one thumbs up that toggles; leaving a group asks the browser to confirm; a bio, email and school are visible to other members only when the Share my profile box is checked.
+
+Planned later (M5): a staff video on moderating the community (admin-social.html). Held until the page can remove comments (the server supports it; the page has no button).

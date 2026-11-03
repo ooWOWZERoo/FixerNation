@@ -292,7 +292,7 @@ async function saveProfile(){
   });
   const msg = document.getElementById('saveSuccess');
   if(res.ok){
-    msg.style.display='';
+    msg.style.display='block'; // the stylesheet hides .success-msg, so clearing the inline style never showed it
     setTimeout(()=>msg.style.display='none',3000);
   } else {
     alert('Failed to save. Please try again.');
@@ -333,5 +333,6 @@ document.addEventListener('fn-auth-changed', function () {
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=17"></script>
 <script src="footer.js?v=10"></script>
+<script src="help-videos.js?v=13" defer></script>
 </body>
 </html>

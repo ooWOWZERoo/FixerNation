@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 102 — 2026-11-03 — Community how-to videos, and two fixes they uncovered
+
+- **Fix: an apostrophe in a community post showed as "Today&" followed by a highlighted "#39" and ";s".** The page turns an apostrophe into a code (`&#39;`) before it looks for hashtags, and it mistook the "39" in that code for a hashtag. Posts with an apostrophe (every "Today's", "Here's" and "don't") now read normally, and real hashtags still highlight. A `#` inside a web address is no longer treated as a hashtag either.
+- **Fix: "Profile saved!" never appeared** after saving a community profile (the save worked; the message stayed hidden by the page's own style). It now shows for three seconds.
+- **Four new how-to videos for the community**, under Teachers on the Help Videos page and as a "How-to video" button on the community pages: "Find and join your community groups" (M1), "Post, reply and react" (M2), "Message a colleague privately" (M3) and "Your community profile" (M4). Each is one to a minute and a half. Planned later: a staff video on moderating the community, once the admin page can remove comments.
+- Static files only (`social.html`, `social-profile.html`, `help-videos.js`, the video captions and posters). New checks in `server/test/social-render.test.js`. `help-videos.js?v=13` on every page that loads it. No Node restart, no alter script.
+
 ## Release 101 — 2026-11-03 — Nine more northeast states researched (drafts, hidden until verified)
 
 - **ME, NH, VT, RI, CT, MA, NJ, DE and MD are researched and loaded as drafts** (`server/data/standards/<ST>.json`), with the framework, official source link, date checked and, where a state has a framework, its standards and Fixer Nation's connections to them. Seven have connections (ME, VT, RI, CT, MA, NJ, DE: 14 to 54 each, 243 in all). NH and MD have no framework to connect to yet (coverage only).
