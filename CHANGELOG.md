@@ -16,6 +16,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 96 — 2026-11-03 — Five help videos re-recorded and republished
+
+- **Re-recorded to match the new screens:** "Invite a teacher" (B2) and "Invite many teachers with a CSV" (B3) now show the grade-level checkboxes and the ES;MS rule; "Why can't I invite teachers yet?" (B10) fills in the new form; "Register with your school email" (T2) says the grade-level step is required; "Build your lesson plan library" (T7) now covers swaps and the new popups instead of saying picks are permanent.
+- Static files only (the videos are on Cloudinary; captions and posters are in `help-assets/`). `help-videos.js` is now `?v=11` on every page that loads it. No Node restart, no alter script.
+
 ## Release 95 — 2026-11-03 — Added seats on an annual quote are free, and now reach the license
 
 - **"Additional Seats" on the Annual tab of the quote builder no longer adds $50 a seat.** The box now shows for every annual tier (it used to appear only for tiers with an Add-On Rate) and says "no extra charge". The price stays the tier price, or the dollar amount you type. The Add-On Seats tab still sells seats alone at the product's Add-On Rate.
