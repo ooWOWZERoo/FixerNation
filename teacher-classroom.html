@@ -656,7 +656,7 @@ var lessonPool = [];
 var lessonSeriesFilter = '';
 
 async function openAssignLesson() {
-  var r = await fetch('/api/curricula', { credentials: 'include' });
+  var r = await fetch('/api/curricula?library=true', { credentials: 'include' });
   var data = r.ok ? await r.json() : [];
   var curricula = Array.isArray(data) ? data : (data.items || data.curricula || []);
   var assigned = new Set((classroom.assignments || []).map(function(a){ return a.curriculum_id; }));

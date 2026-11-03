@@ -268,10 +268,12 @@ router.get('/', async (req, res) => {
     [rows] = await pool.query('SELECT * FROM curricula ORDER BY sort_order ASC, created_at DESC');
   } else {
     const siteUser = await getSiteUser(req);
-    // Licensed non-admin teachers with ≥1 plan selection see only their library
+    // The narrowed "my library" list is opt-in (?library=true). The public lesson page asks for
+    // the plain list, so a teacher with saved plans still sees every published lesson there;
+    // only pages that work from the library (the classroom Assign Lesson box) ask for it.
     // A licensed user gets the teacher library view regardless of site_users.role
     // (a parent who also holds a licence seat is a teacher here, not just a parent).
-    if (siteUser && await hasActiveLicense(siteUser.id)) {
+    if (req.query.library === 'true' && siteUser && await hasActiveLicense(siteUser.id)) {
       const [selRows] = await pool.query(
         'SELECT curriculum_id FROM teacher_lesson_plans WHERE site_user_id = ?',
         [siteUser.id]

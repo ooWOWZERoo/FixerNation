@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 92 — 2026-11-03 — Teachers see the whole lesson library on the main site
+
+- **Fix: a licensed teacher who had saved lessons to My Lesson Plans saw only those lessons on the main lesson page.** The page said "growing library" but showed just the teacher's own picks. The lesson page now always lists every published lesson, as it does for everyone else. What a teacher can open and download is unchanged.
+- **The classroom Assign Lesson box still shows only the teacher's saved lessons** (when they have any), as before.
+- Server code changed (Node restart needed); no alter script. New checks in `server/test/curriculum-list.test.js`. Help videos T3, T4 and T6 checked and still correct.
+
 ## Release 91 — 2026-11-02 — Favorites on the Morning Boost page
 
 - **Readers can star Morning Boost posts and come back to them.** A star on the featured post, on each card and inside the open post saves it to the reader's account, so favorites follow them to any phone or computer. A filter above the list switches between "All posts" and "Favorites (N)"; the count only counts saved posts that are live now. Un-starring in the Favorites view offers Undo.
