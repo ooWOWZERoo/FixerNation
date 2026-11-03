@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 103 — 2026-11-03 — "Build your lesson plan library" video now shows swaps and the level warning
+
+- **T7 re-recorded and republished, about three minutes.** It now shows the one-time "Choose your grade levels" step, the "Curriculum level mismatch" popup (and Cancel), a real swap (Swap or remove, Replace with another lesson, Swap in, Swap), a removal, the swaps-left count going down, and the message a teacher sees when no swaps are left. The earlier version only mentioned swaps.
+- The help video list says the same in its short description. No separate "Swap or remove" video is planned; this one covers it.
+- Static files only (the video is on Cloudinary; captions and poster in `help-assets/`). `help-videos.js?v=14` on every page that loads it. No Node restart, no alter script.
+
 ## Release 102 — 2026-11-03 — Community how-to videos, and two fixes they uncovered
 
 - **Fix: an apostrophe in a community post showed as "Today&" followed by a highlighted "#39" and ";s".** The page turns an apostrophe into a code (`&#39;`) before it looks for hashtags, and it mistook the "39" in that code for a hashtag. Posts with an apostrophe (every "Today's", "Here's" and "don't") now read normally, and real hashtags still highlight. A `#` inside a web address is no longer treated as a hashtag either.
