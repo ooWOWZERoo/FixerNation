@@ -149,7 +149,7 @@
       pages: ['become-an-affiliate.html', 'affiliate-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487236/fne/help/F1.mp4', captions: '/help-assets/F1.vtt', poster: '/help-assets/F1.jpg' },
 
     // ---- Exploring Fixer Nation
-    { id: 'E1', group: 'explore', topic: 'Standards', title: 'See how Fixer Nation lines up with your state\'s standards',
+    { id: 'E1', group: 'explore', topic: 'Standards', title: 'See how Fixer Nation lines up with your state\'s SEL standards and Portrait of a Graduate',
       summary: 'Pick your state, see the connections to its SEL standards or Portrait of a Graduate, and print a one-page summary.',
       pages: ['state-standards.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487237/fne/help/E1.mp4', captions: '/help-assets/E1.vtt', poster: '/help-assets/E1.jpg' }
   ];

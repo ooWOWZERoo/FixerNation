@@ -74,7 +74,7 @@
             '<li><a href="for-schools.html">For Schools</a></li>' +
             '<li><a href="school-licensing.html">Pricing &amp; Licensing</a></li>' +
             '<li><a href="research.html">Research &amp; Alignment</a></li>' +
-            '<li><a href="state-standards.html">State Standards</a></li>' +
+            '<li><a href="state-standards.html">SEL &amp; Portrait of a Graduate</a></li>' +
             '<li><a href="education-schools.html">Teacher Registration</a></li>' +
           '</ul>' +
         '</div>' +

@@ -114,7 +114,7 @@
           '<div class="fn-nav-menu">' +
             '<a href="why-fixer-nation.html"' + (whyActive      ? ' class="active"' : '') + '>Why FNE</a>'    +
             '<a href="research.html"'          + (researchActive ? ' class="active"' : '') + '>Research</a>'   +
-            '<a href="state-standards.html"'   + (standardsActive ? ' class="active"' : '') + '>State Standards</a>' +
+            '<a href="state-standards.html"'   + (standardsActive ? ' class="active"' : '') + '>SEL &amp; Portrait of a Graduate</a>' +
             '<a href="about.html"'             + (aboutActive    ? ' class="active"' : '') + '>About</a>'       +
           '</div>' +
         '</div>' +
@@ -161,7 +161,7 @@
       mmLabel('Why FNE') +
       lnk('why-fixer-nation.html', 'Why FNE', whyActive) +
       lnk('research.html',         'Research', researchActive) +
-      lnk('state-standards.html',  'State Standards', standardsActive) +
+      lnk('state-standards.html',  'SEL &amp; Portrait of a Graduate', standardsActive) +
       lnk('about.html',            'About', aboutActive) +
       mmLabel('Explore') +
       lnk('how-it-works.html',  'How It Works', howActive) +

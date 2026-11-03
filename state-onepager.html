@@ -5,7 +5,7 @@
 <link rel="icon" href="favicon.ico">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Fixer Nation Education - State standards one-page summary</title>
+<title>Fixer Nation Education - SEL &amp; Portrait of a Graduate one-page summary</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -99,7 +99,7 @@
     fws.forEach(function (f) { if (f.draft) anyDraft = true; (f.items || []).forEach(function (i) { total++; if ((i.alignments || []).length) linked++; }); });
     var date = (cov && cov.sourceAccessedOn) || fws.map(function (f) { return f.sourceAccessedOn; }).filter(Boolean).sort().pop();
     var dist = d.district || null;
-    var h = '<div class="head"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"><div class="tag">' + (dist ? 'District framework crosswalk' : 'State standards crosswalk') + '</div></div>' +
+    var h = '<div class="head"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"><div class="tag">' + (dist ? 'District framework crosswalk' : 'SEL & Portrait of a Graduate') + '</div></div>' +
       '<h1>' + (dist ? esc(dist.name) + ': how Fixer Nation lines up with your framework' : esc(d.state.name) + ': how Fixer Nation lines up with your standards') + '</h1>' +
       '<p class="sub">' + (dist ? 'Checked against the district\'s published framework' : 'SEL standards and Portrait of a Graduate, checked against the state\'s documents') + (date ? ' on ' + esc(niceDate(date)) : '') + '.</p>' +
       (anyDraft ? '<div class="draftline">DRAFT PREVIEW: NOT PUBLIC. DO NOT SHARE.</div>' : '');
@@ -152,7 +152,7 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json().then(function (d) {
         if (!(d.frameworks || []).length) { fail('We haven\'t loaded the standards text for ' + esc(d.state.name) + ' yet, so there is no summary to print. <a href="state-standards.html?state=' + encodeURIComponent(code) + '">Back to the state page</a>.'); return; }
-        document.title = (d.district ? d.district.name + ' - District framework one-page summary' : d.state.name + ' - State standards one-page summary') + ' - Fixer Nation Education';
+        document.title = (d.district ? d.district.name + ' - District framework one-page summary' : d.state.name + ' - SEL & Portrait of a Graduate one-page summary') + ' - Fixer Nation Education';
         msg.hidden = true; sheet.hidden = false; document.getElementById('bar').hidden = false;
         if (PREVIEW) { var b = document.getElementById('draftbar'); b.hidden = false; b.textContent = 'Admin preview: this sheet includes drafts that visitors can\'t see yet.'; }
         var run = function () { fitOnePage(d); };

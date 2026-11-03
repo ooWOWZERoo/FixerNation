@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 100 — 2026-11-03 — "State Standards" becomes "SEL & Portrait of a Graduate"
+
+- **The menu and footer link now say "SEL & Portrait of a Graduate"** instead of "State Standards" (desktop menu, mobile menu and footer), because SEL and Portrait of a Graduate (PoG) are the terms districts actually use. The page still talks about state standards: its title is "SEL Standards & Portrait of a Graduate by State", its description says "your state's SEL (social-emotional learning) standards and Portrait of a Graduate", and the headline is unchanged.
+- **Page copy:** the top label reads "SEL & Portrait of a Graduate", and the opening paragraph now says SEL and PoG are the terms states and districts use for this work. The Research page promo reads "New: SEL & Portrait of a Graduate by state", the printable one-page summary is titled "SEL & Portrait of a Graduate one-page summary", and the help video list title for E1 matches.
+- **Unchanged on purpose:** the "Please read" note still says this is Fixer Nation's own mapping and that no state agency or CASEL has reviewed, endorsed or certified it. The new wording says SEL and PoG are recognized terms, not that anyone has approved our mapping. The admin page is still called "Standards Crosswalk".
+- Static files only. `nav.js?v=17`, `footer.js?v=10` and `help-videos.js?v=12` on every page that loads them. No Node restart, no alter script.
+
 ## Release 99 — 2026-11-03 — Add-On Seats quote email reads cleanly
 
 - **The email for a quote built on the Add-On Seats tab is now one row.** It used to read "5 Add-On Seats (Department) (5 seats)" followed by "+ 5 added seats, included". It now reads just "5 Add-On Seats (Department)" with the total below. Quotes for annual plans (tier seats plus free added seats) and quotes with no added seats are unchanged.
