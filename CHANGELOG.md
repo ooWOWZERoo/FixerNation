@@ -16,6 +16,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 95 — 2026-11-03 — Added seats on an annual quote are free, and now reach the license
+
+- **"Additional Seats" on the Annual tab of the quote builder no longer adds $50 a seat.** The box now shows for every annual tier (it used to appear only for tiers with an Add-On Rate) and says "no extra charge". The price stays the tier price, or the dollar amount you type. The Add-On Seats tab still sells seats alone at the product's Add-On Rate.
+- **Fix: added seats now reach the license.** Before, a quote of 15 seats plus 2 added said "+2 added seats, included", but the license the customer accepted had 15. The quote now saves 17 seats, so the acceptance page, the license and the invoice seat count all say 17.
+- **Fix: reopening a saved quote** puts the Additional Seats box back and no longer folds old add-on money into the base price, so saving again can't drop the added seats.
+- **The quote email** lists the tier's seats, then "+ 2 added seats: no extra charge".
+- **Quotes you already sent or accepted keep their saved numbers.** To see which accepted quotes came up short, run `node scripts/report-quote-added-seats.js` (read-only, changes nothing); fix any short license with the seat-count editor on the Licenses page.
+- Server code changed (Node restart needed); no alter script. New shared file `quote-seats.js`. Rules: `docs/reference/quote-added-seats-requirements.md`. 299 server tests pass (9 new). No help video shows this screen.
+
 ## Release 94 — 2026-11-03 — Level warning, and swaps in My Lesson Plans
 
 - **A "Curriculum level mismatch" warning.** When a teacher adds a lesson that is written for a different level than the one on their account (for example an MS lesson for an ES teacher), a popup says so and asks Add anyway or Cancel. A lesson that shares any level with the teacher, or has no level, adds as before.

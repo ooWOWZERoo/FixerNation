@@ -402,15 +402,19 @@ async function sendQuoteEmail({ to, firstName, lastName, school, quoteNumber, pr
     const row = (label, val) =>
       `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;background:#f9fafb;">${label}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${val}</td></tr>`;
 
-    htmlRows += row(`${esc(productName)} (${seats} seat${seats !== 1 ? 's' : ''})`, `See total below`);
-    if (addOn > 0) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, `included`);
+    // An Annual quote's seat count is the tier's seats plus the added seats (added seats are free); show the tier's own seats on
+    // the first row and the added seats on their own row. A quote built on the Add-On Seats tab has the same number for both
+    // (seats === addOn), so it keeps showing all of its seats on the first row.
+    const tierSeats = addOn > 0 && seats > addOn ? seats - addOn : seats;
+    htmlRows += row(`${esc(productName)} (${tierSeats} seat${tierSeats !== 1 ? 's' : ''})`, `See total below`);
+    if (addOn > 0) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, seats > addOn ? `no extra charge` : `included`);
     if (years > 1) htmlRows += row(`${years}-year term`, `included`);
     if (disc > 0)  htmlRows += row(`Multi-year discount`, `${disc}% off`);
     htmlRows += `<tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;border-top:2px solid #d1d5db;">Total</td><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;text-align:right;border-top:2px solid #d1d5db;">${total}</td></tr>`;
 
     textLines = [
-      `  ${productName} (${seats} seat${seats !== 1 ? 's' : ''})`,
-      addOn > 0 ? `  + ${addOn} added seat${addOn !== 1 ? 's' : ''}` : '',
+      `  ${productName} (${tierSeats} seat${tierSeats !== 1 ? 's' : ''})`,
+      addOn > 0 ? `  + ${addOn} added seat${addOn !== 1 ? 's' : ''}${seats > addOn ? ': no extra charge' : ''}` : '',
       years > 1 ? `  ${years}-year term` : '',
       disc > 0  ? `  Multi-year discount: ${disc}% off` : '',
       `  Total: ${total}`,

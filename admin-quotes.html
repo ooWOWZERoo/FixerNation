@@ -301,6 +301,7 @@
 
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script src="admin-common.js?v=17"></script>
+<script src="quote-seats.js?v=1"></script>
 <script>
 fnRequireAuth();
 
@@ -647,9 +648,10 @@ function openModal(id) {
         </div>
         <div class="a-note" style="margin-top:4px;">Auto-fills from the breakdown. Override here to quote a custom amount — the summary updates to match.</div>
       </div>
-      <div class="q-field" id="qAddonField" style="display:none;">
-        <label class="q-label">Additional Seats <span id="qAddonRateHint" style="font-weight:400;color:var(--a-text-soft);font-size:11px;"></span></label>
+      <div class="q-field" id="qAddonField">
+        <label class="q-label">Additional Seats <span style="font-weight:400;color:var(--a-text-soft);font-size:11px;">no extra charge</span></label>
         <input type="number" id="qAddonInput" class="q-input" min="0" max="99" value="0" oninput="calcBreakdown()">
+        <div class="a-note" style="margin-top:4px;">Added seats raise the seat count on the license. They don't change the price.</div>
       </div>
       <div class="q-field">
         <label class="q-label">Quote Valid Until</label>
@@ -709,6 +711,11 @@ function openModal(id) {
             tierSel.selectedIndex = i;
             foundInAnnual = true;
             onTierChange();
+            // Bring the Additional Seats box back (a quote built on the Add-On Seats tab stores the same number as its seat
+            // count and is not an Annual quote with added seats).
+            if (!fnQuoteSeats.isAddonTabQuote(q.quoted_seat_count, q.quoted_addon_seats)) {
+              document.getElementById('qAddonInput').value = parseInt(q.quoted_addon_seats) || 0;
+            }
             // onTierChange() resets modalAmount to catalog price; restore saved amount as annual base
             // (checking presence, not truthiness, so a saved $0 quote restores as 0.00 instead of the catalog default)
             if (q.quoted_amount_cents != null) {
@@ -836,15 +843,6 @@ function initQuoteChips() {
 function onTierChange() {
   const sel      = document.getElementById('qTierSelect');
   const opt      = sel && sel.options[sel.selectedIndex];
-  const addonRate = opt ? parseFloat(opt.dataset.addonRate || 0) : 0;
-  const addonField = document.getElementById('qAddonField');
-  const hintEl     = document.getElementById('qAddonRateHint');
-  if (addonRate > 0) {
-    addonField.style.display = '';
-    hintEl.textContent = `$${addonRate.toFixed(2)}/seat`;
-  } else {
-    addonField.style.display = 'none';
-  }
   // Reset to catalog price on tier change so user starts from a clean base
   if (opt && opt.value) {
     document.getElementById('modalAmount').value = parseFloat(opt.dataset.price || 0).toFixed(2);
@@ -860,29 +858,24 @@ function calcBreakdown() {
     return;
   }
   const catalogPrice = parseFloat(opt.dataset.price || 0);
-  const rawInput     = parseFloat(document.getElementById('modalAmount').value);
-  const effectiveBase = (!isNaN(rawInput) && rawInput >= 0) ? rawInput : catalogPrice;
-
   const seats      = parseInt(opt.dataset.seats || 0);
-  const addonRate  = parseFloat(opt.dataset.addonRate || 0);
   const tierName   = opt.text.split(' — ')[0];
-  const addonCount = addonRate > 0 ? (parseInt(document.getElementById('qAddonInput').value) || 0) : 0;
+  // Added seats are free: they raise the seat count and never touch the price (quote-seats.js, shared with the tests).
+  const addonCount = Math.min(99, Math.max(0, parseInt(document.getElementById('qAddonInput').value) || 0));
 
   const activeTerm   = document.querySelector('#qTermChips .q-chip-active');
   const termYears    = activeTerm ? parseInt(activeTerm.dataset.years) : 1;
   const discountPct  = termYears === 2 ? quoteSettings.twoYrPct : (termYears === 3 ? quoteSettings.threeYrPct : 0);
 
-  const addonTotal  = addonCount * addonRate;
-  const annualBase  = effectiveBase + addonTotal;
-  const subtotal    = annualBase * termYears;
-  const discountAmt = discountPct > 0 ? subtotal * (discountPct / 100) : 0;
-  const total       = subtotal - discountAmt;
+  const price = fnQuoteSeats.annualPrice({ catalogPrice, typedAmount: document.getElementById('modalAmount').value, termYears, discountPct });
+  const effectiveBase = price.annualBase, subtotal = price.subtotal, discountAmt = price.discountAmt, total = price.total;
+  const licenseSeats = fnQuoteSeats.totalSeats(seats, addonCount);
 
-  const isCustom  = Math.abs(effectiveBase - catalogPrice) > 0.005;
-  const tierLabel = `${tierName} (${seats} seat${seats !== 1 ? 's' : ''})${isCustom ? ' — custom rate' : ''}`;
+  const tierLabel = `${tierName} (${seats} seat${seats !== 1 ? 's' : ''})${price.isCustom ? ' — custom rate' : ''}`;
 
   let rows = `<div class="q-breakdown-row"><span>${tierLabel}</span><span>$${effectiveBase.toFixed(2)}/yr</span></div>`;
-  if (addonCount > 0) rows += `<div class="q-breakdown-row soft"><span>+ ${addonCount} added seat${addonCount !== 1 ? 's' : ''} @ $${addonRate.toFixed(2)}</span><span>+$${addonTotal.toFixed(2)}/yr</span></div>`;
+  if (addonCount > 0) rows += `<div class="q-breakdown-row soft"><span>+ ${addonCount} added seat${addonCount !== 1 ? 's' : ''}</span><span>no extra charge</span></div>`;
+  if (addonCount > 0) rows += `<div class="q-breakdown-row soft"><span>${licenseSeats} seats on the license</span><span></span></div>`;
   if (termYears > 1)  rows += `<div class="q-breakdown-row soft"><span>${termYears}-year term</span><span>$${subtotal.toFixed(2)} subtotal</span></div>`;
   if (discountPct > 0) rows += `<div class="q-breakdown-row soft"><span>${termYears}-year discount (${discountPct}%)</span><span>−$${discountAmt.toFixed(2)}</span></div>`;
   rows += `<div class="q-breakdown-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
@@ -1037,7 +1030,9 @@ function getQuotePayload() {
   } else {
     const tierSel = document.getElementById('qTierSelect');
     const tierOpt = tierSel && tierSel.options[tierSel.selectedIndex];
-    seatCount = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || null) : null;
+    // The license gets the tier's seats plus the added seats (added seats are free, see quote-seats.js).
+    const tierSeats = tierOpt && tierOpt.value ? (parseInt(tierOpt.dataset.seats) || 0) : 0;
+    seatCount = tierSeats ? fnQuoteSeats.totalSeats(tierSeats, addonSeats) : null;
   }
   const validUntilEl = document.getElementById('qValidUntil');
   const quotedValidUntil = validUntilEl && validUntilEl.value ? validUntilEl.value : null;
