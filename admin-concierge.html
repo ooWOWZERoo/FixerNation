@@ -31,6 +31,10 @@
   .cc-teacher-row .t-grades label{display:flex;align-items:center;gap:4px;cursor:pointer;}
   .cc-teacher-row .t-grades input{flex:none;padding:0;width:auto;}
   .cc-teacher-row input{flex:1;padding:8px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-card);color:var(--a-text);}
+  .cc-req{font-weight:700;color:var(--a-danger);}
+  .cc-status{font-size:13.5px;font-weight:600;margin:-6px 0 16px;}
+  .cc-status.todo{color:var(--a-danger);}
+  .cc-status.ok{color:var(--a-success);}
   .cc-summary{font-size:13.5px;color:var(--a-text-soft);margin-bottom:18px;}
   .cc-summary strong{color:var(--a-text);}
   .cc-summary .quote-num{font-family:monospace;background:var(--a-bg);border:1px solid var(--a-border);padding:2px 8px;border-radius:6px;color:var(--a-text);}
@@ -67,6 +71,7 @@
 
     <div class="a-content">
       <p class="cc-summary" id="ccSummary">Loading…</p>
+      <p class="cc-status" id="ccStatus" style="display:none;"></p>
       <div id="ccErr" class="err-inline" style="display:none;"></div>
 
       <!-- Step 1: Accept -->
@@ -78,29 +83,29 @@
         <div id="step1Body"></div>
       </div>
 
-      <!-- Step 2: School admin -->
-      <div class="a-card cc-step" id="step2Card">
-        <div class="cc-step-head">
-          <div class="cc-step-num" id="step2Num">2</div>
-          <div><div class="cc-step-title">School License Administrator</div><div class="cc-step-sub">The buyer manages their own roster from here on once this is set.</div></div>
-        </div>
-        <div id="step2Body"></div>
-      </div>
-
-      <!-- Step 3: District admin (optional) -->
+      <!-- Step 2: District admin (required) -->
       <div class="a-card cc-step" id="step3Card">
         <div class="cc-step-head">
-          <div class="cc-step-num" id="step3Num">3</div>
-          <div><div class="cc-step-title">District Administrator <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></div><div class="cc-step-sub">Only if this contact oversees more than one school in the system.</div></div>
+          <div class="cc-step-num" id="step3Num">2</div>
+          <div><div class="cc-step-title">District Administrator <span class="cc-req">(required)</span></div><div class="cc-step-sub">Required. Pick the district (or create it) and assign who manages it.</div></div>
         </div>
         <div id="step3Body"></div>
+      </div>
+
+      <!-- Step 3: School admin (optional) -->
+      <div class="a-card cc-step" id="step2Card">
+        <div class="cc-step-head">
+          <div class="cc-step-num" id="step2Num">3</div>
+          <div><div class="cc-step-title">School License Administrator <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></div><div class="cc-step-sub">The buyer is added automatically when they already have an account. Add anyone else who should manage the roster.</div></div>
+        </div>
+        <div id="step2Body"></div>
       </div>
 
       <!-- Step 4: Invite teachers -->
       <div class="a-card cc-step" id="step4Card">
         <div class="cc-step-head">
           <div class="cc-step-num" id="step4Num">4</div>
-          <div><div class="cc-step-title">Invite teachers</div><div class="cc-step-sub">Each invited teacher gets the same email they'd get from their own school admin.</div></div>
+          <div><div class="cc-step-title">Invite teachers <span style="font-weight:400;color:var(--a-text-soft);">(optional)</span></div><div class="cc-step-sub">Each invited teacher gets the same email they'd get from their own school admin.</div></div>
           <span id="step4SeatCounter" style="margin-left:auto;display:none;font-size:12.5px;color:var(--a-text-soft);text-align:right;"></span>
         </div>
         <div id="step4Body"></div>
@@ -157,6 +162,20 @@ function render() {
     (q.productName ? ' · ' + esc(q.productName) + (q.seatCount ? ' (' + q.seatCount + ' seats)' : '') : '') +
     (q.amountCents != null ? ' · $' + (q.amountCents / 100).toFixed(2) : '');
 
+  // The one required step after accepting: a District Administrator. Everything else on this page is optional.
+  var status = document.getElementById('ccStatus');
+  if (!state.purchase) {
+    status.style.display = 'none';
+  } else if (!(state.districtAdmins || []).length) {
+    status.className = 'cc-status todo';
+    status.textContent = 'Still needed: a District Administrator (step 2). The other steps are optional.';
+    status.style.display = '';
+  } else {
+    status.className = 'cc-status ok';
+    status.textContent = 'The required setup is done. The remaining steps are optional.';
+    status.style.display = '';
+  }
+
   renderStep1();
   renderStep2();
   renderStep3();
@@ -212,19 +231,19 @@ async function doAccept() {
   finally { btn.disabled = false; btn.textContent = 'Accept on behalf of customer'; }
 }
 
-// --- Step 2: School admin ---
+// --- Step 3 on the page: School admin (optional; element ids keep their old numbers) ---
 function renderStep2() {
   var p = state.purchase;
   var admins = state.schoolAdmins || [];
   var num = document.getElementById('step2Num');
   var body = document.getElementById('step2Body');
   if (!p) {
-    num.classList.remove('done'); num.textContent = '2';
+    num.classList.remove('done'); num.textContent = '3';
     body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
     return;
   }
   num.classList.toggle('done', admins.length > 0);
-  num.textContent = admins.length > 0 ? '✓' : '2';
+  num.textContent = admins.length > 0 ? '✓' : '3';
 
   var q = state.quote;
   var list = admins.map(function (sa) {
@@ -265,7 +284,7 @@ async function doAssignSchoolAdmin() {
   } catch (e) { showErr(e.message); btn.disabled = false; btn.textContent = origLabel; }
 }
 
-// --- Step 3: District admin (optional) ---
+// --- Step 2 on the page: District admin (required) ---
 var districtsLoaded = false;
 async function renderStep3() {
   var p = state.purchase;
@@ -274,12 +293,12 @@ async function renderStep3() {
   var num = document.getElementById('step3Num');
   var body = document.getElementById('step3Body');
   if (!p) {
-    num.classList.remove('done'); num.textContent = '3';
+    num.classList.remove('done'); num.textContent = '2';
     body.innerHTML = '<div class="meta-line">Accept the quote first.</div>';
     return;
   }
   num.classList.toggle('done', admins.length > 0);
-  num.textContent = admins.length > 0 ? '✓' : '3';
+  num.textContent = admins.length > 0 ? '✓' : '2';
 
   var q = state.quote;
   var list = admins.map(function (da) {

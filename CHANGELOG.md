@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 98 — 2026-11-03 — Concierge steps reordered, and what is required is clear
+
+- **New order on the Concierge Setup page:** 1 Accept the quote, 2 District Administrator, 3 School License Administrator, 4 Invite teachers, 5 District Branding.
+- **District Administrator is marked "(required)"** (it used to say optional and "only if this contact oversees more than one school"). Until one is assigned, a line under the quote summary says "Still needed: a District Administrator"; once there is one it says the required setup is done. The page doesn't lock the other steps.
+- **School License Administrator, Invite teachers and District Branding are all marked "(optional)".** The buyer is still added as the primary School License Administrator automatically when they already have an account.
+- Page only (`admin-concierge.html`); no Node restart, no alter script.
+
 ## Release 97 — 2026-11-03 — Invoice Bill To and Ship To
 
 - **Staff can change an invoice's Bill To.** On the Invoices page, the new 📍 button opens Bill To (name, company, email, address) and Ship To for that invoice. Saving changes that invoice only: the CRM contact and the buyer's other invoices stay as they were. Paid and cancelled invoices can be corrected too, and every edit is recorded with the old and new values.
