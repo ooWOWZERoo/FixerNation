@@ -16,6 +16,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 99 — 2026-11-03 — Add-On Seats quote email reads cleanly
+
+- **The email for a quote built on the Add-On Seats tab is now one row.** It used to read "5 Add-On Seats (Department) (5 seats)" followed by "+ 5 added seats, included". It now reads just "5 Add-On Seats (Department)" with the total below. Quotes for annual plans (tier seats plus free added seats) and quotes with no added seats are unchanged.
+- Server code changed (Node restart needed); no alter script.
+
 ## Release 98 — 2026-11-03 — Concierge steps reordered, and what is required is clear
 
 - **New order on the Concierge Setup page:** 1 Accept the quote, 2 District Administrator, 3 School License Administrator, 4 Invite teachers, 5 District Branding.
@@ -29,7 +34,7 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Ship To is new.** The printed invoice and the invoice email show a Ship To block next to Bill To when one is filled in ("Same as Bill To" copies it across). The quote builder has Bill To address and Ship To fields (on the quote email too), and the CRM contact form has an optional Ship To address. A new invoice copies its Bill To and Ship To from its quote, or from the contact for a cart order, so a later contact edit doesn't rewrite it. The Licenses page and the contact's purchases show the invoice number and Ship To with a link to the editor.
 - **Older invoices are untouched.** They keep reading Bill To from the contact until someone edits them.
 - **Fix: lowering Additional Seats back to 0 on a quote now saves.** It used to keep the old number (Release 95 follow-up). The Invoices page also now escapes the buyer's name, company and email.
-- **Needs a one-off script and a Node restart:** `node scripts/alter-add-bill-ship-to.js` (safe to run twice) adds the columns; run it before the restart. Not included: a shipping address at card checkout for books (a book bought by card has no invoice). Rules: `docs/reference/invoice-bill-ship-to-requirements.md`. 318 server tests pass (19 new).
+- **Needs a one-off script and a Node restart:** `node scripts/alter-add-bill-ship-to.js` (safe to run twice) adds the columns; run it before the restart. Rules: `docs/reference/invoice-bill-ship-to-requirements.md`. 318 server tests pass (19 new).
 
 ## Release 96 — 2026-11-03 — Five help videos re-recorded and republished
 

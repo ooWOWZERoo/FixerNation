@@ -125,16 +125,27 @@ test('email for an Annual quote of 15 + 2 shows 15 seats, then "+ 2 added seats:
   assert.doesNotMatch(sent[0].html, /\(17 seats\)/);
 });
 
-test('email for a quote with no added seats is unchanged, and an Add-On Seats quote keeps "included"', async () => {
+test('email for a quote with no added seats is unchanged', async () => {
   sent.length = 0;
   await sendQuoteEmail({ ...base, seatCount: 15, addonSeats: 0 });
   assert.match(sent[0].html, /\(15 seats\)/);
   assert.doesNotMatch(sent[0].html, /added seat/);
+});
+
+test('email for an Add-On Seats quote is one row: the product name, no seat count in brackets, no "added seats" row', async () => {
   sent.length = 0;
   await sendQuoteEmail({ ...base, productName: '5 Add-On Seats (Department)', seatCount: 5, addonSeats: 5 });
-  assert.match(sent[0].html, /\(5 seats\)/);
-  assert.match(sent[0].html, /\+ 5 added seats/);
+  assert.match(sent[0].html, /5 Add-On Seats \(Department\)/);
+  assert.doesNotMatch(sent[0].html, /\(5 seats\)/);
+  assert.doesNotMatch(sent[0].html, /added seat/);
   assert.doesNotMatch(sent[0].html, /no extra charge/);
+  assert.doesNotMatch(sent[0].text, /added seat|\(5 seats\)/);
+  assert.match(sent[0].text, /5 Add-On Seats \(Department\)/);
+  // A single added seat reads naturally too
+  sent.length = 0;
+  await sendQuoteEmail({ ...base, productName: '1 Add-On Seat (Department)', seatCount: 1, addonSeats: 1 });
+  assert.match(sent[0].html, /1 Add-On Seat \(Department\)/);
+  assert.doesNotMatch(sent[0].html, /\(1 seat\)|added seat/);
 });
 
 test('report script: an old Annual quote of 15 + 2 with a 15-seat license is short by 2; a 17-seat license is fine', () => {

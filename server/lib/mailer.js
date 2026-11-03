@@ -424,19 +424,21 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
     const row = (label, val) =>
       `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;background:#f9fafb;">${label}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${val}</td></tr>`;
 
-    // An Annual quote's seat count is the tier's seats plus the added seats (added seats are free); show the tier's own seats on
-    // the first row and the added seats on their own row. A quote built on the Add-On Seats tab has the same number for both
-    // (seats === addOn), so it keeps showing all of its seats on the first row.
+    // Two kinds of quote carry added seats. An Annual quote's seat count is the tier's seats plus the added seats (added seats are
+    // free): show the tier's own seats, then the added seats on their own row. A quote built on the Add-On Seats tab (seats === addOn)
+    // is only added seats, and its product name already says how many ("5 Add-On Seats (Department)"): one row, no seat count in
+    // brackets and no "added seats" row repeating it.
+    const addOnOnly = addOn > 0 && seats === addOn;
     const tierSeats = addOn > 0 && seats > addOn ? seats - addOn : seats;
-    htmlRows += row(`${esc(productName)} (${tierSeats} seat${tierSeats !== 1 ? 's' : ''})`, `See total below`);
-    if (addOn > 0) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, seats > addOn ? `no extra charge` : `included`);
+    htmlRows += row(addOnOnly ? esc(productName) : `${esc(productName)} (${tierSeats} seat${tierSeats !== 1 ? 's' : ''})`, `See total below`);
+    if (addOn > 0 && !addOnOnly) htmlRows += row(`+ ${addOn} added seat${addOn !== 1 ? 's' : ''}`, `no extra charge`);
     if (years > 1) htmlRows += row(`${years}-year term`, `included`);
     if (disc > 0)  htmlRows += row(`Multi-year discount`, `${disc}% off`);
     htmlRows += `<tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;border-top:2px solid #d1d5db;">Total</td><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;font-size:18px;text-align:right;border-top:2px solid #d1d5db;">${total}</td></tr>`;
 
     textLines = [
-      `  ${productName} (${tierSeats} seat${tierSeats !== 1 ? 's' : ''})`,
-      addOn > 0 ? `  + ${addOn} added seat${addOn !== 1 ? 's' : ''}${seats > addOn ? ': no extra charge' : ''}` : '',
+      addOnOnly ? `  ${productName}` : `  ${productName} (${tierSeats} seat${tierSeats !== 1 ? 's' : ''})`,
+      addOn > 0 && !addOnOnly ? `  + ${addOn} added seat${addOn !== 1 ? 's' : ''}: no extra charge` : '',
       years > 1 ? `  ${years}-year term` : '',
       disc > 0  ? `  Multi-year discount: ${disc}% off` : '',
       `  Total: ${total}`,

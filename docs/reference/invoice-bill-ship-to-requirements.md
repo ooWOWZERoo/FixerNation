@@ -33,10 +33,6 @@ Written 2026-11-03. Approved by the owner the same day; built and tested 2026-11
 
 **E. Licenses and purchases page.** A purchase that has an invoice shows that invoice's Bill To and Ship To, with an edit button that uses the same invoice endpoint (there is only one place the data lives). A purchase with no invoice (a card purchase) shows nothing and cannot hold a Ship To in this release.
 
-## Open point for the owner
-
-Books are physical. A book bought by card has no invoice, so it has nowhere to carry a Ship To. If books are mailed, the real fix is to ask for a shipping address at checkout, which is a bigger change (Stripe address collection, the order record, a packing list). This release does not do that; say so if it is needed.
-
 ## Who can do what
 
 Only an FNE admin can read or change invoice addresses. A customer never sees the admin invoice page; they see the addresses only in the invoice and quote emails sent to them.
