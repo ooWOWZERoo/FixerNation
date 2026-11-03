@@ -1,0 +1,241 @@
+{
+  "state": "VT",
+  "coverage": {
+    "selStatus": "guidance_only",
+    "pogStatus": "statewide",
+    "selSourceUrl": "https://education.vermont.gov/safe-healthy-schools/sel-vt/social-emotional-learning-and-health-standards",
+    "pogSourceUrl": "https://education.vermont.gov/learning/proficiency-based-learning/proficiency-based-graduation-requirements",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "SEL: the Agency of Education's SEL and Health Standards page states that Vermont statutes and State Board rules do not currently require schools to teach and assess specific SEL competencies for all students. It frames SEL as a universal support in a multi-tiered system of supports (16 V.S.A. 2902), part of comprehensive health education (16 V.S.A. 131) and a route to the Portrait of a Graduate, and links CASEL and other guidance plus the Vermont Early Learning Standards (social and emotional section; early childhood, not opened or recorded). No SEL framework is recorded, so all Vermont alignments sit on the Portrait of a Graduate. PORTRAIT OF A GRADUATE: published by the Agency of Education as a statewide document, which its proficiency-based graduation page says clarifies College and Career Readiness expectations in the Education Quality Standards and was developed with over three hundred students, community members and educators. The same page offers resources for local communities to refine it. Re-check both pages for later changes."
+  },
+  "frameworks": [
+    {
+      "type": "portrait_of_graduate",
+      "name": "A Vermont Portrait of a Graduate",
+      "issuingBody": "Vermont Agency of Education",
+      "officialUrl": "https://education.vermont.gov/sites/aoe/files/documents/edu-a-vt-portrait-of-a-graduate-with-performance-indicators.pdf",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Read in full from the AOE's PDF 'A Vermont Portrait of a Graduate with Performance Indicators' (footer: Revised April 13, 2020; the AOE document page is dated April 15, 2020). Six attributes, each with numbered descriptors and lettered performance indicators in the source; items here are the six attributes, summarized in my own words. No adoption year is recorded: I found the AOE publication and revision dates but no State Board adoption date, so the reviewer should confirm whether, and when, the Board adopted it. A Portrait of a Graduate is not an SEL standard set, so competency tags are left off. The Well-Being attribute is the closest to SEL (managing stress, relationships, empathy, seeking support). The education.vermont.gov pages loaded with a browser-style request; confirm the PDF opens normally for a person. The source has no item codes: LA, GC, AP, CO, CT and WB are FNE labels (short forms of the attribute names), not Vermont's.",
+      "items": [
+        {
+          "code": "LA",
+          "title": "Learner Agency",
+          "summary": "Students own and drive their learning (focus, perseverance, reflection), develop and use their own voice, and set goals and work with others to reach them.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "GC",
+          "title": "Global Citizenship",
+          "summary": "Students see how choices affect themselves and others, work with others in mutual respect, exercise rights and responsibilities in a democracy and respect diverse perspectives.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "AP",
+          "title": "Academic Proficiency",
+          "summary": "Students understand essential concepts across disciplines and apply them, ask effective questions, and document growth by revising work, reflecting and persisting.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "CO",
+          "title": "Communication",
+          "summary": "Students communicate clearly in speech, writing and nonverbal ways, listen so others feel heard, use media with a positive digital footprint and respect multiple points of view.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "CT",
+          "title": "Critical Thinking and Problem Solving",
+          "summary": "Students use inquiry to solve real-world problems, take part in collaborative problem-solving and decision-making, and evaluate information critically.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "WB",
+          "title": "Well-Being",
+          "summary": "Students develop strategies and interpersonal skills to manage stress, promote mental health and build positive relationships, adopt healthy behaviors and make financially responsible decisions.",
+          "gradeBand": "K-12"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "LA",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Take Responsibility for Your Growth\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that support from teachers, family, and friends matters, but no one can grow for them. They will learn that personal growth happens when they choose effort, practice, better responses, and steady learning, even when it feels uncomfortable.\" Students learn that no one can grow for them and that growth comes from choosing effort, practice and steady learning, which is the same idea as taking ownership of and driving one's own learning. Limit: Personal responsibility; does not teach using one's own voice, taking a stand or connecting learning to career goals.",
+      "target": {
+        "type": "curriculum",
+        "title": "Take Responsibility for Your Growth - Lesson Plan 5 - 21 - #44_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "LA",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students pick a skill or habit to strengthen, use tracking and feedback and choose one repeated action, which is setting a goal and taking action to reach it. Limit: Goals are personal habits and skills; does not link goals to college, career or life plans.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "LA",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names setting goals and handling failure, which fits the goal-setting and high-expectations indicators. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Does not address developing a personal voice or taking a stand for others.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students name an immediate result and a later consequence of a choice, who else may be affected, and a caring action, which is the same skill as explaining how choices and actions affect themselves and others. Limit: Everyday personal choices; does not cover world issues, democratic rights or a second language.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain, skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear two teammates' views of one plan and adjust it so everyone can take part, which practises working with others in mutual respect and understanding different perspectives. Limit: A single team-planning scenario; not diversity in cultural or historical contexts, nor democratic rights and responsibilities.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (sel domain, skill: Civic Voice). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Players pick a problem they can change and make an ask people can say yes to, which practises contributing to community life. Limit: Small-scale civic voice; no coverage of world issues or rights and responsibilities.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" Students treat a mistake as information about what needs attention and practice, which supports reflecting critically on learning experiences and revising work. Limit: Covers the mindset toward mistakes; does not teach revising work from teacher or peer feedback, nor any subject content.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Keep Trying When It Gets Hard\" (series: Effort & Perseverance; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that difficulty is not a signal to quit. They will learn that perseverance grows when they keep trying, stay steady, learn from mistakes, and remember that progress often comes through effort, patience, and repeated practice.\" Students learn that difficulty is not a signal to quit and that perseverance grows with practice, which supports the indicator on demonstrating persistence to achieve goals. Limit: Persistence only; FNE lessons teach no discipline-specific content, so this attribute's core (essential concepts across subjects) is not covered.",
+      "target": {
+        "type": "curriculum",
+        "title": "Keep Trying When It Gets Hard - Lesson Plan 7 - 13 - #81_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Reading Detective\" (literacy domain, skill: Reading Comprehension). FNE's catalog description: \"Read the clues in a short mystery, pick your answer, then prove it with the text.\" Players read clues in a short text, pick an answer and prove it with the text, which practises asking questions of a text and using evidence. Limit: A single reading-comprehension skill; does not cover essential concepts across disciplines.",
+      "target": {
+        "type": "brain_game",
+        "slug": "reading-detective"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "CO",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and self-control.\" Students pause, let others finish, ask respectful questions and respond with care, which supports listening to understand another perspective and making sure others feel heard. Limit: Covers listening and respectful responding; not written or media communication.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "CO",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of confusion.\" Students learn to speak honestly, clearly and kindly and to explain without blaming, which supports conveying information clearly and voicing opinions respectfully. Limit: Everyday spoken communication; does not cover writing, multiple media or audiences.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "CO",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (sel domain, skill: Digital Citizenship). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" Players decide what they would share and what they would report when a rumor spreads, which practises acting in safe and ethical ways online. Limit: One digital-citizenship scenario; does not cover building a positive digital footprint or setting technology boundaries in depth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Critical Read\" (literacy domain, skill: Critical Comprehension). FNE's catalog description: \"Judge real claims for evidence, bias and sources, then prove your judgment from the text.\" Players judge real claims for evidence, bias and sources and prove their judgment from the text, which is the same skill as determining the credibility of a source and evaluating bias in information. Limit: Works from one text at a time; does not cover inquiry-based problem solving or collaborative decision-making.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Name the Real Issue\" (series: Problem Solving & Wise Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that many problems are not always what they first appear to be. They will learn to slow down, ask better questions, notice what needs attention, name the real issue, and choose one wise next step with honesty and respect.\" Students slow down, ask better questions and name the real issue before choosing a next step, which supports using inquiry to solve real-world problems. Limit: Everyday personal and peer problems; no information analysis, technology use or design projects.",
+      "target": {
+        "type": "curriculum",
+        "title": "Name the Real Issue - Lesson Plan: 6 - 15 - #61 - MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" Players find a problem at school, listen to the people it affects and try a small fix, which practises collaborative problem-solving with the people involved. Limit: A guided scenario; not open-ended inquiry or project design.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "WB",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Ask for Help the Right Way\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that needing help does not mean they are weak. It means they are honest enough to recognize when they need support. Students will learn to ask clearly, speak respectfully, listen carefully, and keep trying instead of shutting down or giving up.\" Students learn that needing help is not weakness and practise asking clearly and respectfully, which is the same skill as understanding one's own needs and accessing support to meet them. Limit: Asking for help in everyday situations; no content on stress management, physical health or finances.",
+      "target": {
+        "type": "curriculum",
+        "title": "Ask for Help the Right Way - Lesson Plan: 6 - 9 - #57_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "WB",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Believe You Can Learn\" (series: Confidence & Courage; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that not knowing something yet does not mean they cannot learn it. They will learn to see mistakes as part of growth, stay patient during challenges, avoid giving up too quickly, and keep practicing with confidence and courage.\" Students learn that not knowing something yet does not mean they cannot learn it, and to keep practising, which is the same idea as believing abilities can be developed through dedication and hard work. Limit: Growth mindset only; does not cover empathy, healthy behaviors or mental health strategies.",
+      "target": {
+        "type": "curriculum",
+        "title": "Believe You Can Learn - Lesson Plan 5 - 5 - #32_MS"
+      }
+    },
+    {
+      "framework": "A Vermont Portrait of a Graduate",
+      "itemCode": "WB",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (sel domain, skill: Self-Regulation). FNE's catalog description: \"Listen to what happened, then pick what helps you feel calm.\" Players listen to what happened and pick what helps them feel calm, which practises a strategy for managing stress. Limit: Self-regulation scenarios (band: discover); does not cover mental health supports or positive relationships.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    }
+  ]
+}

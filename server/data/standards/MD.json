@@ -1,0 +1,13 @@
+{
+  "state": "MD",
+  "coverage": {
+    "selStatus": "unknown",
+    "pogStatus": "unknown",
+    "selSourceUrl": "https://casel.org/state-page/",
+    "pogSourceUrl": "https://casel.org/state-page/",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "NO items loaded. Every Maryland State Department of Education page and PDF I tried (msde.maryland.gov and marylandpublicschools.org, including its SEL overview for Health and PE, the 2020 State Board SEL presentation and the early learning standards) returned 403 or redirected to a blocked page, so none was read. The only page opened is CASEL's state page (a secondary source), which lists Maryland's early learning standards (2016), no K-12 SEL competencies, and the Health and PE crosswalk as guidance. Search results suggest MSDE uses the CASEL competencies as a reference, not a state-adopted K-12 set, but that is unconfirmed. No Maryland portrait of a graduate was found. Reviewer: check MSDE directly."
+  },
+  "frameworks": [],
+  "alignments": []
+}

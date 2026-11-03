@@ -1,0 +1,715 @@
+{
+  "state": "RI",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "unknown",
+    "selSourceUrl": "https://ride.ri.gov/Portals/0/Uploads/Documents/Students-and-Families-Great-Schools/Health-Safety/Social-Emotional-Learning/RI-SEL-Standards-Linked.pdf",
+    "pogSourceUrl": "https://ride.ri.gov/sites/g/files/xkgbur806/files/Portals/0/Uploads/Documents/Diploma-System/Secondary-Regulations-Reference-Guide-Final-June2018.pdf",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "SEL: RI SEL Standards: Competencies for School and Life Success (5 anchor standards, 23 learning standards), endorsed by the Council on Elementary and Secondary Education Oct 24, 2017, applying Preschool through Adult. RIDE's May 2019 introduction says the Council approved them but districts are NOT required to implement them (a model for districts). POG: no statewide Portrait of a Graduate document was found or opened, so none is recorded; status left 'unknown' because ride.ri.gov web pages returned 403 to our fetch tool (only PDFs could be read). RIDE's 2018 Secondary Regulations Reference Guide quotes the 2020 Vision for Education's one-sentence ideal graduate (think critically and collaboratively; creative, self-motivated, culturally competent learner and citizen); the 2023 Social Studies Framework repeats similar wording from the 2021-2027 Strategic Plan. Neither is a portrait with named attributes. Reviewer: look for a newer RIDE graduate profile."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "issuingBody": "Rhode Island Department of Education (endorsed by the Council on Elementary and Secondary Education)",
+      "officialUrl": "https://ride.ri.gov/Portals/0/Uploads/Documents/Students-and-Families-Great-Schools/Health-Safety/Social-Emotional-Learning/RI-SEL-Standards-Linked.pdf",
+      "adoptedYear": 2017,
+      "gradeSpan": "PreK-adult",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Endorsed Oct 24, 2017 (stated on the standards chart). Per RIDE's May 2019 'Introduction and Guidance' PDF (https://ride.ri.gov/Portals/0/Uploads/Documents/Students-and-Families-Great-Schools/Health-Safety/Social-Emotional-Learning/SEL-Intro-3-15-19.pdf), endorsement means districts are not required to implement; the five anchors follow CASEL's five competencies. Items are all 23 learning standards (1A-5E); titles and summaries are short paraphrases of the chart's wording. RIDE also publishes separate SEL Indicators by grade span (not itemized here). CASEL tags follow the anchor standard each item sits under.",
+      "items": [
+        {
+          "code": "1A",
+          "title": "Understand one's own emotions",
+          "summary": "Individual demonstrates an understanding of one's emotions.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1B",
+          "title": "Know when help is needed and who can give it",
+          "summary": "Identify when help is needed and who can provide it.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1C",
+          "title": "Know one's personal rights and responsibilities",
+          "summary": "Show awareness of one's own personal rights and responsibilities.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1D",
+          "title": "Know one's strengths, cultural and linguistic assets, and aspirations",
+          "summary": "Show knowledge of one's own personal strengths, cultural and linguistic assets, and aspirations.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "1E",
+          "title": "Identify one's own prejudices and biases",
+          "summary": "Seek to understand and identify one's own prejudices and biases.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "2A",
+          "title": "Manage emotions, thoughts, impulses and stress constructively",
+          "summary": "Show the skills to manage emotions, thoughts, impulses and stress in constructive ways.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2B",
+          "title": "Manage materials, space, time and responsibilities",
+          "summary": "Manage materials, space, time and responsibilities effectively.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2C",
+          "title": "Develop, evaluate, modify and achieve goals",
+          "summary": "Show skills to develop, evaluate, modify and achieve goals.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "2D",
+          "title": "Keep a resilient attitude and growth mindset",
+          "summary": "Show a resilient attitude and growth mindset even in the face of adversity and challenges.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "3A",
+          "title": "Read social cues and respond appropriately",
+          "summary": "Read social cues and respond appropriately.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "3B",
+          "title": "Respect people with diverse backgrounds, abilities and identities",
+          "summary": "Seek to understand and show respect for individuals with diverse backgrounds, cultures, abilities, languages and identities.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "3C",
+          "title": "Show empathy for others' emotions and perspectives",
+          "summary": "Show empathy for other people's emotions and perspectives.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "3D",
+          "title": "Recognize and respect leadership in oneself and others",
+          "summary": "Recognize and respect leadership capacity in oneself and others.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "3E",
+          "title": "Contribute productively to school, family, workplace and community",
+          "summary": "Contribute productively to one's school, family, workplace and community.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "4A",
+          "title": "Communicate and interact effectively with diverse others",
+          "summary": "Use communication and interpersonal skills to interact effectively with others, including those with diverse backgrounds, cultures, abilities, languages and identities.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "4B",
+          "title": "Use communication skills to maintain relationships",
+          "summary": "Use appropriate communication strategies and interpersonal skills to maintain relationships.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "4C",
+          "title": "Respectfully engage in and resolve interpersonal conflicts",
+          "summary": "Show the skills to respectfully engage in and resolve interpersonal conflicts in various contexts.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "4D",
+          "title": "Recognize when others need help; give or seek assistance",
+          "summary": "Recognize when others need help and show the ability to provide or seek assistance.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "5A",
+          "title": "Apply problem-solving skills responsibly",
+          "summary": "Apply problem-solving skills to engage responsibly in a variety of situations.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "5B",
+          "title": "Use and adapt tools and strategies to solve problems",
+          "summary": "Use and adapt appropriate tools and strategies to solve problems.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "5C",
+          "title": "Evaluate the impact of decisions and adjust behavior",
+          "summary": "Evaluate the impact of decisions on self, others and the situation, and adjust behavior appropriately.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "5D",
+          "title": "Consider ethical, safety and societal factors in decisions",
+          "summary": "Consider ethical, safety and societal factors when making choices and decisions.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "5E",
+          "title": "Respond to outside influences on decisions",
+          "summary": "Consider and respond appropriately to external influences (for example media, peers, authority figures) on decision-making.",
+          "gradeBand": "PreK-adult",
+          "caselCompetency": "responsible_decision_making"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" Students recognise when emotions start driving behaviour and choose a response, which is understanding one's own emotions and how they connect to actions.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "1A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain, skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Practises naming feelings from real cues in a scene. Limit: Reads other people's feelings from cues; it does not connect the player's own emotions to their own behavior.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "1A",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names understanding and naming emotions and self-awareness. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "1B",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names asking for help. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Names asking for help but not how to tell when help is needed or who can provide it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "1D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (sel domain, skill: Self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" Players spot the strengths a person's actions show, then think about their own. Limit: Strengths only; no cultural or linguistic assets and no aspirations.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "1D",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Strengthen the Life You Want to Live\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Strengthen the Life You Want to Live helps learners connect long-term direction with everyday behavior. The lesson emphasizes that a stronger future is built through repeated choices, healthy routines...\" Connects long-term direction with everyday behavior, which touches on aspirations. Limit: Does not address knowing one's own strengths or cultural and linguistic assets.",
+      "target": {
+        "type": "curriculum",
+        "title": "Strengthen the Life You Want to Live - Lesson Plan 9 - 25 - #135 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2A",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" Students practise a pause-and-reset process and pick one respectful action, which is managing emotions and impulses constructively.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (sel domain, skill: Self-Regulation). FNE's catalog description: \"Listen to what happened, then pick what helps you feel calm.\" Players listen to what happened and pick what helps them feel calm, which practises self-regulation. Limit: Short everyday scenarios; no stress-management skills beyond choosing a calming action.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2B",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Own Your Time\" (series: Discipline & Structure; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that time is shaped by their choices. They will learn that priorities, focused attention, healthy breaks, fewer distractions, and responsible beginnings ca...\" Covers time as a product of choices, with priorities, focus, healthy breaks and fewer distractions, which is managing time and responsibilities. Limit: Does not cover managing materials or space.",
+      "target": {
+        "type": "curriculum",
+        "title": "Own Your Time - Lesson Plan 8 - 4 - #97 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2B",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Build Better Habit Systems\" (series: Discipline & Structure; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that good habits become easier to repeat when they are supported by clear times, reminders, preparation, and simple first steps. They will learn that a str...\" Teaches clear times, reminders, preparation and simple first steps to make habits repeatable, which supports managing responsibilities. Limit: Habit building, not a general organisation skill; no materials or space.",
+      "target": {
+        "type": "curriculum",
+        "title": "Build Better Habit Systems - Lesson Plan 8 - 5 - #98 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2B",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names managing time. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a skill or habit to strengthen, use tracking and feedback, and choose a repeated action, which is developing, evaluating and modifying a goal. Limit: Goals are personal habits; no academic or long-term planning.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Refine Your Routine\" (series: Discipline & Structure; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that refining a routine means noticing what helps, changing what gets in the way, and repeating a stronger pattern. They will learn that small improvements...\" Students notice what helps, change what gets in the way and repeat a stronger pattern, which is modifying a plan. Limit: Routines rather than formal goal setting.",
+      "target": {
+        "type": "curriculum",
+        "title": "Refine Your Routine - Lesson Plan 8 - 10 - #101 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names setting goals. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2D",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" Frames a mistake as information about what to practise next rather than as identity, which is a growth mindset. Limit: Covers mistakes; larger adversity such as hardship or loss is not mentioned in the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Progress, Not Perfection\" (series: Emotional Strength; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Progress, Not Perfection helps learners understand that real growth is built through steady effort, practice, reflection, and learning from mistakes. The lesson challenges perfection pressure and unhe...\" Presents growth as steady effort, practice and learning from mistakes and challenges perfection pressure, which supports a resilient attitude. Limit: Stated objective is general; it does not say how learners handle serious adversity.",
+      "target": {
+        "type": "curriculum",
+        "title": "Progress, Not Perfection - Lesson Plan 8 - 25 - #112 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks. Students learn that difficulty is part of the process - not a sign that they should stop.\" The theme names persistence, growth mindset and bouncing back from setbacks. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain, skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Players look at clues in a scene and pick every feeling that fits, which practises reading social cues. Limit: Emotion cues in short scenes; not body language, tone or cultural norms in depth, and no practice of responding.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (sel domain, skill: Kindness). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Players listen to what happened and pick the kind thing to do, which practises responding appropriately to a situation. Limit: Everyday kindness scenarios for younger players; limited cue reading.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Same and Different\" (sel domain, skill: Social Awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" Players tap what is the same, what is different, or the kind thing to do after hearing a story, which practises respectful attention to similarity and difference. Limit: Does not name abilities, languages or identities in depth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain, skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear two teammates' views and adjust a plan so everyone can take part, which practises including different views. Limit: A group-planning scenario; not about cultural, language or ability differences specifically.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain, skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear both sides of a plan, which practises taking another person's perspective (the game's skill is perspective-taking). Limit: Perspective on a plan; empathy for emotions is not named in the description.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (sel domain, skill: Kindness). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Players listen to what happened and pick the kind thing to do, which practises noticing another person's experience. Limit: Everyday kindness scenarios.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3D",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Make Others Better Around You\" (series: Leadership Through Example; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong leadership does not only help the self. They will learn that real influence helps the whole group become better by encouraging, strengthening, respecting, and supporting the people around them.\" Frames leadership as encouraging, strengthening, respecting and supporting the group, which is recognising leadership capacity in oneself and others. Limit: Does not address recognising and respecting other people's leadership.",
+      "target": {
+        "type": "curriculum",
+        "title": "Make Others Better Around You - Lesson Plan 7 - 24 - #90 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3D",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Leadership & Responsibility\" (programs.html). FNE's published description: \"What leadership looks like in a classroom, on a team, and in a community. Students explore ownership, initiative, accountability, and what it means to lead from any position.\" The theme names leading from any position. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Names leading from any position but not recognising and respecting others' leadership.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3E",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part to help a classroom, team or family, which is contributing productively to school and family. Limit: Classroom, team and family scale; the available text does not mention workplace or wider community.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3E",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" Players find a problem at school, listen to the people it affects and try a small fix, which is contributing to the school. Limit: A school scenario only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "3E",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (sel domain, skill: Civic Voice). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Players pick a problem they can change and make an ask people can say yes to, which practises contributing to a community. Limit: An advanced-band game on civic voice; does not teach the contribution itself.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4A",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame. Limit: General respectful communication; does not address interacting across differences of culture, ability or language.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (sel domain, skill: Communication). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Players pick the message a person would hear best, which practises adapting communication to the listener. Limit: Message choice in written scenarios; not live interaction across differences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4A",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names active listening and expressing yourself clearly. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4B",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and ...\" Teaches letting others finish, asking respectful questions and responding with care, which supports keeping relationships healthy. Limit: Listening habits in general; maintaining relationships over time is not mentioned in the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4B",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Repair Your Words\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that repairing their words is a responsible communication skill. They will learn to notice when their tone, timing, or words are not helpful, apologize when needed, try again with better words, and use communication to make things ...\" Teaches noticing unhelpful tone, apologising and trying again with better words, which helps keep a relationship in good repair. Limit: Focused on repairing communication after a misstep.",
+      "target": {
+        "type": "curriculum",
+        "title": "Repair Your Words - Lesson Plan: 6 - 11 - #59 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4B",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names building healthy relationships. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Students spot signs that a conflict is escalating and choose a respectful response that moves toward an answer, which is engaging in and resolving conflict respectfully.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Choose Peace Without Losing Strength\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will distinguish peace from passivity, identify one calm and assertive response to conflict, and explain when respectful help-seeking protects safety, boundaries, or a fair solution.\" Students practise a calm, assertive response to conflict and learn when respectful help-seeking protects a fair solution.",
+      "target": {
+        "type": "curriculum",
+        "title": "Choose Peace Without Losing Strength - Lesson Plan 10 - 20 - #152 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peace Table\" (sel domain, skill: Conflict Resolution). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Players say what happened, listen and find a fair plan together, which is resolving a conflict respectfully (the game's skill is conflict resolution). Limit: Peer disagreement scenarios for the explore band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4D",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, offering encouragement and being present with purpose, which supports noticing that someone needs help. Limit: Does not teach how to tell when help is needed or how to seek help.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "4D",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names asking for help. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Names asking for help; offering help to others is not described.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (sel domain, skill: Responsible Decision-Making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" Players work through a classmate being left out and decide what they notice and what to do, which practises responsible decision-making (the game's skill). Limit: One peer-inclusion scenario; wider problem-solving situations are not described.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" Players find a problem, listen to those affected and try a small fix, which practises creative problem-solving.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5A",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences. Students practice evaluating options before acting.\" The theme names evaluating options before acting. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" Players find the real need and test one small idea before launching, which practises choosing and adjusting a strategy. Limit: One game scenario; no wider toolkit of problem-solving strategies.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5B",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Slow Down and Think It Through\" (series: Wisdom & Discernment; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Today you will read or listen to a Morning Boost about slowing down before making a choice. This lesson teaches that a pause can create space to gather facts, consider consequences, ask useful questio...\" Teaches that a pause creates space to gather facts, consider consequences and ask useful questions, which is a strategy for solving problems. Limit: The catalog text is cut off, so only the visible part is claimed.",
+      "target": {
+        "type": "curriculum",
+        "title": "Slow Down and Think It Through - Lesson Plan 10 - 1 - #139 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action, which is evaluating the impact of a decision on self and others. Limit: Looks ahead before choosing; adjusting behavior after a decision is not stated in the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5C",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Count the Cost Before You Choose\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Every choice asks something of us and sometimes of others. Learners consider time, shared resources, and trust before choosing a workable plan.\" Learners weigh time, shared resources and trust before choosing a workable plan, which evaluates impact on self and others.",
+      "target": {
+        "type": "curriculum",
+        "title": "Count the Cost Before You Choose - Lesson Plan 10 - 9 - #145 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (sel domain, skill: Responsible Decision-Making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" Players work through a classmate being left out and decide what they notice and what to do, which practises responsible decision-making (the game's skill). Limit: The description does not say players weigh the impact of their choice on others.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5D",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Be Honest Even When It Costs You\" (series: Integrity in Action; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Honesty can require giving up comfort or an advantage you did not earn. Learners practice stating facts respectfully and accepting a fair correction with support.\" Learners practise stating facts respectfully when honesty costs an advantage, which is an ethical factor in a decision. Limit: Honesty only; safety and societal factors are not covered.",
+      "target": {
+        "type": "curriculum",
+        "title": "Be Honest Even When It Costs You - Lesson Plan 10 - 14 - #148 - MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"First Shift\" (sel domain, skill: Workplace Ethics). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" Players decide what they owe the team and the truth, which practises weighing an ethical factor in a decision. Limit: Workplace scenario for the advance band; ethics only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5E",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Think Before You Act\" (series: Self-Control & Daily Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that wise choices often begin with a pause. They will learn that self-control means slowing down long enough to think clearly, notice consequences, manage pressure, and choose what is right instead of reacting too quickly.\" Teaches managing pressure before choosing what is right, which supports responding to outside influences. Limit: Pressure is mentioned in general; media and authority figures are not.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Before You Act - Lesson Plan 7 - 6 - #76_MS"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5E",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (sel domain, skill: Digital Citizenship). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" Players decide what they would share and what they would report when a rumor spreads, which practises responding to peer and media influence. Limit: One digital-citizenship scenario.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "Rhode Island Social Emotional Learning Standards: Competencies for School and Life Success",
+      "itemCode": "5E",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences. Students practice evaluating options before acting.\" The theme names peer pressure. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    }
+  ]
+}

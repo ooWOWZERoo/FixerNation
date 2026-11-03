@@ -1,0 +1,12 @@
+{
+  "state": "NH",
+  "coverage": {
+    "selStatus": "guidance_only",
+    "pogStatus": "district_led_only",
+    "selSourceUrl": "https://www.education.nh.gov/osew",
+    "pogSourceUrl": "https://www.education.nh.gov/sites/g/files/ehbemt326/files/inline-documents/sonh/2024-41_adopted-text_0.pdf",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "No framework is recorded for New Hampshire, so there are no items or alignments. SEL: the Department of Education's Office of Student and Educator Wellness page  describes MTSS-B (a multi-tiered behavioral health and wellness model), toolkits and training; the Department's 2020 back-to-school wellness page has an SEL section that defines SEL and promotes professional development. I found no K-12 SEL standards or competencies on education.nh.gov, and the Ed 306 minimum standards for school approval (adopted text dated December 12, 2024; I searched it for social, emotional, portrait and wellness terms and read the graduation-requirements section) contain none. Third-party summaries say NH has early learning standards that include social-emotional development; I did not open them, so they are not recorded. The education.nh.gov site is mid-redesign and many old pages return 'not found', so the absence of a standards page is not proof. PORTRAIT OF A GRADUATE: the Ed 306 text has no Portrait of a Graduate. Its graduation requirements (Ed 306 section on high school graduation) list 'all programs and courses' skills such as communicating effectively, thinking independently, contributing respectfully and persevering with self-reflection; these are state graduation requirements, not a named portrait, so they are not recorded as one. A June 3, 2024 Concord Monitor news report (secondary source, not a state document) says the nonprofit New Hampshire Learning Initiative drafted a portrait of a New Hampshire learner, that it is not part of Ed 306 or state graduation requirements, and that at least eight districts have written their own. REVIEWER: confirm district_led_only against education.nh.gov or the State Board of Education; if the Department has since issued a portrait, change the status and add the framework. Re-check both pages for later changes."
+  },
+  "alignments": []
+}

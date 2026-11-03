@@ -1,0 +1,432 @@
+{
+  "state": "CT",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "district_led_only",
+    "selSourceUrl": "https://portal.ct.gov/sde/ct-core-standards/materials-for-teachers/components-of-social-emotional-and-intellectual-habits-k3",
+    "pogSourceUrl": "https://www.norwalkps.org/academics",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "SEL: CSDE 'Components of Social, Emotional, and Intellectual Habits: K-12' (seven areas of development with grade-band indicators). K-3 approved by the State Board in 2018; Grades 4-12 developed under Public Act 21-95 and approved in 2023 per CSDE's page (the March 1, 2023 Board agenda resolution I read was marked 'To Be Proposed'; the April 2023 K-12 PDF is the one itemized). The document says it does not oblige districts to adopt new curricula. CSDE also cites the state's five-competency SEL definition (Conn. Gen. Stat. 10-222d; PA 19-166). POG: no statewide portrait of a graduate found. Searches of portal.ct.gov turned up none, and district portraits exist (Norwalk Public Schools' academics page, opened). Treated as district-led; absence on CSDE's site is not proven. Reviewer: confirm with CSDE; also confirm Board vote date."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "issuingBody": "Connecticut State Department of Education (approved by the State Board of Education)",
+      "officialUrl": "https://portal.ct.gov/-/media/sde/social-emotional-learning/cseih_k12.pdf",
+      "adoptedYear": 2023,
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Read the CSDE PDF 'Updated April 2023' (Grades 4-12 section; the K-3 section approved 2018 has its own grade-by-grade indicators and is NOT itemized, so items carry gradeBand 4-12). The document has area names and 'learning progression' strands but no numbered codes: codes here are FNE-assigned labels. Area 1 is split into its four strands (EF-), area 6 into three (IP-), area 7 into two (EA, EM). The PDF table text extracts in a scrambled order, so the strand-to-indicator pairing in summaries is a judgment: verify against the PDF. The document does not tag CASEL competencies; tags are the reviewer's call.",
+      "items": [
+        {
+          "code": "EF-WM",
+          "title": "Working memory and metacognition",
+          "summary": "Executive functioning strand: hold and work with information and reflect on one's own thinking and learning.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "EF-CF",
+          "title": "Cognitive flexibility",
+          "summary": "Executive functioning strand: adjust one's thinking when the environment, information or one's goals change.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "EF-SR",
+          "title": "Self-regulation of emotions and reactions",
+          "summary": "Executive functioning strand: identify feelings, use strategies to manage emotions and behavior, and cope with disappointment and setbacks.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "EF-AB",
+          "title": "Managing attention and behavior",
+          "summary": "Executive functioning strand: keep attention on a goal, resist distractions, and use organizational strategies to finish tasks.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "SC",
+          "title": "Develop a positive self-concept",
+          "summary": "Understand and value oneself: self-awareness, a sense of being capable, personal values, positive self-talk, seeking support, accepting feedback and self-advocacy.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "LR",
+          "title": "Develop logic and reasoning",
+          "summary": "Use critical and analytical thinking, apply known information to new situations, weigh perspectives, and reason through problems and decisions.",
+          "gradeBand": "4-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "SYM",
+          "title": "Develop modes of symbolic representation",
+          "summary": "Use drawings, diagrams, models and role-play to make sense of ideas and to examine how behavior affects others.",
+          "gradeBand": "4-12"
+        },
+        {
+          "code": "ATL",
+          "title": "Develop a positive attitude toward learning",
+          "summary": "Show a growth mindset, curiosity and initiative, seek support when needed, see strengths as tied to learning, and cooperate with others in learning.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "IP-SA",
+          "title": "Social awareness and interpersonal skills",
+          "summary": "Interpersonal skills strand: notice and respond to verbal and nonverbal cues and the impact of words, tone and body language on relationships.",
+          "gradeBand": "4-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "IP-DM",
+          "title": "Responsible decision-making and social problem-solving",
+          "summary": "Interpersonal skills strand: follow a decision-making process, generate choices, weigh consequences for others and handle peer pressure.",
+          "gradeBand": "4-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "IP-CR",
+          "title": "Conflict resolution",
+          "summary": "Interpersonal skills strand: seek help when needed, listen, de-escalate, compromise and restore relationships when working through disagreements.",
+          "gradeBand": "4-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "EA",
+          "title": "Emotional awareness",
+          "summary": "Identify and label emotions in oneself and others, recognize triggers, and use self-monitoring strategies to reframe thoughts and manage reactions.",
+          "gradeBand": "4-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "EM",
+          "title": "Empathy",
+          "summary": "Understand others' emotions and perspectives, respond with empathic concern, and value what differences bring to a community.",
+          "gradeBand": "4-12",
+          "caselCompetency": "social_awareness"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-WM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Memory Match\" (executive domain, skill: Working Memory). FNE's catalog description: \"Flip cards and find all matching pairs as fast as possible.\" Flipping cards to find pairs exercises holding information in mind (the game's skill is working memory). Limit: A puzzle-style practice of the cognitive skill; the Connecticut indicators are about using it in learning tasks, such as breaking tasks into steps and monitoring progress, which the game does not teach.",
+      "target": {
+        "type": "brain_game",
+        "slug": "memory-match"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-WM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Simon Sequence\" (executive domain, skill: Sequential Memory). FNE's catalog description: \"Watch a color pattern grow longer each round and repeat it perfectly.\" Repeating a growing pattern exercises holding and recalling a sequence (the game's skill is sequential memory). Limit: Same limit as Memory Match: practises the underlying skill, not planning, monitoring or reflection on learning.",
+      "target": {
+        "type": "brain_game",
+        "slug": "simon-sequence"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-CF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Stroop Challenge\" (executive domain, skill: Cognitive Flexibility). FNE's catalog description: \"Name the ink color of a word - resist reading what the word says.\" Naming the ink color while ignoring the word asks players to override an automatic response (the game's skill is cognitive flexibility). Limit: A speeded cognitive task; it does not address adjusting plans or looking at an issue from several perspectives.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stroop-challenge"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-SR",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" Students spot early signs that emotions are taking over and use a pause-and-reset process before choosing a respectful action, which is regulating emotions and reactions. Limit: Does not mention coping with disappointment or failure in particular.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-SR",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (sel domain, skill: Self-Regulation). FNE's catalog description: \"Listen to what happened, then pick what helps you feel calm.\" Players listen to what happened and pick what helps them feel calm, which practises self-regulation. Limit: Short scenarios; no reframing or self-monitoring strategies beyond choosing a calming action.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-SR",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-AB",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Own Your Time\" (series: Discipline & Structure; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that time is shaped by their choices. They will learn that priorities, focused attention, healthy breaks, fewer distractions, and responsible beginnings ca...\" Covers focused attention, healthy breaks and fewer distractions, which supports keeping attention on a task. Limit: Time use in general; no organizational routines for multistep academic tasks.",
+      "target": {
+        "type": "curriculum",
+        "title": "Own Your Time - Lesson Plan 8 - 4 - #97 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EF-AB",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Start the Week With Intention\" (series: Wise Daily Direction; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Start the Week With Intention helps learners understand that intention gives direction to attention, effort, time, and daily choices. The lesson emphasizes identifying what matters before distractions...\" Teaches that intention gives direction to attention, effort, time and daily choices. Limit: The catalog text is cut off, so only the visible part is claimed.",
+      "target": {
+        "type": "curriculum",
+        "title": "Start the Week With Intention - Lesson Plan 9 - 14 - #126 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "SC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (sel domain, skill: Self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" Players spot the strengths a person's actions show, then think about their own, which builds awareness of personal strengths. Limit: Strengths only; no cultural or linguistic assets, feedback or self-advocacy.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "SC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Values Compass\" (sel domain, skill: Values and Identity). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" Players name the values behind what someone does, then think about their own, which relates to understanding personal values. Limit: Values and identity only; the indicators on advocacy, feedback and support-seeking are not covered.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "SC",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Your Words Shape Your Mind\" (series: Emotional Strength; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Your Words Shape Your Mind helps learners examine how repeated internal language can influence attention, emotion, confidence, communication, and the next action they choose. The lesson does not teach...\" Examines how repeated internal language shapes confidence and the next action chosen, which relates to positive self-talk. Limit: The catalog text is cut off, so only the visible part is claimed; it does not cover other self-concept indicators.",
+      "target": {
+        "type": "curriculum",
+        "title": "Your Words Shape Your Mind - Lesson Plan 8 - 24 - #111 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "LR",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Slow Down and Think It Through\" (series: Wisdom & Discernment; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Today you will read or listen to a Morning Boost about slowing down before making a choice. This lesson teaches that a pause can create space to gather facts, consider consequences, ask useful questio...\" Teaches that a pause can create space to gather facts, consider consequences and ask useful questions, which supports reasoned decisions. Limit: The catalog text is cut off, so only the visible part is claimed; no formal analysis or hypothesis work.",
+      "target": {
+        "type": "curriculum",
+        "title": "Slow Down and Think It Through - Lesson Plan 10 - 1 - #139 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "LR",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Critical Read\" (literacy domain, skill: Critical Comprehension). FNE's catalog description: \"Judge real claims for evidence, bias and sources, then prove your judgment from the text.\" Players judge claims for evidence, bias and sources, then prove their judgment from the text, which practises critical and analytical thinking. Limit: Reading-based; the indicators also cover problem solving and discussion, which the game does not.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "LR",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" Players find the real need and test one small idea before launching, which practises reasoning to a solution. Limit: One scenario type; does not teach explaining one's thinking to others.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "ATL",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Learn From Mistakes\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that mistakes are part of learning and growth. They will learn that a mistake is not their identity; it is information that can show them what needs attention, what needs practice, and what better choice can be made next time.\" Treats a mistake as information about what to practise next, which matches the indicators on learning from unsuccessful attempts and growth mindset. Limit: Covers mistakes; curiosity, cooperation and seeking academic support are not in the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Learn From Mistakes - Lesson Plan 5 - 22 - #45_MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "ATL",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Choose Growth Over Comfort\" (series: Emotional Strength & Growth; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Choose Growth Over Comfort helps learners examine the difference between staying only with what feels familiar and choosing safe, purposeful challenges that support development. The lesson reinforces...\" Contrasts staying with the familiar with choosing safe, purposeful challenges that support development, which relates to embracing productive struggle. Limit: The catalog text is cut off, so only the visible part is claimed.",
+      "target": {
+        "type": "curriculum",
+        "title": "Choose Growth Over Comfort - Lesson Plan 9 - 4 - #120 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "ATL",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks. Students learn that difficulty is part of the process - not a sign that they should stop.\" The theme names persistence and growth mindset. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-SA",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches pausing before reacting, explaining without blame and choosing helpful words, which relates to how words and tone affect relationships. Limit: Does not address reading nonverbal cues or protecting personal boundaries.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-SA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (sel domain, skill: Communication). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Players pick the message a person would hear best, which practises adjusting words to the listener. Limit: Written scenarios; body language and tone of voice are not part of the description.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-SA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain, skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Players look at clues in a scene and pick every feeling that fits, which practises noticing social and emotional cues. Limit: Emotion cues in still scenes; not verbal and nonverbal cues in conversation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-DM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action, which matches weighing consequences and the impact on others. Limit: Does not mention peer pressure or social norms.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-DM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (sel domain, skill: Responsible Decision-Making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" Players work through a classmate being left out and decide what they notice and what to do, which practises responsible decision-making (the game's skill). Limit: One peer-inclusion scenario; the description does not mention generating choices, peer pressure or weighing consequences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-DM",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences. Students practice evaluating options before acting.\" The theme names peer pressure, choices and consequences. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-CR",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that a conflict is escalating, practice a short pause-and-reset process, and choose one respectful response that helps move the situation toward an answer.\" Students spot signs that a conflict is escalating and choose a respectful response that moves toward an answer, which matches de-escalating and resolving conflict. Limit: Does not mention compromise or restoring a relationship.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-CR",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peace Table\" (sel domain, skill: Conflict Resolution). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Players say what happened, listen and find a fair plan together, which matches listening, discussing solutions and compromising. Limit: Peer disagreement scenarios for the explore band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "IP-CR",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Repair Your Words\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that repairing their words is a responsible communication skill. They will learn to notice when their tone, timing, or words are not helpful, apologize when needed, try again with better words, and use communication to make things ...\" Teaches noticing unhelpful tone, apologising and trying again with better words, which supports restoring a relationship after a disagreement. Limit: Focused on repairing communication, not negotiating solutions.",
+      "target": {
+        "type": "curriculum",
+        "title": "Repair Your Words - Lesson Plan: 6 - 11 - #59 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EA",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" Students identify early signs that emotions are taking control, which relates to recognising triggers. Limit: Does not cover labelling the nuances of emotions or reframing thoughts.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain, skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Players pick every feeling that fits the clues in a scene, which practises identifying and labelling emotions. Limit: Identifies other people's feelings from clues; own triggers and self-monitoring are not covered.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EA",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names understanding and naming emotions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain, skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear two teammates' views and adjust a plan so everyone can take part, which practises taking another person's perspective. Limit: Perspective on a plan; empathic concern for feelings is not named in the description.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (sel domain, skill: Kindness). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Players listen to what happened and pick the kind thing to do, which practises noticing another person's experience. Limit: Everyday kindness scenarios; younger-player band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Components of Social, Emotional, and Intellectual Habits: Kindergarten through Grade 12",
+      "itemCode": "EM",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+{
+  "state": "ME",
+  "coverage": {
+    "selStatus": "guidance_only",
+    "pogStatus": "statewide",
+    "selSourceUrl": "https://www.maine.gov/doe/sel/SELImplementation",
+    "pogSourceUrl": "https://www.maine.gov/doe/learning/guidingprinciples",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "SEL: the Maine DOE's SEL Implementation page says the Department has no SEL-specific standards and no current plans to develop them. It offers optional examples (California's SEL competency continuums; a benchmark document named on the page but not linked there, which I could not open), points to the SEL4ME platform and lesson sequences, and says it recommends no specific SEL program. No SEL framework is recorded, so no SEL alignments exist for Maine. PORTRAIT OF A GRADUATE: Maine has no document called a 'Portrait of a Graduate' on the DOE site. What it does have is the Guiding Principles, five statements of what each Maine student must leave school as, defined in DOE Rule Chapter 132 (the Maine Learning Results; the Guiding Principles page says they are embedded in the Learning Results). It functions as the statewide graduate profile, so it is recorded as portrait_of_graduate and pogStatus 'statewide'. REVIEWER: decide whether you are comfortable presenting the Guiding Principles as Maine's statewide portrait; some sources count Maine's portraits as local (district-led) efforts. Re-check both pages for later changes."
+  },
+  "frameworks": [
+    {
+      "type": "portrait_of_graduate",
+      "name": "Maine's Guiding Principles for Learning",
+      "issuingBody": "Maine Department of Education (defined in DOE Rule Chapter 132, Learning Results: Parameters for Essential Instruction)",
+      "officialUrl": "https://www.maine.gov/doe/learning/guidingprinciples",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Item text was read from the DOE's own PDF excerpt of Chapter 132 (Content & Standards - Maine Learning Results Guiding Principles - 6.13.2024.pdf, linked from the Guiding Principles page) and checked against the Chapter 132 rule PDF on maine.gov (version dated 4.3.2026 in its file name; the rule's effective-date list shows final adoptions in 2019, 2020 and 2022). The principle list was once in statute (20-A MRS 6209, subsection 1) but that subsection was repealed in 2007; the DOE page now says the principles are formally defined in Rule Chapter 132. No adoption year is recorded for the principles themselves because the sources read do not give one. Each principle has 4 to 7 numbered indicators in the source; items here are the five principles, summarized in my own words. A Portrait of a Graduate is not an SEL standard set, and the competency tags are left off for that reason. The maine.gov pages refused automated requests from the standard fetch tool but loaded with a browser-style request; confirm the PDFs open normally for a person.",
+      "items": [
+        {
+          "code": "A",
+          "title": "Clear and Effective Communicator",
+          "summary": "Communicates in an organized, purposeful way, backs ideas with evidence and logic, adjusts to the audience and uses a range of modes of expression.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "B",
+          "title": "Self-Directed and Lifelong Learner",
+          "summary": "Finds and evaluates information, sets goals, shows initiative, flexibility and reliability, and works well with people from different backgrounds.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "C",
+          "title": "Creative and Practical Problem Solver",
+          "summary": "Defines problems by observing and evaluating situations, generates and weighs solutions, and perseveres through challenges.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "D",
+          "title": "Responsible and Involved Citizen",
+          "summary": "Takes part positively in the community, accepts responsibility for personal decisions, acts ethically with moral courage, respects diversity and attends to health and wellness.",
+          "gradeBand": "K-12"
+        },
+        {
+          "code": "E",
+          "title": "Integrative and Informed Thinker",
+          "summary": "Applies knowledge across subjects and real-life situations, evaluates and combines information from multiple sources, and uses systems thinking.",
+          "gradeBand": "K-12"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of confusion.\" Teaches honest, clear, kind speaking and explaining without blame, which matches the principle's organized, purposeful communication. Limit: Covers respectful everyday speaking; does not teach using evidence and logic, adapting to an audience or using varied modes of expression (including a second language), which the principle also names.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (sel domain, skill: Communication). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Players choose the message a particular person would hear best, which practises adjusting communication to the audience. Limit: One short scenario at a time; does not cover evidence, logic or multiple modes of expression.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names expressing yourself clearly and active listening. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: No coverage of evidence-based or multilingual communication.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Take Responsibility for Your Growth\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that support from teachers, family, and friends matters, but no one can grow for them. They will learn that personal growth happens when they choose effort, practice, better responses, and steady learning, even when it feels uncomfortable.\" Students learn that no one can grow for them and that growth comes from choosing effort and steady learning, which matches the self-directed part of the principle. Limit: Personal responsibility for growth only; does not teach locating or evaluating information resources.",
+      "target": {
+        "type": "curriculum",
+        "title": "Take Responsibility for Your Growth - Lesson Plan 5 - 21 - #44_MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Follow Through\" (series: Discipline & Structure; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that follow-through means finishing what they begin, taking the next responsible step, and showing that others can depend on them. They will learn that completing responsibilities, keeping promises, and returning after distractions build discipline, dependability, confidence, and self-trust.\" Covers finishing what they begin and being dependable, which matches the indicator on reliability and concern for quality. Limit: One indicator of seven (reliability); not goal-setting from knowledge, flexibility or learning from diverse people.",
+      "target": {
+        "type": "curriculum",
+        "title": "Follow Through - Lesson Plan 8 - 11 - #102 - MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names setting goals and handling failure, which fits the principle's goal-setting and flexibility indicators. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Covers everyday life skills, not research or information skills.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Name the Real Issue\" (series: Problem Solving & Wise Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that many problems are not always what they first appear to be. They will learn to slow down, ask better questions, notice what needs attention, name the real issue, and choose one wise next step with honesty and respect.\" Students slow down, ask better questions and name the real issue before choosing a next step, which is the same skill as observing and evaluating a situation to define a problem. Limit: Everyday personal and peer problems; no data collection, analysis or technology use.",
+      "target": {
+        "type": "curriculum",
+        "title": "Name the Real Issue - Lesson Plan: 6 - 15 - #61 - MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "C",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Keep Moving Toward the Solution\" (series: Problem Solving & Wise Choices; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that solutions are often built through repeated wise choices, not one quick moment. They will learn to keep trying, ask for help, correct mistakes, choose responsible next steps, and continue moving forward when a problem takes time.\" Covers continuing to try, asking for help and correcting mistakes when a problem takes time, which matches the indicator on persevering in challenging situations. Limit: Perseverance only; does not teach generating and critically comparing solutions.",
+      "target": {
+        "type": "curriculum",
+        "title": "Keep Moving Toward the Solution- Lesson Plan: 6 - 19 - #65 - MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" Players find a problem at school, listen to the people it affects and test a small fix, which practises a creative, practical problem-solving cycle. Limit: A guided game scenario; not open-ended research or data analysis.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "D",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Own Your Choices\" (series: Responsibility & Ownership; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that they may not control everything that happens around them, but they can take responsibility for how they respond. They will learn to pause before blaming, tell the truth about mistakes, learn from them, and choose the next right step.\" Students take responsibility for how they respond, tell the truth about mistakes and choose the next right step, which is the same skill as accepting responsibility for personal decisions and actions. Limit: Personal responsibility; does not cover community participation, civic literacy or global awareness.",
+      "target": {
+        "type": "curriculum",
+        "title": "Own Your Choices - Lesson Plan 5 - 15 - #40_MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "D",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Be Honest Even When It Costs You\" (series: Integrity in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify a short-term cost of honesty, choose an accurate and respectful response, and plan one constructive next step.\" Learners practise accurate, respectful honesty even when it carries a short-term cost, which supports the indicator on ethical behavior and the moral courage to sustain it. Limit: Honesty in everyday situations; not a full treatment of ethics or diversity.",
+      "target": {
+        "type": "curriculum",
+        "title": "Be Honest Even When It Costs You - Lesson Plan 10 - 14 - #148 - MS"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (sel domain, skill: Civic Voice). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Players pick a problem they can change and make an ask people can say yes to, which practises taking part positively in a community. Limit: Small-scale civic voice; no coverage of economic or global literacy.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "E",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Critical Read\" (literacy domain, skill: Critical Comprehension). FNE's catalog description: \"Judge real claims for evidence, bias and sources, then prove your judgment from the text.\" Players judge claims for evidence, bias and sources and prove their judgment from the text, which supports evaluating information. Limit: Works from a single text at a time; does not cover combining several sources, applying ideas across subjects or systems thinking.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "Maine's Guiding Principles for Learning",
+      "itemCode": "E",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Choose the Wiser Option\" (series: Wisdom & Discernment; the objective is the same in every grade version). FNE's stated objective: \"Students will compare options, consider likely outcomes, and identify how values, facts, trusted guidance, and future consequences can support wiser decision-making.\" Students compare options and consider likely outcomes using values, facts, trusted guidance and future consequences, which supports informed, integrative thinking about real-life choices. Limit: Personal decision-making only; FNE has no lesson that covers systems thinking or cross-subject integration.",
+      "target": {
+        "type": "curriculum",
+        "title": "Choose the Wiser Option - Lesson Plan 10 - 2 - #140 - MS"
+      }
+    }
+  ]
+}

@@ -1,0 +1,658 @@
+{
+  "state": "NJ",
+  "coverage": {
+    "selStatus": "k12_standards",
+    "pogStatus": "unknown",
+    "selSourceUrl": "https://www.nj.gov/education/safety/wellness/selearning/",
+    "pogSourceUrl": "https://www.nj.gov/education/about/",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "SEL: K-12 competencies adopted by the NJ State Board of Education in August 2017. A 2025 State Board resolution (https://nj.gov/education/sboe/meetings/agenda/2025/March/public/4b_Resolution_Social_and_Emotional_Learning_Week.pdf, dated March 5, 2025) says the Board and Commissioner \"continue to recommend\" that districts implement them, so this is recommended, not required. Portrait of a Graduate: I found no statewide portrait. The NJDOE page cited here shows a \"Future Pathways: a plan for every graduate\" priority (career and technical education, dual enrollment) which is not a graduate profile; one local news report mentions a district-level portrait (Ocean City). Not enough to call it none or district-led, so left unknown. Reviewer: search the State Board agendas."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "issuingBody": "New Jersey State Board of Education / New Jersey Department of Education",
+      "officialUrl": "https://www.nj.gov/education/safety/wellness/selearning/docs/SELCompetencies.pdf",
+      "adoptedYear": 2017,
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Five competencies, 19 sub-competencies, one grade-neutral list (no grade-band benchmarks). Text was read from NJDOE's accessible PowerPoint copy of the same document (https://www.nj.gov/education/safety/wellness/selearning/docs/SEL-NJCAP.pptx; my tool could not read the PDF itself). Footer: \"Adopted by the New Jersey State Board of Education in August 2017\". The source has NO item codes: SM/SA/SO/DM/RS codes are FNE labels. The document is a slide, so the grouping of sub-competencies under each competency follows slide order; reviewer: confirm against the PDF layout. Titles are short paraphrases.",
+      "items": [
+        {
+          "code": "SM1",
+          "title": "Manage one's emotions, thoughts and behaviors",
+          "summary": "Understand and practice strategies for managing one's own emotions, thoughts and behaviors.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "SM2",
+          "title": "Recognize skills needed to set and achieve goals",
+          "summary": "Recognize the skills needed to establish and achieve personal and educational goals.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "SM3",
+          "title": "Persevere and overcome barriers",
+          "summary": "Identify and apply ways to persevere or overcome barriers, using alternative methods, to reach one's goals.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "SA1",
+          "title": "Recognize one's feelings and thoughts",
+          "summary": "Recognize one's own feelings and thoughts.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "SA2",
+          "title": "See how feelings and thoughts affect behavior",
+          "summary": "Recognize the impact of one's feelings and thoughts on one's own behavior.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "SA3",
+          "title": "Recognize personal traits, strengths and limitations",
+          "summary": "Recognize one's personal traits, strengths and limitations.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "SA4",
+          "title": "Value self-confidence in daily tasks and challenges",
+          "summary": "Recognize the importance of self-confidence in handling daily tasks and challenges.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "SO1",
+          "title": "Recognize others' thoughts, feelings and perspectives",
+          "summary": "Recognize and identify the thoughts, feelings and perspectives of others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "SO2",
+          "title": "Be aware of differences among individuals and groups",
+          "summary": "Show awareness of the differences among individuals, groups and others' cultural backgrounds.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "SO3",
+          "title": "Show mutual respect when viewpoints differ",
+          "summary": "Show an understanding of the need for mutual respect when viewpoints differ.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "SO4",
+          "title": "Know the expectations for social interactions in different settings",
+          "summary": "Show awareness of the expectations for social interactions in a variety of settings.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "DM1",
+          "title": "Problem solving and critical thinking",
+          "summary": "Develop, implement and model effective problem-solving and critical-thinking skills.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "DM2",
+          "title": "Identify consequences to make constructive choices",
+          "summary": "Identify the consequences of one's actions in order to make constructive choices.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "DM3",
+          "title": "Evaluate the personal, ethical, safety and civic impact of decisions",
+          "summary": "Evaluate the personal, ethical, safety and civic impact of decisions.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        },
+        {
+          "code": "RS1",
+          "title": "Establish and maintain healthy relationships",
+          "summary": "Establish and maintain healthy relationships.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "RS2",
+          "title": "Use positive communication and social skills",
+          "summary": "Use positive communication and social skills to interact effectively with others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "RS3",
+          "title": "Resist inappropriate social pressure",
+          "summary": "Identify ways to resist inappropriate social pressure.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "RS4",
+          "title": "Prevent and resolve interpersonal conflicts constructively",
+          "summary": "Show the ability to prevent and resolve interpersonal conflicts in constructive ways.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "RS5",
+          "title": "Know who, when, where and how to seek help",
+          "summary": "Identify who, when, where, or how to seek help for oneself or others when needed.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM1",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"This lesson helps learners recognize what is happening inside them, separate feelings from actions...\" Students notice what is happening inside them during conflict or pressure and separate a feeling from the action they take, which is managing one's own emotions and behavior.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM1",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (sel domain; skill: Self-Regulation). FNE's catalog description: \"Listen to what happened, then pick what helps you feel calm.\" Players pick what helps them feel calm, which practises choosing a strategy for managing a feeling. Limit: Short everyday scenarios for younger students; does not cover managing thoughts or behavior in depth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names managing reactions. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM2",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Strengthen the Life You Want to Live\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"helps learners connect long-term direction with everyday behavior...\" Students link everyday choices to a longer-term direction, which supports recognizing the habits needed to reach a goal. Limit: Personal direction and routines; it does not teach goal-setting steps or educational planning.",
+      "target": {
+        "type": "curriculum",
+        "title": "Strengthen the Life You Want to Live - Lesson Plan 9 - 25 - #135 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM2",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"helps learners understand that meaningful growth is built through repeated practice, reflection, correction, and return....\" Covers the repeated practice and correction that goal progress takes. Limit: Does not teach setting or writing a goal.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM2",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names managing time and setting goals. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM3",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Progress, Not Perfection\" (series: Emotional Strength; the objective is the same in every grade version). FNE's stated objective: \"helps learners understand that real growth is built through steady effort, practice, reflection, and learning from mistakes....\" Students learn to keep going through steady effort and to learn from mistakes rather than stopping when things are not perfect. Limit: Does not teach trying alternative methods to get around a specific barrier.",
+      "target": {
+        "type": "curriculum",
+        "title": "Progress, Not Perfection - Lesson Plan 8 - 25 - #112 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SM3",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Resilience & Mindset\" (programs.html). FNE's published description: \"Building the habits of persistence, growth mindset, and bouncing back from setbacks. Students learn that difficulty is part of the process - not a sign that they should stop.\" The theme names persistence and bouncing back from setbacks. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA1",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain; skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Players pick every feeling that fits the clues in a scene, which practises naming feelings from evidence. Limit: The scenes are about other people; it does not ask players to notice their own thoughts.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA1",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"This lesson helps learners recognize what is happening inside them...\" Students recognize what is happening inside themselves during strong emotion. Limit: Focused on strong emotions in conflict and pressure, not everyday feelings and thoughts.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names understanding and naming emotions and self-awareness. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA2",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Keep Your Mind Moving in the Right Direction\" (series: Wise Daily Direction; the objective is the same in every grade version). FNE's stated objective: \"helps learners understand that thoughts influence attention, emotions, actions, and direction. The lesson teaches that a thought is not a command...\" Teaches that thoughts shape emotions and actions, which is the thoughts-to-behavior link in this sub-competency. Limit: Starts from thoughts; feelings are covered through other lessons.",
+      "target": {
+        "type": "curriculum",
+        "title": "Keep Your Mind Moving in the Right Direction - Lesson Plan 9 - 16 - #128 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA2",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Your Words Shape Your Mind\" (series: Emotional Strength; the objective is the same in every grade version). FNE's stated objective: \"helps learners examine how repeated internal language can influence attention, emotion, confidence, communication, and the next action they choose....\" Adds the effect of self-talk on emotion and on the next action.",
+      "target": {
+        "type": "curriculum",
+        "title": "Your Words Shape Your Mind - Lesson Plan 8 - 24 - #111 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA2",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Pick\" (sel domain; skill: Self-Management). FNE's catalog description: \"Work through being picked last for a team: what you feel, what could happen and what to do.\" Players work through being picked last: what they feel, what could happen and what to do. Limit: One scenario type; it does not teach the thoughts-and-feelings link in general.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-pick"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA3",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (sel domain; skill: Self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" Players spot the strengths an action shows, then think about their own. Limit: Covers strengths, not limitations or personal traits more broadly.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA3",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Choose Growth Over Comfort\" (series: Emotional Strength & Growth; the objective is the same in every grade version). FNE's stated objective: \"helps learners examine the difference between staying only with what feels familiar and choosing safe, purposeful challenges that support development....\" Students weigh what feels comfortable against purposeful challenge, which touches recognizing their own limits and growth areas. Limit: Does not ask students to inventory their own traits or limitations.",
+      "target": {
+        "type": "curriculum",
+        "title": "Choose Growth Over Comfort - Lesson Plan 9 - 4 - #120 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA3",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names developing self-awareness. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA4",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Build Forward With Confidence\" (series: Forward Momentum; the objective is the same in every grade version). FNE's stated objective: \"helps learners understand that confidence is strengthened by progress, preparation, useful habits, and action....\" Students learn what builds confidence for daily tasks and challenges, which matches the importance of self-confidence named here.",
+      "target": {
+        "type": "curriculum",
+        "title": "Build Forward With Confidence - Lesson Plan 9 - 29 - #137 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SA4",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Finish Strong With Purpose\" (series: Strength Through Consistency; the objective is the same in every grade version). FNE's stated objective: \"helps learners understand that the way they complete a task, day, project, or week can influence confidence, trust, stress, and readiness for what comes next....\" Links finishing daily tasks to confidence and readiness.",
+      "target": {
+        "type": "curriculum",
+        "title": "Finish Strong With Purpose - Lesson Plan 9 - 11 - #125 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO1",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain; skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Two teammates see one plan two ways; players hear both, then adjust it so everyone can take part. Limit: Teammate scenarios for older students; other lessons cover feelings in more depth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO1",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain; skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Players pick every feeling that fits the clues in a scene. Limit: Names feelings only; does not cover others' thoughts or perspectives.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO2",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Same and Different\" (sel domain; skill: Social Awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" Players listen to a story, then tap what is the same, what is different, or the kind thing to do. Limit: Everyday similarities and differences for younger students; it does not name cultural backgrounds.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO2",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain; skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Two teammates see one plan two ways. Limit: Covers differing views on a plan, not cultural or group differences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO3",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain; skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear both teammates, then adjust the plan so everyone can take part. Limit: Teammate planning scenarios; not wider disagreements over beliefs.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO3",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peace Table\" (sel domain; skill: Conflict Resolution). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Two kids disagree; players say what happened, listen, and find a fair plan together. Limit: Younger-student conflict scenarios; respect is practised through listening, not taught as a concept.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO3",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names active listening and navigating conflict. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO4",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (sel domain; skill: Digital Citizenship). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" A rumor is spreading; players decide what they would share and what they would report. Limit: Covers online behavior only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "SO4",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"First Shift\" (sel domain; skill: Workplace Ethics). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" A coworker asks you to cover for them; players decide what they owe the team and the truth. Limit: Workplace scenario for older students; not other settings.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM1",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (sel domain; skill: Creative Problem-Solving). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" Players find a problem at school, listen to the people it affects, and try a small fix. Limit: Creative, school-level problems; critical thinking is not the focus.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM1",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Slow Down and Think It Through\" (series: Wisdom & Discernment; the objective is the same in every grade version). FNE's stated objective: \"This lesson teaches that a pause can create space to gather facts, consider consequences...\" Students pause to gather facts and weigh consequences before choosing, which is part of problem solving.",
+      "target": {
+        "type": "curriculum",
+        "title": "Slow Down and Think It Through - Lesson Plan 10 - 1 - #139 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences. Students practice evaluating options before acting.\" The theme names applying the Issues-to-Answers framework and evaluating options before acting. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM2",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"how a choice can feel good now and still create a different result later. Learners practice looking ahead, considering others, and choosing one thoughtful next step.\" Students look ahead to later results and choose a thoughtful next step, which is identifying consequences to choose constructively.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM2",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Count the Cost Before You Choose\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners consider time, shared resources, and trust before choosing a workable plan.\" Adds weighing what a choice costs them and others.",
+      "target": {
+        "type": "curriculum",
+        "title": "Count the Cost Before You Choose - Lesson Plan 10 - 9 - #145 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM2",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (sel domain; skill: Responsible Decision-Making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" A classmate is being left out; players decide what they notice and what to do. Limit: One peer scenario; it is not a general consequences lesson.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM3",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Be Honest Even When It Costs You\" (series: Integrity in Action; the objective is the same in every grade version). FNE's stated objective: \"Honesty can require giving up comfort or an advantage you did not earn. Learners practice stating facts respectfully and accepting a fair correction with support.\" Students weigh an honest choice against personal cost, which is the ethical side of a decision. Limit: Covers honesty only; does not address safety or civic impact.",
+      "target": {
+        "type": "curriculum",
+        "title": "Be Honest Even When It Costs You - Lesson Plan 10 - 14 - #148 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM3",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (sel domain; skill: Empathy & Responsible Decision-Making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" Players work through a team-project problem: see what is happening, who it affects and what to do. Limit: Team-project scenario; it does not cover civic or safety impact.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "DM3",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (sel domain; skill: Civic Voice). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Players pick a problem they can change, then make an ask people can say yes to. Limit: Civic voice on a chosen problem, not a framework for evaluating a decision.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS1",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Keep Your Word\" (series: Integrity in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners practice the self-management and relationship skills that turn words into trust...\" Students build the dependability that trusting relationships rest on. Limit: Focused on keeping commitments; it does not cover friendship skills broadly.",
+      "target": {
+        "type": "curriculum",
+        "title": "Keep Your Word - Lesson Plan 10 - 15 - #149 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS1",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Your Energy Affects Everyone Around You\" (series: Emotional Strength & Growth; the objective is the same in every grade version). FNE's stated objective: \"helps learners examine how their attitude, effort, emotional regulation, communication, and presence can influence the people and environments around them....\" Students see how their own presence affects the people around them.",
+      "target": {
+        "type": "curriculum",
+        "title": "Your Energy Affects Everyone Around You - Lesson Plan 9 - 1 - #117 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS1",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names building healthy relationships. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS2",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (sel domain; skill: Communication). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Players read a situation, pick the message this person would hear best, then find the sentence that shows why. Limit: Written message choices; it does not cover face-to-face skills such as active listening.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS2",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Let Your Yes Mean Yes\" (series: Integrity in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners clarify a commitment, connect it with a specific action, and communicate when a plan needs to change.\" Students practise clear communication when a plan changes. Limit: Covers commitments only, not social skills in general.",
+      "target": {
+        "type": "curriculum",
+        "title": "Let Your Yes Mean Yes - Lesson Plan 10 - 13 - #147 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS2",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Communication & Relationships\" (programs.html). FNE's published description: \"Developing skills for active listening, expressing yourself clearly, navigating conflict, and building healthy relationships - inside and outside the classroom.\" The theme names active listening and expressing yourself clearly. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS3",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Do Not Borrow Other People's Chaos\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"notice emotional spillover, stay grounded...\" Students notice when other people's stress or anger is pulling them toward reactions they do not want, and stay grounded, which is resisting social influence. Limit: Covers emotional spillover; it does not teach refusal skills or peer-pressure scenarios directly.",
+      "target": {
+        "type": "curriculum",
+        "title": "Do Not Borrow Other People's Chaos - Lesson Plan 10 - 21 - #153 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS3",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (sel domain; skill: Digital Citizenship). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" A rumor is spreading; players decide what they would share and what they would report. Limit: Online setting only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS3",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences. Students practice evaluating options before acting.\" The theme names peer pressure. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS4",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Pause Before You Escalate\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Conflict can grow quickly when tone, assumptions, or strong emotion take over. This lesson helps learners slow the moment down, govern their own response, and choose words and actions...\" Students slow a conflict down and choose their words and actions, which is preventing and resolving conflict constructively.",
+      "target": {
+        "type": "curriculum",
+        "title": "Pause Before You Escalate - Lesson Plan 10 - 19 - #151 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS4",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peace Table\" (sel domain; skill: Conflict Resolution). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Two kids disagree; players say what happened, listen, and find a fair plan together. Limit: Younger-student scenarios.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS4",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Respond Without Revenge\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"This lesson helps learners separate accountability from revenge and choose responses that protect...\" Students choose a response that does not escalate a conflict after being hurt.",
+      "target": {
+        "type": "curriculum",
+        "title": "Respond Without Revenge - Lesson Plan 10 - 22 - #154 - MS"
+      }
+    },
+    {
+      "framework": "New Jersey Social and Emotional Learning Competencies and Sub-Competencies",
+      "itemCode": "RS5",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Life Skills\" (programs.html). FNE's published description: \"Practical skills for managing time, setting goals, handling failure, asking for help, and preparing for adult responsibilities. The everyday competencies school rarely teaches directly.\" The theme names asking for help. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: Program-level only; no single lesson or game is linked to this sub-competency.",
+      "target": {
+        "type": "program"
+      }
+    }
+  ]
+}

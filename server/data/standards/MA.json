@@ -1,0 +1,426 @@
+{
+  "state": "MA",
+  "coverage": {
+    "selStatus": "guidance_only",
+    "pogStatus": "state_led_in_progress",
+    "selSourceUrl": "https://doe.mass.edu/sfs/sel/",
+    "pogSourceUrl": "https://www.mass.gov/info-details/vision-of-a-massachusetts-graduate",
+    "sourceAccessedOn": "2026-11-03",
+    "notes": "SEL: no Massachusetts-adopted SEL standards found. DESE's SEL page says the Department commonly uses CASEL's definition and reproduces CASEL's five competencies with examples, so the framework recorded is CASEL's, as presented by DESE (guidance, not a state standard). POG: 'Vision of a Massachusetts Graduate' (6 attributes, 3 qualities) released Sept 24, 2025 by the Governor's Statewide K-12 Graduation Council; mass.gov calls it an aspirational outline and 'the first step' toward a new statewide graduation standard. I found no Board of Elementary and Secondary Education vote adopting it, and the graduation standard itself was still being worked out (search results mention June 2026 final recommendations that I did not open), hence 'in progress'. mass.gov returned 403 to our tools, so its text was read from an Internet Archive copy. Reviewer: check current status."
+  },
+  "frameworks": [
+    {
+      "type": "sel_standards",
+      "name": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "issuingBody": "CASEL, as published by the Massachusetts Department of Elementary and Secondary Education",
+      "officialUrl": "https://doe.mass.edu/sfs/sel/?section=sel-five-core",
+      "gradeSpan": "K-12",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Read DESE's SEL page (section 'Five Core Competencies of SEL, with examples noted'; page footer says last updated April 8, 2026). The page labels the descriptions as CASEL's and also says 'a range of other definitions ... are also viable'. This is NOT a Massachusetts standard and no adoption year is given. Items are paraphrases of CASEL's competency descriptions. Reviewer: decide whether to show this on the public page at all.",
+      "items": [
+        {
+          "code": "SA",
+          "title": "Self-Awareness",
+          "summary": "Understand one's own emotions, thoughts and values and how they influence behavior; recognize strengths and limitations with a grounded sense of confidence and purpose.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_awareness"
+        },
+        {
+          "code": "SM",
+          "title": "Self-Management",
+          "summary": "Manage emotions, thoughts and behaviors effectively in different situations and work toward goals, including delaying gratification, managing stress and feeling motivated.",
+          "gradeBand": "K-12",
+          "caselCompetency": "self_management"
+        },
+        {
+          "code": "SOA",
+          "title": "Social Awareness",
+          "summary": "Understand the perspectives of others and empathize with them, including people from diverse backgrounds, and understand social norms and the supports around one.",
+          "gradeBand": "K-12",
+          "caselCompetency": "social_awareness"
+        },
+        {
+          "code": "RS",
+          "title": "Relationship Skills",
+          "summary": "Build and keep healthy, supportive relationships: communicate clearly, listen actively, cooperate, resolve conflict constructively, resist negative pressure and seek or offer help.",
+          "gradeBand": "K-12",
+          "caselCompetency": "relationship_skills"
+        },
+        {
+          "code": "RDM",
+          "title": "Responsible Decision-Making",
+          "summary": "Make caring, constructive choices about behavior and social interactions, weighing ethical standards, safety and the consequences of actions for oneself and others.",
+          "gradeBand": "K-12",
+          "caselCompetency": "responsible_decision_making"
+        }
+      ]
+    },
+    {
+      "type": "portrait_of_graduate",
+      "name": "Vision of a Massachusetts Graduate",
+      "issuingBody": "Executive Office of Education / Statewide K-12 Graduation Council (Massachusetts)",
+      "officialUrl": "https://www.mass.gov/info-details/vision-of-a-massachusetts-graduate",
+      "gradeSpan": "9-12",
+      "sourceAccessedOn": "2026-11-03",
+      "notes": "Text read from an Internet Archive snapshot of the mass.gov page (web.archive.org/web/20260930070605/https://www.mass.gov/info-details/vision-of-a-massachusetts-graduate) because mass.gov blocked our fetch tools; the six attribute names and definitions match a Public Consulting Group draft dated Aug 19, 2025 hosted by massculturalcouncil.org. Released Sept 24, 2025 (per WBUR); no adoption year recorded because no Board vote was found. Qualities: Thinkers (AP, CPS), Contributors (SAN, IC), Leaders (EC, RDM). Codes are FNE-assigned.",
+      "items": [
+        {
+          "code": "AP",
+          "title": "Academically Prepared",
+          "summary": "A strong foundation across academic disciplines, with the knowledge to thrive in college, career and civic life and the skills to keep learning.",
+          "gradeBand": "9-12"
+        },
+        {
+          "code": "CPS",
+          "title": "Critical Problem-Solvers",
+          "summary": "Examine information critically to draw connections, question assumptions, infer meaning and shape solutions.",
+          "gradeBand": "9-12"
+        },
+        {
+          "code": "SAN",
+          "title": "Self-Aware Navigators",
+          "summary": "Understand oneself, one's strengths and one's opportunities, and use unique skills to navigate a variety of paths and environments.",
+          "gradeBand": "9-12"
+        },
+        {
+          "code": "IC",
+          "title": "Intentional Collaborators",
+          "summary": "Engage respectfully and productively with diverse individuals and groups, valuing one's own perspectives and identities and those of others.",
+          "gradeBand": "9-12"
+        },
+        {
+          "code": "EC",
+          "title": "Effective Communicators",
+          "summary": "Express ideas confidently and clearly to diverse audiences across a variety of mediums.",
+          "gradeBand": "9-12"
+        },
+        {
+          "code": "RDM",
+          "title": "Responsible Decision-Makers",
+          "summary": "Set and pursue personal goals, make healthy and financially sustainable choices, and show confidence and competence in shaping one's life.",
+          "gradeBand": "9-12"
+        }
+      ]
+    }
+  ],
+  "alignments": [
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (sel domain, skill: Self-Awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Practises naming feelings from clues in a scene. Limit: Reads other people's feelings; no work on one's own thoughts and values.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (sel domain, skill: Self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" Players spot the strengths a person's actions show, then think about their own, which relates to recognising strengths. Limit: Strengths only; limitations and a sense of purpose are not covered.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Values Compass\" (sel domain, skill: Values and Identity). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" Players name the values behind what someone does, then think about their own, which relates to understanding one's values. Limit: Values and identity; emotions and strengths are not the focus.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Stay in Control of Your Spirit\" (series: Conflict & Self-Government; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify signs that emotions are beginning to take control, practice a simple pause-and-reset process, and choose one respectful action that keeps their response aligned with their values.\" Students practise a pause-and-reset process and choose a respectful action, which is managing emotions and behavior in a hard moment. Limit: Emotion management; stress management, goal setting and delaying gratification are not part of the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Stay in Control of Your Spirit - Lesson Plan 10 - 23 - #155 - MS"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SM",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Own Your Time\" (series: Discipline & Structure; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that time is shaped by their choices. They will learn that priorities, focused attention, healthy breaks, fewer distractions, and responsible beginnings ca...\" Covers priorities, focused attention and fewer distractions, which supports self-discipline and planning. Limit: Time use only; no emotion or stress management.",
+      "target": {
+        "type": "curriculum",
+        "title": "Own Your Time - Lesson Plan 8 - 4 - #97 - MS"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SM",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a habit to strengthen, track it and choose a repeated action, which supports setting and working toward goals. Limit: Personal habits only; no collective goals.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SOA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain, skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear two teammates' views and adjust a plan so everyone can take part (the game's skill is perspective-taking). Limit: A group-planning scenario; empathy and compassion are not named in the description.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SOA",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Same and Different\" (sel domain, skill: Social Awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" Players tap what is the same, what is different, or the kind thing to do after hearing a story. Limit: Young-player band; does not reach social norms or systems.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "SOA",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Emotional Intelligence\" (programs.html). FNE's published description: \"Understanding and naming emotions, managing reactions, building empathy, and developing the self-awareness that underlies every other social-emotional skill.\" The theme names building empathy. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "RS",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame, which supports communicating clearly. Limit: Communication; teamwork, conflict resolution and help-seeking are not part of the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "RS",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Listen Before You Answer\" (series: Respect & Character; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that strong communication is not only about what they say. It is also about how well they listen. Students will learn to pause before answering, let others finish speaking, ask respectful questions, and respond with care, wisdom, and ...\" Teaches letting others finish, asking respectful questions and responding with care, which is the listening half of the skill. Limit: Listening habits in general.",
+      "target": {
+        "type": "curriculum",
+        "title": "Listen Before You Answer - Lesson Plan: 6 - 3 - #53_MS"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "RS",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peace Table\" (sel domain, skill: Conflict Resolution). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Players say what happened, listen and find a fair plan together, which practises resolving conflict constructively. Limit: Conflict resolution only; the other parts of the competency are not covered.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "RDM",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Think Past the Moment\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Learners will identify an immediate result and a possible later consequence of a choice, explain who else may be affected, and choose one caring, responsible action.\" Students identify an immediate and a later consequence, who else is affected, and choose a caring action, which is anticipating the consequences of one's actions. Limit: Consequences and care for others; ethical standards and safety are not named in the objective.",
+      "target": {
+        "type": "curriculum",
+        "title": "Think Past the Moment - Lesson Plan 10 - 5 - #141 - MS"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (sel domain, skill: Responsible Decision-Making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" Players work through a classmate being left out and decide what they notice and what to do, which practises responsible decision-making (the game's skill). Limit: One peer-inclusion scenario.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "CASEL Five Core Competencies of SEL (as presented on the Massachusetts DESE SEL web page)",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences. Students practice evaluating options before acting.\" The theme names choices and consequences. Program-level: shows the theme is part of the offering, not which lesson teaches it.",
+      "target": {
+        "type": "program"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Reading Detective\" (literacy domain, skill: Reading Comprehension). FNE's catalog description: \"Read the clues in a short mystery, pick your answer, then prove it with the text.\" Players read clues in a short mystery and prove their answer from the text, which practises reading comprehension. Limit: Practice of one literacy skill; it does not build a foundation across academic disciplines.",
+      "target": {
+        "type": "brain_game",
+        "slug": "reading-detective"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Quick Math\" (math domain, skill: Numerical Reasoning). FNE's catalog description: \"Solve arithmetic problems against the clock before time runs out.\" Players solve arithmetic problems against the clock, which practises numerical reasoning. Limit: Arithmetic fluency only; FNE is not an academic curriculum.",
+      "target": {
+        "type": "brain_game",
+        "slug": "quick-math"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "CPS",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Critical Read\" (literacy domain, skill: Critical Comprehension). FNE's catalog description: \"Judge real claims for evidence, bias and sources, then prove your judgment from the text.\" Players judge claims for evidence, bias and sources and prove their judgment from the text, which is critically examining information and questioning assumptions. Limit: Reading-based; shaping solutions is not part of the description.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "CPS",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Headline\" (literacy domain, skill: Media Literacy). FNE's catalog description: \"Read a short story, pick the most accurate headline, then prove it with the text.\" Players pick the most accurate headline and prove it with evidence from the text, which practises inferring meaning from information. Limit: A media-literacy exercise on short stories.",
+      "target": {
+        "type": "brain_game",
+        "slug": "headline"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "CPS",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (sel domain, skill: Creative Problem-Solving). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" Players find the real need and test one small idea before launching, which practises shaping a solution. Limit: One scenario type.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "SAN",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (sel domain, skill: Self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" Players spot the strengths a person's actions show, then think about their own, which relates to understanding one's strengths. Limit: Strengths only; opportunities and navigating paths are not covered.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "SAN",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Values Compass\" (sel domain, skill: Values and Identity). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" Players name the values behind what someone does, then think about their own, which relates to self-understanding. Limit: Values and identity; not about leveraging skills across paths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "SAN",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Strengthen the Life You Want to Live\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's catalog description of the lesson: \"Strengthen the Life You Want to Live helps learners connect long-term direction with everyday behavior. The lesson emphasizes that a stronger future is built through repeated choices, healthy routines...\" Connects long-term direction with everyday behavior, which touches on navigating toward a future. Limit: The catalog text is cut off, so only the visible part is claimed; it does not name identifying one's own strengths.",
+      "target": {
+        "type": "curriculum",
+        "title": "Strengthen the Life You Want to Live - Lesson Plan 9 - 25 - #135 - MS"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "IC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (sel domain, skill: Perspective-taking). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Players hear two teammates' views and adjust a plan so everyone can take part, which is working respectfully and productively with others. Limit: One group-planning scenario.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "IC",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Show Up for Others\" (series: Teamwork & Community; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that showing up for others does not always mean doing something big. They will learn that listening, including others, doing their part, offering encouragement, and being present with purpose can help make a classroom, team, family, ...\" Covers listening, including others and doing one's part, which supports working productively with a group. Limit: Classroom, team and family scale; diverse identities and perspectives are not named in the visible text.",
+      "target": {
+        "type": "curriculum",
+        "title": "Show Up for Others- Lesson Plan: 6 - 22 - #66 - MS"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "IC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Same and Different\" (sel domain, skill: Social Awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" Players tap what is the same, what is different, or the kind thing to do after hearing a story, which practises respectful attention to differences. Limit: Young-player band; not about collaboration.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Say What You Mean With Respect\" (series: Communication That Helps; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that respectful communication means being honest, clear, and kind at the same time. They will learn to pause before reacting, explain without blaming, choose helpful words, and speak in a way that builds understanding instead of ...\" Teaches clear, honest, kind speaking and explaining without blame, which supports expressing ideas clearly. Limit: Speaking and listening; diverse audiences and media are not covered.",
+      "target": {
+        "type": "curriculum",
+        "title": "Say What You Mean With Respect - Lesson Plan: 6 - 8 - #56_MS"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (sel domain, skill: Communication). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Players pick the message a person would hear best, which practises adapting a message to the audience. Limit: Written message choice; not a variety of mediums.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (sel domain, skill: Civic Voice). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Players pick a problem they can change and make an ask people can say yes to, which practises expressing an idea to an audience. Limit: An advance-band civic game.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Matters\" (sel domain, skill: Financial Literacy). FNE's catalog description: \"Manage a first budget through real tradeoffs: savings, credit and surprise costs.\" Players manage a first budget through real tradeoffs with savings, credit and surprise costs (the game's skill is financial literacy), which relates to financially sustainable choices. Limit: Budgeting scenario only; healthy choices and goal setting are not part of the description.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-matters"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Growth Requires Repetition\" (series: Personal Growth in Action; the objective is the same in every grade version). FNE's stated objective: \"Learners will explain why repetition supports growth, identify one skill or habit they want to strengthen, recognize how tracking and feedback improve practice, and choose one repeated action that supports progress.\" Students choose a habit to strengthen, track it and choose a repeated action, which supports setting and pursuing a personal goal. Limit: Personal habits only; no financial or health choices.",
+      "target": {
+        "type": "curriculum",
+        "title": "Growth Requires Repetition - Lesson Plan 9 - 21 - #131 - MS"
+      }
+    },
+    {
+      "framework": "Vision of a Massachusetts Graduate",
+      "itemCode": "RDM",
+      "strength": "supporting",
+      "rationale": "FNE lesson \"Make Choices That Honor Your Future\" (series: Freedom & Responsibility; the objective is the same in every grade version). FNE's stated objective: \"Students will understand that today's choices can either help or hurt tomorrow's direction. They will learn that honoring their future means choosing what builds strength, respect, peace, character, and growth instead of only choosing what feels easy in the ...\" Ties today's choices to tomorrow's direction, which relates to shaping one's own life. Limit: Future-focused choices in general; financial sustainability and healthy choices are not named in the visible text.",
+      "target": {
+        "type": "curriculum",
+        "title": "Make Choices That Honor Your Future - Lesson Plan 7 - 2 - #74_MS"
+      }
+    }
+  ]
+}
