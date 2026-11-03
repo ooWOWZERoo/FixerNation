@@ -116,7 +116,7 @@ id 🔑 · invoice_number varchar(32) ⭐ · contact_id 🔗→newsletter_contac
 🔑 (purchase_id, curriculum_id) · purchase_id 🔗→purchases (CASCADE) · first_accessed_at
 
 ### `school_invitations` — teacher invite links from a school admin
-id 🔑 · purchase_id 🔗→purchases (CASCADE) · seat_id 🔗→license_seats (SET NULL) · invited_email · first/last_name · token ⭐ · status · grade_level/role_title/department/subject_area · personal_message · invited_by_site_user_id · expires_at · resend_count · last_resent_at · revoked_at/by/reason · created_at
+id 🔑 · purchase_id 🔗→purchases (CASCADE) · seat_id 🔗→license_seats (SET NULL) · invited_email · first/last_name · token ⭐ · status · grade_level (older free text; new invites write 'ES, MS')/audiences (grade levels chosen at invite, comma-joined full names, merged into `site_user_audiences` on accept)/role_title/department/subject_area · personal_message · invited_by_site_user_id · expires_at · resend_count · last_resent_at · revoked_at/by/reason · created_at
 
 ### `school_license_admins` — school-admin role assignments (does NOT consume a seat)
 id 🔑 · site_user_id 🔗→site_users (CASCADE) · purchase_id 🔗→purchases (CASCADE) · permission_level (primary/secondary/read_only) · is_active · created_by_admin_id · notes · ⭐ (site_user_id, purchase_id)
@@ -271,6 +271,9 @@ id 🔑 · classroom_id 🔗 (CASCADE) · student_id 🔗→classroom_students (
 
 ### `teacher_lesson_plans` — a teacher's personal saved-lesson library
 🔑 (site_user_id, curriculum_id) · both 🔗 (CASCADE) · selected_at
+
+### `teacher_lesson_plan_swaps` — each time a teacher removed or swapped out a library lesson
+id 🔑 · site_user_id 🔗→site_users (CASCADE) · removed_curriculum_id · added_curriculum_id (null for a plain removal) · swapped_at · voided_at (set when FNE staff reset the teacher's swaps; swaps used = rows with voided_at null)
 
 ---
 

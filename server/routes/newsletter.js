@@ -37,7 +37,16 @@ async function attachSiteUserInfo(contacts) {
   const [rows] = await pool.query('SELECT id, email, email_verified, role FROM site_users WHERE email IN (?)', [emails]);
   const byEmail = {};
   rows.forEach(r => { byEmail[r.email.toLowerCase()] = r; });
-  return contacts.map(c => ({ ...c, siteUser: byEmail[c.email.toLowerCase()] || null }));
+  // The grade levels each of these accounts teaches (site_user_audiences), for the CRM's Grade levels column.
+  const levelsByUser = {};
+  if (rows.length) {
+    const [aud] = await pool.query('SELECT site_user_id, audience FROM site_user_audiences WHERE site_user_id IN (?)', [rows.map(r => r.id)]);
+    aud.forEach(a => { (levelsByUser[a.site_user_id] = levelsByUser[a.site_user_id] || []).push(a.audience); });
+  }
+  return contacts.map(c => {
+    const su = byEmail[c.email.toLowerCase()];
+    return { ...c, siteUser: su ? { ...su, audiences: levelsByUser[su.id] || [] } : null };
+  });
 }
 
 async function setContactGroups(connection, contactId, groupIds) {
@@ -67,6 +76,7 @@ function serialize(row) {
     hasAccount: !!row.siteUser,
     accountVerified: row.siteUser ? !!row.siteUser.email_verified : false,
     role: row.siteUser ? row.siteUser.role : null,
+    gradeLevels: row.siteUser ? row.siteUser.audiences || [] : [], // full names; the CRM page shows ES/MS/HS/HE
   };
 }
 

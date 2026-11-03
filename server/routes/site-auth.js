@@ -17,6 +17,7 @@ const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
 const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms } = require('../lib/access');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
+const { onboardInvitedTeacher } = require('../lib/teacher-onboarding');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
@@ -113,6 +114,17 @@ async function claimPendingSeatsAndSubscribe(userId, email, firstName, lastName,
   );
   if (seatResult.affectedRows > 0) {
     try { await addTeacherToSocialGroups(userId); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
+    // The grade levels the school admin chose on this email's invitation(s) join the teacher's own levels.
+    try {
+      const [invRows] = await pool.query(
+        "SELECT audiences FROM school_invitations WHERE invited_email = ? AND status NOT IN ('revoked','registered','expired')",
+        [email.toLowerCase()]
+      );
+      await onboardInvitedTeacher({
+        siteUserId: userId, email, name: `${firstName} ${lastName}`.trim(),
+        audiences: invRows.map((r) => r.audiences).filter(Boolean).join(','), source,
+      });
+    } catch (e) { console.error('onboardInvitedTeacher failed:', e.message); }
     pool.query(
       "UPDATE school_invitations SET status = 'registered' WHERE invited_email = ? AND status NOT IN ('revoked','registered','expired')",
       [email.toLowerCase()]
@@ -619,6 +631,8 @@ router.put('/me/audiences', requireSiteAuth, async (req, res) => {
   const audiences = Array.isArray(req.body && req.body.audiences) ? req.body.audiences : [];
   const invalid = audiences.find(a => !VALID_AUDIENCES.includes(a));
   if (invalid) return res.status(400).json({ error: `Invalid audience value: ${invalid}` });
+  // Every teacher keeps at least one grade level: the library's level-mismatch check compares lessons against them.
+  if (!audiences.length) return res.status(400).json({ error: 'Choose at least one grade level.' });
 
   const conn = await pool.getConnection();
   try {

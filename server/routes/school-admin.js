@@ -334,7 +334,7 @@ router.get('/invitations', requireSchoolAdmin, async (req, res) => {
 
 // POST /api/school-admin/invitations — send a single invitation
 router.post('/invitations', requireSchoolAdmin, async (req, res) => {
-  const { purchaseId: rawPurchaseId, email, firstName, lastName, gradeLevel, roleName, department, subjectArea, personalMessage } = req.body || {};
+  const { purchaseId: rawPurchaseId, email, firstName, lastName, gradeLevels, roleName, department, subjectArea, personalMessage } = req.body || {};
   const purchaseId = rawPurchaseId ? Number(rawPurchaseId) : req.schoolAdmin.purchaseIds[0];
 
   if (!req.schoolAdmin.purchaseIds.includes(purchaseId)) {
@@ -344,7 +344,7 @@ router.post('/invitations', requireSchoolAdmin, async (req, res) => {
 
   try {
     const result = await inviteTeacherToSeat({
-      purchaseId, email, firstName, lastName, gradeLevel, roleName, department, subjectArea, personalMessage,
+      purchaseId, email, firstName, lastName, gradeLevels, roleName, department, subjectArea, personalMessage,
       invitedBy: {
         siteUserId: req.schoolAdmin.siteUserId,
         email: req.schoolAdmin.email,
@@ -405,7 +405,8 @@ router.post('/invitations/bulk', requireSchoolAdmin, async (req, res) => {
     try {
       const result = await inviteTeacherToSeat({
         purchaseId, email, firstName: rowFirstName, lastName: rowLastName,
-        gradeLevel: inv.gradeLevel || inv.grade_level || null,
+        // A CSV cell holds codes or names separated by ; (ES;MS); a JSON body sends an array.
+        gradeLevels: inv.gradeLevels || inv.grade_levels || inv.grade_level || inv.gradeLevel || null,
         roleName: inv.role || inv.role_title || null,
         department: inv.department || null,
         subjectArea: inv.subjectArea || inv.subject_area || null,
@@ -433,7 +434,7 @@ router.get('/invitations/csv-template', requireSchoolAdmin, (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="teacher-invite-template.csv"');
   // Headers match what school-admin-invitations.html reads (snake_case); the
   // old CamelCase header made every row of an unedited template get dropped.
-  res.send('email,first_name,last_name,grade_level,role,department,subject_area\n');
+  res.send('email,first_name,last_name,grade_level,role,department,subject_area\n');  // grade_level: ES, MS, HS or HE; several separated by ; (ES;MS)
 });
 
 // An invitation that ran out frees its seat (the list marks it expired and revokes the seat). Resending or extending it

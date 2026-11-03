@@ -69,6 +69,11 @@ const ymd = (d) => d.toISOString().slice(0, 10);
     const email = `${f}.${l}@maple.example.com`.toLowerCase();
     const id = await user(f, l, email, 'teacher');
     await q("INSERT INTO license_seats (purchase_id, invited_email, status, registered_site_user_id, registered_at) VALUES (?,?, 'registered', ?, NOW())", [maple.purchaseId, email, id]);
+    // Every teacher has at least one grade level (the library warns when a lesson is for a different level). The demo catalogue
+    // mixes ES, MS and HS lessons, so these teachers teach all three and no how-to video trips the mismatch warning by accident.
+    for (const level of ['Elementary School', 'Middle School', 'High School']) {
+      await q('INSERT INTO site_user_audiences (site_user_id, audience) VALUES (?, ?)', [id, level]);
+    }
   }
   // Maple invitations in every status the Invitations page can show.
   const invite = async (first, last, status, expiresInDays, extra = {}) => {

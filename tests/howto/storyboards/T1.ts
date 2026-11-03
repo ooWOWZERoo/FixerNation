@@ -20,8 +20,8 @@ const board: Storyboard = {
          SELECT 'Nina', 'Cho', '${EXISTING}', password_hash, 1, 'teacher' FROM site_users WHERE email = 'sam.carter@maple.example.com'`);
     const purchaseId = Number(sql("SELECT id FROM purchases WHERE school_domain = 'maple.example.com' LIMIT 1"));
     const sam = await asUser("sam.carter@maple.example.com");
-    await sam("POST", "/api/school-admin/invitations", { purchaseId, email: NEW, firstName: "Morgan", lastName: "Reyes", personalMessage: "Welcome to the team, Morgan!" });
-    await sam("POST", "/api/school-admin/invitations", { purchaseId, email: EXISTING, firstName: "Nina", lastName: "Cho" });
+    await sam("POST", "/api/school-admin/invitations", { purchaseId, email: NEW, firstName: "Morgan", lastName: "Reyes", gradeLevels: ["ES"], personalMessage: "Welcome to the team, Morgan!" });
+    await sam("POST", "/api/school-admin/invitations", { purchaseId, email: EXISTING, firstName: "Nina", lastName: "Cho", gradeLevels: ["MS"] });
     mailNew = await latestMail(NEW, "invited");
     mailExisting = await latestMail(EXISTING, "invited");
   },

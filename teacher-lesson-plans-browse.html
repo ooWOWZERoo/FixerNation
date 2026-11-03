@@ -49,18 +49,11 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 .chip{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink-soft);box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);border:1.5px solid transparent;transition:all .15s;white-space:nowrap;user-select:none;}
 .chip:hover{color:var(--teal-dark);}
 .chip.active{background:var(--teal-dark);color:#fff;box-shadow:none;}
-/* Confirm modal */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
-.modal{background:#fff;border-radius:20px;padding:30px 28px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.3);}
-.modal h3{font-family:'Fraunces',serif;font-size:18px;color:var(--teal-dark);margin-bottom:10px;}
-.modal p{font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:8px;}
-.modal-warn{font-size:12.5px;color:var(--coral-dark);background:#fff3f0;border-radius:8px;padding:10px 12px;margin-bottom:20px;line-height:1.5;}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;}
-.btn-cancel{padding:9px 18px;border-radius:999px;border:1.5px solid var(--border);background:transparent;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
-.btn-cancel:hover{border-color:var(--ink-soft);}
-.btn-confirm{padding:9px 18px;border-radius:999px;background:var(--teal-dark);color:#fff;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:background .15s;}
-.btn-confirm:hover{background:#0a2b28;}
-.btn-confirm:disabled{opacity:.6;cursor:not-allowed;}
+.status{font-size:13.5px;font-weight:600;margin:0 0 14px;min-height:0;}
+.status.ok{color:var(--teal-dark);}
+.status.err{color:var(--coral-dark);}
+.swap-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff;border:2px solid var(--gold);border-radius:14px;padding:12px 16px;margin-bottom:18px;font-size:14px;font-weight:600;color:var(--teal-dark);}
+.swap-banner a{font-size:13px;color:var(--coral-dark);font-weight:700;text-decoration:none;}
 </style>
 </head>
 <body>
@@ -79,12 +72,16 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
   <div class="topbar">
     <div>
       <h1>Add Lesson Plans</h1>
-      <p class="sub" style="margin-bottom:0;">Browse the full catalogue and pick plans for your library. Selections are permanent.</p>
+      <p class="sub" style="margin-bottom:0;">Browse the full catalogue and pick plans for your library. You can swap a plan out later, a limited number of times.</p>
     </div>
     <div class="topbar-right">
+      <div class="counter" id="swapBadge"></div>
       <div class="counter" id="counterBadge">0 of 40 added</div>
     </div>
   </div>
+
+  <div class="swap-banner" id="swapBanner" style="display:none;"><span id="swapBannerText"></span><a href="teacher-lesson-plans.html">Cancel swap</a></div>
+  <div class="status" id="libStatus" role="status" aria-live="polite"></div>
 
   <div class="filter-bar" id="audienceFilterBar">
     <div class="chip active" data-audience="all">All Levels</div>
@@ -103,36 +100,45 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
   <div class="empty" id="emptyMsg" style="display:none;">No lesson plans match your search.</div>
 </div>
 
-<!-- Confirm-add modal -->
-<div class="modal-bg" id="confirmModal" style="display:none;" role="dialog" aria-modal="true">
-  <div class="modal">
-    <h3 id="modalTitle">Add this lesson plan?</h3>
-    <p id="modalDesc"></p>
-    <div class="modal-warn">Once added, this lesson plan is a permanent part of your library and cannot be removed.</div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
-      <button class="btn-confirm" id="confirmBtn" onclick="confirmAdd()">Add to My Library</button>
-    </div>
-  </div>
-</div>
-
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=16"></script>
 <script src="site-auth.js?v=11"></script>
 <script src="admin-common.js?v=17"></script>
+<script src="lesson-library-ui.js?v=1"></script>
 <script>fnTrackPageview();</script>
 <script>
 let allCurricula = [];
 let selectedIds = new Set();
 let limit = 40;
-let pendingCurriculumId = null;
+let swapsLeft = 0;
+let swapLimit = 0;
+let myAudiences = [];
+let swapOut = null; // { id, title } while replacing a lesson (?swap=<id>)
 let activeAudience = 'all';
 let activeSeries = 'all';
+let busy = false;
+
+function say(text, isError) {
+  const box = document.getElementById('libStatus');
+  box.textContent = text || '';
+  box.className = 'status' + (text ? (isError ? ' err' : ' ok') : '');
+  if (text && !isError) setTimeout(function () { if (box.textContent === text) say(''); }, 6000);
+}
 
 function updateCounter() {
   const badge = document.getElementById('counterBadge');
   badge.textContent = `${selectedIds.size} of ${limit} added`;
   badge.className = selectedIds.size >= limit ? 'counter full' : 'counter';
+  const swapBadge = document.getElementById('swapBadge');
+  swapBadge.textContent = fnLibSwapsText(swapsLeft);
+  swapBadge.className = swapsLeft <= 0 ? 'counter full' : 'counter';
+  const banner = document.getElementById('swapBanner');
+  if (swapOut) {
+    document.getElementById('swapBannerText').textContent = `You're swapping out "${swapOut.title}". Pick the lesson you want instead.`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function renderCards(curricula) {
@@ -147,16 +153,17 @@ function renderCards(curricula) {
   empty.style.display = 'none';
   grid.innerHTML = curricula.map(c => {
     const added = selectedIds.has(c.id);
+    const disabled = swapOut ? '' : (atLimit ? ' disabled title="Library is full"' : '');
     return `
       <div class="card${added ? ' added' : ''}">
         ${added ? '<div class="badge-added">Added</div>' : ''}
-        ${c.series ? `<div class="card-series">${c.series}</div>` : ''}
-        <div class="card-title">${c.title}</div>
-        ${c.overview ? `<div class="card-desc">${c.overview}</div>` : (c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : '')}
+        ${c.series ? `<div class="card-series">${fnLibEsc(c.series)}</div>` : ''}
+        <div class="card-title">${fnLibEsc(c.title)}</div>
+        ${c.overview ? `<div class="card-desc">${fnLibEsc(c.overview)}</div>` : (c.shortDescription ? `<div class="card-desc">${fnLibEsc(c.shortDescription)}</div>` : '')}
         <div class="card-foot">
           ${added
             ? '<span class="btn-outline">In Your Library</span>'
-            : `<button class="btn-add" ${atLimit ? 'disabled title="Library is full"' : ''} onclick="openConfirm(${c.id}, ${JSON.stringify(c.title).replace(/"/g, '&quot;')})">Add to Library</button>`
+            : `<button class="btn-add" data-id="${c.id}"${disabled}>${swapOut ? 'Swap in' : 'Add to Library'}</button>`
           }
         </div>
       </div>
@@ -168,7 +175,7 @@ function rebuildSeriesBar(curricula) {
   const uniqueSeries = [...new Set(curricula.map(c => c.series).filter(Boolean))].sort();
   document.getElementById('seriesFilterBar').innerHTML =
     `<div class="chip${activeSeries === 'all' ? ' active' : ''}" data-series="all">All Series</div>` +
-    uniqueSeries.map(s => `<div class="chip${activeSeries === s ? ' active' : ''}" data-series="${s.replace(/"/g,'&quot;')}">${s}</div>`).join('');
+    uniqueSeries.map(s => `<div class="chip${activeSeries === s ? ' active' : ''}" data-series="${fnLibEsc(s)}">${fnLibEsc(s)}</div>`).join('');
 }
 
 function applyFilters() {
@@ -194,49 +201,107 @@ function applyFilters() {
 
 function filterCards() { applyFilters(); }
 
-function openConfirm(id, title) {
-  pendingCurriculumId = id;
-  document.getElementById('modalTitle').textContent = `Add "${title}"?`;
-  document.getElementById('modalDesc').textContent = `This will add "${title}" to your lesson plan library.`;
-  document.getElementById('confirmBtn').disabled = false;
-  document.getElementById('confirmBtn').textContent = 'Add to My Library';
-  document.getElementById('confirmModal').style.display = 'flex';
+function applyServerState(d) {
+  if (typeof d.limit === 'number') limit = d.limit;
+  if (typeof d.swapsLeft === 'number') swapsLeft = d.swapsLeft;
+  if (typeof d.swapLimit === 'number') swapLimit = d.swapLimit;
 }
 
-function closeConfirm() {
-  pendingCurriculumId = null;
-  document.getElementById('confirmModal').style.display = 'none';
-}
-
-async function confirmAdd() {
-  if (!pendingCurriculumId) return;
-  const btn = document.getElementById('confirmBtn');
-  btn.disabled = true;
-  btn.textContent = 'Adding…';
+// Asks the teacher to confirm (and to accept a level mismatch if there is one), then adds or swaps in the lesson.
+async function startAdd(c) {
+  if (busy) return;
+  busy = true;
   try {
-    const r = await fetch('/api/teacher/lesson-plans', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ curriculumId: pendingCurriculumId }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      fnToast(d.error || 'Could not add lesson plan');
-      closeConfirm();
-      return;
+    say('');
+    if (!myAudiences.length) {
+      const saved = await fnLibChooseLevels();
+      if (!saved) return;
+      myAudiences = saved;
     }
-    selectedIds.add(pendingCurriculumId);
-    limit = d.limit || limit;
-    updateCounter();
-    closeConfirm();
-    applyFilters();
-    fnToast('Added to your library');
-  } catch (e) {
-    fnToast('Could not add lesson plan');
-    closeConfirm();
+    let confirmMismatch = false;
+    if (fnLibMismatch(c.audiences, myAudiences)) {
+      const go = await mismatchDialog(c);
+      if (!go) return;
+      confirmMismatch = true;
+    } else {
+      const go = await confirmDialog(c);
+      if (!go) return;
+    }
+    await send(c, confirmMismatch);
+  } finally {
+    busy = false;
   }
 }
+
+function mismatchDialog(c) {
+  return fnLibDialog({
+    title: 'Curriculum level mismatch',
+    message: fnLibMismatchText(c.title, c.audiences, myAudiences),
+    warn: 'Add it anyway?',
+    choices: [{ label: swapOut ? 'Swap anyway' : 'Add anyway', value: 'go', kind: 'primary' }],
+  });
+}
+
+function confirmDialog(c) {
+  if (swapOut) {
+    return fnLibDialog({
+      title: `Swap in "${c.title}"?`,
+      message: `This replaces "${swapOut.title}" with "${c.title}" in your library. It uses one swap, and you'll have ${Math.max(0, swapsLeft - 1)} left.`,
+      choices: [{ label: 'Swap', value: 'go', kind: 'primary' }],
+    });
+  }
+  return fnLibDialog({
+    title: `Add "${c.title}"?`,
+    message: `This adds "${c.title}" to your lesson plan library.`,
+    warn: swapsLeft > 0
+      ? `If you take it out later, that costs one of your swaps. You have ${swapsLeft} left.`
+      : 'You have no swaps left, so once it is in, it stays.',
+    choices: [{ label: 'Add to My Library', value: 'go', kind: 'primary' }],
+  });
+}
+
+async function send(c, confirmMismatch) {
+  const r = swapOut
+    ? await fnLibRequest('POST', '/api/teacher/lesson-plans/swap', { removeCurriculumId: swapOut.id, addCurriculumId: c.id, confirmMismatch })
+    : await fnLibRequest('POST', '/api/teacher/lesson-plans', { curriculumId: c.id, confirmMismatch });
+
+  if (r.ok) {
+    applyServerState(r.data);
+    if (swapOut) {
+      sessionStorage.setItem('fn_lib_notice', `Swapped. ${fnLibSwapsText(swapsLeft)}.`);
+      window.location.href = 'teacher-lesson-plans.html';
+      return;
+    }
+    selectedIds.add(c.id);
+    updateCounter();
+    applyFilters();
+    say('Added to your library.');
+    return;
+  }
+  // The server is the final word on levels: it may disagree with this page (levels changed in another tab).
+  if (r.status === 409 && r.data.code === 'levels_required') {
+    const saved = await fnLibChooseLevels();
+    if (!saved) return;
+    myAudiences = saved;
+    return startAddAgain(c);
+  }
+  if (r.status === 409 && r.data.code === 'level_mismatch' && !confirmMismatch) {
+    myAudiences = r.data.teacherLevels || myAudiences;
+    const lesson = Object.assign({}, c, { audiences: r.data.lessonLevels || c.audiences });
+    const go = await mismatchDialog(lesson);
+    if (!go) return;
+    return send(c, true);
+  }
+  if (r.status === 403 && r.data.code === 'no_swaps_left') {
+    applyServerState(r.data);
+    updateCounter();
+    say('You have no swaps left. Contact us if you need to change your library.', true);
+    return;
+  }
+  say(r.data.error || 'Could not add that lesson plan.', true);
+}
+
+function startAddAgain(c) { busy = false; return startAdd(c); }
 
 async function loadPage() {
   const r = await fetch('/api/teacher/lesson-plans/browse', { credentials: 'include' });
@@ -247,11 +312,28 @@ async function loadPage() {
   const data = await r.json().catch(() => ({}));
   allCurricula = data.curricula || [];
   selectedIds = new Set(allCurricula.filter(c => c.selected).map(c => c.id));
-  limit = data.limit || 40;
+  applyServerState(data);
+  if (!data.limit) limit = 40;
+  myAudiences = data.myAudiences || [];
+
+  const swapId = parseInt(new URLSearchParams(window.location.search).get('swap'), 10);
+  const target = swapId ? allCurricula.find(c => c.id === swapId && c.selected) : null;
+  swapOut = target ? { id: target.id, title: target.title } : null;
+  if (swapOut && swapsLeft <= 0) {
+    swapOut = null;
+    say('You have no swaps left. Contact us if you need to change your library.', true);
+  }
   updateCounter();
   applyFilters();
   document.getElementById('mainWrap').style.visibility = 'visible';
 }
+
+document.getElementById('cardGrid').addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-add');
+  if (!btn || btn.disabled) return;
+  const c = allCurricula.find(x => String(x.id) === btn.dataset.id);
+  if (c) startAdd(c);
+});
 
 document.getElementById('audienceFilterBar').addEventListener('click', function(e) {
   const chip = e.target.closest('.chip');
@@ -270,15 +352,11 @@ document.getElementById('seriesFilterBar').addEventListener('click', function(e)
   applyFilters();
 });
 
-document.getElementById('confirmModal').addEventListener('click', function(e) {
-  if (e.target === this) closeConfirm();
-});
-
 loadPage();
 </script>
 
 <footer></footer>
 <script src="footer.js?v=9"></script>
-<script src="help-videos.js?v=9" defer></script>
+<script src="help-videos.js?v=10" defer></script>
 </body>
 </html>

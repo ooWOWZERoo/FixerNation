@@ -6,6 +6,7 @@ const pool = require('../db/pool');
 const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { getSetting } = require('../lib/settings');
 const { signSession, verifySession } = require('../lib/session-tokens');
+const { onboardInvitedTeacher } = require('../lib/teacher-onboarding');
 
 const router = express.Router();
 
@@ -19,6 +20,21 @@ async function getLoggedInUser(req) {
     return user || null;
   } catch {
     return null;
+  }
+}
+
+// After a seat is claimed: add the invite's grade levels to the teacher's own and make sure they are in the CRM and the
+// Teachers group (lib/teacher-onboarding.js). A problem here is logged, never allowed to undo the accepted invitation.
+async function onboardAfterAccept(inv, user) {
+  try {
+    await onboardInvitedTeacher({
+      siteUserId: user.id,
+      email: inv.invited_email,
+      name: [user.first_name, user.last_name].filter(Boolean).join(' '),
+      audiences: inv.audiences,
+    });
+  } catch (e) {
+    console.error('onboardInvitedTeacher failed:', e.message);
   }
 }
 
@@ -158,6 +174,7 @@ router.post('/claim', async (req, res) => {
   } catch (e) {
     console.error('addTeacherToSocialGroups failed:', e.message);
   }
+  await onboardAfterAccept(inv, loggedInUser);
 
   // Notify school admin(s) that a teacher joined (fire-and-forget)
   pool.query(
@@ -293,6 +310,7 @@ router.post('/register', async (req, res) => {
     } catch (e) {
       console.error('addTeacherToSocialGroups failed:', e.message);
     }
+    await onboardAfterAccept(inv, { id: newUserId, first_name: firstName.trim(), last_name: lastName.trim() });
 
     // Notify school admin(s) that a new teacher joined (fire-and-forget)
     pool.query(
@@ -412,6 +430,7 @@ router.post('/accept-and-verify', async (req, res) => {
   } catch (e) {
     console.error('addTeacherToSocialGroups failed:', e.message);
   }
+  await onboardAfterAccept(inv, user);
 
   // Notify school admin(s) that a teacher joined (fire-and-forget)
   pool.query(

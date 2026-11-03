@@ -12,6 +12,7 @@ const { getSeatCounts } = require('./seat-counts');
 const { licenseAccess, NOT_OPEN_MESSAGES } = require('./license-access');
 const { sendTeacherInvitationEmail } = require('./mailer');
 const { DEMO_SCHOOL_DOMAIN, demoInviteAllowed } = require('./sales-demo');
+const { parseGradeLevels, summarize, toStored } = require('./grade-levels');
 
 const INVITATION_EXPIRY_DAYS = 14;
 
@@ -30,7 +31,7 @@ function makeToken() {
 // an FNE admin acting on the school's behalf — the audit action name
 // differs accordingly so the two are distinguishable in school_audit_log.
 async function inviteTeacherToSeat({
-  purchaseId, email, firstName, lastName, gradeLevel, roleName, department,
+  purchaseId, email, firstName, lastName, gradeLevels, roleName, department,
   subjectArea, personalMessage, invitedBy, ipAddress,
 }) {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -42,6 +43,9 @@ async function inviteTeacherToSeat({
   if (!firstName || !String(firstName).trim() || !lastName || !String(lastName).trim()) {
     throw Object.assign(new Error('First and last name are required'), { status: 400 });
   }
+  // Every teacher is registered for at least one grade level (ES, MS, HS, HE): the library's level-mismatch warning
+  // compares a lesson against these. Throws a 400 with a plain message for an empty or unrecognised list.
+  const levels = parseGradeLevels(gradeLevels);
   const normalEmail = email.trim().toLowerCase();
 
   // License gate (lib/license-access.js): paid, or a purchase order that has been received
@@ -104,11 +108,11 @@ async function inviteTeacherToSeat({
     const [invResult] = await conn.query(
       `INSERT INTO school_invitations
          (purchase_id, seat_id, invited_email, first_name, last_name, token, status,
-          grade_level, role_title, department, subject_area, personal_message,
+          grade_level, audiences, role_title, department, subject_area, personal_message,
           invited_by_site_user_id, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [purchaseId, seatId, normalEmail, firstName || null, lastName || null, token,
-       gradeLevel || null, roleName || null, department || null, subjectArea || null,
+       summarize(levels), toStored(levels), roleName || null, department || null, subjectArea || null,
        personalMessage || null, (invitedBy && invitedBy.siteUserId) || null, expiresAt]
     );
     invitationId = invResult.insertId;

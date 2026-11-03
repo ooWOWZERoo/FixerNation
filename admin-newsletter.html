@@ -314,8 +314,11 @@ const CONTACT_COLUMNS = [
   { key: 'source', label: 'Source', sortable: true },
   { key: 'status', label: 'Status', sortable: true },
   { key: 'role', label: 'Role', sortable: true },
+  { key: 'gradeLevels', label: 'Grade Levels', sortable: true },
   { key: 'groups', label: 'Groups', sortable: false },
 ];
+const GRADE_CODES = { 'Elementary School': 'ES', 'Middle School': 'MS', 'High School': 'HS', 'Higher Education': 'HE' };
+const gradeCodes = (c) => ['Elementary School', 'Middle School', 'High School', 'Higher Education'].filter(n => (c.gradeLevels || []).includes(n)).map(n => GRADE_CODES[n]);
 const ROLE_LABELS_SHORT = {
   teacher: 'Teacher', school_license_admin: 'School Admin', district_admin: 'District Admin',
   admin: 'FNE Admin', parent: 'Parent', affiliate: 'Affiliate',
@@ -325,7 +328,15 @@ const COLUMNS_STORAGE_KEY = 'fnContactsVisibleColumns';
 function loadVisibleColumns() {
   try {
     const saved = JSON.parse(localStorage.getItem(COLUMNS_STORAGE_KEY));
-    if (Array.isArray(saved) && saved.length) return new Set(saved);
+    if (Array.isArray(saved) && saved.length) {
+      // A saved column list predates the Grade Levels column and would hide it for good; show it once, then respect the choice.
+      if (!localStorage.getItem('fnContactsGradeColumnSeen')) {
+        localStorage.setItem('fnContactsGradeColumnSeen', '1');
+        if (!saved.includes('gradeLevels')) { saved.push('gradeLevels'); localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(saved)); }
+      }
+      return new Set(saved);
+    }
+    localStorage.setItem('fnContactsGradeColumnSeen', '1');
   } catch (e) {}
   return new Set(CONTACT_COLUMNS.map(c => c.key));
 }
@@ -448,6 +459,7 @@ function applyFiltersAndRender() {
 
   contacts.sort((a, b) => {
     let av = a[sortField], bv = b[sortField];
+    if (sortField === 'gradeLevels') { av = gradeCodes(a).join(' '); bv = gradeCodes(b).join(' '); }
     if (sortField === 'signupDate') { av = new Date(av).getTime(); bv = new Date(bv).getTime(); }
     else { av = (av || '').toString().toLowerCase(); bv = (bv || '').toString().toLowerCase(); }
     if (av < bv) return sortDir === 'asc' ? -1 : 1;
@@ -497,6 +509,7 @@ function applyFiltersAndRender() {
       source: `<td><span class="a-pill a-pill-neutral">${fnEscape(c.source)}</span></td>`,
       status: `<td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${fnEscape(c.status)}</span></td>`,
       role: `<td>${c.role ? `<span class="a-pill a-pill-neutral">${ROLE_LABELS_SHORT[c.role] || c.role}</span>` : '—'}</td>`,
+      gradeLevels: `<td>${gradeCodes(c).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g}</span>`).join('') || '—'}</td>`,
       groups: `<td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${fnEscape(g.name)}</span>`).join('') || '—'}</td>`,
     };
     tr.innerHTML = CONTACT_COLUMNS.filter(col => visibleColumns.has(col.key)).map(col => cellsByKey[col.key]).join('') + `
@@ -873,13 +886,13 @@ async function saveContact() {
 function exportCsv() {
   const contacts = filteredContactsCache;
   if (contacts.length === 0) { fnToast('No contacts to export'); return; }
-  const rows = [['Name','Email','Phone','Company','Street','City','State','Zip','Signup Date','Source','Status','Groups','Notes']];
+  const rows = [['Name','Email','Phone','Company','Street','City','State','Zip','Signup Date','Source','Status','Groups','Grade Levels','Notes']];
   contacts.forEach(c => rows.push([
     c.name || '', c.email, c.phone || '', c.company || '',
     (c.address && c.address.street) || '', (c.address && c.address.city) || '',
     (c.address && c.address.state) || '', (c.address && c.address.zip) || '',
     fnFormatDate(c.signupDate), c.source, c.status,
-    (c.groups || []).map(g => g.name).join('; '), c.notes || '',
+    (c.groups || []).map(g => g.name).join('; '), gradeCodes(c).join('; '), c.notes || '',
   ]));
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });

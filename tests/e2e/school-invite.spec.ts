@@ -53,6 +53,7 @@ test.describe("School invite flow", () => {
     await modal.locator("#invEmail").fill(inviteEmail);
     await modal.locator("#invFirstName").fill("QA");
     await modal.locator("#invLastName").fill("InviteAdminTest");
+    await modal.locator('#invGradeLevels input[value="ES"]').check();
     await modal.getByRole("button", { name: /send invitation/i }).click();
 
     await expect(page.locator("#inviteModal")).toBeHidden({ timeout: 8000 });

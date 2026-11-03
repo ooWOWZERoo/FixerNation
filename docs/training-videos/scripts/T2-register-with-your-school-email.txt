@@ -6,7 +6,7 @@
 [SCREEN] Select the check button.
 [SAY] We match the part of your email after the at sign to your school's license. If your school has a seat available, we hold one for you right away.
 [SCREEN] The grade level choice.
-[SAY] You'll be asked to choose your grade level. This is optional, and you can skip it.
+[SAY] You'll be asked to choose your grade levels. You need to choose at least one.
 [SCREEN] The success message and signup window.
 [SAY] You'll see a message that your seat is reserved, and a sign up window with your email filled in. Choose a password and create your account.
 [SCREEN] The verification email.

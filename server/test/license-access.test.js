@@ -19,7 +19,7 @@ CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_u
 CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, is_active INTEGER DEFAULT 1);
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY, email TEXT, first_name TEXT);
 CREATE TABLE school_admin_notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, school_domain TEXT, reason TEXT, teacher_email TEXT, admin_contact_id INTEGER, sent_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE school_invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER, seat_id INTEGER, invited_email TEXT, status TEXT);
+CREATE TABLE school_invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER, seat_id INTEGER, invited_email TEXT, first_name TEXT, last_name TEXT, token TEXT, status TEXT, grade_level TEXT, audiences TEXT, role_title TEXT, department TEXT, subject_area TEXT, personal_message TEXT, invited_by_site_user_id INTEGER, expires_at TEXT);
 CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER, purchase_id INTEGER, school_domain TEXT);
 `);
 const run = async (sql, params = []) => {
@@ -118,7 +118,7 @@ test('INVITATIONS: a PO school can invite once the PO is received, unpaid; not b
   for (const [p, shouldOpen, message] of cases) {
     const id = school('oak.example.edu', p);
     let error = null;
-    try { await inviteTeacherToSeat({ purchaseId: id, email: 't@oak.example.edu', firstName: 'T', lastName: 'Teacher', invitedBy: { siteUserId: 1, email: 'a@oak.example.edu', name: 'A', actorType: 'site_user' }, ipAddress: '1.1.1.1' }); } catch (e) { error = e; }
+    try { await inviteTeacherToSeat({ purchaseId: id, email: 't@oak.example.edu', firstName: 'T', lastName: 'Teacher', gradeLevels: ['ES'], invitedBy: { siteUserId: 1, email: 'a@oak.example.edu', name: 'A', actorType: 'site_user' }, ipAddress: '1.1.1.1' }); } catch (e) { error = e; }
     if (shouldOpen) assert.ok(!error || !gate.test(error.message), `should not be refused by the license gate: ${error && error.message}`);
     else { assert.ok(error && error.status === 422, 'should be refused'); assert.match(error.message, message); }
   }

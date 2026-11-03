@@ -169,7 +169,7 @@ router.post('/purchases/:purchaseId/invite-teacher', requireAuth, async (req, re
     const result = await inviteTeacherToSeat({
       purchaseId: Number(req.params.purchaseId),
       email: b.email, firstName: b.firstName, lastName: b.lastName,
-      gradeLevel: b.gradeLevel || null, roleName: b.roleName || null,
+      gradeLevels: b.gradeLevels, roleName: b.roleName || null,
       department: b.department || null, subjectArea: b.subjectArea || null,
       personalMessage: b.personalMessage || null,
       invitedBy: { siteUserId: req.user.userId, email: req.user.username, name: 'Fixer Nation Education', actorType: 'admin' },
@@ -201,7 +201,7 @@ router.post('/purchases/:purchaseId/invite-teachers/bulk', requireAuth, async (r
     try {
       const result = await inviteTeacherToSeat({
         purchaseId, email, firstName: inv.firstName, lastName: inv.lastName,
-        gradeLevel: inv.gradeLevel || null, roleName: inv.roleName || null,
+        gradeLevels: inv.gradeLevels, roleName: inv.roleName || null,
         department: inv.department || null, subjectArea: inv.subjectArea || null,
         invitedBy, ipAddress: req.ip,
       });

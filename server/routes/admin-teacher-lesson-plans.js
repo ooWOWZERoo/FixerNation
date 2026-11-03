@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { getSetting } = require('../lib/settings');
+const { getSwapStatus, resetSwaps } = require('../lib/lesson-library');
 
 const router = express.Router();
 
@@ -31,11 +32,21 @@ router.get('/:siteUserId', requireAuth, async (req, res) => {
     })),
     count: rows.length,
     limit,
+    ...(await getSwapStatus(pool, siteUserId)),
   });
 });
 
+// POST /api/admin/teacher-lesson-plans/:siteUserId/reset-swaps
+// Gives a teacher their swaps back (the earlier swaps stay in the history, they just stop counting).
+router.post('/:siteUserId/reset-swaps', requireAuth, async (req, res) => {
+  const siteUserId = parseInt(req.params.siteUserId, 10);
+  if (!siteUserId) return res.status(400).json({ error: 'siteUserId is required' });
+  const restored = await resetSwaps(pool, siteUserId);
+  res.json({ ok: true, restored, ...(await getSwapStatus(pool, siteUserId)) });
+});
+
 // POST /api/admin/teacher-lesson-plans/:siteUserId
-// Admin adds one curriculum for a teacher (bypasses limit).
+// Admin adds one curriculum for a teacher (bypasses the library limit and the level-mismatch check).
 router.post('/:siteUserId', requireAuth, async (req, res) => {
   const siteUserId = parseInt(req.params.siteUserId, 10);
   const curriculumId = parseInt(req.body && req.body.curriculumId, 10);
@@ -56,7 +67,7 @@ router.post('/:siteUserId', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/admin/teacher-lesson-plans/:siteUserId/:curriculumId
-// Admin removes one specific curriculum from a teacher's library.
+// Admin removes one specific curriculum from a teacher's library (costs the teacher no swap).
 router.delete('/:siteUserId/:curriculumId', requireAuth, async (req, res) => {
   const siteUserId = parseInt(req.params.siteUserId, 10);
   const curriculumId = parseInt(req.params.curriculumId, 10);

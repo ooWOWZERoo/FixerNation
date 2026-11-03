@@ -16,6 +16,26 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 94 — 2026-11-03 — Level warning, and swaps in My Lesson Plans
+
+- **A "Curriculum level mismatch" warning.** When a teacher adds a lesson that is written for a different level than the one on their account (for example an MS lesson for an ES teacher), a popup says so and asks Add anyway or Cancel. A lesson that shares any level with the teacher, or has no level, adds as before.
+- **Teachers can now take a lesson out of My Lesson Plans.** Each lesson card has "Swap or remove". Removing a lesson, or replacing it with another in one step, uses one swap. A teacher's swaps are counted in a badge ("2 swaps left") on both library pages, and lessons already assigned to a class stay assigned.
+- **The swap limit is a setting.** "Swaps per Teacher (limit)" sits on the Teacher Lesson Plan Library card in Settings, next to the two plan limits. Default 3, 0 turns removal off, same number for trial and paid teachers. Staff can give one teacher their swaps back from the Library button on the Licenses page (the earlier swaps stay in the history).
+- **Every teacher has a grade level before they change their library.** A teacher with none (for example one invited or registered before Release 93) is asked to choose their levels first, once.
+- The wording that said picks were permanent is gone from the library pages, My Licenses, Settings, the Licenses page and the help-video list. New shared file `lesson-library-ui.js`; `help-videos.js` is now `?v=10` on every page that loads it.
+- **Needs a one-off script and a Node restart:** `node scripts/alter-add-teacher-lesson-plan-swaps.js` (safe to run twice) creates the swap history table; run it before the restart. Help video T7 needs re-recording (its narration said picks were permanent).
+- Requirements and access rules: `docs/reference/lesson-plan-swaps-requirements.md`. 290 server tests pass (31 new).
+
+## Release 93 — 2026-11-03 — Grade levels on teacher invitations, and in the CRM
+
+- **Inviting a teacher now means choosing their grade levels.** The free-text "Grade Level" box on the invite form is replaced by ES, MS, HS and HE checkboxes (one or more, at least one required). The concierge page has the same checkboxes on each teacher row. In a bulk CSV, the `grade_level` column takes ES, MS, HS or HE, and a semicolon between several (for example `ES;MS`); a row without one is reported as not sent.
+- **The levels follow the teacher.** When a teacher accepts, by any of the sign-in routes, the levels from the invitation are added to the ones they already have (nothing they chose themselves is removed).
+- **Every accepted teacher is now in the CRM and the Teachers group.** Before, only teachers who created their account from the invitation page were added. An existing CRM contact keeps its status and source.
+- **The CRM contact list has a new "Grade Levels" column** (ES, MS, HS, HE tags; sortable; included in the CSV export). It appears once for staff who had saved their own column choices.
+- **Teachers who register with their school email can no longer skip the grade-level question**, and the server refuses an empty list.
+- Older invitations keep their free-text grade level. New ones also fill that old field with a short summary such as "ES, MS", so exports and reports keep showing something.
+- **Needs a one-off script and a Node restart:** `node scripts/alter-add-invitation-audiences.js` (safe to run twice) adds the column; run it before the restart. Help videos B2, B3, B10 and T2 need re-recording (their steps changed).
+
 ## Release 92 — 2026-11-03 — Teachers see the whole lesson library on the main site
 
 - **Fix: a licensed teacher who had saved lessons to My Lesson Plans saw only those lessons on the main lesson page.** The page said "growing library" but showed just the teacher's own picks. The lesson page now always lists every published lesson, as it does for everyone else. What a teacher can open and download is unchanged.

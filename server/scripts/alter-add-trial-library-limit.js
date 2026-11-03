@@ -1,7 +1,7 @@
 // Adds the "trial library limit" — a separate cap from the existing
 // trial_lesson_limit (which gates how many curricula a trial user can even
 // PREVIEW, via trial_curriculum_accesses). This new field caps how many
-// curricula a trial teacher can permanently ADD to their personal
+// curricula a trial teacher can ADD to their personal
 // "Teacher Lesson Plan Library" (server/routes/teacher-lesson-plans.js),
 // which previously used one flat global limit for every teacher regardless
 // of trial status. Snapshotted onto purchases at creation time, same

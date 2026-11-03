@@ -187,6 +187,21 @@ router.put('/teacher-lesson-plan-limit-trial', requireAuth, async (req, res) => 
   res.json({ ok: true });
 });
 
+router.get('/teacher-lesson-plan-swap-limit', requireAuth, async (req, res) => {
+  const raw = await getSetting('teacher_lesson_plan_swap_limit');
+  const limit = parseInt(raw, 10);
+  res.json({ limit: Number.isNaN(limit) ? 3 : Math.max(0, limit) });
+});
+
+// 0 is a real answer ("teachers cannot remove lessons"), so unlike the plan limits this accepts it.
+router.put('/teacher-lesson-plan-swap-limit', requireAuth, async (req, res) => {
+  const raw = req.body && req.body.limit;
+  const limit = typeof raw === 'number' || (typeof raw === 'string' && /^\d+$/.test(raw.trim())) ? Number(raw) : NaN;
+  if (!Number.isInteger(limit) || limit < 0 || limit > 100) return res.status(400).json({ error: 'Swaps must be a whole number from 0 to 100' });
+  await setSetting('teacher_lesson_plan_swap_limit', String(limit));
+  res.json({ ok: true });
+});
+
 router.get('/auto-refresh', requireAuth, async (req, res) => {
   const raw = await getSetting('admin_auto_refresh_sec');
   res.json({ intervalSec: Math.max(0, parseInt(raw || '0', 10)) });

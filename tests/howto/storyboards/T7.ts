@@ -16,7 +16,7 @@ const board: Storyboard = {
       run: async (p) => { await p.waitForSelector("#lessonPlansBanner", { state: "visible" }); await glideTo(p, "#lessonPlansBanner"); },
     },
     {
-      say: "On My Licenses, a green banner says you can pick up to forty plans. You can add more any time, but every plan you pick is permanent for your license period. So choose the ones you really plan to teach. Select Browse Lesson Plans.",
+      say: "On My Licenses, a green banner says you can pick up to forty plans. You can add more any time. If you change your mind, you can swap a plan out a limited number of times. So choose the ones you really plan to teach. Select Browse Lesson Plans.",
       run: async (p) => {
         await p.waitForTimeout(2500);
         await glideClick(p, "#lessonPlansBanner a");
@@ -52,16 +52,16 @@ const board: Storyboard = {
       say: "When you find a lesson you want, select Add to Library.",
       run: async (p) => {
         await glideClick(p, "#cardGrid .card:has-text('Calm Is A Super Power') .btn-add");
-        await p.waitForSelector("#confirmModal", { state: "visible" });
+        await p.waitForSelector(".fnlib-modal", { state: "visible" });
         await p.waitForTimeout(800);
       },
     },
     {
-      say: "You'll see a reminder. Once a plan is added, it's a permanent part of your library, and it can't be removed. If you're not sure, select Cancel. Otherwise, select Add to My Library.",
+      say: "You'll see a short confirmation. If you take a plan out later, that costs one of your swaps, and the box tells you how many you have left. If you're not sure, select Cancel. Otherwise, select Add to My Library.",
       run: async (p) => {
-        await glideTo(p, ".modal-warn");
+        await glideTo(p, ".fnlib-warn");
         await p.waitForTimeout(3500);
-        await glideClick(p, "#confirmBtn");
+        await glideClick(p, ".fnlib-btn.primary");
         await p.waitForSelector(".badge-added");
         await p.waitForTimeout(1500);
       },
@@ -72,9 +72,9 @@ const board: Storyboard = {
         await glideTo(p, "#counterBadge");
         await p.waitForTimeout(1500);
         await glideClick(p, "#cardGrid .card:has-text('Keep Your Word') .btn-add");
-        await p.waitForSelector("#confirmModal", { state: "visible" });
+        await p.waitForSelector(".fnlib-modal", { state: "visible" });
         await p.waitForTimeout(800);
-        await glideClick(p, "#confirmBtn");
+        await glideClick(p, ".fnlib-btn.primary");
         await p.waitForFunction(() => document.querySelectorAll(".badge-added").length >= 2);
         await p.waitForTimeout(1000);
       },
@@ -89,6 +89,14 @@ const board: Storyboard = {
         await glideTo(p, "#cardGrid .card");
         await p.waitForTimeout(1500);
         await glideTo(p, ".btn-view");
+      },
+    },
+    {
+      say: "Changed your mind about a plan? Select Swap or remove on its card. Either one uses a swap, and the badge at the top shows how many you have left.",
+      run: async (p) => {
+        await glideTo(p, "#swapBadge");
+        await p.waitForTimeout(1500);
+        await glideTo(p, ".btn-swap");
       },
     },
     {

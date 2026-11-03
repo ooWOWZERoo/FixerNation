@@ -31,7 +31,7 @@ const board: Storyboard = {
       },
     },
     {
-      say: "You'll be asked which grade levels you teach. Tick the ones that apply and select Continue. This is optional, and you can skip it.",
+      say: "You'll be asked which grade levels you teach. Tick the ones that apply and select Continue. You need to choose at least one.",
       run: async (p) => {
         await glideClick(p, "#gradeCheckboxes label:has-text('Elementary School')");
         await p.waitForTimeout(800);

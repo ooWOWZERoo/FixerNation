@@ -29,6 +29,7 @@ const board: Storyboard = {
         await fillSlowly(p, "#invEmail", "dev.patel@maple.example.com");
         await fillSlowly(p, "#invFirstName", "Dev");
         await fillSlowly(p, "#invLastName", "Patel");
+        await glideClick(p, '#invGradeLevels input[value="ES"]');
         await glideClick(p, "#inviteBtn");
         await p.waitForTimeout(1500);
       },

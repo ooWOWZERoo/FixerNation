@@ -26,6 +26,9 @@ const DEFAULTS = {
   // client-side pre-fill — the product's own field, once saved, is what
   // actually gets snapshotted onto purchases going forward).
   teacher_lesson_plan_limit_trial: '10',
+  // How many times a teacher may take a lesson out of My Lesson Plans (removing it, or swapping it for another). Each removal
+  // uses one. 0 turns removal off. One value for trial and paid teachers alike. See routes/teacher-lesson-plans.js.
+  teacher_lesson_plan_swap_limit: '3',
   // How large campaign sends get throttled — see processCampaignBatch() in
   // server/routes/campaigns.js. Sending the entire audience in one
   // uninterrupted burst risks getting flagged as spam/abuse by receiving

@@ -125,7 +125,7 @@
         <div class="a-field">
           <label>Trial Library Limit</label>
           <input type="number" id="productTrialLibraryLimit" min="1">
-          <div class="a-note">How many lesson plans a trial teacher can permanently add to their library — pre-filled from Settings → Teacher Lesson Plan Library when you check "Trial?", still editable per product.</div>
+          <div class="a-note">How many lesson plans a trial teacher can add to their library. Pre-filled from Settings (Teacher Lesson Plan Library) when you check "Trial?", and still editable per product.</div>
         </div>
       </div>
     </div>
@@ -159,6 +159,7 @@
     </div>
     <div class="a-modal-body">
       <div id="lessonPlanModalStatus" style="font-size:13px;color:var(--a-text-soft);margin-bottom:12px;"></div>
+      <div style="margin-bottom:12px;"><button class="a-btn a-btn-outline" style="font-size:12.5px;" id="lessonPlanResetSwapsBtn" onclick="resetSwapsAdmin()">Reset swaps</button></div>
       <div id="lessonPlanModalList"></div>
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <select id="lessonPlanAddSelect" style="flex:1;min-width:200px;padding:8px 10px;border:1.5px solid var(--a-border);border-radius:8px;font-family:inherit;font-size:13px;"></select>
@@ -594,8 +595,9 @@ async function refreshLessonPlanModal() {
   const r = await fetch(`/api/admin/teacher-lesson-plans/${_lpSiteUserId}`, { credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
   const data = await r.json().catch(() => ({}));
-  const { selections = [], count = 0, limit = 40 } = data;
-  document.getElementById('lessonPlanModalStatus').textContent = `${count} of ${limit} plans selected`;
+  const { selections = [], count = 0, limit = 40, swapsUsed = 0, swapLimit = 3 } = data;
+  document.getElementById('lessonPlanModalStatus').textContent = `${count} of ${limit} plans selected. Swaps used: ${swapsUsed} of ${swapLimit}.`;
+  document.getElementById('lessonPlanResetSwapsBtn').disabled = swapsUsed === 0;
   const list = document.getElementById('lessonPlanModalList');
   if (!selections.length) {
     list.innerHTML = '<div style="color:var(--a-text-soft);font-size:13px;">No plans in library yet.</div>';
@@ -625,6 +627,17 @@ async function removeLessonPlan(curriculumId) {
     method: 'DELETE', credentials: 'include',
   });
   if (fnHandleUnauthorized(r)) return;
+  await refreshLessonPlanModal();
+}
+
+async function resetSwapsAdmin() {
+  const r = await fetch(`/api/admin/teacher-lesson-plans/${_lpSiteUserId}/reset-swaps`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) { fnToast('Could not reset swaps'); return; }
+  fnToast('Swaps reset');
   await refreshLessonPlanModal();
 }
 

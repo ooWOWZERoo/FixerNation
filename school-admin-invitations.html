@@ -95,13 +95,21 @@
         existing account to accept it — it will not create a new account or a "set your password" step.
       </div>
     </div>
-    <div class="sa-form-row">
-      <div class="sa-form-group"><label>Grade Level</label><input type="text" id="invGrade"></div>
-      <div class="sa-form-group"><label>Department</label><input type="text" id="invDept"></div>
+    <div style="margin-bottom:16px;" id="invGradeGroup">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Grade Levels <span style="color:var(--sa-danger)">*</span> <span style="font-weight:400;color:var(--sa-text-soft);">(choose one or more)</span></div>
+      <div id="invGradeLevels" style="display:flex;flex-wrap:wrap;gap:8px 20px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" value="ES"> ES · Elementary</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" value="MS"> MS · Middle</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" value="HS"> HS · High</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"><input type="checkbox" value="HE"> HE · Higher Ed</label>
+      </div>
     </div>
     <div class="sa-form-row">
+      <div class="sa-form-group"><label>Department</label><input type="text" id="invDept"></div>
       <div class="sa-form-group"><label>Role Title</label><input type="text" id="invRoleTitle" placeholder="e.g. Counselor"></div>
-      <div class="sa-form-group"><label>Subject Area</label><input type="text" id="invSubjectArea" placeholder="e.g. Social Studies"></div>
+    </div>
+    <div class="sa-form-group">
+      <label>Subject Area</label><input type="text" id="invSubjectArea" placeholder="e.g. Social Studies">
     </div>
     <div class="sa-form-group">
       <label>Personal Message <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
@@ -126,8 +134,8 @@
 
     <div id="tabCsv" class="tab-panel active">
       <p style="font-size:13px;color:var(--sa-text-soft);margin-bottom:12px;">
-        Upload a CSV with columns: email, first_name, last_name, grade_level, department (email, first_name and
-        last_name are all required for every row — a name is required for every invitation, no exceptions).
+        Upload a CSV with columns: email, first_name, last_name, grade_level, department. Email, first_name, last_name and
+        grade_level are required for every row. In grade_level use ES, MS, HS or HE, and separate several with a semicolon (for example ES;MS).
         <a href="#" onclick="downloadTemplate();return false;">Download template →</a>
       </p>
       <div class="csv-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()">
@@ -297,7 +305,8 @@ function closeInviteModal() {
   document.getElementById('inviteModal').style.display = 'none';
   document.getElementById('inviteErr').style.display = 'none';
   document.getElementById('invEmailWarning').style.display = 'none';
-  ['invEmail','invFirstName','invLastName','invGrade','invDept','invRoleTitle','invSubjectArea','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  ['invEmail','invFirstName','invLastName','invDept','invRoleTitle','invSubjectArea','invMessage'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelectorAll('#invGradeLevels input').forEach(function (cb) { cb.checked = false; });
 }
 async function checkInviteEmail() {
   const email = document.getElementById('invEmail').value.trim();
@@ -318,9 +327,11 @@ async function sendInvite() {
   const lastName = document.getElementById('invLastName').value.trim();
   if (!email) { err.textContent = 'Email is required.'; err.style.display = 'flex'; return; }
   if (!firstName || !lastName) { err.textContent = 'First and last name are required.'; err.style.display = 'flex'; return; }
+  const gradeLevels = Array.from(document.querySelectorAll('#invGradeLevels input:checked')).map(function (cb) { return cb.value; });
+  if (!gradeLevels.length) { err.textContent = 'Choose at least one grade level.'; err.style.display = 'flex'; return; }
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevel: document.getElementById('invGrade').value.trim(), department: document.getElementById('invDept').value.trim(), roleName: document.getElementById('invRoleTitle').value.trim(), subjectArea: document.getElementById('invSubjectArea').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
+    await saFetch('/api/school-admin/invitations', { method: 'POST', body: JSON.stringify({ purchaseId: window.saActivePurchaseId(), email, firstName: document.getElementById('invFirstName').value.trim(), lastName: document.getElementById('invLastName').value.trim(), gradeLevels: gradeLevels, department: document.getElementById('invDept').value.trim(), roleName: document.getElementById('invRoleTitle').value.trim(), subjectArea: document.getElementById('invSubjectArea').value.trim(), personalMessage: document.getElementById('invMessage').value.trim() }) });
     closeInviteModal();
     saToast('Invitation sent to ' + email, 'success');
     loadInvitations();
@@ -410,6 +421,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 </script>
-<script src="help-videos.js?v=9" defer></script>
+<script src="help-videos.js?v=10" defer></script>
 </body>
 </html>

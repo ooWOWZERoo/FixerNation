@@ -40,6 +40,11 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 .card-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:4px;}
 .btn-view{font-size:13px;font-weight:700;color:var(--teal-dark);text-decoration:none;padding:6px 14px;border-radius:999px;border:1.5px solid var(--teal-dark);transition:all .15s;}
 .btn-view:hover{background:rgba(22,79,74,0.06);}
+.btn-swap{font-size:13px;font-weight:700;color:var(--ink-soft);padding:6px 14px;border-radius:999px;border:1.5px solid var(--border);background:transparent;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-swap:hover{border-color:var(--ink-soft);color:var(--ink);}
+.status{font-size:13.5px;font-weight:600;margin:0 0 14px;}
+.status.ok{color:var(--teal-dark);}
+.status.err{color:var(--coral-dark);}
 .empty-search{text-align:center;color:var(--ink-soft);font-size:14px;padding:60px 20px;}
 .filter-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;}
 .chip{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink-soft);box-shadow:0 2px 8px -4px rgba(22,79,74,0.15);border:1.5px solid transparent;transition:all .15s;white-space:nowrap;user-select:none;}
@@ -67,13 +72,15 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
   <div class="topbar">
     <div>
       <h1>My Lesson Plans</h1>
-      <p class="sub" style="margin-bottom:0;">Your personal lesson plan library for this license period.</p>
+      <p class="sub" style="margin-bottom:0;">Your personal lesson plan library. You can swap plans out a limited number of times.</p>
     </div>
     <div class="topbar-right">
+      <div class="counter" id="swapBadge"></div>
       <div class="counter" id="counterBadge">0 of 40 added</div>
       <a href="teacher-lesson-plans-browse.html" class="btn-add-more" id="addMoreBtn">Add Plans →</a>
     </div>
   </div>
+  <div class="status" id="libStatus" role="status" aria-live="polite"></div>
 
   <!-- Empty library state -->
   <div id="emptyLibrary" style="display:none;">
@@ -108,6 +115,7 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 <script src="nav.js?v=16"></script>
 <script src="site-auth.js?v=11"></script>
 <script src="admin-common.js?v=17"></script>
+<script src="lesson-library-ui.js?v=1"></script>
 <script>fnTrackPageview();</script>
 <script>
 let allCurricula = []; // only selected curricula
@@ -116,11 +124,24 @@ let limit = 40;
 let activeAudience = 'all';
 let activeSeries = 'all';
 
+let swapsLeft = 0;
+let busy = false;
+
+function say(text, isError) {
+  const box = document.getElementById('libStatus');
+  box.textContent = text || '';
+  box.className = 'status' + (text ? (isError ? ' err' : ' ok') : '');
+  if (text && !isError) setTimeout(function () { if (box.textContent === text) say(''); }, 6000);
+}
+
 function updateCounter() {
   const badge = document.getElementById('counterBadge');
   badge.textContent = `${totalCount} of ${limit} added`;
   badge.className = totalCount >= limit ? 'counter full' : 'counter';
-  if (totalCount >= limit) document.getElementById('addMoreBtn').style.display = 'none';
+  document.getElementById('addMoreBtn').style.display = totalCount >= limit ? 'none' : '';
+  const swapBadge = document.getElementById('swapBadge');
+  swapBadge.textContent = fnLibSwapsText(swapsLeft);
+  swapBadge.className = swapsLeft <= 0 ? 'counter full' : 'counter';
 }
 
 function renderCards(curricula) {
@@ -134,10 +155,11 @@ function renderCards(curricula) {
   empty.style.display = 'none';
   grid.innerHTML = curricula.map(c => `
     <div class="card">
-      ${c.series ? `<div class="card-series">${c.series}</div>` : ''}
-      <div class="card-title">${c.title}</div>
-      ${c.overview ? `<div class="card-desc">${c.overview}</div>` : (c.shortDescription ? `<div class="card-desc">${c.shortDescription}</div>` : '')}
+      ${c.series ? `<div class="card-series">${fnLibEsc(c.series)}</div>` : ''}
+      <div class="card-title">${fnLibEsc(c.title)}</div>
+      ${c.overview ? `<div class="card-desc">${fnLibEsc(c.overview)}</div>` : (c.shortDescription ? `<div class="card-desc">${fnLibEsc(c.shortDescription)}</div>` : '')}
       <div class="card-foot">
+        <button class="btn-swap" data-id="${c.id}">Swap or remove</button>
         <a class="btn-view" href="lesson-detail.html?id=${c.id}">View Lesson →</a>
       </div>
     </div>
@@ -148,7 +170,7 @@ function rebuildSeriesBar(curricula) {
   const uniqueSeries = [...new Set(curricula.map(c => c.series).filter(Boolean))].sort();
   document.getElementById('seriesFilterBar').innerHTML =
     `<div class="chip${activeSeries === 'all' ? ' active' : ''}" data-series="all">All Series</div>` +
-    uniqueSeries.map(s => `<div class="chip${activeSeries === s ? ' active' : ''}" data-series="${s.replace(/"/g,'&quot;')}">${s}</div>`).join('');
+    uniqueSeries.map(s => `<div class="chip${activeSeries === s ? ' active' : ''}" data-series="${fnLibEsc(s)}">${fnLibEsc(s)}</div>`).join('');
 }
 
 function applyFilters() {
@@ -182,7 +204,10 @@ async function loadPage() {
   allCurricula = (data.curricula || []).filter(c => c.selected);
   totalCount = allCurricula.length;
   limit = data.limit || 40;
+  swapsLeft = typeof data.swapsLeft === 'number' ? data.swapsLeft : 0;
   updateCounter();
+  const notice = sessionStorage.getItem('fn_lib_notice');
+  if (notice) { sessionStorage.removeItem('fn_lib_notice'); say(notice); }
 
   if (totalCount === 0) {
     document.getElementById('emptyLibrary').style.display = 'block';
@@ -213,11 +238,76 @@ document.getElementById('seriesFilterBar').addEventListener('click', function(e)
   applyFilters();
 });
 
+async function swapOrRemove(c) {
+  if (busy) return;
+  busy = true;
+  try {
+    say('');
+    if (swapsLeft <= 0) {
+      await fnLibDialog({
+        title: `Swap or remove "${c.title}"?`,
+        message: 'You have no swaps left. Contact us if you need to change your library.',
+        cancelLabel: 'Close',
+      });
+      return;
+    }
+    const choice = await fnLibDialog({
+      title: `Swap or remove "${c.title}"?`,
+      message: `Either one uses a swap, and you have ${swapsLeft} left. Lessons already assigned to your classes stay assigned.`,
+      choices: [
+        { label: 'Remove it', value: 'remove', kind: 'danger' },
+        { label: 'Replace with another lesson', value: 'swap', kind: 'primary' },
+      ],
+    });
+    if (choice === 'swap') { window.location.href = 'teacher-lesson-plans-browse.html?swap=' + c.id; return; }
+    if (choice === 'remove') await removeLesson(c);
+  } finally {
+    busy = false;
+  }
+}
+
+async function removeLesson(c) {
+  const r = await fnLibRequest('DELETE', '/api/teacher/lesson-plans/' + c.id);
+  if (r.ok) {
+    allCurricula = allCurricula.filter(x => x.id !== c.id);
+    totalCount = allCurricula.length;
+    swapsLeft = r.data.swapsLeft;
+    updateCounter();
+    if (totalCount === 0) {
+      document.getElementById('emptyLibrary').style.display = 'block';
+      document.getElementById('filtersAndGrid').style.display = 'none';
+    } else {
+      applyFilters();
+    }
+    say('Removed from your library.');
+    return;
+  }
+  if (r.status === 409 && r.data.code === 'levels_required') {
+    const saved = await fnLibChooseLevels();
+    if (saved) return removeLesson(c);
+    return;
+  }
+  if (r.status === 403 && r.data.code === 'no_swaps_left') {
+    swapsLeft = 0;
+    updateCounter();
+    say('You have no swaps left. Contact us if you need to change your library.', true);
+    return;
+  }
+  say(r.data.error || 'Could not remove that lesson plan.', true);
+}
+
+document.getElementById('cardGrid').addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-swap');
+  if (!btn) return;
+  const c = allCurricula.find(x => String(x.id) === btn.dataset.id);
+  if (c) swapOrRemove(c);
+});
+
 loadPage();
 </script>
 
 <footer></footer>
 <script src="footer.js?v=9"></script>
-<script src="help-videos.js?v=9" defer></script>
+<script src="help-videos.js?v=10" defer></script>
 </body>
 </html>

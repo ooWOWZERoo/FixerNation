@@ -20,11 +20,11 @@ const board: Storyboard = {
     fs.mkdirSync(path.dirname(CSV), { recursive: true });
     fs.writeFileSync(CSV, [
       "email,first_name,last_name,grade_level,role,department,subject_area",
-      "dev.patel@maple.example.com,Dev,Patel,4th grade,Teacher,Lower school,Math",
-      "nora.fields@maple.example.com,Nora,Fields,2nd grade,Teacher,Lower school,Reading",
-      "omar.haddad@maple.example.com,Omar,Haddad,5th grade,Teacher,Upper school,Science",
-      "alex.kim@maple.example.com,Alex,Kim,3rd grade,Teacher,Lower school,Art",
-      "quinn.avery@maple.example.com,Quinn,,1st grade,Teacher,Lower school,Music",
+      "dev.patel@maple.example.com,Dev,Patel,ES,Teacher,Lower school,Math",
+      "nora.fields@maple.example.com,Nora,Fields,ES;MS,Teacher,Lower school,Reading",
+      "omar.haddad@maple.example.com,Omar,Haddad,MS,Teacher,Upper school,Science",
+      "alex.kim@maple.example.com,Alex,Kim,ES,Teacher,Lower school,Art",
+      "quinn.avery@maple.example.com,Quinn,,ES,Teacher,Lower school,Music",
     ].join("\n") + "\n");
   },
   steps: [
@@ -45,7 +45,7 @@ const board: Storyboard = {
       run: (p) => glideTo(p, "#csvTemplateLink"),
     },
     {
-      say: "The columns are email, first name, last name, grade level, role, department, and subject area. Email, first name, and last name are required on every row, and any row missing a name is skipped.",
+      say: "The columns are email, first name, last name, grade level, role, department, and subject area. Email, first name, last name, and grade level are required on every row, and any row missing a name is skipped. For grade level, use E-S, M-S, H-S, or H-E, and put a semicolon between two or more.",
     },
     {
       say: "Keep each value free of commas, because a comma inside a cell splits it in two when the file is read. You can invite up to two hundred teachers in one upload. If you have more, split them into two files.",

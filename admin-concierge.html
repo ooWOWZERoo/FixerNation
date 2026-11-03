@@ -27,6 +27,9 @@
   .cc-field input,.cc-field select{width:100%;padding:9px 12px;border:1px solid var(--a-border);border-radius:8px;font-size:13.5px;font-family:inherit;background:var(--a-card);color:var(--a-text);}
   .cc-done-box{background:var(--a-bg);border:1px solid var(--a-border);border-radius:10px;padding:12px 14px;font-size:13.5px;}
   .cc-teacher-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .cc-teacher-row .t-grades{display:flex;gap:10px;font-size:12.5px;white-space:nowrap;flex:none;}
+  .cc-teacher-row .t-grades label{display:flex;align-items:center;gap:4px;cursor:pointer;}
+  .cc-teacher-row .t-grades input{flex:none;padding:0;width:auto;}
   .cc-teacher-row input{flex:1;padding:8px 10px;border:1px solid var(--a-border);border-radius:8px;font-size:13px;background:var(--a-card);color:var(--a-text);}
   .cc-summary{font-size:13.5px;color:var(--a-text-soft);margin-bottom:18px;}
   .cc-summary strong{color:var(--a-text);}
@@ -445,6 +448,7 @@ function addTeacherRow() {
     '<input type="text" placeholder="First name" class="t-first">' +
     '<input type="text" placeholder="Last name" class="t-last">' +
     '<input type="email" placeholder="Email" class="t-email">' +
+    '<span class="t-grades" title="Grade levels (choose one or more)"><label><input type="checkbox" value="ES">ES</label><label><input type="checkbox" value="MS">MS</label><label><input type="checkbox" value="HS">HS</label><label><input type="checkbox" value="HE">HE</label></span>' +
     '<button class="a-btn a-btn-outline a-btn-sm" onclick="document.getElementById(\'' + id + '\').remove()">✕</button>';
   wrap.appendChild(div);
 }
@@ -458,10 +462,12 @@ async function doInviteTeachers() {
       firstName: row.querySelector('.t-first').value.trim(),
       lastName: row.querySelector('.t-last').value.trim(),
       email: row.querySelector('.t-email').value.trim(),
+      gradeLevels: Array.from(row.querySelectorAll('.t-grades input:checked')).map(function (cb) { return cb.value; }),
     };
   }).filter(function (r) { return r.email; });
 
   if (!invitations.length) { showErr('Add at least one teacher with an email.'); return; }
+  if (invitations.some(function (r) { return !r.gradeLevels.length; })) { showErr('Choose at least one grade level (ES, MS, HS or HE) for every teacher.'); return; }
 
   btn.disabled = true; btn.textContent = 'Sending…';
   try {

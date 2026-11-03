@@ -29,9 +29,15 @@ const board: Storyboard = {
       },
     },
     {
-      say: "You can also add a grade level, a department, a role title, and a subject area. They're optional, but they make your lists easier to read later.",
+      say: "Choose the grade levels this teacher will teach: E-S for elementary, M-S for middle school, H-S for high school, or H-E for higher education. You can pick more than one, and at least one is required.",
       run: async (p) => {
-        await fillSlowly(p, "#invGrade", "5th grade");
+        await glideClick(p, '#invGradeLevels input[value="ES"]');
+        await glideClick(p, '#invGradeLevels input[value="MS"]');
+      },
+    },
+    {
+      say: "You can also add a department, a role title, and a subject area. They're optional, but they make your lists easier to read later.",
+      run: async (p) => {
         await fillSlowly(p, "#invSubjectArea", "Science");
       },
     },

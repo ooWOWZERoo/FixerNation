@@ -53,6 +53,17 @@ CREATE TABLE IF NOT EXISTS site_user_tokens (
   FOREIGN KEY (user_id) REFERENCES site_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Grade levels a teacher teaches (full names: Elementary School, Middle School, High School, Higher Education).
+-- Created on existing installs by scripts/alter-add-site-user-audiences.js.
+CREATE TABLE IF NOT EXISTS site_user_audiences (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  site_user_id INT UNSIGNED NOT NULL,
+  audience VARCHAR(64) NOT NULL,
+  UNIQUE KEY uniq_user_audience (site_user_id, audience),
+  INDEX idx_site_user (site_user_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------------------------------------------------------------------------
 -- Sales affiliates — see docs/AFFILIATE_PROGRAM_SPIKE.md
 --
@@ -827,7 +838,8 @@ CREATE TABLE IF NOT EXISTS school_invitations (
   last_name VARCHAR(100) NULL,
   token VARCHAR(128) NOT NULL UNIQUE,
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'opened' | 'registered' | 'expired' | 'revoked'
-  grade_level VARCHAR(64) NULL,
+  grade_level VARCHAR(64) NULL, -- older free text; new invites write a code summary such as 'ES, MS'
+  audiences VARCHAR(255) NULL, -- grade levels chosen at invite time, comma-joined full names (lib/grade-levels.js); merged into site_user_audiences on accept
   role_title VARCHAR(128) NULL,
   department VARCHAR(128) NULL,
   subject_area VARCHAR(128) NULL,
@@ -846,6 +858,30 @@ CREATE TABLE IF NOT EXISTS school_invitations (
   INDEX idx_status (status),
   FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
   FOREIGN KEY (seat_id) REFERENCES license_seats(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- A teacher's personal lesson-plan library (My Lesson Plans). Created on existing installs by
+-- scripts/alter-add-teacher-lesson-plans.js.
+CREATE TABLE IF NOT EXISTS teacher_lesson_plans (
+  site_user_id INT UNSIGNED NOT NULL,
+  curriculum_id INT UNSIGNED NOT NULL,
+  selected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (site_user_id, curriculum_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (curriculum_id) REFERENCES curricula(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One row per lesson a teacher took out of their library (or swapped for another). Swaps used = rows with voided_at NULL;
+-- an FNE admin's reset sets voided_at. Created on existing installs by scripts/alter-add-teacher-lesson-plan-swaps.js.
+CREATE TABLE IF NOT EXISTS teacher_lesson_plan_swaps (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  site_user_id INT UNSIGNED NOT NULL,
+  removed_curriculum_id INT UNSIGNED NOT NULL,
+  added_curriculum_id INT UNSIGNED NULL,
+  swapped_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  voided_at DATETIME NULL,
+  INDEX idx_user_voided (site_user_id, voided_at),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Immutable audit trail for school-admin (and, since the District-Level

@@ -122,12 +122,17 @@
           <div class="a-field">
             <label>Plans per Teacher (limit)</label>
             <input type="number" id="lessonPlanLimit" min="1" step="1" style="max-width:120px;">
-            <div class="a-note">Each licensed teacher can permanently add up to this many lesson plans to their personal library. Default is 40.</div>
+            <div class="a-note">Each licensed teacher can add up to this many lesson plans to their personal library. Default is 40.</div>
           </div>
           <div class="a-field">
             <label>Plans per Teacher — Trial (limit)</label>
             <input type="number" id="lessonPlanLimitTrial" min="1" step="1" style="max-width:120px;">
             <div class="a-note">A lower limit for teachers on a trial license. Used two ways: as the fallback for any trial purchase with no limit of its own, and to pre-fill the "Trial Library Limit" field when an admin checks "Trial?" on a license product (admin-licenses.html) — that product's own field is what actually applies once saved.</div>
+          </div>
+          <div class="a-field">
+            <label>Swaps per Teacher (limit)</label>
+            <input type="number" id="lessonPlanSwapLimit" min="0" max="100" step="1" style="max-width:120px;">
+            <div class="a-note">How many times a teacher can take a lesson out of their library, by removing it or swapping it for another. Each removal uses one swap. Set to 0 to turn removal off. Default is 3, for trial and paid teachers alike. You can give a teacher their swaps back from the Library button on the Licenses page.</div>
           </div>
           <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
         </form>
@@ -516,15 +521,18 @@ async function sendAdminInvite() {
 }
 
 async function loadLessonPlanLimit() {
-  const [r, rTrial] = await Promise.all([
+  const [r, rTrial, rSwap] = await Promise.all([
     fetch('/api/settings/teacher-lesson-plan-limit', { credentials: 'include' }),
     fetch('/api/settings/teacher-lesson-plan-limit-trial', { credentials: 'include' }),
+    fetch('/api/settings/teacher-lesson-plan-swap-limit', { credentials: 'include' }),
   ]);
   if (fnHandleUnauthorized(r)) return;
   const data = await r.json();
   document.getElementById('lessonPlanLimit').value = data.limit || 40;
   const dataTrial = await rTrial.json();
   document.getElementById('lessonPlanLimitTrial').value = dataTrial.limit || 10;
+  const dataSwap = await rSwap.json();
+  document.getElementById('lessonPlanSwapLimit').value = typeof dataSwap.limit === 'number' ? dataSwap.limit : 3;
 }
 
 document.getElementById('lessonPlanLimitForm').addEventListener('submit', async function(e) {
@@ -533,7 +541,8 @@ document.getElementById('lessonPlanLimitForm').addEventListener('submit', async 
   errorBox.textContent = '';
   const limit = parseInt(document.getElementById('lessonPlanLimit').value, 10);
   const limitTrial = parseInt(document.getElementById('lessonPlanLimitTrial').value, 10);
-  const [r, rTrial] = await Promise.all([
+  const swapLimit = parseInt(document.getElementById('lessonPlanSwapLimit').value, 10);
+  const [r, rTrial, rSwap] = await Promise.all([
     fetch('/api/settings/teacher-lesson-plan-limit', {
       method: 'PUT',
       credentials: 'include',
@@ -546,12 +555,20 @@ document.getElementById('lessonPlanLimitForm').addEventListener('submit', async 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ limit: limitTrial }),
     }),
+    fetch('/api/settings/teacher-lesson-plan-swap-limit', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit: swapLimit }),
+    }),
   ]);
   if (fnHandleUnauthorized(r)) return;
   const data = await r.json();
   const dataTrial = await rTrial.json();
+  const dataSwap = await rSwap.json();
   if (!r.ok) { errorBox.textContent = data.error || 'Could not save'; return; }
   if (!rTrial.ok) { errorBox.textContent = dataTrial.error || 'Could not save trial limit'; return; }
+  if (!rSwap.ok) { errorBox.textContent = dataSwap.error || 'Could not save swap limit'; return; }
   fnToast('Lesson plan limits saved');
 });
 
