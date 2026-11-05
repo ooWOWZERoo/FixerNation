@@ -6,10 +6,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
-const { hasActiveLicense } = require('../lib/access');
-const { communityMemberSql, isCommunityMember, hasCrmContact } = require('../lib/community-members');
+const { communityMemberSql, schoolDomainSql, hasCommunityLicense, isCommunityMember, hasCrmContact } = require('../lib/community-members');
 const { requireAuth } = require('../middleware/auth');
-const { ensureProfile } = require('../lib/social-groups');
+const { ensureProfile, addTeacherToSocialGroups } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForSocialGroup, resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { sniffFile, reencodeImageToWebp, IMAGE_KINDS } = require('../lib/upload-safety');
@@ -96,7 +95,8 @@ async function requireSocialAccess(req, res, next) {
     return res.status(403).json({ error: 'The community isn\'t available on demo accounts.' });
   }
 
-  const licensed = await hasActiveLicense(rows[0].id);
+  // A seat, or an administrator assignment, on a working license (lib/community-members.js)
+  const licensed = await hasCommunityLicense(pool, rows[0].id);
   if (!licensed) {
     return res.status(403).json({ error: 'A valid license is required to access the community.' });
   }
@@ -603,14 +603,18 @@ router.post('/messages', requireSocialAccess, async (req, res) => {
 // ── Profiles ───────────────────────────────────────────────────────────────
 
 router.get('/profile', requireSocialAccess, async (req, res) => {
+  // A person's first visit joins them to the Community groups. Teachers are joined when their seat is claimed; an administrator
+  // holds no seat, so this is where they join (only on the first visit, so leaving a group sticks).
+  const [[hadProfile]] = await pool.query('SELECT COUNT(*) AS n FROM social_profiles WHERE user_id = ?', [req.siteUser.id]);
   await ensureProfile(req.siteUser.id);
+  if (!Number(hadProfile.n)) {
+    try { await addTeacherToSocialGroups(req.siteUser.id); } catch (e) { console.error('addTeacherToSocialGroups failed:', e.message); }
+  }
   const [[user]] = await pool.query(
     `SELECT su.id, su.first_name, su.last_name, su.email,
             sp.bio, sp.bio_consent, sp.avatar_url,
             COALESCE(bgp.show_badges, 1) AS show_badges,
-            (SELECT p.school_domain FROM license_seats ls
-             JOIN purchases p ON p.id = ls.purchase_id
-             WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
+            ${schoolDomainSql('su')} AS school_domain
      FROM site_users su
      LEFT JOIN social_profiles sp ON sp.user_id = su.id
      LEFT JOIN brain_game_privacy bgp ON bgp.user_id = su.id
@@ -656,9 +660,7 @@ router.get('/profile/:userId', requireSocialAccess, async (req, res) => {
             IF(sp.bio_consent = 1, sp.bio, NULL) AS bio,
             sp.bio_consent, sp.avatar_url,
             COALESCE(bgp.show_badges, 1) AS show_badges,
-            (SELECT p.school_domain FROM license_seats ls
-             JOIN purchases p ON p.id = ls.purchase_id
-             WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
+            ${schoolDomainSql('su')} AS school_domain
      FROM site_users su
      LEFT JOIN social_profiles sp ON sp.user_id = su.id
      LEFT JOIN brain_game_privacy bgp ON bgp.user_id = su.id
@@ -687,9 +689,7 @@ router.get('/members', requireSocialAccess, async (req, res) => {
   const q = (req.query.q || '').trim();
   let sql = `SELECT su.id, su.first_name, su.last_name, sp.avatar_url, sp.bio_consent,
                     IF(sp.bio_consent = 1, su.email, NULL) AS email,
-                    (SELECT p.school_domain FROM license_seats ls
-                     JOIN purchases p ON p.id = ls.purchase_id
-                     WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
+                    ${schoolDomainSql('su')} AS school_domain
              FROM site_users su
              INNER JOIN social_profiles sp ON sp.user_id = su.id
              WHERE ${communityMemberSql('su')}`;

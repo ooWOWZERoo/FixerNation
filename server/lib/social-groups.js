@@ -51,8 +51,17 @@ async function addTeacherToSocialGroups(siteUserId) {
      LIMIT 1`,
     [siteUserId]
   );
-  if (seatRows[0] && seatRows[0].school_domain) {
-    const domain = seatRows[0].school_domain;
+  // No seat: a school license administrator joins their school's group through their assignment
+  let domain = seatRows[0] && seatRows[0].school_domain;
+  if (!seatRows[0]) {
+    const [adminRows] = await pool.query(
+      `SELECT p.school_domain FROM school_license_admins sla JOIN purchases p ON p.id = sla.purchase_id
+       WHERE sla.site_user_id = ? AND sla.is_active = 1 LIMIT 1`,
+      [siteUserId]
+    );
+    domain = adminRows[0] && adminRows[0].school_domain;
+  }
+  if (domain) {
     const schoolGroupId = await ensureGroup('school', domain, domain);
     await joinGroup(schoolGroupId, siteUserId);
   }

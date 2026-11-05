@@ -16,12 +16,19 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 111 — 2026-11-05 — School license administrators and district administrators are in Community
+
+- **Administrators can use Community.** Until now Community needed a registered teacher seat, and administrators hold none, so they could not open it and never appeared in the member list (Cheryl Herman, school license administrator and district administrator for Orleans-Niagara, was missing). A person now counts as a member if they hold a registered seat, **or** an active school license administrator assignment, **or** an active district administrator assignment (with a working license in the district), each on a license that is working now, and they have a CRM contact. Read Only administrators are included. The same rule drives the member list, group counts, direct messages and profiles.
+- **Their school shows** beside their name, and on first opening Community an administrator joins All Teachers and their school's group (only that first time, so leaving a group sticks).
+- Nothing changes for teachers. Administrators with an inactive assignment, or whose license has expired, stay out.
+- Node restart needed; no rsync, no alter script.
+
 ## Release 110 — 2026-11-05 — Community now follows the CRM; a buyer's contact can no longer be deleted by accident
 
 - **Community follows the CRM.** The member list, each group's member count, direct-message recipients, the conversation list and other members' profiles show only people who have a CRM contact (matched by email) and a license that is working right now (and are not sales-demo accounts). Community access itself also needs a CRM contact. Delete a contact and the person disappears from Community at once; before, the contact and the sign-in account were separate and the account (and its Community profile) stayed, which is why duplicate "John Shaw"s kept showing after their CRM contacts were removed. A contact that is Unsubscribed from email is still a member; unsubscribing only stops marketing mail.
 - **Safety fix:** deleting a CRM contact that has purchases or invoices is now refused, with a message saying how many and to remove or cancel them first. Before, the delete silently erased those purchases and invoices, and with them every license seat on them. The CRM page now shows that message, and its confirmation says the person will leave Community.
 - **New report:** `node scripts/report-accounts-vs-crm.js` (read-only) lists accounts with no CRM contact, everyone Community lists today and whether they stay, and names on more than one account. Run it before restarting the Node app after this release.
-- Not yet built (Release 111): closing a person's whole account when their contact is deleted, reopening, and moving an account's email when a contact's email changes. Requirements: `docs/reference/crm-record-of-truth-requirements.md`.
+- Not yet built (now Release 112): closing a person's whole account when their contact is deleted, reopening, and moving an account's email when a contact's email changes. Requirements: `docs/reference/crm-record-of-truth-requirements.md`.
 - Node restart and rsync needed (CRM page). No alter script.
 
 ## Release 109 — 2026-11-05 — A license you just bought now works if you already had an account

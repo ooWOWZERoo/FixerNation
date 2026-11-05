@@ -16,18 +16,21 @@ const db = new DatabaseSync(':memory:');
 db.exec(`
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, is_sales_demo INTEGER DEFAULT 0, session_invalidated_at TEXT);
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, name TEXT);
-CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER, license_status TEXT, expiration_date TEXT, school_domain TEXT);
+CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER, license_status TEXT, expiration_date TEXT, school_domain TEXT, school_id INTEGER);
+CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER);
+CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, purchase_id INTEGER, is_active INTEGER DEFAULT 1);
+CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, district_id INTEGER, is_active INTEGER DEFAULT 1);
 CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER);
 CREATE TABLE license_seats (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER, status TEXT, registered_site_user_id INTEGER);
 CREATE TABLE social_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER UNIQUE, avatar_url TEXT, bio TEXT, bio_consent INTEGER DEFAULT 0);
-CREATE TABLE social_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, description TEXT, is_public INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE social_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, description TEXT, school_domain TEXT, is_public INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE social_group_members (group_id INTEGER, user_id INTEGER, PRIMARY KEY (group_id, user_id));
 CREATE TABLE social_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, sender_id INTEGER, recipient_id INTEGER, content TEXT, attachments TEXT, read_at TEXT, deleted_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE social_posts (id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, author_id INTEGER, content TEXT, deleted_at TEXT);
 CREATE TABLE brain_game_privacy (user_id INTEGER, show_badges INTEGER);
 `);
 const run = async (sql, params = []) => {
-  const s = sql.trim().replace(/CURDATE\(\)/g, 'CURRENT_DATE').replace(/\bNOW\(\)/g, 'CURRENT_TIMESTAMP'); // MariaDB spellings
+  const s = sql.trim().replace(/CURDATE\(\)/g, 'CURRENT_DATE').replace(/\bNOW\(\)/g, 'CURRENT_TIMESTAMP').replace(/INSERT IGNORE INTO/gi, 'INSERT OR IGNORE INTO'); // MariaDB spellings
   if (/^SELECT/i.test(s)) return [db.prepare(s).all(...params)];
   const r = db.prepare(s).run(...params);
   return [{ insertId: Number(r.lastInsertRowid), affectedRows: Number(r.changes) }];
@@ -82,14 +85,20 @@ function person(name, o = {}) {
   const email = `${name.toLowerCase()}${n}@school.test`;
   const uid = Number(db.prepare('INSERT INTO site_users (email, first_name, last_name, is_sales_demo) VALUES (?, ?, ?, ?)').run(email, name, 'Smith', o.demo ? 1 : 0).lastInsertRowid);
   if (o.contact !== false) db.prepare('INSERT INTO newsletter_contacts (email, name) VALUES (?, ?)').run(email, name);
-  if (o.license !== false) {
+  if (o.admin) {
+    // an administrator holds no seat: a school assignment on a purchase, or a district assignment over a school with one
+    const sid = Number(db.prepare('INSERT INTO schools (domain, district_id) VALUES (?, ?)').run(`school${n}.test`, 40 + n).lastInsertRowid);
+    const pid = Number(db.prepare('INSERT INTO purchases (license_status, expiration_date, school_domain, school_id) VALUES (?, ?, ?, ?)').run(o.status || 'active', o.expires || FUTURE, `school${n}.test`, sid).lastInsertRowid);
+    if (o.admin === 'school') db.prepare('INSERT INTO school_license_admins (site_user_id, purchase_id, is_active) VALUES (?, ?, ?)').run(uid, pid, o.inactive ? 0 : 1);
+    else db.prepare('INSERT INTO district_license_admins (site_user_id, district_id, is_active) VALUES (?, ?, ?)').run(uid, 40 + n, o.inactive ? 0 : 1);
+  } else if (o.license !== false) {
     const pid = Number(db.prepare('INSERT INTO purchases (license_status, expiration_date) VALUES (?, ?)').run(o.status || 'active', o.expires || FUTURE).lastInsertRowid);
     db.prepare("INSERT INTO license_seats (purchase_id, status, registered_site_user_id) VALUES (?, 'registered', ?)").run(pid, uid);
   }
-  db.prepare('INSERT INTO social_profiles (user_id) VALUES (?)').run(uid);
+  if (o.profile !== false) db.prepare('INSERT INTO social_profiles (user_id) VALUES (?)').run(uid);
   return { uid, email };
 }
-const reset = () => { for (const t of ['site_users', 'newsletter_contacts', 'purchases', 'invoices', 'license_seats', 'social_profiles', 'social_groups', 'social_group_members', 'social_messages', 'social_posts']) db.exec(`DELETE FROM ${t}`); };
+const reset = () => { for (const t of ['site_users', 'newsletter_contacts', 'purchases', 'invoices', 'license_seats', 'social_profiles', 'social_groups', 'social_group_members', 'social_messages', 'social_posts', 'schools', 'school_license_admins', 'district_license_admins']) db.exec(`DELETE FROM ${t}`); };
 
 test('MEMBERS LIST shows only people with a CRM contact and a working license, and not demo accounts', async () => {
   reset();
@@ -178,4 +187,56 @@ test('CRM DELETE: a contact that owns nothing is deleted as before', async () =>
   assert.equal(r.status, 200);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM newsletter_contacts').get().n, 0);
   assert.equal((await call('DELETE', `/api/newsletter/contacts/${cid}`, { body: {} })).status, 404);
+});
+
+test('ADMINISTRATORS are members: a school license administrator and a district administrator, with a working license', async () => {
+  reset();
+  const me = person('Me');
+  person('SchoolAdmin', { admin: 'school' });
+  person('DistrictAdmin', { admin: 'district' });
+  const r = await call('GET', '/api/social/members', { as: me.uid });
+  assert.deepEqual(r.json.members.map((m) => m.first_name).sort(), ['DistrictAdmin', 'Me', 'SchoolAdmin']);
+  const sa = r.json.members.find((m) => m.first_name === 'SchoolAdmin');
+  assert.match(sa.school_domain, /^school\d+\.test$/, 'their school shows beside their name');
+});
+
+test('ADMINISTRATORS are not members when the assignment is inactive, the license is not working, or they have no CRM contact', async () => {
+  reset();
+  const me = person('Me');
+  person('Removed', { admin: 'school', inactive: true });
+  person('Expired', { admin: 'school', status: 'expired' });
+  person('Lapsed', { admin: 'district', expires: '2020-01-01' });
+  person('DistrictGone', { admin: 'district', inactive: true });
+  person('NoContact', { admin: 'school', contact: false });
+  const r = await call('GET', '/api/social/members', { as: me.uid });
+  assert.deepEqual(r.json.members.map((m) => m.first_name), ['Me']);
+});
+
+test('ADMINISTRATORS can open Community (no seat needed), and are refused when their license is not working', async () => {
+  reset();
+  const ok = person('Ok', { admin: 'school', profile: false });
+  const district = person('District', { admin: 'district', profile: false });
+  const expired = person('Expired', { admin: 'school', status: 'expired', profile: false });
+  assert.equal((await call('GET', '/api/social/profile', { as: ok.uid })).status, 200);
+  assert.equal((await call('GET', '/api/social/profile', { as: district.uid })).status, 200);
+  assert.equal((await call('GET', '/api/social/profile', { as: expired.uid })).status, 403);
+});
+
+test('FIRST VISIT joins an administrator to All Teachers and their school group; leaving a group then sticks', async () => {
+  reset();
+  const admin = person('Admin', { admin: 'school', profile: false });
+  const first = await call('GET', '/api/social/profile', { as: admin.uid });
+  assert.equal(first.status, 200);
+  assert.match(first.json.profile.school_domain, /^school\d+\.test$/);
+  const groups = db.prepare('SELECT g.type FROM social_group_members m JOIN social_groups g ON g.id = m.group_id WHERE m.user_id = ? ORDER BY g.type').all(admin.uid).map((g) => g.type);
+  assert.deepEqual(groups, ['all_teachers', 'school']);
+  db.prepare("DELETE FROM social_group_members WHERE user_id = ?").run(admin.uid);
+  await call('GET', '/api/social/profile', { as: admin.uid });
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM social_group_members WHERE user_id = ?').get(admin.uid).n, 0, 'a later visit does not re-join them');
+});
+
+test('DIRECT MESSAGES can go to an administrator', async () => {
+  reset();
+  const me = person('Me'), admin = person('Admin', { admin: 'school' });
+  assert.equal((await call('POST', '/api/social/messages', { as: me.uid, body: { recipientId: admin.uid, content: 'hi' } })).status, 201);
 });

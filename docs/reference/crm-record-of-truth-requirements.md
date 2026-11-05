@@ -1,6 +1,6 @@
 # The CRM as the record of who is on the platform (requirements)
 
-Written 2026-11-05. Approved by the owner the same day. Release 110 (rules A, D and F) is built; Release 111 (rules B, C and E) is not. This decides who may sign in and what deleting a CRM contact does, so the rules come first.
+Written 2026-11-05. Approved by the owner the same day. Release 110 (rules A, D and F) and Release 111 (administrators in Community, rule D1) are built; Release 112 (rules B, C and E) is not. This decides who may sign in and what deleting a CRM contact does, so the rules come first.
 
 ## What the owner asked for
 
@@ -43,6 +43,17 @@ Staff can reopen a closed account from Account Lookup. It needs a CRM contact fo
 ### D. Community follows the CRM
 
 1. Community lists (members, a group's members and counts, direct-message recipients) show only people who **have a CRM contact** (matched by email, case-insensitive) **and** currently have Community access (an open license, not a sales-demo account, not closed).
+   **Who has Community access (Release 111):** a person who holds any one of these, on a license that is working now (status not pending, expired, cancelled or suspended, and not past its expiration date):
+
+   | Person | In Community? |
+   |---|---|
+   | Teacher with a registered seat | Yes |
+   | School license administrator, active assignment (any permission level, including Read Only) | Yes |
+   | District administrator, active assignment, with at least one working license in the district | Yes |
+   | Anyone without a CRM contact, or a sales-demo account | No |
+   | Assignment made inactive, or no working license | No |
+
+   An administrator joins All Teachers and their school's group the first time they open Community (a school license administrator's school is the school of their assignment; a district administrator has no school group). Joining happens only on that first visit, so leaving a group sticks.
 2. Community access itself also needs a CRM contact. This is a second guard for contacts removed by other means (for example straight in the database).
 3. A contact that is Unsubscribed from email is still on the platform. Unsubscribing stops marketing mail; it does not remove anyone from Community.
 
@@ -66,7 +77,8 @@ Changing a contact's email also changes its account's sign-in email and any seat
 ## Release plan
 
 - **Release 110, no data risk:** rule A (a buyer's contact can no longer be deleted by accident), rule D (Community follows the CRM), rule F (the report), and the confirm-dialog text. This stops the harm and fixes the Community list.
-- **Release 111:** rules B, C and E (closing accounts, reopening, email sync). Needs an alter script (`closed_at`, `closed_reason`), a check of every sign-in path, and more tests. Held until Release 110 is verified.
+- **Release 111:** administrators in Community (rule D1). Built.
+- **Release 112:** rules B, C and E (closing accounts, reopening, email sync). Needs an alter script (`closed_at`, `closed_reason`), a check of every sign-in path, and more tests. Held until Release 110 is verified.
 
 ## Open question for the owner
 
