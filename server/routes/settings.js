@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { getSetting, setSetting } = require('../lib/settings');
+const { trimmedLogoUrl } = require('../lib/site-logo');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,7 +77,7 @@ const LOGO_PATTERN = /^(https:\/\/[^\s"'<>]+|[^\s:"'<>]+)$/;
 
 router.get('/site-logo', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=60');
-  res.json({ url: (await getSetting('website_logo_url')) || '' });
+  res.json({ url: await trimmedLogoUrl((await getSetting('website_logo_url')) || '') });
 });
 
 router.get('/website-logo', requireAuth, async (req, res) => {

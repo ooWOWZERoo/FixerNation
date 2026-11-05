@@ -14,6 +14,7 @@
       '.nav{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:14px 24px!important;flex-wrap:nowrap!important;gap:0!important;max-width:1180px!important;margin:0 auto!important;}' +
       '.brand{display:flex!important;align-items:center!important;gap:12px!important;text-decoration:none!important;flex-shrink:0!important;white-space:nowrap!important;}' +
       '.brand-logo{height:100px!important;width:auto!important;display:block!important;flex-shrink:0!important;}' +
+      '.brand-logo.fn-custom-logo{height:130px!important;max-width:240px!important;object-fit:contain!important;}' +
       '.nav-links{display:flex!important;align-items:center!important;gap:14px!important;font-size:14px!important;font-weight:600!important;color:var(--ink,#2C3B33)!important;flex:1 1 0!important;min-width:0!important;justify-content:center!important;flex-wrap:nowrap!important;}' +
       '.nav-links>a{opacity:.8!important;transition:opacity .15s!important;text-decoration:none!important;color:inherit!important;white-space:nowrap!important;flex-shrink:0!important;}' +
       '.nav-links>a:hover,.nav-links>a.active{opacity:1!important;color:var(--coral-dark,#D9502F)!important;}' +
@@ -35,7 +36,7 @@
       '.fn-nav-menu-right{left:auto!important;right:0!important;}' +
       '.fn-nav-login{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:9px 18px!important;border-radius:999px!important;font-weight:700!important;font-size:14px!important;font-family:\'Plus Jakarta Sans\',sans-serif!important;background:rgba(14,55,51,0.08)!important;color:var(--teal-dark,#0E3733)!important;border:none!important;cursor:pointer!important;white-space:nowrap!important;transition:background .15s!important;}' +
       '.fn-nav-login:hover,.fn-nav-login.active{background:rgba(14,55,51,0.14)!important;color:var(--teal-dark,#0E3733)!important;}' +
-      '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}}' +
+      '@media(max-width:899px){.nav-links{display:none!important;}.nav{padding:12px 16px!important;}.brand-logo.fn-custom-logo{height:84px!important;max-width:160px!important;}}' +
       '.fn-user-authed .fn-login-dd{display:none!important;}' +
       '.fn-user-authed .fn-mm-login-group{display:none!important;}' +
       '.fn-nav-toggle{display:none!important;align-items:center!important;justify-content:center!important;width:38px!important;height:38px!important;border-radius:10px!important;border:none!important;background:none!important;padding:0!important;cursor:pointer!important;color:var(--teal-dark,#0E3733)!important;flex-shrink:0!important;}' +
@@ -192,13 +193,19 @@
   function applySiteLogo(selector) {
     var imgs = document.querySelectorAll(selector);
     if (!imgs.length) return;
-    function show(u) { for (var i = 0; i < imgs.length; i++) if (imgs[i].getAttribute('src') !== u) imgs[i].setAttribute('src', u); }
-    try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached); } catch (e) { /* storage blocked */ }
+    // A custom logo is a different shape from the built-in one, so it gets its own (larger) size class.
+    function show(u, custom) {
+      for (var i = 0; i < imgs.length; i++) {
+        if (imgs[i].getAttribute('src') !== u) imgs[i].setAttribute('src', u);
+        imgs[i].classList.toggle('fn-custom-logo', !!custom);
+      }
+    }
+    try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached, true); } catch (e) { /* storage blocked */ }
     window.__fnSiteLogo = window.__fnSiteLogo || fetch('/api/settings/site-logo').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
     window.__fnSiteLogo.then(function (d) {
       var u = (d && d.url) || '';
       try { if (u) localStorage.setItem('fn_site_logo', u); else localStorage.removeItem('fn_site_logo'); } catch (e) { /* storage blocked */ }
-      show(u || 'logo-fne.png?v=2');
+      show(u || 'logo-fne.png?v=2', !!u);
     });
   }
 

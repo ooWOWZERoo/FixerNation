@@ -94,3 +94,32 @@ test('only an FNE admin can read the admin view or change the logo', async () =>
   assert.equal((await call('GET', 'website-logo', undefined, false)).status, 401);
   assert.equal((await call('PUT', 'website-logo', { logoUrl: '/uploads/x.png' }, false)).status, 401);
 });
+
+// The public endpoint serves a copy with the blank margin trimmed, so a stacked logo on a big white canvas is not tiny.
+const fs = require('node:fs');
+const os = require('node:os');
+const sharp = require('sharp');
+const { trimmedLogoUrl } = require(path.join(SERVER, 'lib/site-logo.js'));
+
+test('a logo on a big blank canvas is trimmed to its content; the original stays', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fne-logo-'));
+  process.env.UPLOADS_DIR = dir; process.env.UPLOADS_URL_PREFIX = '/uploads/';
+  const mark = await sharp({ create: { width: 100, height: 80, channels: 3, background: { r: 10, g: 80, b: 180 } } }).png().toBuffer();
+  await sharp({ create: { width: 600, height: 400, channels: 3, background: '#ffffff' } })
+    .composite([{ input: mark, left: 250, top: 160 }]).png().toFile(path.join(dir, 'big.png'));
+  const url = await trimmedLogoUrl('/uploads/big.png');
+  assert.equal(url, '/uploads/site-logo-big.png');
+  const meta = await sharp(path.join(dir, 'site-logo-big.png')).metadata();
+  assert.deepEqual([meta.width, meta.height], [100, 80]);
+  assert.equal((await sharp(path.join(dir, 'big.png')).metadata()).width, 600);
+  assert.equal(await trimmedLogoUrl('/uploads/big.png'), url); // second call reuses it
+  assert.equal(await trimmedLogoUrl('uploads/big.png'), url);  // path without the leading slash
+});
+
+test('addresses it cannot or should not touch come back unchanged', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fne-logo-'));
+  process.env.UPLOADS_DIR = dir; process.env.UPLOADS_URL_PREFIX = '/uploads/';
+  for (const u of ['https://example.com/a.png', '/uploads/missing.png', '/uploads/../secret.png', '/uploads/sub/a.png', 'logo-fne.png', '', '/uploads/.hidden.png']) {
+    assert.equal(await trimmedLogoUrl(u), u, JSON.stringify(u));
+  }
+});

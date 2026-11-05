@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 117 — 2026-11-05 — A custom website logo is large enough to read
+
+- **The header and footer logo is much bigger when a custom logo is set** (header 130 px tall, footer 130 px, down to 84 px on phones; was 100 px and 56 px). The built-in logo keeps its old size.
+- **Blank margin is trimmed automatically.** A logo saved on a big white canvas (like the stacked scales mark) used to print its lettering about 10 px tall. The site now serves a trimmed copy (`site-logo-<name>.png` next to the original in uploads, capped at 480 px high); the original upload is never changed. No re-save needed.
+- **Deploy order:** pull, rsync (all public pages), restart Node. No script.
+
 ## Release 116 — 2026-11-05 — The website logo is set from the admin settings page
 
 - **New Website Logo card** on FNE Admin → Settings. Upload an image, or paste a file name or https address. Leave it empty and the site keeps the built-in Fixer Nation logo.

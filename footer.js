@@ -11,6 +11,7 @@
       '.fn-flogo{display:flex;align-items:center;gap:12px;text-decoration:none;}',
       '.fn-flogo-pill{background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;flex-shrink:0;}',
       '.fn-flogo-img{height:56px;width:auto;display:block;}',
+      '.fn-flogo-img.fn-custom-logo{height:130px;max-width:260px;object-fit:contain;}',
       '.fn-fcredo{font-family:\'Fraunces\',serif;font-style:italic;color:#F6D9C3;margin-top:16px;font-size:15px;max-width:280px;line-height:1.55;}',
       '.fn-fsocial{display:flex;gap:10px;margin-top:20px;}',
       '.fn-fsocial a{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}',
@@ -35,13 +36,19 @@
   function applySiteLogo(selector) {
     var imgs = document.querySelectorAll(selector);
     if (!imgs.length) return;
-    function show(u) { for (var i = 0; i < imgs.length; i++) if (imgs[i].getAttribute('src') !== u) imgs[i].setAttribute('src', u); }
-    try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached); } catch (e) { /* storage blocked */ }
+    // A custom logo is a different shape from the built-in one, so it gets its own (larger) size class.
+    function show(u, custom) {
+      for (var i = 0; i < imgs.length; i++) {
+        if (imgs[i].getAttribute('src') !== u) imgs[i].setAttribute('src', u);
+        imgs[i].classList.toggle('fn-custom-logo', !!custom);
+      }
+    }
+    try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached, true); } catch (e) { /* storage blocked */ }
     window.__fnSiteLogo = window.__fnSiteLogo || fetch('/api/settings/site-logo').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
     window.__fnSiteLogo.then(function (d) {
       var u = (d && d.url) || '';
       try { if (u) localStorage.setItem('fn_site_logo', u); else localStorage.removeItem('fn_site_logo'); } catch (e) { /* storage blocked */ }
-      show(u || 'logo-fne.png?v=2');
+      show(u || 'logo-fne.png?v=2', !!u);
     });
   }
 
