@@ -161,3 +161,14 @@ test('favicon: with a website logo it serves a square PNG made from it, at the s
   await call('PUT', 'website-logo', { logoUrl: 'https://example.com/x.png' });
   assert.equal((await raw('/api/settings/favicon?size=16')).status, 302);
 });
+
+// Sign-in and one-card pages have no shared header, so each marks its logo and loads site-logo.js.
+test('the sign-in pages show the website logo (marked image + shared script, no hard-coded logo left)', () => {
+  const root = path.join(SERVER, '..');
+  const pages = 'admin-login district-admin-login parent-login school-admin-login student-login teacher-login reset-password parent-invite-accept school-invite-accept admin-accept-invite microsoft-confirm accept-quote'.split(' ');
+  for (const p of pages) {
+    const html = fs.readFileSync(path.join(root, p + '.html'), 'utf8');
+    assert.match(html, /<img src="logo-fne\.png\?v=2" alt="Fixer Nation Education" data-site-logo>/, p);
+    assert.match(html, /<script src="site-logo\.js\?v=1"><\/script>\s*<\/body>/, p);
+  }
+});
