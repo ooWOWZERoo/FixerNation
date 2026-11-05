@@ -3,6 +3,14 @@
  */
 (function () {
   'use strict';
+  // Error capture (Release 122): load the shared reporter once per page.
+  if (!window.__fnErrorCapture && !document.querySelector('script[src^="error-capture.js"]')) {
+    var ec = document.createElement('script');
+    ec.src = 'error-capture.js?v=1';
+    ec.async = true;
+    document.head.appendChild(ec);
+  }
+
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
   if (!document.getElementById('fn-nav-css-v13')) {

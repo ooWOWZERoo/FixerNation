@@ -16,6 +16,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 122 — 2026-11-05 — Error capture: staff can see what broke, in the browser
+
+- **New Errors tab on the Support Inbox** (no new menu item). It lists what went wrong, grouped by kind and place with how many times and how many different browsers, for the last 24 hours, 7 days or 30 days, with a Clear button for a fixed problem. The tab shows a 24-hour count.
+- **Five kinds are captured:** a page script error, an async failure nobody handled, a failed call to our own API (no answer, or a 500 or above; a normal 400, 401, 403 or 404 is not counted), a server crash, and a **failed email** (the subject and the recipient's domain only, plus the mail server's error text). That last one is how a missing test email shows up without reading a log.
+- **Every support request shows errors from that person or browser** in the 7 days before it (matched by signed-in account, or by the anonymous browser id the Get help form now sends).
+- **Privacy:** no IP addresses; no query strings or `#` fragments (tokens live there); no request or response bodies, cookies or form values; no full email addresses (any email or token-like text in a message is replaced); a **student's browser reports with no account, classroom or name**. Reports are kept 30 days and deleted automatically. Browsers can only write their own three kinds, and who is reporting comes from cookies, never from the report.
+- **How it loads:** `error-capture.js` is loaded by `nav.js`, the three admin-area nav scripts and the five student pages (so `nav.js` is v20, `admin-nav.js` v29, `school-admin-nav.js` v23, `district-admin-nav.js` v9).
+- **Deploy order matters:** pull, rsync (all pages), run `alter-create-client-errors.js` (new `client_errors` table and `support_requests.client_session_id`), THEN restart Node.
+- Requirements and access matrix: `docs/reference/error-capture-requirements.md`.
+
 ## Release 121 — 2026-11-05 — Support console: fix a person's problem from Account Lookup, and student names hide when idle
 
 - **Account Lookup gets the support tools in one place.** On the account: Send password reset email, **Show reset link** (a one-time link for 1 hour that staff copy and give to the person, so nobody has to wait for an email; finishing it also verifies the email; not offered for staff accounts), Sign out everywhere, Resend verification email, and Resend welcome beside a pending school or district admin assignment. A **Timeline** lists what has happened to the person, newest first.

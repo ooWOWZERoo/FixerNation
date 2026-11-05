@@ -97,6 +97,8 @@ router.post('/', ipLimit, emailLimit, async (req, res) => {
     userAgent: cleanText(req.headers['user-agent'], LIMITS.userAgent),
     siteUserId: user ? user.id : null,
     context,
+    // The browser's anonymous analytics session id, so staff can see that browser's recent errors next to the request.
+    clientSessionId: typeof body.sessionId === 'string' && /^[a-zA-Z0-9-]{8,64}$/.test(body.sessionId) ? body.sessionId : null,
   });
 
   await tellStaff({

@@ -70,7 +70,7 @@ async function addMessage(requestId, { authorType, adminId = null, visibility = 
 }
 
 // Creates the request and its first message. `who` is already checked: name and email come from the account when signed in.
-async function createRequest({ who, category, subject, message, pageUrl, userAgent, siteUserId, context }) {
+async function createRequest({ who, category, subject, message, pageUrl, userAgent, siteUserId, context, clientSessionId }) {
   let ref;
   let requestId;
   for (let attempt = 0; attempt < 5 && !requestId; attempt++) {
@@ -78,10 +78,10 @@ async function createRequest({ who, category, subject, message, pageUrl, userAge
     try {
       const [r] = await pool.query(
         `INSERT INTO support_requests
-           (ref, status, category, subject, requester_name, requester_email, site_user_id, roles, school_domain, district_id, page_url, user_agent)
-         VALUES (?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (ref, status, category, subject, requester_name, requester_email, site_user_id, roles, school_domain, district_id, page_url, user_agent, client_session_id)
+         VALUES (?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [ref, category, subject, who.name, who.email, siteUserId || null, context ? context.roles : null,
-         context ? context.schoolDomain : null, context ? context.districtId : null, pageUrl || null, userAgent || null]
+         context ? context.schoolDomain : null, context ? context.districtId : null, pageUrl || null, userAgent || null, clientSessionId || null]
       );
       requestId = r.insertId;
     } catch (err) {

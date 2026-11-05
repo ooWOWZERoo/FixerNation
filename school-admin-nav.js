@@ -2,6 +2,14 @@
    Every portal page has <aside class="sa-sidebar"></aside>
    followed by <script src="school-admin-nav.js?v=2"></script>. */
 (function () {
+  // Error capture (Release 122): load the shared reporter once per page.
+  if (!window.__fnErrorCapture && !document.querySelector('script[src^="error-capture.js"]')) {
+    var ec = document.createElement('script');
+    ec.src = 'error-capture.js?v=1';
+    ec.async = true;
+    document.head.appendChild(ec);
+  }
+
   var aside = document.querySelector('.sa-sidebar');
   if (!aside) return;
 

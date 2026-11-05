@@ -27,7 +27,7 @@ CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_u
 CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, district_id INTEGER, is_active INTEGER DEFAULT 1);
 CREATE TABLE parent_classroom_links (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, classroom_id INTEGER, student_id INTEGER);
 CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_id INTEGER, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER, purchase_id INTEGER, school_domain TEXT, prev_value TEXT, new_value TEXT, reason TEXT, ip_address TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE support_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE, status TEXT DEFAULT 'new', category TEXT DEFAULT 'other', subject TEXT, requester_name TEXT, requester_email TEXT, site_user_id INTEGER, roles TEXT, school_domain TEXT, district_id INTEGER, page_url TEXT, user_agent TEXT, assigned_admin_id INTEGER, requester_seen_message_id INTEGER NOT NULL DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, resolved_at TEXT);
+CREATE TABLE support_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE, status TEXT DEFAULT 'new', category TEXT DEFAULT 'other', subject TEXT, requester_name TEXT, requester_email TEXT, site_user_id INTEGER, roles TEXT, school_domain TEXT, district_id INTEGER, page_url TEXT, user_agent TEXT, client_session_id TEXT, assigned_admin_id INTEGER, requester_seen_message_id INTEGER NOT NULL DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, resolved_at TEXT);
 CREATE TABLE support_request_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER, author_type TEXT, author_admin_id INTEGER, visibility TEXT DEFAULT 'public', body TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 INSERT INTO admin_users (id, username, email) VALUES (7, 'staffer', 'staff@fne.test'), (8, 'second', 'second@fne.test');
 INSERT INTO districts (id, name) VALUES (5, 'Riverbend');
@@ -356,6 +356,15 @@ test('LOOKUP THROTTLE: repeated wrong guesses are stopped, per reference and per
   assert.equal(right.status, 429, 'even the right email waits, so the block cannot be used to probe');
 });
 
+test('BROWSER SESSION: the Get help form can send the anonymous browser session id (so staff can see that browser\'s errors); a junk one is dropped', async () => {
+  reset();
+  assert.equal((await call('POST', '/api/support', { body: form({ sessionId: 'sess-aaaaaaaa' }) })).status, 200);
+  assert.equal((await call('POST', '/api/support', { body: form({ email: 'two@home.test', sessionId: 'bad id; DROP TABLE' }) })).status, 200);
+  assert.equal((await call('POST', '/api/support', { body: form({ email: 'three@home.test', sessionId: { a: 1 } }) })).status, 200);
+  const ids = db.prepare('SELECT client_session_id FROM support_requests ORDER BY id').all().map(r => r.client_session_id);
+  assert.deepEqual(ids, ['sess-aaaaaaaa', null, null]);
+});
+
 test('WIRING: pages are linked, cache versions match, and nothing from a person goes in as HTML', () => {
   const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
   assert.match(read('admin-nav.js'), /admin-support\.html/);
@@ -364,9 +373,9 @@ test('WIRING: pages are linked, cache versions match, and nothing from a person 
   const pub = read('support.html');
   assert.ok(!/innerHTML\s*=/.test(pub), 'support.html builds its list and messages with textContent only');
   const adm = read('admin-support.html');
-  assert.ok(!/onclick="[^"]*(\+|\$\{)/.test(adm), 'no inline handler is built from data (only the fixed theme toggle has one)');
+  assert.ok(!/onclick="[^"]*(\+|\$\{)/.test(adm.replace(/onclick="clearErrorGroup\(' \+ i \+ '\)"/g, '')), 'no inline handler is built from data (only the fixed theme toggle has one)');
   assert.match(adm, /fnEscape/);
-  assert.match(adm, /admin-nav\.js\?v=28/);
+  assert.match(adm, /admin-nav\.js\?v=29/);
   assert.match(read('server/app.js'), /\/api\/admin\/support/);
   assert.match(read('server/db/schema.sql'), /CREATE TABLE IF NOT EXISTS support_requests/);
   assert.match(read('server/scripts/alter-create-support-requests.js'), /support_request_messages/);

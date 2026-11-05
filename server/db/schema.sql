@@ -1511,6 +1511,7 @@ CREATE TABLE IF NOT EXISTS support_requests (
   page_url VARCHAR(500) NULL, -- sent by the browser; untrusted text
   user_agent VARCHAR(300) NULL, -- sent by the browser; untrusted text
   assigned_admin_id INT UNSIGNED NULL,
+  client_session_id VARCHAR(64) NULL, -- added by scripts/alter-create-client-errors.js on existing installs; the visitor's anonymous browser session id, so staff can see that browser's recent errors
   requester_seen_message_id INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-support-seen-marker.js on existing installs; the newest staff reply the person has opened (drives the New reply tag)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -1533,4 +1534,31 @@ CREATE TABLE IF NOT EXISTS support_request_messages (
   INDEX idx_request (request_id, created_at),
   FOREIGN KEY (request_id) REFERENCES support_requests(id) ON DELETE CASCADE,
   FOREIGN KEY (author_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Error capture (Release 122): browser errors, failed API calls, server errors and failed emails, with no IP, no query strings and no
+-- student identifiers. Added to existing installs by scripts/alter-create-client-errors.js. Requirements:
+-- docs/reference/error-capture-requirements.md. Rows older than 30 days are deleted when a new report arrives (lib/client-errors.js).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS client_errors (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  kind VARCHAR(24) NOT NULL, -- 'js_error' | 'promise_rejection' | 'failed_request' | 'server_error' | 'email_failed'
+  page_path VARCHAR(200) NOT NULL DEFAULT '', -- the page, path only
+  api_path VARCHAR(200) NOT NULL DEFAULT '', -- the API route with numbers and tokens replaced
+  method VARCHAR(8) NOT NULL DEFAULT '',
+  http_status SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  message VARCHAR(300) NOT NULL DEFAULT '', -- emails and token-like text removed
+  source VARCHAR(200) NOT NULL DEFAULT '', -- script file:line, or for email_failed the recipient's domain and the subject
+  user_kind VARCHAR(12) NOT NULL DEFAULT 'visitor', -- 'visitor' | 'signed_in' | 'student' | 'admin' | 'server'
+  site_user_id INT UNSIGNED NULL, -- only for 'signed_in'; never kept for a student
+  client_session_id VARCHAR(64) NOT NULL DEFAULT '', -- the anonymous analytics session id from the visitor's own sessionStorage
+  user_agent VARCHAR(300) NOT NULL DEFAULT '',
+  occurrences INT UNSIGNED NOT NULL DEFAULT 1,
+  first_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_last_seen (last_seen),
+  INDEX idx_kind (kind, last_seen),
+  INDEX idx_user (site_user_id, last_seen),
+  INDEX idx_session (client_session_id, last_seen)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

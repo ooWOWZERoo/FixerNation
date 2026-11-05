@@ -15,7 +15,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=28"></script>
+<script src="admin-nav.js?v=29"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -25,6 +25,32 @@
     </div>
 
     <div class="a-content">
+
+      <div style="display:flex; gap:8px; margin-bottom:18px;">
+        <button type="button" class="a-btn a-btn-primary" id="tabRequests">Requests</button>
+        <button type="button" class="a-btn a-btn-outline" id="tabErrors">Errors <span id="errCount24" class="a-pill a-pill-neutral" style="display:none;"></span></button>
+      </div>
+
+      <div class="a-card" id="errorsCard" style="display:none;">
+        <div class="a-card-head"><h2>Errors</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          What broke in people's browsers, in our API calls, on the server and in outgoing email. Grouped by what and where, with how many
+          times and how many different browsers. No IP addresses, no query strings and no student names are kept. Clear a group once it is fixed.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <select id="eHours" class="a-filter-select">
+            <option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option>
+          </select>
+          <select id="eKind" class="a-filter-select"><option value="">Every kind</option></select>
+        </div>
+        <table class="a-table" id="errorsTable">
+          <thead><tr><th>Kind</th><th>Where</th><th>What</th><th>Times</th><th>Last seen</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="errorsEmpty" class="a-empty" style="display:none;">Nothing recorded in this period.</div>
+      </div>
+
+      <div id="requestsArea">
 
       <div class="a-card">
         <div class="a-card-head"><h2>Requests</h2></div>
@@ -55,6 +81,7 @@
       <div class="a-card" id="detailCard" style="display:none; margin-top:24px;">
         <div class="a-card-head"><h2 id="dSubject"></h2></div>
         <div id="dFacts" style="margin-bottom:14px; font-size:14px; line-height:1.7;"></div>
+        <div id="dErrors" class="a-note" style="margin:0 0 14px;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
           <label>Status <select id="dStatus" class="a-filter-select">
             <option value="new">New</option><option value="open">Open</option>
@@ -75,6 +102,8 @@
           </div>
           <div class="a-note" style="margin-top:8px;">A reply shows on their Get help page. Signed-in people see a New reply tag. Everyone else looks it up with their reference and email. An internal note is seen by staff only.</div>
         </div>
+      </div>
+
       </div>
 
     </div>
@@ -148,6 +177,7 @@ async function openRequest(id) {
   document.getElementById('dStatus').value = r.status;
   document.getElementById('dAssign').value = r.assigned_admin_id ? String(r.assigned_admin_id) : '';
   document.getElementById('dLookup').href = 'admin-account-lookup.html?email=' + encodeURIComponent(r.requester_email);
+  loadRequestErrors(id);
   document.getElementById('dMessages').innerHTML = d.messages.map(m => {
     const who = m.author_type === 'staff' ? (m.admin_name || 'Staff') + (m.visibility === 'internal' ? ' (internal note)' : ' (reply)') : esc(r.requester_name);
     const bg = m.visibility === 'internal' ? 'background:#FFF4D6;' : m.author_type === 'staff' ? 'background:rgba(22,79,74,0.10);' : 'background:rgba(127,127,127,0.10);';
@@ -180,6 +210,87 @@ document.getElementById('sendNote').addEventListener('click', () => postMessage(
 ['fStatus', 'fCategory'].forEach(id => document.getElementById(id).addEventListener('change', loadList));
 let qTimer;
 document.getElementById('fQuery').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(loadList, 300); });
+
+
+// ---- Errors tab ----
+const KIND_LABEL = { js_error: 'Page script', promise_rejection: 'Page (async)', failed_request: 'Failed request', server_error: 'Server', email_failed: 'Email' };
+let errorGroups = [];
+
+function showTab(which) {
+  const errors = which === 'errors';
+  document.getElementById('errorsCard').style.display = errors ? 'block' : 'none';
+  document.getElementById('requestsArea').style.display = errors ? 'none' : 'block';
+  document.getElementById('tabRequests').className = 'a-btn ' + (errors ? 'a-btn-outline' : 'a-btn-primary');
+  document.getElementById('tabErrors').className = 'a-btn ' + (errors ? 'a-btn-primary' : 'a-btn-outline');
+  if (errors) loadErrors();
+}
+document.getElementById('tabRequests').addEventListener('click', function () { showTab('requests'); });
+document.getElementById('tabErrors').addEventListener('click', function () { showTab('errors'); });
+
+async function errApi(path, opts) {
+  const r = await fetch('/api/admin/client-errors' + path, Object.assign({ credentials: 'include' }, opts || {}));
+  if (fnHandleUnauthorized(r)) return null;
+  const j = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(j.error || 'Something went wrong'); return null; }
+  return j;
+}
+
+function whereText(g) {
+  if (g.kind === 'email_failed') return g.source;
+  if (g.api_path) return (g.method ? g.method + ' ' : '') + g.api_path + (g.page_path ? ' (from ' + g.page_path + ')' : '');
+  return (g.page_path || '') + (g.source ? ' · ' + g.source : '');
+}
+
+async function loadErrors() {
+  const qs = new URLSearchParams({ hours: document.getElementById('eHours').value });
+  if (document.getElementById('eKind').value) qs.set('kind', document.getElementById('eKind').value);
+  const d = await errApi('?' + qs.toString());
+  if (!d) return;
+  const sel = document.getElementById('eKind');
+  if (sel.options.length === 1) d.kinds.forEach(function (k) { const o = document.createElement('option'); o.value = k; o.textContent = KIND_LABEL[k] || k; sel.appendChild(o); });
+  const badge = document.getElementById('errCount24');
+  badge.textContent = String(d.last24Hours); badge.style.display = d.last24Hours ? 'inline-block' : 'none';
+  errorGroups = d.groups;
+  document.querySelector('#errorsTable tbody').innerHTML = d.groups.map(function (g, i) {
+    return '<tr><td>' + esc(KIND_LABEL[g.kind] || g.kind) + '</td><td style="word-break:break-all;">' + esc(whereText(g)) + '</td><td>' + esc(g.message) + (g.http_status ? ' <span class="a-pill a-pill-danger">' + esc(g.http_status) + '</span>' : '') + '</td>' +
+      '<td>' + esc(g.total) + (g.browsers ? '<br><span style="font-size:12px; opacity:.7;">' + esc(g.browsers) + ' browser' + (g.browsers === 1 ? '' : 's') + '</span>' : '') + '</td>' +
+      '<td style="white-space:nowrap;">' + esc(fmt(g.last_seen)) + '</td>' +
+      '<td><button class="a-btn a-btn-outline a-btn-sm" onclick="clearErrorGroup(' + i + ')">Clear</button></td></tr>';
+  }).join('');
+  document.getElementById('errorsEmpty').style.display = d.groups.length ? 'none' : 'block';
+}
+document.getElementById('eHours').addEventListener('change', loadErrors);
+document.getElementById('eKind').addEventListener('change', loadErrors);
+
+async function clearErrorGroup(i) {
+  const g = errorGroups[i];
+  if (!g || !confirm('Clear this group of errors? Do this once it is fixed.')) return;
+  const d = await errApi('/clear', send('POST', { kind: g.kind, page_path: g.page_path, api_path: g.api_path, method: g.method, http_status: g.http_status, message: g.message, source: g.source }));
+  if (d) { fnToast('Cleared'); loadErrors(); }
+}
+
+// the 24-hour count on the tab, without opening it
+errApi('?hours=24').then(function (d) { if (d && d.last24Hours) { const b = document.getElementById('errCount24'); b.textContent = String(d.last24Hours); b.style.display = 'inline-block'; } });
+
+// on a request: errors from the same signed-in person or browser in the 7 days before it
+async function loadRequestErrors(id) {
+  const box = document.getElementById('dErrors');
+  box.textContent = '';
+  const d = await errApi('/for-request/' + id);
+  if (!d) return;
+  const head = document.createElement('div');
+  head.style.fontWeight = '700';
+  head.textContent = 'Errors from this person or browser, in the 7 days before this request';
+  box.appendChild(head);
+  if (!d.matchedBy.account && !d.matchedBy.browser) { box.appendChild(document.createTextNode('This request has no account or browser to match against (they were not signed in and the browser id was not sent).')); return; }
+  if (!d.errors.length) { box.appendChild(document.createTextNode('None found.')); return; }
+  d.errors.forEach(function (e) {
+    const line = document.createElement('div');
+    line.style.cssText = 'font-size:13px; margin-top:4px; word-break:break-all;';
+    line.textContent = fmt(e.last_seen) + ' · ' + (KIND_LABEL[e.kind] || e.kind) + ' · ' + whereText(e) + ' · ' + e.message + (e.occurrences > 1 ? ' (x' + e.occurrences + ')' : '');
+    box.appendChild(line);
+  });
+}
 
 loadAdmins();
 loadList();

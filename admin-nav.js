@@ -3,6 +3,14 @@
    followed immediately by <script src="admin-nav.js?v=26"></script>.
    This script populates it synchronously and marks the active link. */
 (function () {
+  // Error capture (Release 122): load the shared reporter once per page.
+  if (!window.__fnErrorCapture && !document.querySelector('script[src^="error-capture.js"]')) {
+    var ec = document.createElement('script');
+    ec.src = 'error-capture.js?v=1';
+    ec.async = true;
+    document.head.appendChild(ec);
+  }
+
   var aside = document.querySelector('.a-sidebar');
   if (!aside) return;
 

@@ -207,7 +207,8 @@
     post('/api/support', {
       name: $('helpName').value, email: typedEmail, category: $('helpCategory').value,
       subject: $('helpSubject').value, message: $('helpMessage').value, website: $('helpWebsite').value,
-      pageUrl: document.referrer || ''
+      pageUrl: document.referrer || '',
+      sessionId: (typeof fnAnalyticsSessionId === 'function') ? fnAnalyticsSessionId() : ''
     }).then(function (res) {
       $('helpSend').disabled = false;
       if (!res.ok) { err.textContent = res.status === 429 ? 'Too many tries. Please wait a few minutes and try again.' : (res.j.error || "That didn't go through. Check the form and try again."); err.style.display = 'block'; return; }
@@ -354,7 +355,7 @@
 </div>
 
 <script src="referral.js?v=1"></script>
-<script src="nav.js?v=19"></script>
+<script src="nav.js?v=20"></script>
 <script src="site-auth.js?v=11"></script>
 <script src="cart.js"></script>
 

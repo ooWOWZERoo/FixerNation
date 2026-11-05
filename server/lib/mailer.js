@@ -13,6 +13,15 @@ function getTransporter() {
     secure: process.env.SMTP_SECURE === 'true',
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
   });
+  // Every send goes through this one transport, so a refused or failed send is recorded here once (subject and the recipient's domain
+  // only; see lib/client-errors.js) and still thrown to the caller exactly as before.
+  const rawSend = transporter.sendMail.bind(transporter);
+  transporter.sendMail = async (mail) => {
+    try { return await rawSend(mail); } catch (err) {
+      require('./client-errors').recordEmailFailure(mail, err).catch(() => {});
+      throw err;
+    }
+  };
   return transporter;
 }
 

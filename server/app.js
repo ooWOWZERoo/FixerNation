@@ -20,6 +20,9 @@ const contactRoutes = require('./routes/contact');
 const supportRoutes = require('./routes/support');
 const adminSupportRoutes = require('./routes/admin-support');
 const adminSupportConsoleRoutes = require('./routes/admin-support-console');
+const clientErrorRoutes = require('./routes/client-errors');
+const adminClientErrorRoutes = require('./routes/admin-client-errors');
+const { recordServerError } = require('./lib/client-errors');
 const dashboardRoutes = require('./routes/dashboard');
 const analyticsRoutes = require('./routes/analytics');
 const settingsRoutes = require('./routes/settings');
@@ -112,6 +115,8 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/admin/support-console', adminSupportConsoleRoutes);
+app.use('/api/client-errors', clientErrorRoutes);
+app.use('/api/admin/client-errors', adminClientErrorRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
@@ -161,6 +166,7 @@ if (process.env.SERVE_STATIC === 'true') {
 
 app.use((err, req, res, next) => {
   console.error(err);
+  recordServerError(req, err); // so staff can see it in the Support Inbox (Errors tab); never throws
   res.status(500).json({ error: 'Internal server error' });
 });
 
