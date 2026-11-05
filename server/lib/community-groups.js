@@ -2,7 +2,9 @@
 // A person belongs to the school with domain D when they hold a registered seat on a purchase for D, or an active school
 // license administrator assignment on a purchase for D, or an active district administrator assignment for the district that
 // contains the school D. Plain portable SQL (EXISTS, LOWER) so it runs on MariaDB and in the node:sqlite tests.
-const pool = require('../db/pool');
+// The pool is loaded only when a caller does not pass its own connection, so a report script that only wants the SQL fragment
+// does not open one.
+const defaultPool = () => require('../db/pool');
 
 // SQL: this site_users row (userAlias) belongs to the school whose domain is the SQL expression domainExpr.
 function belongsToSchoolSql(userAlias, domainExpr) {
@@ -21,7 +23,7 @@ async function belongsToSchool(db, siteUserId, domain) {
 }
 
 // Everyone sitting in a school group who does not belong to that school: [{ groupId, schoolDomain, userId, email, name }].
-async function findStrangersInSchoolGroups(db = pool) {
+async function findStrangersInSchoolGroups(db = defaultPool()) {
   const [rows] = await db.query(
     `SELECT g.id AS group_id, g.school_domain, su.id AS user_id, su.email, su.first_name, su.last_name
      FROM social_groups g
@@ -33,7 +35,7 @@ async function findStrangersInSchoolGroups(db = pool) {
   return rows.map((r) => ({ groupId: r.group_id, schoolDomain: r.school_domain, userId: r.user_id, email: r.email, name: [r.first_name, r.last_name].filter(Boolean).join(' ') }));
 }
 
-async function removeStrangersFromSchoolGroups(db = pool) {
+async function removeStrangersFromSchoolGroups(db = defaultPool()) {
   const strangers = await findStrangersInSchoolGroups(db);
   for (const s of strangers) await db.query('DELETE FROM social_group_members WHERE group_id = ? AND user_id = ?', [s.groupId, s.userId]);
   return strangers.length;
