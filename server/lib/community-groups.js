@@ -1,14 +1,16 @@
 // Who belongs to a school, for private school groups (docs/reference/community-group-privacy-requirements.md, rule A).
-// A person belongs to the school with domain D when they hold a registered seat on a purchase for D, or an active school
-// license administrator assignment on a purchase for D, or an active district administrator assignment for the district that
-// contains the school D. Plain portable SQL (EXISTS, LOWER) so it runs on MariaDB and in the node:sqlite tests.
+// Fixer Nation staff (site_users.is_fne_staff, set only from the server) belong everywhere. Anyone else belongs to the school with
+// domain D when they hold a registered seat on a purchase for D, or an active school license administrator assignment on a purchase
+// for D, or an active district administrator assignment for the district that contains the school D. Plain portable SQL (EXISTS,
+// LOWER) so it runs on MariaDB and in the node:sqlite tests.
 // The pool is loaded only when a caller does not pass its own connection, so a report script that only wants the SQL fragment
 // does not open one.
 const defaultPool = () => require('../db/pool');
 
 // SQL: this site_users row (userAlias) belongs to the school whose domain is the SQL expression domainExpr.
 function belongsToSchoolSql(userAlias, domainExpr) {
-  return `(EXISTS (SELECT 1 FROM license_seats bls JOIN purchases bp ON bp.id = bls.purchase_id
+  return `(${userAlias}.is_fne_staff = 1
+    OR EXISTS (SELECT 1 FROM license_seats bls JOIN purchases bp ON bp.id = bls.purchase_id
                    WHERE bls.registered_site_user_id = ${userAlias}.id AND bls.status = 'registered' AND LOWER(bp.school_domain) = LOWER(${domainExpr}))
     OR EXISTS (SELECT 1 FROM school_license_admins bsla JOIN purchases bpa ON bpa.id = bsla.purchase_id
                WHERE bsla.site_user_id = ${userAlias}.id AND bsla.is_active = 1 AND LOWER(bpa.school_domain) = LOWER(${domainExpr}))

@@ -234,11 +234,11 @@ router.get('/groups/browse', requireSocialAccess, async (req, res) => {
      FROM social_groups sg
      LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
      LEFT JOIN site_users mu ON mu.id = sgm.user_id AND ${communityMemberSql('mu')}
-     WHERE (sg.type <> 'school' AND sg.is_public = 1)
-        OR (sg.type = 'school' AND EXISTS (SELECT 1 FROM site_users bu WHERE bu.id = ? AND ${belongsToSchoolSql('bu', 'sg.school_domain')}))
+     WHERE ${req.siteUser.is_fne_staff ? '1 = 1' /* Fixer Nation staff see every group, private ones too */ : `(sg.type <> 'school' AND sg.is_public = 1)
+        OR (sg.type = 'school' AND EXISTS (SELECT 1 FROM site_users bu WHERE bu.id = ? AND ${belongsToSchoolSql('bu', 'sg.school_domain')}))`}
      GROUP BY sg.id
      ORDER BY sg.name`,
-    [req.siteUser.id, req.siteUser.id]
+    req.siteUser.is_fne_staff ? [req.siteUser.id] : [req.siteUser.id, req.siteUser.id]
   );
   res.json({ groups: rows });
 });
@@ -297,7 +297,8 @@ router.post('/groups/:groupId/join', requireSocialAccess, async (req, res) => {
   const groupId = Number(req.params.groupId);
   const [[group]] = await pool.query('SELECT id, type, school_domain, is_public FROM social_groups WHERE id = ?', [groupId]);
   // A school group is private: only someone who belongs to that school may join it (and for anyone else it does not exist).
-  const allowed = group && (group.type === 'school' ? await belongsToSchool(pool, req.siteUser.id, group.school_domain) : !!group.is_public);
+  // Fixer Nation staff (is_fne_staff) may join any group.
+  const allowed = group && (req.siteUser.is_fne_staff ? true : group.type === 'school' ? await belongsToSchool(pool, req.siteUser.id, group.school_domain) : !!group.is_public);
   if (!allowed) return res.status(404).json({ error: 'Group not found or not public' });
   await ensureProfile(req.siteUser.id);
   await pool.query(

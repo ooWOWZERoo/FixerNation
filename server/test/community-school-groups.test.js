@@ -13,7 +13,7 @@ process.env.UPLOADS_DIR = path.join(os.tmpdir(), 'fne-test-uploads');
 const SERVER = path.join(__dirname, '..');
 const db = new DatabaseSync(':memory:');
 db.exec(`
-CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, is_sales_demo INTEGER DEFAULT 0, session_invalidated_at TEXT);
+CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, is_sales_demo INTEGER DEFAULT 0, is_fne_staff INTEGER DEFAULT 0, session_invalidated_at TEXT);
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, name TEXT);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, license_status TEXT, expiration_date TEXT, school_domain TEXT, school_id INTEGER);
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER, display_name TEXT);
@@ -228,4 +228,32 @@ test('CLEANUP finds only the people in a school group who do not belong to it, a
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM social_group_members').get().n, 2, 'a dry run changes nothing');
   assert.equal(await removeStrangersFromSchoolGroups({ query: run }), 1);
   assert.deepEqual(db.prepare('SELECT user_id FROM social_group_members').all().map((r) => r.user_id), [ann]);
+});
+
+test('FNE STAFF (is_fne_staff) see every group in Browse, private school groups and private custom groups too, and can join any of them', async () => {
+  reset();
+  const a = school('a.test', 1), b = school('b.test', 2);
+  const ga = await schoolGroup('a.test'); await schoolGroup('b.test');
+  db.prepare("INSERT INTO social_groups (name, type, is_public) VALUES ('Open Group', 'custom', 1)").run();
+  const hidden = Number(db.prepare("INSERT INTO social_groups (name, type, is_public) VALUES ('Hidden Group', 'custom', 0)").run().lastInsertRowid);
+  const staff = teacher('Sam', a);
+  const ordinary = teacher('Bob', b);
+  db.prepare('UPDATE site_users SET is_fne_staff = 1 WHERE id = ?').run(staff);
+  assert.deepEqual(names(await call('GET', '/api/social/groups/browse', { as: staff })), ['Hidden Group', 'Open Group', 'a.test', 'b.test']);
+  assert.deepEqual(names(await call('GET', '/api/social/groups/browse', { as: ordinary })), ['Open Group', 'b.test'], 'an ordinary member still sees only their own school and the public groups');
+  assert.equal((await call('POST', `/api/social/groups/${hidden}/join`, { as: staff, body: {} })).status, 200);
+  const other = await schoolGroup('b.test');
+  assert.equal((await call('POST', `/api/social/groups/${other}/join`, { as: staff, body: {} })).status, 200);
+  assert.equal((await call('POST', `/api/social/groups/${hidden}/join`, { as: ordinary, body: {} })).status, 404);
+  assert.equal((await call('POST', `/api/social/groups/${ga}/join`, { as: ordinary, body: {} })).status, 404);
+});
+
+test('FNE STAFF are never listed as strangers by the cleanup, and an ordinary outsider still is', async () => {
+  reset();
+  const a = school('a.test', 1), b = school('b.test', 2);
+  const ga = await schoolGroup('a.test');
+  const staff = teacher('Sam', b), outsider = teacher('Bob', b);
+  db.prepare('UPDATE site_users SET is_fne_staff = 1 WHERE id = ?').run(staff);
+  join(ga, staff); join(ga, outsider);
+  assert.deepEqual((await findStrangersInSchoolGroups({ query: run })).map((f) => f.userId), [outsider]);
 });

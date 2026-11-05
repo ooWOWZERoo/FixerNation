@@ -25,6 +25,8 @@ A person **belongs to** the school with domain D when any one of these holds:
 - they hold an active school license administrator assignment on a purchase whose school domain is D;
 - they hold an active district administrator assignment for the district that contains the school with domain D.
 
+4. **Fixer Nation staff belong everywhere (Release 113).** A sign-in account marked `site_users.is_fne_staff = 1` belongs to every school, sees every group in Browse (private school groups and private custom groups too) and may join any group. The flag grants nothing else (no Community access without a seat and CRM contact, no admin pages, no other data) and is **not** the staff login (`admin_users`, a different system). It can be set only on the server with `scripts/set-fne-staff-account.js` (dry run by default, existing verified account only, audited); nothing in the website, an API or a sign-up can set it. The cleanup script never lists a staff account as a stranger.
+
 ### B. School groups are private
 
 1. A school group is created private. Existing ones are made private by `alter-make-school-groups-private.js`.

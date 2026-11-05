@@ -1,6 +1,6 @@
 # The CRM as the record of who is on the platform (requirements)
 
-Written 2026-11-05. Approved by the owner the same day. Release 110 (rules A, D and F) and Release 111 (administrators in Community, rule D1) are built; Release 113 (rules B, C and E) is not. This decides who may sign in and what deleting a CRM contact does, so the rules come first.
+Written 2026-11-05. Approved by the owner the same day. Release 110 (rules A, D and F) and Release 111 (administrators in Community, rule D1) are built; Release 114 (rules B, C and E) is not. This decides who may sign in and what deleting a CRM contact does, so the rules come first.
 
 ## What the owner asked for
 
@@ -78,7 +78,7 @@ Changing a contact's email also changes its account's sign-in email and any seat
 
 - **Release 110, no data risk:** rule A (a buyer's contact can no longer be deleted by accident), rule D (Community follows the CRM), rule F (the report), and the confirm-dialog text. This stops the harm and fixes the Community list.
 - **Release 111:** administrators in Community (rule D1). Built.
-- **Release 113:** rules B, C and E (closing accounts, reopening, email sync). Needs an alter script (`closed_at`, `closed_reason`), a check of every sign-in path, and more tests. Held until Release 110 is verified.
+- **Release 114:** rules B, C and E (closing accounts, reopening, email sync). Needs an alter script (`closed_at`, `closed_reason`), a check of every sign-in path, and more tests. Held until Release 110 is verified.
 
 ## Open question for the owner
 

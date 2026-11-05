@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 113 — 2026-11-05 — Fixer Nation staff accounts can join and see every Community group
+
+- **New staff marker for sign-in accounts:** `site_users.is_fne_staff`. An account marked as staff belongs to every school for Community purposes: it sees every group in Browse (private school groups and private custom groups too) and can join any of them, and the private-group cleanup never lists it as a stranger. It grants nothing else, and it is not the staff login. The flag can be set only from the server (`scripts/set-fne-staff-account.js`, dry run by default, an existing verified account only, audited); nothing on the website can set it.
+- First account to mark: `johnfshaw@yahoo.com`.
+- **Deploy order matters:** pull, run `alter-add-fne-staff-flag.js`, then restart Node (the Community queries read the new column), then mark the account.
+- Requirements: rule A4 in `docs/reference/community-group-privacy-requirements.md`.
+
 ## Release 112 — 2026-11-05 — School groups in Community are private; who can delete groups
 
 - **School groups are private.** Only the people of that school (a teacher with a seat there, its school license administrators, and the administrators of its district) see a school's group in Browse or can join it; to anyone else it does not exist. Before, every school's group was public, so any member could join and read another school's group. New school groups are created private, and the staff Public/Private switch is no longer offered for school groups or All Teachers. "My groups" now shows every group you are in, so a private group never disappears from its own members.
@@ -36,7 +43,7 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Community follows the CRM.** The member list, each group's member count, direct-message recipients, the conversation list and other members' profiles show only people who have a CRM contact (matched by email) and a license that is working right now (and are not sales-demo accounts). Community access itself also needs a CRM contact. Delete a contact and the person disappears from Community at once; before, the contact and the sign-in account were separate and the account (and its Community profile) stayed, which is why duplicate "John Shaw"s kept showing after their CRM contacts were removed. A contact that is Unsubscribed from email is still a member; unsubscribing only stops marketing mail.
 - **Safety fix:** deleting a CRM contact that has purchases or invoices is now refused, with a message saying how many and to remove or cancel them first. Before, the delete silently erased those purchases and invoices, and with them every license seat on them. The CRM page now shows that message, and its confirmation says the person will leave Community.
 - **New report:** `node scripts/report-accounts-vs-crm.js` (read-only) lists accounts with no CRM contact, everyone Community lists today and whether they stay, and names on more than one account. Run it before restarting the Node app after this release.
-- Not yet built (now Release 113): closing a person's whole account when their contact is deleted, reopening, and moving an account's email when a contact's email changes. Requirements: `docs/reference/crm-record-of-truth-requirements.md`.
+- Not yet built (now Release 114): closing a person's whole account when their contact is deleted, reopening, and moving an account's email when a contact's email changes. Requirements: `docs/reference/crm-record-of-truth-requirements.md`.
 - Node restart and rsync needed (CRM page). No alter script.
 
 ## Release 109 — 2026-11-05 — A license you just bought now works if you already had an account
