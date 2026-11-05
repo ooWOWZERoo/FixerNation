@@ -117,6 +117,27 @@
 
       <div class="a-card" style="margin-top:24px; max-width:480px;">
         <div class="a-card-head">
+          <h2>Website Logo</h2>
+        </div>
+        <form id="websiteLogoForm">
+          <div class="a-error" id="websiteLogoError"></div>
+          <div class="a-field">
+            <label>Logo</label>
+            <div class="a-image-preview" id="websiteLogoPreview" style="aspect-ratio:auto; height:100px;">Using the built-in logo</div>
+            <div style="display:flex; gap:10px;">
+              <input type="file" id="websiteLogoFile" accept="image/*" style="flex:1;">
+            </div>
+            <div style="margin-top:8px;">
+              <input type="text" id="websiteLogoUrl" placeholder="...or paste an image URL / filename">
+            </div>
+            <div class="a-note">Shown in the header and footer of every public page. Changes can take about a minute to appear. Leave empty to use the built-in Fixer Nation logo.</div>
+          </div>
+          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
+        </form>
+      </div>
+
+      <div class="a-card" style="margin-top:24px; max-width:480px;">
+        <div class="a-card-head">
           <h2>Teacher Lesson Plan Library</h2>
         </div>
         <form id="lessonPlanLimitForm">
@@ -387,6 +408,78 @@ document.getElementById('invoiceBrandingForm').addEventListener('submit', async 
   fnToast('Invoice branding updated');
 });
 
+let websiteLogoData = '';
+let pendingWebsiteLogoFile = null;
+
+function showWebsiteLogoPreview(url) {
+  const box = document.getElementById('websiteLogoPreview');
+  box.textContent = '';
+  if (!url) { box.textContent = 'Using the built-in logo'; return; }
+  const img = document.createElement('img');
+  img.onerror = function() { box.textContent = 'Preview unavailable'; };
+  img.src = url;
+  box.appendChild(img);
+}
+
+async function loadWebsiteLogo() {
+  const r = await fetch('/api/settings/website-logo', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  const data = await r.json();
+  websiteLogoData = data.logoUrl || '';
+  pendingWebsiteLogoFile = null;
+  document.getElementById('websiteLogoUrl').value = websiteLogoData;
+  showWebsiteLogoPreview(websiteLogoData);
+}
+
+document.getElementById('websiteLogoFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  pendingWebsiteLogoFile = file;
+  document.getElementById('websiteLogoUrl').value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) { showWebsiteLogoPreview(ev.target.result); };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('websiteLogoUrl').addEventListener('input', function(e) {
+  pendingWebsiteLogoFile = null;
+  websiteLogoData = e.target.value.trim();
+  showWebsiteLogoPreview(websiteLogoData);
+});
+
+document.getElementById('websiteLogoForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const errorBox = document.getElementById('websiteLogoError');
+  errorBox.classList.remove('show');
+
+  let logoUrl = websiteLogoData;
+  if (pendingWebsiteLogoFile) {
+    const uploadedUrl = await fnUploadFile(pendingWebsiteLogoFile);
+    if (uploadedUrl === null) return;
+    logoUrl = uploadedUrl;
+  }
+
+  const r = await fetch('/api/settings/website-logo', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ logoUrl }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    errorBox.textContent = result.error || 'Could not save changes.';
+    errorBox.classList.add('show');
+    return;
+  }
+  pendingWebsiteLogoFile = null;
+  websiteLogoData = logoUrl;
+  document.getElementById('websiteLogoUrl').value = logoUrl;
+  showWebsiteLogoPreview(logoUrl);
+  fnToast('Website logo updated');
+});
+
 let adminsCache = [];
 
 async function loadAdmins() {
@@ -654,6 +747,7 @@ async function saveSafetyFallbackEmail(e) {
 
 loadContactEmails();
 loadInvoiceBranding();
+loadWebsiteLogo();
 loadLessonPlanLimit();
 loadCampaignBatching();
 loadAutoRefresh();

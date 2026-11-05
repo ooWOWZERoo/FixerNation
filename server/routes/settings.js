@@ -69,6 +69,29 @@ router.put('/invoice-branding', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// The website logo (public header and footer). GET is public: every page's nav.js/footer.js reads it, and it is only a file path.
+// A path on this site ("/uploads/x.webp", "uploads/x.webp", "logo.png") or an https address; anything with another scheme
+// (javascript:, data:) or markup characters is refused.
+const LOGO_PATTERN = /^(https:\/\/[^\s"'<>]+|[^\s:"'<>]+)$/;
+
+router.get('/site-logo', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json({ url: (await getSetting('website_logo_url')) || '' });
+});
+
+router.get('/website-logo', requireAuth, async (req, res) => {
+  res.json({ logoUrl: (await getSetting('website_logo_url')) || '' });
+});
+
+router.put('/website-logo', requireAuth, async (req, res) => {
+  const logoUrl = typeof (req.body || {}).logoUrl === 'string' ? req.body.logoUrl.trim() : '';
+  if (logoUrl && !LOGO_PATTERN.test(logoUrl)) {
+    return res.status(400).json({ error: 'Use an uploaded image, a file name, or an https:// image address' });
+  }
+  await setSetting('website_logo_url', logoUrl);
+  res.json({ ok: true });
+});
+
 router.get('/quote', requireAuth, async (req, res) => {
   const [fromEmail, twoYrPct, threeYrPct] = await Promise.all([
     getSetting('quote_from_email'),

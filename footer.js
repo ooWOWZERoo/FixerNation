@@ -29,6 +29,22 @@
     document.head.appendChild(s);
   }
 
+
+  // The logo comes from the Website Logo card in admin-settings.html. The last value is remembered in localStorage so a
+  // changed logo shows at once on the next page; the built-in logo-fne.png stays the fallback when none is set.
+  function applySiteLogo(selector) {
+    var imgs = document.querySelectorAll(selector);
+    if (!imgs.length) return;
+    function show(u) { for (var i = 0; i < imgs.length; i++) if (imgs[i].getAttribute('src') !== u) imgs[i].setAttribute('src', u); }
+    try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached); } catch (e) { /* storage blocked */ }
+    window.__fnSiteLogo = window.__fnSiteLogo || fetch('/api/settings/site-logo').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+    window.__fnSiteLogo.then(function (d) {
+      var u = (d && d.url) || '';
+      try { if (u) localStorage.setItem('fn_site_logo', u); else localStorage.removeItem('fn_site_logo'); } catch (e) { /* storage blocked */ }
+      show(u || 'logo-fne.png?v=2');
+    });
+  }
+
   var ft = document.querySelector('footer');
   if (!ft) return;
 
@@ -108,4 +124,6 @@
         '<a href="privacy-choices.html" style="color:inherit;">Your Privacy Choices</a>' +
       '</div>' +
     '</div>';
+
+  applySiteLogo('.fn-flogo-img');
 })();

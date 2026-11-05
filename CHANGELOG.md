@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 116 — 2026-11-05 — The website logo is set from the admin settings page
+
+- **New Website Logo card** on FNE Admin → Settings. Upload an image, or paste a file name or https address. Leave it empty and the site keeps the built-in Fixer Nation logo.
+- **Header and footer follow it.** Every public page now reads the logo from that setting, so changing it no longer means editing 100+ pages. A change shows within about a minute.
+- **Starts from the invoice logo.** A one-time script copies the current invoice branding logo into the new setting; after that the two are independent.
+- **Safety:** only an FNE admin can change it; values that could run script (`javascript:`, `data:`) or break out of the page are refused.
+- **Deploy order:** pull, rsync (all public pages plus `admin-settings.html`), run `copy-invoice-logo-to-website-logo.js`, restart Node. The login pages, student pages and emails still use their own logo; they are not part of the header and footer.
+
 ## Release 115 — 2026-11-05 — Support requests: one place to ask for help, and an inbox to answer from
 
 - **New Get help page** (`support.html`, linked from the footer and the Contact page). Anyone can send a request: topic, subject, what is happening. Someone who is signed in does not retype who they are: their role (district administrator, school license administrator, teacher, parent) and school come from the account on the server, never from the form.

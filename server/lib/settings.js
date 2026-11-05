@@ -18,6 +18,8 @@ const DEFAULTS = {
   invoice_business_name: 'Fixer Nation Education',
   invoice_tagline: 'fixernationeducation.com',
   invoice_logo_url: '',
+  // The logo in the public site header (nav.js) and footer (footer.js). Empty means the built-in logo-fne.png. See routes/settings.js.
+  website_logo_url: '',
   teacher_lesson_plan_limit: '40',
   // Default trial-teacher library limit — used two ways: (1) as the
   // fallback for any trial purchase with no trial_library_limit snapshot of
