@@ -152,6 +152,8 @@ async function init(){
   const page = document.getElementById('profilePage');
 
   // Verify social access by fetching own profile first
+  document.getElementById('gateBtns401').style.display='none';
+  document.getElementById('gateBtns403').style.display='none';
   const meRes = await fetch(`${API}/profile`,{credentials:'include'});
   if(meRes.status === 401){
     page.style.display='none';

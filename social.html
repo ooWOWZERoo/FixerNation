@@ -337,6 +337,9 @@ function relTime(s){
 async function init(){
   // Check auth via site-auth.js (fnGetAuthState is available after fnAuthInit fires)
   // We'll poll /api/social/profile to check access
+  // init runs again when sign-in state changes: start from a clean gate so both sets of buttons are never shown together
+  document.getElementById('gateBtns401').style.display='none';
+  document.getElementById('gateBtns403').style.display='none';
   const res = await fetch(`${API}/profile`,{credentials:'include'});
   if(res.status === 401){
     document.getElementById('gateMsg').textContent="Fixer Nation Education's Community is available to licensed teachers. Sign in to continue, or get started below.";

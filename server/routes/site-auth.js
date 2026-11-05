@@ -20,6 +20,7 @@ const { addTeacherToSocialGroups } = require('../lib/social-groups');
 const { onboardInvitedTeacher } = require('../lib/teacher-onboarding');
 const { licenseOpenSql } = require('../lib/license-access');
 const { syncMorningBoostForUser } = require('../lib/morning-boost-group');
+const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
@@ -384,6 +385,8 @@ router.post('/login', async (req, res) => {
     return res.status(403).json({ error: 'Please verify your email before logging in.', reason: 'unverified' });
   }
 
+  // A seat bought for this address and left pending (a purchase made before this account signed in) is theirs once they sign in.
+  await claimForAccountByEmail(pool, user.email);
   setSiteSessionCookie(res, user);
   // isSchoolAdmin/isDistrictAdmin/isAffiliate are real entitlement checks (an
   // active school_license_admins/district_license_admins/affiliates row),

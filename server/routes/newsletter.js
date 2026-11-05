@@ -10,6 +10,7 @@ const { attributePurchase } = require('../lib/affiliate-attribution');
 const { limiter, clientIp } = require('../lib/rate-limit');
 const { notAdminSeatClause } = require('../lib/seat-counts');
 const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal');
+const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -604,8 +605,10 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
       await attributePurchase(connection, purchaseId, affiliateRefCode, amountCents, paymentStatus || 'paid');
     }
 
+    let ownSeatEmail = null; // the buyer's own seat, held 'pending' for them; claimed for an existing account after the commit
     if (productType === 'single_license') {
       const [contactRows] = await connection.query('SELECT email FROM newsletter_contacts WHERE id = ?', [contactId]);
+      ownSeatEmail = contactRows[0].email;
       await connection.query(
         'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, ?)',
         [purchaseId, contactRows[0].email, 'pending']
@@ -617,6 +620,7 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
       // until someone manually invites them into their own seat. The rest
       // of the seats (if any) start 'available', same as any group license.
       if (autoClaimEmail) {
+        ownSeatEmail = autoClaimEmail;
         const availableCount = finalSeatCount - 1;
         const values = [purchaseId, autoClaimEmail, 'pending'];
         let sql = 'INSERT INTO license_seats (purchase_id, invited_email, status) VALUES (?, ?, ?)';
@@ -633,6 +637,10 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
       }
     }
     await connection.commit();
+
+    // A buyer who already has an account (signed up earlier, or signed in before paying) never goes through the sign-up that
+    // claims a pending seat, so claim it here (lib/own-seat-claim.js). A new account claims it when it is created.
+    if (ownSeatEmail) await claimForAccountByEmail(pool, ownSeatEmail);
 
     // Automated thank-you email — best-effort (fireAutomation swallows its
     // own errors), so a template/lookup issue here never fails the purchase
