@@ -24,6 +24,8 @@ const {
 } = require('../lib/school-admin-assignment');
 
 const { loadDashboard } = require('../lib/district-dashboard');
+const { communityMemberSql } = require('../lib/community-members');
+const { audit } = require('../lib/audit');
 
 const router = express.Router();
 
@@ -53,6 +55,44 @@ router.get('/dashboard', requireDistrictAdmin, async (req, res) => {
   const districtId = resolveDistrictId(req);
   if (!districtId) return res.status(403).json({ error: 'Access denied' });
   res.json(await loadDashboard(req.districtAdmin.districtIds, districtId));
+});
+
+// GET /api/district-admin/community-groups -- the Community groups of the schools in this district (school groups only: All Teachers
+// and custom groups are not a district's to manage). docs/reference/community-group-privacy-requirements.md, rule C.
+router.get('/community-groups', requireDistrictAdmin, async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT g.id, g.school_domain, s.display_name AS school_display_name,
+            COUNT(DISTINCT mu.id) AS member_count,
+            (SELECT COUNT(*) FROM social_posts sp WHERE sp.group_id = g.id AND sp.deleted_at IS NULL) AS post_count
+     FROM social_groups g
+     JOIN schools s ON LOWER(s.domain) = LOWER(g.school_domain)
+     LEFT JOIN social_group_members sgm ON sgm.group_id = g.id
+     LEFT JOIN site_users mu ON mu.id = sgm.user_id AND ${communityMemberSql('mu')}
+     WHERE g.type = 'school' AND s.district_id IN (?)
+     GROUP BY g.id, g.school_domain, s.display_name
+     ORDER BY g.school_domain`,
+    [req.districtAdmin.districtIds]
+  );
+  res.json({ groups: rows.map((r) => ({ id: r.id, schoolDomain: r.school_domain, schoolName: r.school_display_name || r.school_domain, memberCount: Number(r.member_count), postCount: Number(r.post_count) })) });
+});
+
+// DELETE /api/district-admin/community-groups/:id -- delete a school group in one of this district's schools. Erases its posts,
+// comments and memberships; the group is recreated empty the next time someone from that school is added. Another district's group,
+// All Teachers and custom groups are 404, never 403: they are not this admin's to know about.
+router.delete('/community-groups/:id', requireDistrictAdmin, async (req, res) => {
+  const [[group]] = await pool.query(
+    `SELECT g.id, g.school_domain FROM social_groups g
+     JOIN schools s ON LOWER(s.domain) = LOWER(g.school_domain)
+     WHERE g.id = ? AND g.type = 'school' AND s.district_id IN (?) LIMIT 1`,
+    [req.params.id, req.districtAdmin.districtIds]
+  );
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+  await pool.query('DELETE FROM social_groups WHERE id = ?', [group.id]);
+  await audit(pool, {
+    actorType: 'site_user', actorId: req.districtAdmin.siteUserId, actorEmail: req.districtAdmin.email,
+    action: 'community_group_deleted', entityType: 'social_groups', entityId: group.id, schoolDomain: group.school_domain, ipAddress: req.ip,
+  });
+  res.json({ ok: true });
 });
 
 // GET /api/district-admin/me

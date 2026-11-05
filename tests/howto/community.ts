@@ -14,7 +14,7 @@ const email = (first: string, last: string) => `${first}.${last}@maple.example.c
 const uid = (e: string) => Number(sql(`SELECT id FROM site_users WHERE email=${q(e)}`));
 
 function addGroup(name: string, type: string, description: string, domain?: string): number {
-  sql(`INSERT INTO social_groups (name, type, description, is_public, school_domain) VALUES (${q(name)}, ${q(type)}, ${q(description)}, 1, ${domain ? q(domain) : "NULL"})`);
+  sql(`INSERT INTO social_groups (name, type, description, is_public, school_domain) VALUES (${q(name)}, ${q(type)}, ${q(description)}, ${type === "school" ? 0 : 1}, ${domain ? q(domain) : "NULL"})`); // a school group is private, as in production (Release 112)
   return Number(sql(`SELECT id FROM social_groups WHERE name=${q(name)} ORDER BY id DESC LIMIT 1`));
 }
 const join = (groupId: number, userId: number) => sql(`INSERT IGNORE INTO social_group_members (group_id, user_id) VALUES (${groupId}, ${userId})`);

@@ -209,18 +209,20 @@ function renderGroups(groups) {
     const pubTag = g.is_public
       ? '<span class="tag-public">Public</span>'
       : '<span class="tag-private">Private</span>';
+    const isSystem = g.type === 'school' || g.type === 'all_teachers';
+    const kindNote = g.type === 'school' ? ' <span class="tag-private">School group</span>' : g.type === 'all_teachers' ? ' <span class="tag-public">All Teachers</span>' : '';
     return `
       <div class="soc-group-card" id="group-card-${g.id}">
         <div class="soc-group-card-top">
           <div style="flex:1;min-width:0;">
-            <div class="soc-group-name">${esc(g.name)} ${pubTag}</div>
+            <div class="soc-group-name">${esc(g.name)} ${pubTag}${kindNote}</div>
             ${g.description ? `<div class="soc-group-desc">${esc(g.description)}</div>` : ''}
             <div class="soc-group-meta">${fnEscape(g.member_count)} member${g.member_count!==1?'s':''} &middot; ${fnEscape(g.post_count)} post${g.post_count!==1?'s':''} &middot; Created ${fmtDate(g.created_at)}</div>
           </div>
           <div class="soc-group-actions">
             <button class="soc-btn-sm" onclick="toggleEdit(${g.id})">Edit</button>
-            <button class="soc-btn-sm" onclick="togglePublic(${g.id}, ${fnEscape(g.is_public)}, this)">${g.is_public ? 'Make Private' : 'Make Public'}</button>
-            <button class="soc-btn-sm soc-btn-danger" onclick="deleteGroup(${g.id})">Delete</button>
+            ${isSystem ? '' : `<button class="soc-btn-sm" onclick="togglePublic(${g.id}, ${fnEscape(g.is_public)}, this)">${g.is_public ? 'Make Private' : 'Make Public'}</button>`}
+            <button class="soc-btn-sm soc-btn-danger" data-type="${esc(g.type)}" onclick="deleteGroup(${g.id}, this.dataset.type)">Delete</button>
           </div>
         </div>
         <div class="inline-edit" id="edit-${g.id}">
@@ -232,12 +234,12 @@ function renderGroups(groups) {
             <label>Description</label>
             <textarea id="edit-desc-${g.id}">${esc(g.description||'')}</textarea>
           </div>
-          <div class="form-row">
+          ${isSystem ? '' : `<div class="form-row">
             <div class="toggle-row">
               <input type="checkbox" id="edit-pub-${g.id}" ${g.is_public?'checked':''}>
               <span>Public</span>
             </div>
-          </div>
+          </div>`}
           <div class="form-actions">
             <button class="a-btn" onclick="saveGroup(${g.id})">Save</button>
             <button class="a-btn a-btn-secondary" onclick="toggleEdit(${g.id})">Cancel</button>
@@ -275,7 +277,8 @@ async function saveGroup(id) {
   const name = document.getElementById(`edit-name-${id}`).value.trim();
   if (!name) { fnToast('Name is required'); return; }
   const description = document.getElementById(`edit-desc-${id}`).value.trim();
-  const isPublic = document.getElementById(`edit-pub-${id}`).checked;
+  const pubEl = document.getElementById(`edit-pub-${id}`); // not shown for school groups and All Teachers (their visibility is fixed)
+  const isPublic = pubEl ? pubEl.checked : true;
 
   const res = await fetch(`/api/social/groups/${id}`, {
     method: 'PUT', credentials: 'include',
@@ -301,8 +304,13 @@ async function togglePublic(id, currentlyPublic, btn) {
   loadGroups();
 }
 
-async function deleteGroup(id) {
-  if (!confirm('Delete this group? All posts and members will be removed from this group.')) return;
+async function deleteGroup(id, type) {
+  const warn = type === 'all_teachers'
+    ? 'Delete All Teachers? This is the group every licensed teacher and administrator is in, on every customer. All of its posts and members are erased. It starts again, empty, the next time someone is added.'
+    : type === 'school'
+      ? 'Delete this school group? All of its posts and members are erased. It starts again, empty, the next time someone from the school is added.'
+      : 'Delete this group? All posts and members will be removed from this group.';
+  if (!confirm(warn)) return;
   const res = await fetch(`/api/social/groups/${id}`, { method: 'DELETE', credentials: 'include' });
   if (!res.ok) { fnToast('Failed to delete group'); return; }
   fnToast('Group deleted');

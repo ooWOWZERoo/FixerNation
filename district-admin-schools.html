@@ -108,6 +108,7 @@
 
 <script>
 let currentPurchaseId = null;
+let communityGroups = {};
 
 document.addEventListener('daReady', function () { loadSchools(); });
 document.addEventListener('daDistrictChanged', function () { loadSchools(); });
@@ -115,6 +116,12 @@ document.addEventListener('daDistrictChanged', function () { loadSchools(); });
 async function loadSchools() {
   try {
     const d = await daFetch('/api/district-admin/schools');
+    // The Community groups of these schools (a failure here must not hide the schools themselves)
+    communityGroups = {};
+    try {
+      const g = await daFetch('/api/district-admin/community-groups');
+      (g.groups || []).forEach(function (grp) { communityGroups[String(grp.schoolDomain || '').toLowerCase()] = grp; });
+    } catch (e) { /* the group row is simply left out */ }
     renderSchools(d.schools || []);
     document.getElementById('pageLoading').style.display = 'none';
     document.getElementById('pageContent').style.display = 'block';
@@ -143,8 +150,30 @@ function renderSchools(schools) {
         '<button class="sa-btn sa-btn-primary sa-btn-sm" data-v="' + esc(s.school_display_name || s.school_domain) + '" onclick="openAssignModal(' + s.purchase_id + ', this.dataset.v)">+ Invite Admin</button>' +
       '</div>' +
       '<div style="margin-top:10px; border-top:1px solid var(--sa-border); padding-top:10px;">' + adminsHtml + '</div>' +
+      communityGroupRow(s.school_domain) +
     '</div>';
   }).join('');
+}
+
+// The school's Community group: private to the school's own people. A district admin can delete it (its posts and members go with it).
+function communityGroupRow(domain) {
+  const g = communityGroups[String(domain || '').toLowerCase()];
+  if (!g) return '';
+  return '<div style="margin-top:10px; border-top:1px solid var(--sa-border); padding-top:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">' +
+    '<div style="font-size:13px;"><strong>Community group</strong> <span style="color:var(--sa-text-soft);">· private to this school · ' + g.memberCount + ' member' + (g.memberCount === 1 ? '' : 's') + ' · ' + g.postCount + ' post' + (g.postCount === 1 ? '' : 's') + '</span></div>' +
+    '<button class="sa-btn sa-btn-danger sa-btn-sm" data-id="' + g.id + '" data-v="' + esc(g.schoolName) + '" onclick="deleteCommunityGroup(this.dataset.id, this.dataset.v)">Delete group</button>' +
+  '</div>';
+}
+
+async function deleteCommunityGroup(id, schoolName) {
+  if (!await daConfirm('This erases ' + schoolName + '\'s Community group, with all of its posts and comments. People keep their accounts and can use the rest of Community. The group starts again, empty, the next time someone from the school is added.', { title: 'Delete this Community group?', confirmText: 'Yes, delete the group' })) return;
+  try {
+    await daFetch('/api/district-admin/community-groups/' + encodeURIComponent(id), { method: 'DELETE' });
+    daToast('Group deleted');
+    loadSchools();
+  } catch (e) {
+    daToast(e.message, 'error');
+  }
 }
 
 const ROLE_LABELS = {

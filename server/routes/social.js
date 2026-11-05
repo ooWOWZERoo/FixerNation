@@ -7,6 +7,7 @@ const fs = require('fs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
 const { communityMemberSql, schoolDomainSql, hasCommunityLicense, isCommunityMember, hasCrmContact } = require('../lib/community-members');
+const { belongsToSchoolSql, belongsToSchool } = require('../lib/community-groups');
 const { requireAuth } = require('../middleware/auth');
 const { ensureProfile, addTeacherToSocialGroups } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
@@ -203,9 +204,13 @@ router.put('/groups/:id', requireAuth, async (req, res) => {
   const b = req.body || {};
   const name = (b.name || '').trim();
   if (!name) return res.status(400).json({ error: 'Group name is required' });
+  const [[existing]] = await pool.query('SELECT type FROM social_groups WHERE id = ?', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Group not found' });
+  // A school group is always private and All Teachers always public; only a custom group's visibility can be changed.
+  const isPublic = existing.type === 'school' ? 0 : existing.type === 'all_teachers' ? 1 : (b.isPublic !== false ? 1 : 0);
   await pool.query(
     'UPDATE social_groups SET name = ?, description = ?, is_public = ? WHERE id = ?',
-    [name, (b.description || '').trim() || null, b.isPublic !== false ? 1 : 0, req.params.id]
+    [name, (b.description || '').trim() || null, isPublic, req.params.id]
   );
   res.json({ ok: true });
 });
@@ -229,10 +234,11 @@ router.get('/groups/browse', requireSocialAccess, async (req, res) => {
      FROM social_groups sg
      LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
      LEFT JOIN site_users mu ON mu.id = sgm.user_id AND ${communityMemberSql('mu')}
-     WHERE sg.is_public = 1
+     WHERE (sg.type <> 'school' AND sg.is_public = 1)
+        OR (sg.type = 'school' AND EXISTS (SELECT 1 FROM site_users bu WHERE bu.id = ? AND ${belongsToSchoolSql('bu', 'sg.school_domain')}))
      GROUP BY sg.id
      ORDER BY sg.name`,
-    [req.siteUser.id]
+    [req.siteUser.id, req.siteUser.id]
   );
   res.json({ groups: rows });
 });
@@ -246,7 +252,6 @@ router.get('/groups', requireSocialAccess, async (req, res) => {
      JOIN social_group_members sgm ON sgm.group_id = sg.id AND sgm.user_id = ?
      LEFT JOIN social_group_members sgm2 ON sgm2.group_id = sg.id
      LEFT JOIN site_users mu ON mu.id = sgm2.user_id AND ${communityMemberSql('mu')}
-     WHERE sg.is_public = 1
      GROUP BY sg.id
      ORDER BY sg.name`,
     [req.siteUser.id]
@@ -290,8 +295,10 @@ router.post('/groups/:groupId/read', requireSocialAccess, async (req, res) => {
 // User: join a public group
 router.post('/groups/:groupId/join', requireSocialAccess, async (req, res) => {
   const groupId = Number(req.params.groupId);
-  const [[group]] = await pool.query('SELECT id FROM social_groups WHERE id = ? AND is_public = 1', [groupId]);
-  if (!group) return res.status(404).json({ error: 'Group not found or not public' });
+  const [[group]] = await pool.query('SELECT id, type, school_domain, is_public FROM social_groups WHERE id = ?', [groupId]);
+  // A school group is private: only someone who belongs to that school may join it (and for anyone else it does not exist).
+  const allowed = group && (group.type === 'school' ? await belongsToSchool(pool, req.siteUser.id, group.school_domain) : !!group.is_public);
+  if (!allowed) return res.status(404).json({ error: 'Group not found or not public' });
   await ensureProfile(req.siteUser.id);
   await pool.query(
     'INSERT IGNORE INTO social_group_members (group_id, user_id) VALUES (?, ?)',

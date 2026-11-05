@@ -14,8 +14,9 @@ async function ensureGroup(type, name, schoolDomain) {
       [type, schoolDomain]
     );
     if (rows[0]) return rows[0].id;
+    // A school group is private: only that school's people belong (docs/reference/community-group-privacy-requirements.md)
     const [result] = await pool.query(
-      'INSERT INTO social_groups (name, type, school_domain) VALUES (?, ?, ?)',
+      'INSERT INTO social_groups (name, type, school_domain, is_public) VALUES (?, ?, ?, 0)',
       [name, type, schoolDomain]
     );
     return result.insertId;
