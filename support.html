@@ -119,21 +119,35 @@
 </div>
 <p class="student-note">Students: please ask your teacher for help. They can reset your PIN.</p>
 
+<div class="form-wrap" id="lookupWrap" style="margin-top:40px; padding-bottom:20px;">
+  <div class="form-card">
+    <h2 style="font-size:24px; margin-bottom:6px;">Already sent a request?</h2>
+    <p class="req-meta" style="margin-bottom:16px;">Enter your reference and the email you used, and you'll see our reply here.</p>
+    <form id="lookupForm">
+      <div class="form-field"><label for="lookupRef">Reference</label><input type="text" id="lookupRef" maxlength="16" placeholder="SR-4F7K2" autocomplete="off"></div>
+      <div class="form-field"><label for="lookupEmail">Email</label><input type="email" id="lookupEmail" maxlength="255" placeholder="jane@school.edu"></div>
+      <div class="form-actions"><button type="submit" class="btn btn-primary">Look it up</button></div>
+      <div class="error-msg" id="lookupError" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;"></div>
+    </form>
+  </div>
+</div>
+
 <div class="mine-wrap" id="mineWrap" style="display:none; margin-top:56px;">
   <h2>Your requests</h2>
   <div id="mineList"></div>
-  <div id="mineDetail" style="display:none;">
-    <button type="button" class="link-btn" id="backToList">&larr; All requests</button>
-    <div class="thread">
-      <h3 id="detailSubject" style="margin-bottom:6px;"></h3>
-      <div class="req-meta" id="detailMeta" style="margin-bottom:16px;"></div>
-      <div id="detailMessages"></div>
-      <form id="followForm" style="margin-top:18px;">
-        <div class="form-field"><label for="followMessage">Add to this request</label><textarea id="followMessage" maxlength="5000" style="min-height:100px;"></textarea></div>
-        <div class="form-actions"><button type="submit" class="btn btn-primary">Send</button></div>
-        <div class="error-msg" id="followError" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;"></div>
-      </form>
-    </div>
+</div>
+
+<div class="mine-wrap" id="detailWrap" style="display:none; margin-top:40px;">
+  <button type="button" class="link-btn" id="backToList">&larr; Back</button>
+  <div class="thread">
+    <h3 id="detailSubject" style="margin-bottom:6px;"></h3>
+    <div class="req-meta" id="detailMeta" style="margin-bottom:16px;"></div>
+    <div id="detailMessages"></div>
+    <form id="followForm" style="margin-top:18px;">
+      <div class="form-field"><label for="followMessage">Add to this request</label><textarea id="followMessage" maxlength="5000" style="min-height:100px;"></textarea></div>
+      <div class="form-actions"><button type="submit" class="btn btn-primary">Send</button></div>
+      <div class="error-msg" id="followError" style="display:none; color:#B3261E; font-size:13.5px; margin-top:10px;"></div>
+    </form>
   </div>
 </div>
 
@@ -152,19 +166,27 @@
   ];
   var STATUS = { 'new': 'Received', open: "We're on it", waiting_on_user: 'Waiting for you', resolved: 'Resolved' };
   var signedIn = false;
+  // How the open request is read and added to: 'mine' (signed in, by id) or 'lookup' (anyone, by reference + email).
+  var current = null;
   var $ = function (id) { return document.getElementById(id); };
   // Text from people and staff only ever goes into the page as text, never as HTML.
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
   function fmt(d) { return d ? new Date(d.replace(' ', 'T')).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
   function pill(status) { return el('span', 'pill' + (status === 'waiting_on_user' ? ' waiting' : status === 'resolved' ? ' resolved' : ''), STATUS[status] || status); }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); });
+  }
 
   CATEGORIES.forEach(function (c) { var o = el('option', '', c[1]); o.value = c[0]; $('helpCategory').appendChild(o); });
-  var wanted = new URLSearchParams(location.search).get('topic');
-  if (wanted) $('helpCategory').value = wanted;
+  var params = new URLSearchParams(location.search);
+  if (params.get('topic')) $('helpCategory').value = params.get('topic');
+  if (params.get('ref')) $('lookupRef').value = params.get('ref');
 
   fetch('/api/support/context', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (c) {
     if (!c.signedIn) return;
     signedIn = true;
+    $('lookupWrap').style.display = 'none';
     if (c.demo) {
       $('helpForm').style.display = 'none';
       var n = $('signedInNote'); n.style.display = 'block'; n.textContent = 'Demo accounts cannot send support requests.';
@@ -182,73 +204,102 @@
     e.preventDefault();
     var err = $('helpError'); err.style.display = 'none'; $('helpSuccess').style.display = 'none';
     $('helpSend').disabled = true;
-    fetch('/api/support', {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: $('helpName').value, email: $('helpEmail').value, category: $('helpCategory').value,
-        subject: $('helpSubject').value, message: $('helpMessage').value, website: $('helpWebsite').value,
-        pageUrl: document.referrer || ''
-      })
-    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        $('helpSend').disabled = false;
-        if (!res.ok) { err.textContent = res.j.error || "That didn't go through. Check the form and try again."; err.style.display = 'block'; return; }
-        $('helpSuccess').textContent = res.j.ref ? 'Thanks, we got it. Your reference is ' + res.j.ref + ". We'll reply by email." : "Thanks, we got it. We'll reply by email.";
-        $('helpSuccess').style.display = 'block';
-        $('helpMessage').value = ''; $('helpSubject').value = '';
-        if (signedIn) loadMine();
-      }).catch(function () {
-        $('helpSend').disabled = false;
-        err.textContent = "That didn't go through. Check the form and try again."; err.style.display = 'block';
-      });
+    var typedEmail = $('helpEmail').value;
+    post('/api/support', {
+      name: $('helpName').value, email: typedEmail, category: $('helpCategory').value,
+      subject: $('helpSubject').value, message: $('helpMessage').value, website: $('helpWebsite').value,
+      pageUrl: document.referrer || ''
+    }).then(function (res) {
+      $('helpSend').disabled = false;
+      if (!res.ok) { err.textContent = res.status === 429 ? 'Too many tries. Please wait a few minutes and try again.' : (res.j.error || "That didn't go through. Check the form and try again."); err.style.display = 'block'; return; }
+      var ref = res.j.ref;
+      $('helpSuccess').textContent = !ref ? "Thanks, we got it. We'll reply here."
+        : signedIn ? 'Thanks, we got it. Your reference is ' + ref + '. Our reply will show under Your requests.'
+        : 'Thanks, we got it. Your reference is ' + ref + ". Save it, because you'll need it with your email on this page to see our reply.";
+      $('helpSuccess').style.display = 'block';
+      if (ref && !signedIn) { $('lookupRef').value = ref; $('lookupEmail').value = typedEmail; }
+      $('helpMessage').value = ''; $('helpSubject').value = '';
+      if (signedIn) loadMine();
+    }).catch(function () {
+      $('helpSend').disabled = false;
+      err.textContent = "That didn't go through. Check the form and try again."; err.style.display = 'block';
+    });
   });
 
   function loadMine() {
     fetch('/api/support/mine', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (d) {
       var list = $('mineList'); list.textContent = '';
-      $('mineDetail').style.display = 'none'; list.style.display = 'block';
+      $('detailWrap').style.display = 'none'; $('mineWrap').style.display = 'block';
       if (!d.requests || !d.requests.length) { list.appendChild(el('p', 'req-meta', "You haven't sent us any requests yet.")); return; }
       d.requests.forEach(function (r) {
         var row = el('div', 'req-row');
         var left = el('div');
         left.appendChild(el('div', 'req-subject', r.subject));
         left.appendChild(el('div', 'req-meta', r.ref + ' \u00b7 ' + r.categoryLabel + ' \u00b7 ' + fmt(r.updated_at)));
-        row.appendChild(left); row.appendChild(pill(r.status));
-        row.addEventListener('click', function () { openRequest(r.id); });
+        var right = el('div'); right.style.display = 'flex'; right.style.gap = '8px'; right.style.alignItems = 'center';
+        if (r.newReplies) { var tag = el('span', 'pill waiting', 'New reply'); right.appendChild(tag); }
+        right.appendChild(pill(r.status));
+        row.appendChild(left); row.appendChild(right);
+        row.addEventListener('click', function () { openMine(r.id); });
         list.appendChild(row);
       });
     }).catch(function () {});
   }
 
-  var openId = null;
-  function openRequest(id) {
+  function showThread(request, messages) {
+    $('mineWrap').style.display = 'none'; $('detailWrap').style.display = 'block';
+    $('detailSubject').textContent = request.subject;
+    $('detailMeta').textContent = request.ref + ' \u00b7 ' + STATUS[request.status];
+    var box = $('detailMessages'); box.textContent = '';
+    messages.forEach(function (m) {
+      var div = el('div', 'msg ' + (m.author_type === 'staff' ? 'staff' : 'you'));
+      div.appendChild(el('div', 'who', (m.author_type === 'staff' ? 'Fixer Nation' : 'You') + ' \u00b7 ' + fmt(m.created_at)));
+      div.appendChild(document.createTextNode(m.body));
+      box.appendChild(div);
+    });
+    $('detailWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function openMine(id) {
     fetch('/api/support/mine/' + id, { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (d) {
       if (!d.request) return;
-      openId = id;
-      $('mineList').style.display = 'none'; $('mineDetail').style.display = 'block';
-      $('detailSubject').textContent = d.request.subject;
-      $('detailMeta').textContent = d.request.ref + ' \u00b7 ' + STATUS[d.request.status];
-      var box = $('detailMessages'); box.textContent = '';
-      d.messages.forEach(function (m) {
-        var div = el('div', 'msg ' + (m.author_type === 'staff' ? 'staff' : 'you'));
-        div.appendChild(el('div', 'who', (m.author_type === 'staff' ? 'Fixer Nation' : 'You') + ' \u00b7 ' + fmt(m.created_at)));
-        div.appendChild(document.createTextNode(m.body));
-        box.appendChild(div);
-      });
+      current = { mode: 'mine', id: id };
+      showThread(d.request, d.messages);
     });
   }
-  $('backToList').addEventListener('click', loadMine);
+
+  $('lookupForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = $('lookupError'); err.style.display = 'none';
+    var ref = $('lookupRef').value.trim(), email = $('lookupEmail').value.trim();
+    post('/api/support/lookup', { ref: ref, email: email }).then(function (res) {
+      if (!res.ok) {
+        err.textContent = res.status === 429 ? 'Too many tries. Please wait a few minutes and try again.' : (res.j.error || "We couldn't find a request with that reference and email. Check both and try again.");
+        err.style.display = 'block'; return;
+      }
+      current = { mode: 'lookup', ref: ref, email: email };
+      showThread(res.j.request, res.j.messages);
+    }).catch(function () { err.textContent = "That didn't go through. Try again."; err.style.display = 'block'; });
+  });
+
+  $('backToList').addEventListener('click', function () {
+    if (signedIn) loadMine(); else { $('detailWrap').style.display = 'none'; $('lookupWrap').scrollIntoView({ behavior: 'smooth' }); }
+  });
+
   $('followForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var err = $('followError'); err.style.display = 'none';
-    fetch('/api/support/mine/' + openId + '/messages', {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: $('followMessage').value })
-    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (!res.ok) { err.textContent = res.j.error || "That didn't go through. Try again."; err.style.display = 'block'; return; }
-        $('followMessage').value = ''; openRequest(openId);
-      });
+    if (!current) return;
+    var message = $('followMessage').value;
+    var req = current.mode === 'mine'
+      ? post('/api/support/mine/' + current.id + '/messages', { message: message })
+      : post('/api/support/lookup/messages', { ref: current.ref, email: current.email, message: message });
+    req.then(function (res) {
+      if (!res.ok) { err.textContent = res.j.error || "That didn't go through. Try again."; err.style.display = 'block'; return; }
+      $('followMessage').value = '';
+      if (current.mode === 'mine') openMine(current.id);
+      else post('/api/support/lookup', { ref: current.ref, email: current.email }).then(function (r2) { if (r2.ok) showThread(r2.j.request, r2.j.messages); });
+    });
   });
 })();
 </script>

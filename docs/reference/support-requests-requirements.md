@@ -68,3 +68,10 @@ The new page is not covered by any help video yet; `docs/training-videos/video-w
 - Retention (question 6): the 2-year deletion is NOT built yet; nothing deletes requests today. Needs a small script, not done in this release.
 - Staff reply emails link to "My requests" only when the requester was signed in.
 - Account Lookup reads `?email=` so the inbox can open a person's record in one click.
+
+## Change in Release 118 (owner, 2026-11-05)
+
+- Replies are read on the Get help page, not emailed (owner: "I prefer that the user receive the update via the support page and not email"). This replaces the "reply is emailed" rows above.
+- Signed in: a "New reply" tag from `support_requests.requester_seen_message_id` (newest staff reply opened); opening a request sets it.
+- Not signed in: `POST /api/support/lookup` and `/lookup/messages` take the reference AND the email. A miss is always the same 404 words; misses are throttled (10 per 15 min per address, 5 per reference). The response never repeats the email, and internal notes are never selected.
+- The request confirmation email is kept (reference plus link to the page). Staff still get an email notice for each new request or follow-up, and the admin menu shows a count of new requests (`GET /api/admin/support/summary`).

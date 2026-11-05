@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 118 — 2026-11-05 — Support replies are read on the page, not emailed
+
+- **Replies show on the Get help page.** Staff replies are no longer emailed. A signed-in person sees a **New reply** tag beside the request in Your requests until they open it.
+- **People who were not signed in can still get their answer.** A new "Already sent a request?" box takes the reference (like SR-4F7K2) and the email used, shows the thread and lets them add to it. A wrong guess says only "couldn't find a request with that reference and email", never which half was wrong, and repeated misses are throttled per address and per reference.
+- **The confirmation email stays** (it carries the reference and a link to the page); the page also shows the reference right after sending.
+- **New requests are noticed even if email fails:** a count of new requests appears beside Support Inbox in the admin menu.
+- **Deploy order matters:** pull, rsync, run `alter-add-support-seen-marker.js` (adds `support_requests.requester_seen_message_id`; the new routes read it), THEN restart Node.
+
 ## Release 117 — 2026-11-05 — A custom website logo is large enough to read
 
 - **The header and footer logo is much bigger when a custom logo is set** (header 130 px tall, footer 130 px, down to 84 px on phones; was 100 px and 56 px). The built-in logo keeps its old size.

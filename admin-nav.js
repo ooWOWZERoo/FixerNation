@@ -118,4 +118,21 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     });
   });
+
+  // A count of brand-new support requests beside the Support Inbox link, so a request is noticed even when its email is not.
+  // Best effort: any failure (signed out, older server) just leaves the link as it is.
+  var supportLink = aside.querySelector('a[href="admin-support.html"] .label');
+  if (supportLink && window.fetch) {
+    fetch('/api/admin/support/summary', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d['new']) return;
+        var badge = document.createElement('span');
+        badge.textContent = String(d['new']);
+        badge.setAttribute('aria-label', d['new'] + ' new support requests');
+        badge.style.cssText = 'margin-left:8px; background:#F26B4D; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:1px 7px;';
+        supportLink.appendChild(badge);
+      })
+      .catch(function () {});
+  }
 })();

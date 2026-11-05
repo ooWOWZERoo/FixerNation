@@ -5,7 +5,8 @@
 //   GET  /api/admin/support/admins                 admin accounts, for "assigned to"
 //   GET  /api/admin/support/:id                    one request with every message, notes included
 //   PUT  /api/admin/support/:id                    status and/or assigned admin
-//   POST /api/admin/support/:id/messages           a reply to the person (emailed) or an internal note
+//   GET  /api/admin/support/summary                how many are new / open / waiting (the badge on the menu link)
+//   POST /api/admin/support/:id/messages           a reply the person reads on the Get help page, or an internal note
 //
 // Every route is requireAuth (the admin account). Every change is written to the audit log by id only, never with the message text.
 const express = require('express');
@@ -13,8 +14,6 @@ const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { audit } = require('../lib/audit');
 const { clientIp } = require('../lib/rate-limit');
-const { getSetting } = require('../lib/settings');
-const { sendSupportEmail } = require('../lib/mailer');
 const { CATEGORIES, STATUSES, LIMITS, cleanText, addMessage } = require('../lib/support');
 
 const router = express.Router();
@@ -59,6 +58,14 @@ router.get('/', requireAuth, async (req, res) => {
   const counts = { new: 0, open: 0, waiting_on_user: 0, resolved: 0 };
   for (const c of countRows) if (c.status in counts) counts[c.status] = Number(c.n);
   res.json({ requests: rows.map(r => ({ ...r, categoryLabel: CATEGORIES[r.category] || CATEGORIES.other })), counts, categories: CATEGORIES });
+});
+
+// GET /api/admin/support/summary -- declared before '/:id' so "summary" is not read as an id
+router.get('/summary', requireAuth, async (req, res) => {
+  const [rows] = await pool.query('SELECT status, COUNT(*) AS n FROM support_requests GROUP BY status');
+  const out = { new: 0, open: 0, waiting_on_user: 0, resolved: 0 };
+  for (const r of rows) if (r.status in out) out[r.status] = Number(r.n);
+  res.json(out);
 });
 
 // GET /api/admin/support/admins -- declared before '/:id' so "admins" is not read as an id
@@ -120,12 +127,12 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/admin/support/:id/messages -- body: { body, visibility: 'public' | 'internal', status? }
-// 'public' is emailed to the person (and shown in their "My requests"); 'internal' is a staff note nobody outside the admin sees.
+// 'public' is shown to the person on the Get help page (signed-in people see a "New reply" tag; others look it up with their reference
+// and email). Nothing is emailed: the owner prefers updates to be read on the page. 'internal' is a staff note nobody outside the admin sees.
 router.post('/:id/messages', requireAuth, async (req, res) => {
   const id = validId(req, res);
   if (!id) return;
-  const [[row]] = await pool.query(
-    'SELECT id, ref, status, subject, requester_name, requester_email, site_user_id, school_domain FROM support_requests WHERE id = ?', [id]);
+  const [[row]] = await pool.query('SELECT id, ref, status, school_domain FROM support_requests WHERE id = ?', [id]);
   if (!row) return res.status(404).json({ error: 'Not found' });
   const body = req.body || {};
   const text = cleanText(body.body, LIMITS.message);
@@ -150,26 +157,7 @@ router.post('/:id/messages', requireAuth, async (req, res) => {
     await pool.query('UPDATE support_requests SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
   }
   await auditStaff(req, visibility === 'public' ? 'support_reply_sent' : 'support_note_added', row, { newValue: { status: newStatus } });
-
-  let emailed = false;
-  let emailError = null;
-  if (visibility === 'public') {
-    try {
-      await sendSupportEmail({
-        to: row.requester_email, name: row.requester_name, ref: row.ref, subject: `Re: ${row.subject}`,
-        intro: 'Fixer Nation support replied to your request:',
-        body: text,
-        replyTo: await getSetting('contact_email_support'),
-        linkUrl: row.site_user_id ? `${process.env.SITE_URL || ''}/support.html` : null,
-        linkLabel: 'See your requests',
-      });
-      emailed = true;
-    } catch (err) {
-      console.error('support: reply email failed:', err.message);
-      emailError = 'The reply is saved, but the email could not be sent. Check the mail settings.';
-    }
-  }
-  res.json({ ok: true, emailed, emailError, status: newStatus });
+  res.json({ ok: true, status: newStatus });
 });
 
 module.exports = router;

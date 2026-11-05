@@ -6,13 +6,18 @@
 //   GET  /api/support/mine               signed-in: my own requests
 //   GET  /api/support/mine/:id           signed-in: one of my requests and the replies meant for me
 //   POST /api/support/mine/:id/messages  signed-in: add to one of my requests
+//   POST /api/support/lookup             anyone: read one request by its reference AND the email it was sent with
+//   POST /api/support/lookup/messages    anyone with that reference and email: add to it
 //
+// Replies are read on the page, not emailed (owner's choice, Release 118). A person who was not signed in comes back with their
+// reference and email; wrong guesses are throttled per address and per reference, and a miss never says which half was wrong.
+
 // Students (PIN login) have no route here by design. Role, school and district are looked up from the account, never taken from
 // the form. Internal staff notes are never selected by a query on this side.
 const express = require('express');
 const pool = require('../db/pool');
 const { getSiteUser } = require('../lib/site-user');
-const { limiter, clientIp } = require('../lib/rate-limit');
+const { limiter, clientIp, FailureTracker, rejectIfBlocked } = require('../lib/rate-limit');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail, sendSupportEmail } = require('../lib/mailer');
 const { CATEGORIES, LIMITS, EMAIL_PATTERN, cleanText, resolveContext, addMessage, createRequest } = require('../lib/support');
@@ -26,6 +31,10 @@ const emailLimit = limiter({
   key: (req) => (req.body && typeof req.body.email === 'string' && req.body.email.trim() ? req.body.email.trim().toLowerCase() : null),
 });
 const followUpLimit = limiter({ name: 'support-followup', windowMs: 3600000, max: 20, key: clientIp });
+// Wrong ref/email guesses: 10 per 15 minutes per address, and 5 per reference so a known reference cannot be tried against many emails.
+const LOOKUP_WINDOW = 15 * 60 * 1000;
+const lookupMissesByIp = new FailureTracker({ name: 'support-lookup-ip', windowMs: LOOKUP_WINDOW, max: 10 });
+const lookupMissesByRef = new FailureTracker({ name: 'support-lookup-ref', windowMs: LOOKUP_WINDOW, max: 5 });
 
 function demoRefused(user) {
   return user && user.is_sales_demo ? 'Demo accounts cannot send support requests.' : null;
@@ -107,9 +116,11 @@ router.post('/', ipLimit, emailLimit, async (req, res) => {
   try {
     await sendSupportEmail({
       to: who.email, name: who.name, ref: created.ref, subject: 'We got your request',
-      intro: 'Thanks for reaching out. We have your request and will reply by email. Here is what you sent us:',
+      intro: 'Thanks for reaching out. We have your request. Our reply will show on the Get help page, where you can look it up with your reference and this email address. Here is what you sent us:',
       body: message,
       replyTo: await getSetting('contact_email_support'),
+      linkUrl: `${siteUrl()}/support.html`,
+      linkLabel: 'Open the Get help page',
     });
   } catch (err) {
     console.error('support: confirmation email failed:', err.message);
@@ -121,11 +132,15 @@ router.post('/', ipLimit, emailLimit, async (req, res) => {
 router.get('/mine', async (req, res) => {
   const user = await requireSignedIn(req, res);
   if (!user) return;
+  // newReplies: staff replies the person has not opened yet (their own "seen up to" message id is kept on the request).
   const [rows] = await pool.query(
-    'SELECT id, ref, status, category, subject, created_at, updated_at FROM support_requests WHERE site_user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 100',
+    `SELECT r.id, r.ref, r.status, r.category, r.subject, r.created_at, r.updated_at,
+            (SELECT COUNT(*) FROM support_request_messages m
+              WHERE m.request_id = r.id AND m.author_type = 'staff' AND m.visibility = 'public' AND m.id > r.requester_seen_message_id) AS new_replies
+     FROM support_requests r WHERE r.site_user_id = ? ORDER BY r.updated_at DESC, r.id DESC LIMIT 100`,
     [user.id]
   );
-  res.json({ requests: rows.map(r => ({ ...r, categoryLabel: CATEGORIES[r.category] || CATEGORIES.other })) });
+  res.json({ requests: rows.map(r => ({ ...r, newReplies: Number(r.new_replies) || 0, categoryLabel: CATEGORIES[r.category] || CATEGORIES.other })) });
 });
 
 async function ownRequest(req, res, user) {
@@ -149,8 +164,26 @@ router.get('/mine/:id', async (req, res) => {
     "SELECT id, author_type, body, created_at FROM support_request_messages WHERE request_id = ? AND visibility = 'public' ORDER BY created_at, id",
     [row.id]
   );
+  const lastStaff = messages.filter(m => m.author_type === 'staff').reduce((max, m) => Math.max(max, m.id), 0);
+  // updated_at = updated_at: opening a request must not look like new activity or reorder the list
+  if (lastStaff) await pool.query('UPDATE support_requests SET requester_seen_message_id = ?, updated_at = updated_at WHERE id = ?', [lastStaff, row.id]);
   res.json({ request: { ...row, categoryLabel: CATEGORIES[row.category] || CATEGORIES.other }, messages });
 });
+
+// An answer from the person puts a resolved or waiting request back in front of staff; a brand-new one stays new. Staff are told by email.
+async function recordFollowUp(row, fromName, message) {
+  await addMessage(row.id, { authorType: 'requester', body: message });
+  if (row.status === 'resolved' || row.status === 'waiting_on_user') {
+    await pool.query("UPDATE support_requests SET status = 'open', resolved_at = NULL WHERE id = ?", [row.id]);
+  } else {
+    await pool.query('UPDATE support_requests SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [row.id]);
+  }
+  await tellStaff({
+    subject: `New reply on support request ${row.ref}`,
+    id: row.id,
+    fields: { Reference: row.ref, From: fromName, Subject: row.subject, Message: message.length > 800 ? message.slice(0, 800) + '...' : message },
+  });
+}
 
 // POST /api/support/mine/:id/messages -- body: { message }
 router.post('/mine/:id/messages', followUpLimit, async (req, res) => {
@@ -162,19 +195,54 @@ router.post('/mine/:id/messages', followUpLimit, async (req, res) => {
   if (!row) return;
   const message = cleanText((req.body || {}).message, LIMITS.message);
   if (!message) return res.status(400).json({ error: 'Please write a message.' });
+  await recordFollowUp(row, `${user.first_name} ${user.last_name}`.trim(), message);
+  res.json({ ok: true });
+});
 
-  await addMessage(row.id, { authorType: 'requester', body: message });
-  // An answer from the person puts a resolved or waiting request back in front of staff; a brand-new one stays new.
-  if (row.status === 'resolved' || row.status === 'waiting_on_user') {
-    await pool.query("UPDATE support_requests SET status = 'open', resolved_at = NULL WHERE id = ?", [row.id]);
-  } else {
-    await pool.query('UPDATE support_requests SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [row.id]);
+// The request for a reference + email pair, or null after answering 404 (the same words whichever half was wrong) or 429.
+async function findByRefAndEmail(req, res) {
+  const body = req.body || {};
+  const ip = clientIp(req);
+  const ref = typeof body.ref === 'string' ? body.ref.trim().toUpperCase().slice(0, 16) : '';
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase().slice(0, LIMITS.email) : '';
+  if (rejectIfBlocked(res, [[lookupMissesByIp, ip], [lookupMissesByRef, ref]])) return null;
+  let row = null;
+  if (ref && email) {
+    [[row]] = await pool.query(
+      'SELECT id, ref, status, category, subject, requester_name, created_at, updated_at FROM support_requests WHERE ref = ? AND LOWER(requester_email) = ?',
+      [ref, email]
+    );
   }
-  await tellStaff({
-    subject: `New reply on support request ${row.ref}`,
-    id: row.id,
-    fields: { Reference: row.ref, From: `${user.first_name} ${user.last_name}`.trim(), Subject: row.subject, Message: message.length > 800 ? message.slice(0, 800) + '...' : message },
+  if (!row) {
+    lookupMissesByIp.fail(ip);
+    lookupMissesByRef.fail(ref);
+    res.status(404).json({ error: "We couldn't find a request with that reference and email. Check both and try again." });
+    return null;
+  }
+  return row;
+}
+
+// POST /api/support/lookup -- body: { ref, email }
+router.post('/lookup', async (req, res) => {
+  const row = await findByRefAndEmail(req, res);
+  if (!row) return;
+  const [messages] = await pool.query(
+    "SELECT id, author_type, body, created_at FROM support_request_messages WHERE request_id = ? AND visibility = 'public' ORDER BY created_at, id",
+    [row.id]
+  );
+  res.json({
+    request: { ref: row.ref, status: row.status, subject: row.subject, categoryLabel: CATEGORIES[row.category] || CATEGORIES.other, created_at: row.created_at, updated_at: row.updated_at },
+    messages,
   });
+});
+
+// POST /api/support/lookup/messages -- body: { ref, email, message }
+router.post('/lookup/messages', followUpLimit, async (req, res) => {
+  const row = await findByRefAndEmail(req, res);
+  if (!row) return;
+  const message = cleanText((req.body || {}).message, LIMITS.message);
+  if (!message) return res.status(400).json({ error: 'Please write a message.' });
+  await recordFollowUp(row, row.requester_name, message);
   res.json({ ok: true });
 });
 

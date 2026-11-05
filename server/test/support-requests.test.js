@@ -13,6 +13,7 @@ require('express-async-errors');
 process.env.UPLOADS_DIR = path.join(os.tmpdir(), 'fne-test-uploads');
 
 const SERVER = path.join(__dirname, '..');
+const realRateLimit = require(path.join(SERVER, 'lib/rate-limit.js')); // loaded before the stubs go in: the lookup throttle should be the real one
 const ROOT = path.join(SERVER, '..');
 const db = new DatabaseSync(':memory:');
 db.exec(`
@@ -26,7 +27,7 @@ CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_u
 CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, district_id INTEGER, is_active INTEGER DEFAULT 1);
 CREATE TABLE parent_classroom_links (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, classroom_id INTEGER, student_id INTEGER);
 CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_id INTEGER, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER, purchase_id INTEGER, school_domain TEXT, prev_value TEXT, new_value TEXT, reason TEXT, ip_address TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE support_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE, status TEXT DEFAULT 'new', category TEXT DEFAULT 'other', subject TEXT, requester_name TEXT, requester_email TEXT, site_user_id INTEGER, roles TEXT, school_domain TEXT, district_id INTEGER, page_url TEXT, user_agent TEXT, assigned_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, resolved_at TEXT);
+CREATE TABLE support_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE, status TEXT DEFAULT 'new', category TEXT DEFAULT 'other', subject TEXT, requester_name TEXT, requester_email TEXT, site_user_id INTEGER, roles TEXT, school_domain TEXT, district_id INTEGER, page_url TEXT, user_agent TEXT, assigned_admin_id INTEGER, requester_seen_message_id INTEGER NOT NULL DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, resolved_at TEXT);
 CREATE TABLE support_request_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER, author_type TEXT, author_admin_id INTEGER, visibility TEXT DEFAULT 'public', body TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 INSERT INTO admin_users (id, username, email) VALUES (7, 'staffer', 'staff@fne.test'), (8, 'second', 'second@fne.test');
 INSERT INTO districts (id, name) VALUES (5, 'Riverbend');
@@ -55,7 +56,7 @@ const stubs = {
     sendSalesAlertEmail: async (m) => { sent.staff.push(m); },
     sendSupportEmail: async (m) => { if (failPersonMail) throw new Error('smtp down'); sent.person.push(m); },
   },
-  [path.join(SERVER, 'lib/rate-limit.js')]: { limiter: () => (req, res, next) => next(), clientIp: () => '127.0.0.1' },
+  [path.join(SERVER, 'lib/rate-limit.js')]: { limiter: () => (req, res, next) => next(), clientIp: () => '127.0.0.1', FailureTracker: realRateLimit.FailureTracker, rejectIfBlocked: realRateLimit.rejectIfBlocked },
 };
 const origLoad = Module._load;
 Module._load = function (request, parent) {
@@ -119,6 +120,7 @@ test('VISITOR: opens a request without signing in; staff are told; the person ge
   assert.equal(sent.staff.length, 1); assert.match(sent.staff[0].subject, /New support request SR-/);
   assert.equal(sent.staff[0].to, 'admin@fixernationeducation.com', 'default support address until the setting is changed');
   assert.equal(sent.person.length, 1); assert.equal(sent.person[0].to, 'visitor@home.test'); assert.equal(sent.person[0].ref, r.json.ref);
+  assert.match(sent.person[0].intro, /Get help page/); assert.match(sent.person[0].linkUrl, /support\.html$/);
 });
 
 test('VALIDATION: an email and a message are needed; odd input is not coerced; the hidden field catches bots', async () => {
@@ -229,19 +231,82 @@ test('INBOX: list with counts, filters and search; detail shows every message', 
   assert.equal((await call('GET', '/api/admin/support/admins')).json.admins.length, 2, '/admins is not read as an id');
 });
 
-test('STAFF REPLY: a public reply is emailed with the support address as Reply-To, waits on the person, and is audited without its text', async () => {
+test('STAFF REPLY: a public reply is NOT emailed; it waits on the person and is audited without its text', async () => {
   reset();
   await call('POST', '/api/support', { body: form() });
   const id = db.prepare('SELECT id FROM support_requests').get().id;
+  sent.person.length = 0;
   const r = await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Please try the reset link again.', visibility: 'public' } });
-  assert.equal(r.status, 200); assert.equal(r.json.emailed, true); assert.equal(r.json.status, 'waiting_on_user');
+  assert.equal(r.status, 200); assert.equal(r.json.status, 'waiting_on_user');
   assert.equal(rowOf(id).status, 'waiting_on_user');
-  const mail = sent.person.at(-1);
-  assert.equal(mail.to, 'visitor@home.test'); assert.equal(mail.body, 'Please try the reset link again.');
-  assert.equal(mail.replyTo, 'admin@fixernationeducation.com'); assert.equal(mail.linkUrl, null, 'a visitor has no My requests page to link to');
+  assert.equal(sent.person.length, 0, 'the person reads replies on the page; nothing is emailed');
   const log = db.prepare("SELECT * FROM school_audit_log WHERE action = 'support_reply_sent'").get();
   assert.equal(log.entity_type, 'support_request'); assert.equal(log.entity_id, id); assert.equal(log.purchase_id, null);
   assert.ok(!JSON.stringify(log).includes('reset link'), 'the audit log holds ids, not message text');
+});
+
+test('NEW REPLY TAG: a signed-in person sees how many staff replies they have not opened; opening clears it', async () => {
+  reset();
+  const a = account('Ann', { teacher: true });
+  await call('POST', '/api/support', { as: a.uid, body: form() });
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  assert.equal((await call('GET', '/api/support/mine', { as: a.uid })).json.requests[0].newReplies, 0);
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Note for us only', visibility: 'internal' } });
+  assert.equal((await call('GET', '/api/support/mine', { as: a.uid })).json.requests[0].newReplies, 0, 'an internal note is never a new reply');
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'First answer', visibility: 'public' } });
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Second answer', visibility: 'public' } });
+  assert.equal((await call('GET', '/api/support/mine', { as: a.uid })).json.requests[0].newReplies, 2);
+  await call('GET', `/api/support/mine/${id}`, { as: a.uid });
+  assert.equal((await call('GET', '/api/support/mine', { as: a.uid })).json.requests[0].newReplies, 0);
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Third answer', visibility: 'public' } });
+  assert.equal((await call('GET', '/api/support/mine', { as: a.uid })).json.requests[0].newReplies, 1, 'only replies after the last opening count');
+});
+
+test('LOOKUP: a visitor reads their request with reference + email (any letter case), public messages only', async () => {
+  reset();
+  const made = (await call('POST', '/api/support', { body: form({ email: 'Visitor@Home.test' }) })).json;
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'SECRET staff note', visibility: 'internal' } });
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'We reset it for you.', visibility: 'public' } });
+  const r = await call('POST', '/api/support/lookup', { body: { ref: made.ref.toLowerCase(), email: ' VISITOR@home.test ' } });
+  assert.equal(r.status, 200); assert.equal(r.json.request.ref, made.ref); assert.equal(r.json.request.status, 'waiting_on_user');
+  assert.deepEqual(r.json.messages.map(m => m.body), ['I reset my password but it fails.', 'We reset it for you.']);
+  assert.ok(!JSON.stringify(r.json).includes('SECRET'), 'internal notes never reach a visitor');
+  assert.ok(!JSON.stringify(r.json).includes('visitor@home.test'), 'the response does not repeat the email back');
+});
+
+test('LOOKUP MISS: a wrong email, wrong reference or odd input all get the same 404 words', async () => {
+  reset();
+  const made = (await call('POST', '/api/support', { body: form() })).json;
+  const wrongEmail = await call('POST', '/api/support/lookup', { body: { ref: made.ref, email: 'someone@else.test' } });
+  const wrongRef = await call('POST', '/api/support/lookup', { body: { ref: 'SR-ZZZZZ', email: 'visitor@home.test' } });
+  assert.equal(wrongEmail.status, 404); assert.equal(wrongRef.status, 404);
+  assert.deepEqual(wrongEmail.json, wrongRef.json, 'a miss never says which half was wrong');
+  assert.equal((await call('POST', '/api/support/lookup', { body: { ref: ['SR-1'], email: { a: 1 } } })).status, 404);
+});
+
+test('LOOKUP FOLLOW-UP: a visitor can add to their request; a resolved one reopens and staff are told', async () => {
+  reset();
+  const made = (await call('POST', '/api/support', { body: form() })).json;
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  await call('PUT', `/api/admin/support/${id}`, { body: { status: 'resolved' } });
+  sent.staff.length = 0;
+  const ok = await call('POST', '/api/support/lookup/messages', { body: { ref: made.ref, email: 'visitor@home.test', message: 'It happened again.' } });
+  assert.equal(ok.status, 200); assert.equal(rowOf(id).status, 'open'); assert.equal(sent.staff.length, 1);
+  assert.equal(db.prepare("SELECT body FROM support_request_messages WHERE author_type = 'requester' ORDER BY id DESC").get().body, 'It happened again.');
+  assert.equal((await call('POST', '/api/support/lookup/messages', { body: { ref: made.ref, email: 'visitor@home.test', message: '  ' } })).status, 400);
+  const before = db.prepare('SELECT COUNT(*) AS n FROM support_request_messages').get().n;
+  assert.equal((await call('POST', '/api/support/lookup/messages', { body: { ref: made.ref, email: 'wrong@home.test', message: 'hi' } })).status, 404);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_request_messages').get().n, before, 'a wrong email adds nothing');
+});
+
+test('SUMMARY: the menu badge count reads the status totals', async () => {
+  reset();
+  await call('POST', '/api/support', { body: form() });
+  await call('POST', '/api/support', { body: form({ email: 'two@home.test' }) });
+  const id = db.prepare('SELECT id FROM support_requests ORDER BY id').get().id;
+  await call('PUT', `/api/admin/support/${id}`, { body: { status: 'open' } });
+  assert.deepEqual((await call('GET', '/api/admin/support/summary')).json, { new: 1, open: 1, waiting_on_user: 0, resolved: 0 });
 });
 
 test('STAFF NOTE: an internal note sends no email and only moves a new request to open', async () => {
@@ -250,21 +315,11 @@ test('STAFF NOTE: an internal note sends no email and only moves a new request t
   const id = db.prepare('SELECT id FROM support_requests').get().id;
   sent.person.length = 0;
   const r = await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Checked: account is fine.', visibility: 'internal' } });
-  assert.equal(r.status, 200); assert.equal(r.json.emailed, false); assert.equal(sent.person.length, 0);
+  assert.equal(r.status, 200); assert.equal(sent.person.length, 0);
   assert.equal(rowOf(id).status, 'open');
   await call('PUT', `/api/admin/support/${id}`, { body: { status: 'waiting_on_user' } });
   await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Another note', visibility: 'internal' } });
   assert.equal(rowOf(id).status, 'waiting_on_user', 'a later note does not change the status');
-});
-
-test('EMAIL FAILURE: the reply is still saved and staff are told the email did not go', async () => {
-  reset();
-  await call('POST', '/api/support', { body: form() });
-  const id = db.prepare('SELECT id FROM support_requests').get().id;
-  failPersonMail = true;
-  const r = await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Hello', visibility: 'public' } });
-  assert.equal(r.status, 200); assert.equal(r.json.emailed, false); assert.match(r.json.emailError, /could not be sent/);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_request_messages WHERE visibility = ? AND author_type = ?').get('public', 'staff').n, 1);
 });
 
 test('STAFF CHANGES: status and assignment are validated and audited; bad input is refused', async () => {
@@ -291,6 +346,16 @@ test('SUPPORT ADDRESS: the staff notice goes to the configured setting', async (
   assert.equal(sent.staff[0].to, 'help@fne.test');
 });
 
+test('LOOKUP THROTTLE: repeated wrong guesses are stopped, per reference and per address', async () => {
+  reset();
+  const made = (await call('POST', '/api/support', { body: form() })).json;
+  let last;
+  for (let i = 0; i < 6; i++) last = await call('POST', '/api/support/lookup', { body: { ref: made.ref, email: `guess${i}@home.test` } });
+  assert.equal(last.status, 429, 'five misses on one reference block that reference');
+  const right = await call('POST', '/api/support/lookup', { body: { ref: made.ref, email: 'visitor@home.test' } });
+  assert.equal(right.status, 429, 'even the right email waits, so the block cannot be used to probe');
+});
+
 test('WIRING: pages are linked, cache versions match, and nothing from a person goes in as HTML', () => {
   const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
   assert.match(read('admin-nav.js'), /admin-support\.html/);
@@ -301,8 +366,11 @@ test('WIRING: pages are linked, cache versions match, and nothing from a person 
   const adm = read('admin-support.html');
   assert.ok(!/onclick="[^"]*(\+|\$\{)/.test(adm), 'no inline handler is built from data (only the fixed theme toggle has one)');
   assert.match(adm, /fnEscape/);
-  assert.match(adm, /admin-nav\.js\?v=26/);
+  assert.match(adm, /admin-nav\.js\?v=27/);
   assert.match(read('server/app.js'), /\/api\/admin\/support/);
   assert.match(read('server/db/schema.sql'), /CREATE TABLE IF NOT EXISTS support_requests/);
   assert.match(read('server/scripts/alter-create-support-requests.js'), /support_request_messages/);
+  assert.match(read('server/scripts/alter-add-support-seen-marker.js'), /requester_seen_message_id/);
+  assert.match(read('server/db/schema.sql'), /requester_seen_message_id/);
+  assert.match(read('admin-nav.js'), /api\/admin\/support\/summary/);
 });

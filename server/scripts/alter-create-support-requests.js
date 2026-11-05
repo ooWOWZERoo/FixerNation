@@ -20,6 +20,7 @@ const TABLES = {
   page_url VARCHAR(500) NULL, -- sent by the browser; untrusted text
   user_agent VARCHAR(300) NULL, -- sent by the browser; untrusted text
   assigned_admin_id INT UNSIGNED NULL,
+  requester_seen_message_id INT UNSIGNED NOT NULL DEFAULT 0, -- the newest staff reply the person has opened (drives the New reply tag)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   resolved_at DATETIME NULL,

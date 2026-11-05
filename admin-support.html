@@ -16,7 +16,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=26"></script>
+<script src="admin-nav.js?v=27"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -71,10 +71,10 @@
             <textarea id="rBody" rows="5" maxlength="5000" style="width:100%;"></textarea>
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-            <button type="button" class="a-btn a-btn-primary" id="sendReply">Email reply to them</button>
+            <button type="button" class="a-btn a-btn-primary" id="sendReply">Send reply</button>
             <button type="button" class="a-btn a-btn-outline" id="sendNote">Save as internal note</button>
           </div>
-          <div class="a-note" style="margin-top:8px;">A reply is emailed to them and shows in their My requests list. An internal note is seen by staff only.</div>
+          <div class="a-note" style="margin-top:8px;">A reply shows on their Get help page. Signed-in people see a New reply tag. Everyone else looks it up with their reference and email. An internal note is seen by staff only.</div>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ async function openRequest(id) {
   document.getElementById('dAssign').value = r.assigned_admin_id ? String(r.assigned_admin_id) : '';
   document.getElementById('dLookup').href = 'admin-account-lookup.html?email=' + encodeURIComponent(r.requester_email);
   document.getElementById('dMessages').innerHTML = d.messages.map(m => {
-    const who = m.author_type === 'staff' ? (m.admin_name || 'Staff') + (m.visibility === 'internal' ? ' (internal note)' : ' (emailed)') : esc(r.requester_name);
+    const who = m.author_type === 'staff' ? (m.admin_name || 'Staff') + (m.visibility === 'internal' ? ' (internal note)' : ' (reply)') : esc(r.requester_name);
     const bg = m.visibility === 'internal' ? 'background:#FFF4D6;' : m.author_type === 'staff' ? 'background:rgba(22,79,74,0.10);' : 'background:rgba(127,127,127,0.10);';
     return '<div style="' + bg + ' padding:10px 14px; border-radius:10px; margin-bottom:10px; white-space:pre-wrap; word-break:break-word;">' +
       '<div style="font-size:12px; font-weight:700; opacity:.7; margin-bottom:4px;">' + (m.author_type === 'staff' ? esc(who) : who) + ' · ' + esc(fmt(m.created_at)) + '</div>' + esc(m.body) + '</div>';
@@ -172,7 +172,7 @@ async function postMessage(visibility) {
   const d = await api('/' + currentId + '/messages', send('POST', { body: body, visibility: visibility }));
   if (!d) return;
   document.getElementById('rBody').value = '';
-  fnToast(visibility === 'public' ? (d.emailed ? 'Reply emailed' : (d.emailError || 'Saved')) : 'Note saved');
+  fnToast(visibility === 'public' ? 'Reply sent' : 'Note saved');
   openRequest(currentId);
   loadList();
 }
