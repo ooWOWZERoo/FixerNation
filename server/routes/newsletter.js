@@ -11,6 +11,7 @@ const { limiter, clientIp } = require('../lib/rate-limit');
 const { notAdminSeatClause } = require('../lib/seat-counts');
 const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal');
 const { claimForAccountByEmail } = require('../lib/own-seat-claim');
+const { describeConsequences, consequencesText, hasRoles, closeAccount } = require('../lib/account-closing');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -190,6 +191,20 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
     notes: b.notes !== undefined ? b.notes : existing.notes,
   };
 
+  // Changing the contact's email moves the sign-in account's email with it (rule E), so the two records cannot drift apart. Refused when
+  // another account already uses the new address.
+  let accountToMove = null;
+  if (String(merged.email).toLowerCase() !== String(existing.email).toLowerCase()) {
+    const [[acct]] = await pool.query('SELECT id, closed_at FROM site_users WHERE LOWER(email) = LOWER(?)', [existing.email]);
+    if (acct && !acct.closed_at) {
+      const [[taken]] = await pool.query('SELECT id FROM site_users WHERE LOWER(email) = LOWER(?) AND id <> ?', [merged.email, acct.id]);
+      if (taken) {
+        return res.status(409).json({ code: 'account_email_in_use', error: `${merged.email} is already the sign-in email of another account, so this contact's email cannot move there. Use a different address.` });
+      }
+      accountToMove = acct;
+    }
+  }
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -202,6 +217,11 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
         'UPDATE newsletter_contacts SET ship_to_name=?, ship_to_company=?, ship_to_street=?, ship_to_city=?, ship_to_state=?, ship_to_zip=? WHERE id=?',
         [shipTo.name || null, shipTo.company || null, shipTo.street || null, shipTo.city || null, shipTo.state || null, shipTo.zip || null, req.params.id]
       );
+    }
+    if (accountToMove) {
+      await connection.query('UPDATE site_users SET email = ? WHERE id = ?', [merged.email, accountToMove.id]);
+      await connection.query('UPDATE license_seats SET invited_email = ? WHERE LOWER(invited_email) = LOWER(?)', [merged.email, existing.email]);
+      await connection.query("UPDATE school_invitations SET invited_email = ? WHERE LOWER(invited_email) = LOWER(?) AND status NOT IN ('registered', 'revoked', 'expired')", [merged.email, existing.email]);
     }
     if (b.groupIds !== undefined) {
       await setContactGroups(connection, req.params.id, b.groupIds);
@@ -223,7 +243,7 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
 
   const [rows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [req.params.id]);
   const [contact] = await attachSiteUserInfo(await attachGroups(rows));
-  res.json({ contact: serialize(contact) });
+  res.json({ contact: serialize(contact), accountEmailUpdated: !!accountToMove });
 });
 
 router.delete('/contacts/:id', requireAuth, async (req, res) => {
@@ -243,9 +263,37 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
       error: `This contact owns ${parts.join(' and ')}. Deleting it would erase them and every license seat on them. Remove or cancel those first.`,
     });
   }
-  const [result] = await pool.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  if (result.affectedRows === 0) return res.status(404).json({ error: 'Contact not found' });
-  res.json({ ok: true });
+  // The CRM is the record of who is on the platform: deleting a contact that has a sign-in account closes the account
+  // (lib/account-closing.js, docs/reference/crm-record-of-truth-requirements.md rule B). Staff confirm first when the account holds a
+  // seat or a role; a staff account (role admin, or marked is_fne_staff) is never closed this way.
+  const [[contact]] = await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [req.params.id]);
+  if (!contact) return res.status(404).json({ error: 'Contact not found' });
+  const [[account]] = await pool.query(
+    'SELECT id, first_name, last_name, role, is_fne_staff, closed_at FROM site_users WHERE LOWER(email) = LOWER(?)', [contact.email]);
+  let closing = false;
+  if (account && !account.closed_at) {
+    if (account.role === 'admin' || Number(account.is_fne_staff)) {
+      return res.status(409).json({ code: 'staff_account', error: 'This contact is a Fixer Nation staff account and cannot be removed here.' });
+    }
+    const consequences = await describeConsequences(pool, account.id);
+    if (hasRoles(consequences) && !(req.body && req.body.confirmClose === true)) {
+      return res.status(409).json({ code: 'confirm_close', consequences, error: consequencesText([account.first_name, account.last_name].filter(Boolean).join(' '), consequences) });
+    }
+    closing = true;
+  }
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    if (closing) await closeAccount(connection, account.id, { actorType: 'admin', actorId: req.user && req.user.userId, reason: 'crm_contact_deleted' });
+    await connection.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+  res.json({ ok: true, accountClosed: closing });
 });
 
 // Ad-hoc admin-triggered resend of the site-account verification email,

@@ -14,7 +14,7 @@ process.env.UPLOADS_DIR = path.join(os.tmpdir(), 'fne-test-uploads');
 const SERVER = path.join(__dirname, '..');
 const db = new DatabaseSync(':memory:');
 db.exec(`
-CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, is_sales_demo INTEGER DEFAULT 0, is_fne_staff INTEGER DEFAULT 0, session_invalidated_at TEXT);
+CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, is_sales_demo INTEGER DEFAULT 0, is_fne_staff INTEGER DEFAULT 0, role TEXT DEFAULT 'teacher', closed_at TEXT, session_invalidated_at TEXT);
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, name TEXT);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER, license_status TEXT, expiration_date TEXT, school_domain TEXT, school_id INTEGER);
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER);
@@ -37,7 +37,7 @@ const run = async (sql, params = []) => {
 };
 const noopProxy = new Proxy({}, { get: () => async () => ({}) });
 const stubs = {
-  [path.join(SERVER, 'db/pool.js')]: { query: run },
+  [path.join(SERVER, 'db/pool.js')]: { query: run, getConnection: async () => ({ query: run, beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {} }) },
   [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => next(), getAuthUser: () => null },
   // the cookie value is the user id, so a test signs in as anyone by sending it
   [path.join(SERVER, 'lib/session-tokens.js')]: { verifySession: (kind, token) => ({ userId: Number(token), iat: Math.floor(Date.now() / 1000) }) },

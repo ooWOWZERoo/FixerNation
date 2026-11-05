@@ -12,8 +12,18 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
+const { reopenAccount } = require('../lib/account-closing');
 
 const router = express.Router();
+
+// POST /api/admin/account-lookup/:id/reopen -- reopen a closed account (docs/reference/crm-record-of-truth-requirements.md rule C). The
+// account only: its seat, administrator roles and Community groups are not restored; staff re-add those on purpose. A CRM contact is
+// created (Unsubscribed) if the person has none.
+router.post('/:id/reopen', requireAuth, async (req, res) => {
+  const result = await reopenAccount(pool, Number(req.params.id), { actorType: 'admin', actorId: req.user && req.user.userId });
+  if (!result.reopened) return res.status(404).json({ error: 'No closed account with that id' });
+  res.json({ ok: true, contactCreated: result.contactCreated });
+});
 
 // GET /api/admin/account-lookup?email=
 router.get('/', requireAuth, async (req, res) => {
@@ -21,7 +31,7 @@ router.get('/', requireAuth, async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
   const [[account]] = await pool.query(
-    'SELECT id, first_name, last_name, email, role, email_verified, session_invalidated_at, created_at FROM site_users WHERE email = ?',
+    'SELECT id, first_name, last_name, email, role, email_verified, session_invalidated_at, created_at, closed_at, closed_reason FROM site_users WHERE email = ?',
     [email]
   );
 

@@ -550,21 +550,32 @@ async function toggleStatus(id) {
 }
 
 async function deleteContact(id) {
-  if (!confirm('Remove this contact? If they have a sign-in account, they will no longer appear in Community.')) return;
-  const r = await fetch(`/api/newsletter/contacts/${id}`, {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  });
-  if (fnHandleUnauthorized(r)) return;
-  if (!r.ok) {
+  if (!confirm('Remove this contact? If they have a sign-in account, it will be closed: they are signed out and cannot sign in again until staff reopen it.')) return;
+  let confirmClose = false;
+  for (;;) {
+    const r = await fetch(`/api/newsletter/contacts/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(confirmClose ? { confirmClose: true } : {}),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    if (r.ok) {
+      const d = await r.json().catch(() => ({}));
+      fetchAndRenderContacts();
+      fnToast(d.accountClosed ? 'Contact removed and sign-in account closed' : 'Contact removed');
+      return;
+    }
     const err = await r.json().catch(() => ({}));
+    // This person holds a license seat or a role: the server says exactly what closing the account takes away, and staff confirm.
+    if (err.code === 'confirm_close' && !confirmClose) {
+      if (!confirm(err.error + '\n\nClose this account and remove the contact?')) return;
+      confirmClose = true;
+      continue;
+    }
     alert(err.error || 'Could not remove this contact');
     return;
   }
-  fetchAndRenderContacts();
-  fnToast('Contact removed');
 }
 
 // Groups field: selected groups show as removable pills; a typeahead
@@ -887,10 +898,11 @@ async function saveContact() {
       body: JSON.stringify({ name, email, phone, company, source, status, address, shipTo, notes, groupIds }),
     });
     if (fnHandleUnauthorized(r)) return;
-    if (!r.ok) { const err = await r.json().catch(() => ({})); if (err.code === 'email_in_use') alert(err.error); else fnToast(err.error || 'Could not save contact'); return; }
+    if (!r.ok) { const err = await r.json().catch(() => ({})); if (err.code === 'email_in_use' || err.code === 'account_email_in_use') alert(err.error); else fnToast(err.error || 'Could not save contact'); return; }
+    const saved = await r.json().catch(() => ({}));
     closeContactModal();
     fetchAndRenderContacts();
-    fnToast('Contact updated');
+    fnToast(saved.accountEmailUpdated ? 'Contact updated. Their sign-in email changed too.' : 'Contact updated');
     return;
   }
 

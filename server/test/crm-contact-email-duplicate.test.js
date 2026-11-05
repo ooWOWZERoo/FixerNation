@@ -15,8 +15,10 @@ db.exec(`
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, phone TEXT, company TEXT, street TEXT, city TEXT, state TEXT, zip TEXT,
   ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT, signup_date TEXT, source TEXT, status TEXT, notes TEXT);
 CREATE TABLE contact_groups (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE license_seats (id INTEGER PRIMARY KEY, invited_email TEXT);
+CREATE TABLE school_invitations (id INTEGER PRIMARY KEY, invited_email TEXT, status TEXT);
 CREATE TABLE contact_group_members (contact_id INTEGER, group_id INTEGER);
-CREATE TABLE site_users (id INTEGER PRIMARY KEY, email TEXT, email_verified INTEGER, role TEXT);
+CREATE TABLE site_users (id INTEGER PRIMARY KEY, email TEXT, email_verified INTEGER, role TEXT, closed_at TEXT);
 CREATE TABLE site_user_audiences (site_user_id INTEGER, audience TEXT);
 `);
 const run = async (sql, rawParams = []) => {

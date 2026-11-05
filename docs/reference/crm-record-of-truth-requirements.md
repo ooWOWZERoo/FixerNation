@@ -1,6 +1,6 @@
 # The CRM as the record of who is on the platform (requirements)
 
-Written 2026-11-05. Approved by the owner the same day. Release 110 (rules A, D and F) and Release 111 (administrators in Community, rule D1) are built; Release 114 (rules B, C and E) is not. This decides who may sign in and what deleting a CRM contact does, so the rules come first.
+Written 2026-11-05. Approved by the owner the same day. Release 110 (rules A, D and F) and Release 111 (administrators in Community, rule D1) are built; Release 114 (rules B, C and E) is built. This decides who may sign in and what deleting a CRM contact does, so the rules come first.
 
 ## What the owner asked for
 
@@ -78,8 +78,16 @@ Changing a contact's email also changes its account's sign-in email and any seat
 
 - **Release 110, no data risk:** rule A (a buyer's contact can no longer be deleted by accident), rule D (Community follows the CRM), rule F (the report), and the confirm-dialog text. This stops the harm and fixes the Community list.
 - **Release 111:** administrators in Community (rule D1). Built.
-- **Release 114:** rules B, C and E (closing accounts, reopening, email sync). Needs an alter script (`closed_at`, `closed_reason`), a check of every sign-in path, and more tests. Held until Release 110 is verified.
+- **Release 114:** rules B, C and E (closing accounts, reopening, email sync). Built. Alter script `alter-add-account-closed.js` (`closed_at`, `closed_reason`), run BEFORE the Node restart.
 
 ## Open question for the owner
 
 If a person's account is closed by mistake, rule C brings the account back but not the seat, the administrator role or the groups. Is that acceptable, or should a reopen within 30 days restore them?
+
+## As built (Release 114)
+
+- Closing happens in `lib/account-closing.js`, called from `DELETE /api/newsletter/contacts/:id` in one transaction with the contact delete. With no seat and no role the account closes without a prompt; with a seat, a school or district administrator assignment or an affiliate account the server answers 409 `confirm_close` with a plain-sentence list, and only proceeds when the request carries `confirmClose: true` (the CRM page shows that sentence in a confirm dialog). A staff account (role `admin` or `is_fne_staff`) answers 409 `staff_account`. A contact that owns purchases or invoices is still refused first (rule A).
+- A closed account is refused at every point a session is checked (`lib/site-user.js`, `lib/access.js`, the school and district admin middleware, Community) and every point one is issued (password sign-in, Microsoft sign-in, reset link, the parent and teacher invitation accept steps, the invitation register steps and sign-up). The password-reset email is not sent. Sign-in answers 403 with `reason: 'closed'`.
+- Reopen: `POST /api/admin/account-lookup/:id/reopen` and a button on Account Lookup. The account only; a CRM contact is created as **Unsubscribed** if missing (deleting a contact is not consent to be mailed again). The open question about restoring seats and roles within 30 days stays as decided: not restored.
+- Email sync: `PUT /api/newsletter/contacts/:id` moves the account's sign-in email, its seat's invited email and any open invitation's email in the same transaction; 409 `account_email_in_use` when another account has the new address. The sign-in email's verified flag is not reset.
+- Seats go back to the pool as `available` (registration and invited email cleared). Posts and comments stay.

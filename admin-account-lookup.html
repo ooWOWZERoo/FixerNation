@@ -117,7 +117,10 @@ function renderAccount(account) {
   const el = document.getElementById('accountSection');
   if (!account) { el.innerHTML = '<div class="a-note">No account exists for this email.</div>'; return; }
   const verified = account.email_verified ? '<span class="a-pill a-pill-success">Verified</span>' : '<span class="a-pill a-pill-warning">Unverified</span>';
-  const revoked = account.session_invalidated_at ? '<div class="a-note">Sessions invalidated as of ' + fmtDate(account.session_invalidated_at) + '</div>' : '';
+  const closedNote = account.closed_at
+    ? '<div class="a-note" style="border-left:4px solid var(--a-danger,#b3261e);">This account is <strong>closed</strong> (' + fmtDate(account.closed_at) + ', ' + esc(String(account.closed_reason || '').replace(/_/g, ' ')) + '). The person cannot sign in. <button class="a-btn a-btn-outline a-btn-sm" onclick="reopenAccount(' + account.id + ')">Reopen account</button> Reopening restores the account only: seats, administrator roles and Community groups are not restored. A CRM contact is created if they have none.</div>'
+    : '';
+  const revoked = (account.session_invalidated_at ? '<div class="a-note">Sessions invalidated as of ' + fmtDate(account.session_invalidated_at) + '</div>' : '') + closedNote;
   el.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">' +
       '<div>' +
@@ -127,6 +130,16 @@ function renderAccount(account) {
       '</div>' +
       '<button class="a-btn a-btn-danger a-btn-sm" onclick="deleteAccount(' + account.id + ')">Delete Account</button>' +
     '</div>';
+}
+
+async function reopenAccount(id) {
+  if (!confirm('Reopen this account? The person will be able to sign in again. Their seat, administrator roles and Community groups are not restored.')) return;
+  const r = await fetch('/api/admin/account-lookup/' + id + '/reopen', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(d.error || 'Could not reopen the account'); return; }
+  fnToast(d.contactCreated ? 'Account reopened. A CRM contact was created (Unsubscribed).' : 'Account reopened');
+  doLookup({ preventDefault: function () {} });
 }
 
 async function deleteAccount(id) {

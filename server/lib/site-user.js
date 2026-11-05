@@ -15,6 +15,7 @@ async function getSiteUser(req) {
     const payload = verifySession('site', token);
     const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
     if (!rows[0]) return null;
+    if (rows[0].closed_at) return null; // a closed account (its CRM contact was deleted) is not signed in anywhere
     if (rows[0].session_invalidated_at) {
       const invalidatedMs = new Date(rows[0].session_invalidated_at).getTime();
       if (payload.iat * 1000 < invalidatedMs) return null;

@@ -9,7 +9,8 @@ async function getSiteUser(req) {
   if (!token) return null;
   try {
     const payload = verifySession('site', token);
-    const [rows] = await pool.query('SELECT id, first_name, email, role FROM site_users WHERE id = ?', [payload.userId]);
+    const [rows] = await pool.query('SELECT id, first_name, email, role, closed_at FROM site_users WHERE id = ?', [payload.userId]);
+    if (rows[0] && rows[0].closed_at) return null; // closed account
     return rows[0] || null;
   } catch {
     return null;

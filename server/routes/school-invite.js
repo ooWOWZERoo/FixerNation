@@ -17,8 +17,8 @@ async function getLoggedInUser(req) {
   if (!cookieToken) return null;
   try {
     const payload = verifySession('site', cookieToken);
-    const [[user]] = await pool.query('SELECT id, email, first_name, last_name FROM site_users WHERE id = ?', [payload.userId]);
-    return user || null;
+    const [[user]] = await pool.query('SELECT id, email, first_name, last_name, closed_at FROM site_users WHERE id = ?', [payload.userId]);
+    return user && !user.closed_at ? user : null; // a closed account is not signed in
   } catch {
     return null;
   }
@@ -250,8 +250,9 @@ router.post('/register', async (req, res) => {
   const email = inv.invited_email.toLowerCase();
 
   // Check for existing account
-  const [[existing]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email]);
+  const [[existing]] = await pool.query('SELECT id, closed_at FROM site_users WHERE email = ?', [email]);
   if (existing) {
+    if (existing.closed_at) return res.status(403).json({ error: 'This account has been closed. Please contact Fixer Nation Education.' });
     return res.status(409).json({ error: 'An account already exists for this email address. Please sign in to claim the invitation.' });
   }
 
@@ -388,8 +389,9 @@ router.post('/accept-and-verify', async (req, res) => {
   }
 
   const email = inv.invited_email.toLowerCase();
-  const [[user]] = await pool.query('SELECT id, first_name, last_name, password_hash FROM site_users WHERE email = ?', [email]);
+  const [[user]] = await pool.query('SELECT id, first_name, last_name, password_hash, closed_at FROM site_users WHERE email = ?', [email]);
   if (!user) return res.status(404).json({ error: 'No account found for this email. Please use the "Create Account" form.' });
+  if (user.closed_at) return res.status(403).json({ error: 'This account has been closed. Please contact Fixer Nation Education.' });
 
   // A Microsoft-only account has no password at all, so there is nothing to compare against.
   if (!user.password_hash) return res.status(401).json({ error: 'This account signs in with Microsoft. Use Continue with Microsoft on the sign-in page, then open this link again.' });

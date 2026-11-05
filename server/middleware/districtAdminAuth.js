@@ -25,10 +25,11 @@ async function requireDistrictAdmin(req, res, next) {
   }
 
   const [userRows] = await pool.query(
-    'SELECT id, first_name, last_name, email, session_invalidated_at FROM site_users WHERE id = ?',
+    'SELECT id, first_name, last_name, email, session_invalidated_at, closed_at FROM site_users WHERE id = ?',
     [payload.userId]
   );
   const user = userRows[0];
+  if (user && user.closed_at) return res.status(401).json({ error: 'Not logged in', reason: 'closed' });
   if (!user) {
     return res.status(403).json({ error: 'District Administrator access required' });
   }

@@ -78,6 +78,7 @@ async function requireSocialAccess(req, res, next) {
   }
   const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [payload.userId]);
   if (!rows[0]) return res.status(401).json({ error: 'Login required' });
+  if (rows[0].closed_at) return res.status(401).json({ error: 'Login required' }); // closed account
   // Same revocation check requireSiteAuth already enforces — without this,
   // a password change (or any of the license-revocation paths that now
   // bump this) doesn't actually invalidate an old token's community access,

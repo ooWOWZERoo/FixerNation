@@ -149,8 +149,9 @@ router.post('/signup', signupLimit, async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
-  const [existing] = await pool.query('SELECT id FROM site_users WHERE email = ?', [email]);
+  const [existing] = await pool.query('SELECT id, closed_at FROM site_users WHERE email = ?', [email]);
   if (existing[0]) {
+    if (existing[0].closed_at) return res.status(403).json({ error: 'This account has been closed. Please contact Fixer Nation Education.', reason: 'closed' });
     return res.status(409).json({ error: 'An account with this email already exists' });
   }
 
@@ -260,6 +261,7 @@ router.get('/microsoft/callback', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM site_users WHERE microsoft_oid = ?', [microsoftOid]);
   if (rows[0]) {
     // Returning user, already proven linked to this exact Microsoft identity.
+    if (rows[0].closed_at) return res.redirect(appendQueryError(returnTo, 'closed')); // a closed account does not sign in
     setSiteSessionCookie(res, rows[0]);
     return res.redirect(returnTo);
   }
@@ -381,6 +383,9 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
   loginFailsByAccount.clear(acctKey);
+  if (user.closed_at) {
+    return res.status(403).json({ error: 'This account has been closed. Please contact Fixer Nation Education.', reason: 'closed' });
+  }
   if (!user.email_verified) {
     return res.status(403).json({ error: 'Please verify your email before logging in.', reason: 'unverified' });
   }
@@ -413,8 +418,8 @@ router.get('/me', async (req, res) => {
   if (!token) return res.json({ loggedIn: false });
   try {
     const payload = verifySession('site', token);
-    const [rows] = await pool.query('SELECT email FROM site_users WHERE id = ?', [payload.userId]);
-    if (!rows[0]) return res.json({ loggedIn: false });
+    const [rows] = await pool.query('SELECT email, closed_at FROM site_users WHERE id = ?', [payload.userId]);
+    if (!rows[0] || rows[0].closed_at) return res.json({ loggedIn: false });
     // hasLicense/isParent/isSchoolAdmin/isDistrictAdmin/isAffiliate are real
     // entitlement checks, independent of site_users.role — an account can
     // hold any combination of these (e.g. a parent later invited and
@@ -455,10 +460,10 @@ router.post('/forgot-password', forgotLimitIp, forgotLimitAcct, async (req, res)
   // this into an open redirect via an emailed link.
   const nextPath = safeLocalPath(req.body && req.body.next, '');
 
-  const [rows] = await pool.query('SELECT id, first_name FROM site_users WHERE email = ?', [email]);
+  const [rows] = await pool.query('SELECT id, first_name, closed_at FROM site_users WHERE email = ?', [email]);
   const user = rows[0];
-  // Always respond ok, regardless of whether the email is registered.
-  if (user) {
+  // Always respond ok, regardless of whether the email is registered. A closed account is sent nothing.
+  if (user && !user.closed_at) {
     const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
     const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}` + (nextPath ? `&next=${encodeURIComponent(nextPath)}` : '');
     await sendPasswordResetEmail({ to: email, firstName: user.first_name, resetUrl });
@@ -473,6 +478,9 @@ router.post('/reset-password', async (req, res) => {
 
   const record = await consumeToken(token, 'reset');
   if (!record) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
+  // A reset link must not bring a closed account back (it is reopened by staff only)
+  const [[owner]] = await pool.query('SELECT closed_at FROM site_users WHERE id = ?', [record.user_id]);
+  if (owner && owner.closed_at) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   // Invalidate any other browser's session for this account — a stolen

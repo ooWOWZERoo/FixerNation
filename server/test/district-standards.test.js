@@ -22,7 +22,7 @@ const db = new DatabaseSync(':memory:');
 db.exec('PRAGMA foreign_keys = ON');
 db.exec(`
 CREATE TABLE admin_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, email_verified INTEGER DEFAULT 1, session_invalidated_at TEXT);
-CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, last_name TEXT, email TEXT, session_invalidated_at TEXT, is_sales_demo INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, last_name TEXT, email TEXT, session_invalidated_at TEXT, closed_at TEXT, is_sales_demo INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE districts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL);
 CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER NOT NULL REFERENCES site_users(id) ON DELETE CASCADE,
   district_id INTEGER NOT NULL REFERENCES districts(id) ON DELETE CASCADE, is_active INTEGER NOT NULL DEFAULT 1);
