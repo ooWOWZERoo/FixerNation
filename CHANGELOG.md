@@ -16,6 +16,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 104 — 2026-11-05 — Fonts and the PDF viewer now come from our own server
+
+- **Student pages no longer contact Google or Cloudflare.** All 125 pages that loaded Google Fonts now load one local `fonts.css` (Fraunces, Plus Jakarta Sans and Inter, all open-license, in `assets/fonts/`). A student's browser used to send its IP address to Google on every page load; it no longer does.
+- **PDF viewer self-hosted.** `pdf-modal.js` now loads PDF.js 3.11.174 from `vendor/pdfjs/` instead of cdnjs (lesson pages for teachers, parents and students). `pdf-modal.js?v=2` on its four pages.
+- The Content-Security-Policy (report-only) no longer lists Google for styles or fonts. A new test (`server/test/self-hosted-assets.test.js`) fails if any page points back at Google Fonts or cdnjs.
+- Look and feel unchanged: same typefaces, same weights. Still contacted from a page only when a visitor asks: Cloudinary (how-to videos on play), YouTube/Vimeo (parent lesson and community embeds), Unsplash (public marketing photos).
+- Static files only. No Node restart, no alter script, no `npm install`.
+
 ## Release 103 — 2026-11-03 — "Build your lesson plan library" video now shows swaps and the level warning
 
 - **T7 re-recorded and republished, about three minutes.** It now shows the one-time "Choose your grade levels" step, the "Curriculum level mismatch" popup (and Cancel), a real swap (Swap or remove, Replace with another lesson, Swap in, Swap), a removal, the swaps-left count going down, and the message a teacher sees when no swaps are left. The earlier version only mentioned swaps.

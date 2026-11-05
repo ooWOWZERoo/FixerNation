@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  // Lazy-load PDF.js from CDN on first use
+  // Lazy-load PDF.js (self-hosted copy of 3.11.174, Apache-2.0) on first use
   var _pdfJsReady = false, _pdfJsQueue = [];
   function loadPdfJs(cb) {
     if (_pdfJsReady) { cb(); return; }
@@ -9,10 +9,10 @@
     if (document.getElementById('fnPdfJsScript')) return;
     var s = document.createElement('script');
     s.id = 'fnPdfJsScript';
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.src = 'vendor/pdfjs/3.11.174/pdf.min.js';
     s.onload = function () {
       pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        'vendor/pdfjs/3.11.174/pdf.worker.min.js';
       _pdfJsReady = true;
       _pdfJsQueue.forEach(function (fn) { fn(); });
       _pdfJsQueue = [];

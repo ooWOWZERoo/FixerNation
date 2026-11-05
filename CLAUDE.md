@@ -59,6 +59,7 @@ No build step. All public pages are flat HTML files with inline `<style>` and `<
 - `admin-common.js` / `admin-common.css` — shared by all `admin-*.html` pages. **Cache-busted as `?v=N`** — bump `N` in every admin HTML file whenever either one changes (grep `admin-common.js?v=` to find all references).
 - `site-auth.js` — login/signup modal, auth-state nav rendering, used on every public page.
 - `cart.js` — localStorage cart helper used on every public page with a shopping element.
+- `fonts.css` — the only font source (self-hosted in `assets/fonts/`, `?v=1`); **never link Google Fonts or a CDN script** on any page (student IPs would leak to a third party; `server/test/self-hosted-assets.test.js` fails). PDF.js lives in `vendor/pdfjs/`.
 
 **Escaping rule (admin pages especially):** anything that originated outside the admin's own keyboard — public form fields, newsletter signups, analytics beacons, signup names/emails, student display names — must go through `fnEscape()` (`admin-common.js`) before it's interpolated into `innerHTML` or an attribute. Never put such data inside an inline `onclick="fn('${...}')"` string: HTML-escaping doesn't help there (`&#39;` decodes back to `'` before the JS runs). Put it in a `data-` attribute (`data-v="${fnEscape(x)}" onclick="fn(this.dataset.v)"`).
 
