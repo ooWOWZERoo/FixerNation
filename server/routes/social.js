@@ -7,6 +7,7 @@ const fs = require('fs');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
 const { hasActiveLicense } = require('../lib/access');
+const { communityMemberSql, isCommunityMember, hasCrmContact } = require('../lib/community-members');
 const { requireAuth } = require('../middleware/auth');
 const { ensureProfile } = require('../lib/social-groups');
 const gateway = require('../lib/safety/gateway');
@@ -98,6 +99,10 @@ async function requireSocialAccess(req, res, next) {
   const licensed = await hasActiveLicense(rows[0].id);
   if (!licensed) {
     return res.status(403).json({ error: 'A valid license is required to access the community.' });
+  }
+  // The CRM is the record of who is on the platform (lib/community-members.js): no contact, no Community.
+  if (!(await hasCrmContact(pool, rows[0].email))) {
+    return res.status(403).json({ error: 'Your account is not active. Please contact Fixer Nation Education.' });
   }
   next();
 }
@@ -219,10 +224,11 @@ router.delete('/groups/:id', requireAuth, async (req, res) => {
 router.get('/groups/browse', requireSocialAccess, async (req, res) => {
   const [rows] = await pool.query(
     `SELECT sg.id, sg.name, sg.description, sg.created_at,
-            COUNT(DISTINCT sgm.user_id) AS member_count,
+            COUNT(DISTINCT mu.id) AS member_count,
             MAX(IF(sgm.user_id = ?, 1, 0)) AS is_member
      FROM social_groups sg
      LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
+     LEFT JOIN site_users mu ON mu.id = sgm.user_id AND ${communityMemberSql('mu')}
      WHERE sg.is_public = 1
      GROUP BY sg.id
      ORDER BY sg.name`,
@@ -235,10 +241,11 @@ router.get('/groups/browse', requireSocialAccess, async (req, res) => {
 router.get('/groups', requireSocialAccess, async (req, res) => {
   const [rows] = await pool.query(
     `SELECT sg.id, sg.name, sg.description,
-            COUNT(DISTINCT sgm2.user_id) AS member_count
+            COUNT(DISTINCT mu.id) AS member_count
      FROM social_groups sg
      JOIN social_group_members sgm ON sgm.group_id = sg.id AND sgm.user_id = ?
      LEFT JOIN social_group_members sgm2 ON sgm2.group_id = sg.id
+     LEFT JOIN site_users mu ON mu.id = sgm2.user_id AND ${communityMemberSql('mu')}
      WHERE sg.is_public = 1
      GROUP BY sg.id
      ORDER BY sg.name`,
@@ -519,7 +526,7 @@ router.get('/messages/conversations', requireSocialAccess, async (req, res) => {
        FROM social_messages
        WHERE (sender_id = ? OR recipient_id = ?) AND deleted_at IS NULL
      ) t
-     JOIN site_users su ON su.id = t.partner_id
+     JOIN site_users su ON su.id = t.partner_id AND ${communityMemberSql('su')}
      LEFT JOIN social_profiles sp ON sp.user_id = t.partner_id
      GROUP BY partner_id, su.first_name, su.last_name, sp.avatar_url
      ORDER BY MAX(latest_at) DESC`,
@@ -563,8 +570,7 @@ router.post('/messages', requireSocialAccess, async (req, res) => {
 
   const [recipRows] = await pool.query('SELECT id, email FROM site_users WHERE id = ?', [recipientId]);
   if (!recipRows[0]) return res.status(404).json({ error: 'Recipient not found' });
-  const rLicensed = await hasActiveLicense(recipientId);
-  if (!rLicensed) return res.status(403).json({ error: 'Recipient is not a community member' });
+  if (!(await isCommunityMember(pool, recipientId))) return res.status(403).json({ error: 'Recipient is not a community member' });
 
   // Content Safety Gateway (SOCIAL_DM) — no group to resolve school context
   // from, so best-effort resolve via the sender's own teacher/school
@@ -656,7 +662,7 @@ router.get('/profile/:userId', requireSocialAccess, async (req, res) => {
      FROM site_users su
      LEFT JOIN social_profiles sp ON sp.user_id = su.id
      LEFT JOIN brain_game_privacy bgp ON bgp.user_id = su.id
-     WHERE su.id = ?`,
+     WHERE su.id = ? AND ${communityMemberSql('su')}`,
     [req.params.userId]
   );
   if (!user) return res.status(404).json({ error: 'Member not found' });
@@ -686,7 +692,7 @@ router.get('/members', requireSocialAccess, async (req, res) => {
                      WHERE ls.registered_site_user_id = su.id AND ls.status = 'registered' LIMIT 1) AS school_domain
              FROM site_users su
              INNER JOIN social_profiles sp ON sp.user_id = su.id
-             WHERE 1=1`;
+             WHERE ${communityMemberSql('su')}`;
   const params = [];
   if (q) {
     sql += ' AND (su.first_name LIKE ? OR su.last_name LIKE ? OR su.email LIKE ?)';
@@ -724,10 +730,11 @@ router.get('/admin/posts', requireAuth, async (req, res) => {
 router.get('/admin/groups', requireAuth, async (req, res) => {
   const [rows] = await pool.query(
     `SELECT sg.id, sg.name, sg.type, sg.description, sg.is_public, sg.created_at,
-            COUNT(DISTINCT sgm.user_id) AS member_count,
+            COUNT(DISTINCT mu.id) AS member_count,
             COUNT(DISTINCT sp.id) AS post_count
      FROM social_groups sg
      LEFT JOIN social_group_members sgm ON sgm.group_id = sg.id
+     LEFT JOIN site_users mu ON mu.id = sgm.user_id AND ${communityMemberSql('mu')}
      LEFT JOIN social_posts sp ON sp.group_id = sg.id AND sp.deleted_at IS NULL
      GROUP BY sg.id
      ORDER BY sg.name`

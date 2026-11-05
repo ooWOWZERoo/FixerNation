@@ -23,8 +23,13 @@ const ymd = (d) => d.toISOString().slice(0, 10);
   const password = 'Demo-' + crypto.randomBytes(5).toString('hex');
   const hash = await bcrypt.hash(password, 10);
 
-  const user = async (first, last, email, role) =>
-    (await q('INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role) VALUES (?,?,?,?,1,?)', [first, last, email, hash, role])).insertId;
+  // Every demo person also gets a CRM contact (Unsubscribed, so nothing could ever email them): since Release 110 Community only
+  // knows people the CRM knows, so a recorded Community page needs them.
+  const user = async (first, last, email, role) => {
+    const id = (await q('INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role) VALUES (?,?,?,?,1,?)', [first, last, email, hash, role])).insertId;
+    await q("INSERT IGNORE INTO newsletter_contacts (name, email, source, status) VALUES (?,?,'How-to demo','Unsubscribed')", [`${first} ${last}`, email]);
+    return id;
+  };
 
   // FNE staff login (admin side), used only by setup steps that act as staff.
   await q('INSERT INTO admin_users (username, password_hash, email) VALUES (?,?,?)', ['howto-admin', hash, 'howto-admin@example.com']);

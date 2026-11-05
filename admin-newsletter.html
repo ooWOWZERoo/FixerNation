@@ -550,7 +550,7 @@ async function toggleStatus(id) {
 }
 
 async function deleteContact(id) {
-  if (!confirm('Remove this contact?')) return;
+  if (!confirm('Remove this contact? If they have a sign-in account, they will no longer appear in Community.')) return;
   const r = await fetch(`/api/newsletter/contacts/${id}`, {
     method: 'DELETE',
     credentials: 'include',
@@ -558,6 +558,11 @@ async function deleteContact(id) {
     body: '{}',
   });
   if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    alert(err.error || 'Could not remove this contact');
+    return;
+  }
   fetchAndRenderContacts();
   fnToast('Contact removed');
 }

@@ -227,6 +227,22 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
 });
 
 router.delete('/contacts/:id', requireAuth, async (req, res) => {
+  // purchases and invoices are deleted with their contact (ON DELETE CASCADE), and a purchase takes every license seat on it
+  // along. A buyer's contact is therefore never deleted from here: remove or cancel what it owns first.
+  const [[owned]] = await pool.query(
+    'SELECT (SELECT COUNT(*) FROM purchases WHERE contact_id = ?) AS purchases, (SELECT COUNT(*) FROM invoices WHERE contact_id = ?) AS invoices',
+    [req.params.id, req.params.id]
+  );
+  const nPurchases = Number(owned.purchases), nInvoices = Number(owned.invoices);
+  if (nPurchases || nInvoices) {
+    const parts = [];
+    if (nPurchases) parts.push(`${nPurchases} purchase${nPurchases === 1 ? '' : 's'}`);
+    if (nInvoices) parts.push(`${nInvoices} invoice${nInvoices === 1 ? '' : 's'}`);
+    return res.status(409).json({
+      code: 'contact_owns_purchases', purchases: nPurchases, invoices: nInvoices,
+      error: `This contact owns ${parts.join(' and ')}. Deleting it would erase them and every license seat on them. Remove or cancel those first.`,
+    });
+  }
   const [result] = await pool.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Contact not found' });
   res.json({ ok: true });
