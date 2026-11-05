@@ -208,6 +208,13 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
     await connection.commit();
   } catch (err) {
     await connection.rollback();
+    // The email column is unique. Say which contact already has the address instead of failing without a reason.
+    if (err.code === 'ER_DUP_ENTRY') {
+      const [[other]] = await pool.query('SELECT id, name FROM newsletter_contacts WHERE email = ? AND id <> ? LIMIT 1', [merged.email, req.params.id]);
+      const who = other ? `${other.name || 'another contact'} (contact #${other.id})` : 'another contact';
+      return res.status(409).json({ code: 'email_in_use', existingContactId: other ? other.id : null,
+        error: `${merged.email} already belongs to ${who}. Edit or delete that contact instead, or use a different address.` });
+    }
     throw err;
   } finally {
     connection.release();

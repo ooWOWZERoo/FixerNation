@@ -882,7 +882,7 @@ async function saveContact() {
       body: JSON.stringify({ name, email, phone, company, source, status, address, shipTo, notes, groupIds }),
     });
     if (fnHandleUnauthorized(r)) return;
-    if (!r.ok) { fnToast('Could not save contact'); return; }
+    if (!r.ok) { const err = await r.json().catch(() => ({})); if (err.code === 'email_in_use') alert(err.error); else fnToast(err.error || 'Could not save contact'); return; }
     closeContactModal();
     fetchAndRenderContacts();
     fnToast('Contact updated');

@@ -23,6 +23,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - If a night fails, the script writes `last-failure.json`, emails the alert address, and leaves the last good backup alone. `last-success.json` shows when the last good run finished and how big the uploads folder is (watch it against the 15 GB plan).
 - Server-only change: new script and helper, a cron line, no database change, no `npm install`, no Node restart (a cron script is not part of the running app).
 
+## Release 106 — 2026-11-05 — The CRM now says why a contact's email won't save
+
+- **Fixed:** changing a CRM contact's email to an address another contact already has failed with only "Could not save contact". It now says which contact has it (for example "cherman@onboces.org already belongs to Cheryl Herman (contact #2165)") and suggests editing or deleting that one instead. Nothing is saved when this happens, and normal edits are unchanged.
+- **Also added:** `server/scripts/report-email-everywhere.js`, a read-only report of everywhere an address appears (sign-in accounts, CRM, school and district admin assignments, seats, invitations, quotes) and of the administrators on a license as the concierge page and the School Admins page each list them. Used to trace the Orleans-Niagara typo (`ccherman@`), which came from a mistyped school admin assignment that left a stray account and contact behind. The School Admins page leaves out anyone who is also a district admin; that is intended.
+- Node restart needed. No alter script.
+
 ## Release 105 — 2026-11-05 — Teachers at purchase-order schools can accept their invitations
 
 - **Fixed:** a school paying by purchase order could send invitations once staff marked the PO received, but every teacher who clicked the link was told "your school's group license is pending payment". The four steps a teacher goes through to accept (open the link, create an account, sign in to claim, and the automatic claim at sign-up) still asked only whether the invoice was paid. They now use the same rule as sending invitations: paid, or a purchase order that has been received (`lib/license-access.js`). A PO that has not arrived, and a card purchase that has not paid, are still refused.
