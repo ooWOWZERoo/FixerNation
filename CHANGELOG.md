@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 119 — 2026-11-05 — The browser-tab icon and the admin sidebar follow the website logo
+
+- **Tab icon.** Every page's browser-tab and home-screen icon now comes from the Website Logo setting (`/api/settings/favicon?size=16|32|48|180`: a square PNG of the trimmed logo on white). With no website logo set, the old built-in icon files are used, so nothing breaks. The page `<link>` tags on all 132 pages changed; the old `favicon.ico` link is gone (the file stays for old crawlers).
+- **FNE admin sidebar.** Shows the Website Logo too, at 104 px tall (was 46 px), with the same built-in fallback.
+- A tab icon is only 16 to 32 px, so only the scales emblem is legible there; the lettering is not. A simpler, emblem-only upload would read better.
+- **Deploy order:** pull, rsync (all pages), restart Node. No script.
+
 ## Release 118 — 2026-11-05 — Support replies are read on the page, not emailed
 
 - **Replies show on the Get help page.** Staff replies are no longer emailed. A signed-in person sees a **New reply** tag beside the request in Your requests until they open it.

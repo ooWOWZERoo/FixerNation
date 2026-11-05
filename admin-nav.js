@@ -6,6 +6,26 @@
   var aside = document.querySelector('.a-sidebar');
   if (!aside) return;
 
+  // The logo comes from the Website Logo card in admin-settings.html (same setting as the public header and footer).
+  // The last value is remembered so it shows at once; the built-in logo-fne.png stays the fallback.
+  function applySiteLogo(selector) {
+    var imgs = document.querySelectorAll(selector);
+    if (!imgs.length) return;
+    function show(u, custom) {
+      for (var i = 0; i < imgs.length; i++) {
+        if (imgs[i].getAttribute('src') !== u) imgs[i].setAttribute('src', u);
+        imgs[i].classList.toggle('fn-custom-logo', !!custom);
+      }
+    }
+    try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached, true); } catch (e) { /* storage blocked */ }
+    window.__fnSiteLogo = window.__fnSiteLogo || fetch('/api/settings/site-logo').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+    window.__fnSiteLogo.then(function (d) {
+      var u = (d && d.url) || '';
+      try { if (u) localStorage.setItem('fn_site_logo', u); else localStorage.removeItem('fn_site_logo'); } catch (e) { /* storage blocked */ }
+      show(u || 'logo-fne.png?v=2', !!u);
+    });
+  }
+
   var page = window.location.pathname.split('/').pop() || 'admin-dashboard.html';
   var STORAGE_KEY = 'fnAdminNavCollapsedSections';
 
@@ -90,6 +110,7 @@
       '<a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>' +
       '<a href="#" onclick="if(typeof fnLogout===\'function\')fnLogout();return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>' +
     '</div>';
+  applySiteLogo('.a-logo-img');
 
   // Every click is a full page load (no client-side routing), so without
   // this the nav's own scroll position resets to the top on every single

@@ -1,7 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { getSetting, setSetting } = require('../lib/settings');
-const { trimmedLogoUrl } = require('../lib/site-logo');
+const { trimmedLogoUrl, faviconPng } = require('../lib/site-logo');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -78,6 +78,19 @@ const LOGO_PATTERN = /^(https:\/\/[^\s"'<>]+|[^\s:"'<>]+)$/;
 router.get('/site-logo', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=60');
   res.json({ url: await trimmedLogoUrl((await getSetting('website_logo_url')) || '') });
+});
+
+// The tab icon and home-screen icon on every page point here. With no website logo (or one we cannot use) it sends the
+// built-in icon files instead, so the pages never end up with a broken icon.
+const BUILT_IN_ICON = { 16: '/favicon-16x16.png', 32: '/favicon-32x32.png', 48: '/favicon-32x32.png', 180: '/apple-touch-icon.png' };
+
+router.get('/favicon', async (req, res) => {
+  const size = BUILT_IN_ICON[Number(req.query.size)] ? Number(req.query.size) : 32;
+  const url = await getSetting('website_logo_url');
+  const png = url ? await faviconPng(url, size) : null;
+  res.set('Cache-Control', 'public, max-age=300');
+  if (!png) return res.redirect(302, BUILT_IN_ICON[size]);
+  res.type('png').send(png);
 });
 
 router.get('/website-logo', requireAuth, async (req, res) => {

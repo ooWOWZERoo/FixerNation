@@ -366,7 +366,7 @@ test('WIRING: pages are linked, cache versions match, and nothing from a person 
   const adm = read('admin-support.html');
   assert.ok(!/onclick="[^"]*(\+|\$\{)/.test(adm), 'no inline handler is built from data (only the fixed theme toggle has one)');
   assert.match(adm, /fnEscape/);
-  assert.match(adm, /admin-nav\.js\?v=27/);
+  assert.match(adm, /admin-nav\.js\?v=28/);
   assert.match(read('server/app.js'), /\/api\/admin\/support/);
   assert.match(read('server/db/schema.sql'), /CREATE TABLE IF NOT EXISTS support_requests/);
   assert.match(read('server/scripts/alter-create-support-requests.js'), /support_request_messages/);

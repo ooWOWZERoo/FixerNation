@@ -123,3 +123,41 @@ test('addresses it cannot or should not touch come back unchanged', async () => 
     assert.equal(await trimmedLogoUrl(u), u, JSON.stringify(u));
   }
 });
+
+// Tab icon and home-screen icon: GET /api/settings/favicon?size=N.
+function raw(pathname) {
+  return new Promise((resolve, reject) => {
+    http.get({ port, path: pathname, timeout: 5000 }, (res) => {
+      const chunks = []; res.on('data', (d) => chunks.push(d));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+    }).on('error', reject);
+  });
+}
+
+test('favicon: with no website logo it sends the built-in icon files', async () => {
+  db.exec('DELETE FROM settings');
+  const cases = { 16: '/favicon-16x16.png', 32: '/favicon-32x32.png', 48: '/favicon-32x32.png', 180: '/apple-touch-icon.png', 999: '/favicon-32x32.png' };
+  for (const [size, to] of Object.entries(cases)) {
+    const r = await raw('/api/settings/favicon?size=' + size);
+    assert.equal(r.status, 302, size); assert.equal(r.headers.location, to, size);
+  }
+  assert.equal((await raw('/api/settings/favicon')).headers.location, '/favicon-32x32.png');
+});
+
+test('favicon: with a website logo it serves a square PNG made from it, at the size asked for', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fne-icon-'));
+  process.env.UPLOADS_DIR = dir; process.env.UPLOADS_URL_PREFIX = '/uploads/';
+  const mark = await sharp({ create: { width: 120, height: 100, channels: 3, background: { r: 10, g: 80, b: 180 } } }).png().toBuffer();
+  await sharp({ create: { width: 700, height: 500, channels: 3, background: '#ffffff' } })
+    .composite([{ input: mark, left: 290, top: 200 }]).png().toFile(path.join(dir, 'wide.png'));
+  await call('PUT', 'website-logo', { logoUrl: '/uploads/wide.png' });
+  for (const size of [16, 32, 48, 180]) {
+    const r = await raw('/api/settings/favicon?size=' + size);
+    assert.equal(r.status, 200); assert.equal(r.headers['content-type'], 'image/png');
+    const m = await sharp(r.body).metadata();
+    assert.deepEqual([m.width, m.height], [size, size], 'size ' + size);
+  }
+  // a logo that is not a local upload falls back to the built-in icon
+  await call('PUT', 'website-logo', { logoUrl: 'https://example.com/x.png' });
+  assert.equal((await raw('/api/settings/favicon?size=16')).status, 302);
+});

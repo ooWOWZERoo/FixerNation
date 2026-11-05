@@ -334,6 +334,8 @@ table.a-table tr:hover td{background:var(--a-bg);}
 .fn-mission-admin .a-sidebar .a-logo{padding:0 10px 24px;}
 .fn-mission-admin .a-sidebar .a-logo-pill{border-radius:12px;padding:9px 13px;}
 .fn-mission-admin .a-sidebar .a-logo-img{height:46px;}
+/* A custom Website Logo (admin-settings.html) is taller and squarer than the built-in wordmark, so it gets more room. */
+.fn-mission-admin .a-sidebar .a-logo-img.fn-custom-logo{height:104px;max-width:100%;object-fit:contain;}
 .fn-mission-admin .a-nav-pinned a,.fn-mission-admin .a-nav a,.fn-mission-admin .a-sidebar-foot a{border-radius:8px;min-height:41px;padding:7px 10px;font-size:12.5px;letter-spacing:.005em;}
 .fn-mission-admin .a-nav-pinned a.active{background:#087b85;box-shadow:inset 3px 0 #7ee0d7;}
 .fn-mission-admin .a-nav-pinned a .ic,.fn-mission-admin .a-nav a .ic,.fn-mission-admin .a-sidebar-foot a .ic{width:25px;height:25px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:6px;flex-shrink:0;}
