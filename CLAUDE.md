@@ -52,6 +52,8 @@ For changes to **existing** tables: write a one-off idempotent script following 
 
 `send-membership-reminders.js` and `send-morning-boost-email.js` run via cPanel Cron Jobs every 5 minutes. Each script is fully self-contained: it loads `.env`, creates its own DB pool, does work, and closes the pool. Scripts check conditions (time window, already-sent guards) so running every 5 minutes is idempotent.
 
+`backup-nightly.js` (cron 2:30 AM, see `setup-cron-jobs.sh`) is the nightly backup: database dump plus uploads except `.mp4`, written to `/home/fixernat/backups/` (never inside `public_html`). It prints a status to `last-success.json`; see PROJECT.md. Don't add the videos to it: the plan has about 5 GB of free disk.
+
 ### Frontend
 
 No build step. All public pages are flat HTML files with inline `<style>` and `<script>` blocks. Shared JS files loaded via `<script src="...">`:

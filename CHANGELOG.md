@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 106 — 2026-11-05 — Nightly backup of the database and uploaded files
+
+- **New nightly backup** (`server/scripts/backup-nightly.js`, cPanel cron at 2:30 AM). It dumps the database to a compressed file and checks the file is complete before keeping it, and it mirrors the uploads folder (PDFs, images, social files) to a private folder outside `public_html`. Keeps 7 days of database dumps. Any file that is changed or deleted is kept 14 days before it is cleaned up, so an accidental delete can be undone.
+- **Not included:** the lesson videos (`.mp4`, about 7.7 GB). They never change once uploaded and would not fit in the plan's disk space; the original exports are the backup. The backup sits on the same server, so it does not protect against losing the server itself; an encrypted offsite copy is the next step.
+- If a night fails, the script writes `last-failure.json`, emails the alert address, and leaves the last good backup alone. `last-success.json` shows when the last good run finished and how big the uploads folder is (watch it against the 15 GB plan).
+- Server-only change: new script and helper, a cron line, no database change, no `npm install`, no Node restart (a cron script is not part of the running app).
+
 ## Release 105 — 2026-11-05 — Teachers at purchase-order schools can accept their invitations
 
 - **Fixed:** a school paying by purchase order could send invitations once staff marked the PO received, but every teacher who clicked the link was told "your school's group license is pending payment". The four steps a teacher goes through to accept (open the link, create an account, sign in to claim, and the automatic claim at sign-up) still asked only whether the invoice was paid. They now use the same rule as sending invitations: paid, or a purchase order that has been received (`lib/license-access.js`). A PO that has not arrived, and a card purchase that has not paid, are still refused.
