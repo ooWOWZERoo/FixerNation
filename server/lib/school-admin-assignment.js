@@ -17,6 +17,7 @@ const { createToken } = require('./site-tokens');
 const { sendSchoolAdminWelcomeEmail, sendPasswordResetEmail, sendSalesAlertEmail } = require('./mailer');
 const { syncRoleToAssignments } = require('./school-admin-roles');
 const { getSetting } = require('./settings');
+const { syncMorningBoostForUser } = require('./morning-boost-group');
 const crypto = require('crypto');
 
 async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = 'primary', notes, createdByAdminId = null, firstName: bodyFirstName, lastName: bodyLastName }) {
@@ -85,6 +86,9 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
   } finally {
     conn.release();
   }
+
+  // Morning Boost recipient group: joins now if their account is already set up, otherwise when they set their password.
+  await syncMorningBoostForUser(pool, user.id);
 
   const siteUrl = process.env.SITE_URL || '';
   try {

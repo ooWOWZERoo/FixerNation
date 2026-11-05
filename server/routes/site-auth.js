@@ -19,6 +19,7 @@ const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdmin
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
 const { onboardInvitedTeacher } = require('../lib/teacher-onboarding');
 const { licenseOpenSql } = require('../lib/license-access');
+const { syncMorningBoostForUser } = require('../lib/morning-boost-group');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
@@ -480,6 +481,8 @@ router.post('/reset-password', async (req, res) => {
     'UPDATE site_users SET password_hash = ?, email_verified = 1, session_invalidated_at = NOW() WHERE id = ?',
     [passwordHash, record.user_id]
   );
+  // An administrator whose account is now set up joins the Morning Boost recipient group (lib/morning-boost-group.js).
+  await syncMorningBoostForUser(pool, record.user_id);
 
   const [rows] = await pool.query('SELECT * FROM site_users WHERE id = ?', [record.user_id]);
   if (rows[0]) setSiteSessionCookie(res, rows[0]);

@@ -61,6 +61,8 @@ async function onboardInvitedTeacher({ db = defaultPool, siteUserId, email, name
   const addedLevels = await mergeAudiences(db, siteUserId, names);
   const contactId = await ensureContact(db, { email: String(email).toLowerCase(), name, source });
   const grouped = await addToTeachersGroup(db, contactId);
+  // The Morning Boost recipient group (lib/morning-boost-group.js); lazy require because that file uses ensureContact from here.
+  await require('./morning-boost-group').syncMorningBoostForUser(db, siteUserId);
   return { addedLevels, contactId, grouped };
 }
 

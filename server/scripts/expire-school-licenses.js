@@ -5,13 +5,14 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const pool = require('../db/pool');
 const { EXPIRED_REASON } = require('../lib/seat-renewal');
 const { fireAutomation } = require('../lib/automations');
+const { syncMorningBoostGroup } = require('../lib/morning-boost-group');
 
 function formatDate(value) {
   const d = new Date(value);
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-async function main() {
+async function expireLicenses() {
   const [rows] = await pool.query(
     `SELECT p.id, p.school_domain, p.expiration_date, p.license_product_id,
             nc.email AS buyer_email, nc.name AS buyer_name,
@@ -26,7 +27,6 @@ async function main() {
 
   if (!rows.length) {
     console.log('No licenses to expire.');
-    await pool.end();
     return;
   }
 
@@ -96,7 +96,22 @@ async function main() {
   }
 
   console.log(`Done. Expired ${rows.length} license(s).`);
-  await pool.end();
+}
+
+// Runs every day: expire licenses, then bring the Morning Boost recipient group in line (adds anyone who qualifies and was
+// missed, removes everyone whose license has ended). A problem in the group sync is logged and never fails the expiry run.
+async function main() {
+  try {
+    await expireLicenses();
+  } finally {
+    try {
+      const r = await syncMorningBoostGroup(pool, { apply: true });
+      console.log(`Morning Boost recipient group: ${r.eligible} qualify, ${r.add} added, ${r.remove} removed.`);
+    } catch (err) {
+      console.error('Morning Boost group sync failed:', err.message);
+    }
+    await pool.end();
+  }
 }
 
 main().catch(err => {

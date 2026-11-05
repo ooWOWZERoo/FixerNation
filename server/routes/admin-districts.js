@@ -16,6 +16,7 @@ const { createToken } = require('../lib/site-tokens');
 const { sendDistrictAdminWelcomeEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { syncRoleToAssignments } = require('../lib/school-admin-roles');
 const { getSetting } = require('../lib/settings');
+const { syncMorningBoostForUser } = require('../lib/morning-boost-group');
 const { notAdminSeatClause } = require('../lib/seat-counts');
 const crypto = require('crypto');
 const { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN } = require('../lib/sales-demo');
@@ -84,6 +85,9 @@ router.post('/:districtId/admins/assign', requireAuth, async (req, res) => {
 
     await conn.commit();
     conn.release();
+
+    // Morning Boost recipient group: joins now if their account is already set up, otherwise when they set their password.
+    await syncMorningBoostForUser(pool, user.id);
 
     const siteUrl = process.env.SITE_URL || '';
     // Only frame this as "set your password" when they genuinely don't have

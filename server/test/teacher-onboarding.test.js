@@ -5,6 +5,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DatabaseSync } = require('node:sqlite');
 const { onboardInvitedTeacher, mergeAudiences, ensureContact } = require('../lib/teacher-onboarding');
+// The Morning Boost group sync that onboarding triggers has its own tests (morning-boost-group.test.js); here its tables are not set up.
+const mbPath = require.resolve('../lib/morning-boost-group');
+require.cache[mbPath] = { id: mbPath, filename: mbPath, loaded: true, exports: { syncMorningBoostForUser: async () => {} } };
 
 const db = new DatabaseSync(':memory:');
 db.exec(`
