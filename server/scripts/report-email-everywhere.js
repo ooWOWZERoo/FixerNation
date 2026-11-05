@@ -25,7 +25,7 @@ async function main() {
       console.log(`\n################ ${email}`);
       const [users] = await conn.query('SELECT id, email, first_name, last_name, role, email_verified, microsoft_oid IS NOT NULL AS microsoft, created_at FROM site_users WHERE LOWER(email) = ?', [email]);
       show('site_users (sign-in accounts)', users);
-      const [contacts] = await conn.query('SELECT id, email, name, company, source, status, created_at FROM newsletter_contacts WHERE LOWER(email) = ?', [email]);
+      const [contacts] = await conn.query('SELECT id, email, name, company, source, status, signup_date FROM newsletter_contacts WHERE LOWER(email) = ?', [email]);
       show('newsletter_contacts (CRM)', contacts);
       const [sla] = await conn.query(
         `SELECT sla.id, sla.is_active, sla.permission_level, p.id AS purchase_id, p.school_domain, p.payment_status, p.license_status
