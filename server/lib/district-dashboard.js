@@ -100,11 +100,10 @@ async function loadDashboard(districtIds, districtId, today = new Date()) {
   const adminsByPurchase = new Map();
   if (ids.length) {
     const marks = ids.map(() => '?').join(',');
-    // Active school administrators, not counting anyone who is also a district administrator (a different tier).
+    // Active school administrators, including anyone who is also a district administrator, so the count matches the names listed.
     const [admins] = await pool.query(
       `SELECT sla.purchase_id, sla.site_user_id FROM school_license_admins sla
-       WHERE sla.purchase_id IN (${marks}) AND sla.is_active = 1
-         AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)`,
+       WHERE sla.purchase_id IN (${marks}) AND sla.is_active = 1`,
       ids
     );
     admins.forEach((a) => { const k = Number(a.purchase_id); if (!adminsByPurchase.has(k)) adminsByPurchase.set(k, new Set()); adminsByPurchase.get(k).add(a.site_user_id); });

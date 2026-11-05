@@ -20,12 +20,9 @@ router.get('/', requireAuth, async (req, res) => {
   const limit = Math.min(100, Math.max(10, Number(req.query.limit || 25)));
   const offset = (page - 1) * limit;
 
-  // Excludes anyone who's also an active district admin -- a district admin
-  // overseeing a school shouldn't show up in the "school license admins"
-  // report at all; that's a different tier of authority, even if they
-  // happen to hold both assignments (e.g. the multi-role QA fixture).
-  let where = `WHERE sla.is_active = 1
-    AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)`;
+  // Everyone holding an active school admin assignment is listed, including a person who is also a district admin
+  // (is_district_admin lets the page tag them). They used to be hidden, which made this list disagree with the concierge page.
+  let where = `WHERE sla.is_active = 1`;
   const params = [];
   if (q) {
     where += ' AND (p.school_domain LIKE ? OR su.email LIKE ?)';
@@ -45,7 +42,8 @@ router.get('/', requireAuth, async (req, res) => {
     `SELECT sla.id, sla.permission_level, sla.is_active, sla.notes, sla.created_at,
             su.id AS site_user_id, su.first_name, su.last_name, su.email, su.role, su.email_verified,
             p.id AS purchase_id, p.school_domain, p.seat_count, p.payment_status,
-            lp.name AS plan_name
+            lp.name AS plan_name,
+            EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1) AS is_district_admin
      FROM school_license_admins sla
      JOIN site_users su ON su.id = sla.site_user_id
      JOIN purchases p ON p.id = sla.purchase_id

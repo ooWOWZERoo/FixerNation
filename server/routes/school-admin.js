@@ -203,19 +203,17 @@ router.get('/org', requireSchoolAdmin, async (req, res) => {
 
   // Co-admins on this purchase. The admin who is looking at the page stays in the list but is
   // flagged is_you, so the page can label that row "(you)" instead of leaving a reader to wonder
-  // whether they are their own co-administrator. Excludes anyone who's also an active district
-  // admin, same reasoning as district-admin.js's /schools list: that's a different tier of
-  // authority, not a school-level co-admin worth reporting here even if they technically also
-  // hold the assignment.
+  // whether they are their own co-administrator. A person who is also a district admin is listed too, with
+  // is_district_admin so the page can tag them.
   const [coAdmins] = await pool.query(
     `SELECT sla.id, sla.permission_level, sla.is_active, sla.created_at,
             su.first_name, su.last_name, su.email,
-            (sla.site_user_id = ?) AS is_you
+            (sla.site_user_id = ?) AS is_you,
+            EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1) AS is_district_admin
      FROM school_license_admins sla
      JOIN site_users su ON su.id = sla.site_user_id
      WHERE sla.purchase_id = ?
        AND sla.is_active = 1
-       AND NOT EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1)
      ORDER BY sla.created_at`,
     [req.schoolAdmin.siteUserId, purchaseId]
   );

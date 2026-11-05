@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 107 — 2026-11-05 — District admins now show in school admin lists, and admins show Registered or Pending
+
+- **District admins who also hold a school license admin assignment are no longer hidden.** The FNE School Admins page, the concierge page's School License Administrator step, the district admin's own school list and a school admin's co-administrator list now all name them, tagged "District Admin". Before, the School Admins page left them out, so it disagreed with the concierge page (Orleans-Niagara: Cheryl Herman). The district dashboard's admin count now matches the names shown. Seat counts are unchanged: administrators still do not use up a license seat.
+- **Registration status for administrators reads like the teacher roster.** On the concierge page (both the school and district admin steps), the School Admins page and the District page, each administrator shows a green "Registered" once they have set up their account, or a "Pending" tag with "Resend welcome" until they do. (Replaces the old "Unverified" tag, which had lost its colour.) The customer portals keep their "Pending Setup" wording.
+- Node restart needed. No alter script.
+
 ## Release 106 — 2026-11-05 — Nightly backup of the database and uploaded files
 
 - **New nightly backup** (`server/scripts/backup-nightly.js`, cPanel cron at 2:30 AM). It dumps the database to a compressed file and checks the file is complete before keeping it, and it mirrors the uploads folder (PDFs, images, social files) to a private folder outside `public_html`. Keeps 7 days of database dumps. Any file that is changed or deleted is kept 14 days before it is cleaned up, so an accidental delete can be undone.

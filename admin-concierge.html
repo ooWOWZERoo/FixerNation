@@ -127,6 +127,21 @@ var quoteId = new URLSearchParams(location.search).get('quoteId');
 var state = null;
 
 function esc(s) { return fnEscape(s); }
+// Same wording as the teacher roster below: Registered once the person has set up their account, otherwise Pending with a
+// Resend button (school admins and district admins each have their own resend route, keyed by the assignment id).
+function adminStatus(a, base) {
+  if (Number(a.email_verified)) return '<span class="a-pill a-pill-success">Registered</span>';
+  return '<span class="a-pill a-pill-warning">Pending</span> <button class="a-btn a-btn-outline a-btn-sm" data-url="' + base + a.id + '/resend-welcome" onclick="resendAdminWelcome(this)">Resend welcome</button>';
+}
+async function resendAdminWelcome(btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch(btn.dataset.url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json().catch(function () { return {}; });
+    fnToast(r.ok ? 'Welcome email sent.' : (d.error || 'Could not send the welcome email'));
+  } finally { btn.disabled = false; }
+}
 function showErr(msg) { var e = document.getElementById('ccErr'); e.textContent = msg; e.style.display = 'block'; }
 function clearErr() { document.getElementById('ccErr').style.display = 'none'; }
 
@@ -244,7 +259,8 @@ function renderStep2() {
 
   var q = state.quote;
   var list = admins.map(function (sa) {
-    return '<div class="cc-done-box" style="margin-bottom:8px;">' + esc([sa.first_name, sa.last_name].filter(Boolean).join(' ')) + ' (' + esc(sa.email) + ') — ' + esc(sa.permission_level) + '</div>';
+    var tag = Number(sa.is_district_admin) ? ' <span class="a-pill a-pill-neutral">District Admin</span>' : '';
+    return '<div class="cc-done-box" style="margin-bottom:8px;">' + esc([sa.first_name, sa.last_name].filter(Boolean).join(' ')) + ' (' + esc(sa.email) + ') — ' + esc(sa.permission_level) + tag + ' ' + adminStatus(sa, '/api/admin/school-admins/') + '</div>';
   }).join('');
   // First admin defaults to the quote's own contact (the common case); a
   // second/third admin is a distinct co-admin, so the fields start blank.
@@ -299,7 +315,7 @@ async function renderStep3() {
 
   var q = state.quote;
   var list = admins.map(function (da) {
-    return '<div class="cc-done-box" style="margin-bottom:8px;">' + esc([da.first_name, da.last_name].filter(Boolean).join(' ')) + ' (' + esc(da.email) + ') — District Administrator for <strong>' + esc(state.districtName) + '</strong></div>';
+    return '<div class="cc-done-box" style="margin-bottom:8px;">' + esc([da.first_name, da.last_name].filter(Boolean).join(' ')) + ' (' + esc(da.email) + ') — District Administrator for <strong>' + esc(state.districtName) + '</strong> ' + adminStatus(da, '/api/admin/districts/admins/') + '</div>';
   }).join('');
 
   // Once this purchase's school is actually linked to a district (set the

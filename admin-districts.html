@@ -472,7 +472,7 @@ async function loadManageAdmins() {
     listEl.innerHTML = detail.admins.length
       ? detail.admins.map(function (a) {
           const name = [a.first_name, a.last_name].filter(Boolean).join(' ') || '(new user)';
-          const verifiedPill = a.email_verified ? '' : ' <span class="a-pill a-pill-warn">Unverified</span>';
+          const verifiedPill = a.email_verified ? ' <span class="a-pill a-pill-success">Registered</span>' : ' <span class="a-pill a-pill-warning">Pending</span>';
           const resendBtn = !a.email_verified
             ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="doResendAdmin(' + a.id + ')">Resend</button> '
             : '';

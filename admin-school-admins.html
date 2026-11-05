@@ -196,8 +196,9 @@ function renderTable(rows) {
           ? '<span class="a-pill a-pill-neutral">Secondary</span>'
           : '<span class="a-pill a-pill-success">Full Access</span>';
       const verifiedPill = r.email_verified
-        ? ''
-        : ' <span class="a-pill a-pill-warn" title="Has not completed account setup">Unverified</span>';
+        ? ' <span class="a-pill a-pill-success" title="Has set up their account">Registered</span>'
+        : ' <span class="a-pill a-pill-warning" title="Has not set up their account yet">Pending</span>';
+      const districtTag = Number(r.is_district_admin) ? ' <span class="a-pill a-pill-neutral" title="Also a district administrator">District Admin</span>' : '';
       const statusPill = r.is_active
         ? '<span class="a-pill a-pill-success">Active</span>'
         : '<span class="a-pill a-pill-danger">Inactive</span>';
@@ -208,7 +209,7 @@ function renderTable(rows) {
         ? '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(r.email) + '" onclick="sendPasswordReset(' + r.site_user_id + ',this.dataset.v,this)">Reset Password</button> '
         : '';
       return '<tr>' +
-        '<td style="font-weight:600;">' + esc(name) + '</td>' +
+        '<td style="font-weight:600;">' + esc(name) + districtTag + '</td>' +
         '<td style="font-size:13px;color:var(--a-text-soft);">' + esc(r.email) + verifiedPill + '</td>' +
         '<td style="font-size:13px;">' + esc(school) + '</td>' +
         '<td>' + permPill + '</td>' +

@@ -74,7 +74,8 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
   let seats = [];
   if (purchase) {
     const [slaRows] = await pool.query(
-      `SELECT sla.id, sla.permission_level, su.first_name, su.last_name, su.email
+      `SELECT sla.id, sla.permission_level, su.first_name, su.last_name, su.email, su.email_verified,
+              EXISTS (SELECT 1 FROM district_license_admins dla WHERE dla.site_user_id = sla.site_user_id AND dla.is_active = 1) AS is_district_admin
        FROM school_license_admins sla JOIN site_users su ON su.id = sla.site_user_id
        WHERE sla.purchase_id = ? AND sla.is_active = 1 ORDER BY sla.created_at`,
       [purchase.id]
@@ -92,7 +93,7 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
         districtId = school.district_id;
         districtName = school.district_name;
         const [dlaRows] = await pool.query(
-          `SELECT dla.id, su.first_name, su.last_name, su.email
+          `SELECT dla.id, su.first_name, su.last_name, su.email, su.email_verified
            FROM district_license_admins dla JOIN site_users su ON su.id = dla.site_user_id
            WHERE dla.district_id = ? AND dla.is_active = 1 ORDER BY dla.created_at`,
           [districtId]
