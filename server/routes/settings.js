@@ -6,14 +6,15 @@ const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 router.get('/contact-emails', requireAuth, async (req, res) => {
-  const [askTheFixer, quote, privacy, general, salesAlerts] = await Promise.all([
+  const [askTheFixer, quote, privacy, general, salesAlerts, support] = await Promise.all([
     getSetting('contact_email_ask_the_fixer'),
     getSetting('contact_email_quote'),
     getSetting('contact_email_privacy'),
     getSetting('contact_email_general'),
     getSetting('contact_email_sales_alerts'),
+    getSetting('contact_email_support'),
   ]);
-  res.json({ askTheFixer, quote, privacy, general, salesAlerts });
+  res.json({ askTheFixer, quote, privacy, general, salesAlerts, support });
 });
 
 router.put('/contact-emails', requireAuth, async (req, res) => {
@@ -23,8 +24,10 @@ router.put('/contact-emails', requireAuth, async (req, res) => {
   const privacy = (b.privacy || '').trim();
   const general = (b.general || '').trim();
   const salesAlerts = (b.salesAlerts || '').trim();
+  // Optional so an older copy of the settings page (without the support field) still saves; absent means leave it as it is.
+  const support = typeof b.support === 'string' ? b.support.trim() : null;
 
-  if (![askTheFixer, quote, privacy, general, salesAlerts].every(v => EMAIL_PATTERN.test(v))) {
+  if (![askTheFixer, quote, privacy, general, salesAlerts, ...(support === null ? [] : [support])].every(v => EMAIL_PATTERN.test(v))) {
     return res.status(400).json({ error: 'All fields need a valid email address' });
   }
 
@@ -34,6 +37,7 @@ router.put('/contact-emails', requireAuth, async (req, res) => {
     setSetting('contact_email_privacy', privacy),
     setSetting('contact_email_general', general),
     setSetting('contact_email_sales_alerts', salesAlerts),
+    ...(support === null ? [] : [setSetting('contact_email_support', support)]),
   ]);
   res.json({ ok: true });
 });

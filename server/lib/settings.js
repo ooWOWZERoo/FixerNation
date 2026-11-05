@@ -8,6 +8,8 @@ const DEFAULTS = {
   contact_email_quote: 'admin@fixernationeducation.com',
   contact_email_privacy: 'admin@fixernationeducation.com',
   contact_email_general: 'admin@fixernationeducation.com',
+  // Where a new support request is announced, and the Reply-To on staff replies. See routes/support.js.
+  contact_email_support: 'admin@fixernationeducation.com',
   // Real-time "money moved" staff alerts (quote accepted, new paid order,
   // PO submitted and awaiting Mark Received) — see mailer.js's
   // sendSalesAlertEmail(). Distinct from contact_email_quote, which only

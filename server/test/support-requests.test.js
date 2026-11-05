@@ -1,0 +1,308 @@
+// Release 115: support requests (docs/reference/support-requests-requirements.md). Anyone can open one; the person sees only their own;
+// staff answer from the inbox; internal notes never reach the person; role and school come from the account, never the form.
+// Run:  cd server && npm test
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
+const http = require('node:http');
+const Module = require('node:module');
+const { DatabaseSync } = require('node:sqlite');
+require('express-async-errors');
+process.env.UPLOADS_DIR = path.join(os.tmpdir(), 'fne-test-uploads');
+
+const SERVER = path.join(__dirname, '..');
+const ROOT = path.join(SERVER, '..');
+const db = new DatabaseSync(':memory:');
+db.exec(`
+CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, role TEXT DEFAULT 'teacher', is_sales_demo INTEGER DEFAULT 0, session_invalidated_at TEXT, closed_at TEXT);
+CREATE TABLE admin_users (id INTEGER PRIMARY KEY, username TEXT, email TEXT);
+CREATE TABLE settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
+CREATE TABLE districts (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, license_status TEXT, expiration_date TEXT, school_domain TEXT);
+CREATE TABLE license_seats (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER, status TEXT, registered_site_user_id INTEGER);
+CREATE TABLE school_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, purchase_id INTEGER, is_active INTEGER DEFAULT 1);
+CREATE TABLE district_license_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, district_id INTEGER, is_active INTEGER DEFAULT 1);
+CREATE TABLE parent_classroom_links (id INTEGER PRIMARY KEY AUTOINCREMENT, site_user_id INTEGER, classroom_id INTEGER, student_id INTEGER);
+CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_id INTEGER, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER, purchase_id INTEGER, school_domain TEXT, prev_value TEXT, new_value TEXT, reason TEXT, ip_address TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE support_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE, status TEXT DEFAULT 'new', category TEXT DEFAULT 'other', subject TEXT, requester_name TEXT, requester_email TEXT, site_user_id INTEGER, roles TEXT, school_domain TEXT, district_id INTEGER, page_url TEXT, user_agent TEXT, assigned_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, resolved_at TEXT);
+CREATE TABLE support_request_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER, author_type TEXT, author_admin_id INTEGER, visibility TEXT DEFAULT 'public', body TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+INSERT INTO admin_users (id, username, email) VALUES (7, 'staffer', 'staff@fne.test'), (8, 'second', 'second@fne.test');
+INSERT INTO districts (id, name) VALUES (5, 'Riverbend');
+`);
+const run = async (sql, rawParams = []) => {
+  let i = 0;
+  const params = [];
+  const s = sql.trim().replace(/CURDATE\(\)/g, 'CURRENT_DATE').replace(/\bNOW\(\)/g, 'CURRENT_TIMESTAMP').replace(/\?/g, () => {
+    const p = rawParams[i++];
+    if (Array.isArray(p)) { params.push(...p); return p.map(() => '?').join(','); }
+    params.push(p);
+    return '?';
+  });
+  if (/^SELECT/i.test(s)) return [db.prepare(s).all(...params)];
+  const r = db.prepare(s).run(...params);
+  return [{ insertId: Number(r.lastInsertRowid), affectedRows: Number(r.changes) }];
+};
+
+const sent = { staff: [], person: [] };
+let failPersonMail = false;
+const stubs = {
+  [path.join(SERVER, 'db/pool.js')]: { query: run },
+  [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => { req.user = { userId: 7 }; next(); }, getAuthUser: () => null },
+  [path.join(SERVER, 'lib/session-tokens.js')]: { verifySession: (kind, token) => ({ userId: Number(token), iat: Math.floor(Date.now() / 1000) }) },
+  [path.join(SERVER, 'lib/mailer.js')]: {
+    sendSalesAlertEmail: async (m) => { sent.staff.push(m); },
+    sendSupportEmail: async (m) => { if (failPersonMail) throw new Error('smtp down'); sent.person.push(m); },
+  },
+  [path.join(SERVER, 'lib/rate-limit.js')]: { limiter: () => (req, res, next) => next(), clientIp: () => '127.0.0.1' },
+};
+const origLoad = Module._load;
+Module._load = function (request, parent) {
+  try { const f = Module._resolveFilename(request, parent); if (stubs[f]) return stubs[f]; } catch { /* default */ }
+  return origLoad.apply(this, arguments);
+};
+
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const app = express();
+app.use(express.json());
+app.use(cookieParser());
+app.use('/api/support', require(path.join(SERVER, 'routes/support.js')));
+app.use('/api/admin/support', require(path.join(SERVER, 'routes/admin-support.js')));
+app.use((err, req, res, next) => res.status(500).json({ error: String(err.message) }));
+let server, port;
+test.before(async () => { server = app.listen(0); port = server.address().port; });
+test.after(() => server.close());
+
+function call(method, p, { as = null, body = null } = {}) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const headers = {};
+    if (as) headers.Cookie = `fn_user_session=${as}`;
+    if (data) { headers['Content-Type'] = 'application/json'; headers['Content-Length'] = Buffer.byteLength(data); }
+    const req = http.request({ port, method, path: p, headers }, (res) => {
+      let b = ''; res.on('data', (d) => b += d); res.on('end', () => resolve({ status: res.statusCode, json: b ? JSON.parse(b) : {} }));
+    });
+    req.on('error', reject); if (data) req.write(data); req.end();
+  });
+}
+
+const reset = () => {
+  for (const t of ['site_users', 'purchases', 'license_seats', 'school_license_admins', 'district_license_admins', 'parent_classroom_links', 'school_audit_log', 'support_requests', 'support_request_messages', 'settings']) db.exec(`DELETE FROM ${t}`);
+  sent.staff.length = 0; sent.person.length = 0; failPersonMail = false;
+};
+let n = 0;
+function account(name, o = {}) {
+  n += 1;
+  const email = `${name.toLowerCase()}${n}@school.test`;
+  const uid = Number(db.prepare('INSERT INTO site_users (email, first_name, last_name, is_sales_demo, closed_at) VALUES (?, ?, ?, ?, ?)').run(email, name, 'Tester', o.demo ? 1 : 0, o.closed ? '2026-01-01' : null).lastInsertRowid);
+  const pid = Number(db.prepare("INSERT INTO purchases (license_status, expiration_date, school_domain) VALUES ('active', '2999-01-01', ?)").run(`s${n}.test`).lastInsertRowid);
+  if (o.teacher) db.prepare("INSERT INTO license_seats (purchase_id, status, registered_site_user_id) VALUES (?, 'registered', ?)").run(pid, uid);
+  if (o.schoolAdmin) db.prepare('INSERT INTO school_license_admins (site_user_id, purchase_id) VALUES (?, ?)').run(uid, pid);
+  if (o.districtAdmin) db.prepare('INSERT INTO district_license_admins (site_user_id, district_id) VALUES (?, 5)').run(uid);
+  if (o.parent) db.prepare('INSERT INTO parent_classroom_links (site_user_id, classroom_id) VALUES (?, 1)').run(uid);
+  return { uid, email, domain: `s${n}.test` };
+}
+const form = (o = {}) => ({ name: 'Visitor V', email: 'visitor@home.test', category: 'cant_sign_in', subject: 'Cannot get in', message: 'I reset my password but it fails.', ...o });
+const rowOf = (id) => db.prepare('SELECT * FROM support_requests WHERE id = ?').get(id);
+
+test('VISITOR: opens a request without signing in; staff are told; the person gets a copy with the reference', async () => {
+  reset();
+  const r = await call('POST', '/api/support', { body: form() });
+  assert.equal(r.status, 200);
+  assert.match(r.json.ref, /^SR-[A-Z2-9]{5}$/);
+  const row = db.prepare('SELECT * FROM support_requests').get();
+  assert.equal(row.status, 'new'); assert.equal(row.site_user_id, null); assert.equal(row.roles, null);
+  assert.equal(row.requester_email, 'visitor@home.test'); assert.equal(row.category, 'cant_sign_in');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_request_messages').get().n, 1);
+  assert.equal(sent.staff.length, 1); assert.match(sent.staff[0].subject, /New support request SR-/);
+  assert.equal(sent.staff[0].to, 'admin@fixernationeducation.com', 'default support address until the setting is changed');
+  assert.equal(sent.person.length, 1); assert.equal(sent.person[0].to, 'visitor@home.test'); assert.equal(sent.person[0].ref, r.json.ref);
+});
+
+test('VALIDATION: an email and a message are needed; odd input is not coerced; the hidden field catches bots', async () => {
+  reset();
+  assert.equal((await call('POST', '/api/support', { body: form({ email: 'not-an-email' }) })).status, 400);
+  assert.equal((await call('POST', '/api/support', { body: form({ email: ['a@b.test'] }) })).status, 400, 'an array is not an email');
+  assert.equal((await call('POST', '/api/support', { body: form({ message: { toString: 'x' } }) })).status, 400, 'an object is not a message');
+  assert.equal((await call('POST', '/api/support', { body: form({ message: '   ' }) })).status, 400);
+  assert.equal((await call('POST', '/api/support', { body: form({ name: '' }) })).status, 400);
+  const odd = await call('POST', '/api/support', { body: form({ category: 'hack_the_planet', subject: '' }) });
+  assert.equal(odd.status, 200);
+  const row = db.prepare('SELECT * FROM support_requests').get();
+  assert.equal(row.category, 'other'); assert.equal(row.subject, 'Something else', 'blank subject falls back to the topic');
+  const before = db.prepare('SELECT COUNT(*) AS n FROM support_requests').get().n;
+  const bot = await call('POST', '/api/support', { body: form({ website: 'http://spam.test' }) });
+  assert.equal(bot.status, 200);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_requests').get().n, before, 'nothing saved for a bot');
+});
+
+test('SIGNED IN: role, school and district come from the account; whatever the form claims is ignored', async () => {
+  reset();
+  const a = account('Dana', { teacher: true, schoolAdmin: true, districtAdmin: true });
+  const r = await call('POST', '/api/support', { as: a.uid, body: form({ name: 'Somebody Else', email: 'forged@evil.test', roles: 'District administrator', schoolDomain: 'evil.test', siteUserId: 999, districtId: 1 }) });
+  assert.equal(r.status, 200);
+  const row = db.prepare('SELECT * FROM support_requests').get();
+  assert.equal(row.site_user_id, a.uid); assert.equal(row.requester_email, a.email); assert.equal(row.requester_name, 'Dana Tester');
+  assert.match(row.roles, /District administrator/); assert.match(row.roles, /School license administrator/); assert.match(row.roles, /Teacher/);
+  assert.equal(row.school_domain, a.domain); assert.equal(row.district_id, 5);
+  assert.equal(sent.person[0].to, a.email, 'the copy goes to the account email, not the form');
+  const p = account('Pat', { parent: true });
+  await call('POST', '/api/support', { as: p.uid, body: form() });
+  assert.equal(db.prepare('SELECT roles FROM support_requests WHERE site_user_id = ?').get(p.uid).roles, 'Parent');
+});
+
+test('REFUSED: a sales demo account cannot send; a closed account is treated as signed out', async () => {
+  reset();
+  const demo = account('Demo', { demo: true });
+  assert.equal((await call('POST', '/api/support', { as: demo.uid, body: form() })).status, 403);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_requests').get().n, 0);
+  const ctx = await call('GET', '/api/support/context', { as: demo.uid });
+  assert.equal(ctx.json.demo, true);
+  const closed = account('Gone', { closed: true });
+  assert.equal((await call('POST', '/api/support', { as: closed.uid, body: { message: 'help' } })).status, 400, 'no name or email given, and the closed session does not fill them in');
+  assert.equal((await call('GET', '/api/support/mine', { as: closed.uid })).status, 401);
+});
+
+test('MINE: a person sees only their own requests, never staff internal notes; anyone else gets 404', async () => {
+  reset();
+  const a = account('Ann', { teacher: true });
+  const b = account('Bo', { teacher: true });
+  const mine = (await call('POST', '/api/support', { as: a.uid, body: form({ subject: 'Ann subject' }) })).json;
+  await call('POST', '/api/support', { as: b.uid, body: form({ subject: 'Bo subject' }) });
+  const idA = db.prepare('SELECT id FROM support_requests WHERE site_user_id = ?').get(a.uid).id;
+  await call('POST', `/api/admin/support/${idA}/messages`, { body: { body: 'SECRET staff note', visibility: 'internal' } });
+  await call('POST', `/api/admin/support/${idA}/messages`, { body: { body: 'Try resetting again.', visibility: 'public' } });
+
+  const list = await call('GET', '/api/support/mine', { as: a.uid });
+  assert.equal(list.json.requests.length, 1); assert.equal(list.json.requests[0].ref, mine.ref);
+  const detail = await call('GET', `/api/support/mine/${idA}`, { as: a.uid });
+  assert.equal(detail.status, 200);
+  const bodies = detail.json.messages.map(m => m.body);
+  assert.ok(bodies.includes('Try resetting again.')); assert.ok(!JSON.stringify(detail.json).includes('SECRET'), 'internal notes never leave the admin side');
+  const idB = db.prepare('SELECT id FROM support_requests WHERE site_user_id = ?').get(b.uid).id;
+  assert.equal((await call('GET', `/api/support/mine/${idB}`, { as: a.uid })).status, 404);
+  assert.equal((await call('POST', `/api/support/mine/${idB}/messages`, { as: a.uid, body: { message: 'hi' } })).status, 404);
+  assert.equal((await call('GET', '/api/support/mine/abc', { as: a.uid })).status, 404);
+  assert.equal((await call('GET', '/api/support/mine')).status, 401);
+});
+
+test('FOLLOW-UP: an answer reopens a resolved or waiting request and tells staff', async () => {
+  reset();
+  const a = account('Ann', { teacher: true });
+  await call('POST', '/api/support', { as: a.uid, body: form() });
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  await call('PUT', `/api/admin/support/${id}`, { body: { status: 'resolved' } });
+  assert.ok(rowOf(id).resolved_at);
+  sent.staff.length = 0;
+  const r = await call('POST', `/api/support/mine/${id}/messages`, { as: a.uid, body: { message: 'Still broken.' } });
+  assert.equal(r.status, 200);
+  assert.equal(rowOf(id).status, 'open'); assert.equal(rowOf(id).resolved_at, null);
+  assert.equal(sent.staff.length, 1);
+  assert.equal((await call('POST', `/api/support/mine/${id}/messages`, { as: a.uid, body: { message: '' } })).status, 400);
+  const demo = account('Demo', { demo: true });
+  assert.equal((await call('POST', `/api/support/mine/${id}/messages`, { as: demo.uid, body: { message: 'x' } })).status, 403);
+});
+
+test('INBOX: list with counts, filters and search; detail shows every message', async () => {
+  reset();
+  const a = account('Ann', { teacher: true });
+  await call('POST', '/api/support', { as: a.uid, body: form({ subject: 'Alpha problem', category: 'parents' }) });
+  await call('POST', '/api/support', { body: form({ subject: 'Beta problem', name: 'Zed Zebra' }) });
+  const id2 = db.prepare("SELECT id FROM support_requests WHERE subject = 'Beta problem'").get().id;
+  await call('PUT', `/api/admin/support/${id2}`, { body: { status: 'resolved' } });
+
+  const active = await call('GET', '/api/admin/support');
+  assert.equal(active.json.requests.length, 1); assert.equal(active.json.requests[0].subject, 'Alpha problem');
+  assert.deepEqual(active.json.counts, { new: 1, open: 0, waiting_on_user: 0, resolved: 1 });
+  assert.equal((await call('GET', '/api/admin/support?status=all')).json.requests.length, 2);
+  assert.equal((await call('GET', '/api/admin/support?status=resolved')).json.requests.length, 1);
+  assert.equal((await call('GET', '/api/admin/support?status=all&category=parents')).json.requests.length, 1);
+  assert.equal((await call('GET', '/api/admin/support?status=all&q=zebra')).json.requests.length, 1);
+  assert.equal((await call('GET', `/api/admin/support?status=all&q=${a.domain}`)).json.requests.length, 1, 'search finds the school');
+
+  const idA = db.prepare("SELECT id FROM support_requests WHERE subject = 'Alpha problem'").get().id;
+  const d = await call('GET', `/api/admin/support/${idA}`);
+  assert.equal(d.json.request.school_domain, a.domain); assert.equal(d.json.messages.length, 1);
+  assert.equal((await call('GET', '/api/admin/support/99999')).status, 404);
+  assert.equal((await call('GET', '/api/admin/support/admins')).json.admins.length, 2, '/admins is not read as an id');
+});
+
+test('STAFF REPLY: a public reply is emailed with the support address as Reply-To, waits on the person, and is audited without its text', async () => {
+  reset();
+  await call('POST', '/api/support', { body: form() });
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  const r = await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Please try the reset link again.', visibility: 'public' } });
+  assert.equal(r.status, 200); assert.equal(r.json.emailed, true); assert.equal(r.json.status, 'waiting_on_user');
+  assert.equal(rowOf(id).status, 'waiting_on_user');
+  const mail = sent.person.at(-1);
+  assert.equal(mail.to, 'visitor@home.test'); assert.equal(mail.body, 'Please try the reset link again.');
+  assert.equal(mail.replyTo, 'admin@fixernationeducation.com'); assert.equal(mail.linkUrl, null, 'a visitor has no My requests page to link to');
+  const log = db.prepare("SELECT * FROM school_audit_log WHERE action = 'support_reply_sent'").get();
+  assert.equal(log.entity_type, 'support_request'); assert.equal(log.entity_id, id); assert.equal(log.purchase_id, null);
+  assert.ok(!JSON.stringify(log).includes('reset link'), 'the audit log holds ids, not message text');
+});
+
+test('STAFF NOTE: an internal note sends no email and only moves a new request to open', async () => {
+  reset();
+  await call('POST', '/api/support', { body: form() });
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  sent.person.length = 0;
+  const r = await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Checked: account is fine.', visibility: 'internal' } });
+  assert.equal(r.status, 200); assert.equal(r.json.emailed, false); assert.equal(sent.person.length, 0);
+  assert.equal(rowOf(id).status, 'open');
+  await call('PUT', `/api/admin/support/${id}`, { body: { status: 'waiting_on_user' } });
+  await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Another note', visibility: 'internal' } });
+  assert.equal(rowOf(id).status, 'waiting_on_user', 'a later note does not change the status');
+});
+
+test('EMAIL FAILURE: the reply is still saved and staff are told the email did not go', async () => {
+  reset();
+  await call('POST', '/api/support', { body: form() });
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  failPersonMail = true;
+  const r = await call('POST', `/api/admin/support/${id}/messages`, { body: { body: 'Hello', visibility: 'public' } });
+  assert.equal(r.status, 200); assert.equal(r.json.emailed, false); assert.match(r.json.emailError, /could not be sent/);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_request_messages WHERE visibility = ? AND author_type = ?').get('public', 'staff').n, 1);
+});
+
+test('STAFF CHANGES: status and assignment are validated and audited; bad input is refused', async () => {
+  reset();
+  await call('POST', '/api/support', { body: form() });
+  const id = db.prepare('SELECT id FROM support_requests').get().id;
+  assert.equal((await call('PUT', `/api/admin/support/${id}`, { body: { status: 'banana' } })).status, 400);
+  assert.equal((await call('PUT', `/api/admin/support/${id}`, { body: { status: ['open'] } })).status, 400);
+  assert.equal((await call('PUT', `/api/admin/support/${id}`, { body: { assignedAdminId: 999 } })).status, 400);
+  assert.equal((await call('PUT', `/api/admin/support/${id}`, { body: { assignedAdminId: 'x' } })).status, 400);
+  assert.equal((await call('PUT', `/api/admin/support/${id}`, { body: { assignedAdminId: 8, status: 'open' } })).status, 200);
+  assert.equal(rowOf(id).assigned_admin_id, 8); assert.equal(rowOf(id).status, 'open');
+  assert.equal((await call('PUT', `/api/admin/support/${id}`, { body: { assignedAdminId: null } })).status, 200);
+  assert.equal(rowOf(id).assigned_admin_id, null);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM school_audit_log WHERE action IN ('support_status_changed', 'support_assigned')").get().n, 3);
+  assert.equal((await call('PUT', '/api/admin/support/99999', { body: { status: 'open' } })).status, 404);
+  assert.equal((await call('POST', `/api/admin/support/${id}/messages`, { body: { body: '  ', visibility: 'public' } })).status, 400);
+});
+
+test('SUPPORT ADDRESS: the staff notice goes to the configured setting', async () => {
+  reset();
+  db.prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('contact_email_support', 'help@fne.test')").run();
+  await call('POST', '/api/support', { body: form() });
+  assert.equal(sent.staff[0].to, 'help@fne.test');
+});
+
+test('WIRING: pages are linked, cache versions match, and nothing from a person goes in as HTML', () => {
+  const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  assert.match(read('admin-nav.js'), /admin-support\.html/);
+  assert.match(read('footer.js'), /support\.html/);
+  assert.match(read('admin-shell.js'), /'support':/);
+  const pub = read('support.html');
+  assert.ok(!/innerHTML\s*=/.test(pub), 'support.html builds its list and messages with textContent only');
+  const adm = read('admin-support.html');
+  assert.ok(!/onclick="[^"]*(\+|\$\{)/.test(adm), 'no inline handler is built from data (only the fixed theme toggle has one)');
+  assert.match(adm, /fnEscape/);
+  assert.match(adm, /admin-nav\.js\?v=26/);
+  assert.match(read('server/app.js'), /\/api\/admin\/support/);
+  assert.match(read('server/db/schema.sql'), /CREATE TABLE IF NOT EXISTS support_requests/);
+  assert.match(read('server/scripts/alter-create-support-requests.js'), /support_request_messages/);
+});

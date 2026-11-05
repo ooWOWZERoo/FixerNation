@@ -16,7 +16,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=25"></script>
+<script src="admin-nav.js?v=26"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -241,6 +241,14 @@ async function revokeDistrictAdmin(assignmentId) {
   doLookup({ preventDefault: function () {} });
 }
 
+// The support inbox links here with ?email=; run the lookup straight away.
+(function () {
+  const wanted = new URLSearchParams(location.search).get('email');
+  if (!wanted) return;
+  document.getElementById('lookupEmail').value = wanted;
+  doLookup({ preventDefault: function () {} });
+})();
+
 function statusPill(status) {
   const map = {
     pending: 'a-pill-warning', opened: 'a-pill', registered: 'a-pill-success',
@@ -252,6 +260,6 @@ function statusPill(status) {
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : '—'; }
 function esc(str) { return fnEscape(str); }
 </script>
-<script src="admin-shell.js?v=2"></script>
+<script src="admin-shell.js?v=3"></script>
 </body>
 </html>

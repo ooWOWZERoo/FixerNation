@@ -183,6 +183,23 @@ async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel }) 
   });
 }
 
+// Support requests (Release 115). One shape for both directions: the "we got your request" copy to the person, and a staff reply.
+// `body` is plain text from a person or staff; it goes through esc() and keeps its line breaks. Reply-To is the support mailbox so a
+// person's answer reaches staff (it is not threaded back into the inbox in this release).
+async function sendSupportEmail({ to, name, ref, subject, intro, body, replyTo, linkUrl, linkLabel }) {
+  const bodyHtml = esc(body).replace(/\r?\n/g, '<br>');
+  const linkHtml = linkUrl ? `<p style="margin-top:14px;"><a href="${safeUrl(linkUrl)}">${esc(linkLabel || 'Open')}</a></p>` : '';
+  const linkText = linkUrl ? `\n\n${linkLabel || 'Open'}: ${linkUrl}` : '';
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    replyTo,
+    subject: `${subject} [${ref}]`,
+    text: `Hi ${name || 'there'},\n\n${intro}\n\n${body}${linkText}\n\nYour reference: ${ref}`,
+    html: `<p>Hi ${esc(name || 'there')},</p><p>${esc(intro)}</p><blockquote style="margin:12px 0; padding:10px 14px; border-left:4px solid #F26B4D; background:#FBF5EC;">${bodyHtml}</blockquote>${linkHtml}<p style="color:#6B5F55; font-size:13px;">Your reference: ${esc(ref)}</p>`,
+  });
+}
+
 // There's no customer-facing invoice page (admin-invoice-print.html requires
 // admin login), so the invoice contents are embedded directly in the email
 // body rather than linked to.
@@ -511,4 +528,4 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
   });
 }
 
-module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail };
+module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendSupportEmail };

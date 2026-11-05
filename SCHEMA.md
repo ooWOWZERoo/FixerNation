@@ -138,6 +138,9 @@ id 🔑 · actor_type/id/email · action · entity_type/id · purchase_id · sch
 
 **NEW consumer (2026-09-24):** the affiliate program (§15) also writes here via the shared `lib/audit.js` helper, tagged with its own `entity_type` values (`affiliate`, `affiliate_application`, `affiliate_commission`, `affiliate_territory`) rather than a second table. Every purchase-scoped query in `school-admin.js` explicitly excludes those values (`AFFILIATE_ENTITY_TYPES`, also from `lib/audit.js`) — this was NOT true on first ship and leaked a commission's `payout_reference` into a school admin's own activity view before it was caught and fixed.
 
+### `support_requests` / `support_request_messages` — help requests and their thread (Release 115)
+`support_requests`: id 🔑 · ref (unique, e.g. SR-4F7K2) · status (`new`/`open`/`waiting_on_user`/`resolved`) · category · subject · requester_name/email · site_user_id 🔗 (SET NULL; only when signed in) · roles/school_domain/district_id (worked out on the server from the account, never the form) · page_url/user_agent (browser-sent, untrusted) · assigned_admin_id 🔗 (SET NULL) · created_at/updated_at/resolved_at. `support_request_messages`: id 🔑 · request_id 🔗 (CASCADE) · author_type (`requester`/`staff`) · author_admin_id 🔗 · visibility (`public`/`internal`; internal is never selected by the person-side routes) · body · created_at. Staff actions are logged in `school_audit_log` with entity_type `support_request` and no purchase_id.
+
 ### `school_admin_notifications` — dedup log for school-admin alert emails
 id 🔑 · school_domain · reason · teacher_email · admin_contact_id · sent_at
 

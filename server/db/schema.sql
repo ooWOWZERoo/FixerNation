@@ -1490,3 +1490,46 @@ CREATE TABLE IF NOT EXISTS standards_alignments (
   FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL,
   FOREIGN KEY (suggested_by_site_user_id) REFERENCES site_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Support requests (Release 115): anyone can ask for help; staff answer from admin-support.html.
+-- Added to existing installs by scripts/alter-create-support-requests.js.
+-- Requirements: docs/reference/support-requests-requirements.md
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS support_requests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ref VARCHAR(16) NOT NULL UNIQUE, -- short code the person quotes, e.g. SR-4F7K2
+  status VARCHAR(24) NOT NULL DEFAULT 'new', -- 'new' | 'open' | 'waiting_on_user' | 'resolved'
+  category VARCHAR(32) NOT NULL DEFAULT 'other',
+  subject VARCHAR(200) NOT NULL,
+  requester_name VARCHAR(120) NOT NULL,
+  requester_email VARCHAR(255) NOT NULL,
+  site_user_id INT UNSIGNED NULL, -- set only when the person was signed in; never taken from the form
+  roles VARCHAR(160) NULL, -- worked out on the server from the account (e.g. 'School license admin, Teacher'); never taken from the form
+  school_domain VARCHAR(255) NULL, -- from the account, not the form
+  district_id INT UNSIGNED NULL, -- from the account, not the form
+  page_url VARCHAR(500) NULL, -- sent by the browser; untrusted text
+  user_agent VARCHAR(300) NULL, -- sent by the browser; untrusted text
+  assigned_admin_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  resolved_at DATETIME NULL,
+  INDEX idx_status (status, updated_at),
+  INDEX idx_user (site_user_id),
+  INDEX idx_email (requester_email),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE SET NULL,
+  FOREIGN KEY (assigned_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS support_request_messages (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  request_id INT UNSIGNED NOT NULL,
+  author_type VARCHAR(16) NOT NULL, -- 'requester' | 'staff'
+  author_admin_id INT UNSIGNED NULL,
+  visibility VARCHAR(16) NOT NULL DEFAULT 'public', -- 'public' (the person sees it) | 'internal' (staff notes; never leaves the admin side)
+  body TEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_request (request_id, created_at),
+  FOREIGN KEY (request_id) REFERENCES support_requests(id) ON DELETE CASCADE,
+  FOREIGN KEY (author_admin_id) REFERENCES admin_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

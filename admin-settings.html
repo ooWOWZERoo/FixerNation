@@ -16,7 +16,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=25"></script>
+<script src="admin-nav.js?v=26"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -76,6 +76,11 @@
             <label>Sales alerts go to</label>
             <input type="email" id="contactEmailSalesAlerts" required>
             <div class="a-note">Real-time alert when a quote is accepted, a new order is paid, or a Purchase Order comes in and needs to be marked received once payment arrives.</div>
+          </div>
+          <div class="a-field" style="margin-top:16px;">
+            <label>Support requests go to</label>
+            <input type="email" id="contactEmailSupport" required>
+            <div class="a-note">Told when someone sends a request from the Get help page or adds to one. Staff replies use this address as the Reply-To.</div>
           </div>
           <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
         </form>
@@ -279,6 +284,7 @@ async function loadContactEmails() {
   document.getElementById('contactEmailPrivacy').value = data.privacy || '';
   document.getElementById('contactEmailGeneral').value = data.general || '';
   document.getElementById('contactEmailSalesAlerts').value = data.salesAlerts || '';
+  document.getElementById('contactEmailSupport').value = data.support || '';
 }
 
 document.getElementById('contactEmailsForm').addEventListener('submit', async function(e) {
@@ -288,6 +294,7 @@ document.getElementById('contactEmailsForm').addEventListener('submit', async fu
   const privacy = document.getElementById('contactEmailPrivacy').value.trim();
   const general = document.getElementById('contactEmailGeneral').value.trim();
   const salesAlerts = document.getElementById('contactEmailSalesAlerts').value.trim();
+  const support = document.getElementById('contactEmailSupport').value.trim();
   const errorBox = document.getElementById('contactEmailsError');
   errorBox.classList.remove('show');
 
@@ -295,7 +302,7 @@ document.getElementById('contactEmailsForm').addEventListener('submit', async fu
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ askTheFixer, quote, privacy, general, salesAlerts }),
+    body: JSON.stringify({ askTheFixer, quote, privacy, general, salesAlerts, support }),
   });
   if (fnHandleUnauthorized(r)) return;
   const result = await r.json().catch(() => ({}));
@@ -654,6 +661,6 @@ loadSafetyFallbackEmail();
 loadAdmins();
 </script>
 
-<script src="admin-shell.js?v=2"></script>
+<script src="admin-shell.js?v=3"></script>
 </body>
 </html>

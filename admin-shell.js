@@ -6,6 +6,7 @@
   var page = location.pathname.split('/').pop();
   var pages = {
     'dashboard': ['Your mission, in motion', 'Mission Control', 'Real tools. Brighter futures. Track progress, support schools, and make your next move count.', 'Overview'],
+    'support': ['Help people get unstuck', '', 'Answer requests from teachers, administrators and parents, with their role and school already in front of you.', 'Sales & Schools'],
     'account-lookup': ['People behind the progress', '', 'Find an account and connect the dots across invitations, access, and licenses.', 'Sales & Schools'],
     'affiliates': ['Grow the movement', '', 'Support your partners, explore territory coverage, and turn connections into opportunity.', 'Sales & Schools'],
     'analytics': ['Follow the journey', '', 'See how visitors discover Fixer Nation and where their next steps take them.', 'Reports'],
