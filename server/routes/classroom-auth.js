@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
 const { isValidPin, PIN_ERROR } = require('../lib/pin');
+const { pinFailsByStudent, pinFailsByIp } = require('../lib/pin-lockout');
 const router = express.Router();
 
 // Student PINs are 6 digits (1,000,000 possibilities) and usernames are guessable
@@ -18,8 +19,7 @@ const router = express.Router();
 // deliberately generous: a whole class logs in from one school address, and
 // correct PINs never count against it.
 const PIN_WINDOW = 15 * 60 * 1000;
-const pinFailsByStudent = new FailureTracker({ name: 'pin-student', windowMs: PIN_WINDOW, max: 5 });
-const pinFailsByIp = new FailureTracker({ name: 'pin-ip', windowMs: PIN_WINDOW, max: 100 });
+// pinFailsByStudent / pinFailsByIp live in lib/pin-lockout.js so the teacher page and the staff console can see and clear them.
 const joinCodeMissesByIp = new FailureTracker({ name: 'join-code-miss-ip', windowMs: PIN_WINDOW, max: 30 });
 const joinLimit = limiter({ name: 'student-join', windowMs: 60 * 60 * 1000, max: 150 });
 

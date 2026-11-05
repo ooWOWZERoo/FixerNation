@@ -43,6 +43,20 @@ router.put('/contact-emails', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// How long an admin page that shows student names may sit idle before it hides them (minutes, 1 to 120).
+router.get('/privacy-lock', requireAuth, async (req, res) => {
+  const minutes = Number(await getSetting('admin_privacy_lock_minutes'));
+  res.json({ minutes: Number.isInteger(minutes) && minutes >= 1 && minutes <= 120 ? minutes : 5 });
+});
+
+router.put('/privacy-lock', requireAuth, async (req, res) => {
+  const raw = (req.body || {}).minutes;
+  const minutes = typeof raw === 'number' || typeof raw === 'string' ? Number(raw) : NaN;
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) return res.status(400).json({ error: 'Enter a whole number of minutes from 1 to 120' });
+  await setSetting('admin_privacy_lock_minutes', String(minutes));
+  res.json({ ok: true, minutes });
+});
+
 router.get('/invoice-branding', requireAuth, async (req, res) => {
   const [businessName, tagline, logoUrl] = await Promise.all([
     getSetting('invoice_business_name'),

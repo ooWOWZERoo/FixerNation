@@ -68,6 +68,38 @@
           <table class="a-table" id="districtAdminTable"><thead><tr><th>District</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
         </div>
 
+        <div class="a-card" style="margin-top:24px;">
+          <div class="a-card-head"><h2>Timeline</h2></div>
+          <div class="a-note" style="margin:0 0 12px;">Newest first. Student names never appear here.</div>
+          <table class="a-table" id="timelineTable"><thead><tr><th style="width:190px;">When</th><th>What happened</th></tr></thead><tbody></tbody></table>
+        </div>
+
+      </div>
+
+      <div id="lockNotice" class="a-note" style="display:none; margin-top:24px;"></div>
+
+      <div class="a-card" style="max-width:900px; margin-top:24px;">
+        <div class="a-card-head"><h2>Classroom lookup</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          Find a classroom by teacher email, classroom code or student username. Student names are hidden after
+          <span id="lockMinutes">5</span> minutes without activity.
+        </div>
+        <form id="classroomForm" onsubmit="classroomLookup(event)" style="display:flex; gap:10px;">
+          <input type="text" id="classroomQuery" placeholder="teacher@school.edu, ABCD2345 or a username" style="flex:1;" maxlength="255" required>
+          <button type="submit" class="a-btn a-btn-primary">Find classroom</button>
+        </form>
+        <div id="pinResult" class="a-note" style="display:none; margin-top:14px; border-left:4px solid var(--a-success,#1f7a4d);"></div>
+        <div id="classroomResults" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="a-card" style="max-width:900px; margin-top:24px;">
+        <div class="a-card-head"><h2>Parent view</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">See the children linked to a parent's account and the invitations sent to their email.</div>
+        <form id="parentForm" onsubmit="parentLookup(event)" style="display:flex; gap:10px;">
+          <input type="email" id="parentEmail" placeholder="parent@email.com" style="flex:1;" maxlength="255" required>
+          <button type="submit" class="a-btn a-btn-primary">Find parent</button>
+        </form>
+        <div id="parentResults" style="margin-top:14px;"></div>
       </div>
 
       <div id="notFoundNote" class="a-note" style="display:none; margin-top:16px;">No account exists yet for this email — but it may still show invitations/seats below if it's been invited without registering.</div>
@@ -77,8 +109,10 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
+<script src="admin-privacy-lock.js?v=1"></script>
 <script>
 let currentEmail = '';
+let currentAccount = null;
 
 async function doLookup(e) {
   e.preventDefault();
@@ -94,7 +128,10 @@ async function doLookup(e) {
 function render(data) {
   document.getElementById('resultsWrap').style.display = 'block';
   document.getElementById('notFoundNote').style.display = data.account ? 'none' : 'block';
+  currentAccount = data.account;
   renderAccount(data.account);
+  refreshTimeline();
+  document.getElementById('parentEmail').value = currentEmail;
   renderInvitations(data.invitations || []);
   renderSeats(data.seats || []);
   renderSchoolAdmin(data.schoolAdminAssignments || []);
@@ -128,8 +165,64 @@ function renderAccount(account) {
         revoked +
       '</div>' +
       '<button class="a-btn a-btn-danger a-btn-sm" onclick="deleteAccount(' + account.id + ')">Delete Account</button>' +
-    '</div>';
+    '</div>' +
+    '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">' +
+      '<button class="a-btn a-btn-outline a-btn-sm" onclick="sendResetEmail(' + account.id + ')">Send password reset email</button>' +
+      '<button class="a-btn a-btn-outline a-btn-sm" onclick="showResetLink(' + account.id + ')">Show reset link</button>' +
+      '<button class="a-btn a-btn-outline a-btn-sm" onclick="signOutEverywhere(' + account.id + ')">Sign out everywhere</button>' +
+      (account.email_verified ? '' : '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendVerification(' + account.id + ')">Resend verification email</button>') +
+    '</div>' +
+    '<div id="resetLinkBox" class="a-note" style="display:none; margin-top:12px; border-left:4px solid var(--a-success,#1f7a4d);"></div>';
 }
+
+async function postJson(url) {
+  const r = await fetch(url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return null;
+  const d = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(d.error || 'That did not work', 'error'); return null; }
+  return d;
+}
+function refreshLookup() { doLookup({ preventDefault: function () {} }); }
+
+async function sendResetEmail(id) {
+  if (!confirm('Send a password reset email to ' + currentEmail + '?')) return;
+  if (await postJson('/api/site-auth/site-users/' + id + '/send-password-reset')) { fnToast('Password reset email sent'); refreshLookup(); }
+}
+async function resendVerification(id) {
+  if (await postJson('/api/admin/support-console/accounts/' + id + '/resend-verification')) { fnToast('Verification email sent'); refreshLookup(); }
+}
+async function signOutEverywhere(id) {
+  if (!confirm('Sign this person out of every device? They will need to sign in again.')) return;
+  if (await postJson('/api/admin/support-console/accounts/' + id + '/sign-out')) { fnToast('Signed out everywhere'); refreshLookup(); }
+}
+async function showResetLink(id) {
+  if (!confirm("Show a reset link on screen? Anyone who has the link can set this account's password. It stops working after 1 hour.")) return;
+  const d = await postJson('/api/admin/support-console/accounts/' + id + '/reset-link');
+  if (!d) return;
+  const box = document.getElementById('resetLinkBox');
+  box.textContent = '';
+  box.style.display = 'block';
+  box.appendChild(document.createTextNode('One-time reset link, good for 1 hour. Give it to the person. Finishing it also verifies their email.'));
+  const input = document.createElement('input');
+  input.type = 'text'; input.readOnly = true; input.value = d.url; input.style.cssText = 'width:100%; margin-top:8px;';
+  input.addEventListener('focus', function () { input.select(); });
+  const copy = document.createElement('button');
+  copy.type = 'button'; copy.className = 'a-btn a-btn-outline a-btn-sm'; copy.style.marginTop = '8px'; copy.textContent = 'Copy link';
+  copy.addEventListener('click', function () { input.select(); navigator.clipboard && navigator.clipboard.writeText(d.url); fnToast('Link copied'); });
+  box.appendChild(input); box.appendChild(copy);
+  refreshTimeline();
+}
+
+async function refreshTimeline() {
+  const r = await fetch('/api/admin/support-console/timeline?email=' + encodeURIComponent(currentEmail), { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  const tbody = document.querySelector('#timelineTable tbody');
+  tbody.innerHTML = (d.events || []).map(function (e) {
+    return '<tr><td style="white-space:nowrap;">' + esc(fmtDateTime(e.at)) + '</td><td>' + esc(e.text) + '</td></tr>';
+  }).join('') || '<tr><td colspan="2">Nothing recorded for this email.</td></tr>';
+}
+function fmtDateTime(d) { return d ? new Date(String(d).replace(' ', 'T')).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
 
 async function reopenAccount(id) {
   if (!confirm('Reopen this account? The person will be able to sign in again. Their seat, administrator roles and Community groups are not restored.')) return;
@@ -197,6 +290,10 @@ async function revokeSeat(id) {
   doLookup({ preventDefault: function () {} });
 }
 
+async function resendWelcome(url) {
+  if (await postJson(url)) fnToast('Welcome email sent');
+}
+
 function renderSchoolAdmin(rows) {
   const tbody = document.querySelector('#schoolAdminTable tbody');
   tbody.innerHTML = rows.map(function (a) {
@@ -204,7 +301,7 @@ function renderSchoolAdmin(rows) {
       '<td>' + esc(a.school_domain) + '</td>' +
       '<td>' + esc(a.permission_level) + '</td>' +
       '<td>' + (a.is_active ? '<span class="a-pill a-pill-success">Active</span>' : '<span class="a-pill a-pill-danger">Revoked</span>') + '</td>' +
-      '<td>' + (a.is_active ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="revokeSchoolAdmin(' + a.id + ')">Revoke</button>' : '') + '</td>' +
+      '<td>' + (a.is_active && currentAccount && !currentAccount.email_verified ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(\'/api/admin/school-admins/' + a.id + '/resend-welcome\')">Resend welcome</button> ' : '') + (a.is_active ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="revokeSchoolAdmin(' + a.id + ')">Revoke</button>' : '') + '</td>' +
       '</tr>';
   }).join('') || '<tr><td colspan="4">No school admin assignments found.</td></tr>';
 }
@@ -225,7 +322,7 @@ function renderDistrictAdmin(rows) {
     return '<tr>' +
       '<td>' + esc(a.district_name) + '</td>' +
       '<td>' + (a.is_active ? '<span class="a-pill a-pill-success">Active</span>' : '<span class="a-pill a-pill-danger">Revoked</span>') + '</td>' +
-      '<td>' + (a.is_active ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="revokeDistrictAdmin(' + a.id + ')">Revoke</button>' : '') + '</td>' +
+      '<td>' + (a.is_active && currentAccount && !currentAccount.email_verified ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendWelcome(\'/api/admin/districts/admins/' + a.id + '/resend-welcome\')">Resend welcome</button> ' : '') + (a.is_active ? '<button class="a-btn a-btn-danger a-btn-sm" onclick="revokeDistrictAdmin(' + a.id + ')">Revoke</button>' : '') + '</td>' +
       '</tr>';
   }).join('') || '<tr><td colspan="3">No district admin assignments found.</td></tr>';
 }
@@ -247,6 +344,105 @@ async function revokeDistrictAdmin(assignmentId) {
   document.getElementById('lookupEmail').value = wanted;
   doLookup({ preventDefault: function () {} });
 })();
+
+// ---- Student names: classroom lookup and parent view (hidden again after the idle time set in Settings) ----
+let lastClassroomQuery = '';
+let lastParentEmail = '';
+const lock = fnPrivacyLock({
+  notice: document.getElementById('lockNotice'),
+  clear: function () {
+    document.getElementById('classroomResults').textContent = '';
+    document.getElementById('parentResults').textContent = '';
+    const pr = document.getElementById('pinResult'); pr.textContent = ''; pr.style.display = 'none';
+  },
+  reload: function () {
+    if (lastClassroomQuery) runClassroomLookup(lastClassroomQuery);
+    if (lastParentEmail) runParentLookup(lastParentEmail);
+  }
+});
+lock.ready.then(function () { document.getElementById('lockMinutes').textContent = String(lock.minutes()); });
+
+function classroomLookup(e) {
+  e.preventDefault();
+  lastClassroomQuery = document.getElementById('classroomQuery').value.trim();
+  if (lastClassroomQuery) runClassroomLookup(lastClassroomQuery);
+}
+
+async function runClassroomLookup(q) {
+  const r = await fetch('/api/admin/support-console/classrooms?q=' + encodeURIComponent(q), { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(d.error || 'Lookup failed', 'error'); return; }
+  const box = document.getElementById('classroomResults');
+  box.innerHTML = (d.classrooms || []).map(function (c) {
+    const rows = c.students.map(function (s) {
+      const status = (s.active ? '<span class="a-pill a-pill-success">Active</span>' : '<span class="a-pill a-pill-neutral">Inactive</span>') +
+        (s.locked ? ' <span class="a-pill a-pill-danger">Locked, ' + esc(s.lockedMinutes) + ' min left</span>' : '');
+      return '<tr><td>' + esc(s.displayName) + '</td><td><code>' + esc(s.username) + '</code></td><td>' + status + '</td><td style="white-space:nowrap;">' +
+        '<button class="a-btn a-btn-outline a-btn-sm" data-v="' + esc(s.displayName) + '" onclick="resetStudentPin(' + Number(s.id) + ', this.dataset.v)">Reset PIN</button> ' +
+        (s.locked ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="unlockStudent(' + Number(s.id) + ')">Unlock</button>' : '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="4">No students in this classroom.</td></tr>';
+    return '<div style="margin-bottom:18px;"><div style="font-weight:700;">' + esc(c.name) + (c.archived ? ' (archived)' : '') + '</div>' +
+      '<div style="font-size:13px; color:var(--a-text-soft); margin-bottom:6px;">Teacher: ' + esc(c.teacher.name) + ' · ' + esc(c.teacher.email) + '</div>' +
+      '<table class="a-table"><thead><tr><th>Name</th><th>Username</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }).join('') || '<div class="a-note">No classroom found for that search.</div>';
+  lock.arm();
+}
+
+async function resetStudentPin(id, name) {
+  if (!confirm('Make a new PIN for this student? The old PIN stops working.')) return;
+  const d = await postJson('/api/admin/support-console/students/' + id + '/reset-pin');
+  if (!d) return;
+  const box = document.getElementById('pinResult');
+  box.textContent = 'New PIN for ' + name + ': ' + d.pin + '. It is shown once. Give it to the teacher or the student.' + (d.active ? '' : ' (This student is marked inactive and cannot sign in until reactivated.)');
+  box.style.display = 'block';
+  lock.arm();
+  if (lastClassroomQuery) runClassroomLookup(lastClassroomQuery);
+}
+
+async function unlockStudent(id) {
+  if (await postJson('/api/admin/support-console/students/' + id + '/clear-lock')) { fnToast('Unlocked'); if (lastClassroomQuery) runClassroomLookup(lastClassroomQuery); }
+}
+
+function parentLookup(e) {
+  e.preventDefault();
+  lastParentEmail = document.getElementById('parentEmail').value.trim().toLowerCase();
+  if (lastParentEmail) runParentLookup(lastParentEmail);
+}
+
+async function runParentLookup(email) {
+  const r = await fetch('/api/admin/support-console/parents?email=' + encodeURIComponent(email), { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(d.error || 'Lookup failed', 'error'); return; }
+  const box = document.getElementById('parentResults');
+  const acct = d.account
+    ? '<div style="font-weight:700;">' + esc(d.account.name) + ' ' + (d.account.verified ? '<span class="a-pill a-pill-success">Verified</span>' : '<span class="a-pill a-pill-warning">Unverified</span>') + (d.account.closed ? ' <span class="a-pill a-pill-danger">Closed</span>' : '') + '</div>'
+    : '<div class="a-note">No account exists for this email.</div>';
+  const kids = (d.children || []).map(function (c) {
+    return '<tr><td>' + esc(c.student) + '</td><td>' + esc(c.className) + '</td><td>' + esc(c.teacher) + '</td></tr>';
+  }).join('') || '<tr><td colspan="3">No children linked.</td></tr>';
+  const invs = (d.invitations || []).map(function (i) {
+    const state = i.status === 'pending' ? (i.expired ? '<span class="a-pill a-pill-warning">Expired</span>' : '<span class="a-pill">Pending</span>') : '<span class="a-pill a-pill-neutral">' + esc(i.status) + '</span>';
+    const acts = i.status === 'pending'
+      ? '<button class="a-btn a-btn-outline a-btn-sm" onclick="changeParentInvite(' + Number(i.id) + ', \'extend\')">Extend 14 days</button> <button class="a-btn a-btn-danger a-btn-sm" onclick="changeParentInvite(' + Number(i.id) + ', \'revoke\')">Revoke</button>'
+      : '';
+    return '<tr><td>' + esc(i.student) + '</td><td>' + esc(i.className) + '</td><td>' + state + '</td><td>' + esc(fmtDate(i.expiresAt)) + '</td><td style="white-space:nowrap;">' + acts + '</td></tr>';
+  }).join('') || '<tr><td colspan="5">No invitations sent to this email.</td></tr>';
+  box.innerHTML = acct +
+    '<h3 style="margin:14px 0 6px; font-size:14px;">Linked children</h3><table class="a-table"><thead><tr><th>Child</th><th>Classroom</th><th>Teacher</th></tr></thead><tbody>' + kids + '</tbody></table>' +
+    '<h3 style="margin:14px 0 6px; font-size:14px;">Invitations</h3><table class="a-table"><thead><tr><th>Child</th><th>Classroom</th><th>Status</th><th>Expires</th><th></th></tr></thead><tbody>' + invs + '</tbody></table>';
+  lock.arm();
+}
+
+async function changeParentInvite(id, action) {
+  const r = await fetch('/api/admin/support-console/parent-invitations/' + id + '/' + action, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(d.error || 'That did not work', 'error'); return; }
+  fnToast(action === 'extend' ? 'Extended by 14 days' : 'Invitation revoked');
+  if (lastParentEmail) runParentLookup(lastParentEmail);
+}
 
 function statusPill(status) {
   const map = {

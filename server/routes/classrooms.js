@@ -7,6 +7,7 @@ const { hasActiveLicense } = require('../lib/access');
 const { resolveSchoolIdForTeacher, getPublishedBranding } = require('../lib/branding');
 const { sendParentInvitationEmail } = require('../lib/mailer');
 const { isValidPin, PIN_ERROR } = require('../lib/pin');
+const { lockStatus, clearLock } = require('../lib/pin-lockout');
 
 const PARENT_INVITE_EXPIRY_DAYS = 14;
 
@@ -136,7 +137,7 @@ router.get('/:id', requireSiteAuth, async (req, res) => {
     [classroom.id]
   );
 
-  res.json({ ...classroom, students, assignments, gameAssignments });
+  res.json({ ...classroom, students: withLock(students), assignments, gameAssignments });
 });
 
 router.put('/:id', requireSiteAuth, async (req, res) => {
@@ -184,6 +185,14 @@ router.put('/:id/regen-code', requireSiteAuth, async (req, res) => {
 // Students
 // ---------------------------------------------------------------------------
 
+// locked / lockedMinutes: this student is locked out of PIN login after 5 wrong tries (see lib/pin-lockout.js); the teacher can clear it.
+function withLock(rows) {
+  return rows.map(r => {
+    const st = lockStatus(r.username);
+    return { ...r, locked: st.locked, lockedMinutes: st.minutes };
+  });
+}
+
 router.get('/:id/students', requireSiteAuth, async (req, res) => {
   const classroom = await ownedClassroom(req, res);
   if (!classroom) return;
@@ -191,7 +200,17 @@ router.get('/:id/students', requireSiteAuth, async (req, res) => {
     'SELECT id, display_name, username, student_number, is_active, created_at FROM classroom_students WHERE classroom_id = ? ORDER BY display_name',
     [classroom.id]
   );
-  res.json(rows);
+  res.json(withLock(rows));
+});
+
+// POST /:id/students/:sid/unlock — clear this student's PIN lockout (the teacher's own classroom only; 404 for anyone else's)
+router.post('/:id/students/:sid/unlock', requireSiteAuth, async (req, res) => {
+  const classroom = await ownedClassroom(req, res);
+  if (!classroom) return;
+  const [[student]] = await pool.query('SELECT id, username FROM classroom_students WHERE id = ? AND classroom_id = ?', [req.params.sid, classroom.id]);
+  if (!student) return res.status(404).json({ error: 'Student not found' });
+  clearLock(student.username);
+  res.json({ ok: true });
 });
 
 // POST /:id/students — add single student, teacher sets PIN

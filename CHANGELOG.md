@@ -16,6 +16,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 121 — 2026-11-05 — Support console: fix a person's problem from Account Lookup, and student names hide when idle
+
+- **Account Lookup gets the support tools in one place.** On the account: Send password reset email, **Show reset link** (a one-time link for 1 hour that staff copy and give to the person, so nobody has to wait for an email; finishing it also verifies the email; not offered for staff accounts), Sign out everywhere, Resend verification email, and Resend welcome beside a pending school or district admin assignment. A **Timeline** lists what has happened to the person, newest first.
+- **Classroom lookup** by teacher email, classroom code or student username shows the students and who is locked out. Staff can **reset a student's PIN** (a new random 6-digit PIN, shown once) and **clear a lockout**. **Parent view** shows a parent's linked children and invitations, with Extend 14 days and Revoke.
+- **Teachers can unlock their own students.** A student locked out by 5 wrong PINs shows a Locked tag on the teacher's classroom page with an Unlock button (it still clears by itself after 15 minutes).
+- **Student names hide when the page sits idle.** On Account Lookup, student names are wiped from the page after 5 minutes without a mouse move, click or key press, with a "Show them again" button. The time is set in **Settings, Student Name Privacy** (1 to 120 minutes). Any future admin page that shows student names uses the same script (`admin-privacy-lock.js`).
+- **Audited:** every classroom or parent lookup, PIN reset, lockout clear, reset link, sign-out, verification resend and invitation change writes an audit row by id (never a PIN, link or name). The existing "send password reset email" button now writes one too.
+- **No database change.** Deploy: pull, rsync (Account Lookup, Settings, the teacher classroom page, `admin-privacy-lock.js`), restart Node.
+- Requirements and access matrix: `docs/reference/support-console-requirements.md`.
+
 ## Release 120 — 2026-11-05 — The sign-in pages show the website logo too
 
 - **Twelve pages that have no shared header now follow the Website Logo setting:** the admin, school administrator, district administrator, teacher, student and parent sign-in pages, plus password reset, the three invitation pages, Microsoft sign-in confirmation and Accept Quote. A new small script (`site-logo.js`) swaps the logo in; with no website logo set they keep the built-in one.

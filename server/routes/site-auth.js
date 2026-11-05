@@ -13,6 +13,7 @@ const { safeLocalPath } = require('../lib/safe-redirect');
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 const { reencodeImageToWebp } = require('../lib/upload-safety');
 const { createToken, consumeToken } = require('../lib/site-tokens');
+const { audit } = require('../lib/audit');
 const { attachPurchaseDetails } = require('./newsletter');
 const { requireAuth } = require('../middleware/auth');
 const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms } = require('../lib/access');
@@ -679,6 +680,7 @@ router.post('/site-users/:id/send-password-reset', requireAuth, async (req, res)
   const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
   const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}`;
   await sendPasswordResetEmail({ to: user.email, firstName: user.first_name, resetUrl });
+  await audit(pool, { actorType: 'admin', actorId: req.user && req.user.userId, action: 'admin_reset_email_sent', entityType: 'site_user', entityId: user.id });
   res.json({ ok: true });
 });
 

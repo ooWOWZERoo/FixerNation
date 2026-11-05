@@ -111,6 +111,8 @@ MS_OAUTH_REDIRECT_URI=   # must exactly match the redirect URI registered in Azu
 ## Admin navigation and Mission Control visual system
 
 `admin-nav.js` renders the sidebar for the admin workspace pages from one `SECTIONS` array (groups: Sales, Schools & Partners, Content, Marketing & CRM, Community, Reports; Mission Control pinned; Settings/View Site/Log Out in the footer). `admin-shell.js` renders the page header, page finder, mobile drawer and page intros (it moves heading nodes, never clones them; don't put shell code in `admin-common.js`, which public pages also load). Visual direction: `.interface-design/system.md`. Bump the `?v=N` cache version on every exact admin HTML reference when a shared asset changes. Current: admin-common.css v22, admin-nav.js v28, admin-shell.js v3, admin-common.js v17, site-auth.js v11, footer.js v11, nav.js v19, school-admin-nav.js v22, district-admin-nav.js v8 (don't match school-admin/district-admin assets by accident).
+**Admin pages that show student names must use the idle lock** (`admin-privacy-lock.js`, setting `admin_privacy_lock_minutes`, default 5): wipe the names from the page after the idle time and reload them on "Show them again". Account Lookup's classroom lookup and parent view do this. Staff lookups of student data are written to `school_audit_log` by id. Student PIN lockouts live in `lib/pin-lockout.js` (in memory).
+
 ## Deploy workflow
 
 Commit → push to GitHub (`github.com/ooWOWZERoo/FixerNation` — **public repo, never commit real PII or secrets**) → user runs the following in cPanel's browser Terminal.

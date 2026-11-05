@@ -161,6 +161,19 @@
       </div>
 
       <div class="a-card" style="margin-top:24px; max-width:480px;">
+        <div class="a-card-head"><h2>Student Name Privacy</h2></div>
+        <form id="privacyLockForm">
+          <div class="a-error" id="privacyLockError"></div>
+          <div class="a-field">
+            <label>Hide student names after (minutes)</label>
+            <input type="number" id="privacyLockMinutes" min="1" max="120" step="1" style="max-width:120px;" required>
+            <div class="a-note">Admin pages that show student names hide them after this many minutes without a mouse move, click or key press. Use 1 to 120. The default is 5.</div>
+          </div>
+          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
+        </form>
+      </div>
+
+      <div class="a-card" style="margin-top:24px; max-width:480px;">
         <div class="a-card-head"><h2>Campaign Sending</h2></div>
         <form id="campaignBatchingForm">
           <div class="a-error" id="campaignBatchingError"></div>
@@ -616,6 +629,27 @@ async function sendAdminInvite() {
   fnToast('Invite sent');
 }
 
+async function loadPrivacyLock() {
+  const r = await fetch('/api/settings/privacy-lock', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  document.getElementById('privacyLockMinutes').value = d.minutes || 5;
+}
+
+document.getElementById('privacyLockForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const errorBox = document.getElementById('privacyLockError');
+  errorBox.classList.remove('show');
+  const r = await fetch('/api/settings/privacy-lock', {
+    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ minutes: parseInt(document.getElementById('privacyLockMinutes').value, 10) }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(function () { return {}; });
+  if (!r.ok) { errorBox.textContent = result.error || 'Could not save changes.'; errorBox.classList.add('show'); return; }
+  fnToast('Saved');
+});
+
 async function loadLessonPlanLimit() {
   const [r, rTrial, rSwap] = await Promise.all([
     fetch('/api/settings/teacher-lesson-plan-limit', { credentials: 'include' }),
@@ -748,6 +782,7 @@ loadContactEmails();
 loadInvoiceBranding();
 loadWebsiteLogo();
 loadLessonPlanLimit();
+loadPrivacyLock();
 loadCampaignBatching();
 loadAutoRefresh();
 loadSafetyFallbackEmail();

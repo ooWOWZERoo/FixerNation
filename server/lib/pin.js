@@ -4,4 +4,8 @@ const PIN_ERROR = 'PIN must be 4 to 6 digits';
 function isValidPin(v) {
   return (typeof v === 'string' || typeof v === 'number') && /^\d{4,6}$/.test(String(v));
 }
-module.exports = { isValidPin, PIN_ERROR };
+// A new random 6-digit PIN (staff-issued resets). crypto, never Math.random(): a PIN is guessable-by-design material.
+function generatePin() {
+  return String(require('crypto').randomInt(100000, 1000000));
+}
+module.exports = { isValidPin, PIN_ERROR, generatePin };

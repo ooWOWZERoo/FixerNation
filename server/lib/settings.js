@@ -46,6 +46,9 @@ const DEFAULTS = {
   // docs/tune-your-brain/LEADERSHIP_DECISIONS_REQUIRED.md. Adjustable here
   // with no schema change; enforced by scripts/purge-learning-events.js.
   learning_events_retention_days: '400',
+  // Admin pages that show student names hide them after this many minutes without a mouse move, click or key press. See
+  // admin-privacy-lock.js and docs/reference/support-console-requirements.md.
+  admin_privacy_lock_minutes: '5',
 };
 
 async function getSetting(key) {

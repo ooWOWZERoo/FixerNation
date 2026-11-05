@@ -392,6 +392,16 @@ async function toggleArchive() {
 // ---------------------------------------------------------------------------
 // Students
 // ---------------------------------------------------------------------------
+async function unlockStudent(id) {
+  var r = await fetch('/api/classrooms/' + classroomId + '/students/' + id + '/unlock', {
+    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
+  if (!r.ok) { toast('Could not unlock this student'); return; }
+  classroom.students = classroom.students.map(function(s){ return s.id === id ? Object.assign({}, s, { locked: false, lockedMinutes: 0 }) : s; });
+  renderStudents();
+  toast('Unlocked. They can try their PIN again.');
+}
+
 function renderStudents() {
   var active = (classroom.students || []).filter(function(s){ return s.is_active; });
   var inactive = (classroom.students || []).filter(function(s){ return !s.is_active; });
@@ -407,8 +417,9 @@ function renderStudents() {
       '<td>' + esc(s.display_name) + '</td>' +
       '<td><code>' + esc(s.username) + '</code></td>' +
       '<td>' + esc(s.student_number || '—') + '</td>' +
-      '<td>' + (s.is_active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + '</td>' +
+      '<td>' + (s.is_active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + (s.locked ? ' <span class="pill pill-gray" title="Too many wrong PINs. This clears by itself, or you can unlock now.">Locked, ' + esc(s.lockedMinutes) + ' min left</span>' : '') + '</td>' +
       '<td style="white-space:nowrap;">' +
+        (s.locked ? '<button class="btn btn-outline btn-xs" style="margin-right:6px;" onclick="unlockStudent(' + s.id + ')">Unlock</button>' : '') +
         '<button class="btn btn-outline btn-xs" style="margin-right:6px;" data-v="' + esc(s.display_name) + '" onclick="openPinReset(' + s.id + ',this.dataset.v)">Reset PIN</button>' +
         '<button class="btn btn-outline btn-xs" style="margin-right:6px;" data-v="' + esc(s.display_name) + '" onclick="openInviteParent(' + s.id + ',this.dataset.v)">Invite Parent</button>' +
         (s.is_active
