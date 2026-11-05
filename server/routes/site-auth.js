@@ -18,6 +18,7 @@ const { requireAuth } = require('../middleware/auth');
 const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms } = require('../lib/access');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
 const { onboardInvitedTeacher } = require('../lib/teacher-onboarding');
+const { licenseOpenSql } = require('../lib/license-access');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
@@ -108,7 +109,7 @@ async function claimPendingSeatsAndSubscribe(userId, email, firstName, lastName,
      SET ls.status = 'registered', ls.registered_site_user_id = ?, ls.registered_at = NOW()
      WHERE ls.invited_email = ?
        AND ls.status = 'pending'
-       AND p.payment_status = 'paid'
+       AND ${licenseOpenSql('p')}
        AND (p.school_domain IS NULL OR LOWER(SUBSTRING_INDEX(?, '@', -1)) = LOWER(p.school_domain))`,
     [userId, email, email]
   );

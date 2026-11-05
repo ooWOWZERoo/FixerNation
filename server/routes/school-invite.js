@@ -7,6 +7,7 @@ const { SITE_COOKIE_NAME, SITE_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { getSetting } = require('../lib/settings');
 const { signSession, verifySession } = require('../lib/session-tokens');
 const { onboardInvitedTeacher } = require('../lib/teacher-onboarding');
+const { licenseAccess } = require('../lib/license-access');
 
 const router = express.Router();
 
@@ -49,7 +50,7 @@ router.get('/validate', async (req, res) => {
   const [[inv]] = await pool.query(
     `SELECT si.id, si.status, si.seat_id, si.invited_email, si.first_name, si.last_name,
             si.expires_at, si.personal_message, si.grade_level, si.department,
-            p.school_domain, p.payment_status,
+            p.school_domain, p.payment_status, p.payment_method, p.license_status,
             lp.name AS plan_name,
             su.first_name AS admin_first, su.last_name AS admin_last
      FROM school_invitations si
@@ -82,7 +83,7 @@ router.get('/validate', async (req, res) => {
   if (inv.status === 'registered') {
     return res.status(409).json({ error: 'This invitation has already been used.', alreadyRegistered: true });
   }
-  if (inv.payment_status !== 'paid') {
+  if (!licenseAccess(inv).open) {
     return res.status(422).json({ error: "Your school's group licensing is not yet active. Please contact your administrator.", paymentPending: true });
   }
 
@@ -130,7 +131,7 @@ router.post('/claim', async (req, res) => {
   if (!invToken) return res.status(400).json({ error: 'Invitation token is required' });
 
   const [[inv]] = await pool.query(
-    `SELECT si.*, p.payment_status, p.school_domain
+    `SELECT si.*, p.payment_status, p.payment_method, p.license_status, p.school_domain
      FROM school_invitations si
      JOIN purchases p ON p.id = si.purchase_id
      WHERE si.token = ?`,
@@ -144,7 +145,7 @@ router.post('/claim', async (req, res) => {
     await pool.query("UPDATE school_invitations SET status = 'expired' WHERE id = ?", [inv.id]);
     return res.status(410).json({ error: 'This invitation has expired' });
   }
-  if (inv.payment_status !== 'paid') {
+  if (!licenseAccess(inv).open) {
     return res.status(422).json({ error: "Your school's group licensing is not yet active." });
   }
   if (inv.invited_email.toLowerCase() !== loggedInUser.email.toLowerCase()) {
@@ -228,7 +229,7 @@ router.post('/register', async (req, res) => {
   }
 
   const [[inv]] = await pool.query(
-    `SELECT si.*, p.payment_status, p.school_domain
+    `SELECT si.*, p.payment_status, p.payment_method, p.license_status, p.school_domain
      FROM school_invitations si
      JOIN purchases p ON p.id = si.purchase_id
      WHERE si.token = ?`,
@@ -242,7 +243,7 @@ router.post('/register', async (req, res) => {
     await pool.query("UPDATE school_invitations SET status = 'expired' WHERE id = ?", [inv.id]);
     return res.status(410).json({ error: 'This invitation has expired' });
   }
-  if (inv.payment_status !== 'paid') {
+  if (!licenseAccess(inv).open) {
     return res.status(422).json({ error: "Your school's group licensing is not yet active." });
   }
 
@@ -368,7 +369,7 @@ router.post('/accept-and-verify', async (req, res) => {
   if (!token || !password) return res.status(400).json({ error: 'token and password are required' });
 
   const [[inv]] = await pool.query(
-    `SELECT si.*, p.payment_status, p.school_domain
+    `SELECT si.*, p.payment_status, p.payment_method, p.license_status, p.school_domain
      FROM school_invitations si
      JOIN purchases p ON p.id = si.purchase_id
      WHERE si.token = ?`,
@@ -382,7 +383,7 @@ router.post('/accept-and-verify', async (req, res) => {
     await pool.query("UPDATE school_invitations SET status = 'expired' WHERE id = ?", [inv.id]);
     return res.status(410).json({ error: 'This invitation has expired' });
   }
-  if (inv.payment_status !== 'paid') {
+  if (!licenseAccess(inv).open) {
     return res.status(422).json({ error: "Your school's group licensing is not yet active." });
   }
 

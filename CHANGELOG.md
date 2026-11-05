@@ -16,6 +16,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 105 — 2026-11-05 — Teachers at purchase-order schools can accept their invitations
+
+- **Fixed:** a school paying by purchase order could send invitations once staff marked the PO received, but every teacher who clicked the link was told "your school's group license is pending payment". The four steps a teacher goes through to accept (open the link, create an account, sign in to claim, and the automatic claim at sign-up) still asked only whether the invoice was paid. They now use the same rule as sending invitations: paid, or a purchase order that has been received (`lib/license-access.js`). A PO that has not arrived, and a card purchase that has not paid, are still refused.
+- **Wording:** the notice on the invitation page now says the license "isn't active yet" and opens when the purchase order or payment is received, instead of blaming payment.
+- Found on Orleans-Niagara Teacher Center (#307785). No database change. Node restart needed.
+
 ## Release 104 — 2026-11-05 — Fonts and the PDF viewer now come from our own server
 
 - **Student pages no longer contact Google or Cloudflare.** All 125 pages that loaded Google Fonts now load one local `fonts.css` (Fraunces, Plus Jakarta Sans and Inter, all open-license, in `assets/fonts/`). A student's browser used to send its IP address to Google on every page load; it no longer does.
