@@ -24,6 +24,7 @@ async function main() {
   console.log(`Start date ${r.startDate}, today ${r.today}. The group ${r.groupExists ? 'exists' : 'does not exist yet'}${apply ? `; switched on as a Morning Boost recipient group: ${r.activated ? 'yes' : 'NO, Morning Boost has no configuration yet (open Morning Boost email settings once, then run again)'}` : ''}.`);
   console.log(`People who qualify: ${r.eligible} (teachers ${r.byRole.teacher}, school license administrators ${r.byRole.school_admin}, district administrators ${r.byRole.district_admin}; one person can hold several roles).`);
   console.log(`${apply ? 'Added' : 'Would add'}: ${r.add}.  ${apply ? 'Removed' : 'Would remove'}: ${r.remove}.  ${apply ? 'CRM contacts created' : 'CRM contacts that would be created'}: ${r.contactsToCreate}.`);
+  if (r.excluded.length) console.log(`Left out as test or demo addresses: ${r.excluded.length}${list ? ' (' + r.excluded.join(', ') + ')' : ''}.`);
   const show = (label, emails) => { if (emails.length) { console.log(`\n${label}:`); (list ? emails : emails.slice(0, 15)).forEach((e) => console.log('  ' + e)); if (!list && emails.length > 15) console.log(`  ... and ${emails.length - 15} more (use --list)`); } };
   show(apply ? 'Added' : 'Would add', r.addEmails);
   show(apply ? 'Removed' : 'Would remove', r.removeEmails);

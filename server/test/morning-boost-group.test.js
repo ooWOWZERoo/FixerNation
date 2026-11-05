@@ -49,58 +49,58 @@ const sync = (o = {}) => syncMorningBoostGroup(pool, { apply: true, today: TODAY
 
 test('TEACHER: registered on or after the start date on an open license is added, with a CRM contact created', async () => {
   reset();
-  seat(school(), user('a@x.example.com'));
+  seat(school(), user('a@school.test'));
   const r = await sync();
-  assert.deepEqual(members(), ['a@x.example.com']);
+  assert.deepEqual(members(), ['a@school.test']);
   assert.equal(r.add, 1); assert.equal(r.contactsToCreate, 1); assert.equal(r.byRole.teacher, 1);
-  const c = db.prepare("SELECT source, status FROM newsletter_contacts WHERE email = 'a@x.example.com'").get();
+  const c = db.prepare("SELECT source, status FROM newsletter_contacts WHERE email = 'a@school.test'").get();
   assert.equal(c.source, 'School License'); assert.equal(c.status, 'Subscribed');
 });
 
 test('START DATE: someone registered before 15 October is not added; the date is the setting when one is set', async () => {
   reset();
   const p = school();
-  seat(p, user('old@x.example.com'), '2026-10-14 23:59:59');
-  seat(p, user('new@x.example.com'), '2026-10-15 00:00:00');
+  seat(p, user('old@school.test'), '2026-10-14 23:59:59');
+  seat(p, user('new@school.test'), '2026-10-15 00:00:00');
   await sync();
-  assert.deepEqual(members(), ['new@x.example.com']);
+  assert.deepEqual(members(), ['new@school.test']);
   db.prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('morning_boost_group_start_date', '2026-01-01')").run();
   await sync();
-  assert.deepEqual(members(), ['new@x.example.com', 'old@x.example.com']);
+  assert.deepEqual(members(), ['new@school.test', 'old@school.test']);
 });
 
 test('LICENSE OPEN: PO received counts even unpaid; PO not received, an expired status and a passed expiration date do not', async () => {
   reset();
-  seat(school({ pay: 'pending', method: 'po', status: 'active' }), user('po-in@x.example.com'));
-  seat(school({ pay: 'pending', method: 'po', status: 'pending' }), user('po-wait@x.example.com'));
-  seat(school({ status: 'expired' }), user('expired@x.example.com'));
-  seat(school({ expires: '2026-11-01' }), user('lapsed@x.example.com'));
-  seat(school({ status: 'expiring_soon', expires: '2026-11-20' }), user('soon@x.example.com'));
+  seat(school({ pay: 'pending', method: 'po', status: 'active' }), user('po-in@school.test'));
+  seat(school({ pay: 'pending', method: 'po', status: 'pending' }), user('po-wait@school.test'));
+  seat(school({ status: 'expired' }), user('expired@school.test'));
+  seat(school({ expires: '2026-11-01' }), user('lapsed@school.test'));
+  seat(school({ status: 'expiring_soon', expires: '2026-11-20' }), user('soon@school.test'));
   await sync();
-  assert.deepEqual(members(), ['po-in@x.example.com', 'soon@x.example.com']);
+  assert.deepEqual(members(), ['po-in@school.test', 'soon@school.test']);
 });
 
 test('SCHOOL ADMIN: needs a set-up (verified) account and an active assignment', async () => {
   reset();
   const p = school();
-  const verified = user('admin@x.example.com');
-  const waiting = user('waiting@x.example.com', { verified: 0 });
-  const gone = user('gone@x.example.com');
+  const verified = user('admin@school.test');
+  const waiting = user('waiting@school.test', { verified: 0 });
+  const gone = user('gone@school.test');
   [verified, waiting, gone].forEach((u) => ins('INSERT INTO school_license_admins (site_user_id, purchase_id, is_active) VALUES (?, ?, ?)', u, p, u === gone ? 0 : 1));
   await sync();
-  assert.deepEqual(members(), ['admin@x.example.com']);
+  assert.deepEqual(members(), ['admin@school.test']);
   db.prepare('UPDATE site_users SET email_verified = 1 WHERE id = ?').run(waiting);
   await sync();
-  assert.deepEqual(members(), ['admin@x.example.com', 'waiting@x.example.com']);
+  assert.deepEqual(members(), ['admin@school.test', 'waiting@school.test']);
 });
 
 test('DISTRICT ADMIN: in while one school in the district has an open license, out when none does', async () => {
   reset();
   const open = school({ district: 5 });
-  const da = user('district@x.example.com');
+  const da = user('district@school.test');
   ins('INSERT INTO district_license_admins (site_user_id, district_id) VALUES (?, 5)', da);
   await sync();
-  assert.deepEqual(members(), ['district@x.example.com']);
+  assert.deepEqual(members(), ['district@school.test']);
   db.prepare("UPDATE purchases SET license_status = 'expired' WHERE id = ?").run(open);
   await sync();
   assert.deepEqual(members(), []);
@@ -109,59 +109,59 @@ test('DISTRICT ADMIN: in while one school in the district has an open license, o
 test('TWO LICENSES: a teacher stays until both have ended; a renewal brings them back', async () => {
   reset();
   const a = school(), b = school();
-  const u = user('two@x.example.com');
+  const u = user('two@school.test');
   seat(a, u); seat(b, u);
   await sync();
   db.prepare("UPDATE purchases SET license_status = 'expired' WHERE id = ?").run(a);
   await sync();
-  assert.deepEqual(members(), ['two@x.example.com']);
+  assert.deepEqual(members(), ['two@school.test']);
   db.prepare("UPDATE purchases SET license_status = 'expired' WHERE id = ?").run(b);
   await sync();
   assert.deepEqual(members(), []);
   db.prepare("UPDATE purchases SET license_status = 'active' WHERE id = ?").run(b);
   await sync();
-  assert.deepEqual(members(), ['two@x.example.com']);
+  assert.deepEqual(members(), ['two@school.test']);
 });
 
 test('ONE PERSON, SEVERAL ROLES: one membership, one contact', async () => {
   reset();
   const p = school({ district: 9 });
-  const u = user('multi@x.example.com');
+  const u = user('multi@school.test');
   seat(p, u);
   ins('INSERT INTO school_license_admins (site_user_id, purchase_id) VALUES (?, ?)', u, p);
   ins('INSERT INTO district_license_admins (site_user_id, district_id) VALUES (?, 9)', u);
   const r = await sync();
-  assert.deepEqual(members(), ['multi@x.example.com']);
+  assert.deepEqual(members(), ['multi@school.test']);
   assert.equal(r.eligible, 1);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM newsletter_contacts').get().n, 1);
 });
 
 test('SALES DEMO accounts are never added', async () => {
   reset();
-  seat(school(), user('demo@x.example.com', { demo: 1 }));
+  seat(school(), user('demo@school.test', { demo: 1 }));
   await sync();
   assert.deepEqual(members(), []);
 });
 
 test('MANAGED GROUP: a hand-added member who does not qualify is removed; an existing contact is left as it is', async () => {
   reset();
-  const u = user('real@x.example.com');
+  const u = user('real@school.test');
   seat(school(), u);
-  ins("INSERT INTO newsletter_contacts (name, email, source, status) VALUES ('Real', 'real@x.example.com', 'Homepage', 'Unsubscribed')");
-  const stray = ins("INSERT INTO newsletter_contacts (name, email, source, status) VALUES ('Stray', 'stray@x.example.com', 'Homepage', 'Subscribed')");
+  ins("INSERT INTO newsletter_contacts (name, email, source, status) VALUES ('Real', 'real@school.test', 'Homepage', 'Unsubscribed')");
+  const stray = ins("INSERT INTO newsletter_contacts (name, email, source, status) VALUES ('Stray', 'stray@school.test', 'Homepage', 'Subscribed')");
   await sync();
   const gid = db.prepare(`SELECT id FROM contact_groups WHERE system_key = '${GROUP_KEY}'`).get().id;
   db.prepare('INSERT INTO contact_group_members (contact_id, group_id) VALUES (?, ?)').run(stray, gid);
   const r = await sync();
   assert.equal(r.remove, 1);
-  assert.deepEqual(members(), ['real@x.example.com']);
-  const c = db.prepare("SELECT source, status FROM newsletter_contacts WHERE email = 'real@x.example.com'").get();
+  assert.deepEqual(members(), ['real@school.test']);
+  const c = db.prepare("SELECT source, status FROM newsletter_contacts WHERE email = 'real@school.test'").get();
   assert.equal(c.source, 'Homepage'); assert.equal(c.status, 'Unsubscribed', 'the contact keeps its own status, so it is still never emailed');
 });
 
 test('GROUP: created when missing and switched on as a recipient group; running again changes nothing', async () => {
   reset();
-  seat(school(), user('a@x.example.com'));
+  seat(school(), user('a@school.test'));
   const first = await sync();
   assert.equal(first.activated, true);
   const gid = db.prepare(`SELECT id FROM contact_groups WHERE system_key = '${GROUP_KEY}'`).get().id;
@@ -177,16 +177,16 @@ test('ANOTHER RECIPIENT GROUP already switched on is left alone', async () => {
   reset();
   const other = ins("INSERT INTO contact_groups (name, system_key) VALUES ('Teachers', 'teachers')");
   db.prepare('INSERT INTO morning_boost_email_groups (config_id, group_id) VALUES (1, ?)').run(other);
-  seat(school(), user('a@x.example.com'));
+  seat(school(), user('a@school.test'));
   await sync();
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM morning_boost_email_groups').get().n, 2);
 });
 
 test('DRY RUN: reports what it would do and changes nothing', async () => {
   reset();
-  seat(school(), user('a@x.example.com'));
+  seat(school(), user('a@school.test'));
   const r = await syncMorningBoostGroup(pool, { apply: false, today: TODAY });
-  assert.equal(r.applied, false); assert.equal(r.add, 1); assert.equal(r.contactsToCreate, 1); assert.deepEqual(r.addEmails, ['a@x.example.com']);
+  assert.equal(r.applied, false); assert.equal(r.add, 1); assert.equal(r.contactsToCreate, 1); assert.deepEqual(r.addEmails, ['a@school.test']);
   for (const t of ['contact_groups', 'contact_group_members', 'newsletter_contacts', 'morning_boost_email_groups']) {
     assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n, 0, `${t} untouched`);
   }
@@ -195,13 +195,13 @@ test('DRY RUN: reports what it would do and changes nothing', async () => {
 test('ONE PERSON run changes only that person', async () => {
   reset();
   const p = school();
-  const a = user('a@x.example.com'), b = user('b@x.example.com');
+  const a = user('a@school.test'), b = user('b@school.test');
   seat(p, a); seat(p, b);
   await syncMorningBoostForUser(pool, a);
-  assert.deepEqual(members(), ['a@x.example.com']);
+  assert.deepEqual(members(), ['a@school.test']);
   db.prepare("UPDATE purchases SET license_status = 'expired'").run();
   await syncMorningBoostForUser(pool, b);
-  assert.deepEqual(members(), ['a@x.example.com'], 'b was never in; a is not touched by a run for b');
+  assert.deepEqual(members(), ['a@school.test'], 'b was never in; a is not touched by a run for b');
   await syncMorningBoostForUser(pool, a);
   assert.deepEqual(members(), []);
 });
@@ -209,8 +209,30 @@ test('ONE PERSON run changes only that person', async () => {
 test('NO MORNING BOOST CONFIG YET: the group is made but reported as not switched on', async () => {
   reset();
   db.exec('DELETE FROM morning_boost_email_config');
-  seat(school(), user('a@x.example.com'));
+  seat(school(), user('a@school.test'));
   const r = await sync();
   assert.equal(r.activated, false);
-  assert.deepEqual(members(), ['a@x.example.com']);
+  assert.deepEqual(members(), ['a@school.test']);
+});
+
+test('TEST ADDRESSES: example.com, its subdomains and the QA inbox domain are left out; the setting replaces the list', async () => {
+  reset();
+  const p = school();
+  seat(p, user('qa@example.com'));
+  seat(p, user('demo@maple.example.com'));
+  seat(p, user('tester@fixernation.testinator.email'));
+  seat(p, user('real@school.test'));
+  const r = await sync();
+  assert.deepEqual(members(), ['real@school.test']);
+  assert.equal(r.excluded.length, 3);
+  db.prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('morning_boost_group_excluded_domains', 'school.test')").run();
+  await sync();
+  assert.deepEqual(members(), ['demo@maple.example.com', 'qa@example.com', 'tester@fixernation.testinator.email'], 'the setting replaces the default list; school.test is now left out, and the three are let in');
+});
+
+test('TEST ADDRESSES: a lookalike domain is not mistaken for a test domain', async () => {
+  reset();
+  seat(school(), user('a@notexample.com'));
+  await sync();
+  assert.deepEqual(members(), ['a@notexample.com']);
 });

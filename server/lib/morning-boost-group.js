@@ -15,6 +15,10 @@ const GROUP_NAME = 'Morning Boost Recipients';
 const DEFAULT_START_DATE = '2026-10-15';
 const START_DATE_SETTING = 'morning_boost_group_start_date';
 const CONTACT_SOURCE = 'School License';
+// Test and demo inboxes never join the group: addresses at these domains (or any subdomain). The setting
+// morning_boost_group_excluded_domains (comma-separated) replaces this list when it is set.
+const EXCLUDED_DOMAINS_SETTING = 'morning_boost_group_excluded_domains';
+const DEFAULT_EXCLUDED_DOMAINS = ['example.com', 'fixernation.testinator.email'];
 
 const isoDay = (d) => d.toISOString().slice(0, 10);
 
@@ -23,6 +27,16 @@ async function readStartDate(db) {
   const v = row && String(row.setting_value || '').trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : DEFAULT_START_DATE;
 }
+
+async function readExcludedDomains(db) {
+  const [[row]] = await db.query('SELECT setting_value FROM settings WHERE setting_key = ?', [EXCLUDED_DOMAINS_SETTING]);
+  if (!row) return DEFAULT_EXCLUDED_DOMAINS;
+  return String(row.setting_value || '').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
+}
+const isExcluded = (email, domains) => {
+  const host = String(email || '').split('@')[1] || '';
+  return domains.some((d) => host === d || host.endsWith('.' + d));
+};
 
 // A license counts as open for this group when it is open under the shared rule AND still running (an expired license
 // can stay "paid", and the expiry job may not have reached it yet). Takes one date parameter: today.
@@ -102,7 +116,10 @@ async function ensureGroup(db) {
 async function syncMorningBoostGroup(db, { apply = false, since = null, today = null, onlyUserId = null } = {}) {
   const startDate = since || await readStartDate(db);
   const day = today || isoDay(new Date());
-  const eligible = await eligibleUsers(db, { since: startDate, today: day, onlyUserId });
+  const everyone = await eligibleUsers(db, { since: startDate, today: day, onlyUserId });
+  const excludedDomains = await readExcludedDomains(db);
+  const eligible = new Map([...everyone].filter(([, person]) => !isExcluded(person.email, excludedDomains)));
+  const excluded = [...everyone.values()].filter((person) => isExcluded(person.email, excludedDomains)).map((person) => person.email);
 
   let groupId = await findGroup(db);
   let activated = null;
@@ -152,7 +169,7 @@ async function syncMorningBoostGroup(db, { apply = false, since = null, today = 
   eligible.forEach((p) => p.roles.forEach((r) => { byRole[r] += 1; }));
   return {
     applied: !!apply, startDate, today: day, groupExists: !!groupId, activated,
-    eligible: eligible.size, byRole,
+    eligible: eligible.size, byRole, excluded,
     add: toAdd.length + wouldCreate.length, remove: toRemove.length, contactsToCreate,
     addEmails: [...toAdd.map((id) => desired.get(id).email), ...wouldCreate],
     removeEmails: toRemove.map((m) => m.email),

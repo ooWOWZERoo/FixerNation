@@ -27,6 +27,7 @@ A person is in the group when all of these hold:
   - **School license administrator:** an active assignment, and an account that has been set up (verified). Date: when the assignment was created.
   - **District administrator:** an active assignment, and an account that has been set up. Date: when the assignment was created. The license is any open license in one of that district's schools.
 - They are not a sales-demo account.
+- Their address is not a test or demo address: anything at `example.com` (or a subdomain of it) or at the QA inbox domain `fixernation.testinator.email`. The setting `morning_boost_group_excluded_domains` (comma-separated) replaces that list when it is set. Added after the first dry run showed three QA inboxes among the nine people.
 
 The start date is the setting `morning_boost_group_start_date` (default 2026-10-15). Because it applies to everyone, someone registered before it is never added, and a renewed license brings back only people registered on or after it.
 
