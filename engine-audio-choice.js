@@ -23,7 +23,9 @@
 // a choice can carry a short `caption` shown under its picture, and an item can give separate on-screen `words`
 // (default: stimulusText) behind a "Show the words" button. A pack with none of these plays as before.
 //
-// Recorded voice (Sound Safari): a pack can use real clips instead of the browser voice. stimulusAudioUrl is the clip for the
+// Recorded voice: every spoken line goes through engine-voice.js, which plays the recorded Ava clip for that exact line when
+// window.FnAudioManifest has one (built by server/scripts/build-discover-audio.js) and the browser voice when it does not.
+// Sound Safari (Release 130) names its clips directly instead: a pack can use real clips instead of the browser voice. stimulusAudioUrl is the clip (or a list of clips, played in order) for the
 // question, a choice's audioUrl is the clip that says its name (played after the question, left to right, when every choice has
 // one), and an item's feedbackAudio { right: [urls], miss: [urls] } plays in order after an answer. Clips play one after another
 // with contentPack.audioGapMs between them (default 500). If a clip will not load or play, the same words are spoken by the
@@ -38,47 +40,25 @@
 // still logged in evidence for a content author who DOES want it, without
 // visually pressuring every learner with a countdown by default.
 (function () {
-  // Pictures are not read by the voice, so strip emoji and joiner characters from anything spoken.
-  const stripEmoji = (s) => String(s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
-  function speak(text, cancel, rate) {
-    if (!window.speechSynthesis || !text) return;
-    try {
-      if (cancel) window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(stripEmoji(text));
-      if (rate && rate !== 1) u.rate = rate;
-      window.speechSynthesis.speak(u);
-    } catch {}
-  }
-
-  // Plays recorded clips one after another. done resolves true when the last clip ends, false if one fails or it was stopped.
-  let activeClips = null;
-  function stopAll() {
-    if (activeClips) activeClips.stop();
-    activeClips = null;
-    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch {}
-  }
-  function playClips(urls, gapMs, onFail) {
-    let i = 0, stopped = false, failed = false, timer = null, current = null, finish;
-    const done = new Promise((res) => { finish = res; });
-    const seq = {
-      done,
-      stop() { stopped = true; clearTimeout(timer); if (current) { try { current.pause(); } catch {} } finish(false); },
+  // The voice (recorded Ava clips, with the browser voice as the fallback) lives in engine-voice.js. If a page forgot to load it,
+  // a plain browser-voice stand-in keeps the game talking.
+  const V = window.FnVoice || (function () {
+    const clean = (s) => String(s == null ? '' : s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
+    return {
+      say(pieces, o) {
+        try {
+          if (!window.speechSynthesis) return { done: null };
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance([].concat(pieces).map(clean).filter(Boolean).map((x) => (/[.?!]$/.test(x) ? x : x + '.')).join(' '));
+          if (o && o.rate && o.rate !== 1) u.rate = o.rate;
+          window.speechSynthesis.speak(u);
+        } catch (e) { /* no browser voice */ }
+        return { done: null };
+      },
+      playUrls() { return { done: Promise.resolve(false), stop() {} }; },
+      stop() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* none */ } },
     };
-    function fail() { if (stopped || failed) return; failed = true; finish(false); if (onFail) onFail(); }
-    function next() {
-      if (stopped) return;
-      if (i >= urls.length) { finish(true); return; }
-      let a;
-      try { a = new Audio(urls[i++]); } catch { fail(); return; } // no Audio in this browser: the browser voice takes over
-      current = a;
-      a.addEventListener('ended', () => { timer = setTimeout(next, i < urls.length ? gapMs : 0); });
-      a.addEventListener('error', fail);
-      a.play().catch(fail);
-    }
-    activeClips = seq;
-    next();
-    return seq;
-  }
+  })();
 
   function mount(container, { contentPack, band, onEvidence, onComplete }) {
     const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
@@ -102,25 +82,25 @@
     renderItem();
 
     // The story and its question, then each answer in order, so a child who cannot read the pictures hears them.
-    function spokenLine(item) {
+    function spokenPieces(item) {
       const answers = item.speakChoices === false ? [] : item.choices.map((c) => c.say || c.caption || c.aria).filter(Boolean);
-      return [item.stimulusText || item.transcript].concat(answers).map((x) => (/[.?!]$/.test(x) ? x : x + '.')).join(' ');
+      return [item.stimulusText || item.transcript].concat(answers);
     }
     function playStimulus(item) {
       if (item.stimulusType !== 'audio') return;
-      stopAll();
       if (item.stimulusAudioUrl) {
         const names = item.speakChoices === false ? [] : item.choices.map((c) => c.audioUrl);
-        const urls = [item.stimulusAudioUrl].concat(names.length && names.every(Boolean) ? names : []);
-        playClips(urls, gapMs, () => speak(spokenLine(item), true, speechRate));
+        const urls = [].concat(item.stimulusAudioUrl).concat(names.length && names.every(Boolean) ? names : []);
+        V.stop();
+        V.playUrls(urls, gapMs, () => V.say(spokenPieces(item), { rate: speechRate, gapMs }));
       } else {
-        speak(spokenLine(item), true, speechRate);
+        V.say(spokenPieces(item), { rate: speechRate, gapMs });
       }
     }
     function wordsFor(item) { return item.words || item.stimulusText || item.transcript || ''; } // a declaration, so renderItem() above can call it on first paint
 
     function renderItem() {
-      stopAll();
+      V.stop();
       answered = false;
       feedbackHolder.innerHTML = '';
       progressHolder.innerHTML = '';
@@ -225,22 +205,20 @@
       feedbackHolder.appendChild(FnGameShell.renderFeedback(isCorrect ? 'correct' : 'incorrect', message));
       // Audio rounds speak every outcome (and stop the story if the child answered early), so non-readers always hear it.
       const typical = (custom || item.stimulusType === 'audio') ? Math.min(7000, 2200 + message.length * 45) : (isCorrect ? 600 : 1300);
-      let wait = typical;
-      let clipsDone = null;
-      stopAll();
+      let spoken = null;
+      V.stop();
       if (item.stimulusType === 'audio') {
         const clips = item.feedbackAudio && item.feedbackAudio[isCorrect ? 'right' : 'miss'];
-        if (clips && clips.length) {
-          clipsDone = playClips(clips, 300, () => speak(message, true, speechRate)).done;
-        } else {
-          speak(message, true, speechRate);
-        }
+        const pieces = custom ? [choice.feedback, item.explanation].filter(Boolean) : [message];
+        if (clips && clips.length) spoken = V.playUrls(clips, 300, () => V.say(pieces, { rate: speechRate, gapMs: 250 }));
+        else spoken = V.say(pieces, { rate: speechRate, gapMs: 250 });
       }
+      const clipsDone = spoken && spoken.done;
 
       const advance = () => {
         index++;
         if (index >= items.length) {
-          stopAll();
+          V.stop();
           const total = correct + incorrect;
           onComplete([
             { value: correct, label: t('audLabelRight') },
@@ -253,7 +231,7 @@
       };
       // With recorded feedback, move on a moment after the last clip ends; if a clip failed the browser voice reads it instead.
       if (clipsDone) clipsDone.then((ok) => setTimeout(advance, ok ? 900 : typical));
-      else setTimeout(advance, wait);
+      else setTimeout(advance, typical);
     }
   }
 

@@ -46,8 +46,9 @@ test('each round: the sound is said once, the answer starts with it, the other t
 test('every clip the page names exists, and every round plays the voice instead of the browser voice', () => {
   const urls = new Set();
   pack.items.forEach((it) => {
-    assert.ok(it.stimulusAudioUrl && it.feedbackAudio.right.length === 2 && it.feedbackAudio.miss.length === 2, `${it.id}: voice clips`);
-    urls.add(it.stimulusAudioUrl);
+    assert.ok(Array.isArray(it.stimulusAudioUrl) && it.stimulusAudioUrl.length === 3, `${it.id}: the question is the word, the sound, then "Which picture..."`);
+    assert.ok(it.feedbackAudio.right.length === 3 && it.feedbackAudio.miss.length === 3, `${it.id}: feedback clips`);
+    it.stimulusAudioUrl.forEach((u) => urls.add(u));
     it.feedbackAudio.right.concat(it.feedbackAudio.miss).forEach((u) => urls.add(u));
     it.choices.forEach((c) => { assert.ok(c.audioUrl, `${it.id}/${c.id}: name clip`); urls.add(c.audioUrl); });
   });
@@ -59,9 +60,33 @@ test('every clip the page names exists, and every round plays the voice instead 
 
 test('the slow fallback voice and the pacing gap are set, and the page loads the newer engine', () => {
   assert.ok(pack.speechRate > 0 && pack.speechRate <= 0.9, 'browser-voice fallback is a little slower than normal');
-  assert.ok(pack.audioGapMs >= 300 && pack.audioGapMs <= 600);
-  assert.match(page, /engine-audio-choice\.js\?v=5/);
+  assert.ok(pack.audioGapMs >= 250 && pack.audioGapMs <= 600);
+  assert.match(page, /engine-audio-choice\.js\?v=6/);
   const engine = fs.readFileSync(path.join(ROOT, 'engine-audio-choice.js'), 'utf8');
-  assert.match(engine, /playClips/);
+  assert.match(engine, /V\.playUrls/);
   assert.match(engine, /speechRate/);
+});
+
+test('every clip starts and ends with a little silence, so no browser clips the first or last sound', () => {
+  const { spawnSync } = require('node:child_process');
+  const ffmpeg = require(path.join(ROOT, 'tests', 'node_modules', 'ffmpeg-static'));
+  const sample = ['s-m.mp3', 's-t.mp3', 's-sh.mp3', 'question.mp3', 'w-monkey.mp3', 'yes.mp3'].concat(rounds.slice(0, 3).map((r) => `i-${r.key}.mp3`));
+  sample.forEach((f) => {
+    const file = path.join(CLIPS_DIR, f);
+    const level = (args) => {
+      const out = spawnSync(ffmpeg, ['-hide_banner', '-nostats', ...args, '-af', 'astats=metadata=0:reset=0', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
+      return Number((/RMS level dB:\s*(-?[\d.]+|-inf)/.exec(out) || [])[1].replace('-inf', '-200'));
+    };
+    assert.ok(level(['-t', '0.08', '-i', file]) < -45, `${f} does not start in silence`);
+    assert.ok(level(['-sseof', '-0.08', '-i', file]) < -45, `${f} does not end in silence`);
+  });
+});
+
+test('the isolated sounds are long enough to hear', () => {
+  const { spawnSync } = require('node:child_process');
+  Object.keys(SOUNDS).forEach((s) => {
+    const out = spawnSync('afinfo', [path.join(CLIPS_DIR, `s-${s}.mp3`)], { encoding: 'utf8' }).stdout;
+    const dur = Number((/estimated duration:\s*([\d.]+)/.exec(out) || [])[1]);
+    assert.ok(dur >= 0.9, `sound ${s} is only ${dur}s`);
+  });
 });

@@ -13,9 +13,7 @@
 // sound?"), then three pictures. The sound is said once on purpose (children told us it was said too many times). The model
 // word is never one of the pictures.
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PAGE = path.join(ROOT, 'brain-sound-safari.html');
@@ -24,6 +22,8 @@ const URL_PREFIX = 'assets/audio/sound-safari/';
 const VOICE = 'Ava (Premium)';
 const RATE = '135'; // say -r words per minute for sentences: slower than the how-to videos (165) but natural, for kindergarten to 2nd grade
 const WORD_RATE = '120';
+const SOUND_RATE = '60'; // each isolated sound is said slowly, then stretched further below if it is still short
+const QUESTION = 'Which picture starts with the same sound?';
 
 // How the voice says each sound (children's phonics spelling: stops get a soft "uh", stretchable sounds are held).
 const SOUNDS = {
@@ -32,6 +32,9 @@ const SOUNDS = {
 };
 // Sounds that are easy to mix up (same mouth shape, voiced or not). They never sit side by side in a round.
 const LOOKALIKE = { b: 'p', p: 'b', d: 't', t: 'd', k: 'g', g: 'k', f: 'v', v: 'f', s: 'z', z: 's', sh: 'ch', ch: 'sh', j: 'ch', m: 'n', n: 'm' };
+
+// Sounds a mouth can hold on to (a stretched "mmm"); the others are short pops and get a shorter minimum.
+const HELD = new Set(['m', 's', 'f', 'l', 'n', 'r', 'v', 'z', 'sh']);
 
 // Pictures: the word, its picture, and the sound it starts with. Only older emoji, so they draw on school Chromebooks.
 const PICTURES = {
@@ -103,18 +106,23 @@ function buildRounds() {
     }
     const choices = [right, ...picks].map((p) => ({ p, k: rand() })).sort((a, b) => a.k - b.k).map((x) => x.p);
     const say = SOUNDS[sound];
-    const line = `${cap(model)} starts with ${say}. Which picture starts with the same sound?`;
-    return { key, sound, model, answer, say, line, explain: `${cap(model)} and ${answer} both start with ${say}.`, choices, number: i + 1 };
+    const intro = `${cap(model)} starts with the sound`;
+    const line = `${intro} ${say}. ${QUESTION}`;
+    const lead = `${cap(model)} and ${answer} both start with the sound`;
+    return { key, sound, model, answer, say, intro, lead, line, explain: `${lead} ${say}.`, choices, number: i + 1 };
   });
 }
 
 function clipList(rounds) {
-  const clips = new Map(); // file -> { text, rate }
+  const clips = new Map(); // file -> { text, rate, minSeconds? }
   clips.set('yes.mp3', { text: 'Yes!', rate: RATE });
   clips.set('not-quite.mp3', { text: 'Not quite.', rate: RATE });
+  clips.set('question.mp3', { text: QUESTION, rate: RATE });
+  // Each sound is its own clip, said slowly and held (a stretched "mmm" or "sss", a clear "tuh"), so it is never swallowed by a sentence.
+  for (const [sound, say] of Object.entries(SOUNDS)) clips.set(`s-${sound}.mp3`, { text: say, rate: SOUND_RATE, minSeconds: HELD.has(sound) ? 1.0 : 0.7 });
   for (const r of rounds) {
-    clips.set(`q-${r.key}.mp3`, { text: r.line, rate: RATE });
-    clips.set(`e-${r.key}.mp3`, { text: r.explain, rate: RATE });
+    clips.set(`i-${r.key}.mp3`, { text: r.intro, rate: RATE });
+    clips.set(`e-${r.key}.mp3`, { text: r.lead, rate: RATE });
     for (const c of r.choices) clips.set(`w-${c.word}.mp3`, { text: cap(c.word) + '.', rate: WORD_RATE });
   }
   return clips;
@@ -125,7 +133,8 @@ function pageBlock(rounds) {
   const out = [];
   for (const r of rounds) {
     out.push('      {');
-    out.push(`        id: ${q(r.key)}, stimulusType: 'audio', stimulusAudioUrl: ${q(URL_PREFIX + `q-${r.key}.mp3`)},`);
+    out.push(`        id: ${q(r.key)}, stimulusType: 'audio',`);
+    out.push(`        stimulusAudioUrl: [${q(URL_PREFIX + `i-${r.key}.mp3`)}, ${q(URL_PREFIX + `s-${r.sound}.mp3`)}, ${q(URL_PREFIX + 'question.mp3')}],`);
     out.push(`        stimulusText: ${q(r.line)},`);
     out.push(`        words: ${q(r.line)},`);
     out.push(`        transcript: ${q(r.line)},`);
@@ -136,7 +145,8 @@ function pageBlock(rounds) {
     }
     out.push('        ],');
     out.push(`        correctId: ${q(r.answer)}, explanation: ${q(r.explain)},`);
-    out.push(`        feedbackAudio: { right: [${q(URL_PREFIX + 'yes.mp3')}, ${q(URL_PREFIX + `e-${r.key}.mp3`)}], miss: [${q(URL_PREFIX + 'not-quite.mp3')}, ${q(URL_PREFIX + `e-${r.key}.mp3`)}] },`);
+    const tail = `${q(URL_PREFIX + `e-${r.key}.mp3`)}, ${q(URL_PREFIX + `s-${r.sound}.mp3`)}`;
+    out.push(`        feedbackAudio: { right: [${q(URL_PREFIX + 'yes.mp3')}, ${tail}], miss: [${q(URL_PREFIX + 'not-quite.mp3')}, ${tail}] },`);
     out.push('      },');
   }
   return out.join('\n');
@@ -152,23 +162,52 @@ function writePage(rounds) {
 }
 
 function render(clips, force) {
-  if (process.platform !== 'darwin') throw new Error('Rendering the voice needs macOS with the "Ava (Premium)" voice installed.');
-  const ffmpeg = require(path.join(ROOT, 'tests', 'node_modules', 'ffmpeg-static'));
+  const { renderer } = require('../lib/ava-render');
+  const { render: renderOne, done } = renderer();
   fs.mkdirSync(CLIPS_DIR, { recursive: true });
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sound-safari-'));
   let made = 0;
-  for (const [file, { text, rate }] of clips) {
-    const dest = path.join(CLIPS_DIR, file);
-    if (!force && fs.existsSync(dest)) continue;
-    const aiff = path.join(tmp, file.replace(/\.mp3$/, '.aiff'));
-    let r = spawnSync('say', ['-v', VOICE, '-r', rate, '-o', aiff, text], { encoding: 'utf8' });
-    if (r.status !== 0) throw new Error(`say failed for "${text}": ${r.stderr}`);
-    r = spawnSync(ffmpeg, ['-y', '-loglevel', 'error', '-i', aiff, '-af', 'silenceremove=start_periods=1:start_threshold=-50dB', '-ac', '1', '-ar', '24000', '-b:a', '48k', dest], { encoding: 'utf8' });
-    if (r.status !== 0) throw new Error(`ffmpeg failed for ${file}: ${r.stderr}`);
-    made++;
-  }
-  fs.rmSync(tmp, { recursive: true, force: true });
+  try {
+    for (const [file, spec] of clips) {
+      const dest = path.join(CLIPS_DIR, file);
+      if (!force && fs.existsSync(dest)) continue;
+      renderOne(spec, dest);
+      made++;
+    }
+  } finally { done(); }
+  for (const f of fs.readdirSync(CLIPS_DIR)) if (f.endsWith('.mp3') && !clips.has(f)) fs.rmSync(path.join(CLIPS_DIR, f)); // clips no round uses any more
   return made;
+}
+
+// A page for a person to listen to every isolated sound and one full round of each, with the clip names to report back.
+function writeAudition(rounds) {
+  const file = path.join(ROOT, 'docs', 'tune-your-brain', 'sound-safari-audition.html');
+  const rows = Object.entries(SOUNDS).map(([sound, say]) => {
+    const r = rounds.find((x) => x.sound === sound);
+    const seq = [`i-${r.key}.mp3`, `s-${sound}.mp3`, 'question.mp3'];
+    return `<tr><td><b>${say}</b><br><small>sound "${sound}"</small></td>`
+      + `<td><button onclick="play(['s-${sound}.mp3'])">Play the sound</button></td>`
+      + `<td><button onclick="play(${JSON.stringify(seq)})">Play a question: ${r.line.replace(/"/g, '&quot;')}</button></td></tr>`;
+  }).join('\n');
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Sound Safari audition</title>
+<style>body{font-family:system-ui,sans-serif;max-width:900px;margin:32px auto;padding:0 16px;color:#2A2420}td{padding:8px 10px;border-bottom:1px solid #ddd;vertical-align:middle}button{padding:8px 12px;border-radius:8px;border:1px solid #164F4A;background:#fff;cursor:pointer;font-size:14px}button:hover{background:#E4F3EE}</style></head><body>
+<h1>Sound Safari: listen to the sounds</h1>
+<p>Generated by <code>server/scripts/build-sound-safari.js</code>. Open this file from the repository (it plays the clips in <code>assets/audio/sound-safari/</code>). For any sound that is hard to hear, cut off, or wrong, tell Claude the sound (for example "p" or "sh").</p>
+<table>${rows}</table>
+<script>
+let current = null;
+function play(files) {
+  if (current) current.stop = true;
+  const token = { stop: false }; current = token; let i = 0;
+  (function next() {
+    if (token.stop || i >= files.length) return;
+    const a = new Audio('../../assets/audio/sound-safari/' + files[i++]);
+    a.onended = () => setTimeout(next, 350);
+    a.play();
+  })();
+}
+</script></body></html>
+`;
+  fs.writeFileSync(file, html);
 }
 
 module.exports = { buildRounds, clipList, pageBlock, SOUNDS, LOOKALIKE, pictureOf, CLIPS_DIR, URL_PREFIX };
@@ -178,6 +217,7 @@ if (require.main === module) {
   const rounds = buildRounds();
   const clips = clipList(rounds);
   writePage(rounds);
+  writeAudition(rounds);
   console.log(`Wrote ${rounds.length} rounds to brain-sound-safari.html (${clips.size} voice clips needed).`);
   if (args.includes('--audio')) console.log(`Rendered ${render(clips, args.includes('--force'))} clip(s) into assets/audio/sound-safari/.`);
   else {

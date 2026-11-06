@@ -47,17 +47,25 @@
 // It is private by design, exactly like Branching Scenario's reflection step: the child's answers are never
 // logged, sent or stored; the only thing recorded is that the step was reached.
 (function () {
-  // Pictures are not read by the voice, so strip emoji and joiner characters from anything spoken.
-  const stripEmoji = (s) => String(s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
-  // Joins lines into one spoken run without doubling the full stops.
-  const sentenceJoin = (parts) => parts.map((x) => (/[.?!]$/.test(String(x).trim()) ? String(x).trim() : String(x).trim() + '.')).join(' ');
-  function speak(text, cancel) {
-    if (!window.speechSynthesis || !text) return;
-    try {
-      if (cancel) window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(stripEmoji(text)));
-    } catch {}
-  }
+  // The voice (recorded Ava clips, with the browser voice as the fallback) lives in engine-voice.js. If a page forgot to load it,
+  // a plain browser-voice stand-in keeps the game talking.
+  const V = window.FnVoice || (function () {
+    const clean = (s) => String(s == null ? '' : s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
+    return {
+      say(pieces) {
+        try {
+          if (!window.speechSynthesis) return { done: null };
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance([].concat(pieces).map(clean).filter(Boolean).map((x) => (/[.?!]$/.test(x) ? x : x + '.')).join(' ')));
+        } catch (e) { /* no browser voice */ }
+        return { done: null };
+      },
+      stop() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* none */ } },
+    };
+  })();
+  // Each line is spoken on its own so a recorded clip can be found for it (see engine-voice.js); the second argument is kept
+  // from the older calls and no longer matters, because every new line now stops the one before it.
+  function speak(pieces) { V.say(pieces, { gapMs: 300 }); }
 
   function mount(container, { contentPack, band, onEvidence, onComplete }) {
     // Readers (Explore and up) see the story as text; Discover is audio-led, so its story stays spoken (and screen-reader) only.
@@ -94,14 +102,13 @@
     container.append(progressHolder, contextBox, replayRow, promptBox, choiceHolder, confirmRow, feedbackHolder);
     renderScenario();
 
-    let selfNarration = '', selfChecks = 0;
+    let selfNarration = [], selfChecks = 0;
 
+    // The lines of the current narration, one per spoken line.
     function narrationFor(scenario) {
       if (stage === 'self_check') return selfNarration;
-      if (stage === 'cues') {
-        return voiced ? sentenceJoin([scenario.context, P.cues, ...scenario.cues.map((c) => c.text)]) : [scenario.context, ...scenario.cues.map((c) => c.text)].join('. ');
-      }
-      return voiced ? sentenceJoin([P.pick, ...scenario.feelings.map((f) => f.text)]) : scenario.feelings.map((f) => f.text).join(', ');
+      if (stage === 'cues') return [scenario.context, ...(voiced ? [P.cues] : []), ...scenario.cues.map((c) => c.text)];
+      return [...(voiced ? [P.pick] : []), ...scenario.feelings.map((f) => f.text)];
     }
 
     function renderReplay(scenario) {
@@ -112,7 +119,7 @@
       btn.textContent = '▶ Replay';
       btn.addEventListener('click', () => {
         onEvidence('hint_requested', { scenarioIndex: index, kind: 'narration_replay', stage });
-        speak(narrationFor(scenario), voiced);
+        speak(narrationFor(scenario));
       });
       replayRow.appendChild(btn);
       if (voiced && scenario) {
@@ -153,7 +160,7 @@
       feedbackHolder.innerHTML = '';
       promptBox.textContent = P.cues;
       renderReplay(scenario);
-      speak(narrationFor(scenario), voiced);
+      speak(narrationFor(scenario));
 
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
@@ -196,7 +203,7 @@
 
       feedbackHolder.innerHTML = '';
       feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', P.afterCues));
-      if (voiced) speak(P.afterCues, true);
+      if (voiced) speak(P.afterCues);
       setTimeout(() => renderFeelingsStage(scenario), holdFor(P.afterCues, 1200));
     }
 
@@ -207,7 +214,7 @@
       promptBox.textContent = P.pick;
       onEvidence('item_presented', { scenarioIndex: index, stage: 'feelings' });
       renderReplay(scenario);
-      speak(narrationFor(scenario), voiced);
+      speak(narrationFor(scenario));
 
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
@@ -253,16 +260,18 @@
         selectedCount: selectedFeelings.size, plausibleCount: selectedPlausible.length, lessFittingCount: selectedLessFitting.length,
       });
 
-      let message;
+      let messageLines;
       if (selectedLessFitting.length > 0) {
-        message = selectedLessFitting.map((f) => f.note).filter(Boolean).join(' ') || 'Take another look at the cues — some of them point somewhere else.';
+        messageLines = selectedLessFitting.map((f) => f.note).filter(Boolean);
+        if (!messageLines.length) messageLines = ['Take another look at the cues — some of them point somewhere else.'];
       } else {
-        message = scenario.reinforcement || 'That fits what is happening here.';
+        messageLines = [scenario.reinforcement || 'That fits what is happening here.'];
       }
+      const message = messageLines.join(' ');
 
       feedbackHolder.innerHTML = '';
       feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', message));
-      if (voiced) speak(message, true);
+      if (voiced) speak(messageLines);
 
       setTimeout(() => {
         const check = selfCheckFor(scenario);
@@ -300,7 +309,7 @@
             feedbackHolder.innerHTML = '';
             const closing = check.closing || 'Nice job checking in with yourself.';
             feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', closing));
-            if (voiced) speak(closing, true);
+            if (voiced) speak(closing);
             setTimeout(() => afterFeelings(scenario), holdFor(closing, 2200));
           }, check.privateNote);
         }, 500);
@@ -309,9 +318,9 @@
 
     function askSelfCheck(prompt, options, onPick, privateNote) {
       promptBox.textContent = prompt;
-      selfNarration = voiced ? sentenceJoin([prompt].concat(options.map((o) => o.text))) : [prompt].concat(options.map((o) => o.text)).join('. ');
+      selfNarration = [prompt].concat(options.map((o) => o.text));
       renderReplay(null);
-      speak(selfNarration, voiced);
+      speak(selfNarration);
       choiceHolder.innerHTML = '';
       const list = document.createElement('div');
       list.className = 'fn-choice-list long-text-list';

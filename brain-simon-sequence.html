@@ -110,6 +110,7 @@
     <div class="guest-prompt" id="guestPrompt" style="display:none;">
       <h3>Save Your Score!</h3>
       <p>Create an account to track your progress and unlock achievement badges.</p>
+      <p style="font-size:13px;margin-top:10px;">Students: <a href="student-login.html" style="font-weight:700;">sign in with your classroom code, username and PIN</a> to save your score.</p>
       <button class="btn btn-ghost" onclick="if(typeof fnAuthOpenModal==='function')fnAuthOpenModal('signup')">Join Free</button>
     </div>
     <div class="results-actions">
@@ -309,5 +310,6 @@ function showBadges(badges) {
     </div>`).join('');
 }
 </script>
+<script src="game-backlink.js?v=1" defer></script>
 </body>
 </html>

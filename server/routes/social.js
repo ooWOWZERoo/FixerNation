@@ -10,6 +10,7 @@ const { communityMemberSql, schoolDomainSql, hasCommunityLicense, isCommunityMem
 const { belongsToSchoolSql, belongsToSchool } = require('../lib/community-groups');
 const { requireAuth } = require('../middleware/auth');
 const { ensureProfile, addTeacherToSocialGroups } = require('../lib/social-groups');
+const { profileBadges } = require('../lib/profile-badges');
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForSocialGroup, resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { sniffFile, reencodeImageToWebp, IMAGE_KINDS } = require('../lib/upload-safety');
@@ -630,17 +631,12 @@ router.get('/profile', requireSocialAccess, async (req, res) => {
      WHERE su.id = ?`,
     [req.siteUser.id]
   );
-  let featuredBadges = [];
+  let featuredBadges = [], badgesAreFeatured = true;
   try {
-    const [rows] = await pool.query(
-      `SELECT b.name, b.emoji, b.rarity, ub.featured_position
-       FROM user_brain_badges ub JOIN brain_badges b ON b.id = ub.badge_id
-       WHERE ub.user_id = ? AND ub.featured = 1 ORDER BY ub.featured_position`,
-      [req.siteUser.id]
-    );
-    featuredBadges = rows;
-  } catch {}
-  res.json({ profile: { ...user, featuredBadges } });
+    const r = await profileBadges(pool, req.siteUser.id);
+    featuredBadges = r.badges; badgesAreFeatured = r.featured;
+  } catch (e) { console.error('profile badges failed:', e.message); }
+  res.json({ profile: { ...user, featuredBadges, badgesAreFeatured } });
 });
 
 router.put('/profile', requireSocialAccess, async (req, res) => {
@@ -679,15 +675,8 @@ router.get('/profile/:userId', requireSocialAccess, async (req, res) => {
   if (!user) return res.status(404).json({ error: 'Member not found' });
   let featuredBadges = [];
   if (user.show_badges) {
-    try {
-      const [rows] = await pool.query(
-        `SELECT b.name, b.emoji, b.rarity, ub.featured_position
-         FROM user_brain_badges ub JOIN brain_badges b ON b.id = ub.badge_id
-         WHERE ub.user_id = ? AND ub.featured = 1 ORDER BY ub.featured_position`,
-        [req.params.userId]
-      );
-      featuredBadges = rows;
-    } catch {}
+    try { featuredBadges = (await profileBadges(pool, req.params.userId)).badges; }
+    catch (e) { console.error('profile badges failed:', e.message); }
   }
   res.json({ profile: { ...user, featuredBadges } });
 });

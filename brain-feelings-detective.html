@@ -26,7 +26,9 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
-<script src="engine-scenario-choice.js?v=6"></script>
+<script src="assets/audio/discover/feelings-detective.js?v=f480566a"></script>
+<script src="engine-voice.js?v=1"></script>
+<script src="engine-scenario-choice.js?v=7"></script>
 <script>
   // Feelings Detective - Tune Your Brain SEL scaling slice (Discover band).
   // Closes the last CASEL gap: the first genuine Self-awareness game in
@@ -44,6 +46,7 @@
 
   const contentPack = {
     title: 'Feelings Detective',
+    roundsPerRun: 4,
     // Discover wording (Release 87): short lines, pictures on the clues and feelings, everything spoken. Plain defaults for
     // the shared prompts live in engine-scenario-choice.js; this game supplies its own.
     prompts: {
@@ -127,6 +130,129 @@
         ],
         reinforcement: 'Nervous and curious can both be true on a first day.',
       },
+      {
+        context: "Ella dropped her ice cream.",
+        illustration: "🍦",
+        cues: [
+          { id: "looking-at-ground", text: "🍦 She stares at the ground.", present: true },
+          { id: "lip-shakes", text: "😢 Her lip shakes.", present: true },
+          { id: "giggles", text: "😄 She giggles and claps.", present: false },
+        ],
+        feelings: [
+          { id: "sad", text: "😢 Sad", tag: "plausible" },
+          { id: "disappointed", text: "😞 Disappointed", tag: "plausible" },
+          { id: "thrilled", text: "🤩 Thrilled", tag: "less_fitting", note: "Thrilled looks bouncy and bright. Ella is quiet." },
+        ],
+        reinforcement: "Sad and disappointed can happen together.",
+      },
+      {
+        context: "Marcus was picked first for the team.",
+        illustration: "🏅",
+        cues: [
+          { id: "smiles-wide", text: "😁 He smiles wide.", present: true },
+          { id: "raises-arms", text: "🙌 He raises his arms.", present: true },
+          { id: "looks-at-shoes", text: "😔 He looks at his shoes.", present: false },
+        ],
+        feelings: [
+          { id: "proud", text: "😃 Proud", tag: "plausible" },
+          { id: "happy", text: "😊 Happy", tag: "plausible" },
+          { id: "sad", text: "😢 Sad", tag: "less_fitting", note: "Sad looks slow and quiet. Marcus is full of energy." },
+        ],
+        reinforcement: "Proud and happy often come together.",
+      },
+      {
+        context: "Zoe hears a loud noise in the dark.",
+        illustration: "🌙",
+        cues: [
+          { id: "eyes-wide", text: "😳 Her eyes open wide.", present: true },
+          { id: "pulls-blanket", text: "🛏️ She pulls the blanket up.", present: true },
+          { id: "snores", text: "😴 She snores softly.", present: false },
+        ],
+        feelings: [
+          { id: "scared", text: "😨 Scared", tag: "plausible" },
+          { id: "worried", text: "😟 Worried", tag: "plausible" },
+          { id: "silly", text: "😄 Silly", tag: "less_fitting", note: "Silly looks giggly and loose. Zoe is tense." },
+        ],
+        reinforcement: "Scared and worried can go together.",
+        seekHelp: { prompt: "If you feel scared at night, what could you do?", text: "Tell a grown-up you trust." },
+      },
+      {
+        context: "Omar's friend moved far away.",
+        illustration: "🚚",
+        cues: [
+          { id: "old-photos", text: "🖼️ He looks at old photos.", present: true },
+          { id: "quiet-lunch", text: "😶 He is quiet at lunch.", present: true },
+          { id: "cartwheels", text: "🤸 He cartwheels across the room.", present: false },
+        ],
+        feelings: [
+          { id: "sad", text: "😢 Sad", tag: "plausible" },
+          { id: "lonely", text: "💔 Lonely", tag: "plausible" },
+          { id: "excited", text: "😆 Excited", tag: "less_fitting", note: "Excited looks bouncy and loud. Omar is quiet." },
+        ],
+        reinforcement: "Sad and lonely can both be true when you miss someone.",
+        seekHelp: { prompt: "If you miss someone, what could help?", text: "Draw a picture for them, or tell a grown-up." },
+      },
+      {
+        context: "Lily's drawing was hung on the wall.",
+        illustration: "🖼️",
+        cues: [
+          { id: "beams", text: "😊 She beams at it.", present: true },
+          { id: "bounces", text: "🦘 She bounces on her toes.", present: true },
+          { id: "frowns", text: "😠 She frowns and crosses her arms.", present: false },
+        ],
+        feelings: [
+          { id: "proud", text: "😃 Proud", tag: "plausible" },
+          { id: "happy", text: "😊 Happy", tag: "plausible" },
+          { id: "angry", text: "😡 Angry", tag: "less_fitting", note: "Angry looks tight and cross. Lily is glowing." },
+        ],
+        reinforcement: "Proud and happy can go together.",
+      },
+      {
+        context: "Ben has a big test today.",
+        illustration: "📝",
+        cues: [
+          { id: "bites-nails", text: "😬 He bites his nails.", present: true },
+          { id: "sweaty-hands", text: "💧 His hands feel sweaty.", present: true },
+          { id: "yawns", text: "🥱 He yawns and stretches.", present: false },
+        ],
+        feelings: [
+          { id: "nervous", text: "😰 Nervous", tag: "plausible" },
+          { id: "worried", text: "😟 Worried", tag: "plausible" },
+          { id: "relaxed", text: "😌 Relaxed", tag: "less_fitting", note: "Relaxed looks loose and calm. Ben looks tense." },
+        ],
+        reinforcement: "Nervous and worried often come before a test.",
+        seekHelp: { prompt: "If you feel nervous, what could help?", text: "Take slow breaths and tell your teacher." },
+      },
+      {
+        context: "Aisha shared her snack with a friend.",
+        illustration: "🍪",
+        cues: [
+          { id: "smiles-softly", text: "😊 She smiles softly.", present: true },
+          { id: "hugs-friend", text: "🤗 She hugs her friend.", present: true },
+          { id: "rolls-eyes", text: "🙄 She rolls her eyes.", present: false },
+        ],
+        feelings: [
+          { id: "kind", text: "🥰 Kind", tag: "plausible" },
+          { id: "happy", text: "😊 Happy", tag: "plausible" },
+          { id: "grumpy", text: "😒 Grumpy", tag: "less_fitting", note: "Grumpy looks scrunched and sour. Aisha looks warm." },
+        ],
+        reinforcement: "Kind and happy often go together.",
+      },
+      {
+        context: "Theo's balloon floated away.",
+        illustration: "🎈",
+        cues: [
+          { id: "watches-it-go", text: "👀 He watches it go up.", present: true },
+          { id: "chin-wobbles", text: "😢 His chin wobbles.", present: true },
+          { id: "laughs-loudly", text: "😂 He laughs out loud.", present: false },
+        ],
+        feelings: [
+          { id: "sad", text: "😢 Sad", tag: "plausible" },
+          { id: "upset", text: "😞 Upset", tag: "plausible" },
+          { id: "excited", text: "🤩 Excited", tag: "less_fitting", note: "Excited looks bouncy and bright. Theo looks small and quiet." },
+        ],
+        reinforcement: "Sad and upset can both fit when something is lost.",
+      },
     ],
     // After each story the child gets a private check-in about their own feelings (NY SEL 1A). Their answers are
     // never logged or sent anywhere; see the note at the top of engine-scenario-choice.js.
@@ -172,5 +298,6 @@
     },
   });
 </script>
+<script src="game-backlink.js?v=1" defer></script>
 </body>
 </html>

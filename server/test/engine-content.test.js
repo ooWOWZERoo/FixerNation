@@ -530,11 +530,11 @@ test('STRENGTH SPOTTER: the private check is present, in order, and never logged
   assert.ok(sets.size > 20, `only ${sets.size} different sets of stories in 100 runs`);
 });
 
-// Same and Different (new 2026-11-01, approved outline: docs/tune-your-brain/SAME_AND_DIFFERENT_OUTLINE.md): 12 rounds, 4 per run.
-test('SAME AND DIFFERENT: twelve rounds in three kinds, four per run, with a spoken line on every choice', () => {
+// Same and Different (new 2026-11-01, approved outline: docs/tune-your-brain/SAME_AND_DIFFERENT_OUTLINE.md): 24 rounds (12 at first, 12 more in Release 131), 5 per run.
+test('SAME AND DIFFERENT: twenty-four rounds in three kinds, five per run, with a spoken line on every choice', () => {
   const g = REAL.find((x) => x.slug === 'same-and-different');
-  assert.equal(g.pack.items.length, 12);
-  assert.equal(g.pack.roundsPerRun, 4);
+  assert.equal(g.pack.items.length, 24);
+  assert.equal(g.pack.roundsPerRun, 5);
   const kinds = { same: 0, diff: 0, kind: 0 };
   let longest = 0;
   g.pack.items.forEach((it, i) => {
@@ -550,8 +550,8 @@ test('SAME AND DIFFERENT: twelve rounds in three kinds, four per run, with a spo
     const lens = it.choices.map((c) => c.caption.length);
     if (it.choices.find((c) => c.id === it.correctId).caption.length === Math.max(...lens)) longest++;
   });
-  assert.equal(`${kinds.same},${kinds.diff},${kinds.kind}`, '4,4,4');
-  assert.ok(longest <= 4, `the right label is the longest in ${longest} of 12 rounds`);
+  assert.equal(`${kinds.same},${kinds.diff},${kinds.kind}`, '8,8,8');
+  assert.ok(longest <= 8, `the right label is the longest in ${longest} of 24 rounds`);
 });
 
 test('SAME AND DIFFERENT: a wrong answer in a same or different round is true of one child or of both, never a made-up fact', () => {

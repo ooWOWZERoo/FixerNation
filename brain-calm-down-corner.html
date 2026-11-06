@@ -26,7 +26,9 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
-<script src="engine-audio-choice.js?v=5"></script>
+<script src="assets/audio/discover/calm-down-corner.js?v=f91f87fb"></script>
+<script src="engine-voice.js?v=1"></script>
+<script src="engine-audio-choice.js?v=6"></script>
 <script>
   // Calm Down Corner - first Tune Your Brain game targeting the
   // Self-management CASEL competency (roadmap section 6.4), and the
@@ -43,50 +45,223 @@
 
   const contentPack = {
     title: 'Calm Down Corner',
+    roundsPerRun: 5,
     items: [
       {
         stimulusType: 'audio',
         stimulusText: "Your tower fell down. You feel mad. What helps you feel calm?",
         transcript: "Your tower fell down. You feel mad. What helps you feel calm?",
         choices: [
-          { id: "breathe", label: "😮‍💨", caption: "Deep breaths", aria: "take slow deep breaths" },
-          { id: "yell", label: "😠", caption: "Yell", aria: "yell about it" },
-          { id: "knock-more", label: "🧱", caption: "Knock more down", aria: "knock down more blocks" },
+          { id: "deep-breaths", label: "😮‍💨", caption: "Deep breaths", aria: "take slow deep breaths", feedback: "You got it!" },
+          { id: "yell", label: "😠", caption: "Yell", aria: "yell about it", feedback: "Try another one." },
+          { id: "knock-more-down", label: "🧱", caption: "Knock more down", aria: "knock down more blocks", feedback: "Try another one." },
         ],
-        correctId: "breathe",
+        correctId: "deep-breaths",
+        explanation: "Slow breaths help your body settle down.",
       },
       {
         stimulusType: 'audio',
         stimulusText: "A puzzle piece will not fit. You feel grumpy. What helps you feel calm?",
         transcript: "A puzzle piece will not fit. You feel grumpy. What helps you feel calm?",
         choices: [
-          { id: "count", label: "🔢", caption: "Count to five", aria: "count slowly to five" },
-          { id: "throw", label: "😤", caption: "Throw it", aria: "throw the puzzle" },
-          { id: "give-up", label: "🙅", caption: "Give up", aria: "give up and stop trying" },
+          { id: "count-to-five", label: "🔢", caption: "Count to five", aria: "count slowly to five", feedback: "You got it!" },
+          { id: "throw-it", label: "😤", caption: "Throw it", aria: "throw the puzzle", feedback: "Try another one." },
+          { id: "give-up", label: "🙅", caption: "Give up", aria: "give up and stop trying", feedback: "Try another one." },
         ],
-        correctId: "count",
+        correctId: "count-to-five",
+        explanation: "Counting gives your mad feeling time to shrink.",
       },
       {
         stimulusType: 'audio',
         stimulusText: "Someone took your turn on the swing. You feel upset. What helps you feel calm?",
         transcript: "Someone took your turn on the swing. You feel upset. What helps you feel calm?",
         choices: [
-          { id: "ask-help", label: "🙋", caption: "Ask a grown-up", aria: "ask a grown-up for help" },
-          { id: "push", label: "😢", caption: "Push and cry", aria: "push and cry loudly" },
-          { id: "keep-inside", label: "🤐", caption: "Keep it inside", aria: "keep the feeling inside" },
+          { id: "ask-a-grown-up", label: "🙋", caption: "Ask a grown-up", aria: "ask a grown-up for help", feedback: "You got it!" },
+          { id: "push-and-cry", label: "😢", caption: "Push and cry", aria: "push and cry loudly", feedback: "Try another one." },
+          { id: "keep-it-inside", label: "🤐", caption: "Keep it inside", aria: "keep the feeling inside", feedback: "Try another one." },
         ],
-        correctId: "ask-help",
+        correctId: "ask-a-grown-up",
+        explanation: "A grown-up can help when you feel stuck.",
       },
       {
         stimulusType: 'audio',
         stimulusText: "You spilled your juice. Your face feels hot. What helps you feel calm?",
         transcript: "You spilled your juice. Your face feels hot. What helps you feel calm?",
         choices: [
-          { id: "calm-spot", label: "🪴", caption: "Calm spot", aria: "take a break in a calm spot" },
-          { id: "yell-unfair", label: "😭", caption: "Yell \"Not fair\"", aria: "yell that it is not fair" },
-          { id: "kick", label: "💥", caption: "Kick something", aria: "kick something" },
+          { id: "calm-spot", label: "🪴", caption: "Calm spot", aria: "take a break in a calm spot", feedback: "You got it!" },
+          { id: "yell-not-fair", label: "😭", caption: "Yell \"Not fair\"", aria: "yell that it is not fair", feedback: "Try another one." },
+          { id: "kick-something", label: "💥", caption: "Kick something", aria: "kick something", feedback: "Try another one." },
         ],
         correctId: "calm-spot",
+        explanation: "A calm spot helps your body cool down.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your ice cream fell on the ground. You feel sad and mad. What helps you feel calm?",
+        transcript: "Your ice cream fell on the ground. You feel sad and mad. What helps you feel calm?",
+        choices: [
+          { id: "hug-your-stuffy", label: "🧸", caption: "Hug your stuffy", aria: "hug a soft stuffed animal", feedback: "You got it!" },
+          { id: "stomp-and-scream", label: "😤", caption: "Stomp and scream", aria: "stomp and scream", feedback: "Try another one." },
+          { id: "grab-a-friend-s", label: "🍦", caption: "Grab a friend's", aria: "grab ice cream from a friend", feedback: "Try another one." },
+        ],
+        correctId: "hug-your-stuffy",
+        explanation: "Something soft to hug helps big feelings settle.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "It is time to stop playing. You wanted more. You feel cross. What helps you feel calm?",
+        transcript: "It is time to stop playing. You wanted more. You feel cross. What helps you feel calm?",
+        choices: [
+          { id: "count-to-ten", label: "🔟", caption: "Count to ten", aria: "count slowly to ten", feedback: "You got it!" },
+          { id: "run-away", label: "🏃", caption: "Run away", aria: "run away from the grown-up", feedback: "Try another one." },
+          { id: "drop-to-the-floor", label: "😭", caption: "Drop to the floor", aria: "drop to the floor and kick", feedback: "Try another one." },
+        ],
+        correctId: "count-to-ten",
+        explanation: "Counting slowly gives your feelings time to get smaller.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your friend won the game. You wanted to win. You feel mad. What helps you feel calm?",
+        transcript: "Your friend won the game. You wanted to win. You feel mad. What helps you feel calm?",
+        choices: [
+          { id: "say-good-game", label: "🤝", caption: "Say good game", aria: "say good game to your friend", feedback: "You got it!" },
+          { id: "say-it-is-unfair", label: "😠", caption: "Say it is unfair", aria: "say the game was unfair", feedback: "Try another one." },
+          { id: "knock-the-board", label: "🎲", caption: "Knock the board", aria: "knock over the game board", feedback: "Try another one." },
+        ],
+        correctId: "say-good-game",
+        explanation: "Saying good game helps the mad feeling pass.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Thunder is booming. Your tummy feels tight. You feel scared. What helps you feel calm?",
+        transcript: "Thunder is booming. Your tummy feels tight. You feel scared. What helps you feel calm?",
+        choices: [
+          { id: "slow-tummy-breaths", label: "😮‍💨", caption: "Slow tummy breaths", aria: "take slow breaths into your tummy", feedback: "You got it!" },
+          { id: "scream-loudly", label: "😱", caption: "Scream loudly", aria: "scream as loudly as you can", feedback: "Try another one." },
+          { id: "run-outside", label: "🏃", caption: "Run outside", aria: "run outside", feedback: "Try another one." },
+        ],
+        correctId: "slow-tummy-breaths",
+        explanation: "Slow tummy breaths tell your body it is safe.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "You cannot tie your shoe. You feel grumpy. What helps you feel calm?",
+        transcript: "You cannot tie your shoe. You feel grumpy. What helps you feel calm?",
+        choices: [
+          { id: "breathe-then-try", label: "🧘", caption: "Breathe, then try", aria: "take a breath and try again", feedback: "You got it!" },
+          { id: "throw-the-shoe", label: "👟", caption: "Throw the shoe", aria: "throw the shoe", feedback: "Try another one." },
+          { id: "say-you-will-never", label: "🚫", caption: "Say you will never", aria: "say you will never wear shoes", feedback: "Try another one." },
+        ],
+        correctId: "breathe-then-try",
+        explanation: "A calm breath helps your fingers try again.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Someone said your drawing is silly. You feel hurt. What helps you feel calm?",
+        transcript: "Someone said your drawing is silly. You feel hurt. What helps you feel calm?",
+        choices: [
+          { id: "tell-a-teacher", label: "🗣️", caption: "Tell a teacher", aria: "tell a teacher what happened", feedback: "You got it!" },
+          { id: "say-mean-things", label: "😡", caption: "Say mean things", aria: "say mean things back", feedback: "Try another one." },
+          { id: "rip-it-up", label: "🖍️", caption: "Rip it up", aria: "rip up your drawing", feedback: "Try another one." },
+        ],
+        correctId: "tell-a-teacher",
+        explanation: "Telling a grown-up helps when words hurt.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your sister is very loud. You feel cross. What helps you feel calm?",
+        transcript: "Your sister is very loud. You feel cross. What helps you feel calm?",
+        choices: [
+          { id: "quiet-corner", label: "🎧", caption: "Quiet corner", aria: "go to a quiet corner", feedback: "You got it!" },
+          { id: "shout-louder", label: "📣", caption: "Shout louder", aria: "shout louder than her", feedback: "Try another one." },
+          { id: "slam-the-door", label: "🚪", caption: "Slam the door", aria: "slam the door", feedback: "Try another one." },
+        ],
+        correctId: "quiet-corner",
+        explanation: "A quiet corner gives your ears and feelings a rest.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "You lost your favorite crayon. Your face is hot. What helps you feel calm?",
+        transcript: "You lost your favorite crayon. Your face is hot. What helps you feel calm?",
+        choices: [
+          { id: "sip-some-water", label: "💧", caption: "Sip some water", aria: "take a sip of water", feedback: "You got it!" },
+          { id: "blame-a-friend", label: "😠", caption: "Blame a friend", aria: "blame a friend", feedback: "Try another one." },
+          { id: "break-the-others", label: "🖍️", caption: "Break the others", aria: "break the other crayons", feedback: "Try another one." },
+        ],
+        correctId: "sip-some-water",
+        explanation: "A cool drink helps your body slow down.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "The line is long. You have to wait. You feel wiggly and cross. What helps you feel calm?",
+        transcript: "The line is long. You have to wait. You feel wiggly and cross. What helps you feel calm?",
+        choices: [
+          { id: "hum-a-quiet-song", label: "🎶", caption: "Hum a quiet song", aria: "hum a quiet song", feedback: "You got it!" },
+          { id: "cut-in-line", label: "🏃", caption: "Cut in line", aria: "cut in line", feedback: "Try another one." },
+          { id: "poke-the-kid-ahead", label: "👉", caption: "Poke the kid ahead", aria: "poke the kid in front", feedback: "Try another one." },
+        ],
+        correctId: "hum-a-quiet-song",
+        explanation: "A quiet song gives waiting something to do.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your friend cannot come over. You feel sad and cross. What helps you feel calm?",
+        transcript: "Your friend cannot come over. You feel sad and cross. What helps you feel calm?",
+        choices: [
+          { id: "draw-a-picture", label: "🎨", caption: "Draw a picture", aria: "draw a picture", feedback: "You got it!" },
+          { id: "stay-mad-all-day", label: "😒", caption: "Stay mad all day", aria: "stay mad all day", feedback: "Try another one." },
+          { id: "say-mean-things", label: "📣", caption: "Say mean things", aria: "say mean things about your friend", feedback: "Try another one." },
+        ],
+        correctId: "draw-a-picture",
+        explanation: "Drawing lets feelings out in a safe way.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "You made a mistake on your paper. You feel upset. What helps you feel calm?",
+        transcript: "You made a mistake on your paper. You feel upset. What helps you feel calm?",
+        choices: [
+          { id: "breathe-then-fix", label: "🧽", caption: "Breathe, then fix", aria: "take a breath, then fix it", feedback: "You got it!" },
+          { id: "crumple-it-up", label: "📄", caption: "Crumple it up", aria: "crumple up the paper", feedback: "Try another one." },
+          { id: "say-you-are-bad", label: "😖", caption: "Say you are bad", aria: "say you are bad at this", feedback: "Try another one." },
+        ],
+        correctId: "breathe-then-fix",
+        explanation: "Mistakes help us learn. Take a breath, then fix it.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "The room is very noisy. You feel shaky. What helps you feel calm?",
+        transcript: "The room is very noisy. You feel shaky. What helps you feel calm?",
+        choices: [
+          { id: "ask-for-quiet", label: "🙋", caption: "Ask for quiet", aria: "ask for a quiet spot", feedback: "You got it!" },
+          { id: "yell-to-be-heard", label: "📣", caption: "Yell to be heard", aria: "yell so people can hear you", feedback: "Try another one." },
+          { id: "run-out", label: "🚪", caption: "Run out", aria: "run out of the room", feedback: "Try another one." },
+        ],
+        correctId: "ask-for-quiet",
+        explanation: "Asking for a quiet spot helps you feel steady.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "It is bedtime. You are not done playing. You feel mad. What helps you feel calm?",
+        transcript: "It is bedtime. You are not done playing. You feel mad. What helps you feel calm?",
+        choices: [
+          { id: "cuddle-and-read", label: "📖", caption: "Cuddle and read", aria: "cuddle up and read a book", feedback: "You got it!" },
+          { id: "stomp-around", label: "😤", caption: "Stomp around", aria: "stomp around the room", feedback: "Try another one." },
+          { id: "throw-the-toys", label: "🧸", caption: "Throw the toys", aria: "throw your toys", feedback: "Try another one." },
+        ],
+        correctId: "cuddle-and-read",
+        explanation: "A cozy story helps your body get ready to rest.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your balloon popped. You feel sad and shocked. What helps you feel calm?",
+        transcript: "Your balloon popped. You feel sad and shocked. What helps you feel calm?",
+        choices: [
+          { id: "ask-for-a-hug", label: "🫂", caption: "Ask for a hug", aria: "ask for a hug", feedback: "You got it!" },
+          { id: "pop-another-one", label: "😠", caption: "Pop another one", aria: "pop another balloon", feedback: "Try another one." },
+          { id: "hide-away", label: "🙈", caption: "Hide away", aria: "hide away from everyone", feedback: "Try another one." },
+        ],
+        correctId: "ask-for-a-hug",
+        explanation: "A hug can help sad feelings get smaller.",
       },
     ],
   };
@@ -112,5 +287,6 @@
     },
   });
 </script>
+<script src="game-backlink.js?v=1" defer></script>
 </body>
 </html>

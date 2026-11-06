@@ -26,7 +26,9 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
-<script src="engine-audio-choice.js?v=5"></script>
+<script src="assets/audio/discover/same-and-different.js?v=edd09cdb"></script>
+<script src="engine-voice.js?v=1"></script>
+<script src="engine-audio-choice.js?v=6"></script>
 <script>
   // Same and Different - Tune Your Brain (Discover band, grades K-2). Same Audio
   // Choice engine as Sharing Circle: a short scene is read aloud, the child taps
@@ -41,7 +43,7 @@
 
   const contentPack = {
     "title": "Same and Different",
-    "roundsPerRun": 4,
+    "roundsPerRun": 5,
     "items": [
       {
         "stimulusType": "audio",
@@ -402,7 +404,151 @@
         ],
         "correctId": "turns",
         "explanation": "Taking turns is a kind way to play when friends like different things."
-      }
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Ria has a cat. Tom has a fish. They both love animals. What is the same?",
+        transcript: "Ria has a cat. Tom has a fish. They both love animals. What is the same?",
+        choices: [
+          { id: "loving-animals", label: "🐾", aria: "loving animals", feedback: "Yes! Ria and Tom both love animals.", caption: "Animals" },
+          { id: "a-cat", label: "🐱", aria: "a cat", feedback: "Ria has a cat, but Tom has a fish. Look for something they both love.", caption: "Ria's cat" },
+          { id: "a-fish", label: "🐟", aria: "a fish", feedback: "Tom has a fish, but Ria has a cat. Look for something they both love.", caption: "Tom's fish" },
+        ],
+        correctId: "loving-animals",
+        explanation: "Friends can have different pets and still love animals.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Lila walks to school. Max rides a bus. They both get there at nine. What is different?",
+        transcript: "Lila walks to school. Max rides a bus. They both get there at nine. What is different?",
+        choices: [
+          { id: "how-they-get-there", label: "🚌", aria: "how they get there", feedback: "Yes! Lila walks and Max rides a bus.", caption: "How they get there" },
+          { id: "the-time", label: "🕘", aria: "the time", feedback: "They both get there at nine, so that is the same.", caption: "The time" },
+          { id: "the-school", label: "🏫", aria: "the school", feedback: "They both go to school, so that is the same.", caption: "The school" },
+        ],
+        correctId: "how-they-get-there",
+        explanation: "There is more than one way to get to school.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Eva likes pizza. Noah likes tacos. They both like eating with friends. What is the same?",
+        transcript: "Eva likes pizza. Noah likes tacos. They both like eating with friends. What is the same?",
+        choices: [
+          { id: "eating-with-friends", label: "🍽️", aria: "eating with friends", feedback: "Yes! Eva and Noah both like eating with friends.", caption: "Eating with friends" },
+          { id: "pizza", label: "🍕", aria: "pizza", feedback: "Eva likes pizza, but Noah likes tacos. Look for something they both like.", caption: "Pizza" },
+          { id: "tacos", label: "🌮", aria: "tacos", feedback: "Noah likes tacos, but Eva likes pizza. Look for something they both like.", caption: "Tacos" },
+        ],
+        correctId: "eating-with-friends",
+        explanation: "Different favorite foods can still be shared at one table.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Jay is tall. Sue is short. They both run fast. What is different?",
+        transcript: "Jay is tall. Sue is short. They both run fast. What is different?",
+        choices: [
+          { id: "how-tall", label: "📏", aria: "how tall they are", feedback: "Yes! Jay is tall and Sue is short.", caption: "How tall" },
+          { id: "running-fast", label: "🏃", aria: "running fast", feedback: "They both run fast, so that is the same.", caption: "Running fast" },
+          { id: "having-feet", label: "👟", aria: "having feet", feedback: "They both have feet, so that is the same.", caption: "Having feet" },
+        ],
+        correctId: "how-tall",
+        explanation: "Bodies come in many sizes, and all are great for running.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Pia speaks Tagalog at home. Ben speaks English. They both love story time. What is the same?",
+        transcript: "Pia speaks Tagalog at home. Ben speaks English. They both love story time. What is the same?",
+        choices: [
+          { id: "loving-story-time", label: "📚", aria: "loving story time", feedback: "Yes! Pia and Ben both love story time.", caption: "Loving story time" },
+          { id: "home-words", label: "🗣️", aria: "the words they speak at home", feedback: "Pia speaks Tagalog but Ben speaks English. Look for something they both love.", caption: "Home words" },
+          { id: "home-country", label: "🌍", aria: "the country they come from", feedback: "The story does not say that. Look for something they both love.", caption: "Home country" },
+        ],
+        correctId: "loving-story-time",
+        explanation: "Stories connect us, in any language.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Ali likes rain. Joy likes sun. They both like to play outside. What is the same?",
+        transcript: "Ali likes rain. Joy likes sun. They both like to play outside. What is the same?",
+        choices: [
+          { id: "playing-outside", label: "🛝", aria: "playing outside", feedback: "Yes! Ali and Joy both like to play outside.", caption: "Outdoor play" },
+          { id: "rain", label: "🌧️", aria: "rain", feedback: "Ali likes rain, but Joy likes sun. Look for something they both like.", caption: "Splashing in rain" },
+          { id: "sun", label: "☀️", aria: "sun", feedback: "Joy likes sun, but Ali likes rain. Look for something they both like.", caption: "Joy's sunny days" },
+        ],
+        correctId: "playing-outside",
+        explanation: "You can like different weather and still play together.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Rosa is shy. Pete is loud. They both want a friend. What could they do?",
+        transcript: "Rosa is shy. Pete is loud. They both want a friend. What could they do?",
+        choices: [
+          { id: "a-game-for-both", label: "🎲", aria: "find a game they both like", feedback: "Yes! A game for both lets them be friends.", caption: "A game for both" },
+          { id: "play-alone", label: "🚪", aria: "each play alone", feedback: "Then they stay lonely. Playing together is better.", caption: "Play alone" },
+          { id: "be-loud", label: "📢", aria: "tell Rosa to be loud", feedback: "Rosa can be shy and still be a good friend.", caption: "Be loud" },
+        ],
+        correctId: "a-game-for-both",
+        explanation: "Shy and loud friends can play together.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Mo has a big family. Kim has a small family. They both love family time. What is different?",
+        transcript: "Mo has a big family. Kim has a small family. They both love family time. What is different?",
+        choices: [
+          { id: "how-many-people", label: "👪", aria: "how many people are in the family", feedback: "Yes! Mo has a big family and Kim has a small one.", caption: "How many people" },
+          { id: "loving-family-time", label: "❤️", aria: "loving family time", feedback: "They both love family time, so that is the same.", caption: "Loving family time" },
+          { id: "having-a-home", label: "🏠", aria: "having a family", feedback: "They both have a family, so that is the same.", caption: "Having a family" },
+        ],
+        correctId: "how-many-people",
+        explanation: "Families come in all sizes, and love is the same.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Lena paints. Carlos plays music. They both want to share their art. What could they do?",
+        transcript: "Lena paints. Carlos plays music. They both want to share their art. What could they do?",
+        choices: [
+          { id: "share-with-each-other", label: "🎪", aria: "share with each other", feedback: "Yes! Sharing lets both of them be seen and heard.", caption: "Share together" },
+          { id: "hide-it", label: "🙈", aria: "hide their art", feedback: "Hiding means nobody enjoys it. Sharing is better.", caption: "Hide it away" },
+          { id: "say-mine-is-best", label: "🏆", aria: "say mine is best", feedback: "That can hurt feelings. Sharing is kinder.", caption: "Say mine is best" },
+        ],
+        correctId: "share-with-each-other",
+        explanation: "Different talents are fun to share.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Ivy writes with her left hand. Dan writes with his right. They both write their names. What is different?",
+        transcript: "Ivy writes with her left hand. Dan writes with his right. They both write their names. What is different?",
+        choices: [
+          { id: "which-hand", label: "✍️", aria: "which hand they use", feedback: "Yes! Ivy uses her left hand and Dan uses his right.", caption: "Which hand" },
+          { id: "writing-names", label: "📝", aria: "writing their names", feedback: "They both write their names, so that is the same.", caption: "Writing names" },
+          { id: "using-a-pencil", label: "✏️", aria: "writing", feedback: "Both of them write, so that is the same.", caption: "Writing" },
+        ],
+        correctId: "which-hand",
+        explanation: "There are many right ways to write.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Tess has a cast on her arm. Ron does not. They both want to play. What could they do?",
+        transcript: "Tess has a cast on her arm. Ron does not. They both want to play. What could they do?",
+        choices: [
+          { id: "pick-a-gentle-game", label: "🎲", aria: "pick a gentle game", feedback: "Yes! A gentle game lets both of them play.", caption: "A gentle game" },
+          { id: "play-rough", label: "🏃", aria: "play a rough game", feedback: "Rough play could hurt Tess. A gentle game is better.", caption: "Play a rough game" },
+          { id: "skip-tess", label: "🙅", aria: "play without Tess", feedback: "That leaves Tess out. Pick a game for both.", caption: "Skip Tess" },
+        ],
+        correctId: "pick-a-gentle-game",
+        explanation: "We can change the game so everyone joins in.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Uma likes loud music. Abe likes quiet music. They share a room. What could they do?",
+        transcript: "Uma likes loud music. Abe likes quiet music. They share a room. What could they do?",
+        choices: [
+          { id: "take-turns", label: "🎧", aria: "take turns", feedback: "Yes! Taking turns is fair to both.", caption: "Take turns" },
+          { id: "play-it-louder", label: "📢", aria: "play the music louder", feedback: "Louder music would bother Abe. Taking turns is fair.", caption: "Play it louder" },
+          { id: "say-turn-it-off", label: "🔇", aria: "say turn it off", feedback: "That is not fair to Uma. Taking turns is better.", caption: "Say turn it off" },
+        ],
+        correctId: "take-turns",
+        explanation: "Taking turns helps two people share a space.",
+      },
     ]
   };
 
@@ -427,5 +573,6 @@
     },
   });
 </script>
+<script src="game-backlink.js?v=1" defer></script>
 </body>
 </html>

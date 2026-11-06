@@ -68,7 +68,8 @@ test('sound-safari: the voice says the sound and the question without slashes, a
 
 test('same-and-different: spoken stories are about 20 words, shuffled answers keep their captions', () => {
   const pack = packOf('same-and-different');
-  assert.equal(pack.items.length, 12);
+  assert.ok(pack.items.length >= 24, 'a pool of at least 24 rounds');
+  assert.ok(pack.roundsPerRun >= 4 && pack.roundsPerRun < pack.items.length);
   pack.items.forEach((it, i) => {
     assert.ok(words(it.stimulusText) <= 26, `round ${i + 1}: ${words(it.stimulusText)} words`);
     assert.equal(it.stimulusText, it.transcript, `round ${i + 1}: the screen-reader text equals the spoken text`);
@@ -78,7 +79,8 @@ test('same-and-different: spoken stories are about 20 words, shuffled answers ke
 
 test('feelings-detective: clues and feelings are short and carry a picture; prompts are Discover wording; the private check-in stays private', () => {
   const pack = packOf('feelings-detective');
-  assert.equal(pack.scenarios.length, 4);
+  assert.ok(pack.scenarios.length >= 12, 'a pool of at least 12 stories');
+  assert.ok(pack.roundsPerRun >= 3 && pack.roundsPerRun < pack.scenarios.length);
   assert.equal(pack.prompts.pick, 'How might they feel? Pick one or more.');
   assert.ok(!/\(s\)/.test(JSON.stringify(pack.prompts)), 'no "(s)" in the prompts');
   const emoji = /\p{Extended_Pictographic}/u;
@@ -102,7 +104,7 @@ test('feelings-detective: clues and feelings are short and carry a picture; prom
 test('ENGINES: the audio engine speaks the story, the answers and every outcome, and Discover has its own words', () => {
   const src = read('engine-audio-choice.js');
   assert.match(src, /item\.choices\.map\(\(c\) => c\.say \|\| c\.caption \|\| c\.aria\)/, 'choices are read aloud');
-  assert.match(src, /if \(item\.stimulusType === 'audio'\) \{[\s\S]*?speak\(message, true, speechRate\)/, 'feedback is always spoken for audio rounds (recorded clips first, the browser voice otherwise)');
+  assert.match(src, /if \(item\.stimulusType === 'audio'\) \{[\s\S]*?V\.say\(pieces, \{ rate: speechRate/, 'feedback is always spoken for audio rounds (recorded clips first, the browser voice otherwise)');
   assert.match(src, /t\('audRight'\)/); assert.match(src, /t\('audMiss'\)/);
   assert.match(src, /hint_requested', \{ index, kind: 'show_words' \}/);
   assert.ok(!/Not quite —/.test(src), 'no hard-coded old outcome line left in the engine');
@@ -112,8 +114,8 @@ test('ENGINES: the audio engine speaks the story, the answers and every outcome,
   assert.equal(sdk.t('audRight', undefined), 'Correct!', 'an unbanded page keeps the old wording');
   const sc = read('engine-scenario-choice.js');
   assert.match(sc, /const voiced = band === 'discover'/);
-  assert.match(sc, /if \(voiced\) speak\(P\.afterCues, true\)/);
-  assert.match(sc, /if \(voiced\) speak\(message, true\)/);
+  assert.match(sc, /if \(voiced\) speak\(P\.afterCues\)/);
+  assert.match(sc, /if \(voiced\) speak\(messageLines\)/);
   assert.match(sc, /kind: 'show_words'/);
   // emoji are stripped before the browser voice sees any text
   assert.match(sc, /Extended_Pictographic/); assert.match(src, /Extended_Pictographic/);
@@ -134,6 +136,6 @@ test('CSS: Discover has caption tiles, readable text rows and a words box; pages
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const html = read(f);
     const tag = /<script[^>]+engine-audio-choice\.js[^>]*>/.exec(html);
-    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=5'), `${f} loads an old audio engine`);
+    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=6'), `${f} loads an old audio engine`);
   }
 });

@@ -26,7 +26,9 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=5"></script>
-<script src="engine-audio-choice.js?v=5"></script>
+<script src="assets/audio/discover/sharing-circle.js?v=e4dd63e0"></script>
+<script src="engine-voice.js?v=1"></script>
+<script src="engine-audio-choice.js?v=6"></script>
 <script>
   // Sharing Circle - Tune Your Brain SEL scaling slice (Discover band).
   // Targets Social awareness and Relationship skills - both had ZERO
@@ -42,50 +44,223 @@
 
   const contentPack = {
     title: 'Sharing Circle',
+    roundsPerRun: 5,
     items: [
       {
         stimulusType: 'audio',
         stimulusText: "A friend lost a toy. They are sad. What is kind?",
         transcript: "A friend lost a toy. They are sad. What is kind?",
         choices: [
-          { id: "comfort", label: "🤗", caption: "Help look", aria: "ask if they are okay and help look" },
-          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away" },
-          { id: "laugh", label: "😂", caption: "Laugh", aria: "laugh" },
+          { id: "help-look", label: "🤗", caption: "Help look", aria: "ask if they are okay and help look", feedback: "You got it!" },
+          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away", feedback: "Try another one." },
+          { id: "laugh", label: "😂", caption: "Laugh", aria: "laugh", feedback: "Try another one." },
         ],
-        correctId: "comfort",
+        correctId: "help-look",
+        explanation: "Helping a sad friend look shows you care.",
       },
       {
         stimulusType: 'audio',
         stimulusText: "A new kid stands alone. Your friends are playing. What is kind?",
         transcript: "A new kid stands alone. Your friends are playing. What is kind?",
         choices: [
-          { id: "invite", label: "🙋", caption: "Invite them", aria: "invite them to play" },
-          { id: "ignore", label: "🙈", caption: "Ignore them", aria: "ignore them" },
-          { id: "whisper", label: "🤫", caption: "Whisper", aria: "point and whisper about them" },
+          { id: "invite-them", label: "🙋", caption: "Invite them", aria: "invite them to play", feedback: "You got it!" },
+          { id: "ignore-them", label: "🙈", caption: "Ignore them", aria: "ignore them", feedback: "Try another one." },
+          { id: "whisper", label: "🤫", caption: "Whisper", aria: "whisper about them", feedback: "Try another one." },
         ],
-        correctId: "invite",
+        correctId: "invite-them",
+        explanation: "Inviting someone in helps them feel they belong.",
       },
       {
         stimulusType: 'audio',
         stimulusText: "Your friend dropped a tray. Kids laugh. What is kind?",
         transcript: "Your friend dropped a tray. Kids laugh. What is kind?",
         choices: [
-          { id: "help", label: "🤝", caption: "Help pick up", aria: "help pick it up" },
-          { id: "laugh-too", label: "😂", caption: "Laugh too", aria: "laugh too" },
-          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away" },
+          { id: "help-pick-up", label: "🤝", caption: "Help pick up", aria: "help pick up the food", feedback: "You got it!" },
+          { id: "laugh-too", label: "😂", caption: "Laugh too", aria: "laugh too", feedback: "Try another one." },
+          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away", feedback: "Try another one." },
         ],
-        correctId: "help",
+        correctId: "help-pick-up",
+        explanation: "Helping is kinder than laughing.",
       },
       {
         stimulusType: 'audio',
         stimulusText: "Your little brother is scared of the storm. What is kind?",
         transcript: "Your little brother is scared of the storm. What is kind?",
         choices: [
-          { id: "comfort", label: "🫂", caption: "Sit with him", aria: "sit with him and comfort him" },
-          { id: "ignore", label: "📵", caption: "Keep playing", aria: "ignore him and keep playing" },
-          { id: "dismiss", label: "😤", caption: "Say \"Stop it\"", aria: "tell him to stop being scared" },
+          { id: "sit-with-him", label: "🫂", caption: "Sit with him", aria: "sit with him", feedback: "You got it!" },
+          { id: "keep-playing", label: "📵", caption: "Keep playing", aria: "keep playing", feedback: "Try another one." },
+          { id: "say-stop-it", label: "😤", caption: "Say \"Stop it\"", aria: "tell him to stop it", feedback: "Try another one." },
         ],
-        correctId: "comfort",
+        correctId: "sit-with-him",
+        explanation: "Staying close helps a scared brother feel safe.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A friend was sick and missed school. What is kind?",
+        transcript: "A friend was sick and missed school. What is kind?",
+        choices: [
+          { id: "make-a-card", label: "💌", caption: "Make a card", aria: "make a get well card", feedback: "You got it!" },
+          { id: "forget-them", label: "🙈", caption: "Forget them", aria: "forget about them", feedback: "Try another one." },
+          { id: "tease-them", label: "😛", caption: "Tease them", aria: "tease them", feedback: "Try another one." },
+        ],
+        correctId: "make-a-card",
+        explanation: "A card shows your friend you were thinking of them.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your friend has no crayons. You have plenty. What is kind?",
+        transcript: "Your friend has no crayons. You have plenty. What is kind?",
+        choices: [
+          { id: "share-some", label: "🖍️", caption: "Share some", aria: "share some crayons", feedback: "You got it!" },
+          { id: "hide-yours", label: "🙈", caption: "Hide yours", aria: "hide your crayons", feedback: "Try another one." },
+          { id: "say-too-bad", label: "😏", caption: "Say too bad", aria: "say too bad", feedback: "Try another one." },
+        ],
+        correctId: "share-some",
+        explanation: "Sharing helps your friend join in.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A kid fell off the swing. They are crying. What is kind?",
+        transcript: "A kid fell off the swing. They are crying. What is kind?",
+        choices: [
+          { id: "get-a-teacher", label: "🙋", caption: "Get a teacher", aria: "get a teacher to help", feedback: "You got it!" },
+          { id: "laugh", label: "😆", caption: "Laugh", aria: "laugh", feedback: "Try another one." },
+          { id: "keep-swinging", label: "🚶", caption: "Keep swinging", aria: "keep swinging", feedback: "Try another one." },
+        ],
+        correctId: "get-a-teacher",
+        explanation: "Getting help is kind when someone is hurt.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "It is your friend's birthday. They look excited. What is kind?",
+        transcript: "It is your friend's birthday. They look excited. What is kind?",
+        choices: [
+          { id: "say-happy-birthday", label: "🎉", caption: "Say happy birthday", aria: "say happy birthday", feedback: "You got it!" },
+          { id: "ignore-them", label: "😒", caption: "Ignore them", aria: "ignore them", feedback: "Try another one." },
+          { id: "say-it-is-boring", label: "😛", caption: "Say it is boring", aria: "say the party is boring", feedback: "Try another one." },
+        ],
+        correctId: "say-happy-birthday",
+        explanation: "Kind words make a special day happier.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A grandma is carrying a heavy bag. What is kind?",
+        transcript: "A grandma is carrying a heavy bag. What is kind?",
+        choices: [
+          { id: "help-carry-it", label: "🛍️", caption: "Help carry it", aria: "help carry the bag", feedback: "You got it!" },
+          { id: "just-watch", label: "👀", caption: "Just watch", aria: "just watch", feedback: "Try another one." },
+          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away", feedback: "Try another one." },
+        ],
+        correctId: "help-carry-it",
+        explanation: "Offering to help makes the load lighter.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A kid brings a lunch you have never seen. They look shy. What is kind?",
+        transcript: "A kid brings a lunch you have never seen. They look shy. What is kind?",
+        choices: [
+          { id: "say-something-nice", label: "😊", caption: "Say something nice", aria: "say something nice about it", feedback: "You got it!" },
+          { id: "say-yuck", label: "🤢", caption: "Say yuck", aria: "say yuck", feedback: "Try another one." },
+          { id: "point-and-laugh", label: "🤭", caption: "Point and laugh", aria: "point and laugh", feedback: "Try another one." },
+        ],
+        correctId: "say-something-nice",
+        explanation: "Kind words help someone feel safe being themselves.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Someone knocked over your friend's puzzle. What is kind?",
+        transcript: "Someone knocked over your friend's puzzle. What is kind?",
+        choices: [
+          { id: "help-rebuild", label: "🧩", caption: "Help rebuild", aria: "help build the puzzle again", feedback: "You got it!" },
+          { id: "laugh", label: "😂", caption: "Laugh", aria: "laugh", feedback: "Try another one." },
+          { id: "run-away", label: "🏃", caption: "Run away", aria: "run away", feedback: "Try another one." },
+        ],
+        correctId: "help-rebuild",
+        explanation: "Helping fix a mess is a kind thing to do.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A new kid does not know where to go. What is kind?",
+        transcript: "A new kid does not know where to go. What is kind?",
+        choices: [
+          { id: "show-them-around", label: "🗺️", caption: "Show them around", aria: "show them where to go", feedback: "You got it!" },
+          { id: "point-and-leave", label: "👉", caption: "Point and leave", aria: "point and walk off", feedback: "Try another one." },
+          { id: "look-away", label: "🙈", caption: "Look away", aria: "look away", feedback: "Try another one." },
+        ],
+        correctId: "show-them-around",
+        explanation: "Showing the way helps a new kid feel welcome.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your friend feels shy about reading out loud. What is kind?",
+        transcript: "Your friend feels shy about reading out loud. What is kind?",
+        choices: [
+          { id: "cheer-them-on", label: "👏", caption: "Cheer them on", aria: "cheer them on", feedback: "You got it!" },
+          { id: "giggle", label: "🤭", caption: "Giggle", aria: "giggle", feedback: "Try another one." },
+          { id: "look-bored", label: "😴", caption: "Look bored", aria: "look bored", feedback: "Try another one." },
+        ],
+        correctId: "cheer-them-on",
+        explanation: "Cheering gives a shy friend courage.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "You have the last cookie. Your friend has none. What is kind?",
+        transcript: "You have the last cookie. Your friend has none. What is kind?",
+        choices: [
+          { id: "break-it-in-half", label: "✂️", caption: "Break it in half", aria: "break it in half to share", feedback: "You got it!" },
+          { id: "eat-it-fast", label: "😋", caption: "Eat it fast", aria: "eat it fast", feedback: "Try another one." },
+          { id: "hide-it", label: "🙈", caption: "Hide it", aria: "hide the cookie", feedback: "Try another one." },
+        ],
+        correctId: "break-it-in-half",
+        explanation: "Sharing a treat makes two people happy.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A kid sits alone at lunch. They look sad. What is kind?",
+        transcript: "A kid sits alone at lunch. They look sad. What is kind?",
+        choices: [
+          { id: "sit-with-them", label: "🪑", caption: "Sit with them", aria: "sit with them", feedback: "You got it!" },
+          { id: "walk-past", label: "🚶", caption: "Walk past", aria: "walk past", feedback: "Try another one." },
+          { id: "whisper-about-them", label: "🤫", caption: "Whisper about them", aria: "whisper about them", feedback: "Try another one." },
+        ],
+        correctId: "sit-with-them",
+        explanation: "Sitting together helps lonely feelings go away.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your friend made a drawing. They look worried. What is kind?",
+        transcript: "Your friend made a drawing. They look worried. What is kind?",
+        choices: [
+          { id: "say-something-nice", label: "🖼️", caption: "Say something nice", aria: "say something nice about it", feedback: "You got it!" },
+          { id: "point-out-mistakes", label: "😬", caption: "Point out mistakes", aria: "point out mistakes", feedback: "Try another one." },
+          { id: "say-it-is-bad", label: "🚫", caption: "Say it is bad", aria: "say it is bad", feedback: "Try another one." },
+        ],
+        correctId: "say-something-nice",
+        explanation: "Kind words help a worried friend feel proud.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "A little kid cannot reach the water fountain. What is kind?",
+        transcript: "A little kid cannot reach the water fountain. What is kind?",
+        choices: [
+          { id: "help-them-reach", label: "⬆️", caption: "Help them reach", aria: "help them reach the water", feedback: "You got it!" },
+          { id: "go-ahead-first", label: "🙈", caption: "Go ahead first", aria: "go ahead of them", feedback: "Try another one." },
+          { id: "walk-away", label: "🚶", caption: "Walk away", aria: "walk away", feedback: "Try another one." },
+        ],
+        correctId: "help-them-reach",
+        explanation: "A little help makes a big difference.",
+      },
+      {
+        stimulusType: 'audio',
+        stimulusText: "Your little cousin wants to hold your toy. What is kind?",
+        transcript: "Your little cousin wants to hold your toy. What is kind?",
+        choices: [
+          { id: "let-them-hold-it", label: "🧸", caption: "Let them hold it", aria: "let them hold it gently", feedback: "You got it!" },
+          { id: "yank-it-away", label: "🙅", caption: "Yank it away", aria: "yank it away", feedback: "Try another one." },
+          { id: "say-mine", label: "😤", caption: "Say mine", aria: "say mine and hide it", feedback: "Try another one." },
+        ],
+        correctId: "let-them-hold-it",
+        explanation: "Sharing with someone little is a kind way to play.",
       },
     ],
   };
@@ -111,5 +286,6 @@
     },
   });
 </script>
+<script src="game-backlink.js?v=1" defer></script>
 </body>
 </html>

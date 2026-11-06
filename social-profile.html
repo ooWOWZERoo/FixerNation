@@ -191,7 +191,7 @@ function avatarHtml(profile) {
 }
 
 function renderOwnProfile(profile, page){
-  const badgesHtml = renderFeaturedBadges(profile.featuredBadges || [], true);
+  const badgesHtml = renderFeaturedBadges(profile.featuredBadges || [], true, profile.badgesAreFeatured);
   page.innerHTML = `
     <div style="margin-bottom:16px;"><a href="social.html" style="font-size:14px;font-weight:700;color:var(--teal-dark);">← Back to Community</a></div>
     <div class="profile-card">
@@ -235,13 +235,15 @@ function renderOwnProfile(profile, page){
     </div>`;
 }
 
-function renderFeaturedBadges(badges, isOwn) {
+function renderFeaturedBadges(badges, isOwn, areFeatured) {
   if (!badges || !badges.length) {
     if (isOwn) {
-      return `<div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;font-style:italic;">No featured badges yet — <a href="brain-badges.html" style="color:var(--teal-dark);font-weight:700;">earn and feature badges</a> in Tune Your Brain.</div>`;
+      return `<div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;font-style:italic;">No badges yet. <a href="brain-games.html" style="color:var(--teal-dark);font-weight:700;">Play a Brain Game</a> to earn your first one.</div>`;
     }
     return '';
   }
+  const note = (isOwn && areFeatured === false)
+    ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">These are your latest badges. To choose which ones show, <a href="brain-badges.html" style="color:var(--teal-dark);font-weight:700;">feature up to 6</a> on your badges page.</div>` : '';
   const chips = badges.map(b => `
     <div style="display:inline-flex;align-items:center;gap:7px;background:var(--cream-soft);border:1px solid rgba(22,79,74,0.12);border-radius:10px;padding:7px 13px;font-size:13px;font-weight:700;color:var(--ink);">
       <span>${b.emoji || '🏅'}</span>
@@ -252,6 +254,7 @@ function renderFeaturedBadges(badges, isOwn) {
     <div style="margin-bottom:16px;">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:8px;">⭐ Brain Game Badges</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">${chips}</div>
+      ${note}
     </div>`;
 }
 
