@@ -20,7 +20,7 @@ const LEGACY = ['memory-match', 'reaction-time', 'simon-sequence', 'stroop-chall
 const slugs = Object.keys(F.GAMES);
 
 test('FOCUS: no game is left out (focus table = game pages = catalog scripts)', () => {
-  assert.equal(slugs.length, 31);
+  assert.equal(slugs.length, 45);
   assert.deepEqual([...slugs].sort(), [...pages].sort(), 'every brain-*.html game page has a focus, and every focus row has a page');
   assert.deepEqual([...slugs].sort(), [...seeded, ...LEGACY].sort(), 'every catalog entry has a focus');
 });
@@ -40,7 +40,7 @@ test('FOCUS: every game has one valid focus, band and domain, and the domain agr
       assert.equal(g.casel, undefined, `${slug} is a skills game and has no competencies`);
     }
   }
-  assert.equal(Object.values(F.GAMES).filter((g) => F.SKILL_FOCUSES.includes(g.focus)).length, 10);
+  assert.equal(Object.values(F.GAMES).filter((g) => F.SKILL_FOCUSES.includes(g.focus)).length, 19);
 });
 
 test('FOCUS: the bands and domains agree with the catalog seed scripts and the page defaults', () => {
@@ -81,10 +81,10 @@ test('FOCUS: the coverage grid counts every game once and leaves pending games o
   const grid = F.coverage();
   let counted = 0, pending = 0;
   for (const b of F.BANDS) for (const f of F.FOCUSES) { counted += grid[b][f].counted.length; pending += grid[b][f].pending.length; }
-  assert.equal(counted + pending, 31);
+  assert.equal(counted + pending, 45);
   assert.equal(pending, 0);
   assert.deepEqual(grid.challenge.thinking.counted.sort(), ['reaction-time', 'stroop-challenge']);
-  assert.deepEqual(grid.explore.math.counted, ['quick-math']);
+  assert.deepEqual(grid.explore.math.counted.sort(), ['quick-math', 'times-table-trail', 'word-problem-workshop']); // plus the two new math games of Release 141
   assert.deepEqual(grid.challenge.math.counted, ['number-sequence']);
   for (const c of F.gaps()) assert.ok(c.missing >= 1 && c.missing <= F.MIN_PER_CELL && c.have + c.missing === F.MIN_PER_CELL);
 });
@@ -132,10 +132,10 @@ test('FOCUS: the seed script logic sets every game, changes nothing on a second 
   for (const slug of slugs) rows[slug] = { focus: null, domain: slug === 'number-sequence' ? 'executive' : F.GAMES[slug].domain, band: slug === 'quick-math' ? 'challenge' : F.GAMES[slug].band, casel_competencies: null };
   rows['hand-added-game'] = { focus: null, domain: 'sel', band: 'explore' };
   const first = await F.applyFocus(fakeDb(rows));
-  assert.equal(first.focus.length, 31);
+  assert.equal(first.focus.length, 45);
   assert.deepEqual(first.domain, ['number-sequence']);
   assert.deepEqual(first.band, ['quick-math']);
-  assert.equal(first.casel.length, 21);
+  assert.equal(first.casel.length, 26);
   assert.deepEqual(first.noFocus, ['hand-added-game'], 'a game added by hand with no focus is reported');
   assert.equal(rows['the-post'].casel_competencies, 'social_awareness,relationship_skills,responsible_decision_making');
   delete rows['hand-added-game'];

@@ -136,6 +136,6 @@ test('CSS: Discover has caption tiles, readable text rows and a words box; pages
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const html = read(f);
     const tag = /<script[^>]+engine-audio-choice\.js[^>]*>/.exec(html);
-    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=6'), `${f} loads an old audio engine`);
+    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=7'), `${f} loads an old audio engine`);
   }
 });

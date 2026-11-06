@@ -29,8 +29,10 @@ function renderer() {
   function render({ text, rate, minSeconds }, dest) {
     const id = `c${n++}`;
     const aiff = path.join(tmp, `${id}.aiff`);
-    const r = spawnSync('say', ['-v', VOICE, '-r', String(rate), '-o', aiff, text], { encoding: 'utf8' });
-    if (r.status !== 0) throw new Error(`say failed for "${text}": ${r.stderr}`);
+    // `say` can hang on a line now and then (seen once on "chair"); give it 40 seconds and one more try rather than stalling the whole build.
+    let r = spawnSync('say', ['-v', VOICE, '-r', String(rate), '-o', aiff, text], { encoding: 'utf8', timeout: 40000 });
+    if (r.status !== 0) r = spawnSync('say', ['-v', VOICE, '-r', String(rate), '-o', aiff, text], { encoding: 'utf8', timeout: 40000 });
+    if (r.status !== 0) throw new Error(`say failed for "${text}": ${r.stderr || r.error}`);
     // An isolated sound that is still short is slowed down (pitch kept) until it is long enough to hear.
     let tempo = 1;
     if (minSeconds) tempo = Math.max(0.5, Math.min(1, seconds(aiff) / minSeconds));

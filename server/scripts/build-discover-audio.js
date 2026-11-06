@@ -25,8 +25,15 @@ const GAMES = [
   { slug: 'helpers-choice', engine: 'audioChoice' },
   { slug: 'same-and-different', engine: 'audioChoice' },
   { slug: 'feelings-detective', engine: 'scenarioChoice' },
+  // Release 141
+  { slug: 'rhyme-time', engine: 'audioChoice' },
+  { slug: 'letter-sounds', engine: 'audioChoice' },
+  { slug: 'more-or-fewer', engine: 'audioChoice' },
+  { slug: 'add-it-up', engine: 'audioChoice' },
+  { slug: 'pattern-parade', engine: 'audioChoice' },
+  { slug: 'my-feelings-today', engine: 'scenarioChoice' },
 ];
-const ENGINE_VERSIONS = { 'engine-audio-choice.js': 6, 'engine-scenario-choice.js': 9, 'engine-voice.js': 1 };
+const ENGINE_VERSIONS = { 'engine-audio-choice.js': 7, 'engine-scenario-choice.js': 9, 'engine-voice.js': 1 };
 const RATE = '135';       // say -r: slower than the how-to videos (165), natural for kindergarten to 2nd grade
 const SHORT_RATE = '120'; // one or two words (picture names, feelings)
 
@@ -57,8 +64,8 @@ function linesFor(game, pack) {
     }
     if (pack.selfCheck) addCheck(pack.selfCheck);
     // Release 139: the "Your turn" finale speaks its intro, every prompt, every answer and every line a card can say (cards with no {token} in them).
-    if (pack.ownTurn) {
-      const ot = pack.ownTurn;
+    // A pack can hold several versions of its finale (variants), each with its own intro and first prompt.
+    for (const ot of [pack.ownTurn].concat((pack.variants || []).map((v) => v.ownTurn)).filter(Boolean)) {
       add(ot.intro);
       for (const st of ot.steps || []) {
         add(st.prompt); add(st.promptIfNone);

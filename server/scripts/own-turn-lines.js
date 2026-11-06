@@ -7,9 +7,12 @@ const fs = require('fs');
 const path = require('path');
 const { extractPack, ROOT } = require('./audit-brain-games.js');
 
-const SLUGS = ['feelings-detective', 'strength-spotter', 'values-compass'];
-const SENTENCE_LIMIT = { 'feelings-detective': 9, 'strength-spotter': 12, 'values-compass': 20 };
-const OPTION_LIMIT = { 'feelings-detective': 4, 'strength-spotter': 12, 'values-compass': 14 };
+const SLUGS = ['feelings-detective', 'strength-spotter', 'values-compass', 'my-feelings-today', 'what-helps-me', 'know-your-triggers', 'know-yourself', 'stress-signals'];
+// Sentence and option limits by band: Discover 9 and 4, Explore 12 and 12, Challenge and Advance 20 and 14.
+const BAND_OF = { 'feelings-detective': 'discover', 'my-feelings-today': 'discover', 'strength-spotter': 'explore', 'what-helps-me': 'explore', 'values-compass': 'challenge', 'know-your-triggers': 'challenge', 'know-yourself': 'advance', 'stress-signals': 'advance' };
+const LIMITS = { discover: [9, 4], explore: [12, 12], challenge: [20, 14], advance: [20, 14] };
+const SENTENCE_LIMIT = new Proxy({}, { get: (_, slug) => LIMITS[BAND_OF[slug]][0] });
+const OPTION_LIMIT = new Proxy({}, { get: (_, slug) => LIMITS[BAND_OF[slug]][1] });
 const HARD = /\b(constructive|overwhelmed|perspective|affects?|reactions?|assume[sd]?|appropriate|situation|consequences?)\b/i;
 const SOOTHING = /\b(completely normal|that is normal|that's normal|totally normal|perfectly normal)\b/i;
 const PRAISE = /^(good (catch|noticing|thinking|job)|great|nice (work|job|read)|well done|exactly|right[.,!])/i;
@@ -21,9 +24,10 @@ const sentences = (s) => String(s).split(/(?<=[.!?]["”’]?)\s+/).filter(Boole
 function strings(pack) {
   const out = [];
   const add = (where, text, kind) => { if (typeof text === 'string' && text) out.push({ where, text, kind: kind || 'line' }); };
-  const ot = pack.ownTurn;
+  const finales = [pack.ownTurn].concat((pack.variants || []).map((v) => v.ownTurn)).filter(Boolean);
+  if (pack.selfCheck) { add('check prompt', pack.selfCheck.prompt); pack.selfCheck.options.forEach((o) => add('check option', o.text, 'option')); }
+  finales.forEach((ot) => {
   add('intro', ot.intro); add('privateNote', ot.privateNote, 'note'); add('summaryLabel', ot.summaryLabel, 'note');
-  add('check prompt', pack.selfCheck.prompt); pack.selfCheck.options.forEach((o) => add('check option', o.text, 'option'));
   ot.steps.forEach((st) => {
     add(`${st.id} prompt`, st.prompt); add(`${st.id} promptIfNone`, st.promptIfNone); add(`${st.id} confirm`, st.confirm, 'option');
     (st.options || []).forEach((o) => { add(`${st.id} option`, o.text, 'option'); add(`${st.id} card`, o.card, 'card'); });
@@ -40,6 +44,7 @@ function strings(pack) {
   });
   const res = ot.result;
   add('heading', res.heading, 'note'); res.lines.forEach((l, i) => add(`card line ${i + 1}`, l.text, 'card')); add('emptyLine', res.emptyLine); add('closing', res.closing); add('finish', res.finish, 'option');
+  });
   return out;
 }
 
@@ -56,12 +61,12 @@ function check(slug) {
     if (s.kind === 'option' && words(s.text) > OPTION_LIMIT[slug]) flag(s.where, `option of ${words(s.text)} words`, s.text);
     if (/\{[^}]*\}/.test(s.text)) {
       // Tokens must name a step in this pack.
-      const ids = new Set(pack.ownTurn.steps.map((st) => st.id).concat(['item'])); // {item} is each pick of a line marked each
+      const ids = new Set([pack.ownTurn].concat((pack.variants || []).map((v) => v.ownTurn)).filter(Boolean)[0].steps.map((st) => st.id).concat(['item'])); // {item} is each pick of a line marked each
       (s.text.match(/\{([a-zA-Z0-9_]+)/g) || []).forEach((t) => { if (!ids.has(t.slice(1))) flag(s.where, `unknown token ${t}`, s.text); });
     }
   }
   // The growth steps for one strength are close in length, so length gives nothing away.
-  const by = pack.ownTurn.steps.find((st) => st.optionsBy);
+  const by = (pack.ownTurn || { steps: [] }).steps.find((st) => st.optionsBy);
   if (by) Object.entries(by.optionsBy.map).concat([['fallback', by.optionsBy.fallback]]).forEach(([k, list]) => {
     const w = list.map((o) => words(o.text));
     if (Math.max(...w) > 1.6 * Math.min(...w)) flag(`${k} steps`, `lengths ${w.join('/')} are not balanced`, list.map((o) => o.text).join(' | '));

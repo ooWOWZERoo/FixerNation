@@ -27,6 +27,20 @@ const DESCRIPTIONS = {
   'team-pick': 'Work through being picked last for a team: what you feel, what could happen and what to do.',
   'the-post': 'A rumor is spreading. Decide what you would share and what you would report.',
   'values-compass': 'Notice what someone does, name the values behind it, then think about your own.',
+  'rhyme-time': 'Listen to a word, then find the picture that rhymes with it.',
+  'letter-sounds': 'Listen to a word, then find the letter it starts with.',
+  'more-or-fewer': 'Look at two groups, then pick the one with more or fewer.',
+  'add-it-up': 'Listen to a number story, then pick how many there are.',
+  'pattern-parade': 'Look at a pattern, then pick what comes next.',
+  'animal-match': 'Flip cards to find the animals that match.',
+  'my-feelings-today': 'Say how you feel, where you feel it and what helps. Only you see it.',
+  'word-clues': 'Find what a new word means, then show the clue that proves it.',
+  'times-table-trail': 'Practice multiplication and division facts with no clock.',
+  'word-problem-workshop': 'Read a word problem, pick the number sentence, then find the key sentence.',
+  'what-helps-me': 'Pick what helps you learn and focus, then try one idea. Only you see it.',
+  'know-your-triggers': 'Name what raises your stress and how you notice it first. Only you see it.',
+  'know-yourself': 'Rank what matters to you, face a tradeoff and see where you lean. Only you see it.',
+  'stress-signals': 'Find the signs that stress is building for you and one way to check in sooner. Only you see it.',
 };
 
 // The six older games had no band (they showed under every filter). They now sit in the band whose tone fits them.

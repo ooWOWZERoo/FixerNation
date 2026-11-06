@@ -13,6 +13,7 @@
 //     stimulusColor: '#3b82f6',         // optional — e.g. Stroop's ink color
 //     stimulusAudioUrl: null,           // optional real audio file
 //     transcript: 'the word red in blue ink',  // required for 'audio' items — screen-reader/no-audio equivalent
+//     visual?: '🐱',                    // optional, 'audio' items: shown instead of the speaker picture (a rhyme target, a pattern to continue)
 //     choices: [{ id, label, feedback? }],   // feedback: optional, shown when THIS choice is picked
 //     correctId,
 //     explanation?,                           // optional, shown after any answer
@@ -112,7 +113,8 @@
       onEvidence('item_presented', { index, stimulusType: item.stimulusType });
 
       if (item.stimulusType === 'audio') {
-        stimulusBox.innerHTML = `<span class="sr-only">${wordsFor(item)}</span><span aria-hidden="true">🔊</span>`;
+        // item.visual (Release 141): a picture or pattern shown with the sound, for rounds that need something to look at (a rhyme target, a pattern to continue).
+        stimulusBox.innerHTML = `<span class="sr-only">${wordsFor(item)}</span><span aria-hidden="true">${item.visual ? String(item.visual).replace(/&/g, '&amp;').replace(/</g, '&lt;') : '🔊'}</span>`;
         replayRow.innerHTML = '';
         wordsBox.hidden = true; wordsBox.textContent = '';
         const replayBtn = document.createElement('button');

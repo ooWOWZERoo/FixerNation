@@ -116,9 +116,11 @@
     const feedbackHolder = document.createElement('div');
 
     container.append(progressHolder, contextBox, replayRow, promptBox, choiceHolder, confirmRow, feedbackHolder);
-    renderScenario();
+    if (scenarios.length) renderScenario();
 
     let selfNarration = [], selfChecks = 0, ownTurnDone = false, ownTurnAnswered = 0;
+    // A game with no stories at all (a pure "Your turn" check-in, Release 141) goes straight to its finale.
+    if (!scenarios.length && contentPack.ownTurn) { ownTurnDone = true; renderOwnTurn(); }
 
     // The lines of the current narration, one per spoken line.
     function narrationFor(scenario) {
@@ -614,11 +616,11 @@
         ownTurnDone = true;
         renderOwnTurn();
       } else if (index >= scenarios.length) {
-        onComplete([
+        onComplete((scenarios.length ? [
           { value: scenarios.length, label: t('scLabelScenarios') },
           { value: cuesNoticedTotal, label: t('scLabelCues') },
           { value: multiFeelingCount, label: P.multiLabel },
-        ].concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : [])
+        ] : []).concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : [])
           .concat(contentPack.ownTurn ? [{ value: ownTurnAnswered, label: contentPack.ownTurn.summaryLabel || 'Questions you answered about yourself' }] : []));
       } else {
         renderScenario();

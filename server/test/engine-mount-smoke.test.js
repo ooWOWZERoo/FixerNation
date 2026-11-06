@@ -32,7 +32,7 @@ function fake() {
   return proxy;
 }
 
-const ENGINE_FILES = ['engine-audio-choice.js', 'engine-evidence-hunt.js', 'engine-scenario-choice.js', 'engine-branching-scenario.js', 'engine-simulation.js'];
+const ENGINE_FILES = ['engine-audio-choice.js', 'engine-evidence-hunt.js', 'engine-scenario-choice.js', 'engine-branching-scenario.js', 'engine-simulation.js', 'engine-memory.js'];
 const engines = {};
 const shell = new Proxy({}, { get: () => () => fake() });
 for (const file of ENGINE_FILES) {
@@ -56,8 +56,8 @@ const games = auditAll().filter((r) => r.engine !== 'legacy' && !r.note).map((r)
   };
 }).filter((g) => g.pack && g.engineName);
 
-test('SMOKE: all five engines registered', () => {
-  assert.deepEqual(Object.keys(engines).sort(), ['audioChoice', 'branchingScenario', 'evidenceHunt', 'scenarioChoice', 'simulation']);
+test('SMOKE: all six engines registered', () => {
+  assert.deepEqual(Object.keys(engines).sort(), ['audioChoice', 'branchingScenario', 'evidenceHunt', 'memory', 'scenarioChoice', 'simulation']);
 });
 
 for (const g of games) {

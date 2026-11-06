@@ -61,7 +61,7 @@ test('every clip the page names exists, and every round plays the voice instead 
 test('the slow fallback voice and the pacing gap are set, and the page loads the newer engine', () => {
   assert.ok(pack.speechRate > 0 && pack.speechRate <= 0.9, 'browser-voice fallback is a little slower than normal');
   assert.ok(pack.audioGapMs >= 250 && pack.audioGapMs <= 600);
-  assert.match(page, /engine-audio-choice\.js\?v=6/);
+  assert.match(page, /engine-audio-choice\.js\?v=7/);
   const engine = fs.readFileSync(path.join(ROOT, 'engine-audio-choice.js'), 'utf8');
   assert.match(engine, /V\.playUrls/);
   assert.match(engine, /speechRate/);

@@ -58,9 +58,9 @@ test('LEGACY GAMES: plain result lines, no dashes in their text, and "End game" 
   assert.ok(!/word says —|— not what the word reads/.test(stroop));
 });
 
-test('CATALOG COPY: plain descriptions for all 25 games, nothing internal, nothing dashed', () => {
+test('CATALOG COPY: plain descriptions for all 39 games, nothing internal, nothing dashed', () => {
   const entries = Object.entries(copy.DESCRIPTIONS);
-  assert.equal(entries.length, 25);
+  assert.equal(entries.length, 39);
   entries.forEach(([slug, d]) => {
     assert.ok(d.length >= 40 && d.length <= 120, `${slug}: ${d.length} characters`);
     assert.ok(!/Tune Your Brain|Phase 5|pilot|experience|Issues-to-Answers/i.test(d), `${slug}: internal wording`);
@@ -97,7 +97,7 @@ test('CATALOG COPY: applyCopy updates only listed games, sets legacy bands, and 
   for (const slug of Object.keys(copy.LEGACY_BANDS)) rows[slug] = { description: 'Legacy text kept as is', band: null };
   rows['some-other-game'] = { description: 'Untouched', band: 'advance' };
   const first = await copy.applyCopy(fakeDb(rows));
-  assert.equal(first.descriptions.length, 25);
+  assert.equal(first.descriptions.length, 39);
   assert.deepEqual(first.bands.sort(), Object.keys(copy.LEGACY_BANDS).sort());
   assert.equal(rows['memory-match'].band, 'explore'); assert.equal(rows['quick-math'].band, 'explore');
   assert.equal(rows['memory-match'].description, 'Legacy text kept as is', 'legacy descriptions are not rewritten');
@@ -109,7 +109,7 @@ test('CATALOG COPY: applyCopy updates only listed games, sets legacy bands, and 
 
 test('CATALOG COPY: a missing row is reported, not an error', async () => {
   const out = await copy.applyCopy(fakeDb({}));
-  assert.equal(out.missing.length, 25 + 6);
+  assert.equal(out.missing.length, 39 + 6);
 });
 
 test('GAMES PAGE: cards and tags carry the band class, and the tag colors pass contrast', () => {

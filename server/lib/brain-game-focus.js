@@ -67,6 +67,21 @@ const GAMES = {
   'the-post':            { band: 'advance', focus: 'responsible_decision_making', domain: 'sel', casel: ['social_awareness', 'relationship_skills', 'responsible_decision_making'] },
   'idea-lab':            { band: 'advance', focus: 'responsible_decision_making', domain: 'sel', casel: ['responsible_decision_making'] },
   'critical-read':       { band: 'advance', focus: 'literacy', domain: 'literacy' },
+  // Release 141: core skills for the younger bands, and a second Self-Awareness game in every band
+  'rhyme-time':          { band: 'discover', focus: 'literacy', domain: 'literacy' },
+  'letter-sounds':       { band: 'discover', focus: 'literacy', domain: 'literacy' },
+  'more-or-fewer':       { band: 'discover', focus: 'math', domain: 'math' },
+  'add-it-up':           { band: 'discover', focus: 'math', domain: 'math' },
+  'pattern-parade':      { band: 'discover', focus: 'thinking', domain: 'executive' },
+  'animal-match':        { band: 'discover', focus: 'thinking', domain: 'executive' },
+  'my-feelings-today':   { band: 'discover', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'] },
+  'word-clues':          { band: 'explore', focus: 'literacy', domain: 'literacy' },
+  'times-table-trail':   { band: 'explore', focus: 'math', domain: 'math' },
+  'word-problem-workshop': { band: 'explore', focus: 'math', domain: 'math' },
+  'what-helps-me':       { band: 'explore', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'] },
+  'know-your-triggers':  { band: 'challenge', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness', 'self_management'] },
+  'know-yourself':       { band: 'advance', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'] },
+  'stress-signals':      { band: 'advance', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness', 'self_management'] },
 };
 
 const BANDS = ['discover', 'explore', 'challenge', 'advance'];
