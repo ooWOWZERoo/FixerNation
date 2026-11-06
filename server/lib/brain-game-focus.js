@@ -93,6 +93,19 @@ const GAMES = {
   'walk-in-their-shoes': { band: 'challenge', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
   'repair-it':           { band: 'advance', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills'] },
   'many-voices':         { band: 'advance', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
+  // Release 144: the last games to bring every band x focus up to two
+  'wait-for-it':         { band: 'discover', focus: 'self_management', domain: 'sel', casel: ['self_management'] },
+  'stop-and-think':      { band: 'discover', focus: 'responsible_decision_making', domain: 'sel', casel: ['responsible_decision_making'] },
+  'stuck-on-it':         { band: 'explore', focus: 'self_management', domain: 'sel', casel: ['self_management'] },
+  'peer-pressure-pause': { band: 'challenge', focus: 'responsible_decision_making', domain: 'sel', casel: ['responsible_decision_making'] },
+  'tone-detective':      { band: 'challenge', focus: 'literacy', domain: 'literacy' },
+  'ratio-shop':          { band: 'challenge', focus: 'math', domain: 'math' },
+  'deadline-crunch':     { band: 'advance', focus: 'self_management', domain: 'sel', casel: ['self_management', 'responsible_decision_making'] },
+  'argument-check':      { band: 'advance', focus: 'literacy', domain: 'literacy' },
+  'graph-match':         { band: 'advance', focus: 'math', domain: 'math' },
+  'stats-check':         { band: 'advance', focus: 'math', domain: 'math' },
+  'plan-it':             { band: 'advance', focus: 'thinking', domain: 'executive' },
+  'switch-board':        { band: 'advance', focus: 'thinking', domain: 'executive' },
 };
 
 const BANDS = ['discover', 'explore', 'challenge', 'advance'];

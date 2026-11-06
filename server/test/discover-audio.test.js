@@ -10,7 +10,7 @@ const { extractPack, ROOT } = require('../scripts/audit-brain-games.js');
 const { games, clips } = plan();
 
 test('every line a Discover game can speak has a recorded clip, and no clip is left over', () => {
-  assert.equal(games.length, 13); // the original five, six from Release 141 and two from Release 143
+  assert.equal(games.length, 15); // the original five, six from Release 141, two from 143 and two from 144
   clips.forEach((text, file) => assert.ok(fs.existsSync(path.join(OUT, file)) && fs.statSync(path.join(OUT, file)).size > 1500, `no clip for "${text}"`));
   const onDisk = fs.readdirSync(OUT).filter((f) => f.endsWith('.mp3'));
   assert.equal(onDisk.length, clips.size, 'stray clips: run node scripts/build-discover-audio.js --audio');
@@ -29,7 +29,7 @@ test('each game page loads its manifest, then the shared voice, then its engine;
 });
 
 test('the games have real variety: bigger pools, a short run drawn from them', () => {
-  const need = { 'calm-down-corner': 16, 'sharing-circle': 16, 'helpers-choice': 16, 'same-and-different': 24, 'feelings-detective': 12, 'rhyme-time': 16, 'letter-sounds': 12, 'more-or-fewer': 14, 'add-it-up': 16, 'pattern-parade': 14, 'asking-nicely': 12, 'team-tower': 12 };
+  const need = { 'calm-down-corner': 16, 'sharing-circle': 16, 'helpers-choice': 16, 'same-and-different': 24, 'feelings-detective': 12, 'rhyme-time': 16, 'letter-sounds': 12, 'more-or-fewer': 14, 'add-it-up': 16, 'pattern-parade': 14, 'asking-nicely': 12, 'team-tower': 12, 'wait-for-it': 12, 'stop-and-think': 12 };
   games.forEach((g) => {
     const pack = extractPack(fs.readFileSync(g.page, 'utf8'));
     if (g.slug === 'my-feelings-today') return; // a check-in about the child: no stories, three openings instead (new-games.test.js)

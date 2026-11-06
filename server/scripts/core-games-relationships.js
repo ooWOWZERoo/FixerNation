@@ -194,4 +194,4 @@ const REL = [
   { slug: 'many-voices', name: 'Many Voices', icon: '📣', skill: 'Bias and Perspective', band: 'advance', domain: 'sel', focus: 'social_awareness', casel: ['social_awareness'], engine: 'evidenceHunt', activity: 'many-voices-perspective', blurb: 'Read a real situation, spot whose voice is missing, then find the sentence that shows it.', desc: 'Read a real situation, spot whose voice is missing, then find the sentence that shows it.', pack: { title: 'Many Voices', roundsPerRun: 5, items: manyVoices() } },
 ].map((g) => Object.assign({ release: 143 }, g));
 
-module.exports = { REL };
+module.exports = { REL, round, spread, hunt, RIGHT, MISS };

@@ -51,6 +51,18 @@ const DESCRIPTIONS = {
   'walk-in-their-shoes': 'Read both sides of a disagreement, then work out why each person sees it that way.',
   'repair-it': 'Read what went wrong, then pick the message that owns it and repairs trust.',
   'many-voices': 'Read a real situation, spot whose voice is missing, then find the sentence that shows it.',
+  'wait-for-it': 'Listen to a waiting problem, then pick what helps you wait.',
+  'stop-and-think': 'Listen to a problem, stop and think, then pick the safe choice.',
+  'stuck-on-it': 'Read about someone who is stuck, then pick what helps and find the proof.',
+  'peer-pressure-pause': 'Read a pressure situation, pick the best choice, then find the risk that proves it.',
+  'tone-detective': 'Read a short passage, name the tone the author uses, then find the line that shows it.',
+  'ratio-shop': 'Compare prices, find sale prices and scale recipes with ratios and percents.',
+  'deadline-crunch': 'Read a deadline problem, pick the plan that holds up, then find the proof.',
+  'argument-check': 'Read a short argument, spot the flaw in its reasoning, then find the weak step.',
+  'graph-match': 'Match a real-life story to the shape of its graph.',
+  'stats-check': 'Find the median, mean, mode and range, and spot a misleading chart or survey.',
+  'plan-it': 'Read jobs and deadlines, pick the order that finishes everything on time, then find the key deadline.',
+  'switch-board': 'Follow a rule that keeps changing, and work out each answer with no clock.',
 };
 
 // The six older games had no band (they showed under every filter). They now sit in the band whose tone fits them.

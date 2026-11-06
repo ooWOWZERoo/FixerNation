@@ -21,8 +21,8 @@ const sentences = (s) => String(s).split(/(?<=[.!?]["”’]?)\s+/).filter(Boole
 const NW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 const DASH = /[—–]|\s-\s/;
 
-test('NEW GAMES: 24 games (14 in Release 141, 10 in Release 143), and every page and catalog script matches its specification', () => {
-  assert.equal(GAMES.length, 24);
+test('NEW GAMES: 36 games (14 in Release 141, 10 in 143, 12 in 144), and every page and catalog script matches its specification', () => {
+  assert.equal(GAMES.length, 36);
   for (const g of GAMES) {
     const onDisk = read(`brain-${g.slug}.html`).replace(/\?v=[0-9a-f]{8}/, '?v=00000000');
     assert.equal(onDisk, page(g), `${g.slug}: the page has drifted from build-core-games.js (run it again)`);
@@ -52,7 +52,7 @@ test('NEW GAMES: the coverage grid now has at least two games in every cell the 
 
 test('NEW GAMES: the spoken Discover games are in the clip builder, and every line they say has a recorded clip', () => {
   const spoken = GAMES.filter((g) => g.band === 'discover' && g.engine !== 'memory').map((g) => g.slug);
-  assert.deepEqual(spoken.sort(), ['add-it-up', 'asking-nicely', 'letter-sounds', 'more-or-fewer', 'my-feelings-today', 'pattern-parade', 'rhyme-time', 'team-tower']);
+  assert.deepEqual(spoken.sort(), ['add-it-up', 'asking-nicely', 'letter-sounds', 'more-or-fewer', 'my-feelings-today', 'pattern-parade', 'rhyme-time', 'stop-and-think', 'team-tower', 'wait-for-it']);
   const { games } = audio.plan();
   for (const slug of spoken) {
     const game = games.find((g) => g.slug === slug);

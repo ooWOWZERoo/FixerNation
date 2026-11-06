@@ -297,6 +297,7 @@ const GAMES = [
 ];
 
 GAMES.push(...require('./core-games-relationships').REL);
+GAMES.push(...require('./core-games-last-group').LAST);
 
 const ENGINE_SCRIPTS = {
   audioChoice: ['engine-audio-choice.js?v=7'],
