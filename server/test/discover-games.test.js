@@ -102,7 +102,7 @@ test('feelings-detective: clues and feelings are short and carry a picture; prom
 test('ENGINES: the audio engine speaks the story, the answers and every outcome, and Discover has its own words', () => {
   const src = read('engine-audio-choice.js');
   assert.match(src, /item\.choices\.map\(\(c\) => c\.say \|\| c\.caption \|\| c\.aria\)/, 'choices are read aloud');
-  assert.match(src, /if \(item\.stimulusType === 'audio'\) speak\(message, true\)/, 'feedback is always spoken for audio rounds');
+  assert.match(src, /if \(item\.stimulusType === 'audio'\) \{[\s\S]*?speak\(message, true, speechRate\)/, 'feedback is always spoken for audio rounds (recorded clips first, the browser voice otherwise)');
   assert.match(src, /t\('audRight'\)/); assert.match(src, /t\('audMiss'\)/);
   assert.match(src, /hint_requested', \{ index, kind: 'show_words' \}/);
   assert.ok(!/Not quite —/.test(src), 'no hard-coded old outcome line left in the engine');
@@ -134,6 +134,6 @@ test('CSS: Discover has caption tiles, readable text rows and a words box; pages
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const html = read(f);
     const tag = /<script[^>]+engine-audio-choice\.js[^>]*>/.exec(html);
-    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=4'), `${f} loads an old audio engine`);
+    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=5'), `${f} loads an old audio engine`);
   }
 });
