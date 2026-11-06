@@ -113,8 +113,11 @@
             '<li><a href="school-admin-login.html">School Admin</a></li>' +
             '<li><a href="district-admin-login.html">District Admin</a></li>' +
           '</ul>' +
-          '<h4 class="fn-fh2">Privacy &amp; Help</h4>' +
+          '<h4 class="fn-fh2">Legal, Privacy &amp; Help</h4>' +
           '<ul>' +
+            '<li><a href="terms.html">Terms of Use</a></li>' +
+            '<li><a href="privacy-policy.html">Privacy Policy</a></li>' +
+            '<li><a href="refund-policy.html">Refunds &amp; Cancellations</a></li>' +
             '<li><a href="student-data-privacy.html">Student Data Privacy</a></li>' +
             '<li><a href="parents-bill-of-rights.html">Parents\' Bill of Rights</a></li>' +
             '<li><a href="privacy-choices.html">Privacy Choices</a></li>' +
@@ -128,6 +131,10 @@
       '</div>' +
       '<div class="fn-fb">' +
         '&copy; 2026 Fixer Nation Issues and Answers. All Rights Reserved.' +
+        ' &nbsp;&middot;&nbsp; ' +
+        '<a href="terms.html" style="color:inherit;">Terms</a>' +
+        ' &nbsp;&middot;&nbsp; ' +
+        '<a href="privacy-policy.html" style="color:inherit;">Privacy Policy</a>' +
         ' &nbsp;&middot;&nbsp; ' +
         '<a href="privacy-choices.html" style="color:inherit;">Your Privacy Choices</a>' +
       '</div>' +

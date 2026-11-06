@@ -12,9 +12,17 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 
 ## Unreleased / Known pending work
 
+- **Help center and support loose ends** are tracked in `docs/BACKLOG.md` (student data retention decision, office-hours details, 18 draft answers to review, publishing the Get help videos, re-recording two portal tours, hiding the Convert to Annual Access button after a trial ends, role-aware quick answers).
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded, pushed, and — as of 2026-08-22 — confirmed configured and working end-to-end in Stripe's **test mode** (real e2e coverage, cart → Stripe Checkout → test card → webhook → paid/active license). **Still not live for real customer charges** — that requires swapping in the admin's real/live Stripe keys in place of the test ones. Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
+
+## Release 126 — 2026-11-06 — Terms, Privacy Policy, Refunds and Affiliate terms (drafts for owner review)
+
+- **Four new public pages** so that every place that points at a legal document has one behind it: Terms of Use (`terms.html`), Privacy Policy (`privacy-policy.html`), Refunds and cancellations (`refund-policy.html`) and Affiliate program terms (`affiliate-terms.html`). They say only what the site and the Help center already say (for example, refunds are decided case by case; licenses do not renew on their own).
+- **Linked from where people decide:** the footer on every page (new Terms, Privacy Policy and Refunds links, plus Terms and Privacy Policy in the bottom line), the cart, quote acceptance, the Buy Now card on the licenses page, the pricing page, the account sign-up box (25 pages), the newsletter box, the contact form and the affiliate application.
+- **Needs the owner's and a lawyer's eyes before it is relied on.** The wording is plain-language drafting, not legal advice. Open questions are in `docs/BACKLOG.md` (governing law, liability cap, the legal name, payout terms).
+- No server or database change. `footer.js` is v15 on every page.
 
 ## Release 125 — 2026-11-05 — Help center: pricing, refunds, hours, devices and more (answers from the owner)
 
