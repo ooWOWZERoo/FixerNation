@@ -287,10 +287,7 @@ table.data-table tr:hover td{background:#fafaf9;}
     </div>
     <div class="field"><label>Subject</label><input id="ecSubject" placeholder="e.g. Social-Emotional Learning"></div>
     <div class="field"><label>Academic Year</label>
-      <select id="ecYear">
-        <option value="">— Select year —</option>
-        <option>2024–2025</option><option>2025–2026</option><option>2026–2027</option><option>2027–2028</option>
-      </select>
+      <select id="ecYear"></select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('editClassroomModal')">Cancel</button>
@@ -307,6 +304,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 <script src="nav.js?v=20"></script>
 <script src="site-auth.js?v=11"></script>
 <script src="school-branding.js?v=1"></script>
+<script src="school-years.js?v=1"></script>
 <script>
 fnRequireSiteAuth();
 
@@ -868,7 +866,7 @@ function openEditClassroom() {
   document.getElementById('ecName').value = classroom.name || '';
   document.getElementById('ecGrade').value = classroom.grade_level || '';
   document.getElementById('ecSubject').value = classroom.subject || '';
-  document.getElementById('ecYear').value = classroom.academic_year || '';
+  FnSchoolYears.fill(document.getElementById('ecYear'), classroom.academic_year);
   document.getElementById('editClassroomModal').classList.add('open');
 }
 

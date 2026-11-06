@@ -17,6 +17,12 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 133 — 2026-11-06 — Classroom Academic Year list goes from now to graduation
+
+- **The Academic Year choices were a fixed list** (2024–2025 to 2027–2028) on the Create Classroom and Edit Classroom boxes, so it already offered two past years and ran out in a year. The list now starts at the school year we are in (2026–2027) and runs 13 school years, to 2038–2039, so a child starting kindergarten now can be followed through grade 12. It moves forward by itself each August (a school year runs August to July), so nobody has to edit it again. New shared `school-years.js`.
+- **An older year on an existing classroom is kept.** If a classroom already has a year no longer in the list (for example 2025–2026), Edit Classroom still shows it, so saving the classroom does not blank it.
+- Static change only. No server or database change.
+
 ## Release 132 — 2026-11-06 — Sound Safari: no more sounds said three times
 
 - **Found why "lll" was said three times.** The voice reads a spelled triple like "lll" as three letter names ("el el el"). The clip lengths showed the same for "sss", "fff", "nnn", "rrr" and "vvv" (each 1.0 to 1.4 seconds, against 0.3 to 0.6 for "mmm", "zzz" and "shhh", which it reads as one hum, buzz and hush).

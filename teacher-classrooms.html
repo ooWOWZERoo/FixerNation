@@ -90,10 +90,7 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
     </div>
     <div class="field"><label>Subject</label><input id="cSubject" placeholder="e.g. Social-Emotional Learning"></div>
     <div class="field"><label>Academic Year</label>
-      <select id="cYear">
-        <option value="">— Select year —</option>
-        <option>2024–2025</option><option>2025–2026</option><option>2026–2027</option><option>2027–2028</option>
-      </select>
+      <select id="cYear"></select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeCreate()">Cancel</button>
@@ -107,6 +104,8 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;}
 <script src="nav.js?v=20"></script>
 <script src="site-auth.js?v=11"></script>
 <script src="school-branding.js?v=1"></script>
+<script src="school-years.js?v=1"></script>
+<script>FnSchoolYears.fill(document.getElementById('cYear'));</script>
 <script>
 fnRequireSiteAuth();
 
