@@ -114,7 +114,8 @@
     function advance() {
       stepIndex++;
       if (stepIndex >= steps.length) {
-        const responsible = responseTypes.filter((t) => t === 'responsible' || t === 'multiple_defensible').length;
+        // Asking a trusted adult is a smart choice too (Release 136); only the unsafe and plausible-but-incomplete answers stay out of the tally.
+        const responsible = responseTypes.filter((t) => t === 'responsible' || t === 'multiple_defensible' || t === 'seek_help').length;
         onComplete([
           { value: steps.length, label: t('brLabelSteps') },
           { value: responsible, label: t('brLabelHelped') },

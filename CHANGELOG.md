@@ -17,6 +17,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 136 — 2026-11-06 — Game fixes from the games audit
+
+- **Money Moves and Money Matters can always be won now.** Each run draws some of the events at random, and in about 35 percent of Money Moves runs and 43 percent of Money Matters runs the draw left out the money coming in, so the goal could not be reached however well you chose. The allowance (Money Moves) and the paycheck and tax refund (Money Matters) are now in every run. A test tries every possible run of both games.
+- **Number Sequence:** the "Quadratic pattern" questions on Hard had a new random number added to every term, so there was no rule to find (about 1 Hard question in 5). They now follow one rule.
+- **Story games:** choosing to ask a trusted adult now counts in "Smart choices" on the end screen (nine games), matching what the feedback already says.
+- **Memory Match** works with a keyboard and a screen reader: every card is a button that says what it shows, and matches and misses are announced.
+- **Same and Different:** a stale code comment corrected (5 rounds are drawn from 12, not 4).
+- **Reading Detective** now has 12 passages, 5 drawn each run (it was the same 4 every time). The wrong answers are written as long as the right one: before, the right answer was the longest in all four items. The text is in `docs/tune-your-brain/READING_DETECTIVE_FOR_REVIEW.md`; sentences and explanations were kept inside the Explore word limits.
+- Static files only. No server or database change.
+
 ## Release 135 — 2026-11-06 — Errors count in the menu follows the Errors page
 
 - **The count beside Errors in the menu did not go down after you cleared errors.** The menu remembered the 24-hour count for 5 minutes. The Errors page now updates the menu count every time it loads or clears a group.

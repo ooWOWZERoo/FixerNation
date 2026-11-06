@@ -25,11 +25,12 @@
 <script src="footer.js?v=17"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
-<script src="engine-sdk.js?v=5"></script>
+<script src="engine-sdk.js?v=6"></script>
 <script src="engine-simulation.js?v=4"></script>
 <script>
   // Money Moves (Challenge band, grades 6-8). Reworked 2026-11-01 (docs/reference/OWNER_DECISIONS_RECOMMENDATIONS.md):
-  // a pool of 14 events with 6 drawn per run, percent and arithmetic in the choices (discounts, sales tax, a savings match,
+  // a pool of 14 events with 6 drawn per run (the allowance event is always one of them, because without an income event the
+  // goal cannot be reached in about a third of the draws: Release 136), percent and arithmetic in the choices (discounts, sales tax, a savings match,
   // a loan with 10 percent extra), needs versus wants, and an ending that uses BOTH counters, with several good endings.
   // `floor: 0` means a choice you cannot afford is shown but cannot be picked. Every event has a free option, so a run can
   // never get stuck. Fictional person and amounts; not financial advice.
@@ -44,6 +45,7 @@
     roundsPerRun: 6,
     events: [
       {
+        "alwaysInclude": true,
         "prompt": "Your $40 allowance arrives. The 10 percent rule says to save 10 percent first, which is $4. What do you do?",
         "options": [
           {

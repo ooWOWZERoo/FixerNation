@@ -25,7 +25,7 @@
 <script src="footer.js?v=17"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
-<script src="engine-sdk.js?v=5"></script>
+<script src="engine-sdk.js?v=6"></script>
 <script src="engine-evidence-hunt.js?v=2"></script>
 <script>
   // Reading Detective — Tune Your Brain, Phase 5 pilot slice (Explore band).
@@ -38,6 +38,9 @@
 
   const contentPack = {
     title: 'Reading Detective',
+    // A pool of 12 passages; 5 are drawn per run (Release 136, was 4 fixed items). The wrong answers are written about as long as the
+    // right one, so the longest answer is not a giveaway. The engine shuffles the choices and the order of the passages each run.
+    roundsPerRun: 5,
     items: [
       {
         passage: [
@@ -48,8 +51,8 @@
         question: 'What most likely happened to Mia’s lunchbox?',
         choices: [
           { id: 'left-outside', text: 'She probably left it at the picnic tables outside.' },
-          { id: 'stolen', text: 'Someone must have taken it from her locker.' },
-          { id: 'never-brought', text: 'She never brought a lunchbox that day.' },
+          { id: 'stolen', text: 'Someone must have taken it from her locker at school.' },
+          { id: 'never-brought', text: 'She forgot to bring a lunchbox from home that day.' },
         ],
         correctChoiceId: 'left-outside',
         correctEvidenceIndex: 2,
@@ -63,9 +66,9 @@
         ],
         question: 'How does Jordan most likely feel?',
         choices: [
-          { id: 'hopeful-nervous', text: 'A little nervous, but hopeful about making friends.' },
-          { id: 'uninterested', text: 'Not interested in meeting anyone.' },
-          { id: 'angry', text: 'Upset with the other students.' },
+          { id: 'hopeful-nervous', text: 'Nervous, but hopeful about making friends.' },
+          { id: 'uninterested', text: 'Bored, and not interested in meeting anyone new.' },
+          { id: 'angry', text: 'Upset with the other students for ignoring him.' },
         ],
         correctChoiceId: 'hopeful-nervous',
         correctEvidenceIndex: 2,
@@ -79,9 +82,9 @@
         ],
         question: 'What is the main idea of this passage?',
         choices: [
-          { id: 'trail-leads', text: 'A trail of clues can show where someone went.' },
-          { id: 'art-messy', text: 'Chalk drawings are always messy.' },
-          { id: 'library-quiet', text: 'The library is usually a quiet place.' },
+          { id: 'trail-leads', text: 'A trail of clues shows where someone went.' },
+          { id: 'art-messy', text: 'Chalk drawings are always messy to clean up.' },
+          { id: 'library-quiet', text: 'The library is usually a very quiet place.' },
         ],
         correctChoiceId: 'trail-leads',
         correctEvidenceIndex: 0,
@@ -95,13 +98,147 @@
         ],
         question: 'What will most likely happen next?',
         choices: [
-          { id: 'moved-inside', text: 'The picnic will probably be moved inside or rescheduled.' },
-          { id: 'picnic-anyway', text: 'The picnic will happen exactly as planned.' },
-          { id: 'school-closed', text: 'School will be canceled for the day.' },
+          { id: 'moved-inside', text: 'The picnic will probably be moved inside.' },
+          { id: 'picnic-anyway', text: 'The picnic will happen outside exactly as planned.' },
+          { id: 'school-closed', text: 'School will be canceled for the whole day.' },
         ],
         correctChoiceId: 'moved-inside',
         correctEvidenceIndex: 1,
         explanation: 'Gray clouds, strong wind and a frown all point one way. The plan will change.',
+      },
+      {
+        passage: [
+          'Every Saturday morning, Mr. Ruiz opens the community garden gate at eight.',
+          'Kids carry watering cans while grown-ups pass out gloves.',
+          'Last week the first tomatoes turned red, and everyone stopped to cheer.',
+          'By noon the beds are weeded and the tools are put away.',
+        ],
+        question: 'What is the main idea of this passage?',
+        choices: [
+          { id: 'work-together', text: 'Neighbors take care of the garden together.' },
+          { id: 'tomatoes-hard', text: 'Tomatoes are the hardest plant to grow well.' },
+          { id: 'gate-late', text: 'Mr. Ruiz is usually late opening the garden gate.' },
+        ],
+        correctChoiceId: 'work-together',
+        correctEvidenceIndex: 1,
+        explanation: 'Kids and grown-ups all help. Nothing says tomatoes are hard.',
+      },
+      {
+        passage: [
+          'Sam practiced his one line in the bathroom mirror all week.',
+          'On the night of the play, his hands shook behind the curtain.',
+          'When his turn came, he took a slow breath and walked out.',
+          'Afterward, he grinned and asked his mom for ice cream.',
+        ],
+        question: 'How does Sam most likely feel after the play?',
+        choices: [
+          { id: 'proud', text: 'Proud that he got through his part.' },
+          { id: 'sad', text: 'Sad that the play is finally over.' },
+          { id: 'angry', text: 'Angry that he only had one line to say.' },
+        ],
+        correctChoiceId: 'proud',
+        correctEvidenceIndex: 3,
+        explanation: 'Sam grins and wants to celebrate. He feels proud.',
+      },
+      {
+        passage: [
+          'It rained all morning, so the school field was covered in puddles.',
+          'At recess, Ms. Lee pointed at the muddy grass and handed out board games.',
+          'Some kids groaned, but Tia found a friend to play checkers with.',
+        ],
+        question: 'Why did Ms. Lee hand out board games at recess?',
+        choices: [
+          { id: 'too-wet', text: 'The field was too wet and muddy to play on.' },
+          { id: 'no-balls', text: 'The class had lost all of the playground balls.' },
+          { id: 'game-day', text: 'It was the school’s special game day for everyone.' },
+        ],
+        correctChoiceId: 'too-wet',
+        correctEvidenceIndex: 1,
+        explanation: 'She points at the muddy grass, then hands out games. The field is too wet.',
+      },
+      {
+        passage: [
+          'The old wooden bridge was fragile.',
+          'Cars were not allowed, and people crossed one at a time.',
+          'A sign at the entrance said, “Please walk slowly and be gentle.”',
+        ],
+        question: 'What does the word fragile most likely mean?',
+        choices: [
+          { id: 'easily-broken', text: 'Easy to break or damage' },
+          { id: 'very-long', text: 'Longer than other bridges' },
+          { id: 'bright-paint', text: 'Painted bright colors' },
+        ],
+        correctChoiceId: 'easily-broken',
+        correctEvidenceIndex: 2,
+        explanation: 'The sign says to be gentle. You are gentle with things that break.',
+      },
+      {
+        passage: [
+          'A honeybee visits hundreds of flowers in one day.',
+          'As it drinks nectar, yellow dust called pollen sticks to its legs.',
+          'At the next flower, pollen rubs off and helps it make seeds.',
+          'Many fruits and vegetables we eat grow because bees do this.',
+        ],
+        question: 'What is the main idea of this passage?',
+        choices: [
+          { id: 'bees-help', text: 'Bees help plants grow by carrying pollen.' },
+          { id: 'yellow-only', text: 'Honeybees only visit flowers that are yellow.' },
+          { id: 'winter-seeds', text: 'Flowers make all of their seeds in winter.' },
+        ],
+        correctChoiceId: 'bees-help',
+        correctEvidenceIndex: 2,
+        explanation: 'Pollen rubs off at the next flower. That helps plants grow.',
+      },
+      {
+        passage: [
+          'Maya packed her swim bag and put her goggles on top.',
+          'Her brother Leo asked if she was ready for the meet.',
+          'She nodded, but she kept checking the clock by the door.',
+          'The bus to the pool would leave in two minutes.',
+        ],
+        question: 'What will Maya most likely do next?',
+        choices: [
+          { id: 'catch-bus', text: 'Rush out the door to catch the bus.' },
+          { id: 'stay-home', text: 'Unpack her bag and stay home today.' },
+          { id: 'play-leo', text: 'Sit down and start a game with Leo.' },
+        ],
+        correctChoiceId: 'catch-bus',
+        correctEvidenceIndex: 3,
+        explanation: 'The bus leaves soon and she keeps checking the clock.',
+      },
+      {
+        passage: [
+          'The library cat, Biscuit, sleeps in the sunny window every afternoon.',
+          'He lets kids pet him, but only if they sit quietly.',
+          'One day a loud group ran in and Biscuit hid.',
+          'The next day he came back out when the room was calm.',
+        ],
+        question: 'What can you tell about Biscuit?',
+        choices: [
+          { id: 'likes-quiet', text: 'He feels safest in a quiet room.' },
+          { id: 'hates-kids', text: 'He does not like any children at all.' },
+          { id: 'night-only', text: 'He only ever sleeps during the night.' },
+        ],
+        correctChoiceId: 'likes-quiet',
+        correctEvidenceIndex: 2,
+        explanation: 'He hides when it is loud and returns when it is calm.',
+      },
+      {
+        passage: [
+          'Jin’s little sister dropped her ice cream cone on the sidewalk.',
+          'She started to cry.',
+          'Jin looked at his own cone, then at her wobbling chin.',
+          'He held it out and said, “You can have mine.”',
+        ],
+        question: 'Which words best describe Jin?',
+        choices: [
+          { id: 'kind', text: 'Kind and willing to share' },
+          { id: 'jealous', text: 'Jealous of his little sister' },
+          { id: 'bored', text: 'Bored with his ice cream cone' },
+        ],
+        correctChoiceId: 'kind',
+        correctEvidenceIndex: 3,
+        explanation: 'He gives up his own cone to cheer her up. That is kind and generous.',
       },
     ],
   };

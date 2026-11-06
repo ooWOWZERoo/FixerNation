@@ -25,7 +25,7 @@
 <script src="footer.js?v=17"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
-<script src="engine-sdk.js?v=5"></script>
+<script src="engine-sdk.js?v=6"></script>
 <script src="assets/audio/discover/same-and-different.js?v=edd09cdb"></script>
 <script src="engine-voice.js?v=1"></script>
 <script src="engine-audio-choice.js?v=6"></script>
@@ -37,7 +37,7 @@
   // is a kind choice. Practises NY SEL 2B (similarities and differences), with 2A
   // supporting. Design and approved outline:
   // docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and SAME_AND_DIFFERENT_OUTLINE.md.
-  // A pool of 12 rounds; 4 are drawn per run and the picture choices are shuffled.
+  // A pool of 12 rounds; 5 are drawn per run (roundsPerRun below) and the picture choices are shuffled.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'discover';
 

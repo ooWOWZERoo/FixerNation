@@ -25,11 +25,12 @@
 <script src="footer.js?v=17"></script>
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
-<script src="engine-sdk.js?v=5"></script>
+<script src="engine-sdk.js?v=6"></script>
 <script src="engine-simulation.js?v=4"></script>
 <script>
   // Money Matters (Advance band, grades 9-12). Reworked 2026-11-01 (docs/tune-your-brain/GAME_SCORECARD.md, Advance wave):
-  // a pool of 14 events with 7 drawn per run, real percent and interest arithmetic (take-home pay, a card at 24 percent a
+  // a pool of 14 events with 7 drawn per run (the paycheck and the tax refund are always two of them, because without them the goal
+  // cannot be reached in about two draws in five: Release 136), real percent and interest arithmetic (take-home pay, a card at 24 percent a
   // year, a savings rate, deductibles, switching fees), needs versus wants, an affordability rule, and an ending that uses
   // all three counters, with several good endings. `floor: 0` means a choice you cannot afford is shown but cannot be
   // picked. Every event has a choice that needs no money, so a run can never get stuck, and the card can never be paid
@@ -47,6 +48,7 @@
     roundsPerRun: 7,
     events: [
       {
+        "alwaysInclude": true,
         "prompt": "Jordan's part-time paycheck is $750 before taxes. About 20 percent is withheld ($150), so $600 arrives. A common rule saves 20 percent of take-home pay, which is $120. What does Jordan do?",
         "options": [
           {
@@ -161,6 +163,7 @@
         ]
       },
       {
+        "alwaysInclude": true,
         "prompt": "Jordan gets a $400 tax refund. The card balance charges about 2 percent a month, so every $100 paid off saves about $2 a month in interest.",
         "options": [
           {

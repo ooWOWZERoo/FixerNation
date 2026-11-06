@@ -131,6 +131,7 @@
   //   - rounds are shuffled for the engines whose rounds are independent (audioChoice, evidenceHunt, scenarioChoice);
   //     the sequential engines (branchingScenario steps, simulation events) keep their order;
   //   - roundsPerRun: N draws N rounds at random from a larger pool, so a pool can be bigger than one run;
+  //     a round marked alwaysInclude: true is never left out of a run (the other rounds are drawn around it);
   //   - variants: [{ steps | events | items | scenarios, ... }] picks one whole variant per run (a scenario
   //     can have several versions); fields in the variant override the pack's own;
   //   - shuffleRounds: true|false overrides the per-engine default above.
@@ -188,8 +189,17 @@
     const shuffleRounds = src.shuffleRounds !== undefined ? !!src.shuffleRounds : !shape.ordered;
     let order = list.map((_, i) => i);
     if (Number.isInteger(src.roundsPerRun) && src.roundsPerRun > 0 && src.roundsPerRun < order.length) {
-      order = shuffled(order, rng).slice(0, src.roundsPerRun);
-      if (!shuffleRounds) order.sort((a, b) => a - b);
+      // alwaysInclude: true on a round keeps it in every run (the rest of the run is drawn at random). Used where a run must
+      // be able to reach its goal, e.g. the income events of the money games. No pinned round: exactly the old draw.
+      const pinned = order.filter((i) => list[i] && list[i].alwaysInclude === true).slice(0, src.roundsPerRun);
+      if (pinned.length) {
+        const rest = order.filter((i) => pinned.indexOf(i) === -1);
+        order = pinned.concat(shuffled(rest, rng).slice(0, src.roundsPerRun - pinned.length));
+        order = shuffleRounds ? shuffled(order, rng) : order.sort((a, b) => a - b);
+      } else {
+        order = shuffled(order, rng).slice(0, src.roundsPerRun);
+        if (!shuffleRounds) order.sort((a, b) => a - b);
+      }
     } else if (shuffleRounds) {
       order = shuffled(order, rng);
     }

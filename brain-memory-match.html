@@ -22,7 +22,10 @@
     width: 100%; aspect-ratio: 1;
     perspective: 600px; cursor: pointer;
     max-width: 80px;
+    /* a real <button> now (keyboard and screen reader), so strip the button look */
+    padding: 0; border: 0; background: none; font: inherit; color: inherit;
   }
+  .flip-card:focus-visible { outline: 3px solid var(--gold, #EBA657); outline-offset: 3px; border-radius: 12px; }
   .flip-inner {
     width: 100%; height: 100%;
     transition: transform .35s;
@@ -110,6 +113,7 @@
         <span><strong id="timerDisplay">0:00</strong>Time</span>
       </div>
       <div id="cardGrid"></div>
+      <div id="mmStatus" class="sr-only" role="status" aria-live="polite"></div>
     </div>
     <button class="btn btn-outline btn-sm" style="display:block;margin:0 auto;" onclick="abandonGame()">End game</button>
   </div>
@@ -152,6 +156,13 @@
 <script src="footer.js?v=17"></script>
 <script>
 const EMOJIS = ['🎯','🌟','🎪','🎭','🎨','🦁','🐯','🦊','🐸','🦋','🌺','🎸','🎹','🍕','🍦'];
+// Spoken names for the cards, so a screen reader says what a flipped card shows (not just "Card 3").
+const EMOJI_NAMES = { '🎯': 'target', '🌟': 'star', '🎪': 'circus tent', '🎭': 'theatre masks', '🎨': 'paint palette', '🦁': 'lion', '🐯': 'tiger', '🦊': 'fox', '🐸': 'frog', '🦋': 'butterfly', '🌺': 'flower', '🎸': 'guitar', '🎹': 'piano keys', '🍕': 'pizza', '🍦': 'ice cream' };
+function cardLabel(i, state) {
+  const name = EMOJI_NAMES[cards[i].emoji] || 'picture';
+  return 'Card ' + (i + 1) + (state === 'down' ? ', face down' : ', ' + name + (state === 'matched' ? ', matched' : ''));
+}
+function say(text) { const el = document.getElementById('mmStatus'); if (el) el.textContent = text; }
 const DIFF_CONFIG = { easy:{pairs:8,cols:4}, medium:{pairs:10,cols:5}, hard:{pairs:15,cols:6} };
 
 let difficulty = 'medium', cards = [], flipped = [], moves = 0, mismatches = 0;
@@ -218,12 +229,13 @@ function renderGrid(cols) {
   const grid = document.getElementById('cardGrid');
   grid.className = `card-grid ${difficulty}`;
   grid.innerHTML = cards.map((c, i) => `
-    <div class="flip-card" id="card-${i}" onclick="flipCard(${i})" aria-label="Card ${i+1}">
+    <button type="button" class="flip-card" id="card-${i}" onclick="flipCard(${i})" aria-label="${cardLabel(i, 'down')}">
       <div class="flip-inner">
-        <div class="flip-face flip-front">?</div>
-        <div class="flip-face flip-back">${c.emoji}</div>
+        <div class="flip-face flip-front" aria-hidden="true">?</div>
+        <div class="flip-face flip-back" aria-hidden="true">${c.emoji}</div>
       </div>
-    </div>`).join('');
+    </button>`).join('');
+  say('');
 }
 
 function updateTimer() {
@@ -240,7 +252,10 @@ function flipCard(i) {
   if (flipped.length === 2) return;
 
   card.flipped = true;
-  document.getElementById(`card-${i}`).classList.add('flipped');
+  const el = document.getElementById(`card-${i}`);
+  el.classList.add('flipped');
+  el.setAttribute('aria-label', cardLabel(i, 'up'));
+  say(cardLabel(i, 'up'));
   flipped.push(i);
 
   if (flipped.length === 2) {
@@ -257,6 +272,8 @@ function checkMatch() {
     cards[a].matched = cards[b].matched = true;
     document.getElementById(`card-${a}`).classList.add('matched');
     document.getElementById(`card-${b}`).classList.add('matched');
+    [a, b].forEach((n) => { const c = document.getElementById(`card-${n}`); c.setAttribute('aria-label', cardLabel(n, 'matched')); c.setAttribute('aria-disabled', 'true'); });
+    say('Match. ' + (EMOJI_NAMES[cards[a].emoji] || 'picture') + '. ' + (totalPairs - matched - 1) + ' pairs left.');
     flipped = []; lockBoard = false; matched++;
     document.getElementById('pairsLeft').textContent = totalPairs - matched;
     if (matched === totalPairs) setTimeout(endGame, 300);
@@ -267,6 +284,8 @@ function checkMatch() {
       cards[a].flipped = cards[b].flipped = false;
       document.getElementById(`card-${a}`).classList.remove('flipped');
       document.getElementById(`card-${b}`).classList.remove('flipped');
+      [a, b].forEach((n) => document.getElementById(`card-${n}`).setAttribute('aria-label', cardLabel(n, 'down')));
+      say('No match. Both cards are face down again.');
       flipped = []; lockBoard = false;
     }, 900);
   }
