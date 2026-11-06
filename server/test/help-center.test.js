@@ -97,13 +97,13 @@ test('facts that must match the system: reset 1 hour, verification 24 hours, inv
 
 test('WIRING: page, footer, portal menus, Get help panel, Contact pointer and the anonymous "answer opened" count', () => {
   const page = read('help.html');
-  assert.match(page, /help-center\.js\?v=4/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
+  assert.match(page, /help-center\.js\?v=6/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
   assert.match(page, /preview/); assert.match(page, /noindex/);
   assert.ok(!/innerHTML/.test(page), 'answers are written with textContent only');
   assert.match(read('footer.js'), /help\.html">Help center/);
   assert.match(read('school-admin-nav.js'), /help\.html\?aud=school/); assert.match(read('district-admin-nav.js'), /help\.html\?aud=district/);
   const sp = read('support.html');
-  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=4/); assert.match(sp, /See all answers/);
+  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=6/); assert.match(sp, /See all answers/);
   assert.match(read('contact.html'), /href="help\.html"/);
   assert.match(read('server/routes/analytics.js'), /EVENT_TYPE_PATTERN = \/\^\[a-z_\]\{1,32\}\$\//);
 });
@@ -132,9 +132,9 @@ test('SEEDED ANSWERS: the site has no public support email, so no answer tells p
 
 test('SEEDED ANSWERS: pricing, response-time promises, privacy and legal wording and research claims stay drafts until the owner reads them', () => {
   const drafts = new Set(HC.entries.filter(e => !e.reviewed).map(e => e.id));
-  for (const id of ['quote-response-time', 'setup-time', 'student-data-collected', 'ferpa-requests', 'site-visitor-privacy', 'student-data-retention']) assert.ok(drafts.has(id), `${id} is a draft`);
+  for (const id of ['ferpa-requests', 'student-data-retention']) assert.ok(drafts.has(id), `${id} is a draft`);
   // Release 140: the owner answered these, so they are published in the owner's words
-  for (const id of ['student-no-email', 'student-data-sale-ads', 'data-deletion', 'privacy-paperwork', 'content-focus', 'outcome-evidence', 'casel-alignment', 'teacher-seat-cost', 'teacher-single-license-price']) assert.ok(!drafts.has(id), `${id} is published`);
+  for (const id of ['student-no-email', 'student-data-sale-ads', 'data-deletion', 'privacy-paperwork', 'content-focus', 'outcome-evidence', 'casel-alignment', 'teacher-seat-cost', 'teacher-single-license-price', 'quote-response-time', 'setup-time', 'parent-preview', 'parent-access-cost', 'district-licensing', 'student-data-collected', 'site-visitor-privacy']) assert.ok(!drafts.has(id), `${id} is published`);
   const text = HC.visible(false).map(e => e.a).join(' ');
   assert.ok(!/\$[1-9]/.test(text), "no dollar prices in a reviewed answer (the only dollar figure allowed is the $0 quote that needs no PO)");
 });
