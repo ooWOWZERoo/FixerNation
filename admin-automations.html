@@ -101,7 +101,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=29"></script>
+<script src="admin-nav.js?v=30"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -322,7 +322,6 @@
             <option value="curriculum">Curriculum</option>
             <option value="blog">Blog</option>
             <option value="marketing">Marketing</option>
-            <option value="support">Support</option>
             <option value="schedule">Schedule</option>
           </select>
         </div>
@@ -504,6 +503,7 @@ const TRIGGER_EVENTS = {
     {key:'link_clicked',          label:'Link Clicked in Email'},
     {key:'contact_inactive_90',   label:'Contact Inactive for 90 Days'},
   ],
+  // Not offered in the picker any more (Release 134): nothing on the server ever fired these two. Kept so an automation saved earlier still shows its name.
   support:[
     {key:'ticket_created',        label:'Support Request Submitted'},
     {key:'ticket_resolved',       label:'Support Request Resolved'},
@@ -574,10 +574,9 @@ const TEMPLATES = [
   {id:'mk5',cat:'marketing',icon:'💤',name:'Re-Engagement (90-Day Inactive)',desc:'Win back contacts who have not engaged in 90 days.'},
   {id:'mk6',cat:'marketing',icon:'🎂',name:'Milestone Celebration (1-Year)', desc:'Celebrate a contact\'s 1-year anniversary with Fixer Nation.'},
   {id:'mk7',cat:'marketing',icon:'🥳',name:'Birthday / Anniversary Message', desc:'Send a personalized message on a contact\'s key date.'},
-  // Customer Success (5)
+  // Customer Success (4)
   {id:'cs1',cat:'success',icon:'🚀',name:'Onboarding Drip (Days 1, 3, 7)',   desc:'Three-email sequence guiding a new member through key features.'},
   {id:'cs2',cat:'success',icon:'💎',name:'Product Feature Spotlight',         desc:'Highlight an underused feature to drive deeper engagement.'},
-  {id:'cs4',cat:'success',icon:'🎫',name:'Support Ticket Follow-Up',          desc:'Check in after a support request is resolved.'},
   {id:'cs5',cat:'success',icon:'📋',name:'Net Promoter Score Survey',         desc:'One-question NPS survey sent at strategic touchpoints.'},
   {id:'cs6',cat:'success',icon:'🌟',name:'Customer Success Story Spotlight', desc:'Invite top members to share their story for a feature.'},
   // Payments & Ops (6)
@@ -1101,6 +1100,6 @@ async function saveEditAuto() {
 loadOverview();
 </script>
 
-<script src="admin-shell.js?v=3"></script>
+<script src="admin-shell.js?v=4"></script>
 </body>
 </html>

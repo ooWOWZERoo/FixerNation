@@ -297,7 +297,7 @@ test('WIRING: idle lock script, Account Lookup, settings page and no data in inl
   for (const ev of ['mousemove', 'click']) assert.match(lockJs, new RegExp(ev));
   assert.match(lockJs, /DEFAULT_MINUTES = 5/);
   assert.match(lockJs, /api\/settings\/privacy-lock/);
-  const page = read('admin-account-lookup.html');
+  const page = read('admin-support-classrooms.html'); // the student-name cards moved here in Release 134
   assert.match(page, /admin-privacy-lock\.js\?v=1/);
   assert.match(page, /fnPrivacyLock\(/);
   assert.match(page, /lock\.arm\(\)/);

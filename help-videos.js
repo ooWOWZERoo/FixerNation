@@ -176,7 +176,7 @@
     // ---- Fixer Nation staff (on the Support Inbox's How-to video button; not listed on the public Help Videos page)
     { id: 'G3', group: 'staff', topic: 'Support', listed: false, title: 'Answer requests in the Support Inbox',
       summary: 'Read a request, see what broke for that person, reply or leave a note, assign it and mark it resolved.',
-      pages: ['admin-support.html'], url: '' }
+      pages: ['admin-support.html', 'admin-support-errors.html'], url: '' }
   ];
 
   var TEXT = {

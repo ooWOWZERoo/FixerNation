@@ -284,6 +284,7 @@
     ],
     "G3": [
       "admin-support.html",
+      "admin-support-errors.html",
       "server/routes/admin-support.js",
       "server/routes/admin-client-errors.js",
       "server/lib/client-errors.js",

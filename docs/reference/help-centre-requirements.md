@@ -2,6 +2,8 @@
 
 Status: BUILT as Release 123 (2026-11-05). Owner confirmed the plan and all five recommended answers. Every first-draft answer is `reviewed: false` until the owner reads it at `help.html?preview=1`. Follows phases 1 to 3 (support requests, support console, error capture). No access control is involved: it is a public page of written answers. What needs confirming is how the content is kept and who approves it.
 
+> Release 134: the support pages were gathered into one Support area; see `support-consolidation-requirements.md`. `admin-support-help.html` shows the Help center and video status read-only.
+
 ## Goal
 
 Most people who get stuck have one of a few dozen problems. A searchable page of short, accurate answers (with the matching help video where one exists) lets them fix it themselves, and a clear "Still stuck? Get help" button sends the rest to the support inbox with the right topic already chosen.

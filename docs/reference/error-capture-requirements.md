@@ -2,6 +2,8 @@
 
 Status: BUILT as Release 122 (2026-11-05). Owner confirmed the matrix and all four recommended answers. Follows `support-requests-requirements.md` (phase 1) and `support-console-requirements.md` (phase 2). This one collects data from public pages, including pages students use, so the access and privacy rules are confirmed before any code.
 
+> Release 134: the support pages were gathered into one Support area; see `support-consolidation-requirements.md`. The Errors list is now its own page, `admin-support-errors.html` (no longer a tab on the Inbox).
+
 ## Goal
 
 When someone writes in with "it just doesn't work", staff can see in the browser what went wrong, without opening a terminal or reading `stderr.log`. Today the server's error log has no timestamps and can only be read in cPanel, and a failed email (like your test one that never arrived) leaves no trace staff can see.

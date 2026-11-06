@@ -2,6 +2,8 @@
 
 Status: PHASE 1 BUILT (Release 115, 2026-11-05). Owner confirmed the matrix and the plan defaults for questions 1 to 4 and 6 (question 5: the notice address is the new setting `contact_email_support`, default the general admin address, editable in admin-settings.html). Phases 2 to 4 are not built.
 
+> Release 134: the support pages were gathered into one Support area; see `support-consolidation-requirements.md`. The Inbox page keeps Requests only.
+
 ## Goal
 
 Anyone who uses Fixer Nation (district admin, school license admin, teacher, parent, or a visitor) can ask for help in one place, and FNE staff can see who they are, what they were doing, and answer them from an inbox inside the admin workspace. Today the contact forms only send an email; nothing is stored, so there is no history, status, or context.

@@ -6,8 +6,11 @@
   var page = location.pathname.split('/').pop();
   var pages = {
     'dashboard': ['Your mission, in motion', 'Mission Control', 'Real tools. Brighter futures. Track progress, support schools, and make your next move count.', 'Overview'],
-    'support': ['Help people get unstuck', '', 'Answer requests from teachers, administrators and parents, with their role and school already in front of you.', 'Sales & Schools'],
-    'account-lookup': ['People behind the progress', '', 'Find an account and connect the dots across invitations, access, and licenses.', 'Sales & Schools'],
+    'support': ['Help people get unstuck', '', 'Answer requests from teachers, administrators and parents, with their role and school already in front of you.', 'Support'],
+    'account-lookup': ['People behind the progress', '', 'Find an account and connect the dots across invitations, access, and licenses.', 'Support'],
+    'support-classrooms': ['Find the right classroom', '', 'Look up a classroom or a parent, reset a student PIN, clear a lockout. Student names hide after a few quiet minutes.', 'Support'],
+    'support-errors': ['See what broke', '', 'Errors from browsers, API calls, the server and outgoing email, grouped so a pattern stands out.', 'Support'],
+    'support-help': ['Answers before questions', '', 'What the Help center and help videos say today, what is still waiting for your read, and where each form’s messages go.', 'Support'],
     'affiliates': ['Grow the movement', '', 'Support your partners, explore territory coverage, and turn connections into opportunity.', 'Sales & Schools'],
     'analytics': ['Follow the journey', '', 'See how visitors discover Fixer Nation and where their next steps take them.', 'Reports'],
     'automations': ['Keep the momentum going', '', 'Manage the messages and workflows that help your community move forward.', 'Marketing & CRM'],
@@ -103,6 +106,7 @@
     [['curriculum','Curriculum','Build confidence in every classroom','Explore lessons'],['morning-boost','Morning Boost','Make a positive start possible','Open the studio'],['campaigns','Campaigns','Bring more people into the mission','Manage campaigns']].forEach(function(item){var a=document.createElement('a');a.href='admin-'+item[0]+'.html';a.innerHTML='<span class="mc-workspace-name">'+item[1]+'</span><span>'+item[2]+'</span><strong>'+item[3]+' <span aria-hidden="true">↗</span></strong>';nav.appendChild(a);});
     hero.after(nav);
   }
+  if(['support','account-lookup','support-classrooms','support-errors','support-help'].indexOf(key)!==-1){var stabs=document.createElement('nav');stabs.className='mc-section-tabs';stabs.setAttribute('aria-label','Support workspace');[['support','Requests'],['account-lookup','Account lookup'],['support-classrooms','Classrooms & parents'],['support-errors','Errors'],['support-help','Help content']].forEach(function(item){var a=document.createElement('a');a.href='admin-'+item[0]+'.html';a.textContent=item[1];if(item[0]===key)a.setAttribute('aria-current','page');stabs.appendChild(a);});hero.after(stabs);}
   if(key.indexOf('morning-boost')===0){var tabs=document.createElement('nav');tabs.className='mc-section-tabs';tabs.setAttribute('aria-label','Morning Boost workspace');[['morning-boost','Studio'],['morning-boost-calendar','Calendar'],['morning-boost-email','Email & schedule']].forEach(function(item){var a=document.createElement('a');a.href='admin-'+item[0]+'.html';a.textContent=item[1];if(item[0]===key)a.setAttribute('aria-current','page');tabs.appendChild(a);});hero.after(tabs);}
   // Wrap both initial and asynchronously-rendered data tables without replacing nodes.
   function wrapTables(){content.querySelectorAll('table').forEach(function(table){if(table.closest('.mc-table-scroll')||table.closest('.a-modal'))return;var wrap=document.createElement('div');wrap.className='mc-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',(table.getAttribute('aria-label')||title.textContent)+' table, scroll horizontally if needed');table.before(wrap);wrap.appendChild(table);});}

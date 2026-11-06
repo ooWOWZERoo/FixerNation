@@ -1,6 +1,6 @@
 // G3  Answer requests in the Support Inbox. FNE staff only. Signed in as the demo staff login. Off-camera: a few requests are sent (the
 // demo teacher, and two visitors), the teacher's browser reports a failed request so the Errors panel has something to show, and a
-// failed-email row is added so the Errors tab shows one. Everything is made up.
+// failed-email row is added so the Errors page shows one. Everything is made up.
 // State-changing: restart the test site (tests/howto/stack.sh up) before recording.
 import { glideClick, glideTo, fillSlowly, sql, type Storyboard } from "../pipeline";
 import { visitorRequest, teacherRequest, teacherBrowserError } from "../support";
@@ -21,7 +21,7 @@ const board: Storyboard = {
   },
   steps: [
     {
-      say: "Requests from the Get help page arrive in the Support Inbox, under Schools and Partners. The number beside the menu link counts requests nobody has opened yet.",
+      say: "Requests from the Get help page arrive in the Support Inbox, in the Support part of the menu. The number beside the menu link counts requests nobody has opened yet.",
       run: async (p) => {
         await p.waitForSelector("#listTable tbody tr");
         await glideTo(p, ".a-sidebar a[href='admin-support.html']");
@@ -89,9 +89,9 @@ const board: Storyboard = {
       },
     },
     {
-      say: "The Errors tab shows what broke across the whole site. Each line is a kind of problem and where it happened, how many times, and how many different browsers. Clear a line once it's fixed.",
+      say: "The Errors page, also in the Support menu, shows what broke across the whole site. Each line is a kind of problem and where it happened, how many times, and how many different browsers. Clear a line once it's fixed.",
       run: async (p) => {
-        await glideClick(p, "#tabErrors");
+        await glideClick(p, ".a-sidebar a[href='admin-support-errors.html']");
         await p.waitForSelector("#errorsTable tbody tr");
         await glideTo(p, "#errorsTable");
         await p.waitForTimeout(2500);

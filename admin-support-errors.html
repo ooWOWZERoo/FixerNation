@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Support Errors</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=30"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Errors</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <div class="a-card" id="errorsCard">
+        <div class="a-card-head"><h2>Errors</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          What broke in people's browsers, in our API calls, on the server and in outgoing email. Grouped by what and where, with how many
+          times and how many different browsers. No IP addresses, no query strings and no student names are kept. Clear a group once it is fixed.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <select id="eHours" class="a-filter-select">
+            <option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option>
+          </select>
+          <select id="eKind" class="a-filter-select"><option value="">Every kind</option></select>
+        </div>
+        <table class="a-table" id="errorsTable">
+          <thead><tr><th>Kind</th><th>Where</th><th>What</th><th>Times</th><th>Last seen</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="errorsEmpty" class="a-empty" style="display:none;">Nothing recorded in this period.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script>
+function esc(v) { return fnEscape(v); }
+function fmt(d) { return d ? new Date(String(d).replace(' ', 'T')).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
+function send(method, body) {
+  return { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) };
+}
+
+// ---- Errors ----
+const KIND_LABEL = { js_error: 'Page script', promise_rejection: 'Page (async)', failed_request: 'Failed request', server_error: 'Server', email_failed: 'Email' };
+let errorGroups = [];
+
+async function errApi(path, opts) {
+  const r = await fetch('/api/admin/client-errors' + path, Object.assign({ credentials: 'include' }, opts || {}));
+  if (fnHandleUnauthorized(r)) return null;
+  const j = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(j.error || 'Something went wrong'); return null; }
+  return j;
+}
+
+function whereText(g) {
+  if (g.kind === 'email_failed') return g.source;
+  if (g.api_path) return (g.method ? g.method + ' ' : '') + g.api_path + (g.page_path ? ' (from ' + g.page_path + ')' : '');
+  return (g.page_path || '') + (g.source ? ' · ' + g.source : '');
+}
+
+async function loadErrors() {
+  const qs = new URLSearchParams({ hours: document.getElementById('eHours').value });
+  if (document.getElementById('eKind').value) qs.set('kind', document.getElementById('eKind').value);
+  const d = await errApi('?' + qs.toString());
+  if (!d) return;
+  const sel = document.getElementById('eKind');
+  if (sel.options.length === 1) d.kinds.forEach(function (k) { const o = document.createElement('option'); o.value = k; o.textContent = KIND_LABEL[k] || k; sel.appendChild(o); });
+  errorGroups = d.groups;
+  document.querySelector('#errorsTable tbody').innerHTML = d.groups.map(function (g, i) {
+    return '<tr><td>' + esc(KIND_LABEL[g.kind] || g.kind) + '</td><td style="word-break:break-all;">' + esc(whereText(g)) + '</td><td>' + esc(g.message) + (g.http_status ? ' <span class="a-pill a-pill-danger">' + esc(g.http_status) + '</span>' : '') + '</td>' +
+      '<td>' + esc(g.total) + (g.browsers ? '<br><span style="font-size:12px; opacity:.7;">' + esc(g.browsers) + ' browser' + (g.browsers === 1 ? '' : 's') + '</span>' : '') + '</td>' +
+      '<td style="white-space:nowrap;">' + esc(fmt(g.last_seen)) + '</td>' +
+      '<td><button class="a-btn a-btn-outline a-btn-sm" onclick="clearErrorGroup(' + i + ')">Clear</button></td></tr>';
+  }).join('');
+  document.getElementById('errorsEmpty').style.display = d.groups.length ? 'none' : 'block';
+}
+document.getElementById('eHours').addEventListener('change', loadErrors);
+document.getElementById('eKind').addEventListener('change', loadErrors);
+
+async function clearErrorGroup(i) {
+  const g = errorGroups[i];
+  if (!g || !confirm('Clear this group of errors? Do this once it is fixed.')) return;
+  const d = await errApi('/clear', send('POST', { kind: g.kind, page_path: g.page_path, api_path: g.api_path, method: g.method, http_status: g.http_status, message: g.message, source: g.source }));
+  if (d) { fnToast('Cleared'); loadErrors(); }
+}
+
+loadErrors();
+</script>
+<script src="admin-shell.js?v=4"></script>
+<script src="help-videos.js?v=16" defer></script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 Status: BUILT as Release 121 (2026-11-05). Owner confirmed the revised plan and the four defaults, and added: student names hide after an idle time (Settings, default 5 minutes from the last mouse move or click; the script also counts key presses, touch and scroll). Follows `support-requests-requirements.md` (phase 1, live as Releases 115 and 118). Per CLAUDE.md the access matrix is confirmed before any code.
 
+> Release 134: the support pages were gathered into one Support area; see `support-consolidation-requirements.md`. Classroom lookup and Parent view now live on `admin-support-classrooms.html`, not Account Lookup.
+
 ## Goal
 
 When a person writes in, staff can see what is going on and fix it from the browser, without sending anyone an email and without opening a terminal. Owner's rule (2026-11-05): everything is managed in the browser, not by email.

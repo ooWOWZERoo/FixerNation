@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Help Content</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=30"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1>Help Content</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+
+      <div class="a-card" style="max-width:900px;">
+        <div class="a-card-head"><h2>Help center answers</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          Answers live in <code>help-center.js</code> and change through a release. Visitors see only reviewed answers; drafts show at the preview link.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <a class="a-btn a-btn-outline a-btn-sm" href="help.html" target="_blank" rel="noopener">Open the Help center</a>
+          <a class="a-btn a-btn-outline a-btn-sm" href="help.html?preview=1" target="_blank" rel="noopener">Read the drafts (preview)</a>
+        </div>
+        <table class="a-table" id="answersTable">
+          <thead><tr><th>Audience</th><th>Published</th><th>Drafts</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3 style="margin:18px 0 6px; font-size:14px;">Drafts waiting for your read</h3>
+        <div id="draftNote" class="a-note" style="display:none; margin:0 0 10px; border-left:4px solid var(--a-warning,#b26a00);"></div>
+        <table class="a-table" id="draftsTable">
+          <thead><tr><th>Question</th><th>Topic</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="draftsEmpty" class="a-empty" style="display:none;">No drafts. Every answer has been reviewed.</div>
+      </div>
+
+      <div class="a-card" style="max-width:900px; margin-top:24px;">
+        <div class="a-card-head"><h2>Help videos</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          A video shows on the site only once it has a link in <code>help-videos.js</code>. The rest are planned, or recorded and waiting to be published.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <a class="a-btn a-btn-outline a-btn-sm" href="help-videos.html" target="_blank" rel="noopener">Open Help Videos</a>
+          <a class="a-btn a-btn-outline a-btn-sm" href="help-videos.html?preview=1" target="_blank" rel="noopener">Include unpublished (preview)</a>
+        </div>
+        <div id="videoCounts" style="margin-bottom:10px;"></div>
+        <table class="a-table" id="videosTable">
+          <thead><tr><th>Video</th><th>Title</th><th>Audience</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="a-card" style="max-width:900px; margin-top:24px;">
+        <div class="a-card-head"><h2>Where messages go</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          Edit these in <a href="admin-settings.html">Settings</a>. Only support requests are kept in the Support Inbox. The Contact Us, Ask The Fixer,
+          quote and privacy forms are emailed to the address below and are not stored on the site.
+        </div>
+        <table class="a-table" id="routingTable">
+          <thead><tr><th>What</th><th>Goes to</th><th>Kept on the site?</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="lockLine" style="margin-top:12px; font-size:14px;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="help-center.js?v=3"></script>
+<script src="help-videos.js?v=16"></script>
+<script>
+function cell(text) { const td = document.createElement('td'); td.textContent = text; return td; }
+function row(cells) { const tr = document.createElement('tr'); cells.forEach(function (c) { tr.appendChild(c); }); return tr; }
+
+(function renderAnswers() {
+  const hc = window.FNHelpCenter;
+  const tb = document.querySelector('#answersTable tbody');
+  hc.audiences.forEach(function (a) {
+    const mine = hc.entries.filter(function (e) { return e.for.indexOf(a.id) !== -1; });
+    tb.appendChild(row([cell(a.title), cell(String(mine.filter(function (e) { return e.reviewed; }).length)), cell(String(mine.filter(function (e) { return !e.reviewed; }).length))]));
+  });
+  const drafts = hc.entries.filter(function (e) { return !e.reviewed; });
+  tb.appendChild(row([cell('All answers (one answer can serve several audiences)'), cell(String(hc.entries.length - drafts.length)), cell(String(drafts.length))]));
+  const dt = document.querySelector('#draftsTable tbody');
+  drafts.forEach(function (e) { dt.appendChild(row([cell(e.q), cell(e.topic)])); });
+  document.getElementById('draftsEmpty').style.display = drafts.length ? 'none' : 'block';
+  document.getElementById('draftsTable').style.display = drafts.length ? '' : 'none';
+  if (drafts.some(function (e) { return e.id === 'student-data-retention'; })) {
+    const n = document.getElementById('draftNote');
+    n.textContent = 'The answer on how long student data is kept is still a draft: what the system does (kept until a teacher archives or an administrator deletes; only Brain Games activity is purged on a schedule) does not match "purged at the end of the school year". It needs a data-handling decision before it can be published.';
+    n.style.display = 'block';
+  }
+})();
+
+(function renderVideos() {
+  const hv = window.FNHelpVideos;
+  const all = hv.videos;
+  const live = all.filter(function (v) { return hv.recorded(v); });
+  const wait = all.filter(function (v) { return !hv.recorded(v); });
+  document.getElementById('videoCounts').textContent = live.length + ' published, ' + wait.length + ' without a link yet.';
+  const groups = {}; hv.groups.forEach(function (g) { groups[g.id] = g.title; });
+  const tb = document.querySelector('#videosTable tbody');
+  wait.forEach(function (v) { tb.appendChild(row([cell(v.id), cell(v.title), cell(groups[v.group] || v.group)])); });
+})();
+
+(async function renderRouting() {
+  const r = await fetch('/api/settings/contact-emails', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  const tb = document.querySelector('#routingTable tbody');
+  [
+    ['Support requests (Get help page)', d.support, 'Yes, in the Support Inbox for 2 years'],
+    ['Privacy and data requests', d.privacy, 'No, email only'],
+    ['Contact Us', d.general, 'No, email only'],
+    ['Ask The Fixer', d.askTheFixer, 'No, email only'],
+    ['Quote requests', d.quote, 'Yes, in Quotes']
+  ].forEach(function (x) { tb.appendChild(row([cell(x[0]), cell(x[1] || 'Not set'), cell(x[2])])); });
+  const lr = await fetch('/api/settings/privacy-lock', { credentials: 'include' });
+  const ld = await lr.json().catch(function () { return {}; });
+  document.getElementById('lockLine').textContent = 'Student names on Classrooms & Parents hide after ' + (ld.minutes || 5) + ' minutes without activity (set in Settings).';
+})();
+</script>
+<script src="admin-shell.js?v=4"></script>
+</body>
+</html>

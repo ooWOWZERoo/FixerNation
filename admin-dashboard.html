@@ -52,7 +52,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=29"></script>
+<script src="admin-nav.js?v=30"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -362,10 +362,32 @@ function renderSalesChart(salesOverTime) {
   }).join('');
 }
 
+// Support rows (Release 134): filled in by loadSupportAttention() from the Support endpoints, then the card is drawn again.
+let supportAttention = { newRequests: 0, errors24: 0 };
+let lastAttentionData = null;
+
 function renderNeedsAttention(data) {
+  lastAttentionData = data;
   const card = document.getElementById('needsAttentionCard');
   const body = document.getElementById('needsAttentionBody');
   const items = [];
+
+  if (supportAttention.newRequests > 0) {
+    items.push({
+      href: 'admin-support.html',
+      label: `${supportAttention.newRequests} new support request${supportAttention.newRequests === 1 ? '' : 's'}`,
+      meta: 'Waiting for a first reply',
+      count: supportAttention.newRequests,
+    });
+  }
+  if (supportAttention.errors24 > 0) {
+    items.push({
+      href: 'admin-support-errors.html',
+      label: `${supportAttention.errors24} error${supportAttention.errors24 === 1 ? '' : 's'} in the last 24 hours`,
+      meta: 'From browsers, API calls, the server or outgoing email',
+      count: supportAttention.errors24,
+    });
+  }
 
   if (data.invoices.unpaid > 0) {
     items.push({
@@ -471,6 +493,18 @@ fetch('/api/dashboard/financial-summary', { credentials: 'include' }).then(r => 
   renderNeedsAttention(data);
 });
 
+async function loadSupportAttention() {
+  try {
+    const [a, b] = await Promise.all([
+      fetch('/api/admin/support/summary', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+      fetch('/api/admin/client-errors?hours=24', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+    ]);
+    supportAttention = { newRequests: (a && Number(a['new'])) || 0, errors24: (b && Number(b.last24Hours)) || 0 };
+    if (lastAttentionData) renderNeedsAttention(lastAttentionData);
+  } catch (e) { /* the card just stays without the Support rows */ }
+}
+loadSupportAttention();
+
 function formatPercent(value, decimals) {
   return value === null || value === undefined ? 'N/A' : (value >= 0 ? '+' : '') + value.toFixed(decimals === undefined ? 1 : decimals) + '%';
 }
@@ -537,6 +571,6 @@ function applySalesRange() {
 setSalesRangePreset(14);
 </script>
 
-<script src="admin-shell.js?v=3"></script>
+<script src="admin-shell.js?v=4"></script>
 </body>
 </html>

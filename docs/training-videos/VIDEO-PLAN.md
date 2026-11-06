@@ -160,7 +160,7 @@ Planned later (M5): a staff video on moderating the community (admin-social.html
 |---|---|---|
 | G1 | Ask for help and follow your request | support.html |
 | G2 | Ask for help without signing in | support.html |
-| G3 | Answer requests in the Support Inbox (FNE staff only) | admin-support.html |
+| G3 | Answer requests in the Support Inbox (FNE staff only) | admin-support.html, admin-support-errors.html |
 
 G1 and G2 are in **Getting started** for everyone. G3 is for FNE staff: it gets a "How-to video" button on the Support Inbox but is **not listed** on the public Help Videos page (`listed: false` in `help-videos.js`). G1 is recorded signed in as the demo teacher (staff answer off-camera through the same route the inbox uses); G2 as a visitor with a made-up example.com address; G3 as the throwaway staff login with three made-up requests, one browser error and one failed email added off-camera. Made with `tests/howto/record.sh G1 G2 G3` (the pipeline now signs in as staff with `as: "staff"`).
 

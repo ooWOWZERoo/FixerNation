@@ -17,6 +17,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 134 — 2026-11-06 — All support tools in one Support area
+
+- **One Support group in the admin menu.** Support Inbox, Account Lookup, Classrooms & Parents, Errors and Help Content now sit together under Support (they were split between "Schools & Partners" and a hidden button). Every support page shows the same tab strip so you can move between them without the menu.
+- **Errors has its own page and a count in the menu** (last 24 hours). The old Errors button on the Inbox is gone; `admin-support.html?tab=errors` forwards to the new page, and each request in the Inbox still shows the errors from that person.
+- **Classroom lookup and Parent view moved to their own page** (Classrooms & Parents), so every student name in the admin sits behind one idle lock. Account Lookup keeps the account, invitations, seats, admin assignments, account actions and timeline, and gains an "Open parent view" link.
+- **New read-only Help Content page:** how many Help center answers are published or still drafts, which help videos have no link yet, and where each form's email goes.
+- **Mission Control:** Needs Attention now lists new support requests and errors from the last 24 hours.
+- **Removed two Automations choices that never worked** ("Support Request Submitted" and "Support Request Resolved" triggers, and the Support Ticket Follow-Up template). Nothing on the server ever fired them; replies are read on the Get help page, not emailed. Automations saved earlier still show their name.
+- No server or database change. No new routes. All old page links still work.
+
 ## Release 133 — 2026-11-06 — Classroom Academic Year list goes from now to graduation
 
 - **The Academic Year choices were a fixed list** (2024–2025 to 2027–2028) on the Create Classroom and Edit Classroom boxes, so it already offered two past years and ran out in a year. The list now starts at the school year we are in (2026–2027) and runs 13 school years, to 2038–2039, so a child starting kindergarten now can be followed through grade 12. It moves forward by itself each August (a school year runs August to July), so nobody has to edit it again. New shared `school-years.js`.
