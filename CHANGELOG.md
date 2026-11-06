@@ -16,6 +16,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 125 — 2026-11-05 — Help center: pricing, refunds, hours, devices and more (answers from the owner)
+
+- **11 new published answers** from your own words: how much a license costs (a quote, no fixed price list), refunds and cancellations (case by case), free trials and demos (case by case), discounts and tax forms (send a request), how renewals work (reminders before the license ends, and the portal banner turns yellow at 30 days), office hours (8 a.m. to 5 p.m., Monday through Friday; reached through the Contact page or Get help), which devices work (any device with a working browser, including Chromebooks and iPads; Chrome preferred), training, and accessibility.
+- **Google Classroom, Clever and single sign-on:** answered from the code. There is no connection to Google Classroom, Clever or ClassLink; adults sign in with email and password or Microsoft, and students use a username and PIN.
+- **"How long is student data kept?" stays a draft.** You said student data is purged at the end of the school year, but nothing in the system does that today (only Brain Games activity is cleared, after about 13 months). It will not be published until the system matches the promise or the wording changes.
+- 191 answers are now published, 18 are drafts. `help-center.js` is v3. No database change.
+
 ## Release 124 — 2026-11-05 — The Help center is filled in
 
 - **The Help center now answers questions.** It was empty because all 32 first-draft answers were still waiting for review. It now has **180 published answers** covering sign-in problems, administrator setup, invitations and seats, branding, reports, quotes and purchasing, district tools, teacher classrooms and student PINs, assignments and progress, Community, Brain Games, parents, and the Get help page itself. About 75 of them quote the exact message a person sees ("It says Too many attempts..."), and most link the matching how-to video.

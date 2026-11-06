@@ -128,3 +128,5 @@ Status values: `Planned`, `Recorded`, `Needs re-record` (say what changed), `Re-
 
 - 2026-11-05, Release 124 (Help center filled in): the video check lists only the not-yet-published G1 and G2 (`support.html` and `help-center.js` changed: the "Check these answers first" box now shows real answers once a topic is chosen). No recorded video depends on those files, so none needs re-recording. G1 and G2 were re-recorded with a line about the box and are still unpublished.
 
+
+- 2026-11-05, Release 125 (owner-supplied Help center answers): the video check lists only the not-yet-published G1 and G2 (`help-center.js`, `support.html`). No recorded video depends on those files. G1 and G2 stay as recorded: the quick-answers box behaves the same, it just has more answers behind it.
