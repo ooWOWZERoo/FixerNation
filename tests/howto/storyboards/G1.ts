@@ -35,6 +35,14 @@ const board: Storyboard = {
       },
     },
     {
+      say: "Once you choose a topic, a short list of quick answers appears at the top of the page. Take a look, because one of them might fix things right away. If not, carry on.",
+      run: async (p) => {
+        await p.waitForSelector("#checkFirst:not([hidden])");
+        await glideTo(p, "#checkFirst");
+        await p.waitForTimeout(1500);
+      },
+    },
+    {
       say: "Add a short subject. Then describe what's happening. Say what you were trying to do, and what you saw instead. The more detail you give, the faster we can help.",
       run: async (p) => {
         await fillSlowly(p, "#helpSubject", "A student can't sign in", 40);

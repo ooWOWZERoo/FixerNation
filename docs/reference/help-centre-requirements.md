@@ -42,9 +42,20 @@ An admin page to edit answers in the browser (answers live in `help-center.js` a
 
 ## As built (Release 123)
 
-- `help.html` and `help-center.js` (30 draft answers: 6 for everyone, 6 school, 3 district, 8 teacher, 3 student, 3 parent). Everyone shows all; a role shows its own plus the "everyone" ones. Search matches every word in the question, answer, steps and topic.
+- `help.html` and `help-center.js` (first draft of 32 answers; see "Seeded in Release 124" below). Everyone shows all; a role shows its own plus the "everyone" ones. Search matches every word in the question, answer, steps and topic.
 - Links: footer ("Help center"), `school-admin-nav.js` and `district-admin-nav.js` (menu item, opens `help.html?aud=school` or `?aud=district`), a pointer on `contact.html`, and "Check these answers first" on `support.html` (reviewed answers for the chosen topic; hidden when there are none).
 - `faq_open` event: `fnTrackEvent('faq_open', <entry id>)`, so entry ids must never change.
 - 2-year delete: `purgeOldRequests()` in `lib/support.js`, called after a new request is saved.
 - Answers worth a second look when you review: seat release after removing a teacher, what each administrator level can do (the answer points to the video instead of listing them), and the teacher self-registration answer.
 - Support how-to videos G1, G2 and G3 (see `docs/training-videos/VIDEO-PLAN.md`).
+
+## Seeded in Release 124 (2026-11-05)
+
+The Help center showed nothing to visitors because every answer was still `reviewed: false`. It was seeded from four sources (the how-to video scripts, the public pages, the code's own error messages and rules, and the existing list) into **197 answers: 180 published and 17 drafts**. Each published answer was written from a source that states it outright; the numbers were checked against the code (200 invitations per upload, 8-character passwords, 7-day welcome links, 14-day invitations, 5 resends, the 90-day affiliate credit, 3 frameworks with 60 standards, the 2 MB logo, 5 files of 100 MB in Community, the sign-in and join-code limits, the 90 percent seat warning, the 30-day banner and the district dashboard flags).
+
+- Entries are written with `E(...)` (published) or `D(...)` (draft) in `help-center.js`; the header comment explains the fields.
+- **Drafts (hidden until the owner reads them at `help.html?preview=1`):** every price, every promise about response or setup time, privacy and data wording taken from the privacy pages, the research and CASEL claims, and the Parents' Bill of Rights wording.
+- No answer tells anyone to email us: the site has no public support email. Contact goes through Get help or the Contact page (a test enforces it).
+- Found while reading the code: after a trial ends, the Convert to Annual Access button is still shown, but pressing it says "No active trial found." The FAQ explains it; the button probably should be hidden.
+- Conflicts between public pages left out of the FAQ: whether parents can see quiz scores (for-parents.html versus the Parents' Bill of Rights), who can read student reflections, and whether parents get an invitation or a code.
+- Questions the public pages do not answer (the owner can supply answers): the full price list, refunds and cancellation, a phone number or office hours, supported devices and browsers, Chromebook and iPad use, renewal steps, data retention periods, Google Classroom or Clever and single sign-on, training, accessibility and languages, free trials or demos, the lesson scope and sequence, discounts, tax forms and invoices, security certifications.

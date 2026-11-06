@@ -24,10 +24,18 @@ const board: Storyboard = {
       },
     },
     {
-      say: "Choose what you need help with, add a subject, and describe what's happening.",
+      say: "Choose what you need help with. A short list of quick answers for that topic appears at the top of the page. It's worth a look first, because one of them might fix things right away.",
       run: async (p) => {
         await glideClick(p, "#helpCategory");
         await p.selectOption("#helpCategory", "cant_sign_in");
+        await p.waitForSelector("#checkFirst:not([hidden])");
+        await glideTo(p, "#checkFirst");
+        await p.waitForTimeout(1500);
+      },
+    },
+    {
+      say: "If it doesn't help, add a subject, and describe what's happening.",
+      run: async (p) => {
         await fillSlowly(p, "#helpSubject", "My password link has expired", 40);
         await fillSlowly(p, "#helpMessage", "I was invited to join my school, but the link in my email says it has expired. I'm not sure how to get a new one.", 22);
       },

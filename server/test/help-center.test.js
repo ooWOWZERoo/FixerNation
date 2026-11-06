@@ -23,12 +23,13 @@ const videos = load('help-videos.js').FNHelpVideos;
 const TOPICS = ['cant_sign_in', 'invitation_or_seat', 'students_or_classroom', 'parents', 'billing_or_license', 'something_broke', 'other'];
 
 test('every entry is complete: unique id, a question, an answer or steps, a known audience and a real Get help topic', () => {
-  assert.ok(HC.entries.length >= 25, 'a useful first set');
+  assert.ok(HC.entries.length >= 100, 'a useful set');
+  assert.ok(HC.visible(false).length >= 100, 'enough reviewed answers that visitors always find something');
   const ids = new Set();
   const audiences = HC.audiences.map(a => a.id);
   for (const e of HC.entries) {
     assert.match(e.id, /^[a-z0-9-]+$/, e.id); assert.ok(!ids.has(e.id), `duplicate id ${e.id}`); ids.add(e.id);
-    assert.ok(e.q && e.q.endsWith('.') || e.q.endsWith('?'), `${e.id}: a question or a plain statement`);
+    assert.ok(/[.?]$/.test(String(e.q || '').replace(/["']+$/, '')), `${e.id}: a question or a plain statement`);
     assert.ok(e.a || (e.steps && e.steps.length), `${e.id}: has an answer`);
     assert.ok(Array.isArray(e.for) && e.for.length && e.for.every(a => audiences.includes(a)), `${e.id}: audience`);
     assert.ok(TOPICS.includes(e.help), `${e.id}: Get help topic ${e.help}`);
@@ -96,13 +97,13 @@ test('facts that must match the system: reset 1 hour, verification 24 hours, inv
 
 test('WIRING: page, footer, portal menus, Get help panel, Contact pointer and the anonymous "answer opened" count', () => {
   const page = read('help.html');
-  assert.match(page, /help-center\.js\?v=1/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
+  assert.match(page, /help-center\.js\?v=2/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
   assert.match(page, /preview/); assert.match(page, /noindex/);
   assert.ok(!/innerHTML/.test(page), 'answers are written with textContent only');
   assert.match(read('footer.js'), /help\.html">Help center/);
   assert.match(read('school-admin-nav.js'), /help\.html\?aud=school/); assert.match(read('district-admin-nav.js'), /help\.html\?aud=district/);
   const sp = read('support.html');
-  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=1/); assert.match(sp, /See all answers/);
+  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=2/); assert.match(sp, /See all answers/);
   assert.match(read('contact.html'), /href="help\.html"/);
   assert.match(read('server/routes/analytics.js'), /EVENT_TYPE_PATTERN = \/\^\[a-z_\]\{1,32\}\$\//);
 });
@@ -119,4 +120,25 @@ test('GET HELP VIDEOS: G1 and G2 are on the Get help page, G3 is staff-only and 
     if (m) assert.equal(m[1], '15', `${f} loads help-videos.js at the current version`);
   }
   assert.ok(HC.entries.some(e => e.video === 'G1') && HC.entries.some(e => e.video === 'G2'), 'the Help center points at both user videos');
+});
+
+test('SEEDED ANSWERS: the site has no public support email, so no answer tells people to email us; contact goes through Get help or the Contact page', () => {
+  for (const e of HC.entries) {
+    const text = `${e.a} ${(e.steps || []).join(' ')}`;
+    assert.ok(!/email (us|support|the team at)|support@/i.test(text), `${e.id} must say "send us a request" instead`);
+    assert.ok(e.a.split(/\s+/).length <= 80, `${e.id} is too long for a quick answer`);
+  }
+});
+
+test('SEEDED ANSWERS: pricing, response-time promises, privacy and legal wording and research claims stay drafts until the owner reads them', () => {
+  const drafts = new Set(HC.entries.filter(e => !e.reviewed).map(e => e.id));
+  for (const id of ['teacher-seat-cost', 'teacher-single-license-price', 'quote-response-time', 'setup-time', 'student-data-collected', 'student-data-sale-ads', 'ferpa-requests', 'data-deletion', 'outcome-evidence', 'casel-alignment']) assert.ok(drafts.has(id), `${id} is a draft`);
+  const text = HC.visible(false).map(e => e.a).join(' ');
+  assert.ok(!/\$[1-9]/.test(text), "no dollar prices in a reviewed answer (the only dollar figure allowed is the $0 quote that needs no PO)");
+});
+
+test('every audience tab has answers for visitors, and a search for a common word finds some', () => {
+  const pub = HC.visible(false);
+  for (const a of HC.audiences) assert.ok(HC.forAudience(pub, a.id).length >= 15, `${a.id} has plenty`);
+  for (const word of ['password', 'invitation', 'pin', 'seat', 'classroom', 'email', 'license', 'parent']) assert.ok(HC.search(pub, word).length >= 3, word);
 });

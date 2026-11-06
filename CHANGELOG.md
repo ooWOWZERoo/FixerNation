@@ -16,6 +16,15 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 124 — 2026-11-05 — The Help center is filled in
+
+- **The Help center now answers questions.** It was empty because all 32 first-draft answers were still waiting for review. It now has **180 published answers** covering sign-in problems, administrator setup, invitations and seats, branding, reports, quotes and purchasing, district tools, teacher classrooms and student PINs, assignments and progress, Community, Brain Games, parents, and the Get help page itself. About 75 of them quote the exact message a person sees ("It says Too many attempts..."), and most link the matching how-to video.
+- **17 answers stay hidden until you read them** (`help.html?preview=1`): everything about prices, promised response times, privacy and legal wording, and research claims.
+- The answers were gathered from the how-to video scripts, the public pages and the code's own error messages, and the numbers in them were checked against the code. None tells people to email us (the site has no public support email); they point to Get help.
+- Existing answers were improved (permission levels, teacher self-registration and seat release are now stated from the code). The "Check these answers first" box on the Get help page now shows real answers for the chosen topic.
+- No database change. Deploy: pull, rsync (`help-center.js` and the pages that load it), restart is not needed for a static change but harmless.
+- Notes and gaps: `docs/reference/help-centre-requirements.md`.
+
 ## Release 123 — 2026-11-05 — Help center, and how-to videos for Get help
 
 - **New Help center** (`help.html`): a search box, tabs for Everyone, School administrators, District administrators, Teachers, Students and Parents, and short plain answers (about 30 to start) with steps where there are steps, the matching help video when one is recorded, and a "Still stuck? Get help" button that opens the Get help form with the topic already chosen. Linked from the footer, the School and District admin menus, the Contact page and the top of the Get help page ("Check these answers first").
