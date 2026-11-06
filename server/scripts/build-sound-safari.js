@@ -25,16 +25,18 @@ const WORD_RATE = '120';
 const SOUND_RATE = '60'; // each isolated sound is said slowly, then stretched further below if it is still short
 const QUESTION = 'Which picture starts with the same sound?';
 
-// How the voice says each sound (children's phonics spelling: stops get a soft "uh", stretchable sounds are held).
+// How the voice says each sound. The voice reads a triple like "lll" or "sss" as three letter names ("el el el"), which is what a
+// child heard as the sound repeated three times, so those sounds are spelled with a short "uh" (one syllable, never a letter name).
+// "mmm", "zzz" and "shhh" are read as one hum, buzz and hush, so they keep their long spelling and are held.
 const SOUNDS = {
-  m: 'mmm', s: 'sss', t: 'tuh', b: 'buh', p: 'puh', d: 'duh', f: 'fff', g: 'guh', h: 'huh', j: 'juh',
-  k: 'kuh', l: 'lll', n: 'nnn', r: 'rrr', w: 'wuh', v: 'vvv', z: 'zzz', sh: 'shhh', ch: 'chuh',
+  m: 'mmm', s: 'suh', t: 'tuh', b: 'buh', p: 'puh', d: 'duh', f: 'fuh', g: 'guh', h: 'huh', j: 'juh',
+  k: 'kuh', l: 'luh', n: 'nuh', r: 'ruh', w: 'wuh', v: 'vuh', z: 'zzz', sh: 'shhh', ch: 'chuh',
 };
 // Sounds that are easy to mix up (same mouth shape, voiced or not). They never sit side by side in a round.
 const LOOKALIKE = { b: 'p', p: 'b', d: 't', t: 'd', k: 'g', g: 'k', f: 'v', v: 'f', s: 'z', z: 's', sh: 'ch', ch: 'sh', j: 'ch', m: 'n', n: 'm' };
 
 // Sounds a mouth can hold on to (a stretched "mmm"); the others are short pops and get a shorter minimum.
-const HELD = new Set(['m', 's', 'f', 'l', 'n', 'r', 'v', 'z', 'sh']);
+const HELD = new Set(['m', 'z', 'sh']);
 
 // Pictures: the word, its picture, and the sound it starts with. Only older emoji, so they draw on school Chromebooks.
 const PICTURES = {

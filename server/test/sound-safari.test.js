@@ -90,3 +90,12 @@ test('the isolated sounds are long enough to hear', () => {
     assert.ok(dur >= 0.9, `sound ${s} is only ${dur}s`);
   });
 });
+
+test('no sound is spelled as a repeated letter the voice would read as three letter names', () => {
+  const ALLOWED_TRIPLES = new Set(['mmm', 'zzz', 'shhh']); // read as one hum, buzz and hush
+  Object.entries(SOUNDS).forEach(([k, say]) => {
+    if (/(.)\1\1/.test(say)) assert.ok(ALLOWED_TRIPLES.has(say), `sound ${k} is spelled "${say}", which the voice reads as three letter names`);
+  });
+  // The spelled sounds, once each, with no "el el el" style repeats in any spoken line of a round.
+  rounds.forEach((r) => assert.ok(!/(.)\1\1/.test(r.line.replace(r.say, '')), `${r.key}: a repeated-letter spelling in the line`));
+});

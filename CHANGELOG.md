@@ -17,6 +17,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 132 — 2026-11-06 — Sound Safari: no more sounds said three times
+
+- **Found why "lll" was said three times.** The voice reads a spelled triple like "lll" as three letter names ("el el el"). The clip lengths showed the same for "sss", "fff", "nnn", "rrr" and "vvv" (each 1.0 to 1.4 seconds, against 0.3 to 0.6 for "mmm", "zzz" and "shhh", which it reads as one hum, buzz and hush).
+- **Six sounds respelled so they are said once:** s, f, l, n, r and v now use a short "uh" ("suh", "fuh", "luh", "nuh", "ruh", "vuh"), the same way the pop sounds ("tuh", "buh") already did. "mmm", "zzz" and "shhh" are unchanged. A test now fails if a sound is ever spelled as a repeated letter again. Only 6 clips changed.
+
 ## Release 131 — 2026-11-06 — Games: a way back, clearer sounds, Ava on every Discover game, and many more rounds
 
 - **Every game now has a "← All Brain Games" link** under the site header (32 game pages; new `game-backlink.js`). It is left out when a game is shown inside a student's classroom page, which already has "My Classroom". Before this, the 26 newer games had no way back except the browser's Back button.
