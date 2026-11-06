@@ -17,6 +17,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 127 — 2026-11-06 — A shorter footer, with help and legal pages kept apart
+
+- **The footer is about 30% shorter** (716 px to 499 px on a laptop, and about 125 px shorter on a phone). The long fourth column is gone: the 10 help, legal and privacy links no longer sit under the sign-in links.
+- **Three clear zones.** Four link columns (Explore, Schools & Partners, Sign in) with seven links or fewer each. A "Need a hand?" band with its own buttons (Help center, Help Videos, Contact, and Get help in coral). A quiet "Legal & privacy" row with Terms of Use, Privacy Policy, Refunds & Cancellations, Student Data Privacy, Parents' Bill of Rights and Your Privacy Choices, next to the copyright.
+- **Small changes.** A thin coral-to-gold stripe on top; Become an Affiliate moved under Schools & Partners; The Positivity Network is now one line (its tagline shows on hover); a custom website logo is capped at 84 px tall instead of 130 px.
+- Static change only: `footer.js` is v16 on every page. No server or database change.
+
 ## Release 126 — 2026-11-06 — Terms, Privacy Policy, Refunds and Affiliate terms (drafts for owner review)
 
 - **Four new public pages** so that every place that points at a legal document has one behind it: Terms of Use (`terms.html`), Privacy Policy (`privacy-policy.html`), Refunds and cancellations (`refund-policy.html`) and Affiliate program terms (`affiliate-terms.html`). They say only what the site and the Help center already say (for example, refunds are decided case by case; licenses do not renew on their own).
