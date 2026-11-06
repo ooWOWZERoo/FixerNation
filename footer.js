@@ -75,10 +75,10 @@
           '<a class="fn-flogo" href="index.html"><span class="fn-flogo-pill"><img src="logo-fne.png?v=2" alt="Fixer Nation Education" class="fn-flogo-img"></span></a>' +
           '<p class="fn-fcredo">&ldquo;There are no problems in life&hellip; only issues and answers.&rdquo;</p>' +
           '<div class="fn-fsocial">' +
-            '<a href="#">IG</a>' +
+            '<a href="https://www.instagram.com/p/Dd6q3pCFWFK/" target="_blank" rel="noopener" aria-label="Instagram">IG</a>' +
             '<a href="#">FB</a>' +
             '<a href="#">X</a>' +
-            '<a href="#">in</a>' +
+            '<a href="https://www.linkedin.com/in/anthony-placito-b0b37442b/" target="_blank" rel="noopener" aria-label="LinkedIn">in</a>' +
           '</div>' +
         '</div>' +
 
