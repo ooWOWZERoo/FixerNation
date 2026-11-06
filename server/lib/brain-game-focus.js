@@ -82,6 +82,17 @@ const GAMES = {
   'know-your-triggers':  { band: 'challenge', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness', 'self_management'] },
   'know-yourself':       { band: 'advance', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'] },
   'stress-signals':      { band: 'advance', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness', 'self_management'] },
+  // Release 143: Relationship Skills and Social Awareness in every band
+  'asking-nicely':       { band: 'discover', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills'] },
+  'team-tower':          { band: 'discover', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills'] },
+  'team-mission':        { band: 'explore', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills'] },
+  'walk-in-my-shoes':    { band: 'explore', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
+  'many-ways-to-be':     { band: 'explore', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
+  'speak-up-kindly':     { band: 'challenge', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills'] },
+  'other-side-of-the-screen': { band: 'challenge', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
+  'walk-in-their-shoes': { band: 'challenge', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
+  'repair-it':           { band: 'advance', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills'] },
+  'many-voices':         { band: 'advance', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
 };
 
 const BANDS = ['discover', 'explore', 'challenge', 'advance'];

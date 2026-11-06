@@ -123,8 +123,8 @@ const REAL = auditAll().filter((r) => r.engine !== 'legacy' && !r.note).map((r) 
   return { slug: r.slug, engineName, pack: extractPack(src) };
 }).filter((g) => g.pack && g.engineName);
 
-test('REAL GAMES: all 39 engine games are found and parse', () => {
-  assert.equal(REAL.length, 39, REAL.map((g) => g.slug).join(', '));
+test('REAL GAMES: all 49 engine games are found and parse', () => {
+  assert.equal(REAL.length, 49, REAL.map((g) => g.slug).join(', '));
 });
 
 test('REAL GAMES: after preparation each round keeps its choices and its right answer', () => {

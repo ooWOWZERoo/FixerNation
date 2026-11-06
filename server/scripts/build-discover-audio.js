@@ -32,6 +32,9 @@ const GAMES = [
   { slug: 'add-it-up', engine: 'audioChoice' },
   { slug: 'pattern-parade', engine: 'audioChoice' },
   { slug: 'my-feelings-today', engine: 'scenarioChoice' },
+  // Release 143
+  { slug: 'asking-nicely', engine: 'audioChoice' },
+  { slug: 'team-tower', engine: 'audioChoice' },
 ];
 const ENGINE_VERSIONS = { 'engine-audio-choice.js': 7, 'engine-scenario-choice.js': 9, 'engine-voice.js': 1 };
 const RATE = '135';       // say -r: slower than the how-to videos (165), natural for kindergarten to 2nd grade

@@ -41,6 +41,16 @@ const DESCRIPTIONS = {
   'know-your-triggers': 'Name what raises your stress and how you notice it first. Only you see it.',
   'know-yourself': 'Rank what matters to you, face a tradeoff and see where you lean. Only you see it.',
   'stress-signals': 'Find the signs that stress is building for you and one way to check in sooner. Only you see it.',
+  'asking-nicely': 'Listen to what happens, then pick the kind words to say.',
+  'team-tower': 'Listen to a team problem, then pick what helps the team.',
+  'team-mission': 'Read a group work problem, pick the best team move, then find the sentence that shows why.',
+  'walk-in-my-shoes': 'Read about someone, work out how they feel, then find the sentence that shows it.',
+  'many-ways-to-be': 'Read about people who are different, then pick the respectful answer and the proof.',
+  'speak-up-kindly': 'Read a situation, pick the message that is clear and kind, then find what is needed.',
+  'other-side-of-the-screen': 'Read an online moment, work out how the other person feels, then find the proof.',
+  'walk-in-their-shoes': 'Read both sides of a disagreement, then work out why each person sees it that way.',
+  'repair-it': 'Read what went wrong, then pick the message that owns it and repairs trust.',
+  'many-voices': 'Read a real situation, spot whose voice is missing, then find the sentence that shows it.',
 };
 
 // The six older games had no band (they showed under every filter). They now sit in the band whose tone fits them.
