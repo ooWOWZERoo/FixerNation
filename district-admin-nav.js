@@ -86,6 +86,7 @@
     '</nav>' +
     '<div id="daDistrictInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +
+      '<a href="help.html?aud=district" target="_blank" rel="noopener"><span class="ic">?</span><span class="label">Help center</span></a>' +
       '<a href="help-videos.html#district-admins" target="_blank" rel="noopener"><span class="ic">▶</span><span class="label">Help videos</span></a>' +
       '<a href="index.html" target="_blank" rel="noopener"><span class="ic">↗</span><span class="label">View Site</span></a>' +
       '<a href="#" onclick="daLogout();return false;"><span class="ic">⎋</span><span class="label">Log Out</span></a>' +

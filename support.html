@@ -85,6 +85,12 @@
   .msg.staff{background:#E4F3EE;}
   .msg .who{font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em;}
   .link-btn{background:none; border:none; color:var(--coral-dark); font-weight:700; cursor:pointer; font-size:14px; margin-bottom:14px;}
+  .check-first{max-width:560px; margin:24px auto 0; padding:0 32px;}
+  .check-first-box{background:#fff; border-radius:var(--radius-md); padding:18px 22px; box-shadow:0 8px 20px -14px rgba(22,79,74,0.35);}
+  .check-first h2{font-size:18px; margin-bottom:8px;}
+  .check-first ul{margin:0 0 6px 18px;}
+  .check-first li{margin-bottom:5px; font-size:14.5px;}
+  .check-first a{color:var(--coral-dark); font-weight:600;}
 </style>
 </head>
 <body>
@@ -94,8 +100,16 @@
 <section class="contact-hero wrap">
   <span class="eyebrow">Help</span>
   <h1>Get help</h1>
-  <p class="lead">Something not working, or not sure what to do next? Tell us what's going on and we'll write back by email.</p>
+  <p class="lead">Something not working, or not sure what to do next? Tell us what's going on and we'll write back here.</p>
 </section>
+
+<div class="check-first" id="checkFirst" hidden>
+  <div class="check-first-box">
+    <h2>Check these answers first</h2>
+    <ul id="checkFirstList"></ul>
+    <a href="help.html">See all answers</a>
+  </div>
+</div>
 
 <div class="form-wrap" id="formWrap">
   <div class="form-card">
@@ -152,6 +166,7 @@
 
 <footer></footer>
 
+<script src="help-center.js?v=1"></script>
 <script>
 (function () {
   var CATEGORIES = [
@@ -181,6 +196,22 @@
   var params = new URLSearchParams(location.search);
   if (params.get('topic')) $('helpCategory').value = params.get('topic');
   if (params.get('ref')) $('lookupRef').value = params.get('ref');
+
+  // "Check these answers first": reviewed Help center answers for the chosen topic (nothing shows until some are reviewed).
+  function showAnswers() {
+    var box = $('checkFirst'), listEl = $('checkFirstList');
+    if (!window.FNHelpCenter) { box.hidden = true; return; }
+    var topic = $('helpCategory').value;
+    var found = FNHelpCenter.visible(false).filter(function (e) { return e.help === topic; }).slice(0, 4);
+    listEl.textContent = '';
+    found.forEach(function (e) {
+      var li = document.createElement('li'), a = document.createElement('a');
+      a.href = 'help.html#' + e.id; a.textContent = e.q; li.appendChild(a); listEl.appendChild(li);
+    });
+    box.hidden = !found.length;
+  }
+  $('helpCategory').addEventListener('change', showAnswers);
+  showAnswers();
 
   fetch('/api/support/context', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (c) {
     if (!c.signedIn) return;
@@ -359,6 +390,7 @@
 <script src="site-auth.js?v=11"></script>
 <script src="cart.js"></script>
 
-<script src="footer.js?v=13"></script>
+<script src="footer.js?v=14"></script>
+<script src="help-videos.js?v=15" defer></script>
 </body>
 </html>

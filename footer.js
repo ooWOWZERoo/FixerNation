@@ -118,6 +118,7 @@
             '<li><a href="student-data-privacy.html">Student Data Privacy</a></li>' +
             '<li><a href="parents-bill-of-rights.html">Parents\' Bill of Rights</a></li>' +
             '<li><a href="privacy-choices.html">Privacy Choices</a></li>' +
+            '<li><a href="help.html">Help center</a></li>' +
             '<li><a href="help-videos.html">Help Videos</a></li>' +
             '<li><a href="support.html">Get help</a></li>' +
             '<li><a href="contact.html">Contact</a></li>' +

@@ -2,6 +2,7 @@
 
    TO ADD A VIDEO: paste its link into that video's `url` below. That is all.
    - A video is shown on the site only once its `url` is filled in. Until then it is hidden everywhere.
+   - `listed: false` keeps a video off the public help-videos.html list (it still gets its page button), e.g. staff-only videos.
    - `pages` lists the pages the video belongs to. Each of those pages gets a "How-to video" button once
      the video has a url, and the page must load this file:  <script src="help-videos.js?v=1" defer></script>
    - `help-videos.html` lists every recorded video, grouped by audience and topic.
@@ -22,7 +23,8 @@
     { id: 'students', title: 'Students' },
     { id: 'parents', title: 'Parents' },
     { id: 'partners', title: 'Affiliate partners' },
-    { id: 'explore', title: 'Exploring Fixer Nation' }
+    { id: 'explore', title: 'Exploring Fixer Nation' },
+    { id: 'staff', title: 'Fixer Nation staff' }
   ];
 
   var VIDEOS = [
@@ -42,6 +44,12 @@
     { id: 'A4', group: 'getting-started', topic: 'Signing in', title: 'Sign in with Microsoft',
       summary: 'Use your Microsoft account to sign in, and what to do the first time.',
       pages: ['microsoft-confirm.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487235/fne/help/A4.mp4', captions: '/help-assets/A4.vtt', poster: '/help-assets/A4.jpg' },
+    { id: 'G1', group: 'getting-started', topic: 'Getting help', title: 'Ask for help and follow your request',
+      summary: 'Send a request from the Get help page, then read our reply and answer it, all on the same page.',
+      pages: ['support.html'], url: '' },
+    { id: 'G2', group: 'getting-started', topic: 'Getting help', title: 'Ask for help without signing in',
+      summary: 'No account needed. Send a request, then come back with your reference and email to read our reply.',
+      pages: ['support.html'], url: '' },
 
     // ---- School license administrators
     { id: 'B1', group: 'school-admins', topic: 'Your portal', title: 'A tour of the School Admin portal',
@@ -163,7 +171,12 @@
     // ---- Exploring Fixer Nation
     { id: 'E1', group: 'explore', topic: 'Standards', title: 'See how Fixer Nation lines up with your state\'s SEL standards and Portrait of a Graduate',
       summary: 'Pick your state, see the connections to its SEL standards or Portrait of a Graduate, and print a one-page summary.',
-      pages: ['state-standards.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487237/fne/help/E1.mp4', captions: '/help-assets/E1.vtt', poster: '/help-assets/E1.jpg' }
+      pages: ['state-standards.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487237/fne/help/E1.mp4', captions: '/help-assets/E1.vtt', poster: '/help-assets/E1.jpg' },
+
+    // ---- Fixer Nation staff (on the Support Inbox's How-to video button; not listed on the public Help Videos page)
+    { id: 'G3', group: 'staff', topic: 'Support', listed: false, title: 'Answer requests in the Support Inbox',
+      summary: 'Read a request, see what broke for that person, reply or leave a note, assign it and mark it resolved.',
+      pages: ['admin-support.html'], url: '' }
   ];
 
   var TEXT = {
@@ -310,7 +323,7 @@
   // ---- help-videos.html: every video, grouped. `preview` also shows the unrecorded ones.
   function renderHelpPage(root, preview) {
     injectStyles();
-    var shown = VIDEOS.filter(function (v) { return preview || recorded(v); });
+    var shown = VIDEOS.filter(function (v) { return preview || (recorded(v) && v.listed !== false); });
     root.textContent = '';
     if (!shown.length) {
       root.appendChild(el('p', { class: 'hv-empty' }, 'Videos are on the way. Check back soon.'));

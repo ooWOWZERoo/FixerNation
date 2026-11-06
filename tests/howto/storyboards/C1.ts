@@ -16,7 +16,7 @@ const board: Storyboard = {
   steps: [
     { say: "Welcome to the District Admin portal. In this tour you'll see what's here and where to find it, in about two minutes." },
     {
-      say: "The menu on the left has four pages: Dashboard, Branding, Schools, and Portrait of a Graduate. At the bottom are Help videos, a link to view the site, and Log Out.",
+      say: "The menu on the left has four pages: Dashboard, Branding, Schools, and Portrait of a Graduate. At the bottom are the Help center, Help videos, a link to view the site, and Log Out.",
       run: async (p) => {
         for (const href of ["district-admin-dashboard.html", "district-admin-branding.html", "district-admin-schools.html", "district-admin-standards.html"]) {
           await glideTo(p, `.sa-nav a[href="${href}"]`);

@@ -38,6 +38,12 @@
     ],
     "explore": [
       "tests/howto/pipeline.ts"
+    ],
+    "staff": [
+      "admin-nav.js",
+      "admin-shell.js",
+      "admin-common.js",
+      "tests/howto/pipeline.ts"
     ]
   },
   "videos": {
@@ -260,6 +266,29 @@
       "server/lib/standards.js",
       "server/routes/standards.js",
       "tests/howto/catalog.ts"
+    ],
+    "G1": [
+      "support.html",
+      "server/routes/support.js",
+      "server/lib/support.js",
+      "help-center.js",
+      "tests/howto/support.ts",
+      "tests/howto/storyboards/G1.ts"
+    ],
+    "G2": [
+      "support.html",
+      "server/routes/support.js",
+      "server/lib/support.js",
+      "tests/howto/support.ts",
+      "tests/howto/storyboards/G2.ts"
+    ],
+    "G3": [
+      "admin-support.html",
+      "server/routes/admin-support.js",
+      "server/routes/admin-client-errors.js",
+      "server/lib/client-errors.js",
+      "tests/howto/support.ts",
+      "tests/howto/storyboards/G3.ts"
     ]
   }
 }

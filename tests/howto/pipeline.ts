@@ -27,7 +27,7 @@ export interface Storyboard {
   slug: string;
   title: string;
   /** Who signs in off-camera before recording. Omit for a signed-out start. */
-  as?: "school-admin" | "district-admin" | "teacher";
+  as?: "school-admin" | "district-admin" | "teacher" | "staff";
   /** Sign in as this email instead of the default demo administrator for `as` (for a role the seed does not provide). */
   asEmail?: string;
   /** Path to open first. */
@@ -178,6 +178,29 @@ export async function staffPost(apiPath: string, body: unknown) {
   return r.json();
 }
 
+/** Act as FNE staff and call any staff route (GET/POST/PUT), the way the staff pages do. Local test site only. */
+export async function staffRequest(method: "GET" | "POST" | "PUT" | "DELETE", apiPath: string, body?: unknown) {
+  const login = await fetch(`${env.baseUrl}/api/auth/login`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: process.env.HOWTO_STAFF_USER ?? "howto-admin", password: env.password }),
+  });
+  if (!login.ok) throw new Error(`Staff sign-in failed (${login.status})`);
+  const cookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]).join("; ");
+  const r = await fetch(`${env.baseUrl}${apiPath}`, { method, headers: { "Content-Type": "application/json", Cookie: cookie }, body: method === "GET" ? undefined : JSON.stringify(body ?? {}) });
+  if (!r.ok) throw new Error(`${method} ${apiPath} failed (${r.status}): ${await r.text()}`);
+  return r.json() as Promise<any>;
+}
+
+/** Sign in off-camera as FNE staff (the admin login) and save the session. */
+async function signInStaff(baseUrl: string, storagePath: string) {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ baseURL: baseUrl });
+  const r = await ctx.request.post("/api/auth/login", { data: { username: process.env.HOWTO_STAFF_USER ?? "howto-admin", password: env.password } });
+  if (!r.ok()) throw new Error(`Staff sign-in failed (${r.status()}). Is the test site seeded?`);
+  await ctx.storageState({ path: storagePath });
+  await browser.close();
+}
+
 /** Sign in off-camera by the same call the sign-in page makes, and save the session. */
 async function signIn(baseUrl: string, email: string, storagePath: string) {
   const browser = await chromium.launch();
@@ -204,7 +227,8 @@ export async function produce(board: Storyboard, outRoot = path.join(__dirname, 
   // 2. Set up the situation and sign in off-camera, then record.
   await board.setup?.();
   const storage = path.join(out, "storage-state.json");
-  if (board.as) await signIn(env.baseUrl, board.asEmail ?? (board.as === "school-admin" ? env.schoolAdmin : board.as === "teacher" ? env.teacher : env.districtAdmin), storage);
+  if (board.as === "staff") await signInStaff(env.baseUrl, storage);
+  else if (board.as) await signIn(env.baseUrl, board.asEmail ?? (board.as === "school-admin" ? env.schoolAdmin : board.as === "teacher" ? env.teacher : env.districtAdmin), storage);
 
   const browser = await chromium.launch();
   const ctx: BrowserContext = await browser.newContext({

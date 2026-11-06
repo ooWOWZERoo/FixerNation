@@ -153,3 +153,14 @@ Four short videos for people who use the community (licensed teachers and school
 Facts the scripts must respect: hashtags are shown highlighted in a post but clicking one does nothing yet, so no video says you can search by hashtag; comments are a flat list, not threaded; a reaction is one thumbs up that toggles; leaving a group asks the browser to confirm; a bio, email and school are visible to other members only when the Share my profile box is checked.
 
 Planned later (M5): a staff video on moderating the community (admin-social.html). Held until the page can remove comments (the server supports it; the page has no button).
+
+## Added 2026-11-05 (Get help)
+
+| ID | Video | Page it belongs to |
+|---|---|---|
+| G1 | Ask for help and follow your request | support.html |
+| G2 | Ask for help without signing in | support.html |
+| G3 | Answer requests in the Support Inbox (FNE staff only) | admin-support.html |
+
+G1 and G2 are in **Getting started** for everyone. G3 is for FNE staff: it gets a "How-to video" button on the Support Inbox but is **not listed** on the public Help Videos page (`listed: false` in `help-videos.js`). G1 is recorded signed in as the demo teacher (staff answer off-camera through the same route the inbox uses); G2 as a visitor with a made-up example.com address; G3 as the throwaway staff login with three made-up requests, one browser error and one failed email added off-camera. Made with `tests/howto/record.sh G1 G2 G3` (the pipeline now signs in as staff with `as: "staff"`).
+

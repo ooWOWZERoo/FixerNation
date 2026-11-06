@@ -2,6 +2,7 @@
 // Requirements and access matrix: docs/reference/support-requests-requirements.md
 const crypto = require('crypto');
 const pool = require('../db/pool');
+const { audit } = require('./audit');
 const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, isLinkedParent } = require('./access');
 
 const CATEGORIES = {
@@ -91,7 +92,33 @@ async function createRequest({ who, category, subject, message, pageUrl, userAge
   }
   if (!requestId) throw new Error('Could not make a unique support reference');
   await addMessage(requestId, { authorType: 'requester', body: message });
+  purgeOldRequests(); // fire and forget: old requests (2 years) are removed in the background
   return { id: requestId, ref };
 }
 
-module.exports = { CATEGORIES, STATUSES, LIMITS, EMAIL_PATTERN, cleanText, makeRef, resolveContext, addMessage, createRequest };
+// Support requests (and their messages) are kept 2 years, then deleted. Runs when a new request arrives, at most once an hour, and
+// writes one audit row with the count (never any text). Never throws: a failed clean-up must not stop a request being saved.
+const RETENTION_YEARS = 2;
+let lastPurge = 0;
+async function purgeOldRequests() {
+  try {
+    const now = Date.now();
+    if (now - lastPurge < 60 * 60 * 1000) return 0;
+    lastPurge = now;
+    const cutoff = new Date(now - RETENTION_YEARS * 366 * 24 * 60 * 60 * 1000);
+    const [[row]] = await pool.query('SELECT COUNT(*) AS n FROM support_requests WHERE created_at < ?', [cutoff]);
+    const n = Number(row && row.n) || 0;
+    if (!n) return 0;
+    await pool.query('DELETE FROM support_request_messages WHERE request_id IN (SELECT id FROM support_requests WHERE created_at < ?)', [cutoff]);
+    await pool.query('DELETE FROM support_requests WHERE created_at < ?', [cutoff]);
+    await audit(pool, { actorType: 'system', action: 'support_retention_purge', entityType: 'support_request', newValue: { removed: n } });
+    return n;
+  } catch (err) {
+    console.error('support: retention clean-up failed:', err.message);
+    return 0;
+  }
+}
+// Test hook: lets a test make the (at most hourly) clean-up run again.
+function _resetPurgeClock() { lastPurge = 0; }
+
+module.exports = { purgeOldRequests, _resetPurgeClock, RETENTION_YEARS, CATEGORIES, STATUSES, LIMITS, EMAIL_PATTERN, cleanText, makeRef, resolveContext, addMessage, createRequest };

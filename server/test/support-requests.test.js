@@ -38,7 +38,7 @@ const run = async (sql, rawParams = []) => {
   const s = sql.trim().replace(/CURDATE\(\)/g, 'CURRENT_DATE').replace(/\bNOW\(\)/g, 'CURRENT_TIMESTAMP').replace(/\?/g, () => {
     const p = rawParams[i++];
     if (Array.isArray(p)) { params.push(...p); return p.map(() => '?').join(','); }
-    params.push(p);
+    params.push(p instanceof Date ? p.toISOString().slice(0, 19).replace('T', ' ') : p); // node:sqlite cannot bind a Date
     return '?';
   });
   if (/^SELECT/i.test(s)) return [db.prepare(s).all(...params)];
@@ -363,6 +363,25 @@ test('BROWSER SESSION: the Get help form can send the anonymous browser session 
   assert.equal((await call('POST', '/api/support', { body: form({ email: 'three@home.test', sessionId: { a: 1 } }) })).status, 200);
   const ids = db.prepare('SELECT client_session_id FROM support_requests ORDER BY id').all().map(r => r.client_session_id);
   assert.deepEqual(ids, ['sess-aaaaaaaa', null, null]);
+});
+
+test('RETENTION: requests older than 2 years are deleted with their messages when a new one arrives; one audit row, no text', async () => {
+  reset();
+  const lib = require(path.join(SERVER, 'lib/support.js'));
+  lib._resetPurgeClock();
+  const old = Number(db.prepare("INSERT INTO support_requests (ref, status, subject, requester_name, requester_email, created_at) VALUES ('SR-OLDOO', 'resolved', 'old one', 'Old', 'old@home.test', '2020-01-01 00:00:00')").run().lastInsertRowid);
+  db.prepare("INSERT INTO support_request_messages (request_id, author_type, visibility, body) VALUES (?, 'requester', 'public', 'SECRET old text')").run(old);
+  const recent = Number(db.prepare("INSERT INTO support_requests (ref, status, subject, requester_name, requester_email, created_at) VALUES ('SR-NEWWW', 'open', 'recent', 'New', 'new@home.test', datetime('now', '-300 days'))").run().lastInsertRowid);
+  db.prepare("INSERT INTO support_request_messages (request_id, author_type, visibility, body) VALUES (?, 'requester', 'public', 'recent text')").run(recent);
+  assert.equal((await call('POST', '/api/support', { body: form({ email: 'fresh@home.test' }) })).status, 200);
+  await new Promise(r => setTimeout(r, 100));
+  const refs = db.prepare('SELECT ref FROM support_requests ORDER BY id').all().map(r => r.ref);
+  assert.ok(!refs.includes('SR-OLDOO') && refs.includes('SR-NEWWW') && refs.length === 2, JSON.stringify(refs));
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_request_messages WHERE request_id = ?').get(old).n, 0);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM support_request_messages WHERE request_id = ?').get(recent).n, 1);
+  const logs = db.prepare("SELECT * FROM school_audit_log WHERE action = 'support_retention_purge'").all();
+  assert.equal(logs.length, 1); assert.deepEqual(JSON.parse(logs[0].new_value), { removed: 1 });
+  assert.ok(!JSON.stringify(logs).includes('SECRET'));
 });
 
 test('WIRING: pages are linked, cache versions match, and nothing from a person goes in as HTML', () => {

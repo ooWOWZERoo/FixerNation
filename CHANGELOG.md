@@ -16,6 +16,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 123 — 2026-11-05 — Help center, and how-to videos for Get help
+
+- **New Help center** (`help.html`): a search box, tabs for Everyone, School administrators, District administrators, Teachers, Students and Parents, and short plain answers (about 30 to start) with steps where there are steps, the matching help video when one is recorded, and a "Still stuck? Get help" button that opens the Get help form with the topic already chosen. Linked from the footer, the School and District admin menus, the Contact page and the top of the Get help page ("Check these answers first").
+- **Nothing is public until you have read it.** Every answer starts as not reviewed. Read them all at `help.html?preview=1`, then they are switched on. Until then visitors see none, and the "Check these answers first" box on the Get help page stays hidden.
+- **What it learns:** opening an answer records an anonymous `faq_open` event (the answer's id only) with the analytics the site already has.
+- **Support requests are deleted after 2 years**, with their messages, when a new request arrives (at most once an hour), leaving one audit row with the count and no text.
+- **Three new how-to videos** on Get help, recorded and checked on the test site (published to the site only after approval): G1 Ask for help and follow your request, G2 Ask for help without signing in, and G3 Answer requests in the Support Inbox (staff only: gets a How-to video button on the Support Inbox but is not listed on the public Help Videos page).
+- No database change. Deploy: pull, rsync (all pages: footer and portal menu versions changed), restart Node.
+- Requirements: `docs/reference/help-centre-requirements.md`.
+
 ## Release 122 — 2026-11-05 — Error capture: staff can see what broke, in the browser
 
 - **New Errors tab on the Support Inbox** (no new menu item). It lists what went wrong, grouped by kind and place with how many times and how many different browsers, for the last 24 hours, 7 days or 30 days, with a Clear button for a fixed problem. The tab shows a 24-hour count.

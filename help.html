@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Help Center</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:var(--teal-dark); text-decoration:none; font-weight:600;}
+  a:hover{text-decoration:underline;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 32px;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero{background:var(--teal-dark); padding:72px 32px 64px; text-align:center;}
+  .hero h1{font-size:36px; color:#fff; line-height:1.13; max-width:700px; margin:0 auto 14px;}
+  .hero p{font-size:15.5px; color:rgba(255,255,255,0.8); max-width:640px; margin:0 auto; line-height:1.7;}
+
+  .jump{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:28px 0 8px;}
+  .jump a{background:#fff; border:1px solid rgba(22,79,74,0.15); border-radius:999px; padding:8px 16px; font-size:13.5px;}
+  .jump a:hover{background:var(--teal); color:#fff; text-decoration:none;}
+
+  .preview-note{background:#FFF4D6; border:1px solid var(--gold); border-radius:12px; padding:12px 16px; margin:24px 0 0; font-size:13.5px;}
+
+  .hv-group{padding:40px 0 8px; scroll-margin-top:90px;}
+  .hv-group h2{font-size:26px; margin-bottom:6px;}
+  .hv-group h3{font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-family:'Plus Jakarta Sans', sans-serif; font-weight:700; margin:20px 0 10px;}
+  .hv-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px;}
+  .hv-card{background:#fff; border-radius:var(--radius-md); padding:20px 20px 18px; box-shadow:0 8px 20px -14px rgba(22,79,74,0.25); display:flex; flex-direction:column; gap:10px;}
+  .hv-card h4{font-size:18px;}
+  .hv-card p{font-size:14px; color:var(--ink-soft); flex:1;}
+  .hv-watch{align-self:flex-start; background:var(--coral); color:#fff; border:0; border-radius:999px; padding:10px 18px; font:700 14px/1 'Plus Jakarta Sans', sans-serif; cursor:pointer;}
+  .hv-watch:hover{background:var(--coral-dark);}
+  .hv-watch:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+  .hv-planned{align-self:flex-start; font-size:12.5px; font-weight:700; color:var(--ink-soft); background:var(--cream-soft); border-radius:999px; padding:6px 12px;}
+  .hv-empty{text-align:center; font-size:16px; color:var(--ink-soft); padding:56px 0;}
+  noscript p{text-align:center; padding:40px 0;}
+
+  .hc-tools{max-width:760px; margin:28px auto 0;}
+  .hc-search{width:100%; border:2px solid rgba(22,79,74,0.18); border-radius:999px; padding:14px 22px; font:500 16px 'Plus Jakarta Sans',sans-serif; background:#fff;}
+  .hc-search:focus{outline:none; border-color:var(--coral);}
+  .hc-tabs{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0 8px;}
+  .hc-tab{background:#fff; border:1px solid rgba(22,79,74,0.15); border-radius:999px; padding:8px 16px; font:600 13.5px 'Plus Jakarta Sans',sans-serif; cursor:pointer; color:var(--teal-dark);}
+  .hc-tab[aria-pressed="true"]{background:var(--teal); color:#fff; border-color:var(--teal);}
+  .hc-list{max-width:820px; margin:18px auto 0;}
+  .hc-topic{font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:700; margin:26px 0 8px;}
+  .hc-item{background:#fff; border-radius:14px; box-shadow:0 8px 20px -14px rgba(22,79,74,0.25); margin-bottom:10px;}
+  .hc-item summary{cursor:pointer; padding:16px 20px; font:600 16px 'Plus Jakarta Sans',sans-serif; color:var(--teal-dark); list-style:none;}
+  .hc-item summary::-webkit-details-marker{display:none;}
+  .hc-item summary::after{content:'+'; float:right; font-weight:700; color:var(--coral-dark);}
+  .hc-item[open] summary::after{content:'\2212';}
+  .hc-body{padding:0 20px 18px; font-size:15px; color:var(--ink);}
+  .hc-body ol{margin:10px 0 0 20px;}
+  .hc-body li{margin-bottom:6px;}
+  .hc-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+  .hc-btn{border:0; border-radius:999px; padding:10px 18px; font:700 14px/1 'Plus Jakarta Sans',sans-serif; cursor:pointer; text-decoration:none; display:inline-block;}
+  .hc-btn.watch{background:var(--coral); color:#fff;}
+  .hc-btn.help{background:var(--cream-soft); color:var(--teal-dark);}
+  .hc-empty{text-align:center; color:var(--ink-soft); padding:40px 0;}
+  .hc-stuck{text-align:center; margin:34px 0 10px;}
+</style>
+</head>
+<body>
+
+<header></header>
+
+<section class="hero">
+  <h1>Help center</h1>
+  <p>Quick answers to the questions we hear most. Can't find yours? Send us a request and we'll write back.</p>
+</section>
+
+<div class="wrap">
+  <p class="preview-note" id="hcPreviewNote" hidden>Preview of answers that haven't been reviewed yet. Visitors only see reviewed ones.</p>
+  <div class="hc-tools">
+    <input type="search" id="hcSearch" class="hc-search" placeholder="Search the help center" aria-label="Search the help center" autocomplete="off">
+    <div class="hc-tabs" id="hcTabs" role="group" aria-label="Who are you?"></div>
+  </div>
+  <div class="hc-list" id="hcList"></div>
+  <p class="hc-stuck"><a class="hc-btn watch" href="support.html">Still stuck? Get help</a></p>
+  <noscript><p>This page needs JavaScript to show the answers.</p></noscript>
+</div>
+
+<div style="padding:40px 0;"></div>
+
+<footer></footer>
+
+<script src="admin-common.js?v=17"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=20"></script>
+<script src="site-auth.js?v=11"></script>
+<script src="footer.js?v=14"></script>
+<script src="help-videos.js?v=15"></script>
+<script src="help-center.js?v=1"></script>
+<script>
+(function () {
+  var HC = window.FNHelpCenter;
+  var q = new URLSearchParams(location.search);
+  var preview = q.get('preview') === '1';
+  var audience = q.get('aud') || 'everyone';
+  if (!HC.audiences.some(function (a) { return a.id === audience; })) audience = 'everyone';
+  var search = document.getElementById('hcSearch');
+  var list = document.getElementById('hcList');
+  var tabs = document.getElementById('hcTabs');
+  if (q.get('q')) search.value = q.get('q').slice(0, 100);
+  if (preview) {
+    var m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex'; document.head.appendChild(m);
+    document.getElementById('hcPreviewNote').hidden = false;
+  }
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+
+  function videoFor(id) {
+    var v = window.FNHelpVideos && FNHelpVideos.videos.filter(function (x) { return x.id === id; })[0];
+    return v && FNHelpVideos.recorded(v) ? v : null;
+  }
+
+  function buildItem(e) {
+    var d = el('details', 'hc-item'); d.id = e.id;
+    d.appendChild(el('summary', null, e.q));
+    var body = el('div', 'hc-body');
+    if (e.a) body.appendChild(el('p', null, e.a));
+    if (e.steps && e.steps.length) { var ol = el('ol'); e.steps.forEach(function (s) { ol.appendChild(el('li', null, s)); }); body.appendChild(ol); }
+    var actions = el('div', 'hc-actions');
+    var v = e.video && videoFor(e.video);
+    if (v) { var w = el('button', 'hc-btn watch', '\u25B6 Watch the video'); w.type = 'button'; w.addEventListener('click', function () { FNHelpVideos.open(v.id); }); actions.appendChild(w); }
+    var h = el('a', 'hc-btn help', 'Still stuck? Get help'); h.href = 'support.html?topic=' + encodeURIComponent(e.help || 'other'); actions.appendChild(h);
+    body.appendChild(actions);
+    d.appendChild(body);
+    d.addEventListener('toggle', function () { if (d.open && typeof fnTrackEvent === 'function') fnTrackEvent('faq_open', e.id); });
+    return d;
+  }
+
+  function render() {
+    var found = HC.search(HC.forAudience(HC.visible(preview), audience), search.value);
+    list.textContent = '';
+    if (!found.length) { list.appendChild(el('p', 'hc-empty', "We couldn't find an answer for that. Try different words, or send us a request.")); return; }
+    var topics = [];
+    found.forEach(function (e) { if (topics.indexOf(e.topic) === -1) topics.push(e.topic); });
+    topics.forEach(function (t) {
+      list.appendChild(el('h2', 'hc-topic', t));
+      found.filter(function (e) { return e.topic === t; }).forEach(function (e) { list.appendChild(buildItem(e)); });
+    });
+    var want = location.hash && document.getElementById(location.hash.slice(1));
+    if (want && want.tagName === 'DETAILS') { want.open = true; want.scrollIntoView(); }
+  }
+
+  function buildTabs() {
+    tabs.textContent = '';
+    HC.audiences.forEach(function (a) {
+      var b = el('button', 'hc-tab', a.title); b.type = 'button';
+      b.setAttribute('aria-pressed', a.id === audience ? 'true' : 'false');
+      b.addEventListener('click', function () { audience = a.id; buildTabs(); render(); });
+      tabs.appendChild(b);
+    });
+  }
+
+  search.addEventListener('input', render);
+  buildTabs();
+  render();
+})();
+</script>
+</body>
+</html>
