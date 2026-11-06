@@ -490,10 +490,10 @@ test('SCENARIO CHOICE PROMPTS: the wording override is optional, and Feelings De
   ['cues', 'afterCues', 'pick', 'confirmCues', 'confirmPick', 'multiLabel'].forEach((k) => assert.ok(fd.pack.prompts[k], `Feelings Detective prompts.${k}`));
 });
 
-test('STRENGTH SPOTTER: twelve stories, five per run, each with noticing cues and strengths', () => {
+test('STRENGTH SPOTTER: twelve stories, four per run (then Your turn), each with noticing cues and strengths', () => {
   const g = REAL.find((x) => x.slug === 'strength-spotter');
   assert.equal(g.pack.scenarios.length, 12);
-  assert.equal(g.pack.roundsPerRun, 5);
+  assert.equal(g.pack.roundsPerRun, 4);
   ['cues', 'afterCues', 'pick', 'confirmCues', 'confirmPick', 'multiLabel'].forEach((k) => assert.ok(g.pack.prompts[k], `prompts.${k}`));
   const sets = new Set(), ids = new Set();
   g.pack.scenarios.forEach((s, i) => {
@@ -513,17 +513,17 @@ test('STRENGTH SPOTTER: twelve stories, five per run, each with noticing cues an
   assert.equal(sets.size, 12, 'no two stories share the same set of strengths');
 });
 
-test('STRENGTH SPOTTER: the private check is present, in order, and never logged; runs differ', () => {
+test('STRENGTH SPOTTER: the one-tap check is present, in order, and never logged; runs differ', () => {
   const g = REAL.find((x) => x.slug === 'strength-spotter');
   const sc = g.pack.selfCheck;
-  assert.ok(sc.prompt && sc.bodyPrompt && sc.closing && sc.privateNote && sc.summaryLabel);
-  assert.equal(sc.options.map((o) => o.id).join(), 'yes,no,not-sure');
-  assert.equal(sc.bodyOptions.length, 5);
+  assert.ok(sc.prompt && sc.privateNote && sc.summaryLabel);
+  assert.equal(sc.options.map((o) => o.id).join(), 'yes,little,not-yet');
+  assert.ok(!sc.bodyPrompt && !sc.bodyOptions, 'Release 138: one tap per story, the second question moved to Your turn');
   assert.ok(!/[–—]/.test(JSON.stringify(sc)));
   const sets = new Set();
   for (let seed = 1; seed <= 100; seed++) {
     const out = prep(g.pack, 'scenarioChoice', seed).pack;
-    assert.equal(out.scenarios.length, 5);
+    assert.equal(out.scenarios.length, 4);
     assert.equal(JSON.stringify(out.selfCheck), JSON.stringify(sc), 'the private check keeps its order');
     sets.add(out.scenarios.map((s) => s.context.slice(0, 10)).sort().join('|'));
   }
@@ -650,10 +650,10 @@ test('CRITICAL READ: passages read at about grades 6 to 13, and runs differ', ()
 });
 
 // Values Compass (new 2026-11-01, approved outline: docs/tune-your-brain/VALUES_COMPASS_OUTLINE.md): 12 stories, 5 per run.
-test('VALUES COMPASS: twelve stories, five per run, each with noticing cues and values', () => {
+test('VALUES COMPASS: twelve stories, four per run (then Your turn), each with noticing cues and values', () => {
   const g = REAL.find((x) => x.slug === 'values-compass');
   assert.equal(g.pack.scenarios.length, 12);
-  assert.equal(g.pack.roundsPerRun, 5);
+  assert.equal(g.pack.roundsPerRun, 4);
   ['cues', 'afterCues', 'pick', 'confirmCues', 'confirmPick', 'multiLabel'].forEach((k) => assert.ok(g.pack.prompts[k], `prompts.${k}`));
   const sets = new Set(), ids = new Set();
   g.pack.scenarios.forEach((s, i) => {
@@ -673,17 +673,17 @@ test('VALUES COMPASS: twelve stories, five per run, each with noticing cues and 
   assert.equal(sets.size, 12, 'no two stories share the same set of values');
 });
 
-test('VALUES COMPASS: the private check is present, in order, and never logged; runs differ', () => {
+test('VALUES COMPASS: the one-tap check is present, in order, and never logged; runs differ', () => {
   const g = REAL.find((x) => x.slug === 'values-compass');
   const sc = g.pack.selfCheck;
-  assert.ok(sc.prompt && sc.bodyPrompt && sc.closing && sc.privateNote && sc.summaryLabel);
+  assert.ok(sc.prompt && sc.privateNote && sc.summaryLabel);
   assert.equal(sc.options.map((o) => o.id).join(), 'yes,little,not-sure');
-  assert.equal(sc.bodyOptions.length, 5);
+  assert.ok(!sc.bodyPrompt && !sc.bodyOptions, 'Release 138: one tap per story, the second question moved to Your turn');
   assert.ok(!/[–—]/.test(JSON.stringify(sc)));
   const sets = new Set();
   for (let seed = 1; seed <= 100; seed++) {
     const out = prep(g.pack, 'scenarioChoice', seed).pack;
-    assert.equal(out.scenarios.length, 5);
+    assert.equal(out.scenarios.length, 4);
     assert.equal(JSON.stringify(out.selfCheck), JSON.stringify(sc), 'the private check keeps its order');
     sets.add(out.scenarios.map((s) => s.context.slice(0, 10)).sort().join('|'));
   }

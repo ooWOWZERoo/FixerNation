@@ -27,26 +27,27 @@
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=6"></script>
 <script src="engine-voice.js?v=1"></script>
-<script src="engine-scenario-choice.js?v=7"></script>
+<script src="engine-scenario-choice.js?v=8"></script>
 <script>
   // Values Compass - Tune Your Brain (Challenge band, grades 6-8). Same Scenario
   // Choice engine as Strength Spotter and Feelings Detective: notice what really
   // happens in a short story, then pick every value that could fit (more than one
-  // is usually right; nothing is scored and no value is ranked). Then a private
-  // check about the student's own values, which is never logged, sent or saved.
+  // is usually right; nothing is scored in the stories). Then a quick private
+  // tap after each story, and a "Your turn" finale (Release 138): rank your own top three values, face one
+  // tradeoff between two of them, and see a compass card built on screen. None of it is logged, sent or saved.
   // The second direct game for NY SEL 1B (identity and agency), with 1C supporting,
   // and the Reflective and Future Focused attribute. At grades 3-5 the question is
   // "what am I good at?"; at grades 6-8 it is "what do I care about, and what do I
   // do when it costs something?" The engine's `feelings` list holds the values
   // here, and `contentPack.prompts` replaces the feelings wording. Design and
   // approved outline: docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and
-  // VALUES_COMPASS_OUTLINE.md. A pool of 12 stories; 5 are drawn per run.
+  // VALUES_COMPASS_OUTLINE.md. A pool of 12 stories; 4 are drawn per run, then the finale.
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'challenge';
 
   const contentPack = {
     "title": "Values Compass",
-    "roundsPerRun": 5,
+    "roundsPerRun": 4,
     "prompts": {
       "cues": "What do you notice in this story?",
       "afterCues": "Now name the values behind it.",
@@ -658,7 +659,7 @@
       }
     ],
     "selfCheck": {
-      "prompt": "Does this matter to you?",
+      "prompt": "Does this value matter to you?",
       "options": [
         {
           "id": "yes",
@@ -673,32 +674,216 @@
           "text": "Not sure"
         }
       ],
-      "bodyPrompt": "Where does it show up in your life?",
-      "bodyOptions": [
-        {
-          "id": "school",
-          "text": "At school"
-        },
-        {
-          "id": "home",
-          "text": "At home"
-        },
-        {
-          "id": "friends",
-          "text": "With friends"
-        },
-        {
-          "id": "elsewhere",
-          "text": "Somewhere else"
-        },
-        {
-          "id": "not-sure",
-          "text": "Not sure"
-        }
-      ],
-      "closing": "What you care about can change as you grow. No one else sees what you picked.",
       "privateNote": "Your answers here are private and are not saved.",
       "summaryLabel": "Times you thought about your own values"
+    },
+    "ownTurn": {
+      "intro": "Now it is your turn. Only you see what you pick.",
+      "illustration": "🧭",
+      "stepWord": "Your turn",
+      "summaryLabel": "Questions you answered about yourself",
+      "privateNote": "Your answers here are private and are not saved.",
+      "steps": [
+        {
+          "id": "top",
+          "type": "rank",
+          "max": 3,
+          "prompt": "Pick the three values that matter most to you right now, in order.",
+          "confirm": "These are my top three",
+          "options": [
+            {
+              "id": "honesty",
+              "text": "Honesty"
+            },
+            {
+              "id": "fairness",
+              "text": "Fairness"
+            },
+            {
+              "id": "loyalty",
+              "text": "Loyalty"
+            },
+            {
+              "id": "respect",
+              "text": "Respect"
+            },
+            {
+              "id": "responsibility",
+              "text": "Responsibility"
+            },
+            {
+              "id": "courage",
+              "text": "Courage"
+            },
+            {
+              "id": "independence",
+              "text": "Independence"
+            },
+            {
+              "id": "generosity",
+              "text": "Generosity"
+            }
+          ],
+          "notSure": {
+            "id": "not-sure",
+            "text": "I'm not sure yet"
+          }
+        },
+        {
+          "id": "trade",
+          "type": "tradeoff",
+          "fromStep": "top",
+          "prompt": "Which would you protect?",
+          "dependsText": "It depends",
+          "pairs": [
+            {
+              "a": "honesty",
+              "b": "loyalty",
+              "context": "A friend broke a school rule and asks you to say they were with you. The truth could get them in trouble.",
+              "optionA": {
+                "text": "Tell the truth, even if your friend is upset.",
+                "card": "When honesty and loyalty pulled apart, I leaned toward honesty."
+              },
+              "optionB": {
+                "text": "Cover for your friend this one time.",
+                "card": "When honesty and loyalty pulled apart, I leaned toward loyalty."
+              },
+              "depends": "When honesty and loyalty pulled apart, I said it depends."
+            },
+            {
+              "a": "fairness",
+              "b": "loyalty",
+              "context": "Your friend sits on the committee that picks a contest winner. They ask you to vote for their entry, but another entry is better.",
+              "optionA": {
+                "text": "Vote for the entry you think is better.",
+                "card": "When fairness and loyalty pulled apart, I leaned toward fairness."
+              },
+              "optionB": {
+                "text": "Vote for your friend's entry.",
+                "card": "When fairness and loyalty pulled apart, I leaned toward loyalty."
+              },
+              "depends": "When fairness and loyalty pulled apart, I said it depends."
+            },
+            {
+              "a": "honesty",
+              "b": "respect",
+              "context": "A classmate shows you a poem they are proud of. You think it needs work, and they ask what you think.",
+              "optionA": {
+                "text": "Say plainly what needs work, in a kind way.",
+                "card": "When honesty and respect pulled apart, I leaned toward honesty."
+              },
+              "optionB": {
+                "text": "Talk about what works and leave out the rest.",
+                "card": "When honesty and respect pulled apart, I leaned toward respect."
+              },
+              "depends": "When honesty and respect pulled apart, I said it depends."
+            },
+            {
+              "a": "independence",
+              "b": "responsibility",
+              "context": "You want Saturday for your own project. Your family needs you to watch your little brother.",
+              "optionA": {
+                "text": "Work on your project and offer to help another day.",
+                "card": "When independence and responsibility pulled apart, I leaned toward independence."
+              },
+              "optionB": {
+                "text": "Watch your brother and work on the project later.",
+                "card": "When independence and responsibility pulled apart, I leaned toward responsibility."
+              },
+              "depends": "When independence and responsibility pulled apart, I said it depends."
+            },
+            {
+              "a": "generosity",
+              "b": "fairness",
+              "context": "Your group earned a reward for finishing first. A friend in another group worked just as hard and got nothing.",
+              "optionA": {
+                "text": "Share part of your reward with your friend.",
+                "card": "When generosity and fairness pulled apart, I leaned toward generosity."
+              },
+              "optionB": {
+                "text": "Keep it, because your group earned it.",
+                "card": "When generosity and fairness pulled apart, I leaned toward fairness."
+              },
+              "depends": "When generosity and fairness pulled apart, I said it depends."
+            },
+            {
+              "a": "courage",
+              "b": "respect",
+              "context": "Most of your class is voting one way. You disagree, and saying so might upset some classmates.",
+              "optionA": {
+                "text": "Share your view calmly anyway.",
+                "card": "When courage and respect pulled apart, I leaned toward courage."
+              },
+              "optionB": {
+                "text": "Stay quiet this time to keep things calm.",
+                "card": "When courage and respect pulled apart, I leaned toward respect."
+              },
+              "depends": "When courage and respect pulled apart, I said it depends."
+            }
+          ]
+        },
+        {
+          "id": "where",
+          "type": "pickOne",
+          "dependsOn": "top",
+          "prompt": "Where did you act on {top.first|lower} this week?",
+          "promptIfNone": "Where did you act on something you care about this week?",
+          "options": [
+            {
+              "id": "school",
+              "text": "At school",
+              "card": "This week I acted on {top.first|lower} at school."
+            },
+            {
+              "id": "home",
+              "text": "At home",
+              "card": "This week I acted on {top.first|lower} at home."
+            },
+            {
+              "id": "online",
+              "text": "Online",
+              "card": "This week I acted on {top.first|lower} online."
+            },
+            {
+              "id": "friends",
+              "text": "With friends",
+              "card": "This week I acted on {top.first|lower} with friends."
+            },
+            {
+              "id": "not-yet",
+              "text": "Not yet",
+              "card": "I have not acted on {top.first|lower} yet this week, and that is okay."
+            }
+          ],
+          "notSure": {
+            "id": "not-sure",
+            "text": "I'm not sure"
+          }
+        }
+      ],
+      "result": {
+        "heading": "My compass",
+        "lines": [
+          {
+            "text": "My top three: {top|lower}.",
+            "needs": "top"
+          },
+          {
+            "text": "{trade}",
+            "needs": "trade"
+          },
+          {
+            "text": "{where}",
+            "needs": [
+              "top",
+              "where"
+            ]
+          }
+        ],
+        "emptyLine": "That is fine. Values can take time to sort out.",
+        "closing": "Values can change as you grow. Only you see this.",
+        "finish": "Finish"
+      }
     }
   };
 

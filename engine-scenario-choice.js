@@ -43,6 +43,22 @@
 //     summaryLabel: '...',                // label for the count on the summary screen
 //   } }
 //
+//
+// Release 138 adds two optional pieces for the Self-Awareness games (docs/reference/own-self-steps-outlines.md):
+//   - selfCheck with NO bodyPrompt/bodyOptions is a single tap after each story (the second question is skipped), and `closing` is optional.
+//   - ownTurn: a short finale after the last story, built from the child's own picks and shown as a card on screen:
+//     ownTurn: {
+//       intro: '...', illustration: '🪞', stepWord: 'Your turn', summaryLabel: '...', privateNote: '...',
+//       steps: [ { id, type: 'pickOne' | 'pickMany' | 'rank' | 'tradeoff', prompt, confirm,
+//                 max?,                           // pickMany: most picks allowed; rank: how many to rank (default 3)
+//                 options: [{ id, text, card? }], // card = a sentence for the result card (may hold {tokens})
+//                 optionsBy?: { from: stepId, map: { <optionId>: [options] }, fallback: [options] }, promptIfNone?, dependsOn?,  // options depend on an earlier pick (promptIfNone is the prompt when that pick was "not sure")
+//                 notSure?: { id, text },         // always offered, ends the step with no pick
+//                 fromStep?, pairs?: [{ a, b, context, optionA, optionB, depends }] }  // tradeoff: the pair that best overlaps the earlier ranked picks
+//       ],
+//       result: { heading, lines: [{ text, needs? }], emptyLine, closing, finish }   // needs: a step id (or a list) that must have a pick; tokens: {stepId}, {stepId.first}, either with |lower
+//     }
+//   The picks are NEVER logged, sent or stored (same rule as selfCheck); only "step reached" and "step answered" are recorded.
 // The self-check is what makes a game about OTHER people's feelings also practise the child's own (NY SEL 1A).
 // It is private by design, exactly like Branching Scenario's reflection step: the child's answers are never
 // logged, sent or stored; the only thing recorded is that the step was reached.
@@ -102,7 +118,7 @@
     container.append(progressHolder, contextBox, replayRow, promptBox, choiceHolder, confirmRow, feedbackHolder);
     renderScenario();
 
-    let selfNarration = [], selfChecks = 0;
+    let selfNarration = [], selfChecks = 0, ownTurnDone = false, ownTurnAnswered = 0;
 
     // The lines of the current narration, one per spoken line.
     function narrationFor(scenario) {
@@ -302,6 +318,17 @@
         // Deliberately NOT logging which option was picked: a young child's answer about their own life stays
         // on the screen. Only the fact that the step was reached is recorded.
         onEvidence('response_submitted', { scenarioIndex: index, stage: 'self_check' });
+        if (!check.bodyPrompt || !check.bodyOptions) {
+          // One-tap version (Release 138): no second question.
+          selfChecks++;
+          feedbackHolder.innerHTML = '';
+          if (check.closing) {
+            feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', check.closing));
+            if (voiced) speak(check.closing);
+          }
+          setTimeout(() => afterFeelings(scenario), check.closing ? holdFor(check.closing, 1400) : 400);
+          return;
+        }
         setTimeout(() => {
           askSelfCheck(check.bodyPrompt, check.bodyOptions, () => {
             selfChecks++;
@@ -367,16 +394,219 @@
       confirmRow.appendChild(btn);
     }
 
+    // ---- Your turn (Release 138) -------------------------------------------------------------------------------------
+    // A finale about the child themselves. Nothing here is scored or logged: the picks live in `picks` (a local object on this
+    // screen) and are used only to build the result card; the only things recorded are "step reached" and "step answered".
+    function joinNice(list) {
+      if (list.length <= 1) return list.join('');
+      return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
+    }
+
+    function renderOwnTurn() {
+      const ot = contentPack.ownTurn;
+      const steps = ot.steps;
+      const picks = {}; // stepId -> { items: [{ id, text, card }], notSure: bool }
+      stage = 'own_turn';
+      replayRow.innerHTML = '';
+      feedbackHolder.innerHTML = '';
+      confirmRow.innerHTML = '';
+      contextBox.innerHTML = `<span aria-hidden="true" style="font-size:2.5em;display:block;text-align:center;">${ot.illustration || ''}</span>` +
+        `<span class="fn-story-text">${ot.intro || ''}</span>`;
+
+      // {stepId} and {stepId.first}, each with an optional |lower. A card sentence on a pick is used instead of its text, and may hold tokens.
+      function fill(template, depth) {
+        return String(template).replace(/\{([a-zA-Z0-9_]+)(\.first)?(\|lower)?\}/g, (m, id, first, lower) => {
+          const pk = picks[id];
+          if (!pk || !pk.items.length) return '';
+          let items = first ? [pk.items[0]] : pk.items;
+          let texts = items.map((i) => (i.card && (depth || 0) < 2 ? fill(i.card, (depth || 0) + 1) : i.text));
+          let out = joinNice(texts);
+          return lower ? out.toLowerCase() : out;
+        });
+      }
+
+      function optionsFor(step) {
+        if (step.optionsBy) {
+          const from = picks[step.optionsBy.from];
+          const first = from && from.items[0];
+          return (first && step.optionsBy.map[first.id]) || step.optionsBy.fallback || [];
+        }
+        if (step.type === 'tradeoff') return [];
+        return step.options || [];
+      }
+
+      function tradeoffPair(step) {
+        const ranked = (picks[step.fromStep] && picks[step.fromStep].items.map((i) => i.id)) || [];
+        let best = step.pairs[0], bestScore = -1;
+        step.pairs.forEach((pr) => {
+          const score = (ranked.includes(pr.a) ? 1 : 0) + (ranked.includes(pr.b) ? 1 : 0);
+          if (score > bestScore) { best = pr; bestScore = score; }
+        });
+        return best;
+      }
+
+      function stepAt(i) {
+        if (i >= steps.length) { renderCard(); return; }
+        const step = steps[i];
+        progressHolder.innerHTML = '';
+        progressHolder.appendChild(FnGameShell.renderProgress(i + 1, steps.length, ot.stepWord || 'Your turn'));
+        onEvidence('item_presented', { stage: 'own_turn', stepIndex: i, stepType: step.type });
+        const done = (chosen) => {
+          picks[step.id] = chosen;
+          ownTurnAnswered++;
+          // Deliberately NOT logging what was picked: only that this step was answered.
+          onEvidence('response_submitted', { stage: 'own_turn', stepIndex: i, stepType: step.type });
+          setTimeout(() => stepAt(i + 1), 350);
+        };
+
+        let options, promptText = fill(step.prompt || '');
+        // promptIfNone: wording for when the pick this step depends on was "not sure" (so a token would come out empty).
+        const dep = step.dependsOn || (step.optionsBy && step.optionsBy.from);
+        if (dep && step.promptIfNone && !(picks[dep] && picks[dep].items.length)) promptText = step.promptIfNone;
+        if (step.type === 'tradeoff') {
+          const pr = tradeoffPair(step);
+          promptText = pr.context + ' ' + (step.prompt || '');
+          options = [
+            { id: 'a', text: pr.optionA.text, card: pr.optionA.card },
+            { id: 'b', text: pr.optionB.text, card: pr.optionB.card },
+            { id: 'depends', text: step.dependsText || 'It depends', card: pr.depends },
+          ];
+        } else {
+          options = optionsFor(step).slice();
+        }
+        if (step.notSure) options.push({ id: step.notSure.id || 'not-sure', text: step.notSure.text, notSure: true });
+        promptBox.textContent = promptText;
+        const narration = [promptText].concat(options.map((o) => o.text));
+        selfNarration = narration;
+        renderReplayFor(narration);
+        speak(narration);
+
+        choiceHolder.innerHTML = '';
+        confirmRow.innerHTML = '';
+        const list = document.createElement('div');
+        list.className = 'fn-choice-list long-text-list';
+        const chosen = []; // option objects, in tap order
+        const limit = step.type === 'rank' ? (step.max || 3) : step.type === 'pickMany' ? (step.max || 2) : 1;
+        const buttons = [];
+        let confirmBtn = null;
+
+        function refresh() {
+          buttons.forEach(({ btn, opt }) => {
+            const at = chosen.indexOf(opt);
+            const on = at !== -1;
+            btn.classList.toggle('selected', on);
+            btn.setAttribute('aria-pressed', String(on));
+            btn.textContent = (step.type === 'rank' && on ? (at + 1) + '. ' : '') + opt.text;
+            // A "not sure" answer replaces everything else (and is always available); once the limit is reached the other options wait.
+            btn.disabled = !on && !opt.notSure && (chosen.length >= limit || (chosen.length && chosen[0].notSure));
+          });
+          if (confirmBtn) confirmBtn.disabled = !(chosen.length === limit || (chosen.length && (chosen[0].notSure || step.type === 'pickMany')));
+        }
+
+        options.forEach((opt) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'fn-choice-btn band-aware tap-target long-text';
+          btn.textContent = opt.text;
+          btn.setAttribute('aria-pressed', 'false');
+          btn.addEventListener('click', () => {
+            const at = chosen.indexOf(opt);
+            if (at !== -1) { chosen.splice(at, 1); refresh(); return; }
+            if (opt.notSure) { chosen.length = 0; chosen.push(opt); refresh(); if (limit === 1) submit(); return; }
+            if (chosen.length >= limit) return;
+            chosen.push(opt);
+            refresh();
+            if (limit === 1) submit();
+          });
+          buttons.push({ btn, opt });
+          list.appendChild(btn);
+        });
+        choiceHolder.appendChild(list);
+
+        function submit() {
+          buttons.forEach(({ btn }) => { btn.disabled = true; });
+          if (confirmBtn) confirmBtn.disabled = true;
+          const notSure = chosen.length === 1 && chosen[0].notSure;
+          done({ items: notSure ? [] : chosen.map((o) => ({ id: o.id, text: o.text, card: o.card })), notSure: !!notSure });
+        }
+
+        if (limit > 1) {
+          confirmBtn = document.createElement('button');
+          confirmBtn.type = 'button';
+          confirmBtn.className = 'btn btn-primary tap-target';
+          confirmBtn.textContent = step.confirm || 'Done';
+          confirmBtn.disabled = true;
+          confirmBtn.addEventListener('click', submit);
+          confirmRow.appendChild(confirmBtn);
+        }
+        if (ot.privateNote) {
+          const note = document.createElement('p');
+          note.className = 'sr-only';
+          note.textContent = ot.privateNote;
+          choiceHolder.appendChild(note);
+        }
+        refresh();
+      }
+
+      function renderReplayFor(lines) {
+        replayRow.innerHTML = '';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-outline btn-sm tap-target';
+        btn.textContent = '▶ Replay';
+        btn.addEventListener('click', () => { onEvidence('hint_requested', { stage: 'own_turn', kind: 'narration_replay' }); speak(lines); });
+        replayRow.appendChild(btn);
+      }
+
+      function renderCard() {
+        const res = ot.result || {};
+        stage = 'own_turn_card';
+        replayRow.innerHTML = '';
+        confirmRow.innerHTML = '';
+        choiceHolder.innerHTML = '';
+        progressHolder.innerHTML = '';
+        promptBox.textContent = res.heading || 'Your card';
+        const has = (id) => !!(picks[id] && picks[id].items.length);
+        const lines = (res.lines || []).filter((l) => !l.needs || [].concat(l.needs).every(has)).map((l) => fill(l.text)).filter(Boolean);
+        if (!lines.length && res.emptyLine) lines.push(res.emptyLine);
+        const card = document.createElement('div');
+        card.className = 'fn-stimulus-box band-aware';
+        card.setAttribute('role', 'group');
+        card.setAttribute('aria-label', res.heading || 'Your card');
+        card.innerHTML = lines.map((l) => `<p class="fn-story-text">${l.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`).join('');
+        choiceHolder.appendChild(card);
+        feedbackHolder.innerHTML = '';
+        if (res.closing) feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', res.closing));
+        const spoken = lines.concat(res.closing ? [res.closing] : []);
+        selfNarration = spoken;
+        renderReplayFor(spoken);
+        speak(spoken);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-primary tap-target';
+        btn.textContent = res.finish || 'Finish';
+        btn.addEventListener('click', () => advance());
+        confirmRow.appendChild(btn);
+      }
+
+      speak([ot.intro || '']);
+      stepAt(0);
+    }
+
     function advance() {
       index++;
       replayRow.innerHTML = '';
       confirmRow.innerHTML = '';
-      if (index >= scenarios.length) {
+      if (index >= scenarios.length && contentPack.ownTurn && !ownTurnDone) {
+        ownTurnDone = true;
+        renderOwnTurn();
+      } else if (index >= scenarios.length) {
         onComplete([
           { value: scenarios.length, label: t('scLabelScenarios') },
           { value: cuesNoticedTotal, label: t('scLabelCues') },
           { value: multiFeelingCount, label: P.multiLabel },
-        ].concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : []));
+        ].concat(contentPack.selfCheck ? [{ value: selfChecks, label: contentPack.selfCheck.summaryLabel || 'Times you checked in with yourself' }] : [])
+          .concat(contentPack.ownTurn ? [{ value: ownTurnAnswered, label: contentPack.ownTurn.summaryLabel || 'Questions you answered about yourself' }] : []));
       } else {
         renderScenario();
       }

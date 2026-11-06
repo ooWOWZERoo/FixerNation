@@ -27,7 +27,7 @@
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=6"></script>
 <script src="engine-voice.js?v=1"></script>
-<script src="engine-scenario-choice.js?v=7"></script>
+<script src="engine-scenario-choice.js?v=8"></script>
 <script>
   // Strength Spotter - Tune Your Brain (Explore band, grades 3-5). Same
   // Scenario Choice engine as Feelings Detective: notice what really happens in
@@ -38,13 +38,14 @@
   // Focused attribute. The engine's `feelings` list holds the strengths here,
   // and `contentPack.prompts` replaces the feelings wording. Design and
   // approved outline: docs/tune-your-brain/NEW_GAMES_FOR_GAPS.md and
-  // STRENGTH_SPOTTER_OUTLINE.md. A pool of 12 stories; 5 are drawn per run.
+  // STRENGTH_SPOTTER_OUTLINE.md. A pool of 12 stories; 4 are drawn per run, then a "Your turn" finale
+  // (Release 138: pick your own strengths, where you use them and one small way to grow one; a card is built on screen from the picks).
   const params = new URLSearchParams(location.search);
   const band = params.get('band') || 'explore';
 
   const contentPack = {
     "title": "Strength Spotter",
-    "roundsPerRun": 5,
+    "roundsPerRun": 4,
     "prompts": {
       "cues": "What do you notice in this story?",
       "afterCues": "Good noticing. Now think about the strengths this shows.",
@@ -656,47 +657,273 @@
       }
     ],
     "selfCheck": {
-      "prompt": "Do you use a strength like this?",
+      "prompt": "Is this strength like you?",
       "options": [
         {
           "id": "yes",
           "text": "Yes"
         },
         {
-          "id": "no",
-          "text": "No"
+          "id": "little",
+          "text": "A little"
         },
         {
-          "id": "not-sure",
-          "text": "Not sure"
+          "id": "not-yet",
+          "text": "Not yet"
         }
       ],
-      "bodyPrompt": "Where do you use it?",
-      "bodyOptions": [
-        {
-          "id": "school",
-          "text": "At school"
-        },
-        {
-          "id": "home",
-          "text": "At home"
-        },
-        {
-          "id": "friends",
-          "text": "With friends"
-        },
-        {
-          "id": "elsewhere",
-          "text": "Somewhere else"
-        },
-        {
-          "id": "not-sure",
-          "text": "Not sure"
-        }
-      ],
-      "closing": "Everyone has strengths, and they can grow. No one else sees what you picked.",
       "privateNote": "Your answers here are private and are not saved.",
       "summaryLabel": "Times you thought about your own strengths"
+    },
+    "ownTurn": {
+      "intro": "Now it is your turn. Only you see what you pick.",
+      "illustration": "🪞",
+      "stepWord": "Your turn",
+      "summaryLabel": "Questions you answered about yourself",
+      "privateNote": "Your answers here are private and are not saved.",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "pickMany",
+          "max": 2,
+          "prompt": "Pick up to two strengths that sound like you.",
+          "confirm": "These sound like me",
+          "options": [
+            {
+              "id": "patience",
+              "text": "Patience"
+            },
+            {
+              "id": "persistence",
+              "text": "Persistence"
+            },
+            {
+              "id": "kindness",
+              "text": "Kindness"
+            },
+            {
+              "id": "courage",
+              "text": "Courage"
+            },
+            {
+              "id": "curiosity",
+              "text": "Curiosity"
+            },
+            {
+              "id": "responsibility",
+              "text": "Responsibility"
+            },
+            {
+              "id": "listening",
+              "text": "Listening"
+            },
+            {
+              "id": "creativity",
+              "text": "Creativity"
+            }
+          ],
+          "notSure": {
+            "id": "not-sure",
+            "text": "I'm not sure yet"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "pickOne",
+          "prompt": "Where have you used it lately?",
+          "options": [
+            {
+              "id": "school",
+              "text": "At school",
+              "card": "I use {s1.first|lower} at school."
+            },
+            {
+              "id": "home",
+              "text": "At home",
+              "card": "I use {s1.first|lower} at home."
+            },
+            {
+              "id": "friends",
+              "text": "With friends",
+              "card": "I use {s1.first|lower} with friends."
+            },
+            {
+              "id": "hobby",
+              "text": "In a sport or hobby",
+              "card": "I use {s1.first|lower} in a sport or hobby."
+            },
+            {
+              "id": "elsewhere",
+              "text": "Somewhere else",
+              "card": "I use {s1.first|lower} in other places."
+            }
+          ],
+          "notSure": {
+            "id": "not-sure",
+            "text": "I'm not sure"
+          }
+        },
+        {
+          "id": "s3",
+          "type": "pickOne",
+          "prompt": "Pick one small way to grow your {s1.first|lower}.",
+          "promptIfNone": "Pick one small step you could try.",
+          "optionsBy": {
+            "from": "s1",
+            "map": {
+              "patience": [
+                {
+                  "id": "g1",
+                  "text": "Count to five before you answer someone."
+                },
+                {
+                  "id": "g2",
+                  "text": "Ask for one more minute when you feel rushed."
+                },
+                {
+                  "id": "g3",
+                  "text": "Take one slow breath before you start the next thing."
+                }
+              ],
+              "persistence": [
+                {
+                  "id": "g1",
+                  "text": "Try a hard thing one more time before you quit."
+                },
+                {
+                  "id": "g2",
+                  "text": "Break a big job into three small steps."
+                },
+                {
+                  "id": "g3",
+                  "text": "Ask someone how they kept going on something hard."
+                }
+              ],
+              "kindness": [
+                {
+                  "id": "g1",
+                  "text": "Do one kind thing for someone every day this week."
+                },
+                {
+                  "id": "g2",
+                  "text": "Notice who looks left out and say hello."
+                },
+                {
+                  "id": "g3",
+                  "text": "Say thank you to someone who helped you."
+                }
+              ],
+              "courage": [
+                {
+                  "id": "g1",
+                  "text": "Say your idea out loud in class once."
+                },
+                {
+                  "id": "g2",
+                  "text": "Try one thing you have been nervous about."
+                },
+                {
+                  "id": "g3",
+                  "text": "Ask for help when something feels too big."
+                }
+              ],
+              "curiosity": [
+                {
+                  "id": "g1",
+                  "text": "Ask one new question about something you like."
+                },
+                {
+                  "id": "g2",
+                  "text": "Read or watch something about a topic you know little about."
+                },
+                {
+                  "id": "g3",
+                  "text": "Try one thing a new way and see what happens."
+                }
+              ],
+              "responsibility": [
+                {
+                  "id": "g1",
+                  "text": "Finish one job at home without being reminded."
+                },
+                {
+                  "id": "g2",
+                  "text": "Write down what you need to bring tomorrow."
+                },
+                {
+                  "id": "g3",
+                  "text": "Tell the truth when you make a mistake."
+                }
+              ],
+              "listening": [
+                {
+                  "id": "g1",
+                  "text": "Look at the speaker and wait until they finish."
+                },
+                {
+                  "id": "g2",
+                  "text": "Say back what you heard before you answer."
+                },
+                {
+                  "id": "g3",
+                  "text": "Ask one question about what someone just said."
+                }
+              ],
+              "creativity": [
+                {
+                  "id": "g1",
+                  "text": "Draw, build or write something new this week."
+                },
+                {
+                  "id": "g2",
+                  "text": "Make up a second way to solve a problem."
+                },
+                {
+                  "id": "g3",
+                  "text": "Change one thing in a game or story to make it yours."
+                }
+              ]
+            },
+            "fallback": [
+              {
+                "id": "g1",
+                "text": "Notice one thing you did well today."
+              },
+              {
+                "id": "g2",
+                "text": "Ask someone what they think you are good at."
+              },
+              {
+                "id": "g3",
+                "text": "Try something new this week and see how it feels."
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "heading": "My strength card",
+        "lines": [
+          {
+            "text": "My strength: {s1|lower}.",
+            "needs": "s1"
+          },
+          {
+            "text": "{s2}",
+            "needs": [
+              "s1",
+              "s2"
+            ]
+          },
+          {
+            "text": "My next step: {s3|lower}",
+            "needs": "s3"
+          }
+        ],
+        "emptyLine": "That is fine. Strengths can take time to notice.",
+        "closing": "Everyone has strengths, and they can grow. Only you see this card.",
+        "finish": "Finish"
+      }
     }
   };
 

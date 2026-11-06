@@ -41,7 +41,7 @@ const GAMES = {
   'sound-safari':        { band: 'discover', focus: 'literacy', domain: 'literacy' },
   // Explore (3-5)
   'team-pick':           { band: 'explore', focus: 'self_management', domain: 'sel', casel: ['self_management', 'relationship_skills'] },
-  'strength-spotter':    { band: 'explore', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'], pending: true },
+  'strength-spotter':    { band: 'explore', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'] },
   'peace-table':         { band: 'explore', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills', 'social_awareness'] },
   'choice-quest':        { band: 'explore', focus: 'responsible_decision_making', domain: 'sel', casel: ['social_awareness', 'relationship_skills', 'responsible_decision_making'] },
   'fix-it-workshop':     { band: 'explore', focus: 'responsible_decision_making', domain: 'sel', casel: ['responsible_decision_making'] },
@@ -52,7 +52,7 @@ const GAMES = {
   // Challenge (6-8)
   'group-chat-meltdown': { band: 'challenge', focus: 'self_management', domain: 'sel', casel: ['self_management', 'responsible_decision_making'] },
   'money-moves':         { band: 'challenge', focus: 'self_management', domain: 'sel', casel: ['self_management', 'responsible_decision_making'] },
-  'values-compass':      { band: 'challenge', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'], pending: true },
+  'values-compass':      { band: 'challenge', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness'] },
   'say-it-another-way':  { band: 'challenge', focus: 'relationship_skills', domain: 'sel', casel: ['relationship_skills', 'social_awareness'] },
   'decision-point':      { band: 'challenge', focus: 'responsible_decision_making', domain: 'sel', casel: ['social_awareness', 'relationship_skills', 'responsible_decision_making'] },
   'headline':            { band: 'challenge', focus: 'literacy', domain: 'literacy' },
