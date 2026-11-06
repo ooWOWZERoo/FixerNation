@@ -22,7 +22,7 @@ test('each game page loads its manifest, then the shared voice, then its engine;
     const m = html.indexOf(`assets/audio/discover/${g.slug}.js`), v = html.indexOf('engine-voice.js'), e = html.search(/engine-(audio|scenario)-choice\.js/);
     assert.ok(m > 0 && v > m && e > v, `${g.slug}: script order is manifest, voice, engine`);
     assert.equal(fs.readFileSync(path.join(OUT, `${g.slug}.js`), 'utf8'), manifestSource(g), `${g.slug}: manifest is out of date`);
-    assert.match(html, /engine-(audio|scenario)-choice\.js\?v=(6|8)/);
+    assert.match(html, /engine-(audio|scenario)-choice\.js\?v=(6|9)/);
   });
   // Sound Safari names its own clips but needs the same voice player.
   assert.match(fs.readFileSync(path.join(ROOT, 'brain-sound-safari.html'), 'utf8'), /engine-voice\.js\?v=1/);

@@ -26,7 +26,7 @@ const GAMES = [
   { slug: 'same-and-different', engine: 'audioChoice' },
   { slug: 'feelings-detective', engine: 'scenarioChoice' },
 ];
-const ENGINE_VERSIONS = { 'engine-audio-choice.js': 6, 'engine-scenario-choice.js': 7, 'engine-voice.js': 1 };
+const ENGINE_VERSIONS = { 'engine-audio-choice.js': 6, 'engine-scenario-choice.js': 9, 'engine-voice.js': 1 };
 const RATE = '135';       // say -r: slower than the how-to videos (165), natural for kindergarten to 2nd grade
 const SHORT_RATE = '120'; // one or two words (picture names, feelings)
 
@@ -56,6 +56,18 @@ function linesFor(game, pack) {
       if (sc.selfCheck) [sc.selfCheck].forEach((c) => addCheck(c));
     }
     if (pack.selfCheck) addCheck(pack.selfCheck);
+    // Release 139: the "Your turn" finale speaks its intro, every prompt, every answer and every line a card can say (cards with no {token} in them).
+    if (pack.ownTurn) {
+      const ot = pack.ownTurn;
+      add(ot.intro);
+      for (const st of ot.steps || []) {
+        add(st.prompt); add(st.promptIfNone);
+        (st.options || []).forEach((o) => { add(o.text); if (o.card && !/\{/.test(o.card)) add(o.card); });
+        if (st.notSure) add(st.notSure.text);
+      }
+      const res = ot.result || {};
+      add(res.emptyLine); add(res.closing);
+    }
     function addCheck(c) {
       add(c.prompt); (c.options || []).forEach((o) => add(o.text));
       add(c.bodyPrompt); (c.bodyOptions || []).forEach((o) => add(o.text));

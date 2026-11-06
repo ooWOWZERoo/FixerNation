@@ -56,7 +56,7 @@
 //                 notSure?: { id, text },         // always offered, ends the step with no pick
 //                 fromStep?, pairs?: [{ a, b, context, optionA, optionB, depends }] }  // tradeoff: the pair that best overlaps the earlier ranked picks
 //       ],
-//       result: { heading, lines: [{ text, needs? }], emptyLine, closing, finish }   // needs: a step id (or a list) that must have a pick; tokens: {stepId}, {stepId.first}, either with |lower
+//       result: { heading, lines: [{ text, needs?, each? }], emptyLine, closing, finish }   // each: stepId writes the line once per pick, {item} = that pick   // needs: a step id (or a list) that must have a pick; tokens: {stepId}, {stepId.first}, either with |lower
 //     }
 //   The picks are NEVER logged, sent or stored (same rule as selfCheck); only "step reached" and "step answered" are recorded.
 // The self-check is what makes a game about OTHER people's feelings also practise the child's own (NY SEL 1A).
@@ -209,6 +209,8 @@
     }
 
     function submitCues(scenario) {
+      if (stage !== 'cues') return; // a second tap on the button (young children double-tap) must not start the next screen twice
+      stage = 'cues_done';
       const presentIds = scenario.cues.filter((c) => c.present).map((c) => c.id);
       const matched = presentIds.filter((id) => selectedCues.has(id));
       cuesNoticedTotal += matched.length;
@@ -263,6 +265,8 @@
     }
 
     function submitFeelings(scenario) {
+      if (stage !== 'feelings') return;
+      stage = 'feelings_done';
       const plausibleIds = scenario.feelings.filter((f) => f.tag === 'plausible').map((f) => f.id);
       const selectedPlausible = plausibleIds.filter((id) => selectedFeelings.has(id));
       const selectedLessFitting = scenario.feelings.filter((f) => f.tag === 'less_fitting' && selectedFeelings.has(f.id));
@@ -388,6 +392,8 @@
       btn.className = 'btn btn-primary tap-target';
       btn.textContent = 'Continue';
       btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        btn.disabled = true;
         onEvidence('response_submitted', { scenarioIndex: index, stage: 'seek_help' });
         advance();
       });
@@ -567,7 +573,14 @@
         progressHolder.innerHTML = '';
         promptBox.textContent = res.heading || 'Your card';
         const has = (id) => !!(picks[id] && picks[id].items.length);
-        const lines = (res.lines || []).filter((l) => !l.needs || [].concat(l.needs).every(has)).map((l) => fill(l.text)).filter(Boolean);
+        // A line with `each: stepId` is written once for every pick in that step, with {item} standing for that pick (two feelings = two lines).
+        const lines = [];
+        (res.lines || []).filter((l) => !l.needs || [].concat(l.needs).every(has)).forEach((l) => {
+          if (l.each) {
+            ((picks[l.each] && picks[l.each].items) || []).forEach((it) => { picks.item = { items: [it] }; const t = fill(l.text); if (t) lines.push(t); });
+            delete picks.item;
+          } else { const t = fill(l.text); if (t) lines.push(t); }
+        });
         if (!lines.length && res.emptyLine) lines.push(res.emptyLine);
         const card = document.createElement('div');
         card.className = 'fn-stimulus-box band-aware';
@@ -585,7 +598,7 @@
         btn.type = 'button';
         btn.className = 'btn btn-primary tap-target';
         btn.textContent = res.finish || 'Finish';
-        btn.addEventListener('click', () => advance());
+        btn.addEventListener('click', () => { if (btn.disabled) return; btn.disabled = true; advance(); });
         confirmRow.appendChild(btn);
       }
 

@@ -73,8 +73,8 @@ test('FOCUS: the owner\'s decisions are in the table', () => {
   assert.deepEqual(F.GAMES['fix-it-workshop'].casel, ['responsible_decision_making']);
   assert.equal(F.GAMES['money-moves'].focus, 'self_management');
   assert.equal(F.GAMES['money-matters'].focus, 'self_management');
-  // Strict counting: only the game whose own-self step is not built yet is pending (Feelings Detective).
-  assert.deepEqual(Object.keys(F.GAMES).filter((s) => F.GAMES[s].pending).sort(), ['feelings-detective']); // Strength Spotter and Values Compass got their Your turn finale in Release 138
+  // Strict counting: a game counts once its own-self step is built; none is pending any more.
+  assert.deepEqual(Object.keys(F.GAMES).filter((s) => F.GAMES[s].pending), []); // all three own-self games have their Your turn finale (Releases 138 and 139)
 });
 
 test('FOCUS: the coverage grid counts every game once and leaves pending games out', () => {
@@ -82,7 +82,7 @@ test('FOCUS: the coverage grid counts every game once and leaves pending games o
   let counted = 0, pending = 0;
   for (const b of F.BANDS) for (const f of F.FOCUSES) { counted += grid[b][f].counted.length; pending += grid[b][f].pending.length; }
   assert.equal(counted + pending, 31);
-  assert.equal(pending, 1);
+  assert.equal(pending, 0);
   assert.deepEqual(grid.challenge.thinking.counted.sort(), ['reaction-time', 'stroop-challenge']);
   assert.deepEqual(grid.explore.math.counted, ['quick-math']);
   assert.deepEqual(grid.challenge.math.counted, ['number-sequence']);

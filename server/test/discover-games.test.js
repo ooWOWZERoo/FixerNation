@@ -97,7 +97,7 @@ test('feelings-detective: clues and feelings are short and carry a picture; prom
       .forEach((line) => assert.ok(words(line) <= 15 && !NO_DASH.test(line) && !/ - /.test(line), `story ${i + 1}: line too long or dashed: ${line}`));
   });
   const sc = pack.selfCheck;
-  assert.ok(words(sc.prompt) <= 8 && words(sc.bodyPrompt) <= 10 && words(sc.closing) <= 15);
+  assert.ok(words(sc.prompt) <= 8 && !sc.bodyPrompt && !sc.closing, 'the per-story check is one tap (Release 139)');
   assert.equal(sc.options.map((o) => o.id).join(), 'yes,no,not-sure');
 });
 

@@ -48,12 +48,14 @@ function play(slug, bandFallback) {
   const pick = (...i) => i.forEach((n) => list()[n].click());
   const ok = () => { confirm.children[0].click(); flush(); };
   // One story: clue, strength or value, the one-tap check.
-  const story = () => { pick(0); ok(); pick(0); ok(); list()[0].click(); flush(); };
+  const story = () => {
+    pick(0); ok(); pick(0); ok(); list()[0].click(); flush();
+    // Some Discover stories end with a "tell a grown-up" screen and a Continue button.
+    if (confirm.children[0] && /Continue/.test(confirm.children[0].textContent)) { confirm.children[0].click(); flush(); }
+  };
   return { prepared, events, spoken, story, list, buttons, pick, ok, flush, prompt: () => prompt.textContent, progress: () => progress.textContent,
-    card: () => [...choice.children[0].innerHTML.matchAll(/<p class="fn-story-text">(.*?)<\/p>/g)].map((m) => m[1].replace(/&lt;/g, '<').replace(/&amp;/g, '&')), feedback: () => feedback.textContent, finishBtn: () => confirm.children[0], summary: () => summary, pack };
+    card: () => [...choice.children[0].innerHTML.matchAll(/<p class="fn-story-text">(.*?)<\/p>/g)].map((m) => m[1].replace(/&lt;/g, '<').replace(/&amp;/g, '&')), feedback: () => feedback.textContent, finishBtn: () => confirm.children[0], confirmBtn: () => confirm.children[0], summary: () => summary, pack };
 }
-
-const NO_SECOND_QUESTION = (t) => !/Where/.test(t);
 
 test('STRENGTH SPOTTER: one story, the one-tap check, then three finale steps and a card built from the picks', () => {
   const g = play('strength-spotter');
@@ -125,13 +127,54 @@ test('VALUES COMPASS: an unranked start still gets a tradeoff and a card with no
   lines.forEach((l) => assert.ok(!/\{|\}|  /.test(l)));
 });
 
+const MANIFEST = (() => { const m = {}; const ctx = { window: { FnAudioManifest: m } }; vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/audio/discover/feelings-detective.js'), 'utf8'), ctx); return m; })();
+const clean = (x) => String(x == null ? '' : x).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
+
+test('FEELINGS DETECTIVE: three stories, one tap each, then my feelings, where I feel it and what helps, ending in a spoken feeling card', () => {
+  const g = play('feelings-detective');
+  assert.equal(g.prepared.scenarios.length, 1);
+  g.story();
+  assert.equal(g.prompt(), 'How do you feel right now? Pick one or two.');
+  assert.deepEqual(g.buttons().map((b) => b.replace(/\p{Extended_Pictographic}/gu, '').trim()), ['Happy', 'Sad', 'Angry', 'Scared', 'Nervous', 'Excited', 'Proud', 'Calm', "I'm not sure"]);
+  g.pick(0, 4); g.ok();                                                  // Happy and Nervous
+  assert.equal(g.prompt(), 'Where do you feel it in your body?');
+  g.pick(0); g.flush();                                                  // My tummy
+  assert.equal(g.prompt(), 'What helps you with this feeling? Pick one.');
+  assert.equal(g.buttons().length, 5);
+  g.pick(0); g.flush();                                                  // Slow breaths
+  assert.deepEqual(g.card(), ['I feel happy.', 'I feel nervous.', 'I feel it in my tummy.', 'Slow breaths help me.']);
+  assert.match(g.feedback(), /Only you see this card/);
+  g.finishBtn().click();
+  assert.equal(g.summary().find((x) => x.label === 'Questions about you').value, 3);
+});
+
+test('FEELINGS DETECTIVE: "not sure" answers still end in a kind card', () => {
+  const g = play('feelings-detective');
+  g.story();
+  g.pick(8); g.ok();                                                     // I'm not sure
+  g.pick(5); g.flush();                                                  // not sure where
+  g.pick(4); g.flush();                                                  // not sure what helps
+  assert.deepEqual(g.card(), ['That is okay. Feelings can be hard to name.']);
+  const h = play('feelings-detective');
+  h.story(); h.pick(8); h.ok(); h.pick(5); h.flush(); h.pick(1); h.flush();
+  assert.deepEqual(h.card(), ['Telling a grown-up helps me.']);
+});
+
+test('FEELINGS DETECTIVE: every line the child hears, in the stories and in Your turn, has a recorded clip', () => {
+  const g = play('feelings-detective');
+  g.story(); g.pick(0, 4); g.ok(); g.pick(0); g.flush(); g.pick(1); g.flush();
+  assert.ok(g.spoken.length > 12);
+  for (const line of g.spoken) assert.ok(MANIFEST[clean(line)], `no recorded clip for: ${line}`);
+  for (const f of new Set(Object.values(MANIFEST))) assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} is missing`);
+});
+
 test('YOUR TURN: nothing the child picks is ever logged, and the old second question is gone', () => {
-  for (const slug of ['strength-spotter', 'values-compass']) {
+  for (const slug of ['feelings-detective', 'strength-spotter', 'values-compass']) {
     const g = play(slug);
     g.story();
-    if (slug === 'strength-spotter') { g.pick(0, 6); g.ok(); g.pick(1); g.flush(); g.pick(0); g.flush(); } else { g.pick(0, 2, 5); g.ok(); g.pick(1); g.flush(); g.pick(1); g.flush(); }
+    if (slug === 'feelings-detective') { g.pick(0, 4); g.ok(); g.pick(0); g.flush(); g.pick(0); g.flush(); } else if (slug === 'strength-spotter') { g.pick(0, 6); g.ok(); g.pick(1); g.flush(); g.pick(0); g.flush(); } else { g.pick(0, 2, 5); g.ok(); g.pick(1); g.flush(); g.pick(1); g.flush(); }
     const log = JSON.stringify(g.events);
-    ['Patience', 'Listening', 'Honesty', 'Loyalty', 'Courage', 'honesty', 'loyalty', 'school', 'home', 'Count to five', 'pulled apart'].forEach((w) => assert.ok(!log.includes(w), `${slug}: ${w} is in the log`));
+    ['Patience', 'Listening', 'Honesty', 'Loyalty', 'Courage', 'honesty', 'loyalty', 'school', 'home', 'Count to five', 'pulled apart', 'Happy', 'Nervous', 'tummy', 'Slow breaths'].forEach((w) => assert.ok(!log.includes(w), `${slug}: ${w} is in the log`));
     const own = g.events.filter((e) => e.meta && e.meta.stage === 'own_turn');
     assert.deepEqual(own.map((e) => e.type), ['item_presented', 'response_submitted', 'item_presented', 'response_submitted', 'item_presented', 'response_submitted']);
     own.forEach((e) => assert.deepEqual(Object.keys(e.meta).sort(), ['stage', 'stepIndex', 'stepType'], 'only the step number and type are recorded'));
@@ -139,8 +182,10 @@ test('YOUR TURN: nothing the child picks is ever logged, and the old second ques
   }
 });
 
-test('YOUR TURN: both packs hold to the writing rules and keep stories at four per run', () => {
+test('YOUR TURN: all three packs hold to the writing rules; Strength Spotter and Values Compass keep four stories per run, Feelings Detective three', () => {
   const { check } = require(path.join(__dirname, '..', 'scripts', 'own-turn-lines.js'));
+  assert.equal(extractPack(fs.readFileSync(path.join(ROOT, 'brain-feelings-detective.html'), 'utf8')).roundsPerRun, 3);
+  assert.deepEqual(check('feelings-detective'), []);
   for (const slug of ['strength-spotter', 'values-compass']) {
     const bad = check(slug);
     assert.deepEqual(bad, [], bad.join('\n'));
@@ -164,8 +209,24 @@ test('YOUR TURN: both packs hold to the writing rules and keep stories at four p
 });
 
 test('YOUR TURN: the page versions and the engine contract are in place', () => {
-  for (const f of ['brain-strength-spotter.html', 'brain-values-compass.html', 'brain-feelings-detective.html']) assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /engine-scenario-choice\.js\?v=8/);
+  for (const f of ['brain-strength-spotter.html', 'brain-values-compass.html', 'brain-feelings-detective.html']) assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /engine-scenario-choice\.js\?v=9/);
   const eng = fs.readFileSync(path.join(ROOT, 'engine-scenario-choice.js'), 'utf8');
   assert.match(eng, /Deliberately NOT logging what was picked/);
   assert.ok(!/onEvidence\([^)]*(picks|chosen|opt\.text)/.test(eng), 'the engine never passes a pick to onEvidence');
+});
+
+test('DOUBLE TAP: tapping a confirm or Continue button twice does not run a screen twice or break Your turn', () => {
+  const g = play('feelings-detective');
+  // Clue stage: tap "I see these" twice, then the feelings stage: tap "I picked these" twice.
+  g.pick(0); g.confirmBtn().click(); g.confirmBtn().click(); g.flush();
+  g.pick(0); g.confirmBtn().click(); g.confirmBtn().click(); g.flush();
+  g.list()[0].click(); g.list()[0].click(); g.flush();
+  if (g.confirmBtn() && /Continue/.test(g.confirmBtn().textContent)) { g.confirmBtn().click(); g.confirmBtn().click(); g.flush(); }
+  assert.equal(g.prompt(), 'How do you feel right now? Pick one or two.', 'Your turn starts once and is not overwritten by a leftover screen');
+  const presented = g.events.filter((e) => e.type === 'item_presented' && e.meta.stage === 'cues').length;
+  assert.equal(presented, 1, 'the one story was presented once');
+  assert.equal(g.events.filter((e) => e.meta && e.meta.stage === 'feelings' && e.type === 'response_submitted').length, 1, 'the feelings were submitted once');
+  g.pick(0); g.ok(); g.pick(0); g.flush(); g.pick(0); g.flush();
+  const fin = g.finishBtn(); fin.click(); fin.click(); // the same button, tapped twice
+  assert.equal(g.summary().find((x) => x.label === 'Questions about you').value, 3, 'the summary counts three answers');
 });

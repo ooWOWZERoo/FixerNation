@@ -26,9 +26,9 @@
 <script src="accessibility-utils.js"></script>
 <script src="game-shell.js?v=3"></script>
 <script src="engine-sdk.js?v=6"></script>
-<script src="assets/audio/discover/feelings-detective.js?v=f480566a"></script>
+<script src="assets/audio/discover/feelings-detective.js?v=454f6ce7"></script>
 <script src="engine-voice.js?v=1"></script>
-<script src="engine-scenario-choice.js?v=8"></script>
+<script src="engine-scenario-choice.js?v=9"></script>
 <script>
   // Feelings Detective - Tune Your Brain SEL scaling slice (Discover band).
   // Closes the last CASEL gap: the first genuine Self-awareness game in
@@ -46,7 +46,7 @@
 
   const contentPack = {
     title: 'Feelings Detective',
-    roundsPerRun: 4,
+    roundsPerRun: 3,
     // Discover wording (Release 87): short lines, pictures on the clues and feelings, everything spoken. Plain defaults for
     // the shared prompts live in engine-scenario-choice.js; this game supplies its own.
     prompts: {
@@ -254,8 +254,8 @@
         reinforcement: "Sad and upset can both fit when something is lost.",
       },
     ],
-    // After each story the child gets a private check-in about their own feelings (NY SEL 1A). Their answers are
-    // never logged or sent anywhere; see the note at the top of engine-scenario-choice.js.
+    // After each story the child gets one private tap about their own life (NY SEL 1A). Their answer is never logged or sent
+    // anywhere; see the note at the top of engine-scenario-choice.js.
     selfCheck: {
       prompt: 'Has this happened to you?',
       options: [
@@ -263,17 +263,70 @@
         { id: 'no', text: 'No' },
         { id: 'not-sure', text: 'Not sure' },
       ],
-      bodyPrompt: 'Where would you feel it in your body?',
-      bodyOptions: [
-        { id: 'tummy', text: 'My tummy' },
-        { id: 'chest', text: 'My chest' },
-        { id: 'face', text: 'My face' },
-        { id: 'hands', text: 'My hands' },
-        { id: 'elsewhere', text: 'Somewhere else' },
-      ],
-      closing: 'You checked in with yourself! No one sees what you picked.',
       privateNote: 'Only you see your answers.',
       summaryLabel: 'Times you checked in',
+    },
+    // Your turn (Release 139): after the stories the child says how THEY feel, where they feel it and what helps, then sees and hears a
+    // feeling card built from those picks. Nothing picked is logged, sent or saved; see engine-scenario-choice.js (ownTurn).
+    // Every spoken line here has a recorded clip (server/scripts/build-discover-audio.js reads this block).
+    ownTurn: {
+      intro: 'Now it is your turn. Only you see what you pick.',
+      illustration: '🪞',
+      stepWord: 'Your turn',
+      summaryLabel: 'Questions about you',
+      privateNote: 'Only you see your answers.',
+      steps: [
+        {
+          id: 'f1', type: 'pickMany', max: 2,
+          prompt: 'How do you feel right now? Pick one or two.',
+          confirm: 'I picked these',
+          options: [
+            { id: 'happy', text: '😊 Happy', card: 'I feel happy.' },
+            { id: 'sad', text: '😢 Sad', card: 'I feel sad.' },
+            { id: 'angry', text: '😡 Angry', card: 'I feel angry.' },
+            { id: 'scared', text: '😨 Scared', card: 'I feel scared.' },
+            { id: 'nervous', text: '😟 Nervous', card: 'I feel nervous.' },
+            { id: 'excited', text: '🤩 Excited', card: 'I feel excited.' },
+            { id: 'proud', text: '😎 Proud', card: 'I feel proud.' },
+            { id: 'calm', text: '😌 Calm', card: 'I feel calm.' },
+          ],
+          notSure: { id: 'not-sure', text: "I'm not sure" },
+        },
+        {
+          id: 'f2', type: 'pickOne',
+          prompt: 'Where do you feel it in your body?',
+          options: [
+            { id: 'tummy', text: 'My tummy', card: 'I feel it in my tummy.' },
+            { id: 'chest', text: 'My chest', card: 'I feel it in my chest.' },
+            { id: 'face', text: 'My face', card: 'I feel it in my face.' },
+            { id: 'hands', text: 'My hands', card: 'I feel it in my hands.' },
+            { id: 'elsewhere', text: 'Somewhere else', card: 'I feel it somewhere else.' },
+          ],
+          notSure: { id: 'not-sure', text: "I'm not sure" },
+        },
+        {
+          id: 'f3', type: 'pickOne',
+          prompt: 'What helps you with this feeling? Pick one.',
+          options: [
+            { id: 'breaths', text: '🌬️ Slow breaths', card: 'Slow breaths help me.' },
+            { id: 'grownup', text: '🗣️ Tell a grown-up', card: 'Telling a grown-up helps me.' },
+            { id: 'move', text: '🏃 Move around', card: 'Moving around helps me.' },
+            { id: 'quiet', text: '🤫 Sit somewhere quiet', card: 'Sitting somewhere quiet helps me.' },
+          ],
+          notSure: { id: 'not-sure', text: "I'm not sure" },
+        },
+      ],
+      result: {
+        heading: 'My feeling card',
+        lines: [
+          { text: '{item}', each: 'f1', needs: 'f1' },
+          { text: '{f2}', needs: ['f1', 'f2'] },
+          { text: '{f3}', needs: 'f3' },
+        ],
+        emptyLine: 'That is okay. Feelings can be hard to name.',
+        closing: 'Only you see this card. Grown-ups you trust can help with big feelings.',
+        finish: 'Finish',
+      },
     },
   };
 

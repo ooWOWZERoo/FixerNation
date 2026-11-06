@@ -170,7 +170,8 @@ test('SELF-CHECK: Feelings Detective carries a pack-level self-check that the SD
   const g = REAL.find((x) => x.slug === 'feelings-detective');
   assert.ok(g && g.pack.selfCheck, 'selfCheck missing from the Feelings Detective pack');
   const sc = g.pack.selfCheck;
-  assert.ok(sc.prompt && sc.bodyPrompt && sc.closing && sc.privateNote);
+  assert.ok(sc.prompt && sc.privateNote);
+  assert.ok(!sc.bodyPrompt && !sc.bodyOptions, 'Release 139: one tap per story, the body question moved to Your turn');
   assert.equal(sc.options.map((o) => o.id).join(), 'yes,no,not-sure'); // joined: the pack comes from a vm context, so arrays are not the same realm
   for (let seed = 1; seed <= 10; seed++) {
     const out = prep(g.pack, g.engineName, seed).pack;

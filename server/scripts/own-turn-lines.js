@@ -1,4 +1,4 @@
-// Release 138: the writing rules for the "Your turn" finale of Strength Spotter (Explore, grades 3-5) and Values Compass (Challenge, grades 6-8).
+// Releases 138 and 139: the writing rules for the "Your turn" finale of Feelings Detective (Discover, K-2), Strength Spotter (Explore, grades 3-5) and Values Compass (Challenge, grades 6-8).
 // No dashes, no praise openers, no soothing lines, short sentences, and (Explore) no hard thinking words. The growth steps for each strength are
 // close in length, so the longest is not the "right" one. Also lists every string so the owner's review document can be checked against the page.
 // Run:  node server/scripts/own-turn-lines.js [slug ...]     (prints each line that breaks a rule; exit code 1 if any)
@@ -7,14 +7,14 @@ const fs = require('fs');
 const path = require('path');
 const { extractPack, ROOT } = require('./audit-brain-games.js');
 
-const SLUGS = ['strength-spotter', 'values-compass'];
-const SENTENCE_LIMIT = { 'strength-spotter': 12, 'values-compass': 20 };
-const OPTION_LIMIT = { 'strength-spotter': 12, 'values-compass': 14 };
+const SLUGS = ['feelings-detective', 'strength-spotter', 'values-compass'];
+const SENTENCE_LIMIT = { 'feelings-detective': 9, 'strength-spotter': 12, 'values-compass': 20 };
+const OPTION_LIMIT = { 'feelings-detective': 4, 'strength-spotter': 12, 'values-compass': 14 };
 const HARD = /\b(constructive|overwhelmed|perspective|affects?|reactions?|assume[sd]?|appropriate|situation|consequences?)\b/i;
 const SOOTHING = /\b(completely normal|that is normal|that's normal|totally normal|perfectly normal)\b/i;
 const PRAISE = /^(good (catch|noticing|thinking|job)|great|nice (work|job|read)|well done|exactly|right[.,!])/i;
 const DASH = /[—–]| - /;
-const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
+const words = (s) => String(s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').trim().split(/\s+/).filter(Boolean).length;
 const sentences = (s) => String(s).split(/(?<=[.!?]["”’]?)\s+/).filter(Boolean);
 
 // Every visible string in the finale and the one-tap check, with where it is.
@@ -51,12 +51,12 @@ function check(slug) {
     if (DASH.test(s.text)) flag(s.where, 'dash', s.text);
     if (SOOTHING.test(s.text)) flag(s.where, 'soothing line', s.text);
     if (PRAISE.test(s.text.trim())) flag(s.where, 'praise opener', s.text);
-    if (slug === 'strength-spotter' && HARD.test(s.text)) flag(s.where, `hard word "${s.text.match(HARD)[0]}"`, s.text);
+    if (slug !== 'values-compass' && HARD.test(s.text)) flag(s.where, `hard word "${s.text.match(HARD)[0]}"`, s.text);
     if (s.kind !== 'note') sentences(s.text.replace(/\{[^}]*\}/g, 'word')).forEach((sn) => { if (words(sn) > SENTENCE_LIMIT[slug]) flag(s.where, `sentence of ${words(sn)} words`, sn); });
     if (s.kind === 'option' && words(s.text) > OPTION_LIMIT[slug]) flag(s.where, `option of ${words(s.text)} words`, s.text);
     if (/\{[^}]*\}/.test(s.text)) {
       // Tokens must name a step in this pack.
-      const ids = new Set(pack.ownTurn.steps.map((st) => st.id));
+      const ids = new Set(pack.ownTurn.steps.map((st) => st.id).concat(['item'])); // {item} is each pick of a line marked each
       (s.text.match(/\{([a-zA-Z0-9_]+)/g) || []).forEach((t) => { if (!ids.has(t.slice(1))) flag(s.where, `unknown token ${t}`, s.text); });
     }
   }

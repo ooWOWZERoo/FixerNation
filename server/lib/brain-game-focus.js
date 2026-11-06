@@ -34,7 +34,7 @@ const FOCUS_HELP = {
 const GAMES = {
   // Discover (K-2)
   'calm-down-corner':    { band: 'discover', focus: 'self_management', domain: 'sel', casel: ['self_management'] },
-  'feelings-detective':  { band: 'discover', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness', 'social_awareness'], pending: true },
+  'feelings-detective':  { band: 'discover', focus: 'self_awareness', domain: 'sel', casel: ['self_awareness', 'social_awareness'] },
   'sharing-circle':      { band: 'discover', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness', 'relationship_skills'] },
   'same-and-different':  { band: 'discover', focus: 'social_awareness', domain: 'sel', casel: ['social_awareness'] },
   'helpers-choice':      { band: 'discover', focus: 'responsible_decision_making', domain: 'sel', casel: ['responsible_decision_making'] },
