@@ -17,6 +17,10 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 128 — 2026-11-06 — Fix bullet lists on the legal pages
+
+- **The bulleted lists on Terms, Privacy Policy, Refunds and Affiliate terms read badly:** each bold label, sentence and link sat in its own column, so text broke into odd blocks (worst under "What we collect and why"). Each list item now flows as normal text with a small bullet. Page styling only; no wording changed.
+
 ## Release 127 — 2026-11-06 — A shorter footer, with help and legal pages kept apart
 
 - **The footer is about 30% shorter** (716 px to 499 px on a laptop, and about 125 px shorter on a phone). The long fourth column is gone: the 10 help, legal and privacy links no longer sit under the sign-in links.

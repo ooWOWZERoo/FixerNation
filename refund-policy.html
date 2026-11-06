@@ -64,7 +64,8 @@
   .section ol{margin:12px 0 12px 22px; padding:0;}
   .section ol li{display:list-item; font-size:14px; line-height:1.6; margin-bottom:10px;}
   .section ol li::before{content:none;}
-  .section ul.plain li::before{content:"\2022";}
+  .section ul.plain li{display:block; position:relative; padding-left:20px;}
+  .section ul.plain li::before{content:"\2022"; position:absolute; left:4px; top:0; margin:0;}
   .updated{font-size:13px; color:var(--ink-soft); margin-top:14px;}
 </style>
 </head>
