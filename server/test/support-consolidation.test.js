@@ -26,6 +26,9 @@ test('NAV: one Support group with the five pages, and neither old entry is left 
   assert.match(nav, /api\/admin\/support\/summary/);
   assert.match(nav, /api\/admin\/client-errors\?hours=24/);
   assert.match(nav, /fnAdminErr24/);
+  // clearing or reloading on the Errors page must refresh the menu count (the 5-minute memory made it stale in Release 134)
+  assert.match(nav, /window\.fnSetErrorBadge = function/);
+  assert.match(read('admin-support-errors.html'), /fnSetErrorBadge\(d\.last24Hours\)/);
 });
 
 test('SHELL: all five pages show the same tab strip and say "Support" in the breadcrumb', () => {
@@ -118,12 +121,12 @@ test('CACHE VERSIONS: every admin page loads the same admin-nav.js and admin-she
   for (const f of files) {
     const s = read(f);
     const nav = s.match(/src="admin-nav\.js\?v=(\d+)"/);
-    if (nav) assert.equal(nav[1], '30', `${f} loads admin-nav.js v30`);
+    if (nav) assert.equal(nav[1], '31', `${f} loads admin-nav.js v31`);
     const sh = s.match(/src="admin-shell\.js\?v=(\d+)"/);
     if (sh) assert.equal(sh[1], '4', `${f} loads admin-shell.js v4`);
   }
-  for (const f of SUPPORT_PAGES) { assert.match(read(f), /admin-nav\.js\?v=30/, f); assert.match(read(f), /admin-shell\.js\?v=4/, f); }
-  assert.match(read('admin-nav.js'), /admin-nav\.js\?v=30/);
+  for (const f of SUPPORT_PAGES) { assert.match(read(f), /admin-nav\.js\?v=31/, f); assert.match(read(f), /admin-shell\.js\?v=4/, f); }
+  assert.match(read('admin-nav.js'), /admin-nav\.js\?v=31/);
 });
 
 test('HELP VIDEO G3: the staff video button is on the Inbox and on the Errors page it also walks through', () => {

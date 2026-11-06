@@ -1,6 +1,6 @@
 /* Fixer Nation — shared admin sidebar navigation.
    Every admin page has an empty <aside class="a-sidebar"></aside> placeholder
-   followed immediately by <script src="admin-nav.js?v=30"></script>.
+   followed immediately by <script src="admin-nav.js?v=31"></script>.
    This script populates it synchronously and marks the active link. */
 (function () {
   // Error capture (Release 122): load the shared reporter once per page.
@@ -157,13 +157,22 @@
   // failure (signed out, older server) just leaves the link as it is.
   function addBadge(href, count, label) {
     var el = aside.querySelector('a[href="' + href + '"] .label');
-    if (!el || !count) return;
+    if (!el) return;
+    var old = el.querySelector('.fn-nav-badge');
+    if (old) old.parentNode.removeChild(old);
+    if (!count) return;
     var badge = document.createElement('span');
+    badge.className = 'fn-nav-badge';
     badge.textContent = String(count);
     badge.setAttribute('aria-label', count + ' ' + label);
     badge.style.cssText = 'margin-left:8px; background:#F26B4D; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:1px 7px;';
     el.appendChild(badge);
   }
+  // The Errors page calls this after it loads or clears a group, so the menu count and the 5-minute memory follow what the page shows.
+  window.fnSetErrorBadge = function (n) {
+    try { sessionStorage.setItem('fnAdminErr24', JSON.stringify({ at: Date.now(), n: n })); } catch (e) { /* storage blocked */ }
+    addBadge('admin-support-errors.html', n, 'errors in the last 24 hours');
+  };
   if (window.fetch) {
     fetch('/api/admin/support/summary', { credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })

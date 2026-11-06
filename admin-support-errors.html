@@ -15,7 +15,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=30"></script>
+<script src="admin-nav.js?v=31"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -83,6 +83,7 @@ async function loadErrors() {
   const sel = document.getElementById('eKind');
   if (sel.options.length === 1) d.kinds.forEach(function (k) { const o = document.createElement('option'); o.value = k; o.textContent = KIND_LABEL[k] || k; sel.appendChild(o); });
   errorGroups = d.groups;
+  if (typeof fnSetErrorBadge === 'function') fnSetErrorBadge(d.last24Hours);
   document.querySelector('#errorsTable tbody').innerHTML = d.groups.map(function (g, i) {
     return '<tr><td>' + esc(KIND_LABEL[g.kind] || g.kind) + '</td><td style="word-break:break-all;">' + esc(whereText(g)) + '</td><td>' + esc(g.message) + (g.http_status ? ' <span class="a-pill a-pill-danger">' + esc(g.http_status) + '</span>' : '') + '</td>' +
       '<td>' + esc(g.total) + (g.browsers ? '<br><span style="font-size:12px; opacity:.7;">' + esc(g.browsers) + ' browser' + (g.browsers === 1 ? '' : 's') + '</span>' : '') + '</td>' +

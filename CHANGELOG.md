@@ -17,6 +17,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 135 — 2026-11-06 — Errors count in the menu follows the Errors page
+
+- **The count beside Errors in the menu did not go down after you cleared errors.** The menu remembered the 24-hour count for 5 minutes. The Errors page now updates the menu count every time it loads or clears a group.
+- Static change only. No server or database change.
+
 ## Release 134 — 2026-11-06 — All support tools in one Support area
 
 - **One Support group in the admin menu.** Support Inbox, Account Lookup, Classrooms & Parents, Errors and Help Content now sit together under Support (they were split between "Schools & Partners" and a hidden button). Every support page shows the same tab strip so you can move between them without the menu.
