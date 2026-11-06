@@ -22,6 +22,8 @@
   .rt-target.waiting { background: #6b7280; cursor: default; }
   .rt-target.ready   { background: var(--game-green); transform: scale(1.04); cursor: pointer; }
   .rt-target.early   { background: var(--game-red); cursor: default; }
+  /* The STOP decoy differs by word and shape as well as colour: a dark red octagon-style sign with a white ring. */
+  .rt-target.stop    { background: #7f1d1d; border-radius: 28px; box-shadow: 0 0 0 8px #fff inset, 0 12px 40px -12px rgba(0,0,0,0.35); cursor: pointer; }
   .rt-target .big-num { font-size: 40px; font-weight: 800; display: block; }
   .attempts-row {
     display: flex; justify-content: center; gap: 10px; margin: 16px 0; flex-wrap: wrap;
@@ -32,6 +34,7 @@
   }
   .attempt-chip.valid { background: #dcfce7; color: #15803d; }
   .attempt-chip.false-start { background: #fee2e2; color: #dc2626; }
+  .attempt-chip.held { background: #e0e7ff; color: #3730a3; }
   .round-indicator {
     display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;
   }
@@ -42,6 +45,7 @@
   }
   .round-dot.done-valid { background: var(--game-green); border-color: var(--game-green); }
   .round-dot.done-false { background: var(--game-red); border-color: var(--game-red); }
+  .round-dot.done-held { background: #6366f1; border-color: #6366f1; }
   .round-dot.current { border-color: var(--teal); }
 </style>
 </head>
@@ -52,7 +56,7 @@
   <div class="game-page-header">
     <span class="game-icon">⚡</span>
     <h1>Reaction Time</h1>
-    <p>Wait for green, then tap as fast as you can. Don't click early!</p>
+    <p>Wait for green, then tap as fast as you can. If you see the red STOP sign, don't tap.</p>
   </div>
 
   <!-- INTRO -->
@@ -60,7 +64,8 @@
     <h3 style="font-family:'Fraunces',serif;font-size:20px;color:var(--teal-dark);margin-bottom:16px;">How to Play</h3>
     <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;">
       The target will turn grey while you wait. When it flashes <strong style="color:var(--game-green)">green</strong>, click or tap immediately!
-      Clicking too early counts as a false start. Complete 5 rounds to see your average.
+      Sometimes a red <strong>STOP</strong> sign shows up instead. When it does, do not tap.
+      Tapping early counts as a false start. Tap on 5 greens to see your average.
     </p>
     <div style="margin-bottom:20px;">
       <label style="font-size:13px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:8px;">DIFFICULTY</label>
@@ -84,7 +89,7 @@
         <span id="targetLabel">Get Ready…</span>
       </div>
       <div class="attempts-row" id="attemptsRow"></div>
-      <p style="font-size:13px;color:var(--ink-soft);">Round <span id="roundNum">1</span> of 5</p>
+      <p style="font-size:13px;color:var(--ink-soft);">Round <span id="roundNum">1</span> of <span id="roundTotal">5</span></p>
     </div>
   </div>
 
@@ -99,6 +104,7 @@
       <div class="results-stat"><div class="val" id="rFalse">—</div><div class="lbl">False Starts</div></div>
       <div class="results-stat"><div class="val" id="rValid">—</div><div class="lbl">Valid Taps</div></div>
     </div>
+    <p id="rNoGoLine" style="font-size:14px;color:var(--ink-soft);margin:-12px 0 20px;text-align:center;"></p>
     <div class="xp-bar-wrap" id="xpSection" style="display:none;">
       <div class="xp-bar-label"><span id="xpLabel">XP</span><span id="levelLabel"></span></div>
       <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
@@ -125,11 +131,16 @@
 <script src="site-auth.js?v=11"></script>
 <script src="footer.js?v=17"></script>
 <script>
-const TOTAL_ROUNDS = 5;
+const GO_ROUNDS = 5;
+// STOP signs per run: they are extra rounds, so a run still has 5 green rounds. The first round is never a STOP sign and
+// two STOP signs never come in a row.
+const NOGO_COUNT = { easy: 1, medium: 2, hard: 3 };
+const STOP_MS = { easy: 1500, medium: 1200, hard: 1000 };
 const DIFF_DELAY = { easy:[1500,4000], medium:[1000,3000], hard:[700,2200] };
 
 let difficulty = 'medium', round = 0, phase = 'idle';
-let validTimes = [], falseStarts = 0;
+let validTimes = [], falseStarts = 0, noGoErrors = 0, noGoHeld = 0;
+let trials = [], stopTimer = null;
 let waitTimer = null, signalTime = null;
 let sessionToken = null, gameStartMs = null, isLoggedIn = false;
 
@@ -145,7 +156,9 @@ document.querySelectorAll('.diff-btn').forEach(b => b.addEventListener('click', 
 }));
 
 async function startGame() {
-  round = 0; validTimes = []; falseStarts = 0; phase = 'idle';
+  round = 0; validTimes = []; falseStarts = 0; noGoErrors = 0; noGoHeld = 0; phase = 'idle';
+  trials = buildTrials(difficulty);
+  clearTimeout(stopTimer);
   document.getElementById('introPanel').style.display = 'none';
   document.getElementById('resultsPanel').style.display = 'none';
   document.getElementById('playPanel').style.display = '';
@@ -153,7 +166,8 @@ async function startGame() {
 
   // Build round dots
   const dots = document.getElementById('roundDots');
-  dots.innerHTML = Array.from({length: TOTAL_ROUNDS}, (_, i) =>
+  document.getElementById('roundTotal').textContent = trials.length;
+  dots.innerHTML = Array.from({length: trials.length}, (_, i) =>
     `<div class="round-dot${i===0?' current':''}" id="dot-${i}"></div>`
   ).join('');
 
@@ -173,8 +187,25 @@ async function startGame() {
   nextRound();
 }
 
+// 5 green rounds plus the STOP rounds for this difficulty, in a random order that keeps the rules above.
+function buildTrials(diff) {
+  const n = NOGO_COUNT[diff] || 2;
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const t = Array.from({ length: GO_ROUNDS }, () => 'go').concat(Array.from({ length: n }, () => 'stop'));
+    for (let i = t.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [t[i], t[j]] = [t[j], t[i]]; }
+    if (t[0] === 'stop') continue;
+    let ok = true;
+    for (let i = 1; i < t.length; i++) if (t[i] === 'stop' && t[i - 1] === 'stop') ok = false;
+    if (ok) return t;
+  }
+  // Fallback (cannot happen for 1 to 3 STOP signs among 5 green rounds): spread them out evenly.
+  const t = Array.from({ length: GO_ROUNDS + n }, () => 'go');
+  for (let k = 0; k < n; k++) t[2 + k * 2] = 'stop';
+  return t;
+}
+
 function nextRound() {
-  if (round >= TOTAL_ROUNDS) { endGame(); return; }
+  if (round >= trials.length) { endGame(); return; }
   document.getElementById('roundNum').textContent = round + 1;
   const target = document.getElementById('rtTarget');
   target.className = 'rt-target waiting';
@@ -186,7 +217,7 @@ function nextRound() {
   const [minD, maxD] = DIFF_DELAY[difficulty];
   const delay = minD + Math.random() * (maxD - minD);
   clearTimeout(waitTimer);
-  waitTimer = setTimeout(showGreen, delay);
+  waitTimer = setTimeout(trials[round] === 'stop' ? showStop : showGreen, delay);
 }
 
 function showGreen() {
@@ -198,8 +229,50 @@ function showGreen() {
   signalTime = Date.now();
 }
 
+// The decoy: a red STOP sign instead of green. Not tapping is the right answer; the sign goes away on its own.
+function showStop() {
+  phase = 'stop';
+  const target = document.getElementById('rtTarget');
+  target.className = 'rt-target stop';
+  document.getElementById('targetEmoji').textContent = '🛑';
+  document.getElementById('targetLabel').textContent = 'STOP: do not tap';
+  stopTimer = setTimeout(heldBack, STOP_MS[difficulty] || 1200);
+}
+
+function heldBack() {
+  if (phase !== 'stop') return;
+  phase = 'idle';
+  noGoHeld++;
+  const target = document.getElementById('rtTarget');
+  target.className = 'rt-target waiting';
+  document.getElementById('targetEmoji').textContent = '✋';
+  document.getElementById('targetLabel').textContent = 'You held back';
+  document.getElementById('statusMsg').textContent = 'Right call. You waited.';
+  addAttemptChip('held', null);
+  markDot(round, 'held');
+  round++;
+  setTimeout(nextRound, 1000);
+}
+
 function handleClick() {
   if (phase === 'idle') return;
+
+  if (phase === 'stop') {
+    // Tapped on a STOP sign: a no-go error. Reported at the end, it does not change the score.
+    clearTimeout(stopTimer);
+    noGoErrors++;
+    phase = 'idle';
+    const target = document.getElementById('rtTarget');
+    target.className = 'rt-target early';
+    document.getElementById('targetEmoji').textContent = '❌';
+    document.getElementById('targetLabel').textContent = 'That was STOP';
+    document.getElementById('statusMsg').textContent = 'That was a STOP sign. Do not tap on it.';
+    addAttemptChip('nogo', null);
+    markDot(round, 'false');
+    round++;
+    setTimeout(nextRound, 1200);
+    return;
+  }
 
   if (phase === 'waiting') {
     // False start
@@ -237,8 +310,8 @@ function handleClick() {
 function addAttemptChip(type, ms) {
   const row = document.getElementById('attemptsRow');
   const chip = document.createElement('div');
-  chip.className = `attempt-chip ${type === 'valid' ? 'valid' : 'false-start'}`;
-  chip.textContent = type === 'valid' ? `${ms} ms` : '❌ Early';
+  chip.className = `attempt-chip ${type === 'valid' ? 'valid' : type === 'held' ? 'held' : 'false-start'}`;
+  chip.textContent = type === 'valid' ? `${ms} ms` : type === 'held' ? '✋ Held back' : type === 'nogo' ? '❌ STOP' : '❌ Early';
   row.appendChild(chip);
 }
 
@@ -246,7 +319,7 @@ function markDot(i, result) {
   const dot = document.getElementById(`dot-${i}`);
   if (!dot) return;
   dot.classList.remove('current');
-  dot.classList.add(result === 'valid' ? 'done-valid' : 'done-false');
+  dot.classList.add(result === 'valid' ? 'done-valid' : result === 'held' ? 'done-held' : 'done-false');
   const next = document.getElementById(`dot-${i+1}`);
   if (next) next.classList.add('current');
 }
@@ -262,6 +335,8 @@ async function endGame() {
   document.getElementById('rBest').textContent = best ? best + ' ms' : '—';
   document.getElementById('rFalse').textContent = falseStarts;
   document.getElementById('rValid').textContent = validTimes.length;
+  const stops = noGoHeld + noGoErrors;
+  document.getElementById('rNoGoLine').textContent = `STOP signs: you held back on ${noGoHeld} of ${stops}.`;
 
   if (!sessionToken || !validTimes.length) {
     document.getElementById('guestPrompt').style.display = '';
@@ -273,7 +348,7 @@ async function endGame() {
     const r = await fetch(`/api/brain-games/sessions/${sessionToken}/complete`, {
       method:'PUT', credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ durationMs, metrics: { validTimes, falseStarts } })
+      body: JSON.stringify({ durationMs, metrics: { validTimes, falseStarts, noGoTrials: noGoHeld + noGoErrors, noGoErrors } })
     });
     if (!r.ok) throw new Error();
     const d = await r.json();

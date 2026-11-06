@@ -254,6 +254,24 @@ table.data-table tr:hover td{background:#fafaf9;}
 <div class="modal-bg" id="assignGameModal">
   <div class="modal">
     <h2>Assign Brain Game</h2>
+    <div class="field">
+      <label for="gameFocus">Focus</label>
+      <select id="gameFocus" onchange="renderGameSelect()">
+        <option value="">All focuses</option>
+        <optgroup label="SEL &amp; Character">
+          <option value="self_awareness">Self-Awareness</option>
+          <option value="self_management">Self-Management</option>
+          <option value="social_awareness">Social Awareness</option>
+          <option value="relationship_skills">Relationship Skills</option>
+          <option value="responsible_decision_making">Responsible Decision-Making</option>
+        </optgroup>
+        <optgroup label="Skills practice">
+          <option value="literacy">Literacy</option>
+          <option value="math">Math</option>
+          <option value="thinking">Thinking Skills</option>
+        </optgroup>
+      </select>
+    </div>
     <div class="field"><select id="gameSelect"><option value="">Loading games…</option></select></div>
     <div class="field" style="font-size:13px;">
       <label style="display:flex;align-items:center;gap:6px;font-weight:500;">
@@ -767,6 +785,7 @@ async function openAssignGame() {
   var data = r.ok ? await r.json() : [];
   assignGamePool = Array.isArray(data) ? data : (data.items || data.games || []);
   document.getElementById('gameBandFilter').checked = false;
+  document.getElementById('gameFocus').value = '';
   renderGameSelect();
   document.getElementById('assignGameModal').classList.add('open');
 }
@@ -775,12 +794,14 @@ function renderGameSelect() {
   var sel = document.getElementById('gameSelect');
   var showAll = document.getElementById('gameBandFilter').checked;
   var band = GRADE_TO_BAND[classroom.grade_level];
+  var focus = document.getElementById('gameFocus').value;
   var games = (showAll || !band)
     ? assignGamePool
     : assignGamePool.filter(function(g){ return !g.band || g.band === band; });
+  if (focus) games = games.filter(function(g){ return g.focus === focus; });
   sel.innerHTML = games.length
     ? '<option value="">Choose a game…</option>' + games.map(function(g){ return '<option value="' + g.id + '">' + esc(g.name) + '</option>'; }).join('')
-    : '<option value="">No games match this classroom\'s grade level</option>';
+    : '<option value="">No games match this grade level and focus</option>';
 }
 
 async function assignGame() {

@@ -42,13 +42,12 @@
   <div class="wrap">
     <span style="font-size:56px;display:block;margin-bottom:16px;">🧠</span>
     <h1>Tune Your Brain</h1>
-    <p>Play games that build reading, math, thinking skills, decision-making, and everyday life skills. Track your progress and earn badges along the way.</p>
+    <p>Play games that build reading, math and thinking skills, plus the social-emotional skills behind good choices. Track your progress and earn badges as you go.</p>
     <div class="hero-badges">
       <div class="hero-badge">📖 Literacy</div>
       <div class="hero-badge">➕ Math</div>
       <div class="hero-badge">🧩 Thinking Skills</div>
       <div class="hero-badge">🤝 SEL &amp; Character</div>
-      <div class="hero-badge">🌱 Wellness &amp; Life Skills</div>
     </div>
     <div class="user-bar" id="userBar">
       <div>
@@ -89,9 +88,14 @@
     <div class="filter-chips" id="bandChips"></div>
   </div>
   <div class="filter-row">
-    <span class="filter-label">Focus:</span>
-    <div class="filter-chips" id="domainChips"></div>
+    <span class="filter-label" style="min-width:132px;">SEL &amp; Character:</span>
+    <div class="filter-chips" id="selChips"></div>
   </div>
+  <div class="filter-row">
+    <span class="filter-label" style="min-width:132px;">Skills practice:</span>
+    <div class="filter-chips" id="skillChips"></div>
+  </div>
+  <p id="focusHelp" style="font-size:13px;color:var(--ink-soft);margin:0 0 14px;min-height:18px;"></p>
   <div class="game-grid" id="gameGrid">
     <!-- Skeleton -->
     <div class="game-card" style="opacity:0.4;">
@@ -124,9 +128,24 @@
 <script src="footer.js?v=17"></script>
 <script>
 var BAND_LABELS = { discover: 'Discover', explore: 'Explore', challenge: 'Challenge', advance: 'Advance' };
-var DOMAIN_LABELS = { literacy: 'Literacy', math: 'Math', executive: 'Thinking Skills', sel: 'SEL & Character', wellness: 'Wellness & Life Skills' };
-// What kind of game it is, so teachers can tell the social-emotional games from the skills practice at a glance.
-// Literacy, math and thinking-skills games practise those skills and are not counted toward SEL coverage.
+// Focus: the five SEL competencies, then the three skills practice areas. Same list as server/lib/brain-game-focus.js.
+var SEL_FOCUSES = ['self_awareness', 'self_management', 'social_awareness', 'relationship_skills', 'responsible_decision_making'];
+var SKILL_FOCUSES = ['literacy', 'math', 'thinking'];
+var FOCUS_LABELS = {
+  self_awareness: 'Self-Awareness', self_management: 'Self-Management', social_awareness: 'Social Awareness',
+  relationship_skills: 'Relationship Skills', responsible_decision_making: 'Responsible Decision-Making',
+  literacy: 'Literacy', math: 'Math', thinking: 'Thinking Skills'
+};
+var FOCUS_HELP = {
+  self_awareness: 'Notice your own feelings and what matters to you.',
+  self_management: 'Handle your feelings and actions, and work toward goals.',
+  social_awareness: "See things from other people's side and respect differences.",
+  relationship_skills: 'Talk, listen, work as a team and sort out disagreements.',
+  responsible_decision_making: 'Think through a problem and choose what is caring and wise.',
+  literacy: 'Reading and word skills.',
+  math: 'Number and pattern puzzles.',
+  thinking: 'Train your memory and focus.'
+};
 var BAND_ORDER = ['discover', 'explore', 'challenge', 'advance'];
 var BAND_GRADES = { discover: 'K-2', explore: '3-5', challenge: '6-8', advance: '9-12' };
 var NEW_DAYS = 30;
@@ -146,14 +165,14 @@ function bandTag(g) {
   return g.band ? '<span class="game-kind band-' + esc(g.band) + '">' + esc(BAND_LABELS[g.band]) + ' (' + BAND_GRADES[g.band] + ')</span> ' : '';
 }
 function newTag(g) { return isNew(g) ? '<span class="game-kind is-new">New</span> ' : ''; }
+// The card tag names the focus; a game with no focus yet (database not updated) falls back to the older SEL / Skills practice tag.
 function kindTag(g) {
-  if (g.domain === 'sel') return '<span class="game-kind">SEL &amp; Character</span>';
-  if (g.domain === 'wellness') return '<span class="game-kind">Wellness &amp; Life Skills</span>';
-  return '<span class="game-kind">Skills practice</span>';
+  if (g.focus && FOCUS_LABELS[g.focus]) return '<span class="game-kind">' + esc(FOCUS_LABELS[g.focus]) + '</span>';
+  return g.domain === 'sel' ? '<span class="game-kind">SEL &amp; Character</span>' : '<span class="game-kind">Skills practice</span>';
 }
 var allGames = [];
 var activeBand = '';
-var activeDomain = '';
+var activeFocus = '';
 
 const LEVEL_NAMES = ['','Beginner','Learner','Challenger','Skilled','Advanced','Expert','Master'];
 
@@ -204,8 +223,8 @@ function renderGameCard(g) {
     </div>`;
 }
 
-function renderChips(containerId, values, labels, activeValue, onPick) {
-  const chips = ['<span class="filter-chip' + (activeValue === '' ? ' active' : '') + '" data-value="">All</span>']
+function renderChips(containerId, values, labels, activeValue, onPick, withAll) {
+  const chips = (withAll === false ? [] : ['<span class="filter-chip' + (activeValue === '' ? ' active' : '') + '" data-value="">All</span>'])
     .concat(values.map(v => '<span class="filter-chip' + (activeValue === v ? ' active' : '') + '" data-value="' + esc(v) + '">' + esc(labels[v]) + '</span>'));
   const el = document.getElementById(containerId);
   el.innerHTML = chips.join('');
@@ -221,7 +240,7 @@ function renderFilteredGrid() {
     return;
   }
   const filtered = allGames.filter(g =>
-    (!activeBand || !g.band || g.band === activeBand) && (!activeDomain || g.domain === activeDomain)
+    (!activeBand || !g.band || g.band === activeBand) && (!activeFocus || g.focus === activeFocus)
   );
   document.getElementById('gameGrid').innerHTML = filtered.map(renderGameCard).join('') ||
     '<div class="no-results">No games match these filters. Try clearing one.</div>';
@@ -230,7 +249,13 @@ function renderFilteredGrid() {
 }
 
 function pickBand(value) { activeBand = value; renderChips('bandChips', ['discover', 'explore', 'challenge', 'advance'], BAND_LABELS, activeBand, pickBand); renderFilteredGrid(); }
-function pickDomain(value) { activeDomain = value; renderChips('domainChips', ['literacy', 'math', 'executive', 'sel', 'wellness'], DOMAIN_LABELS, activeDomain, pickDomain); renderFilteredGrid(); }
+// Two chip rows share one active focus. Clicking the chip that is already on turns it off, and "All" (first row) clears it.
+function renderFocusChips() {
+  renderChips('selChips', SEL_FOCUSES, FOCUS_LABELS, activeFocus, pickFocus);
+  renderChips('skillChips', SKILL_FOCUSES, FOCUS_LABELS, activeFocus, pickFocus, false);
+  document.getElementById('focusHelp').textContent = activeFocus ? FOCUS_HELP[activeFocus] : '';
+}
+function pickFocus(value) { activeFocus = value && value === activeFocus ? '' : value; renderFocusChips(); renderFilteredGrid(); }
 
 async function loadPage() {
   // Load games
@@ -239,7 +264,7 @@ async function loadPage() {
   allGames = sortByBand(gData?.games || []);
 
   renderChips('bandChips', ['discover', 'explore', 'challenge', 'advance'], BAND_LABELS, activeBand, pickBand);
-  renderChips('domainChips', ['literacy', 'math', 'executive', 'sel', 'wellness'], DOMAIN_LABELS, activeDomain, pickDomain);
+  renderFocusChips();
   renderFilteredGrid();
 
   // Load user progress

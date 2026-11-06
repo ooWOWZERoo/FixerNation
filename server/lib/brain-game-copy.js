@@ -35,7 +35,7 @@ const LEGACY_BANDS = {
   'memory-match': 'explore',
   'simon-sequence': 'explore',
   'number-sequence': 'challenge',
-  'quick-math': 'challenge',
+  'quick-math': 'explore', // Release 137: its numbers (up to 12 x 12, two-digit sums) are grade 3-5 content
   'reaction-time': 'challenge',
   'stroop-challenge': 'challenge',
 };

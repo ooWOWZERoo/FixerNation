@@ -18,7 +18,7 @@ const board: Storyboard = {
       run: async (p) => { await glideTo(p, "#userBar"); },
     },
     {
-      say: "Under Choose a Game, use the filter buttons to narrow the list by grade band, or by the skill a game builds. Select All to see everything again.",
+      say: "Under Choose a Game, use the filter buttons to narrow the list by grade band, or by focus, such as a social-emotional skill or reading. Select All to see everything again.",
       run: async (p) => {
         await glideTo(p, "#bandChips");
         await p.waitForTimeout(800);
@@ -26,7 +26,7 @@ const board: Storyboard = {
         await p.waitForTimeout(2000);
         await glideClick(p, "#bandChips .filter-chip >> nth=0");
         await p.waitForTimeout(800);
-        await glideTo(p, "#domainChips");
+        await glideTo(p, "#selChips");
         await p.waitForTimeout(1200);
       },
     },

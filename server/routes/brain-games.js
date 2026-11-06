@@ -369,12 +369,12 @@ function progressRow(row) {
 
 // ── GET /api/brain-games ──────────────────────────────────────────────────────
 const STATIC_GAMES = [
-  { id:0, name:'Memory Match',     slug:'memory-match',     description:'Flip cards and find all matching pairs as fast as possible.',           icon:'🃏', primarySkill:'Working Memory',      progress:null },
-  { id:0, name:'Reaction Time',    slug:'reaction-time',    description:'Wait for the signal, then tap or click as quickly as you can.',         icon:'⚡', primarySkill:'Processing Speed',    progress:null },
-  { id:0, name:'Simon Sequence',   slug:'simon-sequence',   description:'Watch a color pattern grow longer each round and repeat it perfectly.',  icon:'🎵', primarySkill:'Sequential Memory',   progress:null },
-  { id:0, name:'Stroop Challenge', slug:'stroop-challenge', description:'Name the ink color of a word — resist reading what the word says.',     icon:'🎨', primarySkill:'Cognitive Flexibility',progress:null },
-  { id:0, name:'Quick Math',       slug:'quick-math',       description:'Solve arithmetic problems against the clock before time runs out.',      icon:'➕', primarySkill:'Numerical Reasoning', progress:null },
-  { id:0, name:'Number Sequence',  slug:'number-sequence',  description:'Identify the missing number in a mathematical pattern.',                 icon:'🔢', primarySkill:'Pattern Recognition', progress:null },
+  { id:0, name:'Memory Match',     slug:'memory-match', band:'explore', focus:'thinking',     description:'Flip cards and find all matching pairs as fast as possible.',           icon:'🃏', primarySkill:'Working Memory',      progress:null },
+  { id:0, name:'Reaction Time',    slug:'reaction-time', band:'challenge', focus:'thinking',    description:'Wait for the signal, then tap or click as quickly as you can.',         icon:'⚡', primarySkill:'Processing Speed',    progress:null },
+  { id:0, name:'Simon Sequence',   slug:'simon-sequence', band:'explore', focus:'thinking',   description:'Watch a color pattern grow longer each round and repeat it perfectly.',  icon:'🎵', primarySkill:'Sequential Memory',   progress:null },
+  { id:0, name:'Stroop Challenge', slug:'stroop-challenge', band:'challenge', focus:'thinking', description:'Name the ink color of a word — resist reading what the word says.',     icon:'🎨', primarySkill:'Cognitive Flexibility',progress:null },
+  { id:0, name:'Quick Math',       slug:'quick-math', band:'explore', focus:'math',       description:'Solve arithmetic problems against the clock before time runs out.',      icon:'➕', primarySkill:'Numerical Reasoning', progress:null },
+  { id:0, name:'Number Sequence',  slug:'number-sequence', band:'challenge', focus:'math',  description:'Identify the missing number in a mathematical pattern.',                 icon:'🔢', primarySkill:'Pattern Recognition', progress:null },
 ];
 
 router.get('/', async (req, res) => {
@@ -407,7 +407,7 @@ router.get('/', async (req, res) => {
       .map(g => ({
         id: g.id, name: g.name, slug: g.slug,
         description: g.description, icon: g.icon,
-        primarySkill: g.primary_skill, band: g.band, domain: g.domain,
+        primarySkill: g.primary_skill, band: g.band, domain: g.domain, focus: g.focus || null,
         createdAt: g.created_at, // the games page marks recent additions with a "New" tag
         progress: progressMap[g.id] || null,
       }));

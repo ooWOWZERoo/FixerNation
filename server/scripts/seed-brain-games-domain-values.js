@@ -14,7 +14,7 @@ const DOMAINS = {
   'reaction-time': 'executive',
   'simon-sequence': 'executive',
   'stroop-challenge': 'executive',
-  'number-sequence': 'executive',
+  'number-sequence': 'math', // Release 137: pattern arithmetic, so math (was executive)
   'quick-math': 'math',
   'sound-safari': 'literacy',
   'reading-detective': 'literacy',

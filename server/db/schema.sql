@@ -1075,6 +1075,9 @@ CREATE TABLE IF NOT EXISTS brain_games (
     'self_awareness','self_management','social_awareness',
     'relationship_skills','responsible_decision_making'
   ) NULL,
+  -- Release 137: the single focus the games page filters on and the coverage grid counts (five SEL competencies for the
+  -- SEL games, literacy / math / thinking for the skills games). casel_competencies is the secondary list. See lib/brain-game-focus.js.
+  focus ENUM('self_awareness','self_management','social_awareness','relationship_skills','responsible_decision_making','literacy','math','thinking') NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

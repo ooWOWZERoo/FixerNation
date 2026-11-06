@@ -67,7 +67,7 @@ test('CATALOG COPY: plain descriptions for all 25 games, nothing internal, nothi
     assert.ok(!/[—–]| - /.test(d), `${slug}: dash`);
     assert.ok(/[.?]$/.test(d), `${slug}: ends with a full stop`);
   });
-  assert.deepEqual(copy.LEGACY_BANDS, { 'memory-match': 'explore', 'simon-sequence': 'explore', 'number-sequence': 'challenge', 'quick-math': 'challenge', 'reaction-time': 'challenge', 'stroop-challenge': 'challenge' });
+  assert.deepEqual(copy.LEGACY_BANDS, { 'memory-match': 'explore', 'simon-sequence': 'explore', 'number-sequence': 'challenge', 'quick-math': 'explore', 'reaction-time': 'challenge', 'stroop-challenge': 'challenge' });
 });
 
 test('CATALOG COPY: the seed scripts say the same thing, so a fresh install matches production', () => {
@@ -99,7 +99,7 @@ test('CATALOG COPY: applyCopy updates only listed games, sets legacy bands, and 
   const first = await copy.applyCopy(fakeDb(rows));
   assert.equal(first.descriptions.length, 25);
   assert.deepEqual(first.bands.sort(), Object.keys(copy.LEGACY_BANDS).sort());
-  assert.equal(rows['memory-match'].band, 'explore'); assert.equal(rows['quick-math'].band, 'challenge');
+  assert.equal(rows['memory-match'].band, 'explore'); assert.equal(rows['quick-math'].band, 'explore');
   assert.equal(rows['memory-match'].description, 'Legacy text kept as is', 'legacy descriptions are not rewritten');
   assert.deepEqual(rows['some-other-game'], { description: 'Untouched', band: 'advance' });
   assert.equal(rows['team-pick'].band, 'explore', 'bands of other games are not touched');
