@@ -85,6 +85,7 @@ const GAMES = {
 };
 
 const BANDS = ['discover', 'explore', 'challenge', 'advance'];
+const SET_ORDER = ['self_awareness', 'self_management', 'social_awareness', 'relationship_skills', 'responsible_decision_making'];
 const MIN_PER_CELL = 2; // the owner's rule: every grade band x focus needs at least two games
 
 // The band x focus grid. A `pending` game is listed but not counted until its own-self step is built (owner's decision, strict).
@@ -120,7 +121,8 @@ async function applyFocus(db) {
     [r] = await db.query('UPDATE brain_games SET band = ? WHERE slug = ? AND (band IS NULL OR band <> ?)', [g.band, slug, g.band]);
     if (r.affectedRows) changed.band.push(slug);
     if (g.casel) {
-      const csv = g.casel.join(',');
+      // MariaDB hands a SET back in the column's own order, so compare and write in that order (otherwise a game "changes" on every run).
+      const csv = SET_ORDER.filter((c) => g.casel.includes(c)).join(',');
       [r] = await db.query('UPDATE brain_games SET casel_competencies = ? WHERE slug = ? AND (casel_competencies IS NULL OR casel_competencies <> ?)', [csv, slug, csv]);
       if (r.affectedRows) changed.casel.push(slug);
     }
