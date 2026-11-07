@@ -194,4 +194,64 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
   });
 });
 
+// Release 147: which games and lesson plans get used. Counted from the classroom records that already exist
+// (game sessions, lesson progress, assignments, teacher libraries), not from the anonymous visitor beacon, so
+// ad blockers and the opt-out cannot hide real classroom use. Totals only: no student, teacher or school is
+// named or returned. Sales-demo and its classrooms are left out so a demo run never makes a lesson look popular.
+const USAGE_RANGES = { '30': 30, '90': 90, '365': 365, all: 0 };
+const NOT_DEMO_USER = (col) => `NOT EXISTS (SELECT 1 FROM site_users du WHERE du.id = ${col} AND du.is_sales_demo = 1)`;
+const NOT_DEMO_CLASSROOM = (col) => `NOT EXISTS (SELECT 1 FROM classrooms dc JOIN site_users dt ON dt.id = dc.teacher_site_user_id WHERE dc.id = ${col} AND dt.is_sales_demo = 1)`;
+const NOT_DEMO_STUDENT = (col) => `NOT EXISTS (SELECT 1 FROM classroom_students ds JOIN classrooms dc ON dc.id = ds.classroom_id JOIN site_users dt ON dt.id = dc.teacher_site_user_id WHERE ds.id = ${col} AND dt.is_sales_demo = 1)`;
+
+router.get('/usage', requireAuth, async (req, res) => {
+  const range = Object.prototype.hasOwnProperty.call(USAGE_RANGES, req.query.range) ? String(req.query.range) : '30';
+  const days = USAGE_RANGES[range];
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceStr = days ? `${isoDate(since)} 00:00:00` : '1970-01-01 00:00:00';
+
+  const [games] = await pool.query(
+    `SELECT g.id, g.name, g.slug, g.band, g.focus,
+       (SELECT COUNT(*) FROM brain_game_sessions s WHERE s.game_id = g.id AND s.started_at >= ?
+          AND (s.user_id IS NULL OR ${NOT_DEMO_USER('s.user_id')})
+          AND (s.student_id IS NULL OR ${NOT_DEMO_STUDENT('s.student_id')})) AS plays,
+       (SELECT COUNT(*) FROM brain_game_sessions s WHERE s.game_id = g.id AND s.started_at >= ? AND s.completed_at IS NOT NULL
+          AND (s.user_id IS NULL OR ${NOT_DEMO_USER('s.user_id')})
+          AND (s.student_id IS NULL OR ${NOT_DEMO_STUDENT('s.student_id')})) AS completed,
+       (SELECT COUNT(DISTINCT s.user_id) FROM brain_game_sessions s WHERE s.game_id = g.id AND s.started_at >= ?
+          AND (s.user_id IS NULL OR ${NOT_DEMO_USER('s.user_id')})) +
+       (SELECT COUNT(DISTINCT s.student_id) FROM brain_game_sessions s WHERE s.game_id = g.id AND s.started_at >= ?
+          AND (s.student_id IS NULL OR ${NOT_DEMO_STUDENT('s.student_id')})) AS players,
+       (SELECT COUNT(*) FROM classroom_game_assignments a WHERE a.game_id = g.id AND a.created_at >= ?
+          AND ${NOT_DEMO_CLASSROOM('a.classroom_id')}) AS assigned
+     FROM brain_games g WHERE g.active = 1
+     ORDER BY plays DESC, g.name ASC`,
+    [sinceStr, sinceStr, sinceStr, sinceStr, sinceStr]
+  );
+
+  const [lessons] = await pool.query(
+    `SELECT c.id, c.title, c.series,
+       (SELECT COUNT(*) FROM teacher_lesson_plans t WHERE t.curriculum_id = c.id AND t.selected_at >= ?
+          AND ${NOT_DEMO_USER('t.site_user_id')}) AS in_libraries,
+       (SELECT COUNT(*) FROM classroom_assignments a WHERE a.curriculum_id = c.id AND a.assigned_at >= ?
+          AND ${NOT_DEMO_CLASSROOM('a.classroom_id')}) AS assigned,
+       (SELECT COUNT(*) FROM student_lesson_progress p WHERE p.curriculum_id = c.id AND p.started_at >= ?
+          AND ${NOT_DEMO_STUDENT('p.student_id')}) AS started,
+       (SELECT COUNT(*) FROM student_lesson_progress p WHERE p.curriculum_id = c.id AND p.completed_at >= ?
+          AND ${NOT_DEMO_STUDENT('p.student_id')}) AS completed
+     FROM curricula c WHERE c.published = 1
+     ORDER BY started DESC, in_libraries DESC, c.title ASC`,
+    [sinceStr, sinceStr, sinceStr, sinceStr]
+  );
+
+  const n = (v) => Number(v) || 0;
+  res.json({
+    range,
+    games: games.map(g => ({ id: g.id, name: g.name, slug: g.slug, band: g.band, focus: g.focus,
+      plays: n(g.plays), completed: n(g.completed), players: n(g.players), assigned: n(g.assigned) })),
+    lessons: lessons.map(l => ({ id: l.id, title: l.title, series: l.series,
+      inLibraries: n(l.in_libraries), assigned: n(l.assigned), started: n(l.started), completed: n(l.completed) })),
+  });
+});
+
 module.exports = router;

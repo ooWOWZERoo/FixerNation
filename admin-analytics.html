@@ -35,6 +35,17 @@
   .fn-funnel-fill{height:100%; background:var(--a-accent-fill); border-radius:8px; transition:width .3s ease; min-width:2px;}
   .fn-funnel-drop{display:flex; align-items:center; gap:6px; padding:10px 4px 10px 14px; font-size:12.5px; color:var(--a-danger); font-weight:600;}
   .fn-funnel-chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--a-border);}
+  .usage-wrap{max-height:460px; overflow:auto; border-top:1px solid var(--a-border);}
+  .usage-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .usage-table th{position:sticky; top:0; background:var(--a-surface, var(--a-bg)); text-align:right; padding:8px 10px; font-size:12px; color:var(--a-text-soft); cursor:pointer; white-space:nowrap; border-bottom:1px solid var(--a-border);}
+  .usage-table th:first-child{text-align:left;}
+  .usage-table th.sorted{color:var(--a-accent-on-soft); text-decoration:underline;}
+  .usage-table td{padding:8px 10px; border-top:1px solid var(--a-border); text-align:right; font-variant-numeric:tabular-nums;}
+  .usage-table td:first-child{text-align:left; min-width:220px;}
+  .usage-name{font-weight:600;}
+  .usage-sub{color:var(--a-text-soft); font-size:11.5px;}
+  .usage-bar{height:5px; margin-top:5px; border-radius:3px; background:var(--a-accent-fill); min-width:1px;}
+  .usage-zero td{color:var(--a-text-soft);}
   .fn-funnel-chip{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:var(--a-accent-soft); color:var(--a-accent-on-soft); font-size:12.5px; font-weight:700;}
 </style>
 </head>
@@ -110,6 +121,28 @@
           <ul class="analytics-list" id="topEventsList"></ul>
           <div class="a-empty" id="topEventsEmpty" style="display:none;">No tracked interactions yet (book views, add-to-cart, resource opens, quotes, etc.).</div>
         </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head">
+          <h2>Games in Use</h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="a-btn a-btn-outline usage-range" data-r="30" onclick="setUsageRange('30')">Last 30 Days</button>
+            <button class="a-btn a-btn-outline usage-range" data-r="90" onclick="setUsageRange('90')">Last 90 Days</button>
+            <button class="a-btn a-btn-outline usage-range" data-r="365" onclick="setUsageRange('365')">Last 12 Months</button>
+            <button class="a-btn a-btn-outline usage-range" data-r="all" onclick="setUsageRange('all')">All Time</button>
+          </div>
+        </div>
+        <div class="a-note" style="margin-bottom:14px;">This comes from classroom activity, not visitor sessions. A play is one time a game was started. Players are the different students and teachers who played it. Totals only, no names, and sales demo accounts are left out. Click a column heading to sort.</div>
+        <div class="usage-wrap"><table class="usage-table" id="gamesUsageTable"></table></div>
+        <div class="a-empty" id="gamesUsageEmpty" style="display:none;">No games found.</div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-head"><h2>Lesson Plans in Use</h2></div>
+        <div class="a-note" style="margin-bottom:14px;">In libraries is how many teachers added the lesson to My Lesson Plans. Assigned is how many classrooms it was given to. Started and finished count students. The range above applies here too.</div>
+        <div class="usage-wrap"><table class="usage-table" id="lessonsUsageTable"></table></div>
+        <div class="a-empty" id="lessonsUsageEmpty" style="display:none;">No published lesson plans found.</div>
       </div>
 
       <div class="a-card">
@@ -428,9 +461,62 @@ function closePathModal() {
   document.getElementById('pathModalOverlay').classList.remove('show');
 }
 
+// Games and lesson plans in use (Release 147). Sorting happens in the browser; the server returns every game and lesson.
+let usageRange = '30';
+let usageData = { games: [], lessons: [] };
+const usageSort = { games: 'plays', lessons: 'started' };
+const GAME_COLS = [['name', 'Game'], ['band', 'Band'], ['plays', 'Plays'], ['completed', 'Finished'], ['players', 'Players'], ['assigned', 'Assigned']];
+const LESSON_COLS = [['title', 'Lesson plan'], ['inLibraries', 'In libraries'], ['assigned', 'Assigned'], ['started', 'Started'], ['completed', 'Finished']];
+
+function renderUsageTable(tableId, emptyId, key, cols, rows, barKey) {
+  const table = document.getElementById(tableId);
+  const sortKey = usageSort[key];
+  const sorted = rows.slice().sort((a, b) => {
+    if (typeof a[sortKey] === 'string' || typeof b[sortKey] === 'string') return String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''));
+    return (b[sortKey] - a[sortKey]) || String(a[cols[0][0]]).localeCompare(String(b[cols[0][0]]));
+  });
+  document.getElementById(emptyId).style.display = sorted.length ? 'none' : 'block';
+  table.style.display = sorted.length ? 'table' : 'none';
+  const max = Math.max(1, ...sorted.map(r => r[barKey]));
+  table.innerHTML = '<thead><tr>' + cols.map(c =>
+    `<th class="${c[0] === sortKey ? 'sorted' : ''}" data-k="${fnEscape(c[0])}" data-t="${key}" onclick="sortUsage(this.dataset.t, this.dataset.k)">${fnEscape(c[1])}</th>`).join('') + '</tr></thead><tbody>' +
+    sorted.map(r => {
+      const zero = !r[barKey];
+      const first = `<td><div class="usage-name">${fnEscape(r[cols[0][0]])}</div>` +
+        (r.series ? `<div class="usage-sub">${fnEscape(r.series)}</div>` : '') +
+        `<div class="usage-bar" style="width:${Math.round(100 * r[barKey] / max)}%"></div></td>`;
+      return `<tr class="${zero ? 'usage-zero' : ''}">` + first + cols.slice(1).map(c => `<td>${fnEscape(String(r[c[0]] == null ? '' : r[c[0]]))}</td>`).join('') + '</tr>';
+    }).join('') + '</tbody>';
+}
+
+function sortUsage(table, key) {
+  usageSort[table] = key;
+  renderUsage();
+}
+
+function renderUsage() {
+  renderUsageTable('gamesUsageTable', 'gamesUsageEmpty', 'games', GAME_COLS, usageData.games, 'plays');
+  renderUsageTable('lessonsUsageTable', 'lessonsUsageEmpty', 'lessons', LESSON_COLS, usageData.lessons, 'started');
+}
+
+function setUsageRange(range) {
+  usageRange = range;
+  document.querySelectorAll('.usage-range').forEach(b => b.classList.toggle('a-btn-primary', b.dataset.r === range));
+  loadUsage();
+}
+
+async function loadUsage() {
+  const r = await fetch('/api/analytics/usage?range=' + encodeURIComponent(usageRange), { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  if (!r.ok) return;
+  usageData = await r.json();
+  renderUsage();
+}
+
 loadFunnel();
 loadSummary();
 loadSessions();
+setUsageRange('30');
 </script>
 
 <script src="admin-shell.js?v=4"></script>
