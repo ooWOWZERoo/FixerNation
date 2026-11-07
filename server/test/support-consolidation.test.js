@@ -134,5 +134,5 @@ test('HELP VIDEO G3: the staff video button is on the Inbox and on the Errors pa
     ? JSON.parse(read('docs/training-videos/video-watch.json')).videos.G3
     : JSON.parse(read('docs/training-videos/video-watch.json')).G3;
   assert.ok(g3.includes('admin-support-errors.html'), 'video-watch.json lists the Errors page for G3');
-  assert.match(read('admin-support-errors.html'), /help-videos\.js\?v=17/);
+  assert.match(read('admin-support-errors.html'), /help-videos\.js\?v=18/);
 });

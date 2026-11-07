@@ -112,7 +112,7 @@
       pages: ['school-invite-accept.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412321/fne/help/T1.mp4', captions: '/help-assets/T1.vtt', poster: '/help-assets/T1.jpg' },
     { id: 'T2', group: 'teachers', topic: 'Getting in', title: 'Register with your school email',
       summary: 'Use your school email to reserve a seat and create your account.',
-      pages: ['education-schools.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793721655/fne/help/T2.mp4', captions: '/help-assets/T2.vtt', poster: '/help-assets/T2.jpg' },
+      pages: ['education-schools.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794095339/fne/help/T2.mp4', captions: '/help-assets/T2.vtt', poster: '/help-assets/T2.jpg' },
     { id: 'T3', group: 'teachers', topic: 'Classrooms and students', title: 'Create a classroom and add students',
       summary: 'Create a classroom, then add students one at a time or import a list.',
       pages: ['teacher-classrooms.html', 'teacher-classroom.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412323/fne/help/T3.mp4', captions: '/help-assets/T3.vtt', poster: '/help-assets/T3.jpg' },

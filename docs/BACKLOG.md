@@ -12,7 +12,6 @@ Things only the owner can do (cPanel, the live admin, own devices). None affects
 - [ ] **Errors tab.** Open Support, then Errors, and Clear any group mentioning "QA deploy check" (the curl test row; the command-line clean-up found none).
 - [ ] **Registration product description** in the admin still says "this price becomes $0 at checkout". Suggested: "Uses your school's license, so there is nothing to pay. Use your school email address."
 - [ ] **Test affiliate id 3:** run `node scripts/delete-test-affiliate.js` (dry run first, then `--apply`) from `server/` with the nodevenv active. It refuses if the affiliate ever earned a commission.
-- [ ] **T2 video:** re-recorded locally on 2026-11-07 (button reads "Buy Solo: $249"); not yet published. Edit the Registration description in the admin first, then publish (`npm run howto:publish -- T2` in `tests/`).
 - [ ] **Still yours from earlier notes:** Discover voice test on a Chromebook and an iPad, sales deck pricing check, verify more states (only NY and OH are verified), check the stray demo-style address on `admin-school-admins.html`, and one real Stripe test purchase of the solo license once live keys are on.
 
 ## Legal pages: owner and lawyer review (added 2026-11-06)
