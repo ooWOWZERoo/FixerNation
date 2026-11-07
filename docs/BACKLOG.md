@@ -2,6 +2,19 @@
 
 Things we have agreed to do later. Newest section first. Nothing here is started unless it says so. When an item is done, move it to `CHANGELOG.md` as part of its release and delete it here.
 
+## Owner housekeeping (added 2026-11-07)
+
+Things only the owner can do (cPanel, the live admin, own devices). None affects the site today. The repo is public, so the specific email addresses are in the private memory notes, not here.
+
+- [ ] **Account clean-up in the live admin.** Delete the three stray CRM contacts (two internal or test addresses and one misspelled teacher address). Deleting a contact also closes any sign-in account with the same email, including the misspelled teacher's typo account (id 125). Before deleting the teacher's, check in Account Lookup that her correct account exists and which account holds her license seat.
+- [ ] **Rotate the QA credentials** (`rotate-qa-test-credentials.js`). Postponed by the owner on 2026-11-07.
+- [ ] **Backup cron time.** The nightly backup runs at 2:30 on the server clock, which showed as 9:30pm local. Run `date` and `date -u` in cPanel Terminal; if the server is on UTC, change the cron hour to 7 (`30 7 * * *`), then update `setup-cron-jobs.sh` to match.
+- [ ] **Errors tab.** Open Support, then Errors, and Clear any group mentioning "QA deploy check" (the curl test row; the command-line clean-up found none).
+- [ ] **Registration product description** in the admin still says "this price becomes $0 at checkout". Suggested: "Uses your school's license, so there is nothing to pay. Use your school email address."
+- [ ] **Test affiliate id 3:** run `node scripts/delete-test-affiliate.js` (dry run first, then `--apply`) from `server/` with the nodevenv active. It refuses if the affiliate ever earned a commission.
+- [ ] **T2 video:** re-recorded locally on 2026-11-07 (button reads "Buy Solo: $249"); not yet published. Edit the Registration description in the admin first, then publish (`npm run howto:publish -- T2` in `tests/`).
+- [ ] **Still yours from earlier notes:** Discover voice test on a Chromebook and an iPad, sales deck pricing check, verify more states (only NY and OH are verified), check the stray demo-style address on `admin-school-admins.html`, and one real Stripe test purchase of the solo license once live keys are on.
+
 ## Legal pages: owner and lawyer review (added 2026-11-06)
 
 `terms.html`, `privacy-policy.html`, `refund-policy.html` and `affiliate-terms.html` (Release 126) were drafted from what the site, Help center and code already say. Decide or confirm before relying on them:

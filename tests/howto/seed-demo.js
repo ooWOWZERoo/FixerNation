@@ -36,6 +36,15 @@ const ymd = (d) => d.toISOString().slice(0, 10);
 
   const districtId = (await q('INSERT INTO districts (name) VALUES (?)', ['Riverbend School District'])).insertId;
 
+  // The two public one-seat products, set up like production: the quote-only Registration card, and the per-seat Per Educator
+  // license that the Teacher Registration page's "Buy Solo" button sells (so the recorded button reads like the real one).
+  await q(
+    `INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, active, sort_order, footer_note) VALUES (?, ?, 1, 0, 1, 0, 1, 0, 'Valid for 12 months')`,
+    ['Registration — 2D Education Program', "Uses your school's license, so there is nothing to pay. Use your school email address."]);
+  await q(
+    `INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, active, sort_order, footer_note) VALUES (?, ?, 1, 24900, 0, 1, 1, 0, 'Valid for 12 Months')`,
+    ['Per Educator', 'One seat gets you in. Every lesson document, quiz, answer key, and your digital classroom included.']);
+
   const school = async (domain, name, seats, status, expiresInDays, payment = 'paid') => {
     const productId = (await q(
       `INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, active, sort_order) VALUES (?, 'How-to demo plan', ?, 0, 0, 0, 0, 999)`,
