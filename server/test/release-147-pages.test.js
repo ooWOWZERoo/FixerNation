@@ -69,3 +69,9 @@ test('checkout: the old hard-coded $49 and $39 license prices are gone; only the
 test('the one-off price script is marked historic', () => {
   assert.match(read('server/scripts/update-license-product-pricing.js'), /HISTORIC, DO NOT RE-RUN/);
 });
+
+test('no page promises an individual license only one classroom (nothing enforces it)', () => {
+  const schools = read('for-schools.html');
+  assert.ok(!/one classroom/i.test(schools) && !/One Digital Classroom/.test(schools) && !/Multiple Digital Classrooms/.test(schools));
+  assert.ok(!/one teacher with one classroom/i.test(read('help-center.js')));
+});

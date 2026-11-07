@@ -230,7 +230,7 @@
     E('quote-card-password', 'school', 'Quotes and buying', 'billing_or_license', 'D1', `I paid our quote by card. Where do I set my password?`,
       `The link to set your password is in the confirmation email we send you. If you paid by purchase order, you can set your password right on the page after your order is confirmed.`),
     E('license-types', 'school,district,teacher', 'Licensing', 'billing_or_license', '', `What license types are there?`,
-      `An Individual Educator license is for one teacher with one classroom. A School License is for a whole building with many teacher seats. A District License covers several schools, with an admin view for each school and one for the district.`),
+      `An Individual Educator license is for one teacher. A School License is for a whole building with many teacher seats. A District License covers several schools, with an admin view for each school and one for the district.`),
     E('who-buys-license', 'teacher,school', 'Licensing', 'billing_or_license', '', `Who buys a license, and what does it cover?`,
       `A principal or curriculum coordinator usually buys a school license. It gives every teacher in the building the full lesson library, the Digital Classroom and a school admin portal. District plans cover several buildings.`),
     E('own-teacher-account', 'school', 'Licensing', 'invitation_or_seat', '', `Does every teacher need their own account?`,
