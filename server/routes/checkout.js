@@ -83,15 +83,6 @@ async function findOrCreateContact(email, source, name) {
   return result.insertId;
 }
 
-// Prices for the flexible single/group license flow (licenses.html) live here
-// as plain constants — not worth building pricing UI for these two until they
-// actually need to change often. Fixed-tier school plans are a separate,
-// admin-editable catalog (server/routes/license-products.js) sold via the cart.
-const PRICING = {
-  single_license: { name: 'Fixer Nation Single Teacher License', unitAmountCents: 4900 },
-  group_license: { name: 'Fixer Nation Group License Seat', unitAmountCents: 3900 },
-};
-
 router.post('/create-session', limiter({ name: 'checkout-session', windowMs: 3600000, max: 30 }), async (req, res) => {
   const b = req.body || {};
   const email = (b.email || '').trim();
@@ -150,37 +141,9 @@ router.post('/create-session', limiter({ name: 'checkout-session', windowMs: 360
     return res.json({ url: session.url });
   }
 
-  // Legacy path: hardcoded productType (single_license / group_license)
-  const productType = b.productType;
-  if (!PRICING[productType]) {
-    return res.status(400).json({ error: 'productType must be single_license or group_license' });
-  }
-
-  const quantity = productType === 'group_license' ? Number(b.seatCount) : 1;
-  if (productType === 'group_license' && !(quantity > 0)) {
-    return res.status(400).json({ error: 'seatCount must be a positive number' });
-  }
-
-  const product = PRICING[productType];
-
-  const session = await getStripe().checkout.sessions.create({
-    mode: 'payment',
-    payment_method_types: ['card'],
-    customer_email: email,
-    line_items: [{
-      price_data: {
-        currency: 'usd',
-        product_data: { name: product.name },
-        unit_amount: product.unitAmountCents,
-      },
-      quantity,
-    }],
-    metadata: { productType, seatCount: String(quantity), email, ...refMeta },
-    success_url: `${siteUrl}/licenses.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteUrl}/licenses.html?checkout=cancelled`,
-  });
-
-  res.json({ url: session.url });
+  // Release 147: the old hard-coded productType path ($49 single, $39 group seat) is closed. Every license price
+  // is now the admin's license_products price, so a stale constant here could undercut it. Pages send productId.
+  return res.status(400).json({ error: 'Send a productId from the license price list' });
 });
 
 // Looks up real prices/seat counts server-side for every cart line — never

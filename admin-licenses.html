@@ -75,7 +75,7 @@
         <div class="a-field" id="productSeatCountField"><label>Seat Count *</label><input type="number" id="productSeatCount" min="1"></div>
         <div class="a-field" id="productPriceField"><label>Price (USD) *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
       </div>
-      <div class="a-field"><label>Description / Note</label><textarea id="productDescription" rows="3" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Shown below the price on the registration card (e.g. school pricing note)"></textarea></div>
+      <div class="a-field"><label>Description / Note</label><textarea id="productDescription" rows="3" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Shown below the price on the registration card (e.g. Uses your school's license, so there is nothing to pay.)"></textarea></div>
       <div class="a-field"><label>Bullet Points (one per line)</label><textarea id="productBulletPoints" rows="4" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--a-border); font-size:14px; font-family:inherit;" placeholder="Be sure to complete each field on your registration form&#10;You'll receive an onboarding welcome email when submitted"></textarea></div>
       <div class="a-field"><label>Footer Note</label><input type="text" id="productFooterNote" placeholder="e.g. Valid for 12 months"></div>
       <div class="a-field">
@@ -102,7 +102,7 @@
       </div>
       <div class="a-field"><label>Sort Order</label><input type="number" id="productSortOrder" value="0"></div>
       <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:4px;">
-        <input type="checkbox" id="productVariableSeats" onchange="onVariableSeatsChange()"> Variable seat count — buyer picks quantity on licenses.html (price is per seat)
+        <input type="checkbox" id="productVariableSeats" onchange="onVariableSeatsChange()"> Variable seat count — buyer picks quantity on licenses.html (price is per seat). A one-seat, priced, per-seat product is also the solo license sold on the Teacher Registration page.
       </label>
       <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; margin-top:10px;">
         <input type="checkbox" id="productCallForQuote" onchange="onCallForQuoteChange()"> Call For Quote (for 1000+ seat plans — hides the price, shows "Call For Quote" instead)

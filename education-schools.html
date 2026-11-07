@@ -178,6 +178,7 @@
             <button id="regBuySoloBtn" class="btn btn-primary" style="width:100%; font-family:inherit;"><span id="regSoloLabel">Buy Solo</span></button>
             <button id="regNotifyAdminBtn" class="btn btn-outline" style="width:100%; font-family:inherit;" onclick="regNotifyAdmin()">Notify School Admin</button>
           </div>
+          <p id="regSoloNote" style="display:none; font-size:12px; color:var(--ink-soft); margin:10px 0 0; text-align:center; line-height:1.5;">By buying you agree to our <a href="terms.html" style="color:var(--coral-dark); font-weight:700;">Terms of Use</a>. See also <a href="refund-policy.html" style="color:var(--coral-dark); font-weight:700;">Refunds and cancellations</a>.<span id="regSoloValid"></span></p>
           <div id="regNotifyMsg" style="font-size:13px; color:var(--teal-dark); font-weight:600; margin-top:10px; min-height:18px; text-align:center;"></div>
           <div style="text-align:center; margin-top:12px;"><a href="#" onclick="regReset(); return false;" style="font-size:12.5px; color:var(--ink-soft);">← Try a different email</a></div>
         </div>
@@ -265,18 +266,26 @@
 <script src="site-auth.js?v=11"></script>
 <script>
 let _regProduct = null;
+let _soloProduct = null;
 
 (async function loadRegProduct() {
   try {
     const r = await fetch('/api/license-products');
     const data = await r.json().catch(() => ({}));
-    const reg = (data.licenseProducts || []).find(p => p.seatCount === 1);
+    const products = data.licenseProducts || [];
+    // The registration card is the one-seat product that is neither per-seat nor a trial. The solo license is the
+    // one-seat, per-seat, priced, non-trial product (the same one licenses.html sells). Both come from the admin
+    // price list by their settings, so editing or re-sorting products there never swaps them.
+    const reg = products.find(p => p.seatCount === 1 && !p.variableSeats && !p.isTrial);
+    _soloProduct = products.find(p => p.seatCount === 1 && p.variableSeats && !p.isTrial && !p.callForQuote && p.price > 0) || null;
+    wireSoloButton();
     if (!reg) return;
     _regProduct = reg;
 
     document.getElementById('regName').textContent = reg.name;
     document.getElementById('regHeading').textContent = 'Check Your School\'s License';
-    const priceLabel = reg.callForQuote ? 'Contact Us' : ('$' + Number(reg.price).toLocaleString());
+    // A registering teacher is covered by the school's license, so a quote-only or $0 registration product reads as free.
+    const priceLabel = (!reg.callForQuote && reg.price > 0) ? ('$' + Number(reg.price).toLocaleString()) : 'Free with your school\'s license';
     document.getElementById('regPrice').textContent = priceLabel;
     if (reg.description) document.getElementById('regDesc').textContent = reg.description;
     if (reg.bulletPoints && reg.bulletPoints.length) {
@@ -286,21 +295,48 @@ let _regProduct = null;
       document.getElementById('regFooterNote').textContent = reg.footerNote || '';
     }
 
-    // Wire solo-buy button price label
-    const soloLabel = document.getElementById('regSoloLabel');
-    if (soloLabel) soloLabel.textContent = reg.callForQuote ? 'Ask About a Solo License' : 'Buy Solo: $' + Number(reg.price).toLocaleString();
-
-    // Wire solo-buy action
-    document.getElementById('regBuySoloBtn').addEventListener('click', function () {
-      if (!_regProduct) return;
-      if (_regProduct.callForQuote) { window.location.href = 'contact.html'; return; }
-      cartAdd({ type: 'license_product', id: _regProduct.id, name: _regProduct.name, price: _regProduct.price, quantity: 1, schoolDomain: '' });
-      window.location.href = 'cart.html';
-    });
   } catch (e) {
-    // API failure — form still visible with default text
+    // API failure: the form still works; the solo button falls back to the contact page
+    wireSoloButton();
   }
 })();
+
+// Solo license: the same checkout licenses.html uses (/api/checkout/create-session), one seat of the admin's per-seat product.
+// The price is read from the server again at checkout, so the number on the button can never be what is charged.
+function wireSoloButton() {
+  const btn = document.getElementById('regBuySoloBtn');
+  const label = document.getElementById('regSoloLabel');
+  const note = document.getElementById('regSoloNote');
+  if (!_soloProduct) {
+    label.textContent = 'Ask About a Solo License';
+    btn.onclick = function () { window.location.href = 'contact.html'; };
+    return;
+  }
+  label.textContent = 'Buy Solo: $' + Number(_soloProduct.price).toLocaleString();
+  if (note) note.style.display = 'block';
+  const valid = document.getElementById('regSoloValid');
+  if (valid && _soloProduct.footerNote) valid.textContent = ' ' + _soloProduct.footerNote + '.';
+  btn.onclick = async function () {
+    const email = document.getElementById('regEmail').value.trim();
+    const msg = document.getElementById('regNotifyMsg');
+    if (!email) { msg.textContent = 'Enter your email first.'; return; }
+    btn.disabled = true;
+    msg.textContent = '';
+    try {
+      const r = await fetch('/api/checkout/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: _soloProduct.id, seatCount: 1, email: email }),
+      });
+      const result = await r.json().catch(() => ({}));
+      if (!r.ok || !result.url) { btn.disabled = false; msg.textContent = result.error || 'We could not start checkout. Please try again.'; return; }
+      window.location.href = result.url;
+    } catch (e) {
+      btn.disabled = false;
+      msg.textContent = 'We could not start checkout. Please try again.';
+    }
+  };
+}
 
 document.getElementById('regCheckBtn').addEventListener('click', async function () {
   const firstName = document.getElementById('regFirstName').value.trim();
@@ -338,11 +374,8 @@ document.getElementById('regCheckBtn').addEventListener('click', async function 
 
       const failMsg = document.getElementById('regFailMsg');
       if (data.reason === 'no_school') {
-        failMsg.textContent = 'We don\'t have a school license on file for your email domain.';
+        failMsg.innerHTML = 'We don\'t have a school license on file for your email domain. You can buy a license for yourself, or <a href="contact.html" style="color:var(--coral-dark);">contact us</a> about one for your school.';
         document.getElementById('regNotifyAdminBtn').style.display = 'none';
-        const soloBtn = document.getElementById('regBuySoloBtn');
-        soloBtn.textContent = 'Contact Us';
-        soloBtn.onclick = function () { window.location.href = 'contact.html'; };
       } else if (data.reason === 'license_pending') {
         failMsg.textContent = 'Your school has a license order in progress. Your admin will let you know when teacher access is ready.';
         document.getElementById('regNotifyAdminBtn').style.display = 'none';

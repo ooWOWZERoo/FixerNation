@@ -38,3 +38,34 @@ test('education-schools.html no longer carries a hard-coded $149 or $0', () => {
   assert.ok(!/\$<span id="regSoloPrice">149/.test(s));
   assert.ok(!/id="regPrice">\$0</.test(s));
 });
+
+test('education-schools.html: the solo button buys the admin per-seat product through the same checkout as licenses.html', () => {
+  const s = read('education-schools.html');
+  assert.match(s, /\/api\/checkout\/create-session/);
+  assert.match(s, /productId: _soloProduct\.id/);
+  assert.ok(!/cartAdd\(/.test(s), 'the cart path needs a school domain and cannot sell a solo license');
+  // products are found by their settings, never by position or id
+  assert.match(s, /p\.seatCount === 1 && !p\.variableSeats && !p\.isTrial/);
+  assert.match(s, /p\.seatCount === 1 && p\.variableSeats && !p\.isTrial && !p\.callForQuote && p\.price > 0/);
+  assert.ok(!/p\.id === 1[34]/.test(s) && !/\$249/.test(s), 'no hard-coded id or price');
+  // the same terms and refund line licenses.html shows next to Buy Now
+  assert.match(s, /terms\.html[^]*refund-policy\.html/);
+  assert.ok(!/Contact Us'/.test(s.replace(/'Ask About a Solo License'/g, '')), 'no quote-only "Contact Us" price on the registration card');
+});
+
+test('education-schools.html: a school with no license on file can still buy a solo license', () => {
+  const s = read('education-schools.html');
+  const branch = s.slice(s.indexOf("data.reason === 'no_school'"), s.indexOf("data.reason === 'license_pending'"));
+  assert.ok(!/soloBtn\.textContent|soloBtn\.onclick/.test(branch), 'the solo button is no longer turned into Contact Us');
+  assert.match(branch, /buy a license for yourself/);
+});
+
+test('checkout: the old hard-coded $49 and $39 license prices are gone; only the admin price list sells licenses', () => {
+  const s = read('server/routes/checkout.js');
+  assert.ok(!/4900|3900|const PRICING/.test(s));
+  assert.match(s, /Send a productId from the license price list/);
+});
+
+test('the one-off price script is marked historic', () => {
+  assert.match(read('server/scripts/update-license-product-pricing.js'), /HISTORIC, DO NOT RE-RUN/);
+});

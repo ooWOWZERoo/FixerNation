@@ -1,3 +1,5 @@
+// HISTORIC, DO NOT RE-RUN: a one-off from before prices moved into the admin (Licenses page in the admin). Its prices ($349 solo, $149 pilot, and the tier numbers
+// below) do not match the live price list, and the names it looks for no longer exist. Edit prices in the admin instead.
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const pool = require('../db/pool');
 
