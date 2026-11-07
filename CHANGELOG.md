@@ -13,14 +13,21 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 ## Unreleased / Known pending work
 
 - **Help center and support loose ends** are tracked in `docs/BACKLOG.md` (student data retention decision, office-hours details, 18 draft answers to review, publishing the Get help videos, re-recording two portal tours, hiding the Convert to Annual Access button after a trial ends, role-aware quick answers).
-- **"Your turn" finale for Strength Spotter and Values Compass (Release 138, built and tested, held for the owner's read of `docs/tune-your-brain/OWN_SELF_STEPS_FOR_REVIEW.md`; not deployed).** After the stories (4 per run instead of 5), the child answers three questions about themselves and gets a card built from their own picks: Strength Spotter (pick up to two strengths, where they use them, one small way to grow one) and Values Compass (rank their top three values, face a tradeoff between two of them, where they acted on one). Nothing is logged, sent or saved and there is always a "not sure" answer. The per-story check shrinks to one tap. Static files only (`engine-scenario-choice.js` v8). Both games now count as Self-Awareness games in the coverage grid; Feelings Detective is the last one waiting (needs recorded clips).
-- **"Your turn" finale for Feelings Detective (Release 139, built and tested, held for the owner's read and ear test of the new clips; not deployed).** After 3 stories (was 4) and one tap each, the child says how they feel (one or two of eight feelings), where they feel it in their body, and what helps, then sees and hears a feeling card built from those picks, read aloud in the recorded Ava voice (28 new clips). Nothing is logged, sent or saved and every question has an "I'm not sure". Also fixed for all scenario-choice games: a double tap on a confirm, Continue or Finish button no longer starts the next screen twice. Static files only. With this, the three Self-Awareness games all have their finale and count in the coverage grid.
-- **14 new games (Release 141, built and tested, held for the owner's read and ear test; not deployed).** Core skills for the younger bands: Rhyme Time, Letter Sounds, More or Fewer, Add It Up, Pattern Parade and Animal Match (Discover, spoken with 259 new recorded Ava clips), and Word Clues, Times Table Trail and Word Problem Workshop (Explore). A second Self-Awareness game in every band: My Feelings Today (Discover), What Helps Me (Explore), Know Your Triggers (Challenge), and Know Yourself and Stress Signals (Advance), each a short check-in with a card built from the child's own picks; nothing picked is logged, sent or saved. Needs the 14 catalog scripts, the badge script and the focus script run once (see `docs/tune-your-brain/R141_NEW_GAMES_FOR_REVIEW.md`). The audio engine can now show a picture or pattern with a spoken question (v7), and a check-in game can have no stories (scenario engine v9).
-- **10 more games for Relationship Skills and Social Awareness (Release 143, built and tested, held for the owner's read and ear test; not deployed).** Discover (spoken): Asking Nicely and Team Tower. Explore: Team Mission, Walk in My Shoes, Many Ways to Be. Challenge: Speak Up Kindly, Other Side of the Screen, Walk in Their Shoes. Advance: Repair It, Many Voices. Every band now has at least two games in each of the two focuses. Same "read, pick, then show why" shape as the other reading games, 10 situations each, with answers written to be about the same length so length is no clue. Needs the 10 catalog scripts, the badge script and the focus script run once; no restart. Wording to read: `docs/tune-your-brain/R143_RELATIONSHIP_GAMES_FOR_REVIEW.md`.
-- **The last 12 games: every grade band now has at least two games in every focus (Release 144, built and tested, held for the owner's read and ear test; not deployed).** Discover (spoken): Wait for It (Self-Management) and Stop and Think (Responsible Decision-Making). Explore: Stuck on It (Self-Management). Challenge: Peer Pressure Pause (Responsible Decision-Making), Tone Detective (Literacy), Ratio Shop (Math). Advance: Deadline Crunch (Self-Management), Argument Check (Literacy), Graph Match and Stats Check (Math), Plan It and Switch Board (Thinking Skills). The numbers in the math, planning and rule-switching games are worked out in code and re-checked by the tests. Needs the 12 catalog scripts, the badge script and the focus script run once; no restart. Wording to read: `docs/tune-your-brain/R144_LAST_GROUP_FOR_REVIEW.md`.
 - **Stripe card checkout** (individual teacher license purchase on `licenses.html`, and the Stripe option in the cart/PO checkout flow) is coded, pushed, and — as of 2026-08-22 — confirmed configured and working end-to-end in Stripe's **test mode** (real e2e coverage, cart → Stripe Checkout → test card → webhook → paid/active license). **Still not live for real customer charges** — that requires swapping in the admin's real/live Stripe keys in place of the test ones. Purchase Order (PO) checkout requires no Stripe keys and is fully live today.
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
+
+## Release 144 — 2026-11-06 — The last 12 games: every focus covered in every grade band
+
+- **12 more Brain Games, so every grade band now has at least two games in every focus.** Discover (spoken): Wait for It (Self-Management) and Stop and Think (Responsible Decision-Making). Explore: Stuck on It (Self-Management). Challenge: Peer Pressure Pause (Responsible Decision-Making), Tone Detective (Literacy), Ratio Shop (Math). Advance: Deadline Crunch (Self-Management), Argument Check (Literacy), Graph Match and Stats Check (Math), Plan It and Switch Board (Thinking Skills).
+- The numbers in the math, planning and rule-switching games are worked out in code, and the tests re-check them.
+- Catalog, badge and focus scripts run once; no restart. The catalog now holds 67 games. Wording: `docs/tune-your-brain/R144_LAST_GROUP_FOR_REVIEW.md`.
+
+## Release 143 — 2026-11-06 — 10 games for Relationship Skills and Social Awareness
+
+- **Ten new games.** Discover (spoken): Asking Nicely and Team Tower. Explore: Team Mission, Walk in My Shoes, Many Ways to Be. Challenge: Speak Up Kindly, Other Side of the Screen, Walk in Their Shoes. Advance: Repair It, Many Voices.
+- Same "read, pick, then show why" shape as the other reading games, 10 situations each, with answers written to be about the same length so length is no clue. Every band now has at least two games in each of these two focuses.
+- Catalog, badge and focus scripts run once; no restart. Wording: `docs/tune-your-brain/R143_RELATIONSHIP_GAMES_FOR_REVIEW.md`.
 
 ## Release 142 — 2026-11-06 — Help center: licensing, parent and privacy answers
 
@@ -28,10 +35,29 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Two privacy answers reworded to match the site and published:** what we collect about students (display name and username, lesson and quiz results, reflections, goals, enrollment, Brain Games; no IP, device or location data; never sold) and what the website collects from visitors (only form entries, plus anonymous page-view counts you can turn off).
 - 207 answers are published and 2 drafts remain (data retention, and access to a child's records). `help-center.js` is v6. No server change, no restart.
 
+## Release 141 — 2026-11-06 — 14 new games: core skills and a second Self-Awareness game in every band
+
+- **Core skills for the younger bands:** Rhyme Time, Letter Sounds, More or Fewer, Add It Up, Pattern Parade and Animal Match (Discover, spoken with 259 new recorded Ava clips), and Word Clues, Times Table Trail and Word Problem Workshop (Explore).
+- **A second Self-Awareness game in every band:** My Feelings Today (Discover), What Helps Me (Explore), Know Your Triggers (Challenge), and Know Yourself and Stress Signals (Advance). Each is a short check-in with a card built from the child's own picks; nothing picked is logged, sent or saved.
+- The audio engine can now show a picture or pattern with a spoken question (v7), and a check-in game can have no stories (scenario engine v9).
+- Catalog, badge and focus scripts run once; no restart. Details: `docs/tune-your-brain/R141_NEW_GAMES_FOR_REVIEW.md`.
+
 ## Release 140 — 2026-11-06 — Help center: nine answers from the owner
 
 - **Nine answers published in your words:** students need no email or public profile, student data is never sold or used for ads, we delete any data a user asks us to, we help any district with privacy reviews, the lessons are not political, we have no outcome research of our own yet, CASEL has not endorsed the program yet, invited teachers pay nothing and use one seat, and single-license prices are on the Licenses page.
 - Four drafts stay held: data retention (the end-of-year purge is not built), what is collected about students and about visitors (the stated wording does not match what the site stores), and access to a child's records. No server change.
+
+## Release 139 — 2026-11-06 — "Your turn" finale for Feelings Detective
+
+- **After 3 stories (was 4) and one tap each, the child says how they feel** (one or two of eight feelings), where they feel it in their body, and what helps. They then see and hear a feeling card built from those picks, read aloud in the recorded Ava voice (28 new clips). Nothing is logged, sent or saved, and every question has an "I'm not sure".
+- **Fixed for all scenario-choice games:** a double tap on a confirm, Continue or Finish button no longer starts the next screen twice.
+- With this, all three Self-Awareness games have their finale and count in the coverage grid. Static files only. Wording: `docs/tune-your-brain/FEELINGS_DETECTIVE_YOUR_TURN_FOR_REVIEW.md`.
+
+## Release 138 — 2026-11-06 — "Your turn" finale for Strength Spotter and Values Compass
+
+- **After the stories (4 per run instead of 5), the child answers three questions about themselves and gets a card built from their own picks.** Strength Spotter: pick up to two strengths, where they use them, and one small way to grow one. Values Compass: rank their top three values, face a tradeoff between two of them, and say where they acted on one.
+- Nothing is logged, sent or saved, and there is always a "not sure" answer. The per-story check shrinks to one tap. Both games now count as Self-Awareness games in the coverage grid.
+- Static files only (`engine-scenario-choice.js` v8). Wording: `docs/tune-your-brain/OWN_SELF_STEPS_FOR_REVIEW.md`.
 
 ## Release 137 — 2026-11-06 — Games grouped by focus
 
