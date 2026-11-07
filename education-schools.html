@@ -130,7 +130,7 @@
       <div class="register-card" id="regSection">
         <span class="best-value">Teacher Access</span>
         <h3 id="regName">2D SEL Morning Boost</h3>
-        <div class="reg-price" id="regPrice">$0</div>
+        <div class="reg-price" id="regPrice"></div>
         <p class="note" id="regDesc">For all school-purchased tier plans, this price becomes $0 at checkout. Be sure to use your school email address.</p>
         <ul class="reg-list" id="regBulletList">
           <li>Uses your school's existing license. No separate purchase needed.</li>
@@ -175,7 +175,7 @@
         <div id="regFailState" style="display:none;">
           <div id="regFailMsg" style="font-size:13.5px; color:var(--coral); font-weight:600; margin-bottom:14px; text-align:center;"></div>
           <div style="display:flex; flex-direction:column; gap:10px;">
-            <button id="regBuySoloBtn" class="btn btn-primary" style="width:100%; font-family:inherit;">Buy Solo: $<span id="regSoloPrice">149</span></button>
+            <button id="regBuySoloBtn" class="btn btn-primary" style="width:100%; font-family:inherit;"><span id="regSoloLabel">Buy Solo</span></button>
             <button id="regNotifyAdminBtn" class="btn btn-outline" style="width:100%; font-family:inherit;" onclick="regNotifyAdmin()">Notify School Admin</button>
           </div>
           <div id="regNotifyMsg" style="font-size:13px; color:var(--teal-dark); font-weight:600; margin-top:10px; min-height:18px; text-align:center;"></div>
@@ -287,8 +287,8 @@ let _regProduct = null;
     }
 
     // Wire solo-buy button price label
-    const soloPrice = document.getElementById('regSoloPrice');
-    if (soloPrice) soloPrice.textContent = reg.callForQuote ? 'Call' : Number(reg.price).toLocaleString();
+    const soloLabel = document.getElementById('regSoloLabel');
+    if (soloLabel) soloLabel.textContent = reg.callForQuote ? 'Ask About a Solo License' : 'Buy Solo: $' + Number(reg.price).toLocaleString();
 
     // Wire solo-buy action
     document.getElementById('regBuySoloBtn').addEventListener('click', function () {

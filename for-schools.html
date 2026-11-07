@@ -55,6 +55,7 @@
   .license-card h3{font-size:19px; margin-bottom:10px;}
   .license-card p{font-size:14px; color:var(--ink-soft); line-height:1.65; margin-bottom:20px;}
   .license-card ul{list-style:none; font-size:13.5px; margin-bottom:24px;}
+  .license-price{font-family:'Fraunces',serif; font-size:24px; color:var(--teal-dark); margin:0 0 14px; min-height:30px;}
   .license-card li{display:flex; gap:8px; margin-bottom:9px; color:var(--ink);}
   .license-card li::before{content:"✓"; color:var(--coral); font-weight:800; flex-shrink:0;}
 
@@ -183,11 +184,12 @@
     <div class="section-head">
       <span class="eyebrow">Licensing Options</span>
       <h2>Structured for every school size.</h2>
-      <p>FNE licenses are school-level purchases. Contact us for pricing. Every proposal is scoped to your actual building size.</p>
+      <p>Individual teachers can buy online. School and district plans are sized to your building count, and the price on each card comes from our current price list.</p>
     </div>
     <div class="license-grid">
       <div class="license-card">
         <h3>Individual Educator</h3>
+        <div class="license-price" data-tier="individual"></div>
         <p>For a single teacher whose school does not yet have a license. Includes one teacher seat, one classroom, and the full lesson library.</p>
         <ul>
           <li>Full lesson library access</li>
@@ -200,6 +202,7 @@
       <div class="license-card featured">
         <div class="license-badge">Most Popular</div>
         <h3>School License</h3>
+        <div class="license-price" data-tier="school"></div>
         <p>For a full building. Multiple teacher seats, school admin dashboard, and a common SEL framework across every classroom.</p>
         <ul>
           <li>Full lesson library for all teachers</li>
@@ -211,6 +214,7 @@
       </div>
       <div class="license-card">
         <h3>District License</h3>
+        <div class="license-price" data-tier="district"></div>
         <p>For multi-school rollout. District-level oversight with per-school admin panels and unified license management.</p>
         <ul>
           <li>All school license features</li>
@@ -383,6 +387,29 @@
 
 <script src="admin-common.js?v=17"></script>
 <script>fnTrackPageview();</script>
+<script>
+// Card prices come from the admin price list (/api/license-products), never from this file.
+// A tier shows "From $X" when any of its plans has a set price, and "Contact us for a quote" when every plan is quote-only.
+(function showLicensePrices() {
+  fetch('/api/license-products').then(function (r) { return r.json(); }).then(function (data) {
+    var plans = (data.licenseProducts || []).filter(function (p) { return !p.isTrial && p.active; });
+    var tiers = {
+      individual: plans.filter(function (p) { return p.seatCount === 1 && !p.callForQuote; }),
+      school: plans.filter(function (p) { return p.seatCount > 1 && p.seatCount <= 100; }),
+      district: plans.filter(function (p) { return p.seatCount > 100; })
+    };
+    Object.keys(tiers).forEach(function (tier) {
+      var el = document.querySelector('.license-price[data-tier="' + tier + '"]');
+      if (!el || !tiers[tier].length) return;
+      var priced = tiers[tier].filter(function (p) { return !p.callForQuote && p.price > 0; });
+      if (!priced.length) { el.textContent = 'Contact us for a quote'; return; }
+      var low = Math.min.apply(null, priced.map(function (p) { return p.price; }));
+      var perSeat = tier === 'individual' && priced.some(function (p) { return p.variableSeats; });
+      el.textContent = (priced.length > 1 || tier !== 'individual' ? 'From ' : '') + '$' + low.toLocaleString() + (perSeat ? ' per educator' : '');
+    });
+  }).catch(function () {});
+})();
+</script>
 <script src="cart.js"></script>
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=20"></script>

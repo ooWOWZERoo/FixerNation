@@ -25,3 +25,16 @@ test('education-portal.html tells parents to wait for an invitation, not ask for
   assert.ok(!/parent code/i.test(s));
   assert.match(s, /sends an invitation/);
 });
+
+test('for-schools.html takes its prices from the admin price list, not from its own text', () => {
+  const s = read('for-schools.html');
+  assert.ok(!/Contact us for pricing/i.test(s));
+  assert.match(s, /\/api\/license-products/);
+  for (const tier of ['individual', 'school', 'district']) assert.match(s, new RegExp(`data-tier="${tier}"`));
+});
+
+test('education-schools.html no longer carries a hard-coded $149 or $0', () => {
+  const s = read('education-schools.html');
+  assert.ok(!/\$<span id="regSoloPrice">149/.test(s));
+  assert.ok(!/id="regPrice">\$0</.test(s));
+});
