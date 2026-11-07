@@ -17,6 +17,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 146 — 2026-11-06 — Student data retention: honest wording and a read-only report
+
+- **The "How long is student data kept?" answer is published, and says what really happens.** We keep student information while a school uses Fixer Nation; removing a student hides them but does not erase the records; we delete a student's or a whole classroom's data when the school or a parent asks; Brain Games activity older than about 13 months is deleted automatically. It no longer promises an end-of-year purge, because none exists yet. `help-center.js` is v7.
+- **Student Data Privacy, section 6, now says the same**, plus that backup copies are overwritten within 14 days.
+- **New read-only report for staff:** `node scripts/report-student-retention.js` counts classrooms and students by school year and says how many would be due for deletion under the agreed rule (60 days after 31 July). It changes nothing and prints no names or emails. The date rules live in `server/lib/student-retention.js`, which the future purge will reuse.
+- **Requirements confirmed:** `docs/reference/student-data-retention-requirements.md` (owner accepted all nine decisions). The year-end purge itself, the teacher download and the reminder emails are the next releases.
+- No restart and no database change; the report script is run by hand.
+
 ## Release 145 — 2026-11-06 — Small fixes: trial card, role-aware quick answers, comment removal
 
 - **An ended trial no longer offers "Convert to Annual Access."** The button (and the "conversion credit available" line) now show only while a trial is still running, because pressing it after the end only said "No active trial found." An ended trial says so and links to the Licenses page.

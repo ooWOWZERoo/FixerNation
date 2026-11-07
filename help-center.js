@@ -447,8 +447,8 @@
       `Send us a request for guidance on accessibility, and tell us what your students need so we can answer for your situation.`),
 
     // ================= Drafts: pricing, promises about timing, privacy and legal wording, research claims. Hidden until the owner reads them.
-    D('student-data-retention', 'parent,school,district', 'Privacy', 'other', '', `How long is student data kept?`,
-      `Student data is kept during the school year and purged at the end of it.`),
+    E('student-data-retention', 'parent,school,district', 'Privacy', 'other', '', `How long is student data kept?`,
+      `We keep student information while a school is using Fixer Nation. When a teacher removes a student, the student disappears from the classroom but the records are not erased. We delete a student's data, or a whole classroom's, whenever the school or a parent asks, and Brain Games activity older than about 13 months is deleted on its own.`),
     E('student-no-email', 'student,parent', 'Privacy', 'students_or_classroom', '', `Does my child need an email address or a public profile?`,
       `No. Student accounts do not use an email address, and there are no public profiles, social feed or advertising. Students join with a code from their teacher and see only the lessons their teacher assigned.`),
     E('student-data-collected', 'parent,school', 'Privacy', 'other', '', `What information does Fixer Nation collect about students?`,

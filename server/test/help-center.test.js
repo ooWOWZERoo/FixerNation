@@ -97,13 +97,13 @@ test('facts that must match the system: reset 1 hour, verification 24 hours, inv
 
 test('WIRING: page, footer, portal menus, Get help panel, Contact pointer and the anonymous "answer opened" count', () => {
   const page = read('help.html');
-  assert.match(page, /help-center\.js\?v=6/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
+  assert.match(page, /help-center\.js\?v=7/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
   assert.match(page, /preview/); assert.match(page, /noindex/);
   assert.ok(!/innerHTML/.test(page), 'answers are written with textContent only');
   assert.match(read('footer.js'), /help\.html">Help center/);
   assert.match(read('school-admin-nav.js'), /help\.html\?aud=school/); assert.match(read('district-admin-nav.js'), /help\.html\?aud=district/);
   const sp = read('support.html');
-  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=6/); assert.match(sp, /See all answers/);
+  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=7/); assert.match(sp, /See all answers/);
   assert.match(read('contact.html'), /href="help\.html"/);
   assert.match(read('server/routes/analytics.js'), /EVENT_TYPE_PATTERN = \/\^\[a-z_\]\{1,32\}\$\//);
 });
@@ -132,7 +132,7 @@ test('SEEDED ANSWERS: the site has no public support email, so no answer tells p
 
 test('SEEDED ANSWERS: pricing, response-time promises, privacy and legal wording and research claims stay drafts until the owner reads them', () => {
   const drafts = new Set(HC.entries.filter(e => !e.reviewed).map(e => e.id));
-  for (const id of ['ferpa-requests', 'student-data-retention']) assert.ok(drafts.has(id), `${id} is a draft`);
+  assert.ok(drafts.has('ferpa-requests'), 'ferpa-requests is a draft');
   // Release 140: the owner answered these, so they are published in the owner's words
   for (const id of ['student-no-email', 'student-data-sale-ads', 'data-deletion', 'privacy-paperwork', 'content-focus', 'outcome-evidence', 'casel-alignment', 'teacher-seat-cost', 'teacher-single-license-price', 'quote-response-time', 'setup-time', 'parent-preview', 'parent-access-cost', 'district-licensing', 'student-data-collected', 'site-visitor-privacy']) assert.ok(!drafts.has(id), `${id} is published`);
   const text = HC.visible(false).map(e => e.a).join(' ');
@@ -145,14 +145,18 @@ test('every audience tab has answers for visitors, and a search for a common wor
   for (const word of ['password', 'invitation', 'pin', 'seat', 'classroom', 'email', 'license', 'parent']) assert.ok(HC.search(pub, word).length >= 3, word);
 });
 
-test('OWNER-SUPPLIED ANSWERS: pricing, refunds, trials, hours, devices, renewals, SSO, training, accessibility are published; data retention stays a draft', () => {
+test('OWNER-SUPPLIED ANSWERS: pricing, refunds, trials, hours, devices, renewals, SSO, training, accessibility are published; data retention is published as what happens today (no purge promise)', () => {
   const by = (id) => HC.byId(id);
   for (const id of ['license-price', 'refunds', 'free-trial-demo', 'discounts', 'tax-forms', 'how-renewal-works', 'office-hours', 'supported-devices', 'google-clever-sso', 'training', 'accessibility']) assert.equal(by(id).reviewed, true, id);
   assert.match(by('office-hours').a, /8 a\.m\. to 5 p\.m\., Monday through Friday/);
   assert.match(by('supported-devices').a, /Chrome is preferred/);
   assert.match(by('license-price').a, /quote/); assert.match(by('refunds').a, /case by case/);
   assert.ok(!/phone|call us|\d{3}-\d{3}-\d{4}/i.test(by('office-hours').a), 'no phone number is given: the site has none');
-  assert.equal(by('student-data-retention').reviewed, false, 'a purge promise stays a draft until the system really does it');
+  // Release 146: the answer is published, and describes what the system does today. It must not promise a year-end purge until one exists
+  // (docs/reference/student-data-retention-requirements.md); when the purge ships, change this test with the wording.
+  assert.equal(by('student-data-retention').reviewed, true);
+  assert.doesNotMatch(by('student-data-retention').a, /purg|end of the (school )?year/i);
+  assert.match(by('student-data-retention').a, /not erased/); assert.match(by('student-data-retention').a, /13 months/);
   const src = fs.readFileSync(path.join(ROOT, 'server/routes/site-auth.js'), 'utf8');
   assert.match(src, /microsoft-oauth/, 'Microsoft is the only outside sign-in the answer mentions');
 });
