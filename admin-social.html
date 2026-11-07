@@ -26,6 +26,13 @@
   .soc-post.deleted{opacity:0.5;}
   .soc-del-btn{padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid var(--a-danger,#c0392b); color:var(--a-danger,#c0392b); background:transparent; cursor:pointer;}
   .soc-del-btn:hover{background:var(--a-danger,#c0392b); color:#fff;}
+  .soc-comments-btn{padding:0; border:none; background:none; color:var(--a-accent); font-size:12px; cursor:pointer; text-decoration:underline;}
+  .soc-comments{margin-top:10px; border-top:1px solid var(--a-border); padding-top:8px;}
+  .soc-comment{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:8px 0; border-bottom:1px solid var(--a-border);}
+  .soc-comment:last-child{border-bottom:none;}
+  .soc-comment.removed{opacity:0.5;}
+  .soc-comment-by{font-size:12px; color:var(--a-text-soft); margin-bottom:2px;}
+  .soc-comment-text{font-size:13.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word;}
   .soc-pagination{display:flex; gap:8px; align-items:center; margin-top:16px; justify-content:center;}
   .soc-pagination button{padding:6px 14px; border-radius:8px; border:1px solid var(--a-border); background:var(--a-card); color:var(--a-text); cursor:pointer;}
   .soc-pagination button:disabled{opacity:0.4; cursor:default;}
@@ -170,8 +177,10 @@ async function loadPage(page) {
           <div class="soc-post-content">${esc(p.content)}</div>
           <div class="soc-post-footer">
             <span>👍 ${fnEscape(p.reaction_count)}</span>
-            <span>💬 ${fnEscape(p.comment_count)}</span>
+            <span id="comment-count-${p.id}">💬 ${fnEscape(p.comment_count)}</span>
+            ${Number(p.comment_count) > 0 ? `<button class="soc-comments-btn" id="comments-btn-${p.id}" data-post="${p.id}" data-count="${fnEscape(p.comment_count)}" onclick="toggleComments(this.dataset.post)">Comments (${fnEscape(p.comment_count)})</button>` : ''}
           </div>
+          <div class="soc-comments" id="comments-${p.id}" style="display:none;"></div>
         </div>`;
     }).join('');
   }
@@ -180,6 +189,47 @@ async function loadPage(page) {
   document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
   document.getElementById('prevBtn').disabled = currentPage <= 1;
   document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+async function toggleComments(postId) {
+  const box = document.getElementById(`comments-${postId}`);
+  const btn = document.getElementById(`comments-btn-${postId}`);
+  if (box.style.display !== 'none') {
+    box.style.display = 'none';
+    btn.textContent = `Comments (${btn.dataset.count})`;
+    return;
+  }
+  const ok = await loadComments(postId);
+  if (ok) { box.style.display = ''; btn.textContent = 'Hide comments'; }
+}
+
+// Fills one post's comment list and keeps the count shown on the post in step with what is still visible to teachers.
+async function loadComments(postId) {
+  const res = await fetch(`/api/social/admin/posts/${postId}/comments`, { credentials: 'include' });
+  if (!res.ok) { fnToast('Failed to load comments'); return false; }
+  const data = await res.json();
+  const live = data.comments.filter(c => !c.deleted_at).length;
+  const box = document.getElementById(`comments-${postId}`);
+  const btn = document.getElementById(`comments-btn-${postId}`);
+  btn.dataset.count = live;
+  document.getElementById(`comment-count-${postId}`).textContent = `💬 ${live}`;
+  box.innerHTML = data.comments.length ? data.comments.map(c => `
+    <div class="soc-comment${c.deleted_at ? ' removed' : ''}">
+      <div>
+        <div class="soc-comment-by">${esc(c.first_name)} ${esc(c.last_name)} &middot; ${esc(c.email)} &middot; ${fmtDate(c.created_at)}${c.deleted_at ? ' <span class="tag-deleted">Removed</span>' : ''}</div>
+        <div class="soc-comment-text">${esc(c.content)}</div>
+      </div>
+      ${c.deleted_at ? '' : `<button class="soc-del-btn" data-post="${postId}" data-id="${c.id}" onclick="removeComment(this.dataset.post, this.dataset.id)">Remove</button>`}
+    </div>`).join('') : '<p style="color:var(--a-text-soft); font-size:13px;">No comments on this post.</p>';
+  return true;
+}
+
+async function removeComment(postId, commentId) {
+  if (!confirm('Remove this comment? Teachers will no longer see it. This cannot be undone.')) return;
+  const res = await fetch(`/api/social/comments/${commentId}`, { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (!res.ok) { fnToast('Could not remove the comment'); return; }
+  fnToast('Comment removed');
+  loadComments(postId);
 }
 
 async function deletePost(id, btn) {

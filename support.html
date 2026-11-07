@@ -197,12 +197,21 @@
   if (params.get('topic')) $('helpCategory').value = params.get('topic');
   if (params.get('ref')) $('lookupRef').value = params.get('ref');
 
+  var myAudiences = [];
   // "Check these answers first": reviewed Help center answers for the chosen topic (nothing shows until some are reviewed).
   function showAnswers() {
     var box = $('checkFirst'), listEl = $('checkFirstList');
     if (!window.FNHelpCenter) { box.hidden = true; return; }
     var topic = $('helpCategory').value;
-    var found = FNHelpCenter.visible(false).filter(function (e) { return e.help === topic; }).slice(0, 4);
+    var found = FNHelpCenter.visible(false).filter(function (e) { return e.help === topic; });
+    // Signed in: answers written for this person's role first, then answers for everyone, then the rest (list order inside each group).
+    if (myAudiences.length) {
+      var rank = function (e) { return e.for.some(function (a) { return myAudiences.indexOf(a) !== -1; }) ? 0 : e.for.indexOf('everyone') !== -1 ? 1 : 2; };
+      found = found.map(function (e, i) { return { e: e, i: i, r: rank(e) }; })
+        .sort(function (x, y) { return x.r - y.r || x.i - y.i; })
+        .map(function (x) { return x.e; });
+    }
+    found = found.slice(0, 4);
     listEl.textContent = '';
     found.forEach(function (e) {
       var li = document.createElement('li'), a = document.createElement('a');
@@ -216,6 +225,8 @@
   fetch('/api/support/context', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (c) {
     if (!c.signedIn) return;
     signedIn = true;
+    myAudiences = c.audiences || [];
+    showAnswers();
     $('lookupWrap').style.display = 'none';
     if (c.demo) {
       $('helpForm').style.display = 'none';
@@ -392,6 +403,6 @@
 <script src="cart.js"></script>
 
 <script src="footer.js?v=17"></script>
-<script src="help-videos.js?v=16" defer></script>
+<script src="help-videos.js?v=17" defer></script>
 </body>
 </html>

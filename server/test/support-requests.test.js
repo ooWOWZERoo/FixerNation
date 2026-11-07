@@ -155,6 +155,17 @@ test('SIGNED IN: role, school and district come from the account; whatever the f
   assert.equal(db.prepare('SELECT roles FROM support_requests WHERE site_user_id = ?').get(p.uid).roles, 'Parent');
 });
 
+test('CONTEXT: the signed-in answer lists which Help center audiences the account belongs to (Release 145)', async () => {
+  reset();
+  const a = account('Dana', { teacher: true, schoolAdmin: true });
+  const r = await call('GET', '/api/support/context', { as: a.uid });
+  assert.deepEqual(r.json.audiences.slice().sort(), ['school', 'teacher']);
+  const p = account('Pat', { parent: true });
+  assert.deepEqual((await call('GET', '/api/support/context', { as: p.uid })).json.audiences, ['parent']);
+  const none = account('Nina', {});
+  assert.deepEqual((await call('GET', '/api/support/context', { as: none.uid })).json.audiences, []);
+});
+
 test('REFUSED: a sales demo account cannot send; a closed account is treated as signed out', async () => {
   reset();
   const demo = account('Demo', { demo: true });

@@ -46,15 +46,15 @@
       pages: ['microsoft-confirm.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487235/fne/help/A4.mp4', captions: '/help-assets/A4.vtt', poster: '/help-assets/A4.jpg' },
     { id: 'G1', group: 'getting-started', topic: 'Getting help', title: 'Ask for help and follow your request',
       summary: 'Send a request from the Get help page, then read our reply and answer it, all on the same page.',
-      pages: ['support.html'], url: '' },
+      pages: ['support.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021537/fne/help/G1.mp4', captions: '/help-assets/G1.vtt', poster: '/help-assets/G1.jpg' },
     { id: 'G2', group: 'getting-started', topic: 'Getting help', title: 'Ask for help without signing in',
       summary: 'No account needed. Send a request, then come back with your reference and email to read our reply.',
-      pages: ['support.html'], url: '' },
+      pages: ['support.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021539/fne/help/G2.mp4', captions: '/help-assets/G2.vtt', poster: '/help-assets/G2.jpg' },
 
     // ---- School license administrators
     { id: 'B1', group: 'school-admins', topic: 'Your portal', title: 'A tour of the School Admin portal',
       summary: 'Your dashboard, seat counts, license banner and menu.',
-      pages: ['school-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793418364/fne/help/B1.mp4', captions: '/help-assets/B1.vtt', poster: '/help-assets/B1.jpg' },
+      pages: ['school-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021542/fne/help/B1.mp4', captions: '/help-assets/B1.vtt', poster: '/help-assets/B1.jpg' },
     { id: 'B9', group: 'school-admins', topic: 'Your portal', title: 'Permission levels and getting help',
       summary: 'What Primary, Secondary and Read Only administrators can do, and who to contact for more seats or a renewal.',
       pages: ['school-admin-org.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412334/fne/help/B9.mp4', captions: '/help-assets/B9.vtt', poster: '/help-assets/B9.jpg' },
@@ -86,7 +86,7 @@
     // ---- District administrators
     { id: 'C1', group: 'district-admins', topic: 'Your portal', title: 'A tour of the District Admin portal',
       summary: 'The dashboard, the menu, the license banner and switching districts.',
-      pages: ['district-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793579769/fne/help/C1.mp4', captions: '/help-assets/C1.vtt', poster: '/help-assets/C1.jpg' },
+      pages: ['district-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021544/fne/help/C1.mp4', captions: '/help-assets/C1.vtt', poster: '/help-assets/C1.jpg' },
     { id: 'C2', group: 'district-admins', topic: 'Branding', title: 'Set district-wide branding',
       summary: 'Set the logo and colors every school in your district starts with.',
       pages: ['district-admin-branding.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391645/fne/help/C2.mp4', captions: '/help-assets/C2.vtt', poster: '/help-assets/C2.jpg' },
@@ -176,7 +176,7 @@
     // ---- Fixer Nation staff (on the Support Inbox's How-to video button; not listed on the public Help Videos page)
     { id: 'G3', group: 'staff', topic: 'Support', listed: false, title: 'Answer requests in the Support Inbox',
       summary: 'Read a request, see what broke for that person, reply or leave a note, assign it and mark it resolved.',
-      pages: ['admin-support.html', 'admin-support-errors.html'], url: '' }
+      pages: ['admin-support.html', 'admin-support-errors.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021540/fne/help/G3.mp4', captions: '/help-assets/G3.vtt', poster: '/help-assets/G3.jpg' }
   ];
 
   var TEXT = {

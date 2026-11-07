@@ -725,6 +725,21 @@ router.get('/admin/posts', requireAuth, async (req, res) => {
   res.json({ posts: rows, total, page, limit });
 });
 
+// A post's comments for staff, including ones already removed (shown tagged). Removal itself is DELETE /comments/:commentId.
+router.get('/admin/posts/:postId/comments', requireAuth, async (req, res) => {
+  const postId = Number(req.params.postId);
+  if (!Number.isInteger(postId) || postId < 1) return res.status(404).json({ error: 'Post not found' });
+  const [rows] = await pool.query(
+    `SELECT c.id, c.post_id, c.content, c.created_at, c.deleted_at, su.first_name, su.last_name, su.email
+     FROM social_comments c
+     JOIN site_users su ON su.id = c.author_id
+     WHERE c.post_id = ?
+     ORDER BY c.created_at ASC`,
+    [postId]
+  );
+  res.json({ comments: rows });
+});
+
 router.get('/admin/groups', requireAuth, async (req, res) => {
   const [rows] = await pool.query(
     `SELECT sg.id, sg.name, sg.type, sg.description, sg.is_public, sg.created_at,

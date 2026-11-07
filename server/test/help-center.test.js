@@ -114,10 +114,10 @@ test('GET HELP VIDEOS: G1 and G2 are on the Get help page, G3 is staff-only and 
   assert.equal(JSON.stringify(by('G3').pages), '["admin-support.html","admin-support-errors.html"]'); assert.equal(by('G3').listed, false); assert.equal(by('G3').group, 'staff');
   for (const id of ['G1', 'G2', 'G3']) assert.ok(videos.videos.find(v => v.id === id) && !videos.recorded(by(id)) === !by(id).url, `${id} is hidden until published`);
   assert.match(read('help-videos.js'), /v\.listed !== false/);
-  assert.match(read('support.html'), /help-videos\.js\?v=16/); assert.match(read('admin-support.html'), /help-videos\.js\?v=16/);
+  assert.match(read('support.html'), /help-videos\.js\?v=17/); assert.match(read('admin-support.html'), /help-videos\.js\?v=17/);
   for (const f of fs.readdirSync(ROOT).filter(n => n.endsWith('.html'))) {
     const m = read(f).match(/help-videos\.js\?v=(\d+)/);
-    if (m) assert.equal(m[1], '16', `${f} loads help-videos.js at the current version`);
+    if (m) assert.equal(m[1], '17', `${f} loads help-videos.js at the current version`);
   }
   assert.ok(HC.entries.some(e => e.video === 'G1') && HC.entries.some(e => e.video === 'G2'), 'the Help center points at both user videos');
 });

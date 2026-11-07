@@ -21,7 +21,7 @@ Things we have agreed to do later. Newest section first. Nothing here is started
 
 ## Help center and support (added 2026-11-06)
 
-Where it stands: Help center live with 191 published answers and 18 drafts (Release 125). Support requests, support console, error capture and the Get help videos (recorded, not uploaded) are built. These are the loose ends.
+Where it stands: Help center live with 191 published answers and 18 drafts (Release 125). Support requests, support console, error capture and the Get help videos (published in Release 145) are built. These are the loose ends.
 
 ### Needs a decision from the owner
 
@@ -33,10 +33,7 @@ Where it stands: Help center live with 191 published answers and 18 drafts (Rele
 
 ### Ready to do when the owner says go
 
-- [ ] **Publish the Get help videos** G1, G2 and G3 (recorded, in `tests/howto-out/`, not uploaded): `cd tests && npm run howto:publish -- G1 G2 G3` (needs the owner's OK to upload to Cloudinary), then bump `help-videos.js?v=N` on every page, run `node server/scripts/videos-to-review.js`, commit.
-- [ ] **Re-record B1 and C1** (portal tours). The portal menu now has a Help center link and their narration lists the menu's bottom items. The storyboards are already updated: `tests/howto/record.sh B1 C1`, then publish with the owner's OK.
-- [ ] **Hide "Convert to Annual Access" once a trial has ended.** After a trial ends the button still shows on `my-license.html`, but pressing it says "No active trial found." The FAQ explains it; the button should not be offered.
-- [ ] **Make the "Check these answers first" box role-aware.** It lists the first four answers for the chosen topic in list order, so a teacher choosing "An invitation or license seat" sees administrator answers first. Use the signed-in role from `/api/support/context` to prefer matching answers.
+- [ ] **Record M5, the staff community-moderation video.** The page now has a Remove button for comments (Release 145), so the video can be planned: storyboard in `tests/howto/storyboards/M5.ts`, entry in `help-videos.js` and `video-watch.json`, then publish with the owner's OK.
 - [ ] **Review the Help center answers with fresh eyes after a few weeks of use**: use the anonymous `faq_open` counts (analytics) to see which answers are opened, add answers for the questions people send to Get help instead, and trim ones nobody opens.
 
 ### Later, if it proves useful

@@ -67,7 +67,7 @@ router.get('/context', async (req, res) => {
   if (!user) return res.json({ signedIn: false });
   if (user.is_sales_demo) return res.json({ signedIn: true, demo: true });
   const context = await resolveContext(user);
-  res.json({ signedIn: true, name: `${user.first_name} ${user.last_name}`.trim(), email: user.email, roles: context.roles });
+  res.json({ signedIn: true, name: `${user.first_name} ${user.last_name}`.trim(), email: user.email, roles: context.roles, audiences: context.audiences });
 });
 
 // POST /api/support -- body: { name, email, category, subject, message, pageUrl, website }. `website` is a hidden trap for form-filling bots.

@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:00.874 --> 00:00:10.424
+Requests from the Get help page arrive in the Support Inbox, under Schools and Partners. The number beside the menu link counts requests nobody has opened yet.
+
+2
+00:00:10.927 --> 00:00:23.137
+Each row shows who it's from, their role and school if they were signed in, the topic and the status. You can filter by status or topic, or search a name, an email, a school, or a reference.
+
+3
+00:00:23.639 --> 00:00:29.649
+Open a request to read it. You see who they are, where they came from, and the whole conversation.
+
+4
+00:00:30.150 --> 00:00:40.710
+This panel lists anything that broke for that person or their browser in the days before they wrote in. Here, a request to save a student failed. That's often the real answer.
+
+5
+00:00:41.211 --> 00:00:51.271
+The button, Look up this account, opens Account Lookup for that email. There you can show a one time reset link, sign someone out, or fix an invitation.
+
+6
+00:00:51.772 --> 00:01:01.302
+Write your answer, and select Send reply. The person sees it on their Get help page. Nothing is emailed, and the request moves to Waiting on them.
+
+7
+00:01:01.804 --> 00:01:08.844
+An internal note is different. Only staff can see it. Use it to leave yourself, or a colleague, a trail.
+
+8
+00:01:09.345 --> 00:01:18.965
+You can assign the request to an admin, and change its status here. Choose Resolved when it's done. If the person writes back, it reopens by itself.
+
+9
+00:01:19.464 --> 00:01:31.044
+The Errors tab shows what broke across the whole site. Each line is a kind of problem and where it happened, how many times, and how many different browsers. Clear a line once it's fixed.
+
+10
+00:01:31.543 --> 00:01:44.343
+A failed email appears here too, with the mail server's reason. That tells you why someone never got a message. No addresses or student names are kept in this list, and it clears itself after thirty days.

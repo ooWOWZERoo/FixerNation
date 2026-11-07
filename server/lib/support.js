@@ -34,22 +34,23 @@ function makeRef() {
 // What we know about a signed-in person, worked out from the database -- never from what the form says.
 async function resolveContext(siteUser) {
   const roles = [];
+  const audiences = []; // the Help center's "for" ids that match these roles
   let schoolDomain = null;
   let districtId = null;
   if (await hasActiveDistrictAdminAssignment(siteUser.id)) {
-    roles.push('District administrator');
+    roles.push('District administrator'); audiences.push('district');
     const [[d]] = await pool.query('SELECT district_id FROM district_license_admins WHERE site_user_id = ? AND is_active = 1 ORDER BY id LIMIT 1', [siteUser.id]);
     if (d) districtId = d.district_id;
   }
   if (await hasActiveSchoolAdminAssignment(siteUser.id)) {
-    roles.push('School license administrator');
+    roles.push('School license administrator'); audiences.push('school');
     const [[s]] = await pool.query(
       `SELECT p.school_domain FROM school_license_admins sla JOIN purchases p ON p.id = sla.purchase_id
        WHERE sla.site_user_id = ? AND sla.is_active = 1 ORDER BY sla.id LIMIT 1`, [siteUser.id]);
     if (s) schoolDomain = s.school_domain;
   }
   if (await hasActiveLicense(siteUser.id)) {
-    roles.push('Teacher');
+    roles.push('Teacher'); audiences.push('teacher');
     if (!schoolDomain) {
       const [[s]] = await pool.query(
         `SELECT p.school_domain FROM license_seats ls JOIN purchases p ON p.id = ls.purchase_id
@@ -57,9 +58,9 @@ async function resolveContext(siteUser) {
       if (s) schoolDomain = s.school_domain;
     }
   }
-  if (await isLinkedParent(siteUser.id)) roles.push('Parent');
+  if (await isLinkedParent(siteUser.id)) { roles.push('Parent'); audiences.push('parent'); }
   if (!roles.length) roles.push('Signed-in account');
-  return { roles: roles.join(', '), schoolDomain, districtId };
+  return { roles: roles.join(', '), audiences, schoolDomain, districtId };
 }
 
 async function addMessage(requestId, { authorType, adminId = null, visibility = 'public', body }) {
