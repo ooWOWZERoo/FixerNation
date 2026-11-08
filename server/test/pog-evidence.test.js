@@ -272,3 +272,85 @@ test('suggestions: verified direct activities only, matched to the teacher\'s gr
   const after = await pog.suggestionsForItem({ item, classroomId: 10, teacherLevels: ['High School'], connections });
   assert.deepEqual(after, [], 'already assigned: nothing left to suggest');
 });
+
+// ---- the "ideas" box ----------------------------------------------------------------------------------------------
+const ideas = async (classroomId, teacherLevels, limit) => {
+  const connections = await pog.loadConnections('NY');
+  const report = await pog.teacherClassroomReport({ classroomId, schoolYearStart: 2026, connections });
+  const candidates = await pog.candidatePool({ classroomId, teacherLevels, connections });
+  return pog.bestNextSteps({ report, connections, pool: candidates, ...(limit ? { limit } : {}) });
+};
+function ideasScene() {
+  reset();
+  align(1, 'brain_game', 1, 'direct');     // Perspective Swap (advance): empathy 2A
+  align(4, 'brain_game', 1, 'direct');     //   ... and Global Citizen GC
+  align(1, 'brain_game', 2, 'direct');     // Sharing Circle (discover): 2A only
+  align(2, 'brain_game', 4, 'direct');     // Peer Pressure Pause (challenge): 3B
+  align(2, 'curriculum', 11, 'direct');    // a lesson for 3B (stored on the middle-school copy)
+  align(3, 'brain_game', 1, 'supporting'); // supporting never makes a pick
+  return classroom(10, 5);
+}
+
+test('IDEAS: picks the activity that adds the most attributes first, and says which it adds', async () => {
+  ideasScene();
+  const picks = await ideas(10, ['High School']);
+  assert.equal(picks[0].title, 'Perspective Swap');
+  assert.deepEqual(picks[0].adds.map((a) => a.code).sort(), ['2A', 'GC']);
+  assert.equal(picks[1].type, 'lesson');
+  assert.equal(picks[1].level, 'High school', 'the high-school copy of the lesson, not the middle-school one the connection is stored on');
+  assert.deepEqual(picks[1].adds.map((a) => a.code), ['3B']);
+  assert.equal(picks.length, 2, 'nothing else adds a new attribute, so there is no third pick');
+});
+
+test('IDEAS: each pick must add something new (no pick repeats what an earlier pick covered)', async () => {
+  ideasScene();
+  const picks = await ideas(10, null);   // no registered level: every band
+  const seen = new Set();
+  for (const p of picks) { assert.ok(p.adds.length > 0); for (const a of p.adds) { assert.ok(!seen.has(a.code), `${a.code} is added only once`); seen.add(a.code); } }
+  assert.deepEqual([...seen].sort(), ['2A', '3B', 'GC']);
+});
+
+test('IDEAS: matched to the teacher\'s grade levels, so an elementary class is not offered the high-school game', async () => {
+  ideasScene();
+  const picks = await ideas(10, ['Elementary School']);
+  assert.deepEqual(picks.map((p) => p.title).sort(), ['Pause Before You Escalate', 'Sharing Circle']);
+  assert.deepEqual(picks.find((p) => p.title === 'Sharing Circle').adds.map((a) => a.code), ['2A']);
+});
+
+test('IDEAS: leaves out what the classroom already has, and an attribute everyone has practiced is not a gap', async () => {
+  const b = ideasScene();
+  db.prepare('INSERT INTO classroom_game_assignments (classroom_id, game_id) VALUES (10, 1)').run();
+  let picks = await ideas(10, ['High School']);
+  assert.ok(!picks.some((p) => p.title === 'Perspective Swap'));
+  db.prepare('INSERT INTO classroom_assignments (classroom_id, curriculum_id) VALUES (10, 10)').run();   // the ELEMENTARY copy of the lesson
+  picks = await ideas(10, ['High School']);
+  assert.ok(!picks.some((p) => p.type === 'lesson'), 'any grade version of a lesson counts as already assigned');
+  // Everyone finishes Perspective Swap and Sharing Circle: 2A and GC are no longer gaps.
+  for (let i = 1; i <= 5; i++) { playGame(b + i, 1); playGame(b + i, 2); }
+  db.exec('DELETE FROM classroom_game_assignments; DELETE FROM classroom_assignments');
+  picks = await ideas(10, ['High School']);
+  assert.deepEqual(picks.flatMap((p) => p.adds.map((a) => a.code)), ['3B']);
+});
+
+test('IDEAS: a classroom with no students gets none, and one that has practiced everything connected gets none', async () => {
+  const b = ideasScene();
+  db.exec('DELETE FROM classroom_students');
+  assert.deepEqual(await ideas(10, ['High School']), []);
+  ideasScene();
+  const kid = classroom(30, 2);
+  for (const sid of [kid + 1, kid + 2]) { playGame(sid, 1); playGame(sid, 2); playGame(sid, 4); finishLesson(sid, 12); }
+  assert.deepEqual(await ideas(30, null), []);
+});
+
+test('IDEAS: the limit is honoured, and ties go to a game over a lesson, then to the title', async () => {
+  reset();
+  align(1, 'brain_game', 2, 'direct');     // Sharing Circle: 2A
+  align(2, 'brain_game', 4, 'direct');     // Peer Pressure Pause: 3B
+  align(3, 'curriculum', 11, 'direct');    // the lesson: 1B
+  classroom(10, 4);
+  const all = await ideas(10, null);
+  assert.equal(all.length, 3);
+  assert.equal(all[0].type, 'game', 'a game before the lesson when each adds one attribute');
+  assert.deepEqual(all.slice(0, 2).map((p) => p.title), ['Peer Pressure Pause', 'Sharing Circle'], 'then alphabetical');
+  assert.equal((await ideas(10, null, 1)).length, 1);
+});

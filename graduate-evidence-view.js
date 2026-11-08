@@ -22,7 +22,15 @@
     gapNote: 'An attribute with no connected activity says so, rather than showing zero.',
     byGroup: 'By group',
     attributesPracticed: 'Attributes practiced',
-    students: 'Students'
+    students: 'Students',
+    schoolYear: 'School year {label}',
+    ideasHeading: 'Ideas for your class',
+    addsOne: "Adds practice for 1 attribute your class hasn't practiced yet:",
+    addsMany: "Adds practice for {n} attributes your class hasn't practiced yet:",
+    ideasNone: 'Your whole class has practiced every attribute we have an activity for. Check back as we connect more.',
+    ideasNoStudents: 'Add students to your class to get ideas.',
+    seeEvery: 'See every attribute',
+    ideasError: "We couldn't load ideas. Please try again."
   };
 
   function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
@@ -49,6 +57,7 @@
       '.ge-btn:disabled{opacity:.5;cursor:default;}' +
       '.ge-note{font-size:12px;color:var(--ge-soft);margin:6px 0;line-height:1.5;}' +
       '.ge-groups{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 18px;}.ge-groups th,.ge-groups td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--ge-line);}' +
+      '.ge-idea{padding:11px 0;border-top:1px solid var(--ge-line);}.ge-idea:first-of-type{border-top:0;}.ge-idea-head{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;}.ge-idea ul{margin:5px 0 0;padding-left:18px;font-size:12.5px;color:var(--ge-soft);}.ge-link{font-size:12.5px;font-weight:600;color:var(--ge-accent);cursor:pointer;text-decoration:underline;background:none;border:0;font-family:inherit;padding:0;}' +
       '.ge-print-head{display:none;}' +
       '@media print{.ge-noprint,.sa-sidebar,.sa-user,.sa-license-banner{display:none!important;}.sa-main{margin:0!important;}.sa-topbar{border:0!important;}.ge-print-head{display:block;margin-bottom:12px;}.ge-btn{display:none;}.ge-bar{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}';
     document.head.appendChild(s);
@@ -109,9 +118,23 @@
     return out;
   }
 
-  function yearOptions(years, selected) {
-    return (years || []).map(function (y) { return '<option value="' + esc(y.year) + '"' + (Number(y.year) === Number(selected) ? ' selected' : '') + '>' + esc(y.label) + '</option>'; }).join('');
+  // The "ideas for your class" box on the Assignments tab (the teacher asks for it; nothing here assigns anything by itself).
+  function renderIdeas(report) {
+    var picks = report.nextSteps || [];
+    var out = '<h3 style="font-size:15px;margin:0 0 6px;">' + esc(COPY.ideasHeading) + '</h3>';
+    if (!report.students) return out + '<p class="ge-note">' + esc(COPY.ideasNoStudents) + '</p>';
+    if (!picks.length) out += '<p class="ge-note">' + esc(COPY.ideasNone) + '</p>';
+    out += picks.map(function (p) {
+      var lead = p.adds.length === 1 ? COPY.addsOne : fill(COPY.addsMany, { n: p.adds.length });
+      return '<div class="ge-idea"><div class="ge-idea-head"><span class="ge-chip">' + esc(p.type === 'game' ? COPY.game : COPY.lesson) + '</span><span>' + esc(p.title) + '</span>' +
+        '<button class="ge-btn" type="button" data-ge-type="' + esc(p.type) + '" data-ge-id="' + esc(p.id) + '">' + esc(COPY.assign) + '</button></div>' +
+        '<div class="ge-line">' + esc(lead) + '</div><ul>' + p.adds.map(function (a) { return '<li>' + esc(a.code) + ' ' + esc(a.title) + '</li>'; }).join('') + '</ul></div>';
+    }).join('');
+    return out + '<p style="margin:10px 0 0;"><button class="ge-link" type="button" data-ge-see-all="1">' + esc(COPY.seeEvery) + '</button></p>';
   }
 
-  window.FnGraduateEvidence = { COPY: COPY, esc: esc, injectStyles: injectStyles, renderReport: renderReport, renderFrameworks: renderFrameworks, yearOptions: yearOptions };
+  // "School year 2026–2027": always the current school year, named by the server.
+  function schoolYearLine(report) { return report && report.schoolYear ? fill(COPY.schoolYear, { label: report.schoolYear }) : ''; }
+
+  window.FnGraduateEvidence = { COPY: COPY, esc: esc, injectStyles: injectStyles, renderReport: renderReport, renderFrameworks: renderFrameworks, renderIdeas: renderIdeas, schoolYearLine: schoolYearLine };
 })();

@@ -29,6 +29,7 @@ Agreed 2026-10-29. Short screen recordings (2 to 4 minutes), one task per video,
 | B5 | Manage your teacher roster | school-admin-roster.html |
 | B6 | Brand your school | school-admin-branding.html |
 | B7 | Reports and exports | school-admin-reports.html |
+| B11 | See graduate attribute practice across your school | school-admin-evidence.html |
 | B8 | Safety alert recipients | school-admin-org.html |
 | B9 | Permission levels and getting help | school-admin-org.html |
 | B10 | Why can't I invite teachers yet? | school-admin-invitations.html |
@@ -39,6 +40,7 @@ Agreed 2026-10-29. Short screen recordings (2 to 4 minutes), one task per video,
 | C5 | Record your Portrait of a Graduate (part 1) | district-admin-standards.html |
 | C6 | Suggest connections and submit for review (part 2) | district-admin-standards.html |
 | C7 | What the public sees | district-admin-standards.html |
+| C8 | See graduate attribute practice across your district | district-admin-evidence.html |
 | D1 | Accept your quote | accept-quote.html |
 
 Suggested first batch if we film in stages: A1, A2, B1, B2, B4, C1, C3, C4, D1.
@@ -51,6 +53,7 @@ Suggested first batch if we film in stages: A1, A2, B1, B2, B4, C1, C3, C4, D1.
 | T2 | Register with your school email | education-schools.html |
 | T3 | Create a classroom and add students | teacher-classrooms.html, teacher-classroom.html |
 | T4 | Assign lessons and brain games | teacher-classroom.html |
+| T9 | See which graduate attributes your class has practiced | teacher-classroom.html |
 | T5 | Read progress and student reflections | teacher-classroom-progress.html, teacher-game-report.html |
 | T6 | Reset a student's PIN and invite a parent | teacher-classroom.html |
 | S1 | Join your class, then sign in with username and PIN | student-login.html |

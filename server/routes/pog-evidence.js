@@ -20,16 +20,9 @@ const readLimit = limiter({ name: 'pog-evidence', windowMs: 60 * 1000, max: 60 }
 const notFound = (res) => res.status(404).json({ error: 'Not found' });
 const toInt = (v) => (typeof v === 'string' && /^\d{1,10}$/.test(v) ? Number(v) : (Number.isInteger(v) && v > 0 ? v : null));
 
-// ?year=2026 means the 2026-2027 school year. Default: the current one. Anything else is a 400, not a silent fallback.
-function schoolYearFrom(req, res) {
-  const raw = req.query.year;
-  if (raw === undefined) return pog.currentSchoolYearStart();
-  const y = toInt(raw);
-  const now = pog.currentSchoolYearStart();
-  if (!y || y < 2020 || y > now) { res.status(400).json({ error: 'Choose a school year from 2020 up to the current one.' }); return null; }
-  return y;
-}
-const yearChoices = () => { const now = pog.currentSchoolYearStart(); return [now, now - 1].map((y) => ({ year: y, label: pog.schoolYearBounds(y).label })); };
+// The school year is ALWAYS the current one (1 August to 31 July), worked out from today's date. There is no year picker and a ?year=
+// in the URL is ignored, so nobody can ask a screen for another year (last year's student records are gone after the purge anyway).
+const currentYear = () => pog.currentSchoolYearStart();
 
 // The smallest group shown outside a teacher's own classroom. A setting, but never below 5 (a setting of 1 would switch the rule off).
 async function minGroup() {
@@ -80,11 +73,10 @@ async function districtReport({ districtId, year }) {
 }
 
 // ---- teacher: own classroom -------------------------------------------------------------------------------------------
-// GET /api/graduate-evidence/classroom/:id?year=
+// GET /api/graduate-evidence/classroom/:id
 router.get('/classroom/:id', readLimit, requireSiteAuth, async (req, res) => {
   const classroomId = toInt(req.params.id);
-  const year = schoolYearFrom(req, res);
-  if (year === null) return;
+  const year = currentYear();
   if (!classroomId) return notFound(res);
   const [[classroom]] = await pool.query('SELECT id FROM classrooms WHERE id = ? AND teacher_site_user_id = ?', [classroomId, req.siteUser.id]);
   if (!classroom) return notFound(res);
@@ -93,63 +85,60 @@ router.get('/classroom/:id', readLimit, requireSiteAuth, async (req, res) => {
   const connections = await pog.loadConnections('NY');
   const report = await pog.teacherClassroomReport({ classroomId, schoolYearStart: year, connections });
   const levels = await getTeacherLevels(pool, req.siteUser.id);
+  const candidates = await pog.candidatePool({ classroomId, teacherLevels: levels, connections });
   const byId = new Map(connections.frameworks.flatMap((f) => f.items).map((i) => [i.id, i]));
   for (const f of report.frameworks) {
     for (const it of f.items) {
       // Suggest a next step wherever FNE has a direct activity and not every student has practiced it yet.
       if (it.directActivities && report.students && it.practiced < report.students) {
-        it.suggestions = await pog.suggestionsForItem({ item: byId.get(it.id), classroomId, teacherLevels: levels, connections });
+        it.suggestions = await pog.suggestionsForItem({ item: byId.get(it.id), classroomId, teacherLevels: levels, connections, pool: candidates });
       }
     }
   }
-  res.json({ ...report, years: yearChoices(), schoolYearStart: year });
+  // The few activities that add practice for the most attributes the class has not fully practiced yet (the optional "ideas" box).
+  res.json({ ...report, nextSteps: pog.bestNextSteps({ report, connections, pool: candidates }) });
 });
 
 // ---- school administrator ---------------------------------------------------------------------------------------------
-// GET /api/graduate-evidence/school?purchaseId=&year=
+// GET /api/graduate-evidence/school?purchaseId=
 router.get('/school', readLimit, requireSchoolAdmin, async (req, res) => {
-  const year = schoolYearFrom(req, res);
-  if (year === null) return;
+  const year = currentYear();
   const purchaseId = req.query.purchaseId === undefined ? req.schoolAdmin.purchaseIds[0] : toInt(req.query.purchaseId);
   if (!purchaseId || !req.schoolAdmin.purchaseIds.includes(purchaseId)) return notFound(res);
-  res.json({ ...(await schoolReport({ purchaseIds: [purchaseId], year })), years: yearChoices(), schoolYearStart: year, purchaseId });
+  res.json({ ...(await schoolReport({ purchaseIds: [purchaseId], year })), purchaseId });
 });
 
 // ---- district administrator -------------------------------------------------------------------------------------------
-// GET /api/graduate-evidence/district?districtId=&year=
+// GET /api/graduate-evidence/district?districtId=
 router.get('/district', readLimit, requireDistrictAdmin, async (req, res) => {
-  const year = schoolYearFrom(req, res);
-  if (year === null) return;
+  const year = currentYear();
   const districtId = req.query.districtId === undefined ? req.districtAdmin.districtIds[0] : toInt(req.query.districtId);
   if (!districtId || !req.districtAdmin.districtIds.includes(districtId)) return notFound(res);
-  res.json({ ...(await districtReport({ districtId, year })), years: yearChoices(), schoolYearStart: year, districtId });
+  res.json({ ...(await districtReport({ districtId, year })), districtId });
 });
 
 // ---- FNE staff (support): any classroom, school or district, same rules and same small-group suppression -----------------
 // GET /api/graduate-evidence/staff/classroom/:id | school/:purchaseId | district/:districtId
 router.get('/staff/classroom/:id', readLimit, requireAuth, async (req, res) => {
-  const year = schoolYearFrom(req, res);
-  if (year === null) return;
+  const year = currentYear();
   const id = toInt(req.params.id);
   const [[c]] = id ? await pool.query('SELECT id FROM classrooms WHERE id = ?', [id]) : [[]];
   if (!c) return notFound(res);
-  res.json({ ...(await pog.teacherClassroomReport({ classroomId: id, schoolYearStart: year })), years: yearChoices(), schoolYearStart: year });
+  res.json({ ...(await pog.teacherClassroomReport({ classroomId: id, schoolYearStart: year })) });
 });
 router.get('/staff/school/:purchaseId', readLimit, requireAuth, async (req, res) => {
-  const year = schoolYearFrom(req, res);
-  if (year === null) return;
+  const year = currentYear();
   const id = toInt(req.params.purchaseId);
   const [[p]] = id ? await pool.query("SELECT id FROM purchases WHERE id = ? AND product_type = 'group_license'", [id]) : [[]];
   if (!p) return notFound(res);
-  res.json({ ...(await schoolReport({ purchaseIds: [id], year })), years: yearChoices(), schoolYearStart: year, purchaseId: id });
+  res.json({ ...(await schoolReport({ purchaseIds: [id], year })), purchaseId: id });
 });
 router.get('/staff/district/:districtId', readLimit, requireAuth, async (req, res) => {
-  const year = schoolYearFrom(req, res);
-  if (year === null) return;
+  const year = currentYear();
   const id = toInt(req.params.districtId);
   const [[d]] = id ? await pool.query('SELECT id FROM districts WHERE id = ?', [id]) : [[]];
   if (!d) return notFound(res);
-  res.json({ ...(await districtReport({ districtId: id, year })), years: yearChoices(), schoolYearStart: year, districtId: id });
+  res.json({ ...(await districtReport({ districtId: id, year })), districtId: id });
 });
 
 module.exports = router;

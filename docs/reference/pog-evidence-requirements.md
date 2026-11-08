@@ -98,7 +98,7 @@ The report is only as true as the verified connections behind it. From the New Y
 | D1 | What counts as "practiced"? | At least one finished `direct` activity; `supporting` only counts as "touched", shown lighter and kept separate. |
 | D2 | Smallest group shown outside a teacher's own classroom | 10 students, a setting (`pog_evidence_min_group`). |
 | D3 | Does the teacher card list students who have not practiced an item? | No. Counts plus suggested activities; names stay on the existing progress pages. |
-| D4 | Period | School year, 1 August to 31 July; current year by default, previous year selectable. |
+| D4 | Period | School year, 1 August to 31 July. **Changed 2026-11-07 (owner): always the current school year, worked out from today's date; no year picker anywhere, and a `?year=` in a URL is ignored.** |
 | D5 | Show both New York frameworks together | Yes, side by side: SEL benchmarks and Portrait of a Graduate. |
 | D6 | Count free play as well as assigned games | Yes, any finished valid game session counts, once per game per student. |
 | D7 | Who verifies the New York connections I draft | The owner, in the admin, as for every crosswalk row; this is phase 0 and blocks a trustworthy launch. |
@@ -129,3 +129,12 @@ New settings: `pog_evidence_min_group`. New tables: none until phase 5 (`pog_evi
 - **Labels:** a school's groups are "Classroom 1, 2, ..." (never a name a teacher typed); a district's groups are its schools.
 - **Setting:** `pog_evidence_min_group` (default 10, clamped to 5 to 100 in code so it cannot be switched off). There is **no admin screen for it yet**; it is changed in the settings table.
 - **Not built:** the year snapshot at purge (phase 5, waits for retention phase 4); a district's own framework; states other than New York (the library takes a state code, the routes pass 'NY').
+
+## 13. Addendum, 2026-11-07 (Release 152): the optional "ideas" box and the current school year
+
+Owner decisions: (1) offer the evidence at the moment a teacher decides what to assign, as an option the teacher chooses to use; (2) the school year is always the current one, with no picker.
+
+- **Placement.** The Assignments tab opens with a card, "Not sure what to assign?", collapsed until the teacher selects "Show me ideas". The Assign Lesson and Assign Brain Game pickers carry a "Not sure what to assign? Get ideas" link that closes the picker and opens the card. The Graduate Evidence tab (every attribute) sits right after Assignments, and the card links to it ("See every attribute").
+- **What it suggests** (`bestNextSteps` in `lib/pog-evidence.js`, returned as `nextSteps` by `GET /api/graduate-evidence/classroom/:id`): up to three verified `direct` activities, chosen greedily so each pick adds at least one attribute the earlier picks did not; a "gap" is an attribute with a direct activity that not every student has practiced. Ties go to the attribute fewer students have practiced, then games over lessons, then title. Each pick lists the attributes it adds. Matched to the teacher's grade levels, and never anything the classroom already has (any grade version of a lesson counts as already assigned). No AI.
+- **Rules that stay:** the claim is evidence of practice; the box says "adds practice for", never "improves", "should" or "behind"; a classroom with no students, or one that has practiced everything connected, gets a plain message instead of picks; nothing is ever assigned without the teacher pressing Assign; no student is named; verified connections only. Access is unchanged (teacher, own classroom, working license).
+- **School year.** `currentSchoolYearStart()` decides; every view says "School year 2026–2027" in plain text. The library still takes a year as a parameter (tests, and the later snapshot of past years), but no route accepts one.

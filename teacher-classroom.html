@@ -124,8 +124,8 @@ table.data-table tr:hover td{background:#fafaf9;}
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('students', this)">Students</button>
     <button class="tab-btn" onclick="switchTab('assignments', this)">Assignments</button>
-    <button class="tab-btn" onclick="switchTab('progress', this)">Progress</button>
     <button class="tab-btn" onclick="switchTab('evidence', this); loadEvidence()">Graduate Evidence</button>
+    <button class="tab-btn" onclick="switchTab('progress', this)">Progress</button>
   </div>
 
   <!-- STUDENTS TAB -->
@@ -147,6 +147,12 @@ table.data-table tr:hover td{background:#fafaf9;}
 
   <!-- ASSIGNMENTS TAB -->
   <div class="tab-panel" id="tab-assignments">
+    <div class="card" id="ideasCard">
+      <div class="card-title">Not sure what to assign?</div>
+      <div class="card-sub" style="margin-bottom:10px;">Graduate Evidence can show which graduate attributes your class has practiced so far and suggest what to try next. It's only an idea, and you choose what to assign.</div>
+      <button class="btn btn-outline btn-sm" id="ideasBtn" type="button" onclick="toggleIdeas()">Show me ideas</button>
+      <div id="ideasBody" class="ge" style="display:none;margin-top:14px;"></div>
+    </div>
     <div class="section-toolbar">
       <h2>Lesson Assignments</h2>
       <button class="btn btn-primary btn-sm" onclick="openAssignLesson()">+ Assign Lesson</button>
@@ -168,7 +174,7 @@ table.data-table tr:hover td{background:#fafaf9;}
   <div class="tab-panel" id="tab-evidence">
     <div class="section-toolbar">
       <h2>Graduate Evidence</h2>
-      <div class="field" style="margin:0;display:flex;align-items:center;gap:8px;"><label for="geYear" style="margin:0;">School year</label><select id="geYear" onchange="loadEvidence()" style="width:auto;"></select></div>
+      <div class="card-sub" id="geYearLine"></div>
     </div>
     <p class="card-sub" style="margin-bottom:14px;">This shows which graduate attributes your students have practiced this school year. A student counts once they finish an activity that Fixer Nation connects to that attribute. It shows what students have practiced, not how well they did it.</p>
     <div id="geBody" class="ge"></div>
@@ -249,6 +255,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 <div class="modal-bg" id="assignLessonModal">
   <div class="modal" style="max-width:520px;">
     <h2>Assign Lesson</h2>
+    <p class="card-sub" style="margin:0 0 12px;"><button class="ge-link" type="button" onclick="ideasFromPicker('assignLessonModal')" style="font-size:13px;">Not sure what to assign? Get ideas</button></p>
     <div class="lesson-chips" id="lessonSeriesChips"></div>
     <input class="lesson-search" id="lessonSearch" type="text" placeholder="Search lessons…" oninput="filterLessons()" autocomplete="off">
     <div class="lesson-results" id="lessonResults"></div>
@@ -265,6 +272,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 <div class="modal-bg" id="assignGameModal">
   <div class="modal">
     <h2>Assign Brain Game</h2>
+    <p class="card-sub" style="margin:0 0 12px;"><button class="ge-link" type="button" onclick="ideasFromPicker('assignGameModal')" style="font-size:13px;">Not sure what to assign? Get ideas</button></p>
     <div class="field">
       <label for="gameFocus">Focus</label>
       <select id="gameFocus" onchange="renderGameSelect()">
@@ -925,20 +933,49 @@ async function saveClassroomEdit() {
 }
 
 load();
-// ---- Graduate Evidence tab (docs/reference/pog-evidence-requirements.md) ----
-var geLoaded = false;
-async function loadEvidence() {
-  var body = document.getElementById('geBody');
-  FnGraduateEvidence.injectStyles();
-  var sel = document.getElementById('geYear');
-  var qs = sel.value ? '?year=' + encodeURIComponent(sel.value) : '';
-  var r = await fetch('/api/graduate-evidence/classroom/' + classroomId + qs, { credentials: 'include' });
+// ---- Graduate Evidence (docs/reference/pog-evidence-requirements.md) ----
+// One request feeds both the optional "ideas" box on the Assignments tab and the full Graduate Evidence tab. The school year is always
+// the current one; the server works it out from the date.
+FnGraduateEvidence.injectStyles();
+var ideasOpen = false, evidenceShown = false;
+async function fetchEvidence() {
+  var r = await fetch('/api/graduate-evidence/classroom/' + classroomId, { credentials: 'include' });
   var data = await r.json().catch(function () { return {}; });
-  if (!r.ok) { body.innerHTML = '<p class="card-sub">' + esc(r.status === 403 ? (data.error || 'An active license is required to see Graduate Evidence.') : "We couldn't load Graduate Evidence. Please try again.") + '</p>'; return; }
-  if (!geLoaded) { sel.innerHTML = FnGraduateEvidence.yearOptions(data.years, data.schoolYearStart); geLoaded = true; }
-  body.innerHTML = FnGraduateEvidence.renderReport(data, { suggestions: true });
+  return { ok: r.ok, status: r.status, data: data };
+}
+async function loadEvidence() {
+  FnGraduateEvidence.injectStyles();
+  evidenceShown = true;
+  var body = document.getElementById('geBody');
+  var res = await fetchEvidence();
+  if (!res.ok) { body.innerHTML = '<p class="card-sub">' + esc(res.status === 403 ? (res.data.error || 'An active license is required to see Graduate Evidence.') : "We couldn't load Graduate Evidence. Please try again.") + '</p>'; return; }
+  document.getElementById('geYearLine').textContent = FnGraduateEvidence.schoolYearLine(res.data);
+  body.innerHTML = FnGraduateEvidence.renderReport(res.data, { suggestions: true });
+  if (ideasOpen) renderIdeasFrom(res);
+}
+function renderIdeasFrom(res) {
+  var box = document.getElementById('ideasBody');
+  box.innerHTML = res.ok ? FnGraduateEvidence.renderIdeas(res.data) : '<p class="card-sub">' + esc(res.status === 403 ? (res.data.error || 'An active license is required to see Graduate Evidence.') : "We couldn't load ideas. Please try again.") + '</p>';
+}
+async function toggleIdeas(forceOpen) {
+  FnGraduateEvidence.injectStyles();
+  var box = document.getElementById('ideasBody'), btn = document.getElementById('ideasBtn');
+  if (ideasOpen && !forceOpen) { ideasOpen = false; box.style.display = 'none'; btn.textContent = 'Show me ideas'; return; }
+  ideasOpen = true; box.style.display = 'block'; btn.textContent = 'Hide ideas';
+  renderIdeasFrom(await fetchEvidence());
+}
+function ideasFromPicker(modalId) {
+  closeModal(modalId);
+  toggleIdeas(true);
+  document.getElementById('ideasCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function showEvidenceTab() {
+  var btn = Array.prototype.filter.call(document.querySelectorAll('.tab-btn'), function (b) { return /Graduate Evidence/.test(b.textContent); })[0];
+  switchTab('evidence', btn); loadEvidence();
+  window.scrollTo(0, 0);
 }
 document.addEventListener('click', async function (e) {
+  if (e.target.closest && e.target.closest('[data-ge-see-all]')) { showEvidenceTab(); return; }
   var btn = e.target.closest && e.target.closest('.ge-btn');
   if (!btn || !btn.dataset.geType) return;
   btn.disabled = true;
@@ -950,7 +987,7 @@ document.addEventListener('click', async function (e) {
   if (!r.ok) { btn.disabled = false; toast(((await r.json().catch(function () { return {}; })).error) || 'Error'); return; }
   toast('Assigned to your class');
   await load();
-  await loadEvidence();
+  if (ideasOpen || evidenceShown) await loadEvidence();
 });
 </script>
 <script src="help-videos.js?v=18" defer></script>

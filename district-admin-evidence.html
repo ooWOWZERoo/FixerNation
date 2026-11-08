@@ -30,8 +30,7 @@
         <div class="ge-print-head"><h2 id="printTitle" style="font-size:18px;margin:0 0 2px;"></h2><p id="printMeta" class="ge-note"></p></div>
         <p class="ge-noprint" style="font-size:13.5px;color:var(--sa-text-soft);margin:0 0 14px;">See how many students across your district have practiced each graduate attribute this year. These are counts only, and small groups are combined so no one stands out.</p>
         <div class="sa-card ge-noprint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <label for="geYear" style="font-size:13px;font-weight:600;">School year</label>
-          <select id="geYear" style="padding:7px 10px;border:1.5px solid var(--sa-border);border-radius:8px;font-family:inherit;font-size:13px;"></select>
+          <span id="geYearLine" style="font-size:13px;font-weight:600;"></span>
           <button class="sa-btn sa-btn-ghost sa-btn-sm" type="button" onclick="window.print()" style="margin-left:auto;">Print this report</button>
         </div>
         <div class="sa-card"><div id="geBody" class="ge"></div></div>
@@ -41,22 +40,18 @@
 </div>
 <script src="graduate-evidence-view.js?v=1"></script>
 <script>
-var geYearLoaded = false;
 document.addEventListener('daReady', load);
 document.addEventListener('daDistrictChanged', load);
-document.getElementById('geYear').addEventListener('change', load);
 async function load() {
   FnGraduateEvidence.injectStyles();
   var body = document.getElementById('geBody');
   try {
     var id = window.daActiveDistrictId ? window.daActiveDistrictId() : null;
-    var year = document.getElementById('geYear').value;
     var qs = [];
     if (id) qs.push('districtId=' + id);
-    if (year) qs.push('year=' + encodeURIComponent(year));
     var d = await daFetch('/api/graduate-evidence/district' + (qs.length ? '?' + qs.join('&') : ''));
     if (!d) return;
-    if (!geYearLoaded) { document.getElementById('geYear').innerHTML = FnGraduateEvidence.yearOptions(d.years, d.schoolYearStart); geYearLoaded = true; }
+    document.getElementById('geYearLine').textContent = FnGraduateEvidence.schoolYearLine(d);
     body.innerHTML = FnGraduateEvidence.renderReport(d, {});
     var match = (window.daPortalData && window.daPortalData.districts || []).filter(function (x) { return x.districtId === id; })[0];
     document.getElementById('printTitle').textContent = 'Graduate Evidence' + (match ? ': ' + match.districtName : '');

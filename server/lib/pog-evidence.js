@@ -248,11 +248,16 @@ async function groupedReport({ groups, schoolYearStart, min = DEFAULT_MIN_GROUP,
 }
 
 // ---- 6. suggested next activities (teacher view only) -----------------------------------------------------------------
-// Verified `direct` activities for one item that the classroom has not been given yet, matched to the teacher's grade levels.
-// Games match the grade band, lessons match the grade version, so a high-school classroom is not offered a K-2 game.
+// Only verified `direct` activities are ever suggested, matched to the teacher's grade levels (games by grade band, lessons by grade
+// version, so a high-school classroom is not offered a K-2 game), and never something the classroom already has. Suggestions are
+// ideas the teacher may ignore; they never say a class "should" or "is behind" and never promise a result.
 const BANDS_BY_LEVEL = { 'Elementary School': ['discover', 'explore'], 'Middle School': ['challenge'], 'High School': ['advance'] };
 const LEVEL_KEY = { 'Elementary School': 'elementary', 'Middle School': 'middle', 'High School': 'high' };
-async function suggestionsForItem({ item, classroomId, teacherLevels, limit = 3, connections }) {
+
+// Every activity this classroom could be offered, keyed like the connections ('g:<gameId>' or 'l:<lesson stem>'):
+// Map(key -> { key, type, id, title, slug?, band?, level? }). Built once per request, then shared by the per-item "Try next" lists
+// and the "ideas" box.
+async function candidatePool({ classroomId, teacherLevels, connections }) {
   const levels = (teacherLevels || []).filter((l) => BANDS_BY_LEVEL[l]);
   const bands = levels.length ? levels.flatMap((l) => BANDS_BY_LEVEL[l]) : null; // no registered level: do not filter
   const levelKeys = levels.length ? levels.map((l) => LEVEL_KEY[l]) : null;
@@ -260,26 +265,82 @@ async function suggestionsForItem({ item, classroomId, teacherLevels, limit = 3,
   const [givenLessons] = await pool.query('SELECT curriculum_id FROM classroom_assignments WHERE classroom_id = ?', [classroomId]);
   const gaveGame = new Set(givenGames.map((r) => r.game_id)), gaveLesson = new Set(givenLessons.map((r) => r.curriculum_id));
 
-  const out = [];
-  const directTargets = item.targets.filter((t) => t.strength === 'direct');
-  const gameTargets = directTargets.filter((t) => t.kind === 'game' && !gaveGame.has(t.targetId));
-  if (gameTargets.length) {
-    const [rows] = await pool.query(`SELECT id, name, slug, band FROM brain_games WHERE active = 1 AND id IN (${marks(gameTargets)})`, gameTargets.map((t) => t.targetId));
-    for (const g of rows) if (!bands || bands.includes(g.band)) out.push({ type: 'game', id: g.id, title: g.name, slug: g.slug, band: g.band });
+  const targets = connections.frameworks.flatMap((f) => f.items).flatMap((i) => i.targets).filter((t) => t.strength === 'direct');
+  const out = new Map();
+  const gameIds = uniq(targets.filter((t) => t.kind === 'game' && !gaveGame.has(t.targetId)).map((t) => t.targetId));
+  for (const ids of chunks(gameIds)) {
+    const [rows] = await pool.query(`SELECT id, name, slug, band FROM brain_games WHERE active = 1 AND id IN (${marks(ids)})`, ids);
+    for (const g of rows) if (!bands || bands.includes(g.band)) out.set(`g:${g.id}`, { key: `g:${g.id}`, type: 'game', id: g.id, title: g.name, slug: g.slug, band: g.band });
   }
-  const stems = uniq(directTargets.filter((t) => t.kind === 'lesson').map((t) => t.label));
+  const stems = uniq(targets.filter((t) => t.kind === 'lesson').map((t) => t.label));
   if (stems.length) {
     const versions = await standards.lessonVersionsByStem(stems);
     for (const stem of stems) {
       const matching = (versions.get(stem) || []).filter((v) => !levelKeys || levelKeys.includes(v.level));
-      const chosen = matching.find((v) => !gaveLesson.has(v.id)) || null;
-      if (chosen && !matching.some((v) => gaveLesson.has(v.id))) out.push({ type: 'lesson', id: chosen.id, title: stem, level: chosen.label });
+      // Offer the lesson only if no grade version of it is already assigned.
+      if ((versions.get(stem) || []).some((v) => gaveLesson.has(v.id))) continue;
+      const chosen = matching[0];
+      if (chosen) out.set(`l:${stem}`, { key: `l:${stem}`, type: 'lesson', id: chosen.id, title: stem, level: chosen.label });
     }
   }
-  return out.slice(0, limit);
+  return out;
 }
+
+// "Try next" for one attribute: up to `limit` pool activities that are direct for it.
+async function suggestionsForItem({ item, classroomId, teacherLevels, limit = 3, connections, pool: candidates }) {
+  const cands = candidates || await candidatePool({ classroomId, teacherLevels, connections });
+  const out = [];
+  for (const t of item.targets) {
+    if (t.strength !== 'direct') continue;
+    const c = cands.get(t.key);
+    if (c && !out.some((o) => o.key === c.key)) out.push(c);
+  }
+  return out.slice(0, limit).map(({ key, ...rest }) => rest);
+}
+
+// The "ideas for your class" box: the few activities that add practice for the MOST attributes the class has not fully practiced,
+// chosen greedily (each pick must add at least one attribute the earlier picks did not). Ties go to attributes fewer students have
+// practiced, then to games (quicker to run) over lessons, then to the title so the answer is stable. No AI, nothing hidden:
+// every pick lists the attributes it adds.
+function bestNextSteps({ report, connections, pool: candidates, limit = 3 }) {
+  const students = report.students || 0;
+  if (!students) return [];
+  const counts = new Map(); // item id -> practiced
+  for (const f of report.frameworks) for (const it of f.items) if (it.status === 'ok' || it.status === 'supporting_only') counts.set(it.id, it.practiced || 0);
+  const gaps = new Map(); // item id -> { code, title, share } for attributes with a direct activity that not everyone has practiced
+  for (const f of connections.frameworks) for (const it of f.items) {
+    if (!it.direct.length || !counts.has(it.id)) continue;
+    const practiced = counts.get(it.id);
+    if (practiced < students) gaps.set(it.id, { id: it.id, code: it.code, title: it.title, share: practiced / students });
+  }
+  const covers = new Map(); // candidate key -> [gap item ids it is direct for]
+  for (const f of connections.frameworks) for (const it of f.items) {
+    if (!gaps.has(it.id)) continue;
+    for (const k of it.direct) if (candidates.has(k)) { const a = covers.get(k) || []; a.push(it.id); covers.set(k, a); }
+  }
+  const picks = [];
+  const open = new Set(gaps.keys());
+  while (picks.length < limit && open.size) {
+    let best = null;
+    for (const [key, ids] of covers) {
+      const fresh = ids.filter((id) => open.has(id));
+      if (!fresh.length || picks.some((p) => p.key === key)) continue;
+      const need = fresh.reduce((n, id) => n + (1 - gaps.get(id).share), 0);
+      const c = candidates.get(key);
+      const rank = [-fresh.length, -need, c.type === 'game' ? 0 : 1, c.title];
+      if (!best || lessThan(rank, best.rank)) best = { key, fresh, rank };
+    }
+    if (!best) break;
+    const c = candidates.get(best.key);
+    picks.push({ key: best.key, type: c.type, id: c.id, title: c.title, ...(c.slug ? { slug: c.slug } : {}), ...(c.band ? { band: c.band } : {}), ...(c.level ? { level: c.level } : {}),
+      adds: best.fresh.map((id) => ({ code: gaps.get(id).code, title: gaps.get(id).title })) });
+    best.fresh.forEach((id) => open.delete(id));
+  }
+  return picks.map(({ key, ...rest }) => rest);
+}
+function lessThan(a, b) { for (let i = 0; i < a.length; i++) { if (a[i] < b[i]) return true; if (a[i] > b[i]) return false; } return false; }
 
 module.exports = {
   DEFAULT_MIN_GROUP, schoolYearStartOf, currentSchoolYearStart, schoolYearBounds,
-  loadConnections, classroomEvidence, groupWithMinimum, teacherClassroomReport, groupedReport, suggestionsForItem,
+  loadConnections, classroomEvidence, groupWithMinimum, teacherClassroomReport, groupedReport, candidatePool, suggestionsForItem, bestNextSteps,
 };

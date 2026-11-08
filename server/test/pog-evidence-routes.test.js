@@ -90,7 +90,9 @@ test('TEACHER: sees their own classroom with counts and a suggested next step; n
   assert.equal(item(r.json, '2A').practiced, 6);
   assert.equal(item(r.json, '1B').status, 'no_connection');
   assert.equal(item(r.json, '2A').suggestions[0].title, 'Perspective Swap', 'a verified direct game for a high-school teacher');
-  assert.equal(r.json.years.length, 2);
+  assert.match(r.json.schoolYear, /^\d{4}\u2013\d{4}$/, 'the current school year is named, not chosen');
+  assert.equal(r.json.years, undefined, 'there is no year picker data');
+  assert.ok(Array.isArray(r.json.nextSteps), 'the optional ideas box has its picks');
   assert.ok(!r.raw.includes('Secret Name'));
 });
 test('TEACHER: another teacher\'s classroom is a 404, a teacher without a license is a 403, no login is a 401', async () => {
@@ -101,11 +103,17 @@ test('TEACHER: another teacher\'s classroom is a 404, a teacher without a licens
   assert.equal((await get('/api/graduate-evidence/classroom/50', { 'x-teacher': '99' })).status, 403);
   assert.equal((await get('/api/graduate-evidence/classroom/1')).status, 401);
 });
-test('A bad year is refused, not silently replaced', async () => {
+test('The school year is always the current one: a ?year= in the URL is ignored on every view', async () => {
   const h = { 'x-teacher': '11' };
-  assert.equal((await get('/api/graduate-evidence/classroom/1?year=banana', h)).status, 400);
-  assert.equal((await get('/api/graduate-evidence/classroom/1?year=2999', h)).status, 400);
-  assert.equal((await get('/api/graduate-evidence/classroom/1?year=1999', h)).status, 400);
+  const plain = await get('/api/graduate-evidence/classroom/1', h);
+  for (const y of ['banana', '2999', '1999', '2020']) {
+    const r = await get(`/api/graduate-evidence/classroom/1?year=${y}`, h);
+    assert.equal(r.status, 200);
+    assert.equal(r.json.schoolYear, plain.json.schoolYear);
+    assert.equal(item(r.json, '2A').practiced, item(plain.json, '2A').practiced);
+  }
+  const school = await get('/api/graduate-evidence/school?purchaseId=100&year=1999', { 'x-school-admin': '[100]' });
+  assert.equal(school.json.schoolYear, plain.json.schoolYear);
 });
 
 test('SCHOOL ADMIN: own school only; classrooms are labelled neutrally and small ones are merged', async () => {

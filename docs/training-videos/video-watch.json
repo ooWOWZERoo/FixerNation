@@ -290,6 +290,30 @@
       "server/lib/client-errors.js",
       "tests/howto/support.ts",
       "tests/howto/storyboards/G3.ts"
+    ],
+    "T9": [
+      "teacher-classroom.html",
+      "graduate-evidence-view.js",
+      "server/lib/pog-evidence.js",
+      "server/routes/pog-evidence.js",
+      "server/data/standards/NY.json",
+      "tests/howto/evidence.ts"
+    ],
+    "B11": [
+      "school-admin-evidence.html",
+      "graduate-evidence-view.js",
+      "server/lib/pog-evidence.js",
+      "server/routes/pog-evidence.js",
+      "server/data/standards/NY.json",
+      "tests/howto/evidence.ts"
+    ],
+    "C8": [
+      "district-admin-evidence.html",
+      "graduate-evidence-view.js",
+      "server/lib/pog-evidence.js",
+      "server/routes/pog-evidence.js",
+      "server/data/standards/NY.json",
+      "tests/howto/evidence.ts"
     ]
   }
 }

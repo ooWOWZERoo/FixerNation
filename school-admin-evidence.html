@@ -31,8 +31,7 @@
         <div class="ge-print-head"><h2 id="printTitle" style="font-size:18px;margin:0 0 2px;"></h2><p id="printMeta" class="ge-note"></p></div>
         <p class="ge-noprint" style="font-size:13.5px;color:var(--sa-text-soft);margin:0 0 14px;">See how many students at your school have practiced each graduate attribute this year. These are counts only, and no student or teacher is named.</p>
         <div class="sa-card ge-noprint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <label for="geYear" style="font-size:13px;font-weight:600;">School year</label>
-          <select id="geYear" style="padding:7px 10px;border:1.5px solid var(--sa-border);border-radius:8px;font-family:inherit;font-size:13px;"></select>
+          <span id="geYearLine" style="font-size:13px;font-weight:600;"></span>
           <button class="sa-btn sa-btn-ghost sa-btn-sm" type="button" onclick="window.print()" style="margin-left:auto;">Print this report</button>
         </div>
         <div class="sa-card"><div id="geBody" class="ge"></div></div>
@@ -42,22 +41,18 @@
 </div>
 <script src="graduate-evidence-view.js?v=1"></script>
 <script>
-var geYearLoaded = false;
 document.addEventListener('saReady', load);
 document.addEventListener('saSchoolChanged', load);
-document.getElementById('geYear').addEventListener('change', load);
 async function load() {
   FnGraduateEvidence.injectStyles();
   var body = document.getElementById('geBody');
   try {
     var id = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
-    var year = document.getElementById('geYear').value;
     var qs = [];
     if (id) qs.push('purchaseId=' + id);
-    if (year) qs.push('year=' + encodeURIComponent(year));
     var d = await saFetch('/api/graduate-evidence/school' + (qs.length ? '?' + qs.join('&') : ''));
     if (!d) return;
-    if (!geYearLoaded) { document.getElementById('geYear').innerHTML = FnGraduateEvidence.yearOptions(d.years, d.schoolYearStart); geYearLoaded = true; }
+    document.getElementById('geYearLine').textContent = FnGraduateEvidence.schoolYearLine(d);
     body.innerHTML = FnGraduateEvidence.renderReport(d, {});
     var school = (window.saPortalData && window.saPortalData.schools || []).filter(function (s) { return s.purchaseId === id; })[0];
     document.getElementById('printTitle').textContent = 'Graduate Evidence' + (school && school.schoolDomain ? ': ' + school.schoolDomain : '');

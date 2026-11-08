@@ -82,6 +82,9 @@
     { id: 'B7', group: 'school-admins', topic: 'Reports', title: 'Reports and exports',
       summary: 'Utilization, teachers, invitations and the activity log, with CSV downloads.',
       pages: ['school-admin-reports.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793497513/fne/help/B7.mp4', captions: '/help-assets/B7.vtt', poster: '/help-assets/B7.jpg' },
+    { id: 'B11', group: 'school-admins', topic: 'Reports', title: 'See graduate attribute practice across your school',
+      summary: 'See how many students at your school have practiced each graduate attribute.',
+      pages: ['school-admin-evidence.html'] },
 
     // ---- District administrators
     { id: 'C1', group: 'district-admins', topic: 'Your portal', title: 'A tour of the District Admin portal',
@@ -105,6 +108,9 @@
     { id: 'C7', group: 'district-admins', topic: 'Portrait of a Graduate', title: 'What the public sees',
       summary: 'What the review states mean and what visitors see once it\'s published.',
       pages: ['district-admin-standards.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391652/fne/help/C7.mp4', captions: '/help-assets/C7.vtt', poster: '/help-assets/C7.jpg' },
+    { id: 'C8', group: 'district-admins', topic: 'Portrait of a Graduate', title: 'See graduate attribute practice across your district',
+      summary: 'See graduate attribute practice across your district\'s schools.',
+      pages: ['district-admin-evidence.html'] },
 
     // ---- Teachers
     { id: 'T1', group: 'teachers', topic: 'Getting in', title: 'Accept your school\'s invitation',
@@ -143,6 +149,9 @@
     { id: 'T5', group: 'teachers', topic: 'Lessons and results', title: 'Read progress and student reflections',
       summary: 'See who started and finished, quiz scores and written reflections.',
       pages: ['teacher-classroom-progress.html', 'teacher-game-report.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412326/fne/help/T5.mp4', captions: '/help-assets/T5.vtt', poster: '/help-assets/T5.jpg' },
+    { id: 'T9', group: 'teachers', topic: 'Lessons and results', title: 'See which graduate attributes your class has practiced',
+      summary: 'See which graduate attributes your class has practiced, and assign what\'s next.',
+      pages: ['teacher-classroom.html'] },
 
     // ---- Students
     { id: 'S1', group: 'students', topic: 'Getting in', title: 'Join your class and sign in',
