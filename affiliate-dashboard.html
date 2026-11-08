@@ -119,7 +119,7 @@
         <select id="reqCounty" disabled style="flex:1;min-width:160px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"><option value="">Select a state first</option></select>
       </div>
       <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">
-        Territory additions or changes require admin approval before they take effect.
+        Territory additions or changes require admin approval before they take effect. If you ask for all counties in a state, we check which ones other affiliates already have before we decide.
         <span id="changeNotice" style="display:none;">If this replaces an existing territory, that territory stays in effect while your request is under review.</span>
       </p>
       <div id="reqErr" style="display:none;color:#B3261E;font-size:13px;margin-bottom:10px;"></div>
@@ -242,7 +242,7 @@ document.getElementById('reqState').addEventListener('change', async function ()
   countySel.innerHTML = '<option value="">Loading…</option>';
   const r = await fetch('/api/affiliates/counties?state=' + encodeURIComponent(this.value));
   const d = await r.json();
-  countySel.innerHTML = '<option value="">Select a county…</option>' +
+  countySel.innerHTML = '<option value="">Select a county…</option><option value="__ALL__">All counties in this state</option>' +
     d.counties.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
 });
 
@@ -261,7 +261,7 @@ function renderTerritoryRequestCard(pending) {
     form.style.display = 'none';
     pendingBox.innerHTML =
       '<div class="banner" style="background:#FDF2E4;color:#8A5A17;">' +
-      'Pending review: <strong>' + esc(pending.requestedCounty) + ', ' + esc(pending.requestedState) + '</strong>' +
+      'Pending review: <strong>' + esc(pending.requestedLabel || (pending.requestedCounty + ', ' + pending.requestedState)) + '</strong>' +
       ' (' + esc(pending.requestType) + ').' +
       (pending.requestType === 'change' ? ' Your current approved territory remains in effect while this is under review.' : '') +
       ' We’ll notify you when a decision is made.</div>';
@@ -294,14 +294,20 @@ async function submitTerritoryRequest() {
   var state = document.getElementById('reqState').value;
   var county = document.getElementById('reqCounty').value;
   if (!state || !county) {
-    err.textContent = 'Pick a state and a county.';
+    err.textContent = 'Pick a state, then a county or all counties.';
     err.style.display = 'block';
     return;
   }
+  var wholeState = county === '__ALL__';
 
   var hasExisting = currentTerritories.length > 0;
   var requestType = hasExisting ? document.getElementById('reqType').value : 'addition';
   var previousAssignmentId = requestType === 'change' ? document.getElementById('reqPreviousAssignment').value : undefined;
+  if (wholeState && requestType === 'change') {
+    err.textContent = 'A whole state can be added, but it cannot replace one county. Choose "Add another territory", or pick a single county.';
+    err.style.display = 'block';
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Submitting…';
@@ -309,7 +315,7 @@ async function submitTerritoryRequest() {
     const r = await fetch('/api/affiliate-portal/territories/request', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestType: requestType, state: state, county: county, previousAssignmentId: previousAssignmentId }),
+      body: JSON.stringify({ requestType: requestType, state: state, county: wholeState ? undefined : county, wholeState: wholeState, previousAssignmentId: previousAssignmentId }),
     });
     const d = await r.json().catch(function () { return {}; });
     if (!r.ok) throw new Error(d.error || 'Could not submit that request');

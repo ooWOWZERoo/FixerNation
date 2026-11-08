@@ -1,6 +1,6 @@
 # Affiliate whole-state territories: requirements
 
-Status: **decisions D1 to D7 accepted by the owner (2026-11-07). Phase 1 built in Release 148; phase 2 (affiliate asks for a whole state) not built.** Per `CLAUDE.md`, territory rules sit next to billing, so the access matrix and rules below get confirmed first, then built once.
+Status: **decisions D1 to D7 accepted by the owner (2026-11-07). Phase 1 built in Release 148; phase 2 (affiliate asks for a whole state) built in Release 149. Phase 2 needed no alter script: a whole-state request is stored with an empty `requested_county`.** Per `CLAUDE.md`, territory rules sit next to billing, so the access matrix and rules below get confirmed first, then built once.
 
 ## What the owner asked for
 

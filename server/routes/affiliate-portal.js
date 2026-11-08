@@ -13,7 +13,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
 const { LEDGER_TOTALS_SQL } = require('../lib/affiliate-attribution');
-const { territoriesForAffiliate, isValidStateCode, canonicalCountyName, stateName } = require('../lib/territories');
+const { territoriesForAffiliate, isValidStateCode, canonicalCountyName, stateName, planWholeState, requestedTerritoryLabel } = require('../lib/territories');
 const { audit } = require('../lib/audit');
 const { fireAutomation } = require('../lib/automations');
 
@@ -69,6 +69,8 @@ router.get('/me', requireSiteAuth, loadOwnAffiliate, async (req, res) => {
       requestType: pending.request_type,
       requestedState: pending.requested_state,
       requestedCounty: pending.requested_county,
+      requestedLabel: requestedTerritoryLabel(pending.requested_state, pending.requested_county),
+      wholeState: !pending.requested_county,
     } : null,
   });
 });
@@ -87,6 +89,8 @@ router.get('/territories/requests', requireSiteAuth, loadOwnAffiliate, async (re
       requestType: r.request_type,
       requestedState: r.requested_state,
       requestedCounty: r.requested_county,
+      requestedLabel: requestedTerritoryLabel(r.requested_state, r.requested_county),
+      wholeState: !r.requested_county,
       status: r.status,
       rejectionReason: r.rejection_reason,
       createdAt: r.created_at,
@@ -112,8 +116,19 @@ router.post('/territories/request', requireSiteAuth, loadOwnAffiliate, async (re
   const requestedType = (b.requestType || '').trim();
 
   if (!isValidStateCode(state)) return res.status(400).json({ error: `"${b.state}" is not a US state or DC` });
-  const county = canonicalCountyName(state, b.county);
-  if (!county) return res.status(400).json({ error: `"${b.county}" is not a real county in ${stateName(state) || state}` });
+  // Release 148: wholeState: true asks for every county in the state (stored as an empty county). An admin approves it and sees
+  // whether other affiliates already hold any of those counties. A whole state can be added, never used to replace one county.
+  const wholeState = b.wholeState === true;
+  if (wholeState && requestedType === 'change') {
+    return res.status(400).json({ error: 'A whole state can be added, but it cannot replace a single county. Ask for a county to replace one.' });
+  }
+  const county = wholeState ? '' : canonicalCountyName(state, b.county);
+  if (!wholeState && !county) return res.status(400).json({ error: `"${b.county}" is not a real county in ${stateName(state) || state}` });
+  if (wholeState) {
+    const plan = await planWholeState(pool, { affiliateId: req.affiliate.id, state });
+    if (!plan.totalCounties) return res.status(400).json({ error: `No counties are on file for ${stateName(state) || state}.` });
+    if (!plan.toAdd.length) return res.status(409).json({ error: `You already hold every county in ${stateName(state) || state}.` });
+  }
 
   const [[pending]] = await pool.query(
     `SELECT id FROM territory_requests WHERE affiliate_id = ? AND status = 'pending' LIMIT 1`,
@@ -150,13 +165,13 @@ router.post('/territories/request', requireSiteAuth, loadOwnAffiliate, async (re
   await audit(pool, {
     actorType: 'affiliate', actorId: req.affiliate.id, actorEmail: req.siteUser.email,
     action: 'affiliate.territory_requested', entityType: 'affiliate_territory', entityId: result.insertId,
-    newValue: { requestType, state, county },
+    newValue: { requestType, state, county: county || null, wholeState },
     ipAddress: req.ip,
   });
 
   await fireAutomation('affiliate_territory_request_submitted', {
     to: req.siteUser.email,
-    mergeFields: { firstName: req.siteUser.first_name, territory: `${county}, ${state}`, requestType },
+    mergeFields: { firstName: req.siteUser.first_name, territory: requestedTerritoryLabel(state, county), requestType },
   });
 
   res.status(201).json({ ok: true, requestId: result.insertId, requestType });

@@ -23,7 +23,7 @@ const {
   US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder, countiesForState,
   canonicalCountyName, stateName, assignTerritory, revokeTerritoryAssignment,
   territoriesForAffiliate, listTerritories,
-  planWholeState, assignWholeState, revokeAllInState,
+  planWholeState, assignWholeState, revokeAllInState, requestedTerritoryLabel,
 } = require('../lib/territories');
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
 const { limiter, clientIp } = require('../lib/rate-limit');
@@ -787,6 +787,8 @@ router.get('/territory-requests', requireAuth, async (req, res) => {
       requestType: r.request_type,
       requestedState: r.requested_state,
       requestedCounty: r.requested_county,
+      requestedLabel: requestedTerritoryLabel(r.requested_state, r.requested_county),
+      wholeState: !r.requested_county,
       previousAssignmentId: r.previous_assignment_id,
       status: r.status,
       rejectionReason: r.rejection_reason,
@@ -823,6 +825,50 @@ router.post('/territory-requests/:id/approve', requireAuth, async (req, res) => 
     if (request.status !== 'pending') {
       await conn.rollback();
       return res.status(409).json({ error: `This request was already ${request.status}` });
+    }
+
+    // Release 148: a whole-state request. The admin has already seen who else holds counties in that state; acknowledgeOverlap
+    // is their "assign anyway". No overlap is ever created without it.
+    if (!request.requested_county) {
+      const [[aff]] = await conn.query('SELECT status FROM affiliates WHERE id = ?', [request.affiliateId]);
+      if (!aff || aff.status !== 'active') {
+        await conn.rollback();
+        return res.status(409).json({ error: 'This affiliate is suspended. Reactivate them before approving territory.' });
+      }
+      let whole;
+      try {
+        whole = await assignWholeState(conn, {
+          affiliateId: request.affiliateId, state: request.requested_state, adminId: req.user.userId,
+          acknowledgeOverlap: (req.body || {}).acknowledgeOverlap === true, notes: `Approved territory request #${request.id}`,
+        });
+      } catch (err) {
+        await conn.rollback();
+        if (err.code === 'confirm_overlap') {
+          return res.status(409).json({ code: 'confirm_overlap', error: err.message, plan: { ...err.plan, toAdd: undefined, toAddCount: err.plan.toAdd.length } });
+        }
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        throw err;
+      }
+      await conn.query(
+        `UPDATE territory_requests SET status = 'approved', reviewed_by_admin_id = ?, reviewed_at = NOW() WHERE id = ?`,
+        [req.user.userId || null, request.id]
+      );
+      await audit(conn, {
+        actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+        action: 'affiliate.territory_request_approved', entityType: 'affiliate_territory', entityId: request.id,
+        newValue: {
+          requestId: request.id, wholeState: whole.state, added: whole.added, skippedAlreadyHeld: whole.skipped, overlapped: whole.overlapped,
+          otherHolders: [...new Set(whole.overlap.flatMap(o => o.holders.map(h => h.name)))].slice(0, 20),
+        },
+        ipAddress: req.ip,
+      });
+      await conn.commit();
+      const label = `All of ${whole.stateName}`;
+      await fireAutomation('affiliate_territory_request_approved', {
+        to: request.email,
+        mergeFields: { firstName: request.first_name, territory: label },
+      });
+      return res.json({ ok: true, wholeState: true, state: whole.state, stateName: whole.stateName, added: whole.added, skipped: whole.skipped, overlapped: whole.overlapped, territory: { name: label } });
     }
 
     if (request.request_type === 'change' && request.previous_assignment_id) {

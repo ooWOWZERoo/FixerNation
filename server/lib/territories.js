@@ -326,7 +326,7 @@ async function planWholeState(conn, { affiliateId, state }) {
 
 // Assigns every county the affiliate does not already hold, inside the caller's transaction (all or nothing). When any county is
 // held by another affiliate, throws a 409 carrying the plan unless the caller passes acknowledgeOverlap: true.
-async function assignWholeState(conn, { affiliateId, state, adminId, acknowledgeOverlap }) {
+async function assignWholeState(conn, { affiliateId, state, adminId, acknowledgeOverlap, notes: notesOverride }) {
   const plan = await planWholeState(conn, { affiliateId, state });
   if (!plan.totalCounties) {
     throw Object.assign(new Error(`No counties are on file for ${plan.stateName}`), { status: 400 });
@@ -334,7 +334,7 @@ async function assignWholeState(conn, { affiliateId, state, adminId, acknowledge
   if (plan.overlap.length && acknowledgeOverlap !== true) {
     throw Object.assign(new Error('Some counties are already held by other affiliates. Confirm to assign them anyway.'), { status: 409, code: 'confirm_overlap', plan });
   }
-  const notes = `Whole-state assignment: ${plan.state}`;
+  const notes = notesOverride || `Whole-state assignment: ${plan.state}`;
   for (const county of plan.toAdd) {
     const territory = await findOrCreateTerritory(conn, { state: plan.state, county });
     await conn.query(
@@ -344,6 +344,11 @@ async function assignWholeState(conn, { affiliateId, state, adminId, acknowledge
     );
   }
   return { ...plan, added: plan.toAdd.length, skipped: plan.alreadyHeldByThisAffiliate, overlapped: plan.overlap.length };
+}
+
+// How a requested territory reads to people. A request with no county (requested_county = '') is a request for the whole state.
+function requestedTerritoryLabel(state, county) {
+  return county ? `${county}, ${state}` : `All of ${stateName(state) || state}`;
 }
 
 // Revokes every active county this affiliate holds in one state, in one statement. Other affiliates' rows are never touched.
@@ -386,4 +391,5 @@ module.exports = {
   planWholeState,
   assignWholeState,
   revokeAllInState,
+  requestedTerritoryLabel,
 };

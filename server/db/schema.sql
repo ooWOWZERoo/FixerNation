@@ -1395,7 +1395,7 @@ CREATE TABLE IF NOT EXISTS territory_requests (
   affiliate_id INT UNSIGNED NOT NULL,
   request_type VARCHAR(16) NOT NULL, -- 'initial' | 'addition' | 'change'
   requested_state CHAR(2) NOT NULL,
-  requested_county VARCHAR(100) NOT NULL, -- always required, incl. DC's single pseudo-county
+  requested_county VARCHAR(100) NOT NULL, -- a county (incl. DC's single pseudo-county), or '' for a request for the WHOLE state (Release 148)
   previous_assignment_id INT UNSIGNED NULL, -- 'change' only: the affiliate_territories row being replaced
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
   reviewed_by_admin_id INT UNSIGNED NULL,

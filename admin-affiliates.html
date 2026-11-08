@@ -1171,11 +1171,13 @@ async function doRevokeTerritory(assignmentId) {
 // --- Whole-state assignment (Release 148) ------------------------------------
 var wholeStateCode = '';
 var wholeStateNeedsAck = false;
+var wholeStateAffiliateId = null; // whose state is being assigned
+var wholeStateRequestId = null;   // set when this dialog is approving an affiliate's request, not assigning directly
 
 function renderWholeStatePlan(plan) {
   wholeStateCode = plan.state;
   wholeStateNeedsAck = plan.overlap.length > 0;
-  document.getElementById('wholeStateTitle').textContent = 'Assign all of ' + plan.stateName;
+  document.getElementById('wholeStateTitle').textContent = (wholeStateRequestId ? 'Approve request: all of ' : 'Assign all of ') + plan.stateName;
   var html = '<p style="margin:0 0 10px;">' + esc(plan.stateName) + ' has <strong>' + plan.totalCounties + '</strong> counties. ' +
     '<strong>' + plan.toAddCount + '</strong> will be added to this affiliate' +
     (plan.alreadyHeldByThisAffiliate ? ', and ' + plan.alreadyHeldByThisAffiliate + ' they already hold will be skipped' : '') + '.</p>';
@@ -1210,7 +1212,9 @@ async function startWholeState() {
   var state = document.getElementById('wholeStateSelect').value;
   if (!state) { err.textContent = 'Pick a state.'; err.style.display = 'block'; return; }
   try {
-    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories/whole-state?state=' + encodeURIComponent(state), { credentials: 'include' });
+    wholeStateAffiliateId = territoryAffiliateId;
+    wholeStateRequestId = null;
+    const r = await fetch('/api/affiliates/' + wholeStateAffiliateId + '/territories/whole-state?state=' + encodeURIComponent(state), { credentials: 'include' });
     if (fnHandleUnauthorized(r)) return;
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed');
@@ -1226,7 +1230,10 @@ async function confirmWholeState() {
   err.style.display = 'none';
   go.disabled = true;
   try {
-    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories/whole-state', {
+    const url = wholeStateRequestId
+      ? '/api/affiliates/territory-requests/' + wholeStateRequestId + '/approve'
+      : '/api/affiliates/' + wholeStateAffiliateId + '/territories/whole-state';
+    const r = await fetch(url, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: wholeStateCode, acknowledgeOverlap: wholeStateNeedsAck }),
@@ -1241,11 +1248,27 @@ async function confirmWholeState() {
     }
     if (!r.ok) throw new Error(d.error || 'Failed');
     closeModal('wholeStateModal');
-    fnToast('Assigned ' + d.added + ' counties in ' + d.stateName + (d.overlapped ? ' (' + d.overlapped + ' shared with other affiliates)' : '') + '.');
-    document.getElementById('wholeStateSelect').value = '';
-    await loadTerritoryList();
+    var stateLabel = d.stateName || wholeStateCode;
+    fnToast('Assigned ' + d.added + ' counties in ' + stateLabel + (d.overlapped ? ' (' + d.overlapped + ' shared with other affiliates)' : '') + '.');
+    if (wholeStateRequestId) { wholeStateRequestId = null; loadTerritoryRequests(); mapLoadedOnce = false; }
+    else { document.getElementById('wholeStateSelect').value = ''; await loadTerritoryList(); }
     loadAffiliates();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; go.disabled = false; }
+}
+
+// Approving an affiliate's own whole-state request: the same preview, warning and confirmation as assigning directly.
+async function startWholeStateRequest(req) {
+  try {
+    wholeStateAffiliateId = req.affiliateId;
+    wholeStateRequestId = req.id;
+    const r = await fetch('/api/affiliates/' + req.affiliateId + '/territories/whole-state?state=' + encodeURIComponent(req.requestedState), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    document.getElementById('wholeStateErr').style.display = 'none';
+    renderWholeStatePlan(d.plan);
+    document.getElementById('wholeStateModal').classList.add('show');
+  } catch (e) { wholeStateRequestId = null; alert(e.message); }
 }
 
 async function doRevokeState() {
@@ -1319,7 +1342,7 @@ function renderTerritoryRequests() {
       return '<tr>' +
         '<td><div style="font-weight:600;">' + esc(req.affiliateName) + '</div></td>' +
         '<td style="font-size:13px;">' + currentNames + '</td>' +
-        '<td style="font-size:13px;">' + esc(req.requestedCounty) + ', ' + esc(req.requestedState) + '</td>' +
+        '<td style="font-size:13px;">' + esc(req.requestedLabel || (req.requestedCounty + ', ' + req.requestedState)) + '</td>' +
         '<td style="font-size:13px;">' + esc(REQUEST_TYPE_LABEL[req.requestType] || req.requestType) + '</td>' +
         '<td style="font-size:13px;">' + shortDate(req.createdAt) + '</td>' +
         '<td>' + statusPill + '</td>' +
@@ -1330,6 +1353,8 @@ function renderTerritoryRequests() {
 }
 
 async function doApproveRequest(id) {
+  var wholeReq = territoryRequests.find(function (x) { return x.id === id; });
+  if (wholeReq && wholeReq.wholeState) { return startWholeStateRequest(wholeReq); }
   if (!confirm('Approve this territory request? It takes effect immediately.')) return;
   try {
     const r = await fetch('/api/affiliates/territory-requests/' + id + '/approve', {
@@ -1351,7 +1376,7 @@ function openRejectRequest(id) {
   if (!req) return;
   reqRejectId = id;
   document.getElementById('reqRejectErr').style.display = 'none';
-  document.getElementById('reqRejectWho').textContent = req.affiliateName + ' — ' + req.requestedCounty + ', ' + req.requestedState;
+  document.getElementById('reqRejectWho').textContent = req.affiliateName + ' — ' + (req.requestedLabel || (req.requestedCounty + ', ' + req.requestedState));
   document.getElementById('reqRejectReason').value = '';
   document.getElementById('reqRejectModal').classList.add('show');
 }
