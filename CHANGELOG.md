@@ -17,6 +17,16 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 148 — 2026-11-07 — Assign a whole state to an affiliate
+
+- **Whole-state assignment.** On `admin-affiliates.html`, in an affiliate's Territories window, pick a state and press "Assign whole state…" to give them every county in it at once (New York is 62, Texas 254). Before anything is saved you see how many counties will be added, how many the affiliate already holds (skipped), and which counties other affiliates already hold, by name. **Cancel** changes nothing; **Assign anyway** gives those counties two affiliates. The server will not create an overlap unless you confirmed it, and it all happens in one step or not at all.
+- **Revoke all in state.** One confirmed button takes back every county that affiliate holds in a state. It never touches another affiliate's counties.
+- **Overlap only happens this way.** Assigning a single county, approving an affiliate's request and approving an application still allow only one affiliate per county. Commissions are not affected: they follow the referral code, never the territory, so a shared county cannot pay anyone twice.
+- Suspended affiliates cannot be given a state. Every whole-state assignment is tagged ("Whole-state assignment: NY") and written to the audit log with the names of any other holders. The admin audit log shows "Whole state assigned" and "Whole state revoked".
+- **Wording now matches.** `admin-affiliates.html`, `become-an-affiliate.html`, the Affiliate Terms (still a draft for a lawyer) and the Help center answer used to promise one affiliate per county; they now say "normally one", and that FNE can assign overlapping areas on purpose.
+- Still to come (phase 2, after this is live): an affiliate asking for a whole state, with the same warning when you approve it. Requirements: `docs/reference/affiliate-whole-state-requirements.md`.
+- No database change. Node restart needed (new routes).
+
 ## Release 147 — 2026-11-07 — Which games and lessons get used, and three pages that agreed with the system
 
 - **Visitor Paths now shows usage.** Two new tables, "Games in Use" and "Lesson Plans in Use", with Last 30 Days, Last 90 Days, Last 12 Months and All Time buttons. Games show plays, finished plays, different players and classroom assignments. Lesson plans show how many teachers added them to My Lesson Plans, how many classrooms were given them, and how many students started and finished them. Click a column heading to sort. Games and lessons nobody used still appear at the bottom, so you can see what is not working.

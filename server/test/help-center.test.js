@@ -97,13 +97,13 @@ test('facts that must match the system: reset 1 hour, verification 24 hours, inv
 
 test('WIRING: page, footer, portal menus, Get help panel, Contact pointer and the anonymous "answer opened" count', () => {
   const page = read('help.html');
-  assert.match(page, /help-center\.js\?v=8/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
+  assert.match(page, /help-center\.js\?v=9/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
   assert.match(page, /preview/); assert.match(page, /noindex/);
   assert.ok(!/innerHTML/.test(page), 'answers are written with textContent only');
   assert.match(read('footer.js'), /help\.html">Help center/);
   assert.match(read('school-admin-nav.js'), /help\.html\?aud=school/); assert.match(read('district-admin-nav.js'), /help\.html\?aud=district/);
   const sp = read('support.html');
-  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=8/); assert.match(sp, /See all answers/);
+  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=9/); assert.match(sp, /See all answers/);
   assert.match(read('contact.html'), /href="help\.html"/);
   assert.match(read('server/routes/analytics.js'), /EVENT_TYPE_PATTERN = \/\^\[a-z_\]\{1,32\}\$\//);
 });

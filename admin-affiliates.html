@@ -214,7 +214,7 @@
           <select id="approveTerritoryState"><option value="">No territory yet</option></select>
           <select id="approveTerritoryCounty" disabled><option value="">Select a state first</option></select>
         </div>
-        <div class="a-hint">Fixed to real US states and counties — a county is required for any territory. Two active affiliates can't hold the same territory, but territory never decides who earns a commission — the referral code does.</div>
+        <div class="a-hint">Fixed to real US states and counties — a county is required for any territory. Each county normally has one affiliate; assigning a whole state can overlap on purpose. Territory never decides who earns a commission — the referral code does.</div>
       </div>
       <div class="a-field">
         <label>Referral Code</label>
@@ -298,7 +298,7 @@
       <div class="err-inline" id="territoryErr"></div>
       <div id="territoryWho" style="font-size:14px;font-weight:600;margin-bottom:16px;"></div>
 
-      <div id="territoryList" style="margin-bottom:18px;"></div>
+      <div id="territoryList" style="margin-bottom:18px; max-height:300px; overflow:auto;"></div>
 
       <div class="a-field">
         <label>Assign a new territory</label>
@@ -306,12 +306,40 @@
           <select id="territoryAddState"><option value="">Select a state…</option></select>
           <select id="territoryAddCounty" disabled><option value="">Select a state first</option></select>
         </div>
-        <div class="a-hint">Fixed to real US states and counties — a county is required. Only one active affiliate can hold a given territory at a time.</div>
+        <div class="a-hint">Fixed to real US states and counties. A single county can have only one active affiliate.</div>
+      </div>
+
+      <div class="a-field">
+        <label>Assign or revoke a whole state</label>
+        <div class="a-form-row">
+          <select id="wholeStateSelect"><option value="">Select a state…</option></select>
+          <button class="a-btn a-btn-outline" id="wholeStateBtn" onclick="startWholeState()">Assign whole state…</button>
+          <button class="a-btn a-btn-danger" onclick="doRevokeState()">Revoke all in state…</button>
+        </div>
+        <div class="a-hint">Assigns every county in the state at once. If other affiliates already hold some of them, you will see who and can cancel or assign anyway, which gives those counties two affiliates. Commissions are not affected: they follow the referral code.</div>
       </div>
     </div>
     <div class="a-modal-foot">
       <button class="a-btn a-btn-outline" onclick="closeModal('territoryModal')">Close</button>
       <button class="a-btn a-btn-primary" id="territoryAddBtn" onclick="doAssignTerritory()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Whole-state confirmation -->
+<div class="a-modal-overlay" id="wholeStateModal">
+  <div class="a-modal" style="max-width:560px;">
+    <div class="a-modal-head">
+      <h3 id="wholeStateTitle">Assign a whole state</h3>
+      <button class="a-modal-close" onclick="closeModal('wholeStateModal')">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="err-inline" id="wholeStateErr"></div>
+      <div id="wholeStateBody"></div>
+    </div>
+    <div class="a-modal-foot">
+      <button class="a-btn a-btn-outline" onclick="closeModal('wholeStateModal')">Cancel</button>
+      <button class="a-btn a-btn-primary" id="wholeStateGo" onclick="confirmWholeState()">Assign</button>
     </div>
   </div>
 </div>
@@ -501,6 +529,7 @@ function wireCountyDropdown(stateSelId, countySelId, placeholder) {
 document.addEventListener('DOMContentLoaded', function () {
   populateStateSelect(document.getElementById('approveTerritoryState'), 'No territory yet');
   populateStateSelect(document.getElementById('territoryAddState'), 'Select a state…');
+  populateStateSelect(document.getElementById('wholeStateSelect'), 'Select a state…');
   wireCountyDropdown('approveTerritoryState', 'approveTerritoryCounty', 'Select a state first');
   wireCountyDropdown('territoryAddState', 'territoryAddCounty', 'Select a state first');
   loadApplications();
@@ -1051,6 +1080,7 @@ async function openTerritories(id) {
     [a.first_name, a.last_name].filter(Boolean).join(' ') + ' · ' + a.referral_code;
   document.getElementById('territoryAddState').value = '';
   document.getElementById('territoryAddCounty').value = '';
+  document.getElementById('wholeStateSelect').value = '';
   document.getElementById('territoryList').innerHTML = '<div class="a-empty">⏳ Loading…</div>';
   document.getElementById('territoryModal').classList.add('show');
   await loadTerritoryList();
@@ -1068,7 +1098,9 @@ async function loadTerritoryList() {
   }
 }
 
+var territoryRows = [];
 function renderTerritoryList(rows) {
+  territoryRows = rows;
   var el = document.getElementById('territoryList');
   if (!rows.length) {
     el.innerHTML = '<div class="a-empty" style="padding:16px;"><div class="big">🗺️</div>No territory assigned yet.</div>';
@@ -1131,6 +1163,110 @@ async function doRevokeTerritory(assignmentId) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed');
     fnToast('Territory revoked.');
+    await loadTerritoryList();
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+// --- Whole-state assignment (Release 148) ------------------------------------
+var wholeStateCode = '';
+var wholeStateNeedsAck = false;
+
+function renderWholeStatePlan(plan) {
+  wholeStateCode = plan.state;
+  wholeStateNeedsAck = plan.overlap.length > 0;
+  document.getElementById('wholeStateTitle').textContent = 'Assign all of ' + plan.stateName;
+  var html = '<p style="margin:0 0 10px;">' + esc(plan.stateName) + ' has <strong>' + plan.totalCounties + '</strong> counties. ' +
+    '<strong>' + plan.toAddCount + '</strong> will be added to this affiliate' +
+    (plan.alreadyHeldByThisAffiliate ? ', and ' + plan.alreadyHeldByThisAffiliate + ' they already hold will be skipped' : '') + '.</p>';
+  if (plan.overlap.length) {
+    var byHolder = {};
+    plan.overlap.forEach(function (o) {
+      o.holders.forEach(function (h) {
+        var k = h.affiliateId + '|' + h.name;
+        (byHolder[k] = byHolder[k] || { name: h.name, counties: [] }).counties.push(o.county);
+      });
+    });
+    html += '<div style="border:1px solid var(--a-danger);border-radius:10px;padding:12px 14px;margin:0 0 6px;">' +
+      '<div style="font-weight:700;margin-bottom:6px;">' + plan.overlap.length + ' of these counties already belong to other affiliates</div>' +
+      '<div class="a-hint" style="margin:0 0 8px;">If you continue, each of these counties will have two affiliates. You can revoke either one later. Commissions follow the referral code, so nobody is paid twice.</div>' +
+      Object.keys(byHolder).map(function (k) {
+        var h = byHolder[k];
+        var shown = h.counties.slice(0, 6).map(esc).join(', ') + (h.counties.length > 6 ? ' and ' + (h.counties.length - 6) + ' more' : '');
+        return '<div style="font-size:13.5px;margin:4px 0;"><strong>' + esc(h.name) + '</strong>: ' + h.counties.length + ' (' + shown + ')</div>';
+      }).join('') + '</div>';
+  } else {
+    html += '<p class="a-hint" style="margin:0;">No other affiliate holds any county here.</p>';
+  }
+  document.getElementById('wholeStateBody').innerHTML = html;
+  var go = document.getElementById('wholeStateGo');
+  go.textContent = wholeStateNeedsAck ? 'Assign anyway' : 'Assign all ' + plan.toAddCount;
+  go.disabled = plan.toAddCount === 0;
+}
+
+async function startWholeState() {
+  var err = document.getElementById('territoryErr');
+  err.style.display = 'none';
+  var state = document.getElementById('wholeStateSelect').value;
+  if (!state) { err.textContent = 'Pick a state.'; err.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories/whole-state?state=' + encodeURIComponent(state), { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    document.getElementById('wholeStateErr').style.display = 'none';
+    renderWholeStatePlan(d.plan);
+    document.getElementById('wholeStateModal').classList.add('show');
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function confirmWholeState() {
+  var go = document.getElementById('wholeStateGo');
+  var err = document.getElementById('wholeStateErr');
+  err.style.display = 'none';
+  go.disabled = true;
+  try {
+    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories/whole-state', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: wholeStateCode, acknowledgeOverlap: wholeStateNeedsAck }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (r.status === 409 && d.code === 'confirm_overlap') {
+      // Someone else's territory changed since the preview: show the new picture and make the admin confirm again.
+      renderWholeStatePlan(d.plan);
+      err.textContent = 'Things changed while this was open. Please read it again.'; err.style.display = 'block';
+      return;
+    }
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    closeModal('wholeStateModal');
+    fnToast('Assigned ' + d.added + ' counties in ' + d.stateName + (d.overlapped ? ' (' + d.overlapped + ' shared with other affiliates)' : '') + '.');
+    document.getElementById('wholeStateSelect').value = '';
+    await loadTerritoryList();
+    loadAffiliates();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; go.disabled = false; }
+}
+
+async function doRevokeState() {
+  var err = document.getElementById('territoryErr');
+  err.style.display = 'none';
+  var state = document.getElementById('wholeStateSelect').value;
+  if (!state) { err.textContent = 'Pick a state.'; err.style.display = 'block'; return; }
+  var n = territoryRows.filter(function (t) { return t.status === 'active' && t.state === state; }).length;
+  if (!n) { err.textContent = 'This affiliate holds no counties in that state.'; err.style.display = 'block'; return; }
+  if (!confirm('Revoke all ' + n + ' counties this affiliate holds in ' + state + '? Other affiliates are not affected.')) return;
+  try {
+    const r = await fetch('/api/affiliates/' + territoryAffiliateId + '/territories/revoke-state', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: state }),
+    });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    fnToast('Revoked ' + d.revoked + ' counties in ' + d.state + '.');
+    document.getElementById('wholeStateSelect').value = '';
     await loadTerritoryList();
     loadAffiliates();
   } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
@@ -1253,6 +1389,8 @@ var ACTIVITY_ACTION_LABEL = {
   'affiliate.rate_changed': 'Rate changed',
   'affiliate.territory_assigned': 'Territory assigned',
   'affiliate.territory_revoked': 'Territory revoked',
+  'affiliate.whole_state_assigned': 'Whole state assigned',
+  'affiliate.state_territories_revoked': 'Whole state revoked',
   'affiliate.territory_requested': 'Territory requested',
   'affiliate.territory_request_approved': 'Territory request approved',
   'affiliate.territory_request_rejected': 'Territory request rejected',

@@ -129,7 +129,7 @@
     E('affiliate-dashboard-numbers', 'everyone', 'Affiliate program', 'billing_or_license', 'F1', `What do Pending, Owed and Paid mean on my affiliate dashboard?`,
       `Pending is money that is not confirmed yet. Owed is confirmed and waiting to be paid out. Paid has already been sent to you. Your commission history lists every sale and what it paid.`),
     E('affiliate-territory', 'everyone', 'Affiliate program', 'other', 'F1', `How do I ask for a territory, or a different one?`,
-      `Your account page shows your commission rate and your territory, and you can request a territory right there. Each territory (a state plus a county) has one active affiliate, so we review every request and confirm yours or suggest an open one.`),
+      `Your account page shows your commission rate and your territory, and you can request a territory right there. Each territory (a state plus a county) normally has one active affiliate, so we review every request and confirm yours or suggest an open one. We can also give an affiliate a whole state, which can overlap with counties others hold. Your commission always follows your referral code, not the territory.`),
 
     // ================= School administrators
     E('welcome-email-steps', 'school,district', 'First sign-in', 'cant_sign_in', 'A1', `I got a welcome email as an administrator. What do I do with it?`,

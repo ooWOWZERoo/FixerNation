@@ -226,7 +226,9 @@ async function territoriesForAffiliate(affiliateId, conn = pool) {
 
 // Territory rows plus who currently holds each — used by the admin's browse
 // list and by the assign picker (so it can show "already held by X" before
-// the admin even tries).
+// the admin even tries). Since the whole-state assignment (Release 148) a
+// county can have more than one active holder, so each row carries `holders`
+// (all of them) as well as `holder` (the first, kept for older callers).
 async function listTerritories({ state, q } = {}, conn = pool) {
   const where = [];
   const params = [];
@@ -239,17 +241,132 @@ async function listTerritories({ state, q } = {}, conn = pool) {
     params.push(`%${q}%`);
   }
   const [rows] = await conn.query(
-    `SELECT t.*,
-            su.id AS holder_affiliate_id, su.first_name AS holder_first_name, su.last_name AS holder_last_name
-     FROM territories t
-     LEFT JOIN affiliate_territories at ON at.territory_id = t.id AND at.status = 'active'
-     LEFT JOIN affiliates a2 ON a2.id = at.affiliate_id
-     LEFT JOIN site_users su ON su.id = a2.site_user_id
+    `SELECT t.* FROM territories t
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY t.scope = 'state' DESC, t.state, t.county`,
     params
   );
+  const [holderRows] = await conn.query(
+    `SELECT at.territory_id, a.id AS affiliate_id, su.first_name, su.last_name
+     FROM affiliate_territories at
+     JOIN affiliates a ON a.id = at.affiliate_id
+     JOIN site_users su ON su.id = a.site_user_id
+     WHERE at.status = 'active'`
+  );
+  const holdersByTerritory = new Map();
+  for (const h of holderRows) {
+    const list = holdersByTerritory.get(Number(h.territory_id)) || [];
+    list.push({ affiliateId: h.affiliate_id, name: [h.first_name, h.last_name].filter(Boolean).join(' ') });
+    holdersByTerritory.set(Number(h.territory_id), list);
+  }
+  return rows.map(t => {
+    const holders = holdersByTerritory.get(Number(t.id)) || [];
+    return {
+      ...t,
+      holders,
+      holder_affiliate_id: holders[0] ? holders[0].affiliateId : null,
+      holder_first_name: holders[0] ? holders[0].name : null,
+      holder_last_name: null,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Whole-state assignment (Release 148). Docs: docs/reference/affiliate-whole-state-requirements.md.
+//
+// An admin can give one affiliate EVERY county of a state in one action. This is the only way two affiliates can end up holding
+// the same county: the admin is shown who already holds counties in that state and must confirm ("acknowledgeOverlap") before
+// the overlap is created. Territory never decides who earns a commission (attribution is by referral code), so an overlap
+// cannot double-pay anyone. Single-county assignment and approving a request keep the one-holder rule above.
+// ---------------------------------------------------------------------------
+
+const personName = (r) => [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email || 'Another affiliate';
+
+// Every active holder of every county in one state, from one query.
+async function holdersInState(conn, stateCode) {
+  const [rows] = await conn.query(
+    `SELECT t.county, at.affiliate_id, su.first_name, su.last_name, su.email
+     FROM territories t
+     JOIN affiliate_territories at ON at.territory_id = t.id AND at.status = 'active'
+     JOIN affiliates a ON a.id = at.affiliate_id
+     JOIN site_users su ON su.id = a.site_user_id
+     WHERE t.state = ? AND t.scope = 'county'`,
+    [stateCode]
+  );
   return rows;
+}
+
+// What a whole-state assignment would do for this affiliate: read-only, writes nothing.
+async function planWholeState(conn, { affiliateId, state }) {
+  const stateCode = String(state || '').toUpperCase();
+  if (!isValidStateCode(stateCode)) {
+    throw Object.assign(new Error(`"${state}" is not a US state or DC`), { status: 400 });
+  }
+  const counties = countiesForState(stateCode);
+  const byCounty = new Map();
+  for (const r of await holdersInState(conn, stateCode)) {
+    const list = byCounty.get(r.county) || [];
+    list.push(r);
+    byCounty.set(r.county, list);
+  }
+  const alreadyMine = [];
+  const toAdd = [];
+  const overlap = [];
+  for (const county of counties) {
+    const holders = byCounty.get(county) || [];
+    if (holders.some(h => Number(h.affiliate_id) === Number(affiliateId))) { alreadyMine.push(county); continue; }
+    toAdd.push(county);
+    if (holders.length) overlap.push({ county, holders: holders.map(h => ({ affiliateId: h.affiliate_id, name: personName(h) })) });
+  }
+  return {
+    state: stateCode, stateName: stateName(stateCode), totalCounties: counties.length,
+    alreadyHeldByThisAffiliate: alreadyMine.length, toAdd, overlap,
+  };
+}
+
+// Assigns every county the affiliate does not already hold, inside the caller's transaction (all or nothing). When any county is
+// held by another affiliate, throws a 409 carrying the plan unless the caller passes acknowledgeOverlap: true.
+async function assignWholeState(conn, { affiliateId, state, adminId, acknowledgeOverlap }) {
+  const plan = await planWholeState(conn, { affiliateId, state });
+  if (!plan.totalCounties) {
+    throw Object.assign(new Error(`No counties are on file for ${plan.stateName}`), { status: 400 });
+  }
+  if (plan.overlap.length && acknowledgeOverlap !== true) {
+    throw Object.assign(new Error('Some counties are already held by other affiliates. Confirm to assign them anyway.'), { status: 409, code: 'confirm_overlap', plan });
+  }
+  const notes = `Whole-state assignment: ${plan.state}`;
+  for (const county of plan.toAdd) {
+    const territory = await findOrCreateTerritory(conn, { state: plan.state, county });
+    await conn.query(
+      `INSERT INTO affiliate_territories (affiliate_id, territory_id, status, assigned_by_admin_id, notes)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [affiliateId, territory.id, adminId || null, notes]
+    );
+  }
+  return { ...plan, added: plan.toAdd.length, skipped: plan.alreadyHeldByThisAffiliate, overlapped: plan.overlap.length };
+}
+
+// Revokes every active county this affiliate holds in one state, in one statement. Other affiliates' rows are never touched.
+async function revokeAllInState(conn, { affiliateId, state, adminId }) {
+  const stateCode = String(state || '').toUpperCase();
+  if (!isValidStateCode(stateCode)) {
+    throw Object.assign(new Error(`"${state}" is not a US state or DC`), { status: 400 });
+  }
+  const [[held]] = await conn.query(
+    `SELECT COUNT(*) AS n FROM affiliate_territories at JOIN territories t ON t.id = at.territory_id
+     WHERE at.affiliate_id = ? AND at.status = 'active' AND t.state = ?`,
+    [affiliateId, stateCode]
+  );
+  const count = Number(held.n);
+  if (!count) throw Object.assign(new Error(`This affiliate holds nothing in ${stateName(stateCode)}.`), { status: 409 });
+  await conn.query(
+    `UPDATE affiliate_territories
+        SET status = 'revoked', revoked_at = NOW(), revoked_by_admin_id = ?, notes = ?
+      WHERE affiliate_id = ? AND status = 'active'
+        AND territory_id IN (SELECT id FROM territories WHERE state = ?)`,
+    [adminId || null, `Revoked with the rest of ${stateCode}`, affiliateId, stateCode]
+  );
+  return { state: stateCode, revoked: count };
 }
 
 module.exports = {
@@ -266,4 +383,7 @@ module.exports = {
   revokeTerritoryAssignment,
   territoriesForAffiliate,
   listTerritories,
+  planWholeState,
+  assignWholeState,
+  revokeAllInState,
 };

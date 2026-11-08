@@ -23,6 +23,7 @@ const {
   US_STATES, isValidStateCode, findOrCreateTerritory, activeHolder, countiesForState,
   canonicalCountyName, stateName, assignTerritory, revokeTerritoryAssignment,
   territoriesForAffiliate, listTerritories,
+  planWholeState, assignWholeState, revokeAllInState,
 } = require('../lib/territories');
 const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
 const { limiter, clientIp } = require('../lib/rate-limit');
@@ -699,6 +700,7 @@ router.get('/territories', requireAuth, async (req, res) => {
       holder: r.holder_affiliate_id
         ? { affiliateId: r.holder_affiliate_id, name: [r.holder_first_name, r.holder_last_name].filter(Boolean).join(' ') }
         : null,
+      holders: r.holders || [],
     })),
   });
 });
@@ -1102,6 +1104,107 @@ router.post('/:id/territories', requireAuth, async (req, res) => {
 
     await conn.commit();
     res.status(201).json({ ok: true, assignmentId: result.assignmentId, territory: result.territory });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Whole-state assignment (Release 148, docs/reference/affiliate-whole-state-requirements.md). Admin only. The only way two
+// affiliates can hold the same county, and only after the admin has seen who holds what and confirmed.
+// ---------------------------------------------------------------------------
+
+async function activeAffiliateOr409(conn, id, res) {
+  const [[affiliate]] = await conn.query('SELECT id, status FROM affiliates WHERE id = ? FOR UPDATE', [id]);
+  if (!affiliate) { res.status(404).json({ error: 'Affiliate not found' }); return null; }
+  if (affiliate.status !== 'active') { res.status(409).json({ error: 'This affiliate is suspended. Reactivate them before assigning territory.' }); return null; }
+  return affiliate;
+}
+
+// GET /api/affiliates/:id/territories/whole-state?state=NY: what assigning the whole state would do. Writes nothing.
+router.get('/:id/territories/whole-state', requireAuth, async (req, res) => {
+  const [[affiliate]] = await pool.query('SELECT id FROM affiliates WHERE id = ?', [req.params.id]);
+  if (!affiliate) return res.status(404).json({ error: 'Affiliate not found' });
+  try {
+    const plan = await planWholeState(pool, { affiliateId: affiliate.id, state: req.query.state });
+    res.json({ plan: { ...plan, toAdd: undefined, toAddCount: plan.toAdd.length } });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+});
+
+// POST /api/affiliates/:id/territories/whole-state { state, acknowledgeOverlap }
+router.post('/:id/territories/whole-state', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const affiliate = await activeAffiliateOr409(conn, req.params.id, res);
+    if (!affiliate) { await conn.rollback(); return; }
+
+    let result;
+    try {
+      result = await assignWholeState(conn, { affiliateId: affiliate.id, state: b.state, adminId: req.user.userId, acknowledgeOverlap: b.acknowledgeOverlap === true });
+    } catch (err) {
+      await conn.rollback();
+      if (err.code === 'confirm_overlap') {
+        return res.status(409).json({ code: 'confirm_overlap', error: err.message, plan: { ...err.plan, toAdd: undefined, toAddCount: err.plan.toAdd.length } });
+      }
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: 'affiliate.whole_state_assigned', entityType: 'affiliate', entityId: affiliate.id,
+      newValue: {
+        state: result.state, added: result.added, skippedAlreadyHeld: result.skipped, overlapped: result.overlapped,
+        otherHolders: [...new Set(result.overlap.flatMap(o => o.holders.map(h => h.name)))].slice(0, 20),
+      },
+      ipAddress: req.ip,
+    });
+
+    await conn.commit();
+    res.status(201).json({ ok: true, state: result.state, stateName: result.stateName, added: result.added, skipped: result.skipped, overlapped: result.overlapped });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+});
+
+// POST /api/affiliates/:id/territories/revoke-state { state }: revoke every county this affiliate holds in one state.
+router.post('/:id/territories/revoke-state', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[affiliate]] = await conn.query('SELECT id FROM affiliates WHERE id = ? FOR UPDATE', [req.params.id]);
+    if (!affiliate) { await conn.rollback(); return res.status(404).json({ error: 'Affiliate not found' }); }
+
+    let result;
+    try {
+      result = await revokeAllInState(conn, { affiliateId: affiliate.id, state: b.state, adminId: req.user.userId });
+    } catch (err) {
+      await conn.rollback();
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
+
+    await audit(conn, {
+      actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,
+      action: 'affiliate.state_territories_revoked', entityType: 'affiliate', entityId: affiliate.id,
+      prevValue: { state: result.state, revoked: result.revoked },
+      ipAddress: req.ip,
+    });
+
+    await conn.commit();
+    res.json({ ok: true, state: result.state, revoked: result.revoked });
   } catch (err) {
     await conn.rollback();
     throw err;
