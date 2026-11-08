@@ -143,9 +143,9 @@ test('SEEDED ANSWERS: pricing, response-time promises, privacy and legal wording
   assert.ok(!/\$[1-9]/.test(text), "no dollar prices in a reviewed answer (the only dollar figure allowed is the $0 quote that needs no PO)");
 });
 
-test('OWNER APPROVED 2026-11-08: the Graduate Evidence and My Graduate Portrait answers are published (reviewed)', () => {
+test('OWNER APPROVED 2026-11-08: the Graduate Evidence, My Graduate Portrait and Program Use Report answers are published (reviewed)', () => {
   const by = (id) => HC.entries.find(e => e.id === id);
-  for (const id of ['graduate-evidence-what', 'graduate-evidence-privacy', 'portrait-what', 'portrait-keepsake', 'portrait-pins-privacy']) assert.ok(by(id) && by(id).reviewed, `${id} is published`);
+  for (const id of ['graduate-evidence-what', 'graduate-evidence-privacy', 'portrait-what', 'portrait-keepsake', 'portrait-pins-privacy', 'program-report-what', 'program-report-small-schools']) assert.ok(by(id) && by(id).reviewed, `${id} is published`);
   assert.ok(!/\bscores?\b|mastery|proficien|growth/i.test(['portrait-what', 'portrait-keepsake', 'portrait-pins-privacy'].map(id => by(id).a).join(' ')), 'the portrait answers keep the evidence-of-practice language');
 });
 

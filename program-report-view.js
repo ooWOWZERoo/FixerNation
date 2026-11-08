@@ -130,6 +130,7 @@
       '<li>' + esc('A school\'s classrooms are the classrooms of teachers holding a registered seat there. Teachers and classrooms are only counted, never named.') + '</li>' +
       '<li>' + esc('Standards coverage uses Graduate Evidence: a student has practiced a benchmark or attribute once they finish an activity that Fixer Nation connects to it. New York\'s SEL benchmarks are shown under the three goals the state uses.') + '</li>' +
       '<li>' + esc('Following New York\'s guidance on the SEL benchmarks, nothing here is used to diagnose or grade students, and there is no per-student view. Fixer Nation does not produce rating levels for the state\'s implementation rubric. These counts can support your own self-assessment.') + '</li>' +
+      '<li>' + esc('What a state or funder asks you to submit depends on your state and your funding program. Start with your state education agency\'s website and the terms of your award. The method page below has links for New York.') + '</li>' +
       '<li>' + esc('The school year runs 1 August to 31 July. Totals are saved each month, so last year\'s figures stay available after student records are removed.') + '</li></ul>' +
       '<p class="pr-note"><a href="program-report-how-we-count.html">Read the full method as its own page</a>, to share with a board or a funder.</p></details>';
   }

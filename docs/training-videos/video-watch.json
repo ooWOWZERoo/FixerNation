@@ -306,6 +306,14 @@
       "server/data/standards/NY.json",
       "tests/howto/evidence.ts"
     ],
+    "B12": [
+      "school-admin-program-report.html",
+      "program-report-view.js",
+      "graduate-evidence-view.js",
+      "server/lib/program-use.js",
+      "server/routes/program-report.js",
+      "tests/howto/evidence.ts"
+    ],
     "B11": [
       "school-admin-evidence.html",
       "graduate-evidence-view.js",

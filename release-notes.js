@@ -49,7 +49,7 @@
         know: [
           'Schools with very few students are combined into one row, and schools with only a few activated teachers hide their teacher and classroom figures, so no one can be picked out. A downloaded figure that is hidden says suppressed instead of showing 0.',
           'The report shows how the program is used. It doesn\'t measure student outcomes, and Fixer Nation holds no demographic information, so figures can\'t be split by group. Measures such as attendance or climate surveys come from your own data.',
-          'The connections to New York\'s frameworks are Fixer Nation\'s own mapping. Neither New York State nor CASEL has endorsed them. New York\'s social emotional learning benchmarks are voluntary and the state has no required reporting form that we know of, so this is supporting information to attach to your own report. Fixer Nation does not produce rating levels for the state\'s implementation rubric, but these counts can support your own self-assessment.',
+          'The connections to New York\'s frameworks are Fixer Nation\'s own mapping. Neither New York State nor CASEL has endorsed them. New York\'s social emotional learning benchmarks are voluntary and the state has no required reporting form that we know of, so this is supporting information to attach to your own report. Check your state education agency and your funding program for what to submit. Fixer Nation does not produce rating levels for the state\'s implementation rubric, but these counts can support your own self-assessment.',
           'The first school year shows only the months since the report was switched on, filled in from classroom activity. If a teacher removed a student, that student is left out of those months.'
         ]
       },

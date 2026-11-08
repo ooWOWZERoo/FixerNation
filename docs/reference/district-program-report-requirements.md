@@ -118,7 +118,7 @@ A district administrator with more than one district uses the selector the other
 | D8 | Exports | Browser print to PDF and a CSV, both carrying the definitions and claim lines; no server-side PDF |
 | D9 | Claim wording | The two standing lines in section 3, owner-approved before anything is published; anything about outcomes or equity breakdowns says plainly that FNE does not hold that data |
 | D10 | School administrators | Same report scoped to their own school, in a later phase |
-| D11 | The state | **Re-checked 2026-11-08 (section 14): no mandated New York SEL reporting form found; the packet stays a neutral attachment, grouped by NYSED's three goals.** Still ask two or three districts which funder format they have before building any format-specific export |
+| D11 | The state | **Decided by the owner 2026-11-08: do not ask districts or build any state or funder specific format.** Personalizing by district would mean thousands of formats, so FNE ships one neutral packet (page, print, CSV, method page) and **steers administrators to their own state's resources**: the method page and the report's "How we count" section tell them to start with their state education agency and the terms of their award, with NYSED links for New York. (Section 14 still records what the NYSED sources say.) |
 | D12 | Frameworks | New York only, as Graduate Evidence; a district's own framework is out of scope until the report is proven |
 
 ## 11. Out of scope (this version)
@@ -129,7 +129,7 @@ Outcomes of any kind (referrals, attendance, climate, test results); subgroup or
 
 | Phase | What | Needs |
 |---|---|---|
-| 0 | Owner answers D1 to D12; ask two or three districts what they submit to the state and funders (D11) | The owner |
+| 0 | Owner answers D1 to D12 (done 2026-11-08; D11 settled as "steer to the state's own resources", no district interviews) | The owner |
 | 1 | `lib/program-use.js`: the definitions above as plain portable SQL on `node:sqlite` (tests: active student, finished-once, regular-use weeks, scoping by district and school, merge and suppression for students and teachers, demo isolation, every access-matrix row), `GET /api/district-admin/program-report`, the page with tiles, month table and school table, the print view, a link from the district portal menu (bump the nav version) | D1 to D6 |
 | 2 | `program_use_snapshots` + `scripts/snapshot-program-use.js` + one-time backfill + cron line; the page reads snapshots for past months and last year | D7 |
 | 3 | CSV export, the "How we count" page, last year against this year for attributes (first reader of `pog_evidence_snapshots`) | D8, D9 |
@@ -140,7 +140,7 @@ New settings: `program_report_regular_weeks`, `program_report_low_use_pct`, `pro
 
 ## 13. What I do not know
 
-- **What a state or a funder requires.** I believe Portrait of a Graduate and SEL implementation reporting is not standardized in New York, but I have not verified that, and grant forms vary widely. D11 exists so the packet is shaped by what districts actually submit, not by my guess.
+- **What a state or a funder requires (settled: the report steers administrators to their state's resources instead of guessing).** I believe Portrait of a Graduate and SEL implementation reporting is not standardized in New York, but I have not verified that, and grant forms vary widely. D11 exists so the packet is shaped by what districts actually submit, not by my guess.
 - **Whether a small district's raw monthly counts in the snapshot table count as de-identified** for each district's data agreement. They hold no ids, but the retention requirements (D5) should be re-read with that table in mind before phase 2 ships.
 - **How many districts and schools will have enough students for the small-group rule to leave a useful report.** A district with a few small schools will see mostly merged rows, which is the rule working, but the owner should know it before a sales demo.
 

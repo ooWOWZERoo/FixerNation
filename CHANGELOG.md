@@ -18,6 +18,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 162 — 2026-11-08 — Program Use Report: Help answers published, state guidance, and a school administrator video
+
+- **Two Help answers are published:** what the Program Use Report shows, and why some schools are combined or hidden.
+- **The report now points administrators to their own state's resources** instead of trying to match every state's or funder's format. The public "How the Program Use Report counts" page has a new section, "Using this report with your state or funder" (start with your state education agency's website and the terms of your award; New York links to NYSED's social emotional learning and Portrait of a Graduate pages), the report's "How we count" section says the same in one line, and the published release note carries one added sentence.
+- **A how-to video for school administrators, B12,** is recorded and published (see VIDEO-STATUS). `help-videos.js` is at `?v=24`.
+- The owner decided against asking districts what they submit: personalizing by district would mean thousands of formats. The packet stays neutral (page, print, CSV, method page). Static files only: no restart, no database change.
+
 ## Release 161 — 2026-11-08 — Program Use Report for district and school administrators
 
 - **A new district portal page, Program Use Report,** shows how schools are using Fixer Nation this school year: teachers activated of licensed, students enrolled, the share of students who finished at least one lesson or game, use month by month, and a school-by-school table with a "Needs support" mark for schools where few classrooms are in regular use. Below it, standards coverage from Graduate Evidence, with New York's SEL benchmarks grouped under the state's three goals.

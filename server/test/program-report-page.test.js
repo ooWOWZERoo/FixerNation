@@ -85,6 +85,7 @@ test('SYNTAX: every inline script on the page compiles (a stray apostrophe in a 
 
 test('HOW WE COUNT: a public page (no login) that a funder can read: the definitions, the small-group rules, and what the report cannot tell you', () => {
   for (const must of ['Active student', 'Reach', 'Classroom in regular use', 'Needs support', 'How small groups are protected', 'What this report cannot tell you', 'suppressed', 'implementation rubric', 'Neither|have not endorsed']) assert.match(HOW, new RegExp(must));
+  assert.match(HOW, /Using this report with your state or funder/); assert.match(HOW, /state education agency/); assert.match(HOW, /https:\/\/www\.nysed\.gov\/student-support-services\/sel/); assert.match(HOW, /https:\/\/www\.nysed\.gov\/grad-measures\/new-york-state-portrait-graduate/);
   assert.match(HOW, /nav\.js\?v=\d+/); assert.match(HOW, /footer\.js/);
   assert.match(read('server/lib/program-use-csv.js'.replace('server/', 'server/')), /program-report-how-we-count\.html/);
   assert.ok(!/\/api\//.test(HOW.replace(/\/api\/settings\/favicon[^"]*/g, '')), 'a method page, no data');

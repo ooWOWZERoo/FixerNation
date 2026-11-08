@@ -85,6 +85,9 @@
     { id: 'B11', group: 'school-admins', topic: 'Reports', title: 'See graduate attribute practice across your school',
       summary: 'See how many students at your school have practiced each graduate attribute.',
       pages: ['school-admin-evidence.html'] },
+    { id: 'B12', group: 'school-admins', topic: 'Reports', title: 'See how your school is using Fixer Nation',
+      summary: 'See reach, use by month and standards coverage for your school.',
+      pages: ['school-admin-program-report.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794159670/fne/help/B12.mp4', captions: '/help-assets/B12.vtt', poster: '/help-assets/B12.jpg' },
 
     // ---- District administrators
     { id: 'C1', group: 'district-admins', topic: 'Your portal', title: 'A tour of the District Admin portal',

@@ -30,6 +30,7 @@ Agreed 2026-10-29. Short screen recordings (2 to 4 minutes), one task per video,
 | B6 | Brand your school | school-admin-branding.html |
 | B7 | Reports and exports | school-admin-reports.html |
 | B11 | See graduate attribute practice across your school | school-admin-evidence.html |
+| B12 | See how your school is using Fixer Nation | school-admin-program-report.html |
 | B8 | Safety alert recipients | school-admin-org.html |
 | B9 | Permission levels and getting help | school-admin-org.html |
 | B10 | Why can't I invite teachers yet? | school-admin-invitations.html |
