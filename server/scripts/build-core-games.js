@@ -309,7 +309,7 @@ const ENGINE_SCRIPTS = {
 function page(g) {
   const voiced = g.band === 'discover' && g.engine !== 'memory';
   const scripts = [
-    'referral.js?v=1', 'nav.js?v=20', 'site-auth.js?v=11', 'footer.js?v=17', 'accessibility-utils.js', 'game-shell.js?v=3', 'engine-sdk.js?v=6',
+    'referral.js?v=1', 'nav.js?v=20', 'site-auth.js?v=11', 'footer.js?v=18', 'accessibility-utils.js', 'game-shell.js?v=3', 'engine-sdk.js?v=6',
   ].concat(voiced ? ['assets/audio/discover/' + g.slug + '.js?v=00000000', 'engine-voice.js?v=1'] : ['audioChoice', 'scenarioChoice'].includes(g.engine) ? ['engine-voice.js?v=1'] : [], ENGINE_SCRIPTS[g.engine]);
   const json = JSON.stringify(g.pack, null, 2).replace(/\n/g, '\n  ');
   const engineKind = { audioChoice: 'Audio Choice', evidenceHunt: 'Evidence Hunt', scenarioChoice: 'Scenario Choice (a "Your turn" check-in with no stories)', memory: 'Memory' }[g.engine];

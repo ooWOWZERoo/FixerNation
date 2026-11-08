@@ -1,18 +1,19 @@
 # Customer release notes
 
-Fixer Nation now has paying schools and teachers, so any change they can see on the site gets a short note to them. The `CHANGELOG.md` stays the internal record. These notes are what customers read.
+Fixer Nation now has paying schools and teachers, so any change they can see on the site gets a note they can read. `CHANGELOG.md` stays the internal record. The customer notes live **on the site**:
 
-**One file per visible change**, named `YYYY-MM-title.md`, written when the change is built and held as a DRAFT until it is live. A change is "visible" when a customer would notice it on a page they use: a new page, tab or button, changed wording they rely on, a moved or removed feature, a new rule about their students' data. Back-end fixes nobody can see do not need one.
+- **`release-notes.html`** is the index (grouped by month, with an audience filter) and each note's own page (`release-notes.html?note=<id>`), modeled on Apple's release-notes pages: overview, What's new, What changed, What we fixed, Good to know, Where to find it, a side list to jump around. It is public, and it is linked from the footer of every page (Explore column).
+- **`release-notes.js`** is the one list of notes, newest first. To add a note, add an entry at the top (the file header explains each field). Do not change a note's `id`: it is in links people have been sent.
+- **Drafts.** A note with `published: false` is hidden from visitors and shown only at `release-notes.html?preview=1`. Anything about privacy, data, prices, legal wording or promises starts as a draft until the owner has read it. Flip it to `true` to publish. Tests (`server/test/release-notes.test.js`) check that every note is complete, that Graduate Evidence never says mastery, growth or a score, and that drafts stay hidden.
 
-Each note has two parts:
+## When to write one
 
-1. **Before you send** (internal): what must be true first, who gets it, and through which channel.
-2. **The customer note**: what changed, why it helps each audience, where to find it, and anything they should know. Plain words, honest about limits, never a claim the product cannot back up. Run the customer text through the humanize skill before it is final.
+When a change is **visible to a customer** on a page they use: a new page, tab or button, changed wording they rely on, a moved or removed feature, or a new rule about their students' data. Back-end fixes nobody can see do not need one. Write it in the same release as the change, say what changed and why it helps each audience, say where to find it, and be honest about limits. Run the customer wording through the humanize skill. A feature that is new or changed should also get a how-to video (`tests/howto/`), named in the note's `videos` list; it shows on the note once the video is published.
 
-Audiences differ, so write the value for each one that is affected: teachers, school administrators, district administrators, and (when a change reaches them) parents or students' families. Every note ends with where to find the change and, once published, a link to the how-to video.
+## Telling people
 
-Channels in use today: an email from Campaigns (`admin-campaigns.html`) to the right CRM contacts. Nothing is sent automatically; the owner sends or schedules each one.
+The page is the record. To tell people about a change, send an email from Campaigns (`admin-campaigns.html`) that links to the note. Nothing is sent automatically; the owner sends or schedules each one. Email drafts and a Word version for a note can sit in this folder (for example `2026-11-graduate-evidence.docx`), but the text on the page is the source of truth.
 
-| Note | Change | Release | Status |
-|---|---|---|---|
-| [2026-11-graduate-evidence.md](2026-11-graduate-evidence.md) | Graduate Evidence tab and pages | 151 | Draft, waiting on the checklist inside it |
+| Note | Email draft |
+|---|---|
+| Graduate Evidence (Releases 151 and 152) | [2026-11-graduate-evidence.md](2026-11-graduate-evidence.md), `2026-11-graduate-evidence.docx` |

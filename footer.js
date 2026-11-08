@@ -93,6 +93,7 @@
             '<li><a href="brain-games.html">Brain Games</a></li>' +
             '<li><a href="social.html">Community</a></li>' +
             '<li><a href="for-parents.html">For Parents</a></li>' +
+            '<li><a href="release-notes.html">Release notes</a></li>' +
             '<li><a href="https://fixernation.org/" target="_blank" rel="noopener" title="Health, hope &amp; good news, from our parent community">Positivity Network &#8599;</a></li>' +
           '</ul>' +
         '</div>' +

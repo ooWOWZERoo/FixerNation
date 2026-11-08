@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A plain-language record of what Fixer Nation Education has added, changed and fixed for teachers, schools, districts and families.">
+<title>Fixer Nation Education - Release Notes</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:var(--teal-dark); text-decoration:none; font-weight:600;}
+  a:hover{text-decoration:underline;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 32px;}
+  header{position:sticky; top:0; z-index:80; background:rgba(251,245,236,0.85); backdrop-filter:blur(10px); border-bottom:1px solid rgba(22,79,74,0.08);}
+
+  .hero[hidden]{display:none;}
+  .hero{background:var(--teal-dark); padding:64px 32px 56px; text-align:center;}
+  .hero .eyebrow{font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); margin-bottom:12px;}
+  .hero h1{font-size:36px; color:#fff; line-height:1.13; max-width:700px; margin:0 auto 14px;}
+  .hero p{font-size:15.5px; color:rgba(255,255,255,0.8); max-width:640px; margin:0 auto; line-height:1.7;}
+
+  .preview-note{background:#FFF4D6; border:1px solid var(--gold); border-radius:12px; padding:12px 16px; margin:24px 0 0; font-size:13.5px;}
+
+  /* chips (audience filter and the audience tags on each note) */
+  .rn-filter{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:28px 0 6px;}
+  .rn-filter .lbl{font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-right:4px;}
+  .rn-chip{background:#fff; border:1px solid rgba(22,79,74,0.15); border-radius:999px; padding:7px 15px; font:600 13.5px 'Plus Jakarta Sans',sans-serif; cursor:pointer; color:var(--teal-dark);}
+  .rn-chip[aria-pressed="true"]{background:var(--teal); color:#fff; border-color:var(--teal);}
+  .rn-chip:focus-visible,.rn-link:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+  .rn-tag{display:inline-block; background:var(--cream-soft); color:var(--teal-dark); border-radius:999px; padding:2px 10px; font-size:11.5px; font-weight:700; margin:0 6px 4px 0;}
+
+  /* the index: months, then one row per note */
+  .rn-month{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:700; margin:30px 0 10px; font-family:'Plus Jakarta Sans',sans-serif;}
+  .rn-row{display:block; background:#fff; border-radius:var(--radius-md); box-shadow:0 8px 20px -14px rgba(22,79,74,0.25); padding:20px 24px; margin-bottom:12px; color:var(--ink); font-weight:400;}
+  .rn-row:hover{text-decoration:none; box-shadow:0 12px 26px -14px rgba(22,79,74,0.4);}
+  .rn-row h2{font-size:21px; margin:0 0 4px;}
+  .rn-row .meta{font-size:12.5px; color:var(--ink-soft); margin-bottom:8px;}
+  .rn-row p{font-size:14.5px; color:var(--ink); margin:0 0 8px;}
+  .rn-draft{background:#FFF4D6; border:1px solid var(--gold); color:var(--ink); border-radius:999px; padding:1px 9px; font-size:11.5px; font-weight:700; margin-left:8px; vertical-align:middle;}
+  .rn-empty{text-align:center; color:var(--ink-soft); padding:56px 0;}
+
+  /* one note: breadcrumb, title, then a sticky side list beside the sections */
+  .rn-crumbs{font-size:13px; color:var(--ink-soft); margin:26px 0 0;}
+  .rn-note-head{padding:14px 0 6px;}
+  .rn-note-head h1{font-size:34px; margin:6px 0 8px;}
+  .rn-note-head .meta{font-size:13px; color:var(--ink-soft); margin-bottom:10px;}
+  .rn-lead{font-size:17px; line-height:1.65; max-width:760px; margin:10px 0 0;}
+  .rn-layout{display:grid; grid-template-columns:230px minmax(0,1fr); gap:44px; margin-top:26px; align-items:start;}
+  .rn-side{position:sticky; top:96px; font-size:13.5px;}
+  .rn-side h4{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; margin:0 0 8px;}
+  .rn-side ul{list-style:none; margin:0 0 22px;}
+  .rn-side li{margin-bottom:6px;}
+  .rn-side a{font-weight:600;}
+  .rn-side a[aria-current="page"]{color:var(--coral-dark);}
+  .rn-sec{scroll-margin-top:96px; padding:6px 0 10px;}
+  .rn-sec h2{font-size:25px; margin:18px 0 12px;}
+  .rn-sec p{font-size:15.5px; margin-bottom:12px; max-width:760px;}
+  .rn-item{background:#fff; border-radius:14px; box-shadow:0 8px 20px -14px rgba(22,79,74,0.25); padding:18px 22px; margin-bottom:12px; max-width:760px;}
+  .rn-item h3{font-size:18px; margin:0 0 6px;}
+  .rn-item p{font-size:15px; margin:6px 0 0;}
+  .rn-know{margin:0 0 0 20px; max-width:760px;}
+  .rn-know li{margin-bottom:8px; font-size:15.5px;}
+  .rn-btn{display:inline-block; border:0; border-radius:999px; padding:10px 18px; font:700 14px/1 'Plus Jakarta Sans',sans-serif; cursor:pointer; text-decoration:none; margin:0 10px 10px 0;}
+  .rn-btn.watch{background:var(--coral); color:#fff;}
+  .rn-btn.watch:hover{background:var(--coral-dark);}
+  .rn-btn.help{background:var(--cream-soft); color:var(--teal-dark);}
+  .rn-back{display:inline-block; margin:26px 0 0; font-size:14px;}
+  noscript p{text-align:center; padding:40px 0;}
+  @media(max-width:860px){.rn-layout{grid-template-columns:1fr; gap:10px;} .rn-side{position:static;} .wrap{padding:0 20px;} .rn-note-head h1{font-size:28px;}}
+</style>
+</head>
+<body>
+
+<header></header>
+
+<section class="hero">
+  <div class="eyebrow">Release notes</div>
+  <h1>What's new in Fixer Nation Education</h1>
+  <p>A plain-language record of what we've added, changed and fixed for teachers, schools, districts and families. The newest notes are first.</p>
+</section>
+
+<div class="wrap">
+  <p class="preview-note" id="rnPreviewNote" hidden>Preview of release notes that haven't been published yet. Visitors only see published ones.</p>
+  <div id="rnRoot"></div>
+  <noscript><p>This page needs JavaScript to show the release notes.</p></noscript>
+</div>
+
+<div style="padding:40px 0;"></div>
+
+<footer></footer>
+
+<script src="admin-common.js?v=17"></script>
+<script>fnTrackPageview();</script>
+<script src="cart.js"></script>
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=20"></script>
+<script src="site-auth.js?v=11"></script>
+<script src="footer.js?v=18"></script>
+<script src="help-videos.js?v=18"></script>
+<script src="release-notes.js?v=1"></script>
+<script>
+(function () {
+  var RN = window.FNReleaseNotes, HV = window.FNHelpVideos;
+  var q = new URLSearchParams(location.search);
+  var preview = q.get('preview') === '1';
+  var root = document.getElementById('rnRoot');
+  if (preview) document.getElementById('rnPreviewNote').hidden = false;
+
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function keep() { return preview ? '&preview=1' : ''; }
+  function tags(ids) {
+    var all = ids.length >= RN.audiences.length;
+    return (all ? ['Everyone'] : ids.map(RN.audienceTitle)).map(function (t) { return '<span class="rn-tag">' + esc(t) + '</span>'; }).join('');
+  }
+
+  // ---- the index: filter chips, then the notes grouped by month ----
+  function renderIndex() {
+    var aud = q.get('aud') || 'everyone';
+    if (aud !== 'everyone' && !RN.audiences.some(function (a) { return a.id === aud; })) aud = 'everyone';
+    document.title = 'Fixer Nation Education - Release Notes';
+    var chips = [{ id: 'everyone', title: 'Everyone' }].concat(RN.audiences).map(function (a) {
+      return '<button type="button" class="rn-chip" data-aud="' + esc(a.id) + '" aria-pressed="' + (a.id === aud ? 'true' : 'false') + '">' + esc(a.title) + '</button>';
+    }).join('');
+    var notes = RN.forAudience(RN.visible(preview), aud);
+    var body = notes.length ? RN.byMonth(notes).map(function (g) {
+      return '<h2 class="rn-month">' + esc(g.month) + '</h2>' + g.notes.map(function (n) {
+        return '<a class="rn-row" href="release-notes.html?note=' + encodeURIComponent(n.id) + keep() + '">' +
+          '<h2>' + esc(n.title) + (n.published ? '' : '<span class="rn-draft">Draft</span>') + '</h2>' +
+          '<div class="meta">' + esc(RN.formatDate(n.date)) + '</div>' +
+          '<p>' + esc(n.summary) + '</p><div>' + tags(n.audiences) + '</div></a>';
+      }).join('');
+    }).join('') : '<p class="rn-empty">No release notes match that filter yet.</p>';
+    root.innerHTML = '<div class="rn-filter" role="group" aria-label="Show notes for"><span class="lbl">Show notes for</span>' + chips + '</div>' + body;
+    Array.prototype.forEach.call(root.querySelectorAll('.rn-chip'), function (b) {
+      b.addEventListener('click', function () {
+        var next = new URLSearchParams(location.search);
+        if (b.dataset.aud === 'everyone') next.delete('aud'); else next.set('aud', b.dataset.aud);
+        history.replaceState(null, '', location.pathname + (next.toString() ? '?' + next.toString() : ''));
+        q = next; renderIndex();
+      });
+    });
+  }
+
+  // ---- one note ----
+  function section(id, title, inner) { return '<section class="rn-sec" id="' + id + '"><h2>' + esc(title) + '</h2>' + inner + '</section>'; }
+  function items(list) {
+    return list.map(function (it) { return '<div class="rn-item"><h3>' + esc(it.title) + '</h3><div>' + tags(it.who) + '</div><p>' + esc(it.body) + '</p></div>'; }).join('');
+  }
+  function renderNote(n) {
+    document.querySelector('.hero').hidden = true; // the note's own title leads; the big banner is for the index
+    document.title = n.title + ' - Release Notes - Fixer Nation Education';
+    var s = n.sections || {}, parts = [], toc = [];
+    function add(id, title, inner) { parts.push(section(id, title, inner)); toc.push([id, title]); }
+    if (n.overview) add('overview', 'Overview', '<p>' + esc(n.overview) + '</p>');
+    if (s.new && s.new.length) add('new', "What's new", items(s.new));
+    if (s.changed && s.changed.length) add('changed', 'What changed', items(s.changed));
+    if (s.fixed && s.fixed.length) add('fixed', 'What we fixed', items(s.fixed));
+    if (s.know && s.know.length) add('know', 'Good to know', '<ul class="rn-know">' + s.know.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>');
+    if (n.where) add('where', 'Where to find it', '<p>' + esc(n.where) + '</p>');
+    var vids = (n.videos || []).map(function (id) { return HV && HV.videos.filter(function (v) { return v.id === id && HV.recorded(v); })[0]; }).filter(Boolean);
+    if (vids.length) add('watch', 'Watch', vids.map(function (v) { return '<button type="button" class="rn-btn watch" data-video="' + esc(v.id) + '">' + esc(v.title) + '</button>'; }).join(''));
+    add('help', 'Questions', '<p>Questions about this change? Search the Help center, or send us a request with Get help.</p><a class="rn-btn help" href="help.html">Help center</a><a class="rn-btn help" href="support.html">Get help</a>');
+
+    var others = RN.visible(preview).map(function (o) {
+      return '<li><a href="release-notes.html?note=' + encodeURIComponent(o.id) + keep() + '"' + (o.id === n.id ? ' aria-current="page"' : '') + '>' + esc(o.title) + '</a></li>';
+    }).join('');
+    root.innerHTML =
+      '<nav class="rn-crumbs" aria-label="Breadcrumb"><a href="release-notes.html' + (preview ? '?preview=1' : '') + '">Release notes</a> &rsaquo; ' + esc(n.title) + '</nav>' +
+      '<div class="rn-note-head"><h1>' + esc(n.title) + (n.published ? '' : '<span class="rn-draft">Draft</span>') + '</h1>' +
+      '<div class="meta">Released ' + esc(RN.formatDate(n.date)) + (n.releases ? ' &middot; ' + esc(n.releases) : '') + '</div><div>' + tags(n.audiences) + '</div>' +
+      '<p class="rn-lead">' + esc(n.summary) + '</p></div>' +
+      '<div class="rn-layout"><aside class="rn-side" aria-label="Release note navigation"><h4>On this page</h4><ul>' +
+      toc.map(function (t) { return '<li><a href="#' + t[0] + '">' + esc(t[1]) + '</a></li>'; }).join('') + '</ul>' +
+      '<h4>All release notes</h4><ul>' + others + '</ul></aside><div>' + parts.join('') +
+      '<a class="rn-back" href="release-notes.html' + (preview ? '?preview=1' : '') + '">&larr; All release notes</a></div></div>';
+    Array.prototype.forEach.call(root.querySelectorAll('[data-video]'), function (b) { b.addEventListener('click', function () { HV.open(b.dataset.video); }); });
+    window.scrollTo(0, 0);
+  }
+
+  var id = q.get('note');
+  var note = id ? RN.byId(id) : null;
+  if (id && (!note || (!note.published && !preview))) {
+    root.innerHTML = '<p class="rn-empty">We couldn\'t find that release note.</p><p style="text-align:center;"><a href="release-notes.html">See all release notes</a></p>';
+  } else if (note) {
+    renderNote(note);
+  } else {
+    renderIndex();
+  }
+})();
+</script>
+</body>
+</html>

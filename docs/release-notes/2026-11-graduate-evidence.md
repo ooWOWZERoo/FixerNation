@@ -1,6 +1,6 @@
 # Release notes: Graduate Evidence (Release 151)
 
-**Status: DRAFT. Do not send yet.** Releases 151 and 152 are live in production (checked 2026-11-07). A Word version of this file, with the same text, is `2026-11-graduate-evidence.docx` in this folder.
+**Status: DRAFT. Do not send yet.** The release note itself is now a public page on the site (`release-notes.html?note=graduate-evidence`, text in `release-notes.js`); these are the email drafts that point to it. Releases 151 and 152 are live in production (checked 2026-11-07). A Word version of this file, with the same text, is `2026-11-graduate-evidence.docx` in this folder.
 
 ## Before you send (internal)
 
@@ -44,6 +44,8 @@ It shows practice, not how well a student did, and student names stay on your us
 
 Here's a short video that walks through it: {videoLink}
 
+The full release note is on our website: https://fixernationeducation.com/release-notes.html?note=graduate-evidence
+
 ### Email to school and district administrators
 
 Hi {firstName},
@@ -53,6 +55,8 @@ School and district administrators now have a Graduate Evidence page in the port
 Your teachers don't have to do anything. The counts come from the lessons and games they already assign. You see counts and percentages only, never a student's or a teacher's name, and very small groups are combined so no one can be picked out.
 
 Here's a short video: {videoLink}
+
+The full release note is on our website: https://fixernationeducation.com/release-notes.html?note=graduate-evidence
 
 ### Release notes page (for a "What's new" page or a long-form post)
 
