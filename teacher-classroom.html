@@ -125,6 +125,7 @@ table.data-table tr:hover td{background:#fafaf9;}
     <button class="tab-btn active" onclick="switchTab('students', this)">Students</button>
     <button class="tab-btn" onclick="switchTab('assignments', this)">Assignments</button>
     <button class="tab-btn" onclick="switchTab('progress', this)">Progress</button>
+    <button class="tab-btn" onclick="switchTab('evidence', this); loadEvidence()">Graduate Evidence</button>
   </div>
 
   <!-- STUDENTS TAB -->
@@ -161,6 +162,16 @@ table.data-table tr:hover td{background:#fafaf9;}
   <!-- PROGRESS TAB -->
   <div class="tab-panel" id="tab-progress">
     <div id="progressList"></div>
+  </div>
+
+  <!-- GRADUATE EVIDENCE TAB -->
+  <div class="tab-panel" id="tab-evidence">
+    <div class="section-toolbar">
+      <h2>Graduate Evidence</h2>
+      <div class="field" style="margin:0;display:flex;align-items:center;gap:8px;"><label for="geYear" style="margin:0;">School year</label><select id="geYear" onchange="loadEvidence()" style="width:auto;"></select></div>
+    </div>
+    <p class="card-sub" style="margin-bottom:14px;">This shows which graduate attributes your students have practiced this school year. A student counts once they finish an activity that Fixer Nation connects to that attribute. It shows what students have practiced, not how well they did it.</p>
+    <div id="geBody" class="ge"></div>
   </div>
 </div>
 
@@ -323,6 +334,7 @@ table.data-table tr:hover td{background:#fafaf9;}
 <script src="site-auth.js?v=11"></script>
 <script src="school-branding.js?v=1"></script>
 <script src="school-years.js?v=1"></script>
+<script src="graduate-evidence-view.js?v=1"></script>
 <script>
 fnRequireSiteAuth();
 
@@ -913,6 +925,33 @@ async function saveClassroomEdit() {
 }
 
 load();
+// ---- Graduate Evidence tab (docs/reference/pog-evidence-requirements.md) ----
+var geLoaded = false;
+async function loadEvidence() {
+  var body = document.getElementById('geBody');
+  FnGraduateEvidence.injectStyles();
+  var sel = document.getElementById('geYear');
+  var qs = sel.value ? '?year=' + encodeURIComponent(sel.value) : '';
+  var r = await fetch('/api/graduate-evidence/classroom/' + classroomId + qs, { credentials: 'include' });
+  var data = await r.json().catch(function () { return {}; });
+  if (!r.ok) { body.innerHTML = '<p class="card-sub">' + esc(r.status === 403 ? (data.error || 'An active license is required to see Graduate Evidence.') : "We couldn't load Graduate Evidence. Please try again.") + '</p>'; return; }
+  if (!geLoaded) { sel.innerHTML = FnGraduateEvidence.yearOptions(data.years, data.schoolYearStart); geLoaded = true; }
+  body.innerHTML = FnGraduateEvidence.renderReport(data, { suggestions: true });
+}
+document.addEventListener('click', async function (e) {
+  var btn = e.target.closest && e.target.closest('.ge-btn');
+  if (!btn || !btn.dataset.geType) return;
+  btn.disabled = true;
+  var isGame = btn.dataset.geType === 'game';
+  var r = await fetch('/api/classrooms/' + classroomId + (isGame ? '/game-assignments' : '/assignments'), {
+    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(isGame ? { gameId: Number(btn.dataset.geId) } : { curriculumId: Number(btn.dataset.geId) }),
+  });
+  if (!r.ok) { btn.disabled = false; toast(((await r.json().catch(function () { return {}; })).error) || 'Error'); return; }
+  toast('Assigned to your class');
+  await load();
+  await loadEvidence();
+});
 </script>
 <script src="help-videos.js?v=18" defer></script>
 </body>

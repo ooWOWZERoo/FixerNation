@@ -423,6 +423,10 @@
       `Each lesson has a take-home discussion guide with conversation starters tied to what your child learned, and the parent portal has lesson summaries and activity ideas.`),
     D('who-reads-student-writing', 'teacher,school,district,parent', 'Privacy', 'other', '', `Who can read what students write?`,
       `A student's reflections and quiz answers are read by their own teacher. A linked parent sees whether each lesson is done, not the answers or the writing, and administrators see activity totals only. Student writing is also checked automatically for safety. If something serious turns up, an alert email goes to the people the school chose, naming the type of concern without what the student wrote.`),
+    D('graduate-evidence-what', 'teacher,school,district', 'Privacy', 'other', '', `What is Graduate Evidence?`,
+      `Graduate Evidence shows which graduate attributes your students have practiced this school year, using New York's Social Emotional Learning Benchmarks and Portrait of a Graduate. A student counts once they finish a lesson or game that Fixer Nation connects to an attribute. It shows practice, not how well they did. Teachers find it on the Graduate Evidence tab of a classroom, with activities to assign next, and school and district administrators have their own Graduate Evidence page.`),
+    D('graduate-evidence-privacy', 'teacher,school,district', 'Privacy', 'other', '', `Can administrators see which students have practiced what?`,
+      `No. School and district administrators see counts and percentages, never a student's name or a teacher's. Very small groups are combined with others so no one can be picked out. Teachers see counts for their own classroom, and student names stay on the usual progress pages.`),
     E('parent-privacy', 'parent', 'Privacy', 'other', '', `How is my child's information protected?`,
       `Students sign in with a username and PIN, with no email address. Only the student, their teacher and authorized Fixer Nation staff can see their information. Read the Student Data Privacy page for the full details.`),
 

@@ -51,6 +51,7 @@ const adminAccountLookupRoutes = require('./routes/admin-account-lookup');
 const affiliateRoutes = require('./routes/affiliates');
 const affiliatePortalRoutes = require('./routes/affiliate-portal');
 const standardsRoutes = require('./routes/standards');
+const pogEvidenceRoutes = require('./routes/pog-evidence');
 const adminStandardsRoutes = require('./routes/admin-standards');
 const districtAdminStandardsRoutes = require('./routes/district-admin-standards');
 
@@ -147,6 +148,7 @@ app.use('/api/admin/account-lookup', adminAccountLookupRoutes);
 app.use('/api/affiliates', affiliateRoutes);
 app.use('/api/affiliate-portal', affiliatePortalRoutes);
 app.use('/api/standards', standardsRoutes);
+app.use('/api/graduate-evidence', pogEvidenceRoutes);
 app.use('/api/admin/standards', adminStandardsRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.

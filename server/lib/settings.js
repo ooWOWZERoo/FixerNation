@@ -33,6 +33,8 @@ const DEFAULTS = {
   // How many times a teacher may take a lesson out of My Lesson Plans (removing it, or swapping it for another). Each removal
   // uses one. 0 turns removal off. One value for trial and paid teachers alike. See routes/teacher-lesson-plans.js.
   teacher_lesson_plan_swap_limit: '3',
+  // Graduate Evidence: the smallest group of students any school or district view will show a figure for (never below 5). See routes/pog-evidence.js.
+  pog_evidence_min_group: '10',
   // How large campaign sends get throttled — see processCampaignBatch() in
   // server/routes/campaigns.js. Sending the entire audience in one
   // uninterrupted burst risks getting flagged as spam/abuse by receiving

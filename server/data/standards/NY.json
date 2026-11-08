@@ -480,6 +480,1446 @@
       "target": {
         "type": "program"
       }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (tagged self-management). FNE's catalog description: \"Listen to what happened, then pick what helps you feel calm.\" Each round names a feeling in a short scene (mad, grumpy, upset) and the child picks what helps them feel calm, such as slow breaths or counting. That ties a named feeling to a calming action, which is the skill the benchmark describes. Limit: the feeling is named for the child, so it practises choosing a response more than identifying the emotion.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Calm Down Corner\" (tagged self-management). FNE's catalog description: \"Listen to what happened, then pick what helps you feel calm.\" Choosing a way to settle a big feeling is a small responsible decision that protects the child's own well-being. Limit: no reflection on strengths, goals or growth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "calm-down-corner"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Children hear what happened to someone (a classmate who lost a toy, a new kid standing alone, a grandma with a heavy bag) and pick the kind action, a small act for the well-being of the people around them. Limit: one-to-one kindness in a scene, not action on a school or community problem.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness and relationship skills). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" Choosing kind actions toward classmates and neighbors practises acting responsibly in a local community. Limit: everyday kindness only; no civic, global or digital content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the right thing to do.\" Children hear a short situation about honesty and follow-through (a found dollar, spilled paint, a promise to feed the fish, a friend asking them to say something untrue) and pick the right thing to do. Choosing to be honest and responsible in the classroom is acting responsibly and ethically in a local community. Limit: classroom-sized situations; no civic, global or digital content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the right thing to do.\" Several rounds are about owning a mistake (spilled paint, a broken pencil) or keeping a promise instead of hiding or blaming. Limit: it does not involve setting goals or learning from the mistake over time.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the right thing to do.\" The explanations point out the effect on other people (a lost dollar, a friend asked to say something false), so the child considers others when deciding. Limit: honesty and fairness, not safety.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the right thing to do.\" Each round is a one-step choice with a short explanation of what it leads to. Limit: one right answer per round; no weighing of several options.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (tagged self-awareness and social awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Each story is about another child. The player notices which cues are really there (what happened, posture, words) and picks every feeling that could fit, so more than one reaction can be right. That is recognising that other people feel and react in their own ways, which is the core of the benchmark.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (tagged self-awareness and social awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" After each story the game privately asks the child whether something like it has happened to them, where they would feel it in their body, and what helps. Nothing is saved or scored. Limit: a short check-in; it does not ask about strengths, goals or growth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Same and Different\" (tagged social awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" Children listen to a short story about two kids and tap what is the same, what is different, or the kind thing to do. The scenes include a home language, a wheelchair and different families, and the closing line says that both ways are okay, so the child practises noticing and accepting similarities and differences. Limit: noticing and accepting at K-2 level; no respectful conversation about harder topics.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Same and Different\" (tagged social awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" In the kind-choice rounds the child picks a response that fits what the other child needs. Limit: one round type in three.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Same and Different\" (tagged social awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" Learning early that friends can be different and still be treated kindly is a first step toward belonging to a diverse community. Limit: noticing and kindness only; no civic or global content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Asking Nicely\" (tagged relationship skills). FNE's catalog description: \"Listen to what happens, then pick the kind words to say.\" Children listen to an everyday moment and pick the kind words to say: asking for a turn, saying thank you, saying sorry, hearing no and staying friendly. That is using communication and social skills with care for the other person. Limit: everyday manners with classmates; it does not involve talking across differences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "asking-nicely"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Asking Nicely\" (tagged relationship skills). FNE's catalog description: \"Listen to what happens, then pick the kind words to say.\" Many rounds are small wants that could turn into an argument (a toy a friend has, a turn on the swing, hearing no), and a few follow a small harm (bumping a friend, spilling juice). The kind words prevent or repair the problem. Limit: one-line responses.",
+      "target": {
+        "type": "brain_game",
+        "slug": "asking-nicely"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Asking Nicely\" (tagged relationship skills). FNE's catalog description: \"Listen to what happens, then pick the kind words to say.\" The child chooses the words to use, which practises saying what you want or feel so that others can hear it. Limit: choosing from spoken options; the child does not produce speech or writing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "asking-nicely"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Team Tower\" (tagged relationship skills). FNE's catalog description: \"Listen to a team problem, then pick what helps the team.\" Children hear a team problem (both want the next block, a friend is tired, a friend has a different idea) and pick what helps, such as taking turns, helping or listening. That is using social skills with a partner or a small group. Limit: simple teamwork in K-2 scenes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-tower"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Tower\" (tagged relationship skills). FNE's catalog description: \"Listen to a team problem, then pick what helps the team.\" Rounds such as \"you both want the next block\" are small disagreements, and the right pick (take turns) shows a way to prevent a fight. Limit: one-step choices.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-tower"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Tower\" (tagged relationship skills). FNE's catalog description: \"Listen to a team problem, then pick what helps the team.\" Picks like helping a tired friend clean up or lifting a box together are small acts for the good of the team. Limit: the team is two or three children, not a school or community.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-tower"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Wait for It\" (tagged self-management). FNE's catalog description: \"Listen to a waiting problem, then pick what helps you wait.\" Each round puts a child in a moment of wanting something now or feeling mad (dinner in ten minutes, a turn on the slide, losing a game) and the child picks what helps them wait, such as a deep breath or counting to ten. That links a feeling or urge to a calming action. Limit: the main skill is impulse control, and most rounds name a want rather than an emotion, so it is a partial match.",
+      "target": {
+        "type": "brain_game",
+        "slug": "wait-for-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Wait for It\" (tagged self-management). FNE's catalog description: \"Listen to a waiting problem, then pick what helps you wait.\" Choosing to wait and say okay instead of grabbing or shouting is a small decision that shapes how the moment goes. Limit: one-step choices; no weighing of options.",
+      "target": {
+        "type": "brain_game",
+        "slug": "wait-for-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Stop and Think\" (tagged responsible decision-making). FNE's catalog description: \"Listen to a problem, stop and think, then pick the safe choice.\" Rounds present a safety moment (a ball rolling into the street, a stranger offering candy, a pill on the floor, a hot stove, a friend climbing a high fence) and the child pauses and picks the safe choice, usually involving a grown-up. That is weighing safety when making a decision, which the benchmark names. Limit: simple K-2 safety rules; it does not weigh social context.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stop-and-think"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Stop and Think\" (tagged responsible decision-making). FNE's catalog description: \"Listen to a problem, stop and think, then pick the safe choice.\" The child stops, thinks and then chooses, so it practises the pause before a decision. Limit: one right answer per round; no weighing of several options and no reflection afterward.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stop-and-think"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"My Feelings Today\" (tagged self-awareness). FNE's catalog description: \"Say how you feel, where you feel it and what helps. Only you see it.\" A private check-in. The child picks how they feel (up to two feelings), where they feel it in their body and what helps, then sees a card built from their own picks. That is naming one's own emotion and connecting it to what helps, which is the skill the benchmark describes. Nothing is saved or scored.",
+      "target": {
+        "type": "brain_game",
+        "slug": "my-feelings-today"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"My Feelings Today\" (tagged self-awareness). FNE's catalog description: \"Say how you feel, where you feel it and what helps. Only you see it.\" The check-in asks the child to stop and think about their own feelings and what helps them. Limit: about a minute long; it does not ask about strengths, goals or growth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "my-feelings-today"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Team Pick\" (tagged self-management and relationship skills). FNE's catalog description: \"Work through being picked last for a team: what you feel, what could happen and what to do.\" The player works through being picked last for a team in five steps (see what is happening, what it feels like, what could happen, what to do, a private reflection on what helps them calm down). That ties a feeling to a choice of action, which is what the benchmark describes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-pick"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Pick\" (tagged self-management and relationship skills). FNE's catalog description: \"Work through being picked last for a team: what you feel, what could happen and what to do.\" The best moves include telling friends calmly how it felt, without blame. Limit: one step in a five-step story.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-pick"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Pick\" (tagged self-management and relationship skills). FNE's catalog description: \"Work through being picked last for a team: what you feel, what could happen and what to do.\" Talking to the friends who picked is a way to handle a hurt before it becomes a conflict. Limit: the story is about a hurt feeling, not a two-sided disagreement.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-pick"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Pick\" (tagged self-management and relationship skills). FNE's catalog description: \"Work through being picked last for a team: what you feel, what could happen and what to do.\" The closing private reflection asks what helps the player settle, and the story ends in a choice that protects both their feelings and their friendships. Limit: one reflection question; it does not ask about strengths or goals.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-pick"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" After stories about other children, the child picks strengths that sound like them and says where they have used them, which is reflecting on who they are. Limit: personal strengths only; no cultural or group identity.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" The child notices what a character does, picks strengths that sound like them, says where they use them and picks one small way to grow a strength. That is reflecting on strengths and growth areas. Limit: a private check-in with nothing saved or scored.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" The last step offers one small way to grow the strength they picked (for example, breaking a big job into three small steps), a small step toward a personal goal. Limit: one step, no follow-up.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peace Table\" (tagged relationship skills and social awareness). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Each story is two children who both want the same thing. The player says what happened and how they feel, listens to the other side and finds a fair plan together. That is managing and resolving a conflict respectfully.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peace Table\" (tagged relationship skills and social awareness). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" The first step is saying what happened and how you feel before acting. Limit: one step of five.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peace Table\" (tagged relationship skills and social awareness). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" A step asks what the player notices about the other child's side, so they practise seeing that the other child also has a reason and a feeling. Limit: one step; empathy is not the main skill.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peace Table\" (tagged relationship skills and social awareness). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Choices include how to say what you need calmly instead of attacking (\"always\" statements). Limit: used to settle a disagreement, not to communicate across differences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peace Table\" (tagged relationship skills and social awareness). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Saying what happened and how you feel, and listening to the other child, are the speaking and listening parts of communication. Limit: choosing among options; no free writing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" The player works through a team-project problem in five steps (recognize, understand the impact, consider options, choose, reflect), with feedback on every choice. Weighing options and choosing is the decision-making cycle the benchmark describes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" One step asks who the problem affects, and the best answers consider why a teammate may be stuck before judging her. Limit: one step of five.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" The careful moves involve talking with the teammate about a problem that could turn into a conflict. Limit: a missed deadline, not a direct disagreement.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" The story rewards finding out what is really happening before judging a teammate. Limit: facts in a team situation, not evaluating sources.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" The careful moves involve asking the teammate and saying what you noticed, and one option is telling a trusted adult, so the player practises putting a concern into words. Limit: choosing among options; no free writing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" The player takes a real school problem (for example a slow lunch line), observes it, asks the people it affects, chooses an idea and tries a small fix. That is taking action for the well-being of the school community.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CI",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" The idea step offers three workable ideas, each with a strength and a cost, and the player chooses one and tries it. Finding the real problem and weighing different ideas is creative problem solving. Limit: choosing among written ideas; the player does not invent their own.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" The player asks the people the problem affects (other kids, lunch staff) what they notice. Limit: listening for facts about a problem, not understanding someone's feelings in depth.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" The five-step cycle (listen, name the real problem, pick an idea, choose how to act, reflect) is a decision-making process. Limit: the focus is designing a fix, not a personal choice.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" The player watches and times the problem before deciding what is wrong, so they use evidence before jumping to a fix.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" Working to improve a shared school space is a small act as a member of a local community. Limit: school-level only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Reading Detective\" (a literacy-domain game). FNE's catalog description: \"Read the clues in a short mystery, pick your answer, then prove it with the text.\" The player reads a short mystery, picks an answer and then taps the sentence in the text that proves it. Backing an answer with evidence from the text is the evidence-weighing part of critical thinking. Limit: short passages at an easy reading level; no source or bias analysis.",
+      "target": {
+        "type": "brain_game",
+        "slug": "reading-detective"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Walk in My Shoes\" (tagged social awareness). FNE's catalog description: \"Read about someone, work out how they feel, then find the sentence that shows it.\" The child reads about someone (a new student alone at lunch, a child whose clay dragon broke), works out how they feel and what they need, then taps the sentence that shows it. Reading another person's feelings from what they do and say is the empathy skill the benchmark describes. Limit: reading-based scenes at grades 3 to 5.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-my-shoes"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Many Ways to Be\" (tagged social awareness). FNE's catalog description: \"Read about people who are different, then pick the respectful answer and the proof.\" The child reads about people who are different (a different lunch, a language at home, a wheelchair at recess) and picks the respectful answer, then the sentence that shows why. That is recognizing differences and responding to them respectfully. Limit: classroom-sized situations; no harder conversations about identity.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-ways-to-be"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Ways to Be\" (tagged social awareness). FNE's catalog description: \"Read about people who are different, then pick the respectful answer and the proof.\" The respectful answers depend on understanding why a difference matters to the other child. Limit: the focus is on respectful responses more than on empathy for a feeling.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-ways-to-be"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Ways to Be\" (tagged social awareness). FNE's catalog description: \"Read about people who are different, then pick the respectful answer and the proof.\" Respecting different languages, foods and abilities in a shared school is part of belonging to a diverse community. Limit: classroom situations; no civic or global content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-ways-to-be"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"What Helps Me\" (tagged self-awareness). FNE's catalog description: \"Pick what helps you learn and focus, then try one idea. Only you see it.\" A private check-in. The child picks what helps them learn, when focusing is hardest and one idea to try this week, then sees a card of their own picks. That is reflecting on one's own strengths and growth areas and choosing a small goal. Limit: about a minute long; nothing saved or scored.",
+      "target": {
+        "type": "brain_game",
+        "slug": "what-helps-me"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"What Helps Me\" (tagged self-awareness). FNE's catalog description: \"Pick what helps you learn and focus, then try one idea. Only you see it.\" The last question picks one thing to try this week, which is a small goal. Limit: there is no follow-up on whether it worked.",
+      "target": {
+        "type": "brain_game",
+        "slug": "what-helps-me"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"What Helps Me\" (tagged self-awareness). FNE's catalog description: \"Pick what helps you learn and focus, then try one idea. Only you see it.\" Knowing how you learn best is part of knowing yourself, and the options include outside supports such as a quiet spot, a friend or a list of steps. Limit: about learning habits, not identity or background.",
+      "target": {
+        "type": "brain_game",
+        "slug": "what-helps-me"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Stuck on It\" (tagged self-management). FNE's catalog description: \"Read about someone who is stuck, then pick what helps and find the proof.\" The child reads about someone who is stuck (a hard math problem, learning to ride a bike, a report not yet started), picks what helps (rest, try again with a small goal, write one small part today) and finds the sentence that proves it. That is working toward a goal and recovering from a setback. Limit: reading-based scenes; the child does not set their own goal.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stuck-on-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Stuck on It\" (tagged self-management). FNE's catalog description: \"Read about someone who is stuck, then pick what helps and find the proof.\" Several items start with noticing a feeling such as frustration or worry and calming it before trying again. Limit: the character's feelings, not the player's own.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stuck-on-it"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Stuck on It\" (tagged self-management). FNE's catalog description: \"Read about someone who is stuck, then pick what helps and find the proof.\" The best answers set a small goal and keep going after a setback. Limit: about someone else; there is no reflection on the player's own strengths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stuck-on-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Team Mission\" (tagged relationship skills). FNE's catalog description: \"Read a group work problem, pick the best team move, then find the sentence that shows why.\" The player reads a group work problem (two classmates arguing over who goes first, a quiet teammate with an idea, a partner who will not share the computer), picks the best team move and finds the sentence that shows why. Splitting jobs, inviting a quiet teammate in and asking for turns are communication and social skills used in a group. Limit: group work at grades 3 to 5; not across cultural differences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-mission"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Mission\" (tagged relationship skills). FNE's catalog description: \"Read a group work problem, pick the best team move, then find the sentence that shows why.\" Several items start with an argument or a hurt feeling in the group, and the best move settles it. Limit: small group-work conflicts.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-mission"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Team Mission\" (tagged relationship skills). FNE's catalog description: \"Read a group work problem, pick the best team move, then find the sentence that shows why.\" Best moves include asking a quiet teammate what they think and proposing a fair switch, which are speaking and listening skills. Limit: choosing among options; no free writing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-mission"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Know Your Triggers\" (tagged self-awareness and self-management). FNE's catalog description: \"Name what raises your stress and how you notice it first. Only you see it.\" A private check-in. The student picks up to three things that make stress rise, what they notice first (such as a tight chest, racing thoughts or snapping at people), and what could help them notice it sooner. That is identifying one's own emotions and how they show up in what one does. Nothing is saved or scored.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-your-triggers"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Know Your Triggers\" (tagged self-awareness and self-management). FNE's catalog description: \"Name what raises your stress and how you notice it first. Only you see it.\" The last question picks a way to catch stress earlier, a small step toward looking after one's own well-being. Limit: it is a short reflection and not a screening; it does not ask about goals or strengths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-your-triggers"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" In the story a classmate, Sam, has quietly been left out of the project group chat, and the player decides what to do about it. Acting so that a classmate is included is acting for the well-being of the school community. Limit: one story with one classmate.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" The situation takes place in a class group chat, and the best moves treat the classmate fairly and bring him back in. That is acting responsibly and ethically in a school and digital community. Limit: school-level; no civic or global content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Decision Point\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A classmate is being left out. Decide what you notice and what to do.\" The player picks how to approach Sam and the group, which uses communication and social skills with care for the other person. Limit: one step of five.",
+      "target": {
+        "type": "brain_game",
+        "slug": "decision-point"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Group Chat Meltdown\" (tagged self-management and responsible decision-making). FNE's catalog description: \"The chat turned on you. Decide how to answer before you type.\" A friend posts a video of you tripping and the chat laughs. The player picks ways to handle how they feel before answering and ends with one strategy that helps them pause. That ties a strong emotion to a planned action, which is the skill the benchmark describes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "group-chat-meltdown"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Group Chat Meltdown\" (tagged self-management and responsible decision-making). FNE's catalog description: \"The chat turned on you. Decide how to answer before you type.\" The player decides how to respond to the friend who posted it, including telling an adult if it keeps happening. That is managing a conflict and disagreeing respectfully.",
+      "target": {
+        "type": "brain_game",
+        "slug": "group-chat-meltdown"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Group Chat Meltdown\" (tagged self-management and responsible decision-making). FNE's catalog description: \"The chat turned on you. Decide how to answer before you type.\" The situation is a group chat, and the best moves pause before posting, respond to one friend and report it if it keeps happening. That is acting responsibly in a digital community. Limit: one story about a chat among friends.",
+      "target": {
+        "type": "brain_game",
+        "slug": "group-chat-meltdown"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Group Chat Meltdown\" (tagged self-management and responsible decision-making). FNE's catalog description: \"The chat turned on you. Decide how to answer before you type.\" The best answers weigh the player's own well-being, how the friends may react and when to bring in an adult. Limit: emotional and social safety; no physical safety.",
+      "target": {
+        "type": "brain_game",
+        "slug": "group-chat-meltdown"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Group Chat Meltdown\" (tagged self-management and responsible decision-making). FNE's catalog description: \"The chat turned on you. Decide how to answer before you type.\" The ending asks for one strategy that helps the player pause before reacting online, a short private reflection on a growth area. Limit: one question.",
+      "target": {
+        "type": "brain_game",
+        "slug": "group-chat-meltdown"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (tagged relationship skills and social awareness). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" The player reads a situation (for example cancelling plans with a friend who minds when no new plan is offered), picks the message that person would hear best and finds the sentence that shows what they need. That is communicating with empathy for the particular person in the interaction. Limit: written messages in everyday situations.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (tagged relationship skills and social awareness). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Choosing the clearest, kindest wording for a message and explaining why it works is expressing ideas clearly in writing. Limit: the player chooses among written drafts and does not write their own.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (tagged relationship skills and social awareness). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" Many items involve a hurt or a disagreement, and the right message avoids blame while still saying what is needed.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Speak Up Kindly\" (tagged relationship skills). FNE's catalog description: \"Read a situation, pick the message that is clear and kind, then find what is needed.\" The student reads a situation (a teammate who has stopped answering, a friend keeping borrowed notes, a joke that bothers a teammate), picks the message that is clear and kind and finds what the person needs. That is using communication skills with empathy in the interaction. Limit: choosing among written messages.",
+      "target": {
+        "type": "brain_game",
+        "slug": "speak-up-kindly"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Speak Up Kindly\" (tagged relationship skills). FNE's catalog description: \"Read a situation, pick the message that is clear and kind, then find what is needed.\" Picking wording that states a need clearly without blame is expressing ideas clearly. Limit: the student chooses among written messages and does not write their own.",
+      "target": {
+        "type": "brain_game",
+        "slug": "speak-up-kindly"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Speak Up Kindly\" (tagged relationship skills). FNE's catalog description: \"Read a situation, pick the message that is clear and kind, then find what is needed.\" Many situations are small conflicts, and the right message asks for what is needed without starting a fight.",
+      "target": {
+        "type": "brain_game",
+        "slug": "speak-up-kindly"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Other Side of the Screen\" (tagged social awareness). FNE's catalog description: \"Read an online moment, work out how the other person feels, then find the proof.\" The student reads an online moment (harsh comments on a video, silence in a group chat, a one-word reply read the wrong way), works out how the other person feels and finds the sentence that shows it. Seeing how someone else is affected online is the empathy skill the benchmark describes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "other-side-of-the-screen"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Other Side of the Screen\" (tagged social awareness). FNE's catalog description: \"Read an online moment, work out how the other person feels, then find the proof.\" Several items show a message being read differently than it was meant, which supports communicating with care. Limit: reading and judging, not writing messages.",
+      "target": {
+        "type": "brain_game",
+        "slug": "other-side-of-the-screen"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Other Side of the Screen\" (tagged social awareness). FNE's catalog description: \"Read an online moment, work out how the other person feels, then find the proof.\" Every moment is online, so it supports acting responsibly in a digital community. Limit: understanding how others feel, not choosing what to post.",
+      "target": {
+        "type": "brain_game",
+        "slug": "other-side-of-the-screen"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Walk in Their Shoes\" (tagged social awareness). FNE's catalog description: \"Read both sides of a disagreement, then work out why each person sees it that way.\" The student reads both sides of a disagreement (extra homework before a long weekend, a curfew, cancelled plans) and works out why each person sees it that way. Seeing that people feel and react differently because of their own situations is the skill the benchmark describes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-their-shoes"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Walk in Their Shoes\" (tagged social awareness). FNE's catalog description: \"Read both sides of a disagreement, then work out why each person sees it that way.\" Understanding both reasons is a step toward resolving a disagreement. Limit: the game stops before any plan, so it does not practise resolving it.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-their-shoes"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Walk in Their Shoes\" (tagged social awareness). FNE's catalog description: \"Read both sides of a disagreement, then work out why each person sees it that way.\" The student must back each person's reasoning with a sentence from the text. Limit: short passages; no source or bias analysis.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-their-shoes"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peer Pressure Pause\" (tagged responsible decision-making). FNE's catalog description: \"Read a pressure situation, pick the best choice, then find the risk that proves it.\" The student reads a pressure situation (skipping class, mocking a classmate's photo in a chat, a drink at a party), picks the best choice and finds the sentence naming the risk. That is weighing safety and social context in a decision.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peer-pressure-pause"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peer Pressure Pause\" (tagged responsible decision-making). FNE's catalog description: \"Read a pressure situation, pick the best choice, then find the risk that proves it.\" The best choices say no or offer an alternative while keeping the friendship, which practises making a decision that shapes the outcome under pressure. Limit: choosing among written options.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peer-pressure-pause"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peer Pressure Pause\" (tagged responsible decision-making). FNE's catalog description: \"Read a pressure situation, pick the best choice, then find the risk that proves it.\" The best choices protect the student's own well-being and relationships. Limit: it does not ask for reflection on strengths or goals.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peer-pressure-pause"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Values Compass\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" Students notice what a character does and name the values behind it, then rank the values that matter most to them and say where they act on them. Reflecting on what one values is part of personal identity. Limit: personal values only; no cultural or group identity beyond what a story shows.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Values Compass\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" Students rank their own values, face a tradeoff between two of them and see where they lean. That is reflecting on what matters and how one acts. Limit: private; nothing saved or scored; no goal setting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Values Compass\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" The last question asks where they acted on their top value this week, a light check of whether actions match what they care about. Limit: no goal setting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Values Compass\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" Each story first asks the student to notice what really happens, with one cue that is not in the story, before naming a value. Limit: noticing details, not weighing sources.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Money Moves\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Save toward a goal and keep some spending money. More than one path works.\" The player saves toward a bike fund across a run of events while keeping some spending money. Planning and adjusting choices to reach a goal is setting and working toward goals.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-moves"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Money Moves\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Save toward a goal and keep some spending money. More than one path works.\" Setting a savings goal and changing choices to reach it is the goal-setting part of the attribute. Limit: a money context only; no reflection on strengths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-moves"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Moves\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Save toward a goal and keep some spending money. More than one path works.\" Each event is a save-or-spend choice with a tradeoff, such as a discount, sales tax or a loan with 10 percent extra. Limit: money decisions only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-moves"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Moves\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Save toward a goal and keep some spending money. More than one path works.\" Events use real percent and money arithmetic (discounts, sales tax, a savings match), which supports math in the NYS standards. Limit: practical money math, not a full standards match.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-moves"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Deadline Crunch\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Read a deadline problem, pick the plan that holds up, then find the proof.\" The student reads a deadline problem (a paper and a quiz in the same week, saving for a car, three tests and a job), picks the plan that holds up and finds the sentence that proves it. Planning to reach a goal among competing demands, and learning from what went wrong last time, is working toward goals. Limit: choosing among written plans.",
+      "target": {
+        "type": "brain_game",
+        "slug": "deadline-crunch"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Deadline Crunch\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Read a deadline problem, pick the plan that holds up, then find the proof.\" Each item asks the student to weigh options (study all night, skip the job, set aside a fixed amount) before choosing. Limit: planning and time-management choices.",
+      "target": {
+        "type": "brain_game",
+        "slug": "deadline-crunch"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Deadline Crunch\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Read a deadline problem, pick the plan that holds up, then find the proof.\" The best plans set goals and protect well-being (for example, protecting sleep). Limit: no reflection on strengths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "deadline-crunch"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Know Yourself\" (tagged self-awareness). FNE's catalog description: \"Rank what matters to you, face a tradeoff and see where you lean. Only you see it.\" A private check-in. The student ranks their top three priorities, faces a tradeoff between two of them (such as sleep or study, family or friends) and sees where they lean, then sees a card of their own picks. Knowing what matters to you is part of personal identity. Limit: personal priorities only; no cultural or group identity. Nothing is saved or scored.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-yourself"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Know Yourself\" (tagged self-awareness). FNE's catalog description: \"Rank what matters to you, face a tradeoff and see where you lean. Only you see it.\" Ranking priorities, weighing a tradeoff and checking whether the past week matched them is reflecting on what matters and how one acts. Limit: a short private check-in; no goal setting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-yourself"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Know Yourself\" (tagged self-awareness). FNE's catalog description: \"Rank what matters to you, face a tradeoff and see where you lean. Only you see it.\" The last question asks whether the week matched the student's top priority, a light check of actions against goals. Limit: no follow-up plan.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-yourself"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Stress Signals\" (tagged self-awareness and self-management). FNE's catalog description: \"Find the signs that stress is building for you and one way to check in sooner. Only you see it.\" A private check-in. The student picks which signs show up when stress builds (in the body, in thoughts, in what they do), which kind they miss most easily and what could help them check in earlier. That is identifying one's own emotions and how they show up in what one does. Nothing is saved or scored.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stress-signals"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Stress Signals\" (tagged self-awareness and self-management). FNE's catalog description: \"Find the signs that stress is building for you and one way to check in sooner. Only you see it.\" The last question picks a way to check in with oneself earlier, a small step toward looking after one's well-being. Limit: a short reflection and not a screening; no goals or strengths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stress-signals"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" The student reads a real situation (a panel with little variety, a power gap between a worker and a manager, a classmate pressured about her faith), spots whose voice is missing and finds the sentence that shows it. Recognizing differences in who is heard, and responding respectfully, is the benchmark's focus. Limit: it asks students to notice and judge, not to hold the difficult conversation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" Students must see why a situation feels different to the person with less power or less representation. Limit: noticing patterns more than one person's feelings.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" Some items ask what a respectful bystander would do (speak up and support), a step toward standing against bias. Limit: most items stop at noticing.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" Asking whose voice is missing is part of belonging to a diverse, democratic community. Limit: it does not involve taking civic action.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" Students must find the sentence that shows the missing voice, which means checking claims against the text. Limit: short situations.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Repair It\" (tagged relationship skills). FNE's catalog description: \"Read what went wrong, then pick the message that owns it and repairs trust.\" The student reads what went wrong (a snapped-at coworker, a missed birthday dinner, harsh feedback in front of a group) and picks the message that owns it and repairs trust. Repairing a relationship after harm is managing and resolving a conflict. Limit: choosing among written messages.",
+      "target": {
+        "type": "brain_game",
+        "slug": "repair-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Repair It\" (tagged relationship skills). FNE's catalog description: \"Read what went wrong, then pick the message that owns it and repairs trust.\" The right messages own the mistake, which is the owning-mistakes side of the benchmark. Limit: no goal setting or longer follow-up.",
+      "target": {
+        "type": "brain_game",
+        "slug": "repair-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Repair It\" (tagged relationship skills). FNE's catalog description: \"Read what went wrong, then pick the message that owns it and repairs trust.\" Good repair messages are clear, specific and respectful of the other person's feelings. Limit: one message, not an ongoing conversation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "repair-it"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"First Shift\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" The student works through a first-job problem in five steps (for example a coworker who asks them to cover for broken equipment), with feedback on every choice and a private reflection. Weighing options and choosing is the decision-making cycle the benchmark describes.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"First Shift\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" The four stories ask what you owe the team and the truth: covering for a coworker, a shift promised twice, a rude customer, pay in cash with no paperwork. That is acting responsibly and ethically in a work community. Limit: part-time job situations; no civic or global content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"First Shift\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" The student weighs the effect on the coworker, the manager and the team, and when to ask an adult. Limit: social and ethical context; no physical safety.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"First Shift\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" One story is about a shift promised to two people, so keeping a commitment and owning a mistake come up. Limit: one story of four.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"First Shift\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" The rude-customer story calls for speaking up respectfully for a new coworker. Limit: one story of four.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"The Post\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" The student decides what to do about a harmful post (a rumor about a teacher, a giveaway that asks for a login, a tagged photo) by weighing the harm to the people involved and to themselves. That is weighing well-being and social context in a decision. Limit: emotional, social and privacy harm; no physical safety.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"The Post\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" Each story runs the five-step cycle (recognize, understand the impact, consider options, choose, reflect), with feedback on every choice.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" A step asks what could happen to the people involved if the post spreads or is shared. Limit: one step of five, and some stories are about the player's own privacy.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" The best moves are often private (not sharing, telling an adult) rather than a visible act for the community. Limit: it does not ask the student to take public action.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"The Post\" (tagged social awareness, relationship skills and responsible decision-making). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" The stories ask the student to question whether a post or offer is true or safe instead of trusting that many people are commenting. Limit: school-sized situations, not formal source evaluation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" The student picks a problem at school they could change (for example a later activity bus), listens to who is affected and works out an ask that people can say yes to. That is acting for the well-being of the school community.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Hearing from a wide group, checking facts and making a respectful ask of the people who decide is civic participation. Limit: school-level; no government or global content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Making a clear, respectful ask is expressing ideas clearly to an audience. Limit: the student chooses among options and does not write their own.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" Choices include how to approach people who see the problem differently. Limit: one story step.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" The five-step cycle (recognize, check the facts, consider options, choose, reflect) is a decision-making process. Limit: a civic project context.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged responsible decision-making and relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" The stories reward checking facts and asking a wide group before making a claim. Limit: no source evaluation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CI",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (tagged responsible decision-making). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" The student finds the real need behind a school problem (for example why students do not ask for help with schoolwork), sees what already exists and picks one of three workable ideas, each with a strength and a cost, then tests it before launching. Looking for the real problem and weighing different ideas is creative problem solving. Limit: choosing among written ideas; the student does not invent their own.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (tagged responsible decision-making). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" The projects are for the school community (peer tutoring, getting announcements to everyone, a garden fundraiser), but the game is about designing and testing an idea rather than acting on one. Limit: it stops at a test.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (tagged responsible decision-making). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" The five-step cycle is a decision-making process applied to a design problem. Limit: the focus is design, not a personal choice.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (tagged responsible decision-making). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" The student checks what exists and asks who is affected before building. Limit: no source evaluation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "3B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Money Matters\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Manage a first budget through real tradeoffs: savings, credit and surprise costs.\" Jordan has moved into a first apartment, and the student manages cash, savings and credit through real tradeoffs such as a car repair, a credit card balance, a tax refund and a paycheck. Weighing consequences before choosing is decision-making. Limit: a money context only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-matters"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "1C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Matters\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Manage a first budget through real tradeoffs: savings, credit and surprise costs.\" The student plans toward a savings goal and sees how choices affect it. Limit: it does not ask the student to set their own goal.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-matters"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "RF",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Matters\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Manage a first budget through real tradeoffs: savings, credit and surprise costs.\" The game uses a plan for the future and a kind debrief that does not treat a lower balance as a failure. Limit: no reflection on strengths.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-matters"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Matters\" (tagged self-management and responsible decision-making). FNE's catalog description: \"Manage a first budget through real tradeoffs: savings, credit and surprise costs.\" Events use real percent and interest arithmetic (take-home pay, a card at 24 percent a year), which supports math in the NYS standards. Limit: practical money math, not a full standards match.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-matters"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness and relationship skills). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" The student works through teammate situations where a teammate's needs differ (a family holiday on a practice day, a teammate who waits for a pause in a fast discussion, a dinner some teammates cannot afford, a video with no captions) and adjusts the plan so everyone can take part. That is respecting differences and engaging with them respectfully.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness and relationship skills). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" The last step picks how to adjust the plan and talk to the teammate so that no one carries the whole cost. That is using communication and social skills with empathy across a difference.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness and relationship skills). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Adjusting a shared plan so that a diverse team can all take part is contributing to a diverse community. Limit: team-sized situations; no civic or global content.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness and relationship skills). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" The first two steps ask what each teammate notices from their own side. Limit: the focus is on adjusting the plan, not on one person's feelings.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New York State Social Emotional Learning Benchmarks (Equity Revisions)",
+      "itemCode": "2D",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness and relationship skills). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" The teammates disagree about the plan, and the careful moves avoid making one teammate carry the cost. Limit: a plan disagreement, not a conflict that has already escalated.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "CT",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness and relationship skills). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" The student weighs both sides' reasons before choosing. Limit: no source or evidence evaluation.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "GC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Critical Read\" (a literacy-domain game). FNE's catalog description: \"Judge real claims for evidence, bias and sources, then prove your judgment from the text.\" Judging whether a claim is supported by its source is part of acting responsibly as a reader and sharer of information in a digital community. Limit: it does not involve civic action or sharing decisions.",
+      "target": {
+        "type": "brain_game",
+        "slug": "critical-read"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "EC",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Headline\" (a literacy-domain game). FNE's catalog description: \"Read a short story, pick the most accurate headline, then prove it with the text.\" The student picks the headline that best matches what a short story says and proves it from the text, which touches how ideas are expressed in media. Limit: choosing among headlines; the student does not write one.",
+      "target": {
+        "type": "brain_game",
+        "slug": "headline"
+      }
+    },
+    {
+      "framework": "New York State Portrait of a Graduate",
+      "itemCode": "AP",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Sound Safari\" (a literacy-domain game). FNE's catalog description: \"Listen for a sound, then find the picture that starts with the same sound.\" Children listen for a sound and find the picture that starts with the same sound, an early phonemic awareness skill that is a foundation for reading. Limit: one early reading skill for kindergarten and grade 1; it has no social-emotional link.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sound-safari"
+      }
     }
   ]
 }

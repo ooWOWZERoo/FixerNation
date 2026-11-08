@@ -8,7 +8,6 @@ Things only the owner can do (cPanel, the live admin, own devices). None affects
 
 - [ ] **Account clean-up in the live admin.** Delete the three stray CRM contacts (two internal or test addresses and one misspelled teacher address). Deleting a contact also closes any sign-in account with the same email, including the misspelled teacher's typo account (id 125). Before deleting the teacher's, check in Account Lookup that her correct account exists and which account holds her license seat.
 - [ ] **Rotate the QA credentials** (`rotate-qa-test-credentials.js`). Postponed by the owner on 2026-11-07.
-- [ ] **Backup cron time.** The nightly backup runs at 2:30 on the server clock, which showed as 9:30pm local. Run `date` and `date -u` in cPanel Terminal; if the server is on UTC, change the cron hour to 7 (`30 7 * * *`), then update `setup-cron-jobs.sh` to match.
 - [ ] **Errors tab.** Open Support, then Errors, and Clear any group mentioning "QA deploy check" (the curl test row; the command-line clean-up found none).
 - [ ] **Registration product description** in the admin still says "this price becomes $0 at checkout". Suggested: "Uses your school's license, so there is nothing to pay. Use your school email address."
 - [ ] **Still yours from earlier notes:** Discover voice test on a Chromebook and an iPad, sales deck pricing check, verify more states (only NY and OH are verified), check the stray demo-style address on `admin-school-admins.html`, and one real Stripe test purchase of the solo license once live keys are on.

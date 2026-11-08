@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Graduate Evidence</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-branding.js?v=1"></script>
+  <script src="school-admin-nav.js?v=25"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Graduate Evidence</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+        <div class="ge-print-head"><h2 id="printTitle" style="font-size:18px;margin:0 0 2px;"></h2><p id="printMeta" class="ge-note"></p></div>
+        <p class="ge-noprint" style="font-size:13.5px;color:var(--sa-text-soft);margin:0 0 14px;">See how many students at your school have practiced each graduate attribute this year. These are counts only, and no student or teacher is named.</p>
+        <div class="sa-card ge-noprint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <label for="geYear" style="font-size:13px;font-weight:600;">School year</label>
+          <select id="geYear" style="padding:7px 10px;border:1.5px solid var(--sa-border);border-radius:8px;font-family:inherit;font-size:13px;"></select>
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" type="button" onclick="window.print()" style="margin-left:auto;">Print this report</button>
+        </div>
+        <div class="sa-card"><div id="geBody" class="ge"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="graduate-evidence-view.js?v=1"></script>
+<script>
+var geYearLoaded = false;
+document.addEventListener('saReady', load);
+document.addEventListener('saSchoolChanged', load);
+document.getElementById('geYear').addEventListener('change', load);
+async function load() {
+  FnGraduateEvidence.injectStyles();
+  var body = document.getElementById('geBody');
+  try {
+    var id = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+    var year = document.getElementById('geYear').value;
+    var qs = [];
+    if (id) qs.push('purchaseId=' + id);
+    if (year) qs.push('year=' + encodeURIComponent(year));
+    var d = await saFetch('/api/graduate-evidence/school' + (qs.length ? '?' + qs.join('&') : ''));
+    if (!d) return;
+    if (!geYearLoaded) { document.getElementById('geYear').innerHTML = FnGraduateEvidence.yearOptions(d.years, d.schoolYearStart); geYearLoaded = true; }
+    body.innerHTML = FnGraduateEvidence.renderReport(d, {});
+    var school = (window.saPortalData && window.saPortalData.schools || []).filter(function (s) { return s.purchaseId === id; })[0];
+    document.getElementById('printTitle').textContent = 'Graduate Evidence' + (school && school.schoolDomain ? ': ' + school.schoolDomain : '');
+    document.getElementById('printMeta').textContent = 'School year ' + d.schoolYear + '. Generated ' + new Date().toLocaleDateString() + '.';
+  } catch (err) {
+    body.innerHTML = '<p class="ge-note">' + FnGraduateEvidence.esc("We couldn't load Graduate Evidence. Please try again.") + '</p>';
+  }
+  document.getElementById('pageLoading').style.display = 'none';
+  document.getElementById('pageContent').style.display = 'block';
+}
+</script>
+<script src="help-videos.js?v=18" defer></script>
+</body>
+</html>

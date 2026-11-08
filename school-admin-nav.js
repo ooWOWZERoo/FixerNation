@@ -79,6 +79,7 @@
       link('school-admin-roster.html',      '🪑', 'Roster') +
       link('school-admin-invitations.html', '✉️',  'Invitations') +
       link('school-admin-reports.html',     '📈', 'Reports') +
+      link('school-admin-evidence.html',    '🎓', 'Graduate Evidence') +
     '</nav>' +
     '<div id="saSchoolInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +
