@@ -145,7 +145,7 @@
       pages: ['social-profile.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793737090/fne/help/M4.mp4', captions: '/help-assets/M4.vtt', poster: '/help-assets/M4.jpg' },
     { id: 'T4', group: 'teachers', topic: 'Lessons and results', title: 'Assign lessons and brain games',
       summary: 'Choose lessons and brain games for your class.',
-      pages: ['teacher-classroom.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412324/fne/help/T4.mp4', captions: '/help-assets/T4.vtt', poster: '/help-assets/T4.jpg' },
+      pages: ['teacher-classroom.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794151372/fne/help/T4.mp4', captions: '/help-assets/T4.vtt', poster: '/help-assets/T4.jpg' },
     { id: 'T5', group: 'teachers', topic: 'Lessons and results', title: 'Read progress and student reflections',
       summary: 'See who started and finished, quiz scores and written reflections.',
       pages: ['teacher-classroom-progress.html', 'teacher-game-report.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412326/fne/help/T5.mp4', captions: '/help-assets/T5.vtt', poster: '/help-assets/T5.jpg' },

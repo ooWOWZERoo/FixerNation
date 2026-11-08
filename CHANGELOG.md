@@ -17,6 +17,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 156 — 2026-11-08 — T4 video republished with the ideas box, and the My Graduate Portrait recommendations
+
+- **T4 (Assign lessons and brain games) is re-recorded and published.** It now mentions the optional "Not sure what to assign?" ideas box and shows it on screen, then points to the Graduate Evidence video for the detail. New captions and poster; `help-videos.js` is at `?v=20` on every page that loads it.
+- **My Graduate Portrait: researched recommended answers for all 14 decisions** are in `docs/reference/graduate-portrait-requirements.md` section 13, with the sources. Changes to the first draft: a student's own words are not shown to parents and are copied into a lifelong profile one pin at a time; unused profiles are checked once a year and deleted after two unanswered check-ins; the lifelong tier also waits for a customer to ask for it. Nothing built. Static files only: no restart, no database change.
+
 ## Release 155 — 2026-11-08 — Graduate Evidence year snapshot, a screen for the smallest-group rule, and the My Graduate Portrait plan
 
 - **Staff can now set the smallest group** Graduate Evidence will show. Settings has a new Graduate Evidence card: a whole number of students from 5 to 100 (the default stays 10). School and district screens still merge or hide any group below it, and a damaged saved value can never drop the rule under 5.
