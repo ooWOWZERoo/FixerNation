@@ -14,7 +14,7 @@ const board: Storyboard = {
   steps: [
     { say: "In this video you'll choose lessons and brain games for your class." },
     {
-      say: "Open your classroom, and select the Assignments tab.",
+      say: "Open your classroom, and select the Assignments tab. At the top, Not sure what to assign? is an optional box of ideas based on what your class has practiced. Another video covers it.",
       run: async (p) => {
         await p.waitForSelector(".classroom-card");
         await glideClick(p, ".classroom-card");
@@ -22,7 +22,9 @@ const board: Storyboard = {
         await p.waitForSelector("#studentTable table, #studentTable .data-table");
         await p.waitForTimeout(800);
         await glideClick(p, ".tab-btn:has-text('Assignments')");
-        await p.waitForTimeout(800);
+        await p.waitForTimeout(1200);
+        await glideTo(p, "#ideasCard");
+        await p.waitForTimeout(1500);
       },
     },
     {

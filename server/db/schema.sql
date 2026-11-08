@@ -1565,3 +1565,30 @@ CREATE TABLE IF NOT EXISTS client_errors (
   INDEX idx_user (site_user_id, last_seen),
   INDEX idx_session (client_session_id, last_seen)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Graduate Evidence year snapshot (Release 155): de-identified totals per classroom, school year and attribute, written once by
+-- scripts/snapshot-pog-evidence.js (and later by the student-data purge, before it deletes students). Counts only: no student id,
+-- name or text. Added to existing installs by scripts/alter-create-pog-evidence-snapshots.js.
+-- Requirements: docs/reference/pog-evidence-requirements.md section 14.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pog_evidence_snapshots (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  state_code CHAR(2) NOT NULL,
+  school_year_start SMALLINT UNSIGNED NOT NULL,
+  classroom_id INT UNSIGNED NOT NULL,
+  framework_id INT UNSIGNED NOT NULL,
+  framework_name VARCHAR(255) NOT NULL,
+  item_id INT UNSIGNED NOT NULL,
+  item_code VARCHAR(40) NOT NULL,
+  item_title VARCHAR(255) NOT NULL,
+  students_counted INT UNSIGNED NOT NULL,
+  practiced INT UNSIGNED NOT NULL,
+  touched INT UNSIGNED NOT NULL,
+  activities_finished INT UNSIGNED NOT NULL,
+  direct_activities SMALLINT UNSIGNED NOT NULL,
+  supporting_activities SMALLINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_snapshot (state_code, school_year_start, classroom_id, item_id),
+  INDEX idx_classroom_year (classroom_id, school_year_start)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

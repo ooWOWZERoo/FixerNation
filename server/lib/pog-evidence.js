@@ -15,6 +15,14 @@ const { internals: standards } = require('./standards');
 // SQL stays plain (no NOW(), no ON DUPLICATE KEY, no array params) so test/pog-evidence.test.js runs it on node:sqlite.
 
 const DEFAULT_MIN_GROUP = 10;
+// The smallest group a school or district screen may show a figure for. The FNE admin can move the setting between these two,
+// never below 5 (a setting of 1 would switch the rule off). Used by the route that reads it and the one that saves it.
+const MIN_GROUP_FLOOR = 5;
+const MIN_GROUP_CEILING = 100;
+const clampMinGroup = (raw) => {
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? DEFAULT_MIN_GROUP : Math.min(MIN_GROUP_CEILING, Math.max(MIN_GROUP_FLOOR, n));
+};
 const CHUNK = 400;
 
 const chunks = (list, size = CHUNK) => { const out = []; for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size)); return out; };
@@ -132,8 +140,9 @@ async function finishedByStudent(studentIds, connections, bounds) {
 
 // ---- 3. per-classroom counts ---------------------------------------------------------------------------------------
 // -> Map(classroomId -> { students, items: { [itemId]: { practiced, touched } } }). Only ACTIVE students are counted, on both
-// sides of every percentage. Pass only classrooms the viewer is allowed to see.
-async function classroomEvidence({ classroomIds, schoolYearStart, connections }) {
+// sides of every percentage. Pass only classrooms the viewer is allowed to see. `withFinished` (the year snapshot only) also adds, per
+// item, how many student-and-activity finishes connect to it (a count of finishes; never a score).
+async function classroomEvidence({ classroomIds, schoolYearStart, connections, withFinished = false }) {
   const bounds = schoolYearBounds(schoolYearStart);
   const result = new Map();
   const ids = uniq((classroomIds || []).map(Number).filter(Number.isInteger));
@@ -153,17 +162,18 @@ async function classroomEvidence({ classroomIds, schoolYearStart, connections })
     const slot = result.get(cid);
     slot.students = sids.length;
     for (const it of allItems) {
-      let practiced = 0, touched = 0;
+      let practiced = 0, touched = 0, finishes = 0;
       for (const sid of sids) {
         const done = finished.get(sid);
         if (!done) continue;
         if (it.direct.some((k) => done.has(k))) practiced++;
         else if (it.supporting.some((k) => done.has(k))) touched++;
+        if (withFinished) finishes += it.direct.filter((k) => done.has(k)).length + it.supporting.filter((k) => done.has(k)).length;
       }
-      slot.items[it.id] = { practiced, touched };
+      slot.items[it.id] = withFinished ? { practiced, touched, finished: finishes } : { practiced, touched };
     }
   }
-  for (const slot of result.values()) for (const it of allItems) if (!slot.items[it.id]) slot.items[it.id] = { practiced: 0, touched: 0 };
+  for (const slot of result.values()) for (const it of allItems) if (!slot.items[it.id]) slot.items[it.id] = withFinished ? { practiced: 0, touched: 0, finished: 0 } : { practiced: 0, touched: 0 };
   return result;
 }
 
@@ -341,6 +351,6 @@ function bestNextSteps({ report, connections, pool: candidates, limit = 3 }) {
 function lessThan(a, b) { for (let i = 0; i < a.length; i++) { if (a[i] < b[i]) return true; if (a[i] > b[i]) return false; } return false; }
 
 module.exports = {
-  DEFAULT_MIN_GROUP, schoolYearStartOf, currentSchoolYearStart, schoolYearBounds,
+  DEFAULT_MIN_GROUP, MIN_GROUP_FLOOR, MIN_GROUP_CEILING, clampMinGroup, schoolYearStartOf, currentSchoolYearStart, schoolYearBounds,
   loadConnections, classroomEvidence, groupWithMinimum, teacherClassroomReport, groupedReport, candidatePool, suggestionsForItem, bestNextSteps,
 };

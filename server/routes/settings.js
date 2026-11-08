@@ -2,6 +2,7 @@ const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { getSetting, setSetting } = require('../lib/settings');
 const { trimmedLogoUrl, faviconPng } = require('../lib/site-logo');
+const pogEvidence = require('../lib/pog-evidence');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,6 +56,22 @@ router.put('/privacy-lock', requireAuth, async (req, res) => {
   if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) return res.status(400).json({ error: 'Enter a whole number of minutes from 1 to 120' });
   await setSetting('admin_privacy_lock_minutes', String(minutes));
   res.json({ ok: true, minutes });
+});
+
+// Graduate Evidence: the smallest group of students a school or district screen will show a figure for. The saved value is clamped on
+// every read (lib/pog-evidence.js), so a damaged row can never switch the rule off.
+router.get('/pog-evidence-min-group', requireAuth, async (req, res) => {
+  const { MIN_GROUP_FLOOR: min, MIN_GROUP_CEILING: max } = pogEvidence;
+  res.json({ students: pogEvidence.clampMinGroup(await getSetting('pog_evidence_min_group')), min, max });
+});
+
+router.put('/pog-evidence-min-group', requireAuth, async (req, res) => {
+  const { MIN_GROUP_FLOOR: min, MIN_GROUP_CEILING: max } = pogEvidence;
+  const raw = (req.body || {}).students;
+  const students = typeof raw === 'number' || (typeof raw === 'string' && /^\d+$/.test(raw.trim())) ? Number(raw) : NaN;
+  if (!Number.isInteger(students) || students < min || students > max) return res.status(400).json({ error: `Enter a whole number of students from ${min} to ${max}` });
+  await setSetting('pog_evidence_min_group', String(students));
+  res.json({ ok: true, students });
 });
 
 router.get('/invoice-branding', requireAuth, async (req, res) => {

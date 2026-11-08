@@ -24,10 +24,9 @@ const toInt = (v) => (typeof v === 'string' && /^\d{1,10}$/.test(v) ? Number(v) 
 // in the URL is ignored, so nobody can ask a screen for another year (last year's student records are gone after the purge anyway).
 const currentYear = () => pog.currentSchoolYearStart();
 
-// The smallest group shown outside a teacher's own classroom. A setting, but never below 5 (a setting of 1 would switch the rule off).
+// The smallest group shown outside a teacher's own classroom. A setting (Settings > Graduate Evidence), never below 5.
 async function minGroup() {
-  const n = parseInt(await getSetting('pog_evidence_min_group'), 10);
-  return Number.isNaN(n) ? pog.DEFAULT_MIN_GROUP : Math.min(100, Math.max(5, n));
+  return pog.clampMinGroup(await getSetting('pog_evidence_min_group'));
 }
 
 // ---- scopes: which classrooms belong to a school / a district --------------------------------------------------------
