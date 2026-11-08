@@ -314,6 +314,13 @@
       "server/data/standards/NY.json",
       "tests/howto/evidence.ts"
     ],
+    "C9": [
+      "district-admin-program-report.html",
+      "graduate-evidence-view.js",
+      "server/lib/program-use.js",
+      "server/routes/program-report.js",
+      "tests/howto/evidence.ts"
+    ],
     "C8": [
       "district-admin-evidence.html",
       "graduate-evidence-view.js",

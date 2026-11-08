@@ -187,6 +187,29 @@
       </div>
 
       <div class="a-card" style="margin-top:24px; max-width:480px;">
+        <div class="a-card-head"><h2>Program Use Report</h2></div>
+        <form id="programReportForm">
+          <div class="a-error" id="programReportError"></div>
+          <div class="a-field">
+            <label>Weeks of use for a classroom to count as in regular use</label>
+            <input type="number" id="prWeeks" min="1" max="4" step="1" style="max-width:120px;" required>
+            <div class="a-note">A classroom is in regular use in a month when students finished activities in at least this many different weeks. Use 1 to 4. The default is 3.</div>
+          </div>
+          <div class="a-field">
+            <label>Mark a school Needs support below this percent</label>
+            <input type="number" id="prLowPct" min="10" max="90" step="1" style="max-width:120px;" required>
+            <div class="a-note">A school is marked when fewer than this percent of its classrooms were in regular use last month. Use 10 to 90. The default is 50.</div>
+          </div>
+          <div class="a-field">
+            <label>Fewest teachers a school can have before its teacher figures show</label>
+            <input type="number" id="prMinTeachers" min="3" max="50" step="1" style="max-width:120px;" required>
+            <div class="a-note">A school with fewer activated teachers than this hides its teacher and classroom figures, so no one can be picked out. Use 3 to 50. The default is 5. The student minimum is the Graduate Evidence setting above.</div>
+          </div>
+          <button type="submit" class="a-btn a-btn-primary" style="margin-top:16px;">Save</button>
+        </form>
+      </div>
+
+      <div class="a-card" style="margin-top:24px; max-width:480px;">
         <div class="a-card-head"><h2>Campaign Sending</h2></div>
         <form id="campaignBatchingForm">
           <div class="a-error" id="campaignBatchingError"></div>
@@ -685,6 +708,33 @@ document.getElementById('pogMinGroupForm').addEventListener('submit', async func
   fnToast('Saved');
 });
 
+async function loadProgramReport() {
+  const r = await fetch('/api/settings/program-report', { credentials: 'include' });
+  if (fnHandleUnauthorized(r)) return;
+  const d = await r.json().catch(function () { return {}; });
+  document.getElementById('prWeeks').value = d.regularWeeks || 3;
+  document.getElementById('prLowPct').value = d.lowUsePct || 50;
+  document.getElementById('prMinTeachers').value = d.minTeachers || 5;
+}
+
+document.getElementById('programReportForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const errorBox = document.getElementById('programReportError');
+  errorBox.classList.remove('show');
+  const r = await fetch('/api/settings/program-report', {
+    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      regularWeeks: parseInt(document.getElementById('prWeeks').value, 10),
+      lowUsePct: parseInt(document.getElementById('prLowPct').value, 10),
+      minTeachers: parseInt(document.getElementById('prMinTeachers').value, 10),
+    }),
+  });
+  if (fnHandleUnauthorized(r)) return;
+  const result = await r.json().catch(function () { return {}; });
+  if (!r.ok) { errorBox.textContent = result.error || 'Could not save changes.'; errorBox.classList.add('show'); return; }
+  fnToast('Saved');
+});
+
 async function loadLessonPlanLimit() {
   const [r, rTrial, rSwap] = await Promise.all([
     fetch('/api/settings/teacher-lesson-plan-limit', { credentials: 'include' }),
@@ -819,6 +869,7 @@ loadWebsiteLogo();
 loadLessonPlanLimit();
 loadPrivacyLock();
 loadPogMinGroup();
+loadProgramReport();
 loadCampaignBatching();
 loadAutoRefresh();
 loadSafetyFallbackEmail();

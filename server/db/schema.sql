@@ -1610,3 +1610,31 @@ CREATE TABLE IF NOT EXISTS student_portrait_pins (
   KEY idx_student_year (student_id, school_year_start),
   FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- District Program Use Report history (Release 161): one row per school and month, saved by scripts/snapshot-program-use.js (cron, 1st of each month, plus
+-- a one-time --backfill of the current school year). Counts only: no student id, teacher id, name or text. Written once, never recomputed. Added to
+-- existing installs by scripts/alter-create-program-use-snapshots.js. Requirements: docs/reference/district-program-report-requirements.md section 8.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS program_use_snapshots (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  school_year_start SMALLINT UNSIGNED NOT NULL,
+  month CHAR(7) NOT NULL,
+  school_id INT UNSIGNED NOT NULL,
+  district_id INT UNSIGNED NULL,
+  teachers_licensed INT UNSIGNED NOT NULL,
+  teachers_activated INT UNSIGNED NOT NULL,
+  teachers_teaching INT UNSIGNED NOT NULL,
+  teachers_teaching_ytd INT UNSIGNED NOT NULL,
+  classrooms INT UNSIGNED NOT NULL,
+  classrooms_active INT UNSIGNED NOT NULL,
+  classrooms_regular INT UNSIGNED NOT NULL,
+  students_enrolled INT UNSIGNED NOT NULL,
+  students_active INT UNSIGNED NOT NULL,
+  students_active_ytd INT UNSIGNED NOT NULL,
+  activities INT UNSIGNED NOT NULL,
+  source VARCHAR(10) NOT NULL DEFAULT 'monthly',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_snapshot (school_year_start, month, school_id),
+  INDEX idx_district_year (district_id, school_year_start)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

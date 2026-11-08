@@ -111,6 +111,9 @@
     { id: 'C8', group: 'district-admins', topic: 'Portrait of a Graduate', title: 'See graduate attribute practice across your district',
       summary: 'See graduate attribute practice across your district\'s schools.',
       pages: ['district-admin-evidence.html'] },
+    { id: 'C9', group: 'district-admins', topic: 'Portrait of a Graduate', title: 'See how your schools are using Fixer Nation',
+      summary: 'See reach, use by month and standards coverage across your district.',
+      pages: ['district-admin-program-report.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794159151/fne/help/C9.mp4', captions: '/help-assets/C9.vtt', poster: '/help-assets/C9.jpg' },
 
     // ---- Teachers
     { id: 'T1', group: 'teachers', topic: 'Getting in', title: 'Accept your school\'s invitation',

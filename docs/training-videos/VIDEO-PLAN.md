@@ -41,6 +41,7 @@ Agreed 2026-10-29. Short screen recordings (2 to 4 minutes), one task per video,
 | C6 | Suggest connections and submit for review (part 2) | district-admin-standards.html |
 | C7 | What the public sees | district-admin-standards.html |
 | C8 | See graduate attribute practice across your district | district-admin-evidence.html |
+| C9 | See how your schools are using Fixer Nation | district-admin-program-report.html |
 | D1 | Accept your quote | accept-quote.html |
 
 Suggested first batch if we film in stages: A1, A2, B1, B2, B4, C1, C3, C4, D1.

@@ -35,6 +35,27 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('program-use-report', true, '2026-11-08', 'Release 161', 'Program Use Report for districts and schools', ['district', 'school'],
+      'See how your schools are using Fixer Nation this school year, month by month and compared with last year, with a printable page and a download for your board or a grant report.',
+      'The Program Use Report gives district administrators one page that shows how much Fixer Nation is being used across their schools: how many teachers have activated their seats, how many students have finished a lesson or game, and how that changes from month to month. Below that it shows which New York social emotional learning benchmarks and graduate attributes students have practiced. School administrators get the same report for their own school. Every figure is a count, and no teacher or student is named. The report describes how the program is used. It does not evaluate student outcomes.',
+      {
+        new: [
+          item('Use across your district, by school', ['district'], 'Select Program Use Report in your portal menu. Tiles show teachers activated, students enrolled, and the share of students who finished at least one activity this school year. A school table shows each school, and marks a school Needs support when few of its classrooms are in regular use.'),
+          item('Month by month, and last school year', ['district'], 'See students active, activities finished, and classrooms in regular use for each month. Fixer Nation now saves these totals every month, so last school year stays on the page after student records are removed. Months from this school year are filled in from classroom activity, so last year may have a few of those.'),
+          item('Standards coverage under New York\'s three goals', ['district', 'school'], 'The same Graduate Evidence view, with the social emotional learning benchmarks grouped under the three goals the state uses. Last year\'s coverage appears beside this year\'s once it has been saved.'),
+          item('Download, print, and share the method', ['district', 'school'], 'Download a CSV of the same numbers, or print the page to PDF. A plain "How we count" page explains every number and what the report can\'t tell you, and you can link to it from a board packet or a grant report.'),
+          item('A version for each school', ['school'], 'School administrators select Program Use Report in their menu to see their own school: teachers activated, students active, use by month, and standards coverage.')
+        ],
+        know: [
+          'Schools with very few students are combined into one row, and schools with only a few activated teachers hide their teacher and classroom figures, so no one can be picked out. A downloaded figure that is hidden says suppressed instead of showing 0.',
+          'The report shows how the program is used. It doesn\'t measure student outcomes, and Fixer Nation holds no demographic information, so figures can\'t be split by group. Measures such as attendance or climate surveys come from your own data.',
+          'The connections to New York\'s frameworks are Fixer Nation\'s own mapping. Neither New York State nor CASEL has endorsed them. New York\'s social emotional learning benchmarks are voluntary and the state has no required reporting form that we know of, so this is supporting information to attach to your own report. Fixer Nation does not produce rating levels for the state\'s implementation rubric, but these counts can support your own self-assessment.',
+          'The first school year shows only the months since the report was switched on, filled in from classroom activity. If a teacher removed a student, that student is left out of those months.'
+        ]
+      },
+      'District administrators and school administrators: select Program Use Report in your portal menu.',
+      ['C9']),
+
     N('my-graduate-portrait', true, '2026-11-08', 'Releases 157 and 159', 'My Graduate Portrait', ['teachers', 'school', 'district', 'families'],
       'Students get their own page showing which graduate skills they have practiced this school year, and can pin a few of their own words to it.',
       'My Graduate Portrait is a page each student sees when they sign in. It uses the same New York frameworks as Graduate Evidence and the same rule: a skill counts as practiced once the student has finished a lesson or game that Fixer Nation connects to it. The student sees the names of the activities behind each skill, and up to three of their own reflections or goals if they choose to pin them. Students and their families can also print a one-page keepsake of it. The portrait is a record of what a student has done. It never gives a grade and never compares one student with another.',

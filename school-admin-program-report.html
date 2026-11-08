@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Program Use Report</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="school-branding.js?v=1"></script>
+  <script src="school-admin-nav.js?v=27"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Program Use Report</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+        <div class="ge-print-head"><h2 id="printTitle" style="font-size:18px;margin:0 0 2px;"></h2><p id="printMeta" class="ge-note"></p></div>
+        <p class="pr-lead ge-noprint">See how your school is using Fixer Nation this school year, month by month, and which New York social emotional learning benchmarks and graduate attributes students have practiced. Everything here is a count. No teacher or student is named.</p>
+        <div class="sa-card ge-noprint" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span id="prYearLine" style="font-size:13px;font-weight:600;"></span>
+          <a href="#howWeCount" style="font-size:13px;">How we count</a>
+          <a id="prCsv" class="sa-btn sa-btn-ghost sa-btn-sm" href="#" style="margin-left:auto;" download>Download CSV</a>
+          <button class="sa-btn sa-btn-ghost sa-btn-sm" type="button" onclick="window.print()">Print or save as PDF</button>
+        </div>
+        <div id="prBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="graduate-evidence-view.js?v=2"></script>
+<script src="program-report-view.js?v=1"></script>
+<script src="help-videos.js?v=23" defer></script>
+<script>
+document.addEventListener('saReady', load);
+document.addEventListener('saSchoolChanged', load);
+
+var GE = window.FnGraduateEvidence, PR = window.FnProgramReport, esc = PR.esc, data = null;
+
+async function load() {
+  GE.injectStyles(); PR.injectStyles();
+  var body = document.getElementById('prBody');
+  try {
+    var id = window.saActivePurchaseId ? window.saActivePurchaseId() : null;
+    var d = await saFetch('/api/program-report/school' + (id ? '?purchaseId=' + id : ''));
+    if (!d) return;
+    data = d;
+    document.getElementById('prYearLine').textContent = 'School year ' + d.schoolYear + '. Counts as of ' + PR.dateText(d.asOf) + '.';
+    var csv = document.getElementById('prCsv');
+    csv.href = '/api/program-report/school/export' + (id ? '?purchaseId=' + id : '');
+    document.getElementById('printTitle').textContent = 'Program Use Report' + (d.schoolLabel ? ': ' + d.schoolLabel : '');
+    document.getElementById('printMeta').textContent = 'School year ' + d.schoolYear + '. Counts as of ' + PR.dateText(d.asOf) + '. Printed ' + new Date().toLocaleDateString() + '.';
+    render();
+  } catch (err) {
+    body.innerHTML = '<p class="pr-note">' + esc("We couldn't load the report. Please try again.") + '</p>';
+  }
+}
+
+function render() {
+  var d = data, h = '';
+  if (d.suppressed) h += PR.suppressedHtml(d);
+  else h += PR.tilesHtml(d) + PR.monthsHtml(d);
+  h += '<div class="sa-card pr-card">' + PR.standardsHtml(d.standards, 'Students who have practiced each New York benchmark and graduate attribute this school year at your school. <a href="school-admin-evidence.html">See it classroom by classroom</a>.') + '</div>';
+  h += PR.howHtml() + PR.claimsHtml();
+  document.getElementById('prBody').innerHTML = h;
+  document.getElementById('pageLoading').style.display = 'none';
+  document.getElementById('pageContent').style.display = 'block';
+}
+</script>
+</body>
+</html>

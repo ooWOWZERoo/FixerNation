@@ -51,6 +51,12 @@ const DEFAULTS = {
   // Admin pages that show student names hide them after this many minutes without a mouse move, click or key press. See
   // admin-privacy-lock.js and docs/reference/support-console-requirements.md.
   admin_privacy_lock_minutes: '5',
+  // District Program Use Report (docs/reference/district-program-report-requirements.md): a classroom is "in regular use" in a month when
+  // students finished activities in at least this many different weeks; a school is flagged when under this percent of its classrooms were
+  // in regular use last month; schools with fewer activated teachers than the minimum hide every teacher and classroom figure.
+  program_report_regular_weeks: '3',
+  program_report_low_use_pct: '50',
+  program_report_min_teachers: '5',
 };
 
 async function getSetting(key) {

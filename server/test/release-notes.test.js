@@ -66,6 +66,17 @@ test('OWNER APPROVED 2026-11-08: the My Graduate Portrait note is published and 
   assert.match(allText(n), /Neither New York State nor CASEL has endorsed/);
 });
 
+test('OWNER APPROVED 2026-11-08: the Program Use Report note is published; it describes use, never outcomes, a score or a ranking, and says the connections are not endorsed', () => {
+  const n = RN.byId('program-use-report');
+  assert.equal(n.published, true);
+  assert.equal(JSON.stringify(n.videos), JSON.stringify(['C9']));
+  const t = allText(n).replace('The report describes how the program is used. It does not evaluate student outcomes.', '').replace('It doesn\'t measure student outcomes', '');
+  assert.ok(!/\b(impact|outcomes?|results?|improv\w*|growth|mastery|proficien\w*|achiev\w*|scores?|rank\w*|grades?|efficacy)\b/i.test(t), 'no outcome words outside the two "not" sentences');
+  assert.match(allText(n), /Neither New York State nor CASEL has endorsed/);
+  assert.match(allText(n), /no demographic information/);
+  assert.ok(!/not available yet/i.test(allText(n)), 'nothing that is built is described as missing');
+});
+
 test('audience filter keeps the notes that matter to that audience', () => {
   const all = RN.visible(true);
   assert.equal(RN.forAudience(all, 'everyone').length, all.length);

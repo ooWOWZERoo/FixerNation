@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const { getSetting, setSetting } = require('../lib/settings');
 const { trimmedLogoUrl, faviconPng } = require('../lib/site-logo');
 const pogEvidence = require('../lib/pog-evidence');
+const programUse = require('../lib/program-use');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,6 +73,28 @@ router.put('/pog-evidence-min-group', requireAuth, async (req, res) => {
   if (!Number.isInteger(students) || students < min || students > max) return res.status(400).json({ error: `Enter a whole number of students from ${min} to ${max}` });
   await setSetting('pog_evidence_min_group', String(students));
   res.json({ ok: true, students });
+});
+
+// District Program Use Report thresholds (docs/reference/district-program-report-requirements.md, D4 and D5). Clamped on every read, so a
+// damaged saved value can never switch the small-group rule off or make the flag meaningless.
+router.get('/program-report', requireAuth, async (req, res) => {
+  const [w, l, t] = await Promise.all(['program_report_regular_weeks', 'program_report_low_use_pct', 'program_report_min_teachers'].map(getSetting));
+  res.json({ regularWeeks: programUse.clampRegularWeeks(w), lowUsePct: programUse.clampLowUsePct(l), minTeachers: programUse.clampMinTeachers(t),
+    limits: { regularWeeks: [1, 4], lowUsePct: [10, 90], minTeachers: [3, 50] } });
+});
+
+router.put('/program-report', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const whole = (v) => (typeof v === 'number' && Number.isInteger(v) ? v : (typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : NaN));
+  const spec = [['regularWeeks', 'program_report_regular_weeks', 1, 4, 'Regular-use weeks'], ['lowUsePct', 'program_report_low_use_pct', 10, 90, 'The support flag percent'], ['minTeachers', 'program_report_min_teachers', 3, 50, 'The smallest number of teachers shown']];
+  const values = {};
+  for (const [field, key, lo, hi, name] of spec) {
+    const n = whole(b[field]);
+    if (!Number.isInteger(n) || n < lo || n > hi) return res.status(400).json({ error: `${name} must be a whole number from ${lo} to ${hi}` });
+    values[key] = String(n);
+  }
+  for (const [key, value] of Object.entries(values)) await setSetting(key, value);
+  res.json({ ok: true, regularWeeks: Number(values.program_report_regular_weeks), lowUsePct: Number(values.program_report_low_use_pct), minTeachers: Number(values.program_report_min_teachers) });
 });
 
 router.get('/invoice-branding', requireAuth, async (req, res) => {

@@ -84,6 +84,7 @@
       link('district-admin-schools.html',   '🏫', 'Schools') +
       link('district-admin-standards.html', '🎓', 'Portrait of a Graduate') +
       link('district-admin-evidence.html',  '📈', 'Graduate Evidence') +
+      link('district-admin-program-report.html', '📋', 'Program Use Report') +
     '</nav>' +
     '<div id="daDistrictInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +

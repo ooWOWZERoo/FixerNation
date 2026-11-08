@@ -30,6 +30,9 @@
     ideasNone: 'Your whole class has practiced every attribute we have an activity for. Check back as we connect more.',
     ideasNoStudents: 'Add students to your class to get ideas.',
     seeEvery: 'See every attribute',
+    goal1: 'Goal 1: Self-awareness and agency',
+    goal2: 'Goal 2: Social awareness and relationships',
+    goal3: 'Goal 3: Intentional decision-making',
     ideasError: "We couldn't load ideas. Please try again."
   };
 
@@ -58,6 +61,7 @@
       '.ge-note{font-size:12px;color:var(--ge-soft);margin:6px 0;line-height:1.5;}' +
       '.ge-groups{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 18px;}.ge-groups th,.ge-groups td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--ge-line);}' +
       '.ge-idea{padding:11px 0;border-top:1px solid var(--ge-line);}.ge-idea:first-of-type{border-top:0;}.ge-idea-head{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;}.ge-idea ul{margin:5px 0 0;padding-left:18px;font-size:12.5px;color:var(--ge-soft);}.ge-link{font-size:12.5px;font-weight:600;color:var(--ge-accent);cursor:pointer;text-decoration:underline;background:none;border:0;font-family:inherit;padding:0;}' +
+      '.ge-goal{font-size:13px;font-weight:800;color:var(--sa-text-soft,#6B5F55);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em;}' +
       '.ge-print-head{display:none;}' +
       '@media print{.ge-noprint,.sa-sidebar,.sa-user,.sa-license-banner{display:none!important;}.sa-main{margin:0!important;}.sa-topbar{border:0!important;}.ge-print-head{display:block;margin-bottom:12px;}.ge-btn{display:none;}.ge-bar{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}';
     document.head.appendChild(s);
@@ -95,7 +99,16 @@
     opts = opts || {};
     return frameworks.map(function (f) {
       var src = f.officialUrl && /^https:\/\//.test(f.officialUrl) ? '<p class="ge-src">Source: <a href="' + esc(f.officialUrl) + '" target="_blank" rel="noopener">' + esc(f.issuingBody || 'official site') + '</a></p>' : '';
-      return '<div class="ge-fw"><h3>' + esc(f.name) + '</h3>' + src + f.items.map(function (it) { return itemHtml(it, opts); }).join('') + '</div>';
+      // opts.goals (the district report): the SEL benchmarks sit under NYSED's three goals (the digit in 1A to 3C); a framework whose codes are not
+      // like that, such as Portrait of a Graduate, is listed as before.
+      var grouped = opts.goals && f.items.length && f.items.every(function (it) { return /^[123][A-Z]$/.test(it.code); });
+      var lastGoal = '';
+      var body = f.items.map(function (it) {
+        var head = '';
+        if (grouped && it.code.charAt(0) !== lastGoal) { lastGoal = it.code.charAt(0); head = '<h4 class="ge-goal">' + esc(COPY['goal' + lastGoal]) + '</h4>'; }
+        return head + itemHtml(it, opts);
+      }).join('');
+      return '<div class="ge-fw"><h3>' + esc(f.name) + '</h3>' + src + body + '</div>';
     }).join('');
   }
 
