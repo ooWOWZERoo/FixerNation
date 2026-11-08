@@ -109,7 +109,7 @@
       },
       'Help center and Get help are in the footer on every page, and in the School Admin and District Admin portal menus.', ['G1', 'G2']),
 
-    N('student-data-kept', false, '2026-11-06', 'Release 146', 'Student data: what we keep, and for how long', ['school', 'district', 'families'],
+    N('student-data-kept', true, '2026-11-06', 'Release 146', 'Student data: what we keep, and for how long', ['school', 'district', 'families'],
       'The Student Data Privacy page and a Help answer now say plainly how long student information is kept.',
       'We rewrote this wording so it matches what really happens today.',
       {

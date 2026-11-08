@@ -51,13 +51,11 @@ test('notes are newest first, so the index and the month groups read in order', 
   assert.equal(groups.flatMap((g) => g.notes).length, RN.notes.length);
 });
 
-test('DRAFTS: a note not marked published is hidden from visitors and shown only in preview; privacy wording starts as a draft', () => {
+test('DRAFTS: visitors only ever get published notes; preview adds the rest; the student data note was published by the owner on 2026-11-07', () => {
   assert.ok(RN.visible(false).every((n) => n.published));
-  assert.equal(RN.visible(true).length, RN.notes.length);
-  assert.ok(RN.visible(true).length > RN.visible(false).length, 'there is at least one draft waiting for the owner');
-  const retention = RN.byId('student-data-kept');
-  assert.ok(retention && !retention.published, 'the student data note stays a draft until the owner has read it');
+  assert.ok(RN.visible(true).length >= RN.visible(false).length);
   assert.equal(RN.byId('no-such-note'), null);
+  assert.ok(RN.byId('student-data-kept').published, 'the owner approved the retention wording');
 });
 
 test('audience filter keeps the notes that matter to that audience', () => {

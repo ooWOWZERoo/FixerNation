@@ -10,10 +10,10 @@ const board: Storyboard = {
   steps: [
     { say: "Fixer Nation Education has a few different sign in pages, and this video helps you pick the right one." },
     {
-      say: "Look at the footer at the bottom of any page. The Access column lists Student Login, Teacher Login, Parent Portal, School Admin, and District Admin.",
+      say: "Look at the footer at the bottom of any page. The Sign in column lists Student Login, Teacher Login, Parent Portal, School Admin, and District Admin.",
       run: async (p) => {
-        await p.waitForSelector("footer h4:has-text('Access')");
-        await glideTo(p, "footer h4:has-text('Access')");
+        await p.waitForSelector("footer h4:has-text('Sign in')");
+        await glideTo(p, "footer h4:has-text('Sign in')");
         await p.waitForTimeout(2500);
         await glideTo(p, "footer a[href='district-admin-login.html']");
       },

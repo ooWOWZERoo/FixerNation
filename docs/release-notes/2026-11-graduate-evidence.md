@@ -5,7 +5,7 @@
 ## Before you send (internal)
 
 - [ ] **Verify the New York connections** in `admin-standards.html` (after running `node scripts/import-standards.js NY` on cPanel). Until then many attributes show "No Fixer Nation activity is connected to this yet", which would make this note look like a feature that does not work. Send it once the page looks full.
-- [ ] **Publish the three how-to videos** (T9 teachers, B11 school administrators, C8 district administrators), then put each link where `{videoLink}` appears below. The re-recorded tour videos B1 and C1 should go up first or at the same time, because their menus now have a Graduate Evidence link.
+- [x] **How-to videos T9, B11 and C8 are published**, and B1 and C1 were re-recorded (2026-11-07). They show as Watch buttons on the release note page.
 - [ ] **Read and publish the two draft Help answers** (`graduate-evidence-what`, `graduate-evidence-privacy`) at `help.html?preview=1`, so the note's "questions?" link lands on something.
 - [ ] **Look at one real classroom** on the live site (Assignments tab ideas box, Graduate Evidence tab) and confirm literacy games such as Critical Read appear under Try next (they need a grade band set in the database).
 - [ ] **The school year is always the current one** (no picker). The ideas box is optional and sits on the Assignments tab; the emails say so.
@@ -42,9 +42,7 @@ There's nothing extra to do. A student counts once they finish a lesson or game 
 
 It shows practice, not how well a student did, and student names stay on your usual progress pages.
 
-Here's a short video that walks through it: {videoLink}
-
-The full release note is on our website: https://fixernationeducation.com/release-notes.html?note=graduate-evidence
+Here's the full release note, with a short video that walks through it: https://fixernationeducation.com/release-notes.html?note=graduate-evidence
 
 ### Email to school and district administrators
 
@@ -54,9 +52,7 @@ School and district administrators now have a Graduate Evidence page in the port
 
 Your teachers don't have to do anything. The counts come from the lessons and games they already assign. You see counts and percentages only, never a student's or a teacher's name, and very small groups are combined so no one can be picked out.
 
-Here's a short video: {videoLink}
-
-The full release note is on our website: https://fixernationeducation.com/release-notes.html?note=graduate-evidence
+Here's the full release note, with a short video: https://fixernationeducation.com/release-notes.html?note=graduate-evidence
 
 ### Release notes page (for a "What's new" page or a long-form post)
 

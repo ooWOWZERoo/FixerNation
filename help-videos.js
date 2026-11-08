@@ -40,7 +40,7 @@
       pages: ['school-admin-login.html', 'district-admin-login.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391617/fne/help/A2.mp4', captions: '/help-assets/A2.vtt', poster: '/help-assets/A2.jpg' },
     { id: 'A3', group: 'getting-started', topic: 'Signing in', title: 'Which sign-in page do I use?',
       summary: 'Teachers, school administrators and district administrators each have their own sign-in page. Here is which one to use.',
-      pages: ['teacher-login.html', 'student-login.html', 'parent-login.html', 'school-admin-login.html', 'district-admin-login.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391620/fne/help/A3.mp4', captions: '/help-assets/A3.vtt', poster: '/help-assets/A3.jpg' },
+      pages: ['teacher-login.html', 'student-login.html', 'parent-login.html', 'school-admin-login.html', 'district-admin-login.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794110416/fne/help/A3.mp4', captions: '/help-assets/A3.vtt', poster: '/help-assets/A3.jpg' },
     { id: 'A4', group: 'getting-started', topic: 'Signing in', title: 'Sign in with Microsoft',
       summary: 'Use your Microsoft account to sign in, and what to do the first time.',
       pages: ['microsoft-confirm.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793487235/fne/help/A4.mp4', captions: '/help-assets/A4.vtt', poster: '/help-assets/A4.jpg' },
@@ -54,7 +54,7 @@
     // ---- School license administrators
     { id: 'B1', group: 'school-admins', topic: 'Your portal', title: 'A tour of the School Admin portal',
       summary: 'Your dashboard, seat counts, license banner and menu.',
-      pages: ['school-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021542/fne/help/B1.mp4', captions: '/help-assets/B1.vtt', poster: '/help-assets/B1.jpg' },
+      pages: ['school-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794110413/fne/help/B1.mp4', captions: '/help-assets/B1.vtt', poster: '/help-assets/B1.jpg' },
     { id: 'B9', group: 'school-admins', topic: 'Your portal', title: 'Permission levels and getting help',
       summary: 'What Primary, Secondary and Read Only administrators can do, and who to contact for more seats or a renewal.',
       pages: ['school-admin-org.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412334/fne/help/B9.mp4', captions: '/help-assets/B9.vtt', poster: '/help-assets/B9.jpg' },
@@ -89,7 +89,7 @@
     // ---- District administrators
     { id: 'C1', group: 'district-admins', topic: 'Your portal', title: 'A tour of the District Admin portal',
       summary: 'The dashboard, the menu, the license banner and switching districts.',
-      pages: ['district-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794021544/fne/help/C1.mp4', captions: '/help-assets/C1.vtt', poster: '/help-assets/C1.jpg' },
+      pages: ['district-admin-dashboard.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794110414/fne/help/C1.mp4', captions: '/help-assets/C1.vtt', poster: '/help-assets/C1.jpg' },
     { id: 'C2', group: 'district-admins', topic: 'Branding', title: 'Set district-wide branding',
       summary: 'Set the logo and colors every school in your district starts with.',
       pages: ['district-admin-branding.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391645/fne/help/C2.mp4', captions: '/help-assets/C2.vtt', poster: '/help-assets/C2.jpg' },
@@ -115,7 +115,7 @@
     // ---- Teachers
     { id: 'T1', group: 'teachers', topic: 'Getting in', title: 'Accept your school\'s invitation',
       summary: 'Accept your school\'s invitation, whether you\'re new or already have an account.',
-      pages: ['school-invite-accept.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793412321/fne/help/T1.mp4', captions: '/help-assets/T1.vtt', poster: '/help-assets/T1.jpg' },
+      pages: ['school-invite-accept.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794110411/fne/help/C8.mp4', captions: '/help-assets/C8.vtt', poster: '/help-assets/C8.jpg' },
     { id: 'T2', group: 'teachers', topic: 'Getting in', title: 'Register with your school email',
       summary: 'Use your school email to reserve a seat and create your account.',
       pages: ['education-schools.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794095339/fne/help/T2.mp4', captions: '/help-assets/T2.vtt', poster: '/help-assets/T2.jpg' },
@@ -156,7 +156,7 @@
     // ---- Students
     { id: 'S1', group: 'students', topic: 'Getting in', title: 'Join your class and sign in',
       summary: 'Join your class with the code from your teacher, then sign in with your username and PIN.',
-      pages: ['student-login.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391656/fne/help/S1.mp4', captions: '/help-assets/S1.vtt', poster: '/help-assets/S1.jpg' },
+      pages: ['student-login.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794110408/fne/help/T9.mp4', captions: '/help-assets/T9.vtt', poster: '/help-assets/T9.jpg' },
     { id: 'S2', group: 'students', topic: 'Learning', title: 'Do a lesson and play a brain game',
       summary: 'Work through a lesson and its quiz, then play a brain game.',
       pages: ['student-home.html', 'student-lesson.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391658/fne/help/S2.mp4', captions: '/help-assets/S2.vtt', poster: '/help-assets/S2.jpg' },
