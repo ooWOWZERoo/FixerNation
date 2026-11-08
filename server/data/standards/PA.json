@@ -2,11 +2,11 @@
   "state": "PA",
   "coverage": {
     "selStatus": "k12_standards",
-    "pogStatus": "unknown",
-    "selSourceUrl": "https://www.pa.gov/agencies/education/resources/student/career-ready-pa/pennsylvania-career-ready-skills",
-    "pogSourceUrl": "https://www.pa.gov/agencies/education/resources/student/career-ready-pa/pennsylvania-career-ready-skills",
-    "sourceAccessedOn": "2026-10-26",
-    "notes": "SEL: the Pennsylvania Career Ready Skills (final July 2018) are PDE's SEL learning progressions, Pre-K-12, in three domains; PDE presents them as guidance and a target for instruction, aligned with (not duplicating) the Career Education and Work Standards, and credits CASEL. Reviewer: decide whether 'guidance_only' is the more accurate status. Portrait of a Graduate: no statewide portrait was found on the PDE pages checked, and vendor pages that claim one could not be traced to a state document, so the status stays 'unknown' (absence not proven); many PA districts have their own portraits."
+    "pogStatus": "district_led_only",
+    "selSourceUrl": "https://www.pa.gov/agencies/education/programs-and-services/schools/school-climate-wellbeing/mental-health/sel-best-practice-resources",
+    "pogSourceUrl": "https://www.cmsd.k12.pa.us/academics/curriculum-instruction/portrait-of-a-graduate",
+    "sourceAccessedOn": "2026-11-08",
+    "notes": "SEL: the Pennsylvania Career Ready Skills (final July 2018) are PDE's SEL learning progressions, Pre-K-12, in three domains; PDE presents them as guidance and a target for instruction, aligned with (not duplicating) the Career Education and Work Standards, and credits CASEL. PDE's SEL Best Practice Resources page (the SEL source link) names the Career Ready Skills and lists programs as guidance, not requirements, and sets out no formal standards. Reviewer: decide whether 'guidance_only' is the more accurate status. Portrait of a Graduate: no statewide portrait was found on PDE's pages (rechecked 2026-11-08), so portraits are district-led; the source link is Canon-McMillan School District's own Portrait of a Graduate (six attributes), a district document, not a state one. Many other PA districts have their own."
   },
   "frameworks": [
     {
@@ -207,6 +207,476 @@
       "rationale": "Morning Boost program theme \"Healthy Decisions\" (programs.html). FNE's published description: \"Applying the Issues-to-Answers framework to real-life decisions involving peer pressure, risk, choices, and consequences.\" The theme names choices and consequences. Program-level: shows the theme is part of the offering, not which lesson teaches it. Limit: PA's domain also names understanding others' backgrounds; FNE covers kindness and impact on others, not cultural perspective-taking.",
       "target": {
         "type": "program"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Feelings Detective\" (tagged self-awareness). FNE's catalog description: \"Look at the clues in a scene, then pick every feeling that fits.\" Pre-K to grade 5 skills in this domain start with recognizing and labelling feelings; the child reads the clues in a scene and names every feeling that fits. Limit: The feelings belong to people in the scene, not the child, and the game does not ask them to manage a feeling.",
+      "target": {
+        "type": "brain_game",
+        "slug": "feelings-detective"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"My Feelings Today\" (tagged self-awareness). FNE's catalog description: \"Say how you feel, where you feel it and what helps. Only you see it.\" The child names how they feel, where they feel it in their body and what helps, which is recognizing a feeling and choosing a way to respond to it (Pre-K to grade 5). Limit: A private check-in for the youngest band, so it shows what the child feels but nothing about how they handled it.",
+      "target": {
+        "type": "brain_game",
+        "slug": "my-feelings-today"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Wait for It\" (tagged self-management). FNE's catalog description: \"Listen to a waiting problem, then pick what helps you wait.\" Each round is a moment of wanting something now, and the child picks what helps them wait, which is choosing a coping strategy for a hard moment (grades 1 to 5). Limit: Everyday waiting moments for the youngest band only; no goal-setting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "wait-for-it"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Strength Spotter\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, spot the strengths it shows, then think about your own.\" The child spots strengths in stories about others, then picks strengths that sound like them, which is identifying one's own strengths (grades 1 to 5). Limit: Covers strengths only, not needs or preferences.",
+      "target": {
+        "type": "brain_game",
+        "slug": "strength-spotter"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"What Helps Me\" (tagged self-awareness). FNE's catalog description: \"Pick what helps you learn and focus, then try one idea. Only you see it.\" The child picks what helps them learn and focus and one idea to try, which is naming one's own needs and preferences (grades 1 to 5). Limit: Limited to learning and focus, and it is a private check-in.",
+      "target": {
+        "type": "brain_game",
+        "slug": "what-helps-me"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Stuck on It\" (tagged self-management). FNE's catalog description: \"Read about someone who is stuck, then pick what helps and find the proof.\" The child picks what helps someone who is stuck, such as rest or a smaller goal, which is selecting a coping strategy for an adverse situation (grades 1 to 5). Limit: The child reads about another person rather than working through their own frustration.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stuck-on-it"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Team Pick\" (tagged self-management). FNE's catalog description: \"Work through being picked last for a team: what you feel, what could happen and what to do.\" The player works through being picked last: what they feel, what could happen and what to do, which is identifying a feeling in context and choosing how to respond (grades 1 to 8). Limit: One kind of situation, so it shows the skill rather than building a full set of coping strategies.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-pick"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Know Your Triggers\" (tagged self-awareness). FNE's catalog description: \"Name what raises your stress and how you notice it first. Only you see it.\" The student names what raises their stress and what they notice first, which is identifying how a feeling shows up in a particular context (grades 6 to 8). Limit: Identifies and names; it does not teach or practise a coping strategy. A private check-in.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-your-triggers"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Group Chat Meltdown\" (tagged self-management). FNE's catalog description: \"The chat turned on you. Decide how to answer before you type.\" The player picks ways to handle how they feel before answering a chat that turned on them, which is selecting a healthy response to an adverse situation (grades 6 to 12). Limit: One online scenario.",
+      "target": {
+        "type": "brain_game",
+        "slug": "group-chat-meltdown"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Stress Signals\" (tagged self-awareness). FNE's catalog description: \"Find the signs that stress is building for you and one way to check in sooner. Only you see it.\" The student finds the signs that stress is building for them and one way to check in sooner, which is identifying a healthy coping step for an adverse situation (grades 9 to 12). Limit: One check-in step rather than a range of coping skills. A private check-in.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stress-signals"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Know Yourself\" (tagged self-awareness). FNE's catalog description: \"Rank what matters to you, face a tradeoff and see where you lean. Only you see it.\" The student ranks what matters to them and faces a tradeoff, which feeds the goal-setting and self-advocacy skills of grades 9 to 12. Limit: It does not have the student set or pursue a goal.",
+      "target": {
+        "type": "brain_game",
+        "slug": "know-yourself"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Values Compass\" (tagged self-awareness). FNE's catalog description: \"Notice what someone does, name the values behind it, then think about your own.\" The student names the values behind what someone does, then ranks their own, which supports explaining one's own preferences (grades 6 to 8). Limit: Values only; nothing is shared or acted on.",
+      "target": {
+        "type": "brain_game",
+        "slug": "values-compass"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Moves\" (tagged self-management). FNE's catalog description: \"Save toward a goal and keep some spending money. More than one path works.\" The player saves toward a goal across a run of events and adjusts when something comes up, which supports working toward a goal (grades 1 to 8). Limit: Money is the only goal, and the game teaches budgeting more than goal-setting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-moves"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Money Matters\" (tagged self-management). FNE's catalog description: \"Manage a first budget through real tradeoffs: savings, credit and surprise costs.\" The student manages a first budget through real tradeoffs, which supports planning for living on one's own (grades 9 to 12). Limit: Financial decisions only, not postsecondary or career planning.",
+      "target": {
+        "type": "brain_game",
+        "slug": "money-matters"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "A",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Deadline Crunch\" (tagged self-management). FNE's catalog description: \"Read a deadline problem, pick the plan that holds up, then find the proof.\" The student picks the plan that holds up under competing deadlines, which supports spotting what gets in the way of a goal (grades 6 to 8). Limit: Planning and time only; feelings and coping are not part of it.",
+      "target": {
+        "type": "brain_game",
+        "slug": "deadline-crunch"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Sharing Circle\" (tagged social awareness). FNE's catalog description: \"Listen to what happened, then pick the kind thing to do.\" The child picks the kind thing to do for someone, which is interacting in pro-social ways with peers (Pre-K to grade 5). Limit: Everyday kindness for the youngest band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "sharing-circle"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Asking Nicely\" (tagged relationship skills). FNE's catalog description: \"Listen to what happens, then pick the kind words to say.\" The child picks kind words for a moment such as asking for a turn, saying thank you or saying sorry, which is communicating in a way that suits the other person (Pre-K to grade 5). Limit: Short, simple phrases for the youngest band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "asking-nicely"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Team Tower\" (tagged relationship skills). FNE's catalog description: \"Listen to a team problem, then pick what helps the team.\" The child picks what helps a team, such as taking turns, helping or listening, which is cooperating with peers (Pre-K to grade 5). Limit: Simple team moments for the youngest band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-tower"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Team Mission\" (tagged relationship skills). FNE's catalog description: \"Read a group work problem, pick the best team move, then find the sentence that shows why.\" The player picks the best team move in a group work problem and finds the sentence that shows why, which is interacting with respect and cooperation (grades 6 to 8). Limit: Group work at school only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "team-mission"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peace Table\" (tagged relationship skills). FNE's catalog description: \"Two kids disagree. Say what happened, listen, and find a fair plan together.\" Two children disagree and the player says what happened, listens and finds a fair plan, which is practising ways to solve a conflict (grades 1 to 5). Limit: Peer disagreements between children.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peace-table"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Many Ways to Be\" (tagged social awareness). FNE's catalog description: \"Read about people who are different, then pick the respectful answer and the proof.\" The child reads about people who are different and picks the respectful answer, which is showing respect for the uniqueness of others (grades 1 to 5). Limit: A short respectful-answer choice, not a lesson on diversity.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-ways-to-be"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Same and Different\" (tagged social awareness). FNE's catalog description: \"Listen to the story, then tap what is the same, what is different, or the kind thing to do.\" The child taps what is the same, what is different, or the kind thing to do in a short story, which is respecting how others are different (Pre-K to grade 5). Limit: Very short stories for the youngest band. The match is looser than the next game up in age, so the reviewer may prefer supporting.",
+      "target": {
+        "type": "brain_game",
+        "slug": "same-and-different"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Say It Another Way\" (tagged relationship skills). FNE's catalog description: \"Read a situation, pick the message this person would hear best, then find the sentence that shows why.\" The player picks the message this person would hear best and finds the sentence that shows why, which is choosing communication for its effect on others (grades 6 to 8). Limit: Written messages, not spoken ones.",
+      "target": {
+        "type": "brain_game",
+        "slug": "say-it-another-way"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Speak Up Kindly\" (tagged relationship skills). FNE's catalog description: \"Read a situation, pick the message that is clear and kind, then find what is needed.\" The student picks the message that is clear and kind for the situation, which is selecting a communication strategy that fits the context (grades 9 to 12). Limit: Written messages only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "speak-up-kindly"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Repair It\" (tagged relationship skills). FNE's catalog description: \"Read what went wrong, then pick the message that owns it and repairs trust.\" The student reads what went wrong and picks the message that owns it and repairs trust, which is resolving a conflict (grades 9 to 12). Limit: Repairing after a conflict, not preventing one.",
+      "target": {
+        "type": "brain_game",
+        "slug": "repair-it"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" Two teammates see one plan two ways and the player adjusts it so everyone can take part, which supports using empathy and perspective-taking in relationships (grades 6 to 8). Limit: Teamwork scenarios; its stronger match is in the Social Problem-Solving domain.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Walk in My Shoes\" (tagged social awareness). FNE's catalog description: \"Read about someone, work out how they feel, then find the sentence that shows it.\" The child works out how someone feels and what they need, which supports building relationships through empathy (grades 1 to 5). Limit: Its stronger match is in the Social Problem-Solving domain.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-my-shoes"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Walk in Their Shoes\" (tagged social awareness). FNE's catalog description: \"Read both sides of a disagreement, then work out why each person sees it that way.\" The student works out why each side of a disagreement sees it that way, which supports empathy and perspective-taking in relationships (grades 6 to 8). Limit: Its stronger match is in the Social Problem-Solving domain.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-their-shoes"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" The student spots whose voice is missing in a real situation, which supports awareness and respect of diversity (grades 9 to 12). Limit: Its stronger match is in the Social Problem-Solving domain.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" The student makes an ask people can say yes to, which supports choosing communication for a context (grades 9 to 12). Limit: One kind of request, written for school.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "B",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Peer Pressure Pause\" (tagged responsible decision-making). FNE's catalog description: \"Read a pressure situation, pick the best choice, then find the risk that proves it.\" The student weighs a pressure situation and picks the best choice, which supports resisting inappropriate pressure from peers. Limit: Its stronger match is in the Social Problem-Solving domain.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peer-pressure-pause"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Helper's Choice\" (tagged responsible decision-making). FNE's catalog description: \"Listen to what happened, then pick the right thing to do.\" The child hears a short situation about honesty or follow-through and picks the right thing to do, which is acknowledging the consequences of a choice (Pre-K to grade 5). Limit: Short situations for the youngest band.",
+      "target": {
+        "type": "brain_game",
+        "slug": "helpers-choice"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Stop and Think\" (tagged responsible decision-making). FNE's catalog description: \"Listen to a problem, stop and think, then pick the safe choice.\" The child stops and thinks, then picks the safe choice, which is acknowledging the consequences of a choice before acting (Pre-K to grade 5). Limit: Safety moments only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "stop-and-think"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Choice Quest\" (tagged responsible decision-making). FNE's catalog description: \"Work through a team-project problem: see what is happening, who it affects and what to do.\" The player works through a team-project problem by seeing what is happening, who it affects and what to do, which is weighing a decision's consequences for oneself and others (grades 1 to 8). Limit: One kind of school problem.",
+      "target": {
+        "type": "brain_game",
+        "slug": "choice-quest"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Walk in My Shoes\" (tagged social awareness). FNE's catalog description: \"Read about someone, work out how they feel, then find the sentence that shows it.\" The child works out how someone feels and what they need, then finds the sentence that shows it, which is responding to others with a sense of their point of view (Pre-K to grade 5). Limit: Reading about a person rather than meeting them.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-my-shoes"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Walk in Their Shoes\" (tagged social awareness). FNE's catalog description: \"Read both sides of a disagreement, then work out why each person sees it that way.\" The student reads both sides of a disagreement and works out why each person sees it that way, which is analysing various perspectives on a situation (grades 6 to 8). Limit: Disagreements written for the age group, not live discussion.",
+      "target": {
+        "type": "brain_game",
+        "slug": "walk-in-their-shoes"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Other Side of the Screen\" (tagged social awareness). FNE's catalog description: \"Read an online moment, work out how the other person feels, then find the proof.\" The student works out how someone feels about an online moment, which is telling how a social context, here an online one, shapes how people feel (grades 6 to 8). Limit: Online moments only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "other-side-of-the-screen"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Peer Pressure Pause\" (tagged responsible decision-making). FNE's catalog description: \"Read a pressure situation, pick the best choice, then find the risk that proves it.\" The student picks the best choice in a pressure situation and finds the risk that proves it, which is making a decision based on anticipated consequences (grades 6 to 8). Limit: Pressure scenarios only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "peer-pressure-pause"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Perspective Swap\" (tagged social awareness). FNE's catalog description: \"Two teammates see one plan two ways. Hear both, then adjust it so everyone can take part.\" The player hears two teammates' views of one plan and adjusts it so everyone can take part, which is analysing various perspectives on a situation (grades 6 to 12). Limit: Teamwork scenarios.",
+      "target": {
+        "type": "brain_game",
+        "slug": "perspective-swap"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"The Post\" (tagged responsible decision-making). FNE's catalog description: \"A rumor is spreading. Decide what you would share and what you would report.\" The student decides what to share and what to report when a rumor spreads, which is evaluating consequences from a personal and civic perspective (grades 9 to 12). Limit: Digital settings only.",
+      "target": {
+        "type": "brain_game",
+        "slug": "the-post"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"First Shift\" (tagged responsible decision-making). FNE's catalog description: \"A coworker asks you to cover for them. Decide what you owe the team and the truth.\" The student decides what they owe the team and the truth when a coworker asks them to cover, which is weighing a response in a particular social context (grades 9 to 12). Limit: One workplace scenario.",
+      "target": {
+        "type": "brain_game",
+        "slug": "first-shift"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "Tune Your Brain game \"Many Voices\" (tagged social awareness). FNE's catalog description: \"Read a real situation, spot whose voice is missing, then find the sentence that shows it.\" The student spots whose voice is missing and how conventions shape what people see, which is evaluating how societal conventions can influence perspectives (grades 9 to 12). Limit: Reading situations; no response or decision is asked of the student.",
+      "target": {
+        "type": "brain_game",
+        "slug": "many-voices"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Fix-It Workshop\" (tagged responsible decision-making). FNE's catalog description: \"Find a problem at school, listen to the people it affects, and try a small fix.\" The player listens to the people a school problem affects before trying a small fix, which supports looking at how a decision touches others. Limit: The focus is creative problem-solving rather than social problem-solving.",
+      "target": {
+        "type": "brain_game",
+        "slug": "fix-it-workshop"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Idea Lab\" (tagged responsible decision-making). FNE's catalog description: \"Find the real need, then test one small idea before you launch.\" The student finds the real need behind a school problem before testing an idea, which supports considering the people a decision affects. Limit: The focus is creative problem-solving rather than social problem-solving.",
+      "target": {
+        "type": "brain_game",
+        "slug": "idea-lab"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "supporting",
+      "rationale": "Tune Your Brain game \"Community Voice\" (tagged relationship skills). FNE's catalog description: \"Pick a problem you can change, then make an ask people can say yes to.\" The student listens to who a school problem affects before making an ask, which supports weighing a decision from a civic perspective (grades 9 to 12). Limit: One kind of request.",
+      "target": {
+        "type": "brain_game",
+        "slug": "community-voice"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Count the Cost Before You Choose\" (series: Decision Making & Consequences; the objective is the same in every grade version). FNE's stated objective: \"Every choice asks something of us and sometimes of others. Learners consider time, shared resources, and trust before choosing a workable plan.\" The lesson has students weigh what a choice costs themselves and others before picking a plan, which is making a decision based on its anticipated consequences. Limit: Teaches the weighing skill in general terms; it does not include a social scenario between peers.",
+      "target": {
+        "type": "curriculum",
+        "title": "Count the Cost Before You Choose - Lesson Plan 10 - 9 - #145 - MS"
+      }
+    },
+    {
+      "framework": "Pennsylvania Career Ready Skills",
+      "itemCode": "C",
+      "strength": "direct",
+      "rationale": "FNE lesson \"Slow Down and Think It Through\" (series: Wisdom & Discernment; the objective is the same in every grade version). FNE's stated objective: \"Today you will read or listen to a Morning Boost about slowing down before making a choice. This lesson teaches that a pause can create space to gather facts, consider consequences, ask useful questions, and choose a wiser response.\" The lesson teaches a pause that gathers facts, considers consequences and seeks perspective before responding, which is identifying consequences before acting. Limit: A thinking routine; social settings appear only in the examples.",
+      "target": {
+        "type": "curriculum",
+        "title": "Slow Down and Think It Through - Lesson Plan 10 - 1 - #139 - MS"
       }
     }
   ]
