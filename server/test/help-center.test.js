@@ -97,13 +97,13 @@ test('facts that must match the system: reset 1 hour, verification 24 hours, inv
 
 test('WIRING: page, footer, portal menus, Get help panel, Contact pointer and the anonymous "answer opened" count', () => {
   const page = read('help.html');
-  assert.match(page, /help-center\.js\?v=12/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
+  assert.match(page, /help-center\.js\?v=\d+/); assert.match(page, /help-videos\.js/); assert.match(page, /fnTrackEvent\('faq_open', e\.id\)/);
   assert.match(page, /preview/); assert.match(page, /noindex/);
   assert.ok(!/innerHTML/.test(page), 'answers are written with textContent only');
   assert.match(read('footer.js'), /help\.html">Help center/);
   assert.match(read('school-admin-nav.js'), /help\.html\?aud=school/); assert.match(read('district-admin-nav.js'), /help\.html\?aud=district/);
   const sp = read('support.html');
-  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=12/); assert.match(sp, /See all answers/);
+  assert.match(sp, /Check these answers first/); assert.match(sp, /help-center\.js\?v=\d+/); assert.match(sp, /See all answers/);
   assert.match(read('contact.html'), /href="help\.html"/);
   assert.match(read('server/routes/analytics.js'), /EVENT_TYPE_PATTERN = \/\^\[a-z_\]\{1,32\}\$\//);
 });
@@ -114,11 +114,15 @@ test('GET HELP VIDEOS: G1 and G2 are on the Get help page, G3 is staff-only and 
   assert.equal(JSON.stringify(by('G3').pages), '["admin-support.html","admin-support-errors.html"]'); assert.equal(by('G3').listed, false); assert.equal(by('G3').group, 'staff');
   for (const id of ['G1', 'G2', 'G3']) assert.ok(videos.videos.find(v => v.id === id) && !videos.recorded(by(id)) === !by(id).url, `${id} is hidden until published`);
   assert.match(read('help-videos.js'), /v\.listed !== false/);
-  assert.match(read('support.html'), /help-videos\.js\?v=19/); assert.match(read('admin-support.html'), /help-videos\.js\?v=19/);
+  assert.match(read('support.html'), /help-videos\.js\?v=\d+/); assert.match(read('admin-support.html'), /help-videos\.js\?v=\d+/);
+  // Every page must load the same version, so a changed registry reaches every browser at once (the number itself changes with each release).
+  const seen = new Map();
   for (const f of fs.readdirSync(ROOT).filter(n => n.endsWith('.html'))) {
     const m = read(f).match(/help-videos\.js\?v=(\d+)/);
-    if (m) assert.equal(m[1], '19', `${f} loads help-videos.js at the current version`);
+    if (m) seen.set(f, m[1]);
   }
+  assert.ok(seen.size > 40, 'the pages that load help-videos.js were found');
+  assert.equal(new Set(seen.values()).size, 1, `every page loads help-videos.js at one version: ${[...new Set(seen.values())].join(', ')}`);
   assert.ok(HC.entries.some(e => e.video === 'G1') && HC.entries.some(e => e.video === 'G2'), 'the Help center points at both user videos');
 });
 

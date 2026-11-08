@@ -133,6 +133,7 @@ Note: `server/scripts/videos-to-review.js` read `help-videos.js` with a pattern 
 | T7 | Build your lesson plan library | teacher-lesson-plans-browse.html, teacher-lesson-plans.html, my-license.html |
 | T8 | Buy a teacher license and check out | licenses.html |
 | S4 | Play and track brain games | brain-games.html, brain-games-progress.html, brain-badges.html |
+| S5 | My Graduate Portrait | student-portrait.html |
 | F1 | Join the affiliate program | become-an-affiliate.html, affiliate-dashboard.html |
 | E1 | See how Fixer Nation lines up with your state's standards | state-standards.html |
 

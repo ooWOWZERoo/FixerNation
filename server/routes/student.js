@@ -5,6 +5,7 @@ const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/br
 const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForClassroom } = require('../lib/safety/school-context');
 const { awardClassroomCompletion } = require('../lib/rewards');
+const { removePinsFor } = require('../lib/portrait-pins');
 
 const router = express.Router();
 router.use(requireStudentAuth);
@@ -363,6 +364,7 @@ router.put('/goals/:id', async (req, res) => {
 
 router.delete('/goals/:id', async (req, res) => {
   await pool.query('DELETE FROM student_goals WHERE id = ? AND student_id = ?', [req.params.id, req.student.id]);
+  await removePinsFor(req.student.id, 'goal', Number(req.params.id)); // a deleted goal also leaves the portrait
   res.json({ ok: true });
 });
 

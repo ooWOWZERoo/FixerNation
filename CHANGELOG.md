@@ -17,6 +17,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 157 — 2026-11-08 — My Graduate Portrait, tier 1: every student gets their own portrait page
+
+- **A new student page, My Graduate Portrait,** shows which New York graduate skills a student has practiced this school year, with the names of the games and lessons that count. It says "evidence of practice" in plain words, never a grade, and never compares students. Linked from the student home page and from My Goals & History.
+- **Students can pin up to three of their own words** (a reflection or a goal from this school year) and show one beside a skill. Pinned words show only on the student's own page: not to parents, and not in school or district pages. They are pointers, not copies, and disappear with the original or with the student's records.
+- **Drafts waiting for the owner:** a release note (`release-notes.html?preview=1`), two Help answers (`help.html?preview=1`), and a how-to video, S5, recorded but not published.
+- Decisions D1 to D14 for the portrait are confirmed (all as recommended). Tier 2 (the end-of-year keepsake) and tier 3 (the lifelong portrait) are not built.
+- Housekeeping: tests no longer hard-code `help-videos.js` and `help-center.js` version numbers (two of them failed after Release 156); the local video test site no longer adds the lesson catalog twice. Deploy needs the alter script and a Node restart.
+
 ## Release 156 — 2026-11-08 — T4 video republished with the ideas box, and the My Graduate Portrait recommendations
 
 - **T4 (Assign lessons and brain games) is re-recorded and published.** It now mentions the optional "Not sure what to assign?" ideas box and shows it on screen, then points to the Graduate Evidence video for the detail. New captions and poster; `help-videos.js` is at `?v=20` on every page that loads it.

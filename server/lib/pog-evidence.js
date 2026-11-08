@@ -233,6 +233,39 @@ async function teacherClassroomReport({ classroomId, schoolYearStart, state = 'N
   return { state: conns.state, schoolYear: schoolYearBounds(schoolYearStart).label, students: c.students, frameworks: frameworkViews(conns, c.items, c.students) };
 }
 
+// One student's OWN portrait (My Graduate Portrait, tier 1: docs/reference/graduate-portrait-requirements.md). Same joins and the same
+// definitions as the class report, for a single student, read-only. Per item the status is: 'practiced' (finished a verified DIRECT
+// activity), 'touched' (finished only a SUPPORTING one), 'not_yet' (something is connected, nothing finished), or 'no_connection'
+// (nothing verified is connected: not a gap in the student). `activities` lists only what the student FINISHED, never what they have
+// not. Nothing here is a score: no quiz, game score, time or accuracy is read, and nothing compares one student with another.
+// The caller passes the student id from the VERIFIED student session, never one from the client.
+async function studentPortrait({ studentId, schoolYearStart, state = 'NY', connections }) {
+  const sid = Number(studentId);
+  if (!Number.isInteger(sid) || sid < 1) { const e = new Error('Not a student.'); e.status = 400; throw e; }
+  const conns = connections || await loadConnections(state);
+  const done = (await finishedByStudent([sid], conns, schoolYearBounds(schoolYearStart))).get(sid) || new Set();
+  let practiced = 0, touched = 0, connected = 0;
+  const frameworks = conns.frameworks.map((f) => ({
+    id: f.id, type: f.type, name: f.name, issuingBody: f.issuingBody, officialUrl: f.officialUrl, verifiedAt: f.verifiedAt,
+    items: f.items.map((it) => {
+      const isConnected = it.direct.length + it.supporting.length > 0;
+      const seen = new Map(); // activity key -> { kind, title, strength }; direct wins over supporting
+      for (const t of it.targets) {
+        if (!done.has(t.key)) continue;
+        const have = seen.get(t.key);
+        if (!have || (have.strength !== 'direct' && t.strength === 'direct')) seen.set(t.key, { kind: t.kind, title: t.label, strength: t.strength });
+      }
+      const activities = [...seen.values()].sort((a, b) => (a.strength === 'direct' ? 0 : 1) - (b.strength === 'direct' ? 0 : 1) || a.title.localeCompare(b.title));
+      let status = 'no_connection';
+      if (isConnected) status = activities.some((a) => a.strength === 'direct') ? 'practiced' : activities.length ? 'touched' : 'not_yet';
+      if (isConnected) connected++;
+      if (status === 'practiced') practiced++; else if (status === 'touched') touched++;
+      return { id: it.id, code: it.code, title: it.title, summary: it.summary, status, activities };
+    }),
+  }));
+  return { state: conns.state, schoolYear: schoolYearBounds(schoolYearStart).label, summary: { items: frameworks.reduce((n, f) => n + f.items.length, 0), connected, practiced, touched }, frameworks };
+}
+
 // School and district views: groups are { key, label, classroomIds }. Counts are computed per group, then merged until every
 // group has at least `min` students. Nothing returned names a student or a teacher.
 async function groupedReport({ groups, schoolYearStart, min = DEFAULT_MIN_GROUP, state = 'NY', connections, otherLabel }) {
@@ -352,5 +385,5 @@ function lessThan(a, b) { for (let i = 0; i < a.length; i++) { if (a[i] < b[i]) 
 
 module.exports = {
   DEFAULT_MIN_GROUP, MIN_GROUP_FLOOR, MIN_GROUP_CEILING, clampMinGroup, schoolYearStartOf, currentSchoolYearStart, schoolYearBounds,
-  loadConnections, classroomEvidence, groupWithMinimum, teacherClassroomReport, groupedReport, candidatePool, suggestionsForItem, bestNextSteps,
+  loadConnections, classroomEvidence, groupWithMinimum, teacherClassroomReport, studentPortrait, groupedReport, candidatePool, suggestionsForItem, bestNextSteps,
 };

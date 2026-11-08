@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - My Graduate Portrait</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+:root{--cream:#FBF5EC;--teal:#164F4A;--teal-dark:#0E3733;--coral:#F26B4D;--coral-dark:#D9502F;--gold:#EBA657;--ink:#2A2420;--ink-soft:#6B5F55;--border:rgba(22,79,74,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+a{text-decoration:none;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:28px 20px 60px;}
+.wrap{max-width:800px;margin:0 auto;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.brand img{height:60px;width:auto;display:block;}
+.back-link{font-size:13px;font-weight:600;color:var(--teal-dark);}
+.back-link:hover{text-decoration:underline;}
+h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bottom:6px;}
+.year{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:14px;}
+.intro{font-size:15px;line-height:1.55;max-width:60ch;margin-bottom:26px;}
+h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:20px;margin:30px 0 4px;}
+.fw-sum{font-size:14px;color:var(--ink-soft);margin-bottom:14px;}
+.item{background:#fff;border-radius:16px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:16px 18px;margin-bottom:12px;border-left:6px solid var(--border);}
+.item.practiced{border-left-color:var(--teal);}
+.item.touched{border-left-color:var(--gold);}
+.item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.item-title{font-weight:800;font-size:16px;color:var(--teal-dark);}
+.item-code{font-size:12px;font-weight:700;color:var(--ink-soft);margin-right:6px;}
+.item-sum{font-size:13.5px;color:var(--ink-soft);margin-top:3px;line-height:1.45;max-width:58ch;}
+.chip{display:inline-block;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;border:1.5px solid var(--border);color:var(--ink-soft);background:#fff;}
+.chip.practiced{background:var(--teal);border-color:var(--teal);color:#fff;}
+.chip.touched{background:#fdf0d9;border-color:var(--gold);color:#7a4b09;}
+.acts-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:12px 0 4px;}
+.acts{list-style:none;}
+.acts li{font-size:14px;padding:3px 0;}
+.acts .kind{font-size:12px;color:var(--ink-soft);margin-left:4px;}
+.quote{margin-top:10px;padding:10px 12px;background:var(--cream);border-radius:10px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.words{background:#fff;border-radius:16px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:18px 20px;}
+.help{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:12px;}
+.pin{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);}
+.pin:first-of-type{border-top:none;}
+.pin-text{font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;flex:1;}
+.pin-beside{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+.btn{padding:9px 15px;border-radius:10px;border:1.5px solid var(--teal);background:#fff;color:var(--teal-dark);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;}
+.btn:hover{background:var(--cream);}
+.btn.primary{background:var(--teal);color:#fff;}
+.btn.primary:hover{background:var(--teal-dark);}
+.btn:disabled{opacity:.5;cursor:default;}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+.panel{margin-top:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;background:var(--cream);}
+.panel h3{font-size:15px;color:var(--teal-dark);margin-bottom:10px;}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-size:14px;line-height:1.45;cursor:pointer;}
+.choice input{margin-top:3px;}
+.choice small{display:block;color:var(--ink-soft);font-size:12px;}
+.field{margin:12px 0;}
+.field label{display:block;font-size:13px;font-weight:700;margin-bottom:4px;}
+select{width:100%;max-width:360px;padding:9px 11px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;}
+.msg{font-size:13.5px;margin-top:10px;color:var(--coral-dark);min-height:1em;}
+.empty{font-size:14px;color:var(--ink-soft);padding:6px 0;}
+.footnote{margin-top:34px;font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:64ch;}
+.footnote a{color:var(--teal-dark);text-decoration:underline;}
+@media print{.back-link,.btn,.panel{display:none;}body{padding:0;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="brand"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"></div>
+    <a class="back-link" href="student-home.html">← Home</a>
+  </div>
+
+  <h1>My Graduate Portrait</h1>
+  <div class="year" id="year"></div>
+  <p class="intro">Here are the graduate skills you've practiced in Fixer Nation this school year. It's just a record of what you've done, so there's no grade here.</p>
+
+  <div id="content" aria-live="polite"><div class="empty">Loading…</div></div>
+
+  <h2>In my own words</h2>
+  <div class="words">
+    <p class="help">Pick up to 3 things you wrote, like a reflection or a goal, and they'll show on your portrait. Only you see them here.</p>
+    <div id="pins"></div>
+    <button class="btn primary" id="openPin" type="button" style="margin-top:10px;">Pin my words</button>
+    <div class="msg" id="limitMsg" role="status"></div>
+    <div class="panel" id="panel" hidden>
+      <h3>Choose something you wrote</h3>
+      <div id="choices"></div>
+      <div class="field" id="besideField">
+        <label for="beside">Show it beside</label>
+        <select id="beside"></select>
+      </div>
+      <button class="btn primary" id="doPin" type="button">Pin this</button>
+      <button class="btn" id="cancelPin" type="button">Cancel</button>
+      <div class="msg" id="pinMsg" role="alert"></div>
+    </div>
+  </div>
+
+  <p class="footnote" id="footnote"></p>
+</div>
+
+<script src="error-capture.js?v=1" defer></script>
+<script src="help-videos.js?v=20" defer></script>
+<script>
+var data = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function api(method, path, body) {
+  return fetch(path, {
+    method: method, credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body || {}),
+  });
+}
+
+async function load() {
+  var r = await api('GET', '/api/student-portrait');
+  if (r.status === 401) { location.href = 'student-login.html'; return; }
+  if (!r.ok) { document.getElementById('content').innerHTML = '<div class="empty">We couldn\'t load your portrait. Please try again.</div>'; return; }
+  data = await r.json();
+  render();
+}
+
+function itemById(id) {
+  var found = null;
+  data.frameworks.forEach(function (f) { f.items.forEach(function (i) { if (i.id === id) found = i; }); });
+  return found;
+}
+
+var CHIP = { practiced: 'Practiced', touched: 'Tried something related', not_yet: 'Not practiced yet', no_connection: 'No activity connected yet' };
+
+function render() {
+  document.getElementById('year').textContent = 'School year ' + data.schoolYear;
+  var frameworks = data.frameworks.slice().sort(function (a, b) {
+    return (a.type === 'portrait_of_graduate' ? 0 : 1) - (b.type === 'portrait_of_graduate' ? 0 : 1);
+  });
+  var html = '';
+  if (!frameworks.length || !data.summary.connected) {
+    html = '<div class="empty">Fixer Nation is still connecting activities to these skills. Check back soon.</div>';
+  }
+  frameworks.forEach(function (f) {
+    var n = f.items.filter(function (i) { return i.status === 'practiced'; }).length;
+    html += '<h2>' + esc(f.name) + '</h2>';
+    html += '<div class="fw-sum">' + (n
+      ? 'So far this year you\'ve practiced ' + n + (n === 1 ? ' skill.' : ' skills.')
+      : 'You haven\'t practiced any of these yet. Finish a lesson or a game and it\'ll show up here.') + '</div>';
+    f.items.forEach(function (i) {
+      var attached = data.pins.filter(function (p) { return p.itemId === i.id; });
+      html += '<div class="item ' + (i.status === 'practiced' ? 'practiced' : i.status === 'touched' ? 'touched' : '') + '">' +
+        '<div class="item-top"><div><span class="item-code">' + esc(i.code) + '</span><span class="item-title">' + esc(i.title) + '</span>' +
+        (i.summary ? '<div class="item-sum">' + esc(i.summary) + '</div>' : '') + '</div>' +
+        '<span class="chip ' + (i.status === 'practiced' ? 'practiced' : i.status === 'touched' ? 'touched' : '') + '">' + esc(CHIP[i.status] || '') + '</span></div>';
+      if (i.activities.length) {
+        html += '<div class="acts-label">' + (i.status === 'practiced' ? 'How you practiced this' : 'Related things you finished') + '</div><ul class="acts">' +
+          i.activities.map(function (a) { return '<li>' + esc(a.title) + '<span class="kind">(' + (a.kind === 'game' ? 'game' : 'lesson') + ')</span></li>'; }).join('') + '</ul>';
+      }
+      attached.forEach(function (p) { html += '<div class="quote">' + esc(p.text) + '</div>'; });
+      html += '</div>';
+    });
+  });
+  document.getElementById('content').innerHTML = html;
+
+  var first = frameworks[0];
+  document.getElementById('footnote').innerHTML = 'Fixer Nation picked these connections itself. New York State and CASEL haven\'t endorsed or certified them.' +
+    (first && first.officialUrl ? ' The frameworks come from <a href="' + esc(first.officialUrl) + '" rel="noopener noreferrer">' + esc(first.issuingBody || 'the state') + '</a>.' : '');
+  renderPins();
+}
+
+function renderPins() {
+  var el = document.getElementById('pins');
+  if (!data.pins.length) {
+    el.innerHTML = '<div class="empty">You haven\'t pinned anything yet.</div>';
+  } else {
+    el.innerHTML = data.pins.map(function (p) {
+      var it = p.itemId ? itemById(p.itemId) : null;
+      return '<div class="pin"><div><div class="pin-text">' + esc(p.text) + '</div>' +
+        (it ? '<div class="pin-beside">Shown beside ' + esc(it.title) + '</div>' : '') + '</div>' +
+        '<button class="btn" type="button" data-id="' + esc(p.id) + '" onclick="removePin(this.dataset.id)">Remove</button></div>';
+    }).join('');
+  }
+  var full = data.pins.length >= data.maxPins;
+  document.getElementById('openPin').disabled = full;
+  document.getElementById('limitMsg').textContent = full ? 'You\'ve pinned ' + data.maxPins + '. Remove one to pin another.' : '';
+}
+
+function openPanel() {
+  var choices = document.getElementById('choices');
+  if (!data.pinnable.length) {
+    choices.innerHTML = '<div class="empty">Nothing to pin yet. Reflections and goals you write this school year will show up here.</div>';
+    document.getElementById('besideField').hidden = true;
+    document.getElementById('doPin').hidden = true;
+  } else {
+    choices.innerHTML = data.pinnable.map(function (s, n) {
+      return '<label class="choice"><input type="radio" name="pinChoice" value="' + n + '"><span>' + esc(s.text) +
+        '<small>' + (s.kind === 'goal' ? 'A goal I set' : 'A reflection' + (s.from ? ' from ' + esc(s.from) : '')) + '</small></span></label>';
+    }).join('');
+    var opts = '<option value="">No skill in particular</option>';
+    data.frameworks.forEach(function (f) { f.items.forEach(function (i) { opts += '<option value="' + esc(i.id) + '">' + esc(i.code + ' ' + i.title) + '</option>'; }); });
+    document.getElementById('beside').innerHTML = opts;
+    document.getElementById('besideField').hidden = false;
+    document.getElementById('doPin').hidden = false;
+  }
+  document.getElementById('pinMsg').textContent = '';
+  document.getElementById('panel').hidden = false;
+}
+
+async function doPin() {
+  var picked = document.querySelector('input[name="pinChoice"]:checked');
+  var msg = document.getElementById('pinMsg');
+  if (!picked) { msg.textContent = 'Choose one first.'; return; }
+  var s = data.pinnable[Number(picked.value)];
+  var beside = document.getElementById('beside').value;
+  var r = await api('POST', '/api/student-portrait/pins', { kind: s.kind, sourceId: s.id, itemId: beside ? Number(beside) : null });
+  if (r.status === 401) { location.href = 'student-login.html'; return; }
+  if (!r.ok) { var e = await r.json().catch(function () { return {}; }); msg.textContent = e.error || 'That didn\'t work. Please try again.'; return; }
+  document.getElementById('panel').hidden = true;
+  await load();
+}
+
+async function removePin(id) {
+  var r = await api('DELETE', '/api/student-portrait/pins/' + encodeURIComponent(id));
+  if (r.status === 401) { location.href = 'student-login.html'; return; }
+  await load();
+}
+
+document.getElementById('openPin').addEventListener('click', openPanel);
+document.getElementById('cancelPin').addEventListener('click', function () { document.getElementById('panel').hidden = true; });
+document.getElementById('doPin').addEventListener('click', doPin);
+load();
+</script>
+</body>
+</html>

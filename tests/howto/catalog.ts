@@ -44,6 +44,8 @@ export function seedLessonCatalog() {
   sql("UPDATE curricula SET title = 'Take Responsibility for Your Growth', series = 'Responsibility & Ownership' WHERE id = 1");
   LESSONS.filter(([, title]) => title !== "Take Responsibility for Your Growth").forEach(([series, title], i) => {
     const t = title.replace(/'/g, "''"), s = series.replace(/'/g, "''");
+    // Safe to call twice (a second call used to add every lesson again, and the standards import then refused the duplicate titles).
+    if (Number(sql(`SELECT COUNT(*) FROM curricula WHERE title = '${t}'`)) > 0) return;
     sql(`INSERT INTO curricula (title, series, short_description, overview, published, sort_order) VALUES ('${t}', '${s}', 'A short, guided SEL lesson for your classroom.', 'Students practice one skill through discussion and a short reflection.', 1, ${i + 1})`);
     const id = Number(sql("SELECT MAX(id) FROM curricula"));
     // Each real lesson is one grade version, named with a suffix: ES, MS or HS.

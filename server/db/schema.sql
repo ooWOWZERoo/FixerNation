@@ -1592,3 +1592,21 @@ CREATE TABLE IF NOT EXISTS pog_evidence_snapshots (
   UNIQUE KEY uq_snapshot (state_code, school_year_start, classroom_id, item_id),
   INDEX idx_classroom_year (classroom_id, school_year_start)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- My Graduate Portrait, tier 1 (Release 157): the up-to-3 reflections or goals a student pins to their own portrait. A pin is a pointer
+-- to the student's own reflection or goal (never a copy), deleted with the student. Added to existing installs by
+-- scripts/alter-create-student-portrait-pins.js. Requirements: docs/reference/graduate-portrait-requirements.md.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS student_portrait_pins (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  student_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(12) NOT NULL,
+  source_id INT UNSIGNED NOT NULL,
+  item_id INT UNSIGNED NULL,
+  school_year_start SMALLINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_pin (student_id, kind, source_id),
+  KEY idx_student_year (student_id, school_year_start),
+  FOREIGN KEY (student_id) REFERENCES classroom_students(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

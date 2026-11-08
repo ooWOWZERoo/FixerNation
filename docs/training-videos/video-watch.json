@@ -198,6 +198,9 @@
     "S3": [
       "student-achievements.html"
     ],
+    "S5": [
+      "student-portrait.html"
+    ],
     "P1": [
       "parent-invite-accept.html",
       "parent-portal.html",
