@@ -17,6 +17,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 150 — 2026-11-07 — Help center answers for the questions that used to be left out
+
+- **New answer: "Do I need a parent code to join?"** (published). No code exists; the child's teacher sends a personal invitation by email, one per child.
+- **New draft: "Who can read what students write?"** It says the student's own teacher reads reflections and quiz answers, a linked parent sees completion only, administrators see activity totals, and safety alerts name the type of concern without the student's words. It is a **draft** because the Help center's own rule keeps privacy wording hidden until the owner has read it at `help.html?preview=1`; say the word and it goes live.
+- **"How much does a license cost?"** now ends with "A single teacher can buy online at the price on the Licenses page."
+- `for-parents.html` said the school's FNE administrator sends parent invitations. Only the child's teacher can (`POST /api/classrooms/:id/students/:sid/invite-parent`), so the step now says that.
+- `help-center.js` is `?v=10`. Static files only: no restart, no database change.
+
 ## Release 149 — 2026-11-07 — Affiliates can ask for a whole state
 
 - **Affiliates can request every county in a state.** On the affiliate dashboard, the county list has a new first choice, "All counties in this state". The request waits for approval like any other, and an affiliate can still have only one request pending at a time. A whole state can be added to what they hold, but it cannot replace a single county (they would pick a county for that). If they already hold every county in the state, they are told so.

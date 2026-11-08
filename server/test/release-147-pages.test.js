@@ -75,3 +75,20 @@ test('no page promises an individual license only one classroom (nothing enforce
   assert.ok(!/one classroom/i.test(schools) && !/One Digital Classroom/.test(schools) && !/Multiple Digital Classrooms/.test(schools));
   assert.ok(!/one teacher with one classroom/i.test(read('help-center.js')));
 });
+
+test('Help center: parents are told there is no code, the writing-visibility answer waits for the owner, and for-parents names the teacher', () => {
+  const vm = require('node:vm');
+  const ctx = { window: {}, document: { readyState: 'complete', addEventListener() {}, getElementById: () => null, querySelectorAll: () => [], head: { appendChild() {} }, body: { appendChild() {} }, createElement: () => ({ style: {}, setAttribute() {} }) }, location: { search: '' }, console, setTimeout, fetch: () => Promise.resolve({ ok: false }) };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(read('help-center.js'), ctx);
+  const HC = ctx.FNHelpCenter;
+  const byId = (id) => HC.entries.find((e) => e.id === id);
+  assert.equal(byId('parent-need-code').reviewed, true);
+  assert.match(byId('parent-need-code').a, /no parent code/);
+  assert.equal(byId('who-reads-student-writing').reviewed, false, 'privacy wording stays a draft until the owner reads it');
+  assert.match(byId('license-price').a, /single teacher can buy online/);
+  const parents = read('for-parents.html');
+  assert.ok(!/FNE administrator sends a parent invite/.test(parents));
+  assert.match(parents, /Your child's teacher sends a parent invitation/);
+});
