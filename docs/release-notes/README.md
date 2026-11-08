@@ -10,6 +10,10 @@ Fixer Nation now has paying schools and teachers, so any change they can see on 
 
 When a change is **visible to a customer** on a page they use: a new page, tab or button, changed wording they rely on, a moved or removed feature, or a new rule about their students' data. Back-end fixes nobody can see do not need one. Write it in the same release as the change, say what changed and why it helps each audience, say where to find it, and be honest about limits. Run the customer wording through the humanize skill. A feature that is new or changed should also get a how-to video (`tests/howto/`), named in the note's `videos` list; it shows on the note once the video is published.
 
+## The banner
+
+Publishing a note (`published: true`) automatically shows a thin, dismissible banner above the page header on the public site and the school and district portals, linking to that note, for 30 days (`release-banner.js`, loaded by `nav.js`, `school-admin-nav.js` and `district-admin-nav.js`). Dismissing it is remembered per note in the visitor's browser, so the next note brings it back. It is never shown for a draft, on the release notes page, on print, on the student pages or the staff admin. Keep the `?v=N` that `release-banner.js` uses for `release-notes.js` equal to the one in `release-notes.html` (a test checks), and bump both whenever `release-notes.js` changes.
+
 ## Telling people
 
 The page is the record. To tell people about a change, send an email from Campaigns (`admin-campaigns.html`) that links to the note. Nothing is sent automatically; the owner sends or schedules each one. Email drafts and a Word version for a note can sit in this folder (for example `2026-11-graduate-evidence.docx`), but the text on the page is the source of truth.

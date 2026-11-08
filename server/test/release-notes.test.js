@@ -58,6 +58,14 @@ test('DRAFTS: visitors only ever get published notes; preview adds the rest; the
   assert.ok(RN.byId('student-data-kept').published, 'the owner approved the retention wording');
 });
 
+test('OWNER APPROVED 2026-11-08: the My Graduate Portrait note is published and says evidence of practice, never a grade or score', () => {
+  const n = RN.byId('my-graduate-portrait');
+  assert.ok(n.published);
+  assert.equal(JSON.stringify(n.videos), JSON.stringify(['S5', 'S6']));
+  assert.ok(!/mastery|mastered|proficien|achiev|\bgrowth\b|\bscores?\b|outcomes?/i.test(allText(n)), 'no assessment words');
+  assert.match(allText(n), /Neither New York State nor CASEL has endorsed/);
+});
+
 test('audience filter keeps the notes that matter to that audience', () => {
   const all = RN.visible(true);
   assert.equal(RN.forAudience(all, 'everyone').length, all.length);

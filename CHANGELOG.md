@@ -18,6 +18,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 160 — 2026-11-08 — A "what's new" banner, S6 published, and the portrait notes and answers go live
+
+- **A thin, dismissible banner announces each new release note.** It sits above the page header on the public site and in the school and district portals, names the newest published note, and links straight to it. Closing it keeps it away until the next note is published, and it disappears on its own 30 days after a note's date. It never appears on the release notes page, on print, or on the student pages. Publishing a note in `release-notes.js` is all it takes to start the banner; nothing else to update.
+- **Published, approved by the owner:** the My Graduate Portrait release note, and five Help answers (what the portrait is, how to print the keepsake, who can see pinned words, what Graduate Evidence is, and whether administrators can see which students practiced what).
+- **S6, "Print or save your Graduate Portrait keepsake," is published** (43 seconds, with captions). `help-videos.js` is at `?v=22`.
+- New York check: production serves both New York frameworks with all 179 drafted connections verified (67 direct, 112 supporting), so Graduate Evidence and the portraits are drawing on the full set.
+- Tier 3 (the lifelong portrait) is on hold at the owner's direction. Static files only: no restart, no database change.
+
 ## Release 159 — 2026-11-08 — My Graduate Portrait, tier 2: a one-page keepsake students and families can print
 
 - **A printable keepsake.** Students select "Print or save my keepsake" on their portrait, and a linked parent can open the same keepsake from the parent portal. It fits on one letter page with the student's name, class and school year, every skill, and the games and lessons that count. **Fixer Nation keeps no copy and emails nothing:** it is built when it's opened, so families save or print it themselves.

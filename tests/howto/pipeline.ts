@@ -238,6 +238,9 @@ export async function produce(board: Storyboard, outRoot = path.join(__dirname, 
     ...(board.as ? { storageState: storage } : {}),
   });
   await ctx.addInitScript(CURSOR_SCRIPT);
+  // The site shows a thin "new release note" banner for 30 days after a note is published (release-banner.js). Keep it out of the recordings so
+  // a video never depends on the day it was made: the script does nothing when this flag is already set.
+  await ctx.addInitScript(() => { (window as any).__fnReleaseBanner = true; });
   const page = await ctx.newPage();
   const t0 = Date.now();
   const now = () => (Date.now() - t0) / 1000;

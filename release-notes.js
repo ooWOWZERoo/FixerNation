@@ -35,7 +35,7 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
-    N('my-graduate-portrait', false, '2026-11-08', 'Releases 157 and 159', 'My Graduate Portrait', ['teachers', 'school', 'district', 'families'],
+    N('my-graduate-portrait', true, '2026-11-08', 'Releases 157 and 159', 'My Graduate Portrait', ['teachers', 'school', 'district', 'families'],
       'Students get their own page showing which graduate skills they have practiced this school year, and can pin a few of their own words to it.',
       'My Graduate Portrait is a page each student sees when they sign in. It uses the same New York frameworks as Graduate Evidence and the same rule: a skill counts as practiced once the student has finished a lesson or game that Fixer Nation connects to it. The student sees the names of the activities behind each skill, and up to three of their own reflections or goals if they choose to pin them. Students and their families can also print a one-page keepsake of it. The portrait is a record of what a student has done. It never gives a grade and never compares one student with another.',
       {

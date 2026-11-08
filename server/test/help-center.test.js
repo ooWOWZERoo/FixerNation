@@ -143,6 +143,12 @@ test('SEEDED ANSWERS: pricing, response-time promises, privacy and legal wording
   assert.ok(!/\$[1-9]/.test(text), "no dollar prices in a reviewed answer (the only dollar figure allowed is the $0 quote that needs no PO)");
 });
 
+test('OWNER APPROVED 2026-11-08: the Graduate Evidence and My Graduate Portrait answers are published (reviewed)', () => {
+  const by = (id) => HC.entries.find(e => e.id === id);
+  for (const id of ['graduate-evidence-what', 'graduate-evidence-privacy', 'portrait-what', 'portrait-keepsake', 'portrait-pins-privacy']) assert.ok(by(id) && by(id).reviewed, `${id} is published`);
+  assert.ok(!/\bscores?\b|mastery|proficien|growth/i.test(['portrait-what', 'portrait-keepsake', 'portrait-pins-privacy'].map(id => by(id).a).join(' ')), 'the portrait answers keep the evidence-of-practice language');
+});
+
 test('every audience tab has answers for visitors, and a search for a common word finds some', () => {
   const pub = HC.visible(false);
   for (const a of HC.audiences) assert.ok(HC.forAudience(pub, a.id).length >= 15, `${a.id} has plenty`);
