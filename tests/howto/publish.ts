@@ -49,7 +49,8 @@ async function upload(id: string, file: string): Promise<string> {
     const url = await upload(id, mp4);
     // Update this video's entry: its block runs from "id: 'ID'" to its closing "}".
     const start = registry.indexOf(`{ id: '${id}'`);
-    const end = registry.indexOf("}", registry.indexOf("url:", start));
+    // The first "}" after the start is this entry's own close (no entry has braces inside). Do not search for "url:" first: an entry with no url yet would run on into the NEXT entry and overwrite it.
+    const end = start < 0 ? -1 : registry.indexOf("}", start);
     if (start < 0 || end < 0) throw new Error(`${id} is not in help-videos.js`);
     let block = registry.slice(start, end + 1);
     block = block.replace(/,?\s*(url|captions|poster): '[^']*'/g, "").replace(/\s*\}$/, "");

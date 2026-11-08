@@ -17,6 +17,11 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 158 — 2026-11-08 — The My Graduate Portrait how-to video is published
+
+- **S5, "My Graduate Portrait," is published** (45 seconds, with captions). It appears on the student portrait page's How-to video button, and on the two draft Help answers and the draft release note once the owner publishes those. `help-videos.js` is at `?v=21` on every page that loads it.
+- The publish tool no longer overwrites the next video's entry when it publishes a video that has no link yet (this nearly replaced the parent video's link with S5's during this release). Static files only: no restart, no database change.
+
 ## Release 157 — 2026-11-08 — My Graduate Portrait, tier 1: every student gets their own portrait page
 
 - **A new student page, My Graduate Portrait,** shows which New York graduate skills a student has practiced this school year, with the names of the games and lessons that count. It says "evidence of practice" in plain words, never a grade, and never compares students. Linked from the student home page and from My Goals & History.
