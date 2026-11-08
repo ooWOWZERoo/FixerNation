@@ -259,7 +259,8 @@ async function renderPortal(children) {
 
     return '<div class="classroom-block" data-classroom-id="' + esc(child.classroomId) + '">' +
       '<div class="fn-school-line" style="display:none;"></div>' +
-      '<div class="classroom-head"><div><h3>' + esc(child.studentName) + '</h3><div class="sub">' + esc(child.className) + '</div></div></div>' +
+      '<div class="classroom-head"><div><h3>' + esc(child.studentName) + '</h3><div class="sub">' + esc(child.className) + '</div>' +
+        '<div class="sub" style="margin-top:6px;"><a href="portrait-keepsake.html?child=' + encodeURIComponent(child.studentId) + '" style="font-weight:700;color:inherit;text-decoration:underline;">Graduate Portrait keepsake</a> (a one-page record of the skills practiced this year)</div></div></div>' +
       (lessonCards
         ? '<div class="lesson-grid">' + lessonCards + '</div>'
         : '<div class="no-lessons">No lessons have been assigned to this classroom yet.</div>') +

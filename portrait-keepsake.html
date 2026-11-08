@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Graduate Portrait keepsake</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+  :root{ --cream:#FBF5EC; --teal:#164F4A; --teal-dark:#0E3733; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55; --line:rgba(22,79,74,0.22); --fs:10.5px; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  [hidden]{display:none !important;}
+  @page{ size:letter; margin:0.5in; }
+  body{font-family:'Plus Jakarta Sans',sans-serif; color:var(--ink); background:#E9E2D6; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .bar{max-width:8.5in; margin:0 auto; padding:16px 12px 8px; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; justify-content:space-between; font-size:14px;}
+  .bar a{color:var(--teal-dark); font-weight:700; text-decoration:underline; text-underline-offset:3px;}
+  .bar button{background:var(--coral-dark); color:#fff; border:none; border-radius:999px; padding:12px 22px; font:700 14px 'Plus Jakarta Sans',sans-serif; cursor:pointer;}
+  .bar button:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+  .keep{max-width:8.5in; margin:0 auto 12px; padding:0 12px; font-size:13.5px; color:var(--ink-soft);}
+  .msg{max-width:8.5in; margin:0 auto 12px; padding:0 12px; font-size:15px; line-height:1.5;}
+  /* the sheet: letter page minus 0.5in margins = 7.5in x 10in */
+  .sheet{width:7.5in; min-height:10in; margin:0 auto 40px; background:#fff; padding:0.18in 0.22in; font-size:var(--fs); line-height:1.32; box-shadow:0 8px 30px rgba(0,0,0,0.12);}
+  .head{display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:2px solid var(--teal); padding-bottom:0.08in; margin-bottom:0.08in;}
+  .head img{height:0.42in; width:auto;}
+  .head .tag{font-size:0.85em; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--coral-dark); text-align:right;}
+  h1{font-family:'Fraunces',serif; font-size:2.1em; line-height:1.1; color:var(--teal-dark); font-weight:700;}
+  .sub{margin-top:0.04in; color:var(--ink-soft); font-size:1.02em;}
+  .intro{margin:0.07in 0 0.02in; font-size:1em;}
+  h2{font-family:'Fraunces',serif; font-size:1.2em; color:var(--teal-dark); margin:0.09in 0 0.01in; font-weight:700;}
+  .sum{color:var(--ink-soft); font-size:0.95em; margin-bottom:0.04in;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:0.05in 0.14in;}
+  .it{border:1px solid var(--line); border-left:4px solid var(--line); border-radius:6px; padding:0.04in 0.08in; break-inside:avoid;}
+  .it.practiced{border-left-color:var(--teal);} .it.touched{border-left-color:var(--gold);}
+  .it .t{font-weight:800; color:var(--teal-dark);}
+  .it .c{color:var(--coral-dark); font-weight:800; margin-right:4px;}
+  .it .st{font-size:0.88em; font-weight:700; color:var(--ink-soft);}
+  .it.practiced .st{color:var(--teal);}
+  .it .acts{font-size:0.92em; color:var(--ink); margin-top:0.01in;}
+  .it .kind{color:var(--ink-soft);}
+  .words{margin-top:0.04in;}
+  .words blockquote{border-left:3px solid var(--gold); padding:0.02in 0.09in; margin:0.03in 0; white-space:pre-wrap; word-break:break-word;}
+  .words .beside{font-size:0.88em; color:var(--ink-soft);}
+  .foot{margin-top:0.1in; padding-top:0.06in; border-top:2px solid var(--teal); font-size:0.9em; color:var(--ink-soft);}
+  .foot p{margin-bottom:0.03in;}
+  @media print{
+    body{background:#fff;} .bar,.keep,.msg{display:none !important;}
+    .sheet{width:auto; min-height:0; margin:0; padding:0; box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar" hidden>
+  <a id="backLink" href="student-portrait.html">Back to my portrait</a>
+  <button type="button" id="printBtn">Print or save as PDF</button>
+</div>
+<p class="keep" id="keep" hidden>Fixer Nation doesn't keep a copy of this page. Save or print it now to keep it.</p>
+<div class="msg" id="msg" aria-live="polite">Loading…</div>
+<main class="sheet" id="sheet" hidden></main>
+
+<script src="error-capture.js?v=1" defer></script>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var child = params.get('child');
+  var PARENT = child !== null;
+  var sheet = document.getElementById('sheet'), msg = document.getElementById('msg');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function say(html) { msg.innerHTML = html; msg.hidden = false; sheet.hidden = true; }
+  function dateText(iso) { var p = String(iso || '').split('-'); return p.length === 3 ? new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''; }
+
+  var STATUS = { practiced: ['●', 'Practiced'], touched: ['◐', 'Tried something related'], not_yet: ['○', 'Not practiced yet'], no_connection: ['○', 'No activity connected yet'] };
+
+  function render(d) {
+    var frameworks = d.frameworks.slice().sort(function (a, b) { return (a.type === 'portrait_of_graduate' ? 0 : 1) - (b.type === 'portrait_of_graduate' ? 0 : 1); });
+    var h = '<div class="head"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"><div class="tag">Graduate Portrait keepsake</div></div>' +
+      '<h1>' + esc(d.student.displayName) + '</h1>' +
+      '<div class="sub">' + (d.className ? esc(d.className) + ' · ' : '') + 'School year ' + esc(d.schoolYear) + ' · Made ' + esc(dateText(d.madeOn)) + '</div>' +
+      '<p class="intro">These are the graduate skills practiced in Fixer Nation this school year. It\'s a record of activities finished, so there\'s no grade here.</p>';
+    frameworks.forEach(function (f) {
+      var n = f.items.filter(function (i) { return i.status === 'practiced'; }).length;
+      h += '<h2>' + esc(f.name) + '</h2><div class="sum">' + (n ? n + (n === 1 ? ' skill practiced so far.' : ' skills practiced so far.') : 'No skills practiced yet.') + '</div><div class="grid">';
+      f.items.forEach(function (i) {
+        var st = STATUS[i.status] || STATUS.not_yet;
+        h += '<div class="it ' + (i.status === 'practiced' ? 'practiced' : i.status === 'touched' ? 'touched' : '') + '"><div class="t"><span class="c">' + esc(i.code) + '</span>' + esc(i.title) + '</div>' +
+          '<div class="st"><span aria-hidden="true">' + st[0] + '</span> ' + st[1] + '</div>' +
+          (i.activities.length ? '<div class="acts">' + i.activities.map(function (a) { return esc(a.title) + ' <span class="kind">(' + (a.kind === 'game' ? 'game' : 'lesson') + ')</span>'; }).join(', ') + '</div>' : '') + '</div>';
+      });
+      h += '</div>';
+    });
+    if (d.pins && d.pins.length) {
+      h += '<h2>In my own words</h2><div class="words">' + d.pins.map(function (p) {
+        var it = null; d.frameworks.forEach(function (f) { f.items.forEach(function (i) { if (i.id === p.itemId) it = i; }); });
+        return '<blockquote>' + esc(p.text) + (it ? '<div class="beside">Beside ' + esc(it.title) + '</div>' : '') + '</blockquote>';
+      }).join('') + '</div>';
+    }
+    var src = frameworks[0];
+    h += '<div class="foot"><p>Fixer Nation picked these connections itself. New York State and CASEL haven\'t endorsed or certified them.' +
+      (src && src.officialUrl ? ' Frameworks: ' + esc(src.issuingBody || 'the state') + '.' : '') + '</p><p>Made by Fixer Nation Education on ' + esc(dateText(d.madeOn)) + '.</p></div>';
+    sheet.innerHTML = h;
+  }
+
+  // One letter page, always: shrink the type a little at a time until it fits (like the one-page state summary).
+  function fit() {
+    var MAX = 925; // 10in is 960px; leave a margin for print-engine differences
+    sheet.style.minHeight = '0';
+    for (var fs = 10.5; fs >= 6; fs -= 0.25) {
+      sheet.style.setProperty('--fs', fs + 'px');
+      if (sheet.scrollHeight <= MAX) break;
+    }
+    sheet.style.minHeight = '';
+  }
+
+  // The sheet is a fixed letter-page width so it prints right. On a screen narrower than that (a phone), shrink the PREVIEW to fit; the
+  // zoom is taken off while printing, and the type was already fitted at full size above.
+  function zoomToScreen() {
+    var w = sheet.offsetWidth || 720, avail = Math.max(280, document.documentElement.clientWidth - 24);
+    sheet.style.zoom = avail < w ? String(avail / w) : '';
+  }
+  window.addEventListener('beforeprint', function () { sheet.style.zoom = ''; });
+  window.addEventListener('afterprint', zoomToScreen);
+  window.addEventListener('resize', zoomToScreen);
+
+  var back = document.getElementById('backLink');
+  if (PARENT) { back.href = 'parent-portal.html'; back.textContent = 'Back to the parent portal'; }
+  document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+  var url = PARENT ? (/^\d{1,10}$/.test(child) ? '/api/parent-portrait/students/' + child : null) : '/api/student-portrait/keepsake';
+  if (!url) { say('We couldn\'t find that. <a href="parent-portal.html">Back to the parent portal</a>.'); return; }
+  fetch(url, { credentials: 'include' }).then(function (r) {
+    if (r.status === 401) { say(PARENT ? 'Please <a href="parent-login.html">sign in</a> to see this.' : 'Please <a href="student-login.html">sign in</a> to see this.'); return null; }
+    return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+  }).then(function (res) {
+    if (!res) return;
+    if (!res.ok) { say(esc(res.d.error || 'We couldn\'t load the keepsake. Please try again.') + ' <a href="' + (PARENT ? 'parent-portal.html' : 'student-portrait.html') + '">Go back</a>.'); return; }
+    msg.hidden = true; document.getElementById('bar').hidden = false; document.getElementById('keep').hidden = false; sheet.hidden = false;
+    render(res.d);
+    var run = function () { sheet.style.zoom = ''; fit(); zoomToScreen(); };
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(run); else run();
+  }).catch(function () { say('We couldn\'t load the keepsake. Please try again.'); });
+})();
+</script>
+</body>
+</html>

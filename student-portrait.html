@@ -61,6 +61,8 @@ h2{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:20px;margin:30p
 select{width:100%;max-width:360px;padding:9px 11px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;}
 .msg{font-size:13.5px;margin-top:10px;color:var(--coral-dark);min-height:1em;}
 .empty{font-size:14px;color:var(--ink-soft);padding:6px 0;}
+.keepsake{background:#fff;border-radius:14px;box-shadow:0 4px 16px -8px rgba(22,79,74,0.15);padding:14px 18px;margin:-8px 0 8px;font-size:14px;line-height:1.5;}
+.keepsake .btn{display:inline-block;margin-bottom:6px;}
 .footnote{margin-top:34px;font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:64ch;}
 .footnote a{color:var(--teal-dark);text-decoration:underline;}
 @media print{.back-link,.btn,.panel{display:none;}body{padding:0;}}
@@ -76,6 +78,8 @@ select{width:100%;max-width:360px;padding:9px 11px;border:1.5px solid var(--bord
   <h1>My Graduate Portrait</h1>
   <div class="year" id="year"></div>
   <p class="intro">Here are the graduate skills you've practiced in Fixer Nation this school year. It's just a record of what you've done, so there's no grade here.</p>
+
+  <div id="keepsakeBox" class="keepsake" hidden></div>
 
   <div id="content" aria-live="polite"><div class="empty">Loading…</div></div>
 
@@ -166,6 +170,20 @@ function render() {
   document.getElementById('footnote').innerHTML = 'Fixer Nation picked these connections itself. New York State and CASEL haven\'t endorsed or certified them.' +
     (first && first.officialUrl ? ' The frameworks come from <a href="' + esc(first.officialUrl) + '" rel="noopener noreferrer">' + esc(first.issuingBody || 'the state') + '</a>.' : '');
   renderPins();
+  renderKeepsake();
+}
+
+function renderKeepsake() {
+  var box = document.getElementById('keepsakeBox'), k = data.keepsake || {};
+  if (k.available) {
+    box.innerHTML = '<a class="btn primary" href="portrait-keepsake.html">Print or save my keepsake</a><div class="help" style="margin:0;">It\'s a one-page copy of this page that you can keep. Fixer Nation doesn\'t save a copy for you.</div>';
+    box.hidden = false;
+  } else if (k.enabled === false) {
+    box.innerHTML = '<div class="help" style="margin:0;">Your teacher has turned the keepsake off for this class.</div>';
+    box.hidden = false;
+  } else {
+    box.hidden = true;
+  }
 }
 
 function renderPins() {

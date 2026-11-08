@@ -326,6 +326,10 @@ table.data-table tr:hover td{background:#fafaf9;}
     <div class="field"><label>Academic Year</label>
       <select id="ecYear"></select>
     </div>
+    <div class="field">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:600;"><input type="checkbox" id="ecKeepsake" style="width:auto;flex:none;padding:0;margin:3px 0 0;"> <span style="flex:1;">Let students and families print a Graduate Portrait keepsake</span></label>
+      <div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;line-height:1.45;">It's a one-page copy of each student's portrait. Turn it off if you'd rather not have it printed, such as during testing.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('editClassroomModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveClassroomEdit()">Save</button>
@@ -908,6 +912,7 @@ function openEditClassroom() {
   document.getElementById('ecGrade').value = classroom.grade_level || '';
   document.getElementById('ecSubject').value = classroom.subject || '';
   FnSchoolYears.fill(document.getElementById('ecYear'), classroom.academic_year);
+  document.getElementById('ecKeepsake').checked = classroom.keepsake_enabled === undefined || classroom.keepsake_enabled === null || Number(classroom.keepsake_enabled) !== 0;
   document.getElementById('editClassroomModal').classList.add('open');
 }
 
@@ -922,6 +927,7 @@ async function saveClassroomEdit() {
       gradeLevel: document.getElementById('ecGrade').value.trim(),
       subject: document.getElementById('ecSubject').value.trim(),
       academicYear: document.getElementById('ecYear').value.trim(),
+      keepsakeEnabled: document.getElementById('ecKeepsake').checked,
     }),
   });
   var data = await r.json();

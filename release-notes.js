@@ -35,24 +35,28 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
-    N('my-graduate-portrait', false, '2026-11-08', 'Release 157', 'My Graduate Portrait', ['teachers', 'school', 'district', 'families'],
+    N('my-graduate-portrait', false, '2026-11-08', 'Releases 157 and 159', 'My Graduate Portrait', ['teachers', 'school', 'district', 'families'],
       'Students get their own page showing which graduate skills they have practiced this school year, and can pin a few of their own words to it.',
-      'My Graduate Portrait is a page each student sees when they sign in. It uses the same New York frameworks as Graduate Evidence and the same rule: a skill counts as practiced once the student has finished a lesson or game that Fixer Nation connects to it. The student sees the names of the activities behind each skill, and up to three of their own reflections or goals if they choose to pin them. It is a record of what they have done. It never gives a grade and never compares one student with another.',
+      'My Graduate Portrait is a page each student sees when they sign in. It uses the same New York frameworks as Graduate Evidence and the same rule: a skill counts as practiced once the student has finished a lesson or game that Fixer Nation connects to it. The student sees the names of the activities behind each skill, and up to three of their own reflections or goals if they choose to pin them. Students and their families can also print a one-page keepsake of it. The portrait is a record of what a student has done. It never gives a grade and never compares one student with another.',
       {
         new: [
           item('A portrait page for every student', ['families', 'teachers'], 'Students select My Graduate Portrait on their home page. Each skill shows whether they have practiced it, with the games and lessons that count. A skill that says Not practiced yet only means nothing connected to it has been finished so far.'),
+          item('A one-page keepsake to print or save', ['families', 'teachers'], 'Students select Print or save my keepsake on their portrait. A parent or guardian linked to the student can open the same keepsake from the parent portal. It fits on one letter page and shows each skill with the games and lessons that count. Fixer Nation doesn\'t keep a copy, so families save or print it themselves.'),
           item('Pin up to three of their own words', ['families', 'teachers'], 'A student can pin a reflection or a goal they wrote this school year and show it beside a skill if they like. They can remove a pin whenever they want, and the original reflection or goal stays where it was.')
+        ],
+        changed: [
+          item('A switch for teachers', ['teachers'], 'In Edit Details for a classroom, teachers can turn the keepsake off for that class, for example during testing. It\'s on by default, and the portrait page itself stays available.')
         ],
         know: [
           'The portrait shows evidence of practice: a student finished an activity that Fixer Nation connects to a skill. It isn\'t a test, and it doesn\'t show how well a student did.',
           'The connections are Fixer Nation\'s own mapping to New York\'s frameworks. Neither New York State nor CASEL has endorsed them. For now every student sees New York\'s frameworks.',
-          'Pinned words show only on the student\'s own page. Parents and school and district administrators don\'t see them there, and teachers read reflections and goals on the usual progress pages, as before.',
-          'The page shows the current school year. When a student\'s records are removed, their portrait and any pinned words go with them.',
-          'Parents can\'t open a student\'s portrait yet, and there is no printable end-of-year version yet.'
+          'Pinned words show only on the student\'s own page and on the keepsake the student prints. Parents and school and district administrators don\'t see them, and teachers read reflections and goals on the usual progress pages, as before.',
+          'The portrait page shows the current school year. The keepsake shows the school year of the student\'s classroom, so it still prints after the new school year starts.',
+          'Parents see the keepsake but not the student\'s portrait page. When a student\'s records are removed, their portrait and any pinned words go with them.'
         ]
       },
       'Students: sign in and select My Graduate Portrait on your home page, or at the top of My Goals & History.',
-      ['S5']),
+      ['S5', 'S6']),
 
     N('graduate-evidence', true, '2026-11-07', 'Releases 151 and 152', 'Graduate Evidence', ['teachers', 'school', 'district'],
       'See which of New York\'s graduate attributes and social emotional learning benchmarks your students have practiced, and get optional ideas for what to assign next.',

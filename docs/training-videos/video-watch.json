@@ -201,6 +201,10 @@
     "S5": [
       "student-portrait.html"
     ],
+    "S6": [
+      "student-portrait.html",
+      "portrait-keepsake.html"
+    ],
     "P1": [
       "parent-invite-accept.html",
       "parent-portal.html",

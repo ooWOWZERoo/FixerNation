@@ -22,7 +22,7 @@ CREATE TABLE districts (id INTEGER PRIMARY KEY, name TEXT);
 CREATE TABLE standards_frameworks (id INTEGER PRIMARY KEY, state_code TEXT, framework_type TEXT, name TEXT, issuing_body TEXT, official_url TEXT, review_status TEXT DEFAULT 'draft', reviewed_at TEXT, district_id INTEGER);
 CREATE TABLE standards_items (id INTEGER PRIMARY KEY, framework_id INTEGER, code TEXT, title TEXT, summary TEXT, sort_order INTEGER DEFAULT 0);
 CREATE TABLE standards_alignments (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, target_type TEXT, target_id INTEGER DEFAULT 0, strength TEXT, rationale TEXT, review_status TEXT DEFAULT 'draft');
-CREATE TABLE classrooms (id INTEGER PRIMARY KEY, teacher_site_user_id INTEGER, archived_at TEXT);
+CREATE TABLE classrooms (id INTEGER PRIMARY KEY, name TEXT, teacher_site_user_id INTEGER, archived_at TEXT, academic_year TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, keepsake_enabled INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE classroom_students (id INTEGER PRIMARY KEY, classroom_id INTEGER, display_name TEXT, is_active INTEGER DEFAULT 1);
 CREATE TABLE classroom_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, classroom_id INTEGER, curriculum_id INTEGER);
 CREATE TABLE classroom_game_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, classroom_id INTEGER, game_id INTEGER);
@@ -247,5 +247,6 @@ test('PRIVACY: pinned words are read only by the student route; no parent, teach
   const offenders = [];
   const walk = (dir) => { for (const f of fs.readdirSync(dir)) { const p = path.join(dir, f); if (fs.statSync(p).isDirectory()) { if (!['node_modules', 'test', 'scripts'].includes(f)) walk(p); } else if (/\.js$/.test(f) && /student_portrait_pins|portrait-pins/.test(fs.readFileSync(p, 'utf8'))) offenders.push(path.relative(SERVER, p)); } };
   walk(SERVER);
-  assert.deepEqual(offenders.sort(), ['lib/portrait-pins.js', 'routes/student-portrait.js', 'routes/student.js'], 'only the student routes and the pins library may touch pins');
+  // lib/portrait-keepsake.js reads pins only when asked (the student's own keepsake); routes/parent-portrait.js never asks and never names them.
+  assert.deepEqual(offenders.sort(), ['lib/portrait-keepsake.js', 'lib/portrait-pins.js', 'routes/student-portrait.js', 'routes/student.js'], 'only the student routes, the pins library and the student\'s own keepsake may touch pins');
 });

@@ -162,6 +162,15 @@ router.put('/:id', requireSiteAuth, async (req, res) => {
       classroom.id,
     ]
   );
+  // The teacher's switch for the Graduate Portrait keepsake. A separate statement, and only when the request carries it, so every other
+  // classroom edit keeps working even before the column exists.
+  if (typeof req.body.keepsakeEnabled === 'boolean') {
+    try {
+      await pool.query('UPDATE classrooms SET keepsake_enabled = ? WHERE id = ?', [req.body.keepsakeEnabled ? 1 : 0, classroom.id]);
+    } catch (err) {
+      if (!err || err.code !== 'ER_BAD_FIELD_ERROR') throw err; // the alter script has not run yet: the switch does nothing, the rest of the edit is saved
+    }
+  }
   const [[updated]] = await pool.query('SELECT * FROM classrooms WHERE id = ?', [classroom.id]);
   res.json(updated);
 });

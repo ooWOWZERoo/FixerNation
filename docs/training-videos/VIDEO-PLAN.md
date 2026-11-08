@@ -134,6 +134,7 @@ Note: `server/scripts/videos-to-review.js` read `help-videos.js` with a pattern 
 | T8 | Buy a teacher license and check out | licenses.html |
 | S4 | Play and track brain games | brain-games.html, brain-games-progress.html, brain-badges.html |
 | S5 | My Graduate Portrait | student-portrait.html |
+| S6 | Print or save your Graduate Portrait keepsake | student-portrait.html, portrait-keepsake.html |
 | F1 | Join the affiliate program | become-an-affiliate.html, affiliate-dashboard.html |
 | E1 | See how Fixer Nation lines up with your state's standards | state-standards.html |
 

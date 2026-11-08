@@ -169,6 +169,9 @@
     { id: 'S5', group: 'students', topic: 'Learning', title: 'My Graduate Portrait',
       summary: 'See the graduate skills you\'ve practiced this year, and pin your own words.',
       pages: ['student-portrait.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794152983/fne/help/S5.mp4', captions: '/help-assets/S5.vtt', poster: '/help-assets/S5.jpg' },
+    { id: 'S6', group: 'students', topic: 'Learning', title: 'Print or save your Graduate Portrait keepsake',
+      summary: 'Make a one-page copy of your portrait to keep.',
+      pages: ['student-portrait.html'] },
 
     // ---- Parents
     { id: 'P1', group: 'parents', topic: 'Getting started', title: 'Accept your invitation and see your child\'s progress',

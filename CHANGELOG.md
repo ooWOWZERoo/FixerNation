@@ -17,6 +17,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 159 — 2026-11-08 — My Graduate Portrait, tier 2: a one-page keepsake students and families can print
+
+- **A printable keepsake.** Students select "Print or save my keepsake" on their portrait, and a linked parent can open the same keepsake from the parent portal. It fits on one letter page with the student's name, class and school year, every skill, and the games and lessons that count. **Fixer Nation keeps no copy and emails nothing:** it is built when it's opened, so families save or print it themselves.
+- **Pinned words stay the student's.** They appear on the student's own keepsake, never on a parent's.
+- **A teacher's switch.** Edit Details on a classroom has a new checkbox to turn the keepsake off for that class, such as during testing. It's on by default and doesn't affect the portrait page.
+- **It shows the classroom's own school year,** so it still prints in August and September after the new year starts. Until the student-data purge exists it never closes; once the purge ships, it will open 1 June and close the day before records are cleared.
+- Drafts waiting for the owner: the release note now covers both tiers, a new Help answer, and a new how-to video S6 (recorded, not published). Deploy needs the alter script (adds `classrooms.keepsake_enabled`) and a Node restart.
+
 ## Release 158 — 2026-11-08 — The My Graduate Portrait how-to video is published
 
 - **S5, "My Graduate Portrait," is published** (45 seconds, with captions). It appears on the student portrait page's How-to video button, and on the two draft Help answers and the draft release note once the owner publishes those. `help-videos.js` is at `?v=21` on every page that loads it.
