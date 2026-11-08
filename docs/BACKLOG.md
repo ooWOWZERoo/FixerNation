@@ -11,7 +11,6 @@ Things only the owner can do (cPanel, the live admin, own devices). None affects
 - [ ] **Backup cron time.** The nightly backup runs at 2:30 on the server clock, which showed as 9:30pm local. Run `date` and `date -u` in cPanel Terminal; if the server is on UTC, change the cron hour to 7 (`30 7 * * *`), then update `setup-cron-jobs.sh` to match.
 - [ ] **Errors tab.** Open Support, then Errors, and Clear any group mentioning "QA deploy check" (the curl test row; the command-line clean-up found none).
 - [ ] **Registration product description** in the admin still says "this price becomes $0 at checkout". Suggested: "Uses your school's license, so there is nothing to pay. Use your school email address."
-- [ ] **Test affiliate id 3:** run `node scripts/delete-test-affiliate.js` (dry run first, then `--apply`) from `server/` with the nodevenv active. It refuses if the affiliate ever earned a commission.
 - [ ] **Still yours from earlier notes:** Discover voice test on a Chromebook and an iPad, sales deck pricing check, verify more states (only NY and OH are verified), check the stray demo-style address on `admin-school-admins.html`, and one real Stripe test purchase of the solo license once live keys are on.
 
 ## Legal pages: owner and lawyer review (added 2026-11-06)
