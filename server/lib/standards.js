@@ -435,7 +435,7 @@ async function assembleFrameworks(fws, includeDrafts) {
   for (const fw of fws) {
     const [items] = await pool.query('SELECT * FROM standards_items WHERE framework_id = ? ORDER BY sort_order, code', [fw.id]);
     const [aligns] = await pool.query(
-      `SELECT a.item_id, a.review_status, a.target_type, a.target_id, a.strength, a.rationale, c.title AS curriculum_title, g.name AS game_name
+      `SELECT a.item_id, a.review_status, a.target_type, a.target_id, a.strength, a.rationale, c.title AS curriculum_title, g.name AS game_name, g.slug AS game_slug
        FROM standards_alignments a
        JOIN standards_items i ON i.id = a.item_id
        LEFT JOIN curricula c ON a.target_type = 'curriculum' AND c.id = a.target_id AND c.published = 1
@@ -452,6 +452,7 @@ async function assembleFrameworks(fws, includeDrafts) {
         targetType: a.target_type, targetId: a.target_id || null,
         targetTitle: a.target_type === 'program' ? 'Fixer Nation Education program' : (isLesson ? lessonStem(a.curriculum_title) : a.game_name),
         ...(isLesson ? { versions: versions.get(lessonStem(a.curriculum_title)) || [] } : {}),
+        ...(a.target_type === 'brain_game' && a.game_slug ? { targetSlug: a.game_slug } : {}), // the public game page link (game.html?slug=)
         strength: a.strength, rationale: a.rationale,
         ...(includeDrafts ? { draft: a.review_status !== 'verified' } : {}),
       });
@@ -509,6 +510,34 @@ async function buildDistrict(districtIdIn, includeDrafts) {
   const frameworks = await assembleFrameworks(fws, includeDrafts);
   const code = fws[0].state_code;
   return { district: { id: d.id, name: d.name, ...(includeDrafts ? { demo: isDemo } : {}) }, state: { code, name: STATES[code] }, frameworks };
+}
+
+// ---- PUBLIC game connections (the per-game page, Release 163) -------------------------------
+// Every verified connection one game has, grouped by state then framework. Same gate as every public reader:
+// verified alignment with a real rationale, verified state framework, district_id IS NULL (a district's own
+// framework never shows here). Reviewer notes are never selected. A draft cannot appear: the filter is in the SQL.
+async function getPublicGameConnections(gameIdIn) {
+  const gameId = Number(gameIdIn);
+  if (!Number.isInteger(gameId) || gameId <= 0) return [];
+  const [rows] = await pool.query(
+    `SELECT f.id AS framework_id, f.state_code, f.framework_type, f.name AS framework_name, f.official_url,
+            i.code, i.title, a.strength, a.rationale
+     FROM standards_alignments a
+     JOIN standards_items i ON i.id = a.item_id
+     JOIN standards_frameworks f ON f.id = i.framework_id
+     WHERE a.target_type = 'brain_game' AND a.target_id = ?
+       AND a.review_status = 'verified' AND a.rationale <> ''
+       AND f.review_status = 'verified' AND f.district_id IS NULL
+     ORDER BY f.state_code, f.framework_type, f.name, i.sort_order, i.code`, [gameId]);
+  const states = [];
+  for (const r of rows) {
+    let st = states.find((s) => s.state.code === r.state_code);
+    if (!st) { st = { state: { code: r.state_code, name: STATES[r.state_code] || r.state_code }, frameworks: [] }; states.push(st); }
+    let fw = st.frameworks.find((f) => f.id === r.framework_id);
+    if (!fw) { fw = { id: r.framework_id, type: r.framework_type, name: r.framework_name, officialUrl: r.official_url, items: [] }; st.frameworks.push(fw); }
+    fw.items.push({ code: r.code, title: r.title, strength: r.strength, rationale: r.rationale });
+  }
+  return states;
 }
 
 async function getPublicState(codeIn) { return buildState(codeIn, false); }
@@ -604,5 +633,5 @@ module.exports = {
   createFramework, updateFramework, deleteFramework, upsertItems, deleteItem, verifyFramework, unverifyFramework,
   upsertAlignment, deleteAlignment, verifyAlignment, verifyAlignmentsForItem, unverifyAlignment,
   getPublicDistrict, getPreviewDistrict,
-  getPublicOverview, getPublicState, getPreviewState, getPreviewOverview, getAdminOverview, getAdminState, getAdminFramework,
+  getPublicOverview, getPublicState, getPublicGameConnections, getPreviewState, getPreviewOverview, getAdminOverview, getAdminState, getAdminFramework,
 };

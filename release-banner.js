@@ -12,7 +12,7 @@
 
   var KEY = 'fn_release_banner_dismissed';
   var SHOW_FOR_DAYS = 30;
-  var NOTES_SCRIPT = 'release-notes.js?v=6';
+  var NOTES_SCRIPT = 'release-notes.js?v=7';
 
   if (/release-notes\.html$/.test(location.pathname || '')) return;
 

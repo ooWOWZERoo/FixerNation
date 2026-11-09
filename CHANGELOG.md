@@ -18,6 +18,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 163 — 2026-11-08 — A public page for every game
+
+- **Every Tune Your Brain game has its own page,** `game.html?slug=<slug>`: name, description, grade band, focus, what it builds, a Play now button, and the state standards it connects to (verified connections only, grouped by state, each with its reason and a link to the state's own document, plus the "not endorsed by a state agency or CASEL" notice). Open to anyone, so a teacher can share a link with a parent or principal.
+- **Links in:** an About button on every card on the games page, and game names on the SEL & Portrait of a Graduate page now link to the game's page. Signed-in teachers see an "Assign to a classroom" shortcut.
+- **How it is built:** `GET /api/brain-games/:slug` (public, read-only, 120 requests a minute, declared after the literal routes), `lib/game-pages.js`, and `getPublicGameConnections()` in `lib/standards.js` (verified alignment with a real rationale, verified state framework, `district_id IS NULL`; reviewer notes never selected). The pilot flag hides a pilot game's page exactly as it hides its card. The public standards payload also gains `targetSlug` for games.
+- **Draft release note** `game-pages` (not published; it touches the standards claim). No schema change.
+- **Deploy:** push, pull, rsync, restart Node (new route). No alter script.
+
 ## Release 162 — 2026-11-08 — Program Use Report: Help answers published, state guidance, and a school administrator video
 
 - **Two Help answers are published:** what the Program Use Report shows, and why some schools are combined or hidden.

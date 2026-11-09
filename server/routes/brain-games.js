@@ -6,8 +6,11 @@ const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME } = require('../lib/session');
 const { getLevelFromXP, getNextLevel, updateStreak } = require('../lib/rewards');
 const { isFeatureEnabled } = require('../lib/feature-flags');
 const { resolveSchoolIdForTeacher, resolveSchoolIdForStudent } = require('../lib/branding');
+const { getGamePage, validSlug } = require('../lib/game-pages');
+const { limiter } = require('../lib/rate-limit');
 
 const router = express.Router();
+const gamePageLimit = limiter({ name: 'game-page', windowMs: 60 * 1000, max: 120 });
 
 function describeBadgeCriteria(type, criteriaJson) {
   try {
@@ -377,6 +380,13 @@ const STATIC_GAMES = [
   { id:0, name:'Number Sequence',  slug:'number-sequence', band:'challenge', focus:'math',  description:'Identify the missing number in a mathematical pattern.',                 icon:'🔢', primarySkill:'Pattern Recognition', progress:null },
 ];
 
+async function pilotEnabledFor(principal) {
+  let schoolId = null;
+  if (principal?.type === 'user') schoolId = await resolveSchoolIdForTeacher(principal.id);
+  else if (principal?.type === 'student') schoolId = await resolveSchoolIdForStudent(principal.id);
+  return isFeatureEnabled('tune_your_brain_pilot_enabled', { schoolId });
+}
+
 router.get('/', async (req, res) => {
   try {
     const [games] = await pool.query(
@@ -397,10 +407,7 @@ router.get('/', async (req, res) => {
     // school — the pre-existing legacy games are always visible. The flag
     // is seeded enabled_globally so this is a no-op today; it exists so a
     // future rollout can be scoped to specific pilot schools.
-    let schoolId = null;
-    if (principal?.type === 'user') schoolId = await resolveSchoolIdForTeacher(principal.id);
-    else if (principal?.type === 'student') schoolId = await resolveSchoolIdForStudent(principal.id);
-    const pilotEnabled = await isFeatureEnabled('tune_your_brain_pilot_enabled', { schoolId });
+    const pilotEnabled = await pilotEnabledFor(principal);
 
     const result = games
       .filter(g => pilotEnabled || g.reward_pipeline !== 'classroom_generic')
@@ -788,6 +795,17 @@ router.patch('/me/privacy', async (req, res) => {
     [principal.id, showBadges]
   );
   res.json({ ok: true });
+});
+
+// ── GET /api/brain-games/:slug ───────────────────────────────────────────────
+// The public page for one game (game.html): catalog text and verified standards connections, nothing about any player.
+// Declared last: a bare /:slug must come after every literal path (/sessions, /me/*) so none of them is read as a slug.
+router.get('/:slug', gamePageLimit, async (req, res) => {
+  const slug = req.params.slug;
+  if (!validSlug(slug)) return res.status(404).json({ error: 'Game not found' });
+  const page = await getGamePage(slug, { pilotEnabled: await pilotEnabledFor(await getPrincipal(req)) });
+  if (!page) return res.status(404).json({ error: 'Game not found' });
+  res.json(page);
 });
 
 module.exports = router;

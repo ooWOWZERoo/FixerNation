@@ -306,7 +306,8 @@
       } else if (a.targetId) {
         t = '<a class="t" href="lesson-detail.html?id=' + encodeURIComponent(a.targetId) + '">' + title + '</a>';
       }
-    } else if (a.targetType === 'program') t = '<a class="t" href="programs.html">' + title + '</a>';
+    } else if (a.targetType === 'brain_game' && /^[a-z0-9-]{1,50}$/.test(String(a.targetSlug || ''))) t = '<a class="t" href="game.html?slug=' + encodeURIComponent(a.targetSlug) + '">' + title + '</a>';
+    else if (a.targetType === 'program') t = '<a class="t" href="programs.html">' + title + '</a>';
     else t = '<span class="t">' + title + '</span>';
     return '<div class="al"><div class="al-top"><span class="badge ' + (a.strength === 'direct' ? 'direct' : 'supporting') + '">' +
       esc(STRENGTH_LABEL[a.strength] || a.strength) + '</span>' + (a.draft ? DRAFT : '') + t + '<span class="kind">' + esc(KIND_LABEL[a.targetType] || '') + '</span></div>' + extra +

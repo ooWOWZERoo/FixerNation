@@ -35,6 +35,23 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('game-pages', false, '2026-11-08', 'Release 163', 'A page for every game', EVERYONE,
+      'Every Tune Your Brain game now has its own page with what it practices, the grades it is for and how it connects to state standards, and you can share the link with anyone.',
+      'On the games page, each game card has a new About button. It opens a page for that one game: what students practice, the grade band, and the state standards our team has checked it against. The page is open to anyone, so a teacher can send the link to a parent or a principal who has no account.',
+      {
+        new: [
+          item('A page for each game', EVERYONE, 'Select About on any game card. You see the game\'s name and description, the grade band, what it builds, and a Play now button. Teachers who are signed in also see a shortcut to their classrooms, where they can assign it.'),
+          item('Standards connections in one place', ['teachers', 'school', 'district'], 'The page lists each state standard the game connects to, says whether it is a direct match or a supporting one, gives the reason, and links to the state\'s own document. Only connections our team has checked appear.'),
+          item('From the standards page to the game', ['school', 'district'], 'On the SEL & Portrait of a Graduate page, a game\'s name is now a link to its page.')
+        ],
+        know: [
+          'The connections are Fixer Nation\'s own mapping. No state education agency or CASEL has reviewed or endorsed them, and the state\'s document is always the source of truth.',
+          'A game with no checked connections says so on its page.',
+          'Playing without signing in does not save scores. Students who are signed in through their class still play from their own classroom page.'
+        ]
+      },
+      'Open the games page and select About on any game, or open the SEL & Portrait of a Graduate page and select a game name.',
+      []),
     N('program-use-report', true, '2026-11-08', 'Release 161', 'Program Use Report for districts and schools', ['district', 'school'],
       'See how your schools are using Fixer Nation this school year, month by month and compared with last year, with a printable page and a download for your board or a grant report.',
       'The Program Use Report gives district administrators one page that shows how much Fixer Nation is being used across their schools: how many teachers have activated their seats, how many students have finished a lesson or game, and how that changes from month to month. Below that it shows which New York social emotional learning benchmarks and graduate attributes students have practiced. School administrators get the same report for their own school. Every figure is a count, and no teacher or student is named. The report describes how the program is used. It does not evaluate student outcomes.',

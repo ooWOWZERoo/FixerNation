@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixer Nation Education - Game</title>
+<meta name="description" content="One of the Tune Your Brain games from Fixer Nation Education: what it practices, which grades it is for and how it connects to state SEL and Portrait of a Graduate documents.">
+<link rel="stylesheet" href="fonts.css?v=1">
+<link rel="stylesheet" href="brain-games.css?v=7">
+<style>
+  .gp-crumb { padding: 18px 0 0; font-size: 13px; color: var(--ink-soft); }
+  .gp-crumb a { color: var(--coral-dark); font-weight: 600; text-decoration: none; }
+  .gp-card { background: #fff; border-radius: 20px; border-top: 6px solid var(--teal); box-shadow: var(--shadow-sm); padding: 32px; margin-top: 14px; }
+  .gp-card.band-discover { border-top-color: #FFD21F; }
+  .gp-card.band-explore { border-top-color: #7C3AED; }
+  .gp-card.band-challenge { border-top-color: #2563EB; }
+  .gp-card.band-advance { border-top-color: #38BDF8; }
+  .gp-head { display: flex; gap: 20px; align-items: flex-start; }
+  .gp-icon { font-size: 64px; line-height: 1; flex-shrink: 0; }
+  .gp-head h1 { font-family: 'Fraunces', serif; font-size: 34px; line-height: 1.15; color: var(--teal-dark); margin-bottom: 6px; }
+  .gp-skill { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-bottom: 10px; }
+  .gp-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gp-tags .game-kind { margin-top: 0; }
+  .gp-desc { font-size: 17px; line-height: 1.65; margin: 22px 0 6px; max-width: 700px; }
+  .gp-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 22px; }
+  .gp-note { font-size: 13.5px; color: var(--ink-soft); margin-top: 14px; max-width: 620px; }
+  .gp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+  .gp-box { background: var(--cream-soft); border-radius: 14px; padding: 18px 20px; }
+  .gp-box h2 { font-family: 'Fraunces', serif; font-size: 18px; color: var(--teal-dark); margin-bottom: 6px; }
+  .gp-box p { font-size: 14.5px; line-height: 1.6; }
+  .gp-connects { margin-top: 36px; }
+  .gp-connects h2 { font-family: 'Fraunces', serif; font-size: 24px; color: var(--teal-dark); margin-bottom: 8px; }
+  .gp-notice { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 18px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); margin-bottom: 16px; }
+  .gp-state { background: #fff; border-radius: 14px; box-shadow: var(--shadow-sm); margin-bottom: 12px; }
+  .gp-state summary { cursor: pointer; padding: 16px 20px; font-weight: 800; color: var(--teal-dark); font-size: 16px; }
+  .gp-state .gp-inner { padding: 0 20px 18px; }
+  .gp-fw { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); margin: 14px 0 8px; }
+  .gp-item { border-top: 1px solid var(--border); padding: 12px 0; }
+  .gp-item:first-of-type { border-top: 0; }
+  .gp-item-title { font-weight: 700; font-size: 15px; }
+  .gp-item-code { color: var(--ink-soft); font-weight: 600; margin-right: 6px; }
+  .gp-strength { display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; background: rgba(22,79,74,.1); color: var(--teal-dark); }
+  .gp-strength.is-direct { background: var(--teal); color: #fff; }
+  .gp-why { font-size: 14px; line-height: 1.6; color: var(--ink-soft); margin-top: 4px; }
+  .gp-official { font-size: 13px; font-weight: 700; color: var(--coral-dark); }
+  .gp-empty { background: var(--cream-soft); border-radius: 12px; padding: 18px 20px; font-size: 14px; color: var(--ink-soft); }
+  .gp-missing { text-align: center; padding: 70px 0; }
+  .gp-missing h1 { font-family: 'Fraunces', serif; font-size: 30px; color: var(--teal-dark); margin-bottom: 10px; }
+  .gp-missing p { color: var(--ink-soft); margin-bottom: 20px; }
+  @media (max-width: 640px) {
+    .gp-card { padding: 22px; }
+    .gp-head { flex-direction: column; gap: 10px; }
+    .gp-head h1 { font-size: 28px; }
+    .gp-grid { grid-template-columns: 1fr; }
+    .gp-actions .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="wrap" style="padding-bottom:60px;">
+  <div class="gp-crumb"><a href="brain-games.html">&#8592; All games</a></div>
+
+  <div id="loading" style="padding:70px 0;text-align:center;color:var(--ink-soft);">Loading&hellip;</div>
+
+  <div id="missing" class="gp-missing" hidden>
+    <h1 id="missingTitle">We couldn't find that game.</h1>
+    <p id="missingBody">It may have moved or been retired. Browse all the games to find another.</p>
+    <a class="btn btn-primary" href="brain-games.html">Back to all games</a>
+  </div>
+
+  <div id="page" hidden>
+    <div class="gp-card" id="card">
+      <div class="gp-head">
+        <span class="gp-icon" id="gIcon"></span>
+        <div>
+          <h1 id="gName"></h1>
+          <div class="gp-skill" id="gSkill"></div>
+          <div class="gp-tags" id="gTags"></div>
+        </div>
+      </div>
+      <p class="gp-desc" id="gDesc"></p>
+      <div class="gp-actions">
+        <a class="btn btn-primary" id="playBtn" href="brain-games.html">Play now</a>
+        <a class="btn btn-outline" id="assignBtn" href="teacher-classrooms.html" hidden>Assign to a classroom</a>
+      </div>
+      <p class="gp-note" id="signInNote" hidden>Sign in and we'll save your progress. You can play without signing in, but your scores won't be saved.</p>
+      <div class="gp-grid">
+        <div class="gp-box" id="practiceBox">
+          <h2>What you practice</h2>
+          <p id="practiceText"></p>
+        </div>
+        <div class="gp-box" id="forBox">
+          <h2>Who it's for</h2>
+          <p id="forText"></p>
+        </div>
+      </div>
+    </div>
+
+    <section class="gp-connects">
+      <h2>How this game connects to standards</h2>
+      <div class="gp-notice">This is Fixer Nation's own mapping to each state's published SEL and Portrait of a Graduate documents, and our team checked every connection against the state's document. No state education agency or CASEL has reviewed or endorsed it. The state's document is always the source of truth.</div>
+      <div id="connections"></div>
+    </section>
+  </div>
+</div>
+
+<footer></footer>
+
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=21"></script>
+<script src="site-auth.js?v=11"></script>
+<script src="footer.js?v=18"></script>
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// A link from the database is only used when it is a plain https address.
+function safeUrl(u) { return /^https:\/\/[^\s"'<>]+$/.test(String(u || '')) ? String(u) : ''; }
+var SLUG_OK = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+function showMissing() {
+  document.getElementById('loading').hidden = true;
+  document.getElementById('page').hidden = true;
+  document.getElementById('missing').hidden = false;
+  document.title = 'Game not found - Fixer Nation Education';
+}
+function showLoadError() {
+  document.getElementById('loading').hidden = true;
+  document.getElementById('missingTitle').textContent = "This page didn't load.";
+  document.getElementById('missingBody').textContent = 'Check your connection and try again.';
+  document.getElementById('missing').hidden = false;
+}
+
+function renderConnections(states) {
+  var box = document.getElementById('connections');
+  if (!states || !states.length) {
+    box.innerHTML = '<div class="gp-empty">No standards connections are published for this game yet.</div>';
+    return;
+  }
+  box.innerHTML = states.map(function (st) {
+    var fws = st.frameworks.map(function (fw) {
+      var link = safeUrl(fw.officialUrl);
+      var items = fw.items.map(function (it) {
+        var direct = it.strength === 'direct';
+        return '<div class="gp-item">' +
+          '<div class="gp-item-title"><span class="gp-item-code">' + esc(it.code) + '</span>' + esc(it.title) +
+          '<span class="gp-strength' + (direct ? ' is-direct' : '') + '">' + (direct ? 'Direct match' : 'Supporting') + '</span></div>' +
+          '<div class="gp-why">' + esc(it.rationale) + '</div></div>';
+      }).join('');
+      return '<div class="gp-fw">' + esc(fw.name) + '</div>' + items +
+        (link ? '<p style="margin-top:8px;"><a class="gp-official" href="' + esc(link) + '" target="_blank" rel="noopener">Read the official document &#8594;</a></p>' : '');
+    }).join('');
+    return '<details class="gp-state"' + (states.length === 1 ? ' open' : '') + '><summary>' + esc(st.state.name) + '</summary><div class="gp-inner">' + fws + '</div></details>';
+  }).join('');
+}
+
+function renderPage(data) {
+  var g = data.game;
+  document.title = g.name + ' - Fixer Nation Education';
+  document.getElementById('card').className = 'gp-card' + (g.band ? ' band-' + g.band : '');
+  document.getElementById('gIcon').textContent = g.icon || '';
+  document.getElementById('gName').textContent = g.name;
+  document.getElementById('gSkill').textContent = g.primarySkill || '';
+  document.getElementById('gDesc').textContent = g.description || '';
+  var tags = '';
+  if (g.band) tags += '<span class="game-kind band-' + esc(g.band) + '">' + esc(g.bandLabel) + ' (' + esc(g.grades) + ')</span>';
+  if (g.focusLabel) tags += '<span class="game-kind">' + esc(g.focusLabel) + '</span>';
+  document.getElementById('gTags').innerHTML = tags;
+  document.getElementById('playBtn').href = g.playUrl;
+
+  var practice = g.focusHelp || '';
+  if (g.competencies && g.competencies.length > 1) {
+    var others = g.competencies.filter(function (c) { return c.label !== g.focusLabel; }).map(function (c) { return c.label; });
+    if (others.length) practice += (practice ? ' ' : '') + 'Also builds ' + others.join(' and ') + '.';
+  }
+  if (practice) document.getElementById('practiceText').textContent = practice;
+  else document.getElementById('practiceBox').hidden = true;
+
+  if (g.band) document.getElementById('forText').textContent = 'Grades ' + g.grades + ', ' + g.bandLabel + ' band.';
+  else document.getElementById('forBox').hidden = true;
+
+  renderConnections(data.connections);
+  document.getElementById('loading').hidden = true;
+  document.getElementById('page').hidden = false;
+}
+
+async function load() {
+  var slug = new URLSearchParams(window.location.search).get('slug') || '';
+  if (!slug || slug.length > 50 || !SLUG_OK.test(slug)) { showMissing(); return; }
+  var r;
+  try { r = await fetch('/api/brain-games/' + encodeURIComponent(slug), { credentials: 'include' }); }
+  catch (e) { showLoadError(); return; }
+  if (r.status === 404) { showMissing(); return; }
+  if (!r.ok) { showLoadError(); return; }
+  var data = await r.json().catch(function () { return null; });
+  if (!data || !data.game) { showLoadError(); return; }
+  renderPage(data);
+
+  // Signed-in teachers get a shortcut to their classrooms; everyone else is told scores are not saved.
+  fetch('/api/site-auth/me', { credentials: 'include' }).then(function (m) { return m.json(); }).then(function (me) {
+    if (me && me.loggedIn) {
+      if (me.role === 'teacher' || me.hasLicense) document.getElementById('assignBtn').hidden = false;
+    } else {
+      document.getElementById('signInNote').hidden = false;
+    }
+  }).catch(function () {});
+}
+load();
+</script>
+</body>
+</html>
