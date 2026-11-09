@@ -35,6 +35,22 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('parent-portal-games', false, '2026-11-08', 'Release 164', 'Parents can see assigned games and how a lesson connects to SEL', ['families', 'teachers'],
+      'The Parent Portal now lists the games your child\'s teacher assigned and whether your child has played each one, and every lesson page shows the state goals it supports.',
+      'Parents who are linked to a classroom now see two additions. Each child has a Games section that lists the games the teacher assigned and whether the child has played them. Each lesson page has a new section that explains which state SEL and Portrait of a Graduate goals the lesson supports.',
+      {
+        new: [
+          item('Games your child\'s teacher assigned', ['families', 'teachers'], 'In the Parent Portal, each child has a Games section. A game shows Played or Not played yet. You never see a score, a time or which answers your child gave. Select a game to read about it.'),
+          item('How a lesson connects to state goals', ['families'], 'On a lesson page, open the section called How this lesson connects to SEL and Portrait of a Graduate. It lists the state goals the lesson supports and why, and links to the state\'s own document.')
+        ],
+        know: [
+          'Parents see completion only, the same as for lessons. Reflections and quiz answers stay with the teacher.',
+          'Fixer Nation does not know which state a school is in, so the lesson section lists each state we have checked.',
+          'The connections are Fixer Nation\'s own mapping. No state education agency or CASEL has reviewed or endorsed it, and the state\'s document is always the source of truth.'
+        ]
+      },
+      'Parent Portal, under each child. Open any lesson from there to see its connections.',
+      []),
     N('game-pages', false, '2026-11-08', 'Release 163', 'A page for every game', EVERYONE,
       'Every Tune Your Brain game now has its own page with what it practices, the grades it is for and how it connects to state standards, and you can share the link with anyone.',
       'On the games page, each game card has a new About button. It opens a page for that one game: what students practice, the grade band, and the state standards our team has checked it against. The page is open to anyone, so a teacher can send the link to a parent or a principal who has no account.',

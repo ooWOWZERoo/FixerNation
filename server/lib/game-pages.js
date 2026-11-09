@@ -34,4 +34,26 @@ async function getGamePage(slug, { pilotEnabled = true } = {}) {
   };
 }
 
-module.exports = { getGamePage, validSlug, BAND_LABELS, BAND_GRADES };
+// The games a teacher assigned to a classroom, with whether ONE child has played each (parent portal, Release 164).
+// Completion only: no score, no time, no date. classroomId and studentId come from the parent's own links
+// (getParentClassrooms), never from the request, and the completion join is limited to this one student.
+async function getChildGames(classroomId, studentId) {
+  const [rows] = await pool.query(
+    `SELECT cga.id AS assignment_id, cga.due_date, bg.name, bg.slug, bg.icon, bg.band, bg.focus, bg.primary_skill,
+            MAX(sgc.completed_at) AS last_completed_at
+     FROM classroom_game_assignments cga
+     JOIN brain_games bg ON bg.id = cga.game_id AND bg.active = 1
+     LEFT JOIN student_game_completions sgc ON sgc.game_assignment_id = cga.id AND sgc.student_id = ?
+     WHERE cga.classroom_id = ?
+     GROUP BY cga.id, cga.due_date, bg.name, bg.slug, bg.icon, bg.band, bg.focus, bg.primary_skill
+     ORDER BY cga.id`, [studentId, classroomId]);
+  return rows.map((r) => ({
+    slug: r.slug, name: r.name, icon: r.icon || '', primarySkill: r.primary_skill || '',
+    band: r.band || null, bandLabel: r.band ? BAND_LABELS[r.band] : null, grades: r.band ? BAND_GRADES[r.band] : null,
+    focusLabel: r.focus ? FOCUS_LABELS[r.focus] : null,
+    dueDate: r.due_date || null,
+    played: !!r.last_completed_at,
+  }));
+}
+
+module.exports = { getGamePage, getChildGames, validSlug, BAND_LABELS, BAND_GRADES };

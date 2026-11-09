@@ -18,6 +18,14 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 164 — 2026-11-08 — Parent portal: assigned games, and how a lesson connects to SEL
+
+- **Games in the Parent Portal.** Each child now has a Games section: the active games the teacher assigned to that child's classroom, each marked Played or Not played yet for **that child only**. Completion only, as for lessons: no score, no time, no date, no assignment id. Each card links to the game's public page (Release 163). `GET /api/parent/children` gains `games` per child (`getChildGames()` in `lib/game-pages.js`; classroom and student come from the parent's own link row, never from the request).
+- **"How this lesson connects to SEL and Portrait of a Graduate"** on `parent-lesson.html`: verified connections only, grouped by state (schools carry no state on record, so every state with a verified connection is listed), each with its reason, direct or supporting, a link to the state's own document and the "not endorsed" notice. A connection is a claim about the lesson, so it applies to every grade version, and the same standard on two versions is listed once. District frameworks are never shown to parents. `GET /api/parent/lesson/:id` gains `connections` (`getPublicLessonConnections()`, sharing one query with the game page; draft, blank-reason and draft-framework connections are filtered in the SQL).
+- **Portable SQL:** the two array-parameter queries in `routes/parent.js` now write out their placeholders, so the route is tested on a real SQL engine.
+- **Draft release note** `parent-portal-games`. No schema change.
+- **Deploy:** push, pull, rsync, restart Node. No alter script.
+
 ## Release 163 — 2026-11-08 — A public page for every game
 
 - **Every Tune Your Brain game has its own page,** `game.html?slug=<slug>`: name, description, grade band, focus, what it builds, a Play now button, and the state standards it connects to (verified connections only, grouped by state, each with its reason and a link to the state's own document, plus the "not endorsed by a state agency or CASEL" notice). Open to anyone, so a teacher can share a link with a parent or principal.

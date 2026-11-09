@@ -3,6 +3,8 @@ const pool = require('../db/pool');
 const { requireSiteAuth } = require('./site-auth');
 const { getParentClassrooms, hasParentAccessToCurriculum, isLinkedParent } = require('../lib/access');
 const { resolveSchoolIdForClassroom, getPublishedBranding } = require('../lib/branding');
+const { getChildGames } = require('../lib/game-pages');
+const standards = require('../lib/standards');
 
 const router = express.Router();
 
@@ -33,9 +35,9 @@ router.get('/children', requireSiteAuth, async (req, res) => {
     `SELECT ca.classroom_id, ca.curriculum_id, cur.title, cur.short_description AS shortDescription, cur.series
      FROM classroom_assignments ca
      JOIN curricula cur ON cur.id = ca.curriculum_id AND cur.published = 1
-     WHERE ca.classroom_id IN (?)
+     WHERE ca.classroom_id IN (${classroomIds.map(() => '?').join(',')})
      ORDER BY ca.sort_order, ca.assigned_at`,
-    [classroomIds]
+    classroomIds
   );
 
   const assignmentsByClassroom = assignments.reduce((acc, a) => {
@@ -48,13 +50,18 @@ router.get('/children', requireSiteAuth, async (req, res) => {
     return acc;
   }, {});
 
+  // Games the teacher assigned to this child's classroom, and whether THIS child has played each (completion only, never a score).
+  // The pair comes from the parent's own link row, so a parent can only ever see their own linked child's classroom.
+  const gamesByChild = await Promise.all(linked.map(c => getChildGames(c.classroomId, c.studentId)));
+
   res.json({
-    children: linked.map(c => ({
+    children: linked.map((c, i) => ({
       studentId:   c.studentId,
       studentName: c.studentName,
       classroomId: c.classroomId,
       className:   c.className,
       assignments: assignmentsByClassroom[c.classroomId] || [],
+      games:       gamesByChild[i],
     })),
   });
 });
@@ -119,8 +126,8 @@ router.get('/lesson/:curriculumId', requireSiteAuth, async (req, res) => {
 
   const PARENT_ACCESSIBLE = ['Teacher Copy', 'Student Handout', 'Classroom Poster'];
   const [resourceRows] = await pool.query(
-    'SELECT resource, file_path, file_name, download_limit FROM curriculum_resources WHERE curriculum_id = ? AND resource IN (?)',
-    [curriculumId, PARENT_ACCESSIBLE]
+    `SELECT resource, file_path, file_name, download_limit FROM curriculum_resources WHERE curriculum_id = ? AND resource IN (${PARENT_ACCESSIBLE.map(() => '?').join(',')})`,
+    [curriculumId, ...PARENT_ACCESSIBLE]
   );
   const [videoRows] = await pool.query(
     'SELECT name, url, size_label AS sizeLabel FROM curriculum_videos WHERE curriculum_id = ? ORDER BY sort_order',
@@ -135,7 +142,11 @@ router.get('/lesson/:curriculumId', requireSiteAuth, async (req, res) => {
     [curriculumId]
   );
 
+  // How the lesson connects to state SEL / Portrait of a Graduate documents: verified connections only, grouped by state.
+  const connections = await standards.getPublicLessonConnections(curriculumId);
+
   res.json({
+    connections,
     curriculum: {
       ...curRows[0],
       objectives: objectiveRows.map(r => r.objective),

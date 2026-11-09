@@ -75,6 +75,21 @@ img{max-width:100%; display:block;}
 .info-toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--teal-dark); color:#fff; padding:12px 22px; border-radius:999px; font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s; z-index:2000; max-width:calc(100vw - 40px); text-align:center;}
 .info-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
+/* Connections to state SEL / Portrait of a Graduate documents */
+.conn-notice{background:#fff; border:1.5px solid rgba(22,79,74,0.15); border-radius:12px; padding:14px 18px; font-size:13.5px; line-height:1.6; color:var(--ink-soft); margin-bottom:14px; max-width:760px;}
+.conn-state{background:#fff; border-radius:14px; box-shadow:0 10px 24px -18px rgba(22,79,74,0.28); margin-bottom:10px; max-width:760px;}
+.conn-state summary{cursor:pointer; padding:14px 18px; font-weight:800; color:var(--teal-dark); font-size:15.5px;}
+.conn-inner{padding:0 18px 16px;}
+.conn-fw{font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); margin:12px 0 6px;}
+.conn-item{border-top:1px solid rgba(22,79,74,0.12); padding:10px 0;}
+.conn-item:first-of-type{border-top:0;}
+.conn-title{font-weight:700; font-size:14.5px;}
+.conn-code{color:var(--ink-soft); font-weight:600; margin-right:6px;}
+.conn-strength{display:inline-block; margin-left:8px; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800; background:rgba(22,79,74,0.1); color:var(--teal-dark);}
+.conn-strength.is-direct{background:var(--teal); color:#fff;}
+.conn-why{font-size:13.5px; line-height:1.6; color:var(--ink-soft); margin-top:3px;}
+.conn-official{font-size:13px; font-weight:700; color:var(--coral-dark);}
+
 @media (max-width:720px){
   .resource-grid{grid-template-columns:1fr 1fr;}
   .lesson-hero h1{font-size:26px;}
@@ -137,6 +152,12 @@ img{max-width:100%; display:block;}
     <div class="section" id="videosSection" style="display:none;">
       <div class="section-label">Videos</div>
       <div id="videosList" class="videos-list"></div>
+    </div>
+
+    <div class="section" id="connectionsSection" style="display:none;">
+      <div class="section-label">How this lesson connects to SEL and Portrait of a Graduate</div>
+      <div class="conn-notice">This is Fixer Nation's own mapping to each state's published SEL and Portrait of a Graduate documents, and our team checked every connection against the state's document. No state education agency or CASEL has reviewed or endorsed it. The state's document is always the source of truth.</div>
+      <div id="connectionsList"></div>
     </div>
   </div>
 </div>
@@ -262,6 +283,29 @@ function renderVideos(videos) {
   }).join('');
 }
 
+// A link from the database is only used when it is a plain https address.
+function safeUrl(u) { return /^https:\/\/[^\s"'<>]+$/.test(String(u || '')) ? String(u) : ''; }
+
+function renderConnections(states) {
+  var section = document.getElementById('connectionsSection');
+  if (!states || !states.length) { section.style.display = 'none'; return; }
+  document.getElementById('connectionsList').innerHTML = states.map(function(st) {
+    var fws = st.frameworks.map(function(fw) {
+      var link = safeUrl(fw.officialUrl);
+      var items = fw.items.map(function(it) {
+        var direct = it.strength === 'direct';
+        return '<div class="conn-item"><div class="conn-title"><span class="conn-code">' + esc(it.code) + '</span>' + esc(it.title) +
+          '<span class="conn-strength' + (direct ? ' is-direct' : '') + '">' + (direct ? 'Direct match' : 'Supporting') + '</span></div>' +
+          '<div class="conn-why">' + esc(it.rationale) + '</div></div>';
+      }).join('');
+      return '<div class="conn-fw">' + esc(fw.name) + '</div>' + items +
+        (link ? '<p style="margin-top:8px;"><a class="conn-official" href="' + esc(link) + '" target="_blank" rel="noopener">Read the official document &#8594;</a></p>' : '');
+    }).join('');
+    return '<details class="conn-state"><summary>' + esc(st.state.name) + '</summary><div class="conn-inner">' + fws + '</div></details>';
+  }).join('');
+  section.style.display = '';
+}
+
 // ── Load ──────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -327,6 +371,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   renderResources(c.id, c.resources || []);
   renderVideos(c.videos || []);
+  renderConnections(data.connections || []);
 
   document.getElementById('lessonWrap').style.display = '';
 });
