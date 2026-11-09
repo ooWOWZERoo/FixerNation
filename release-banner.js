@@ -1,10 +1,10 @@
 /* A thin, dismissible banner at the top of the public site and the school and district portals whenever a new release note is
-   published. It shows the NEWEST PUBLISHED note from release-notes.js (never a draft), only for 30 days after the note's date, links
-   straight to that note (release-notes.html?note=<id>), and stays away once the visitor dismisses it: the dismissed note's id is kept
-   in this browser, so the next note brings the banner back. Nothing is sent anywhere. Not shown on the release notes page itself, on
-   print, or on the student pages (they do not load nav.js). Loaded by nav.js, school-admin-nav.js and district-admin-nav.js.
-   Adding a note to release-notes.js is all it takes: there is nothing else to update, except that release-notes.js is requested with
-   the same ?v=N as release-notes.html (a test keeps the two in step). */
+   published. It says "New Features Are Released" and links to the release notes page (release-notes.html, the list), not to one note.
+   It appears only while the NEWEST PUBLISHED note (never a draft) is less than 30 days old, and stays away once the visitor dismisses
+   it: the dismissed note's id is kept in this browser, so the next published note brings the banner back. Nothing is sent anywhere.
+   Not shown on the release notes page itself, on print, or on the student pages (they do not load nav.js). Loaded by nav.js,
+   school-admin-nav.js and district-admin-nav.js. Adding a note to release-notes.js is all it takes: there is nothing else to update,
+   except that release-notes.js is requested with the same ?v=N as release-notes.html (a test keeps the two in step). */
 (function () {
   'use strict';
   if (window.__fnReleaseBanner) return;
@@ -12,7 +12,7 @@
 
   var KEY = 'fn_release_banner_dismissed';
   var SHOW_FOR_DAYS = 30;
-  var NOTES_SCRIPT = 'release-notes.js?v=9';
+  var NOTES_SCRIPT = 'release-notes.js?v=10';
 
   if (/release-notes\.html$/.test(location.pathname || '')) return;
 
@@ -48,12 +48,12 @@
     var bar = document.createElement('div');
     bar.className = 'fn-rb';
     bar.setAttribute('role', 'region');
-    bar.setAttribute('aria-label', 'New release note');
+    bar.setAttribute('aria-label', 'New features');
     var text = document.createElement('span');
-    text.textContent = 'New: ' + note.title + '.';
+    text.textContent = 'New Features Are Released';
     var link = document.createElement('a');
-    link.href = 'release-notes.html?note=' + encodeURIComponent(note.id);
-    link.textContent = 'Read the release note';
+    link.href = 'release-notes.html';
+    link.textContent = 'Read the release notes';
     var close = document.createElement('button');
     close.type = 'button';
     close.setAttribute('aria-label', 'Dismiss this message');

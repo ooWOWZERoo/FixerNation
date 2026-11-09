@@ -270,5 +270,5 @@
     return data;
   };
   // A thin, dismissible banner when a new release note is published (release-banner.js; docs/release-notes/README.md).
-  (function () { var s = document.createElement('script'); s.src = 'release-banner.js?v=1'; s.async = true; document.head.appendChild(s); })();
+  (function () { var s = document.createElement('script'); s.src = 'release-banner.js?v=2'; s.async = true; document.head.appendChild(s); })();
 })();

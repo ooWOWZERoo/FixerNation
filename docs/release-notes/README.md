@@ -12,7 +12,7 @@ When a change is **visible to a customer** on a page they use: a new page, tab o
 
 ## The banner
 
-Publishing a note (`published: true`) automatically shows a thin, dismissible banner above the page header on the public site and the school and district portals, linking to that note, for 30 days (`release-banner.js`, loaded by `nav.js`, `school-admin-nav.js` and `district-admin-nav.js`). Dismissing it is remembered per note in the visitor's browser, so the next note brings it back. It is never shown for a draft, on the release notes page, on print, on the student pages or the staff admin. Keep the `?v=N` that `release-banner.js` uses for `release-notes.js` equal to the one in `release-notes.html` (a test checks), and bump both whenever `release-notes.js` changes.
+Publishing a note (`published: true`) automatically shows a thin, dismissible banner above the page header on the public site and the school and district portals. It says "New Features Are Released" and links to the release notes page (the list, not one note), for 30 days after the newest published note's date (`release-banner.js`, loaded by `nav.js`, `school-admin-nav.js` and `district-admin-nav.js`). Dismissing it is remembered per note in the visitor's browser, so the next note brings it back. It is never shown for a draft, on the release notes page, on print, on the student pages or the staff admin. Keep the `?v=N` that `release-banner.js` uses for `release-notes.js` equal to the one in `release-notes.html` (a test checks), and bump both whenever `release-notes.js` changes.
 
 ## Telling people
 

@@ -1,5 +1,6 @@
-// The thin, dismissible "new release note" banner (release-banner.js): shows the newest PUBLISHED note for 30 days, links straight to it,
-// stays dismissed per note, comes back for the next note, never shows a draft, and stays off the release notes page. Runs the real script
+// The thin, dismissible "New Features Are Released" banner (release-banner.js): appears while the newest PUBLISHED note is under 30 days
+// old, links to the release notes page (the list, not one note), stays dismissed per note, comes back for the next note, never shows a draft,
+// and stays off the release notes page. Runs the real script
 // against a tiny fake browser, plus checks of the wiring (which pages load it, the shared ?v=N).
 // Run:  cd server && npm test
 const test = require('node:test');
@@ -53,20 +54,23 @@ function browser({ notes, today = '2026-11-09', pathname = '/index.html', saved 
 }
 const note = (id, date, published = true, title = id) => ({ id, date, published, title });
 
-test('shows the newest published note, with a link straight to it and a dismiss button', () => {
+test('says "New Features Are Released" and links to the release notes page, with a dismiss button', () => {
   const b = browser({ notes: [note('my-graduate-portrait', '2026-11-08', true, 'My Graduate Portrait'), note('older', '2026-11-07')] });
   assert.ok(b.bar, 'the banner is on the page');
-  assert.equal(b.text, 'New: My Graduate Portrait.');
-  assert.equal(b.link.href, 'release-notes.html?note=my-graduate-portrait');
-  assert.equal(b.link.textContent, 'Read the release note');
+  assert.equal(b.text, 'New Features Are Released');
+  assert.equal(b.link.href, 'release-notes.html', 'the list page, not one note');
+  assert.equal(b.link.textContent, 'Read the release notes');
   assert.equal(b.close.attrs['aria-label'], 'Dismiss this message');
   assert.equal(b.bar.attrs.role, 'region');
   assert.equal(b.body.children[0], b.bar, 'it is the first thing on the page');
 });
 
-test('a draft is never announced: the newest PUBLISHED note is used', () => {
+test('a draft is never announced: the newest PUBLISHED note decides, and only a draft means no banner', () => {
   const b = browser({ notes: [note('draft-one', '2026-11-08', false, 'Draft'), note('live-one', '2026-11-07', true, 'Live')] });
-  assert.equal(b.link.href, 'release-notes.html?note=live-one');
+  assert.ok(b.bar);
+  assert.equal(b.link.href, 'release-notes.html');
+  assert.ok(!/Draft/.test(b.text), 'a draft title never appears');
+  assert.ok(!browser({ notes: [note('draft-one', '2026-11-08', false), note('old-live', '2026-09-01', true)] }).bar, 'the newest published note is too old');
   assert.ok(!browser({ notes: [note('only-draft', '2026-11-08', false)] }).bar, 'only drafts: no banner');
   assert.ok(!browser({ notes: [] }).bar);
 });
@@ -83,7 +87,7 @@ test('dismissing removes it, remembers that note, and keeps it away on later vis
 test('the NEXT note brings the banner back for someone who dismissed the last one', () => {
   const b = browser({ notes: [note('b', '2026-11-09', true, 'Newer'), note('a', '2026-11-08')], saved: 'a' });
   assert.ok(b.bar);
-  assert.equal(b.link.href, 'release-notes.html?note=b');
+  assert.equal(b.link.href, 'release-notes.html');
 });
 
 test('only for 30 days after the note\'s date; a bad date shows nothing; the day itself and a future date do show', () => {
@@ -113,13 +117,17 @@ test('loads the notes itself when the page has not (the normal case) and asks fo
   assert.equal(asked, `release-notes.js?v=${read('release-notes.html').match(/release-notes\.js\?v=(\d+)/)[1]}`, 'same ?v=N as release-notes.html, so the browser reuses one cached copy');
 });
 
-test('the note\'s words go in as text, never as markup', () => {
+test('the banner never puts a note\'s words on the page, and nothing goes in as markup', () => {
   assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(SOURCE), 'no HTML injection');
-  assert.equal(browser({ notes: [note('a', '2026-11-08', true, '<img src=x onerror=alert(1)>')] }).text, 'New: <img src=x onerror=alert(1)>.');
+  const b = browser({ notes: [note('a', '2026-11-08', true, '<img src=x onerror=alert(1)>')] });
+  assert.equal(b.text, 'New Features Are Released', 'the same words whatever the note is called');
+  assert.ok(!/note=/.test(b.link.href), 'no note id in the address');
 });
 
 test('WIRING: public pages and the school and district portals load it; students, the staff admin and the notes page itself do not', () => {
   for (const f of ['nav.js', 'school-admin-nav.js', 'district-admin-nav.js']) assert.match(read(f), /release-banner\.js\?v=\d+/, `${f} loads the banner`);
+  const versions = ['nav.js', 'school-admin-nav.js', 'district-admin-nav.js'].map((f) => /release-banner\.js\?v=(\d+)/.exec(read(f))[1]);
+  assert.equal(new Set(versions).size, 1, 'all three navs ask for the same banner version, so one cached copy serves them');
   assert.ok(!/release-banner/.test(read('admin-nav.js')), 'the staff admin pages do not');
   for (const f of ['student-home.html', 'student-portrait.html', 'student-lesson.html', 'student-game.html', 'student-login.html', 'student-achievements.html', 'portrait-keepsake.html']) {
     assert.ok(!/(^|[^-a-z])nav\.js/.test(read(f)), `${f} does not load nav.js, so children never see the banner`);

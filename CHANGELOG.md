@@ -18,6 +18,13 @@ All notable changes to the Fixer Nation Education platform (fixernationeducation
 - **Deeper bounce detection** — today's bounce/undelivered tracking only catches failures the mail server reports immediately at send time. Catching the far more common case (a bounce that arrives later as its own email) would need IMAP access to the sending mailbox, a bounce-message parser, and a periodic cron job — deliberately deferred as a second phase; ask if this becomes a real gap.
 - **Migrate off plain SMTP to a real ESP** (SendGrid, Postmark, Amazon SES, etc.) with native delivery/open/bounce/complaint webhooks — this would replace the current pixel-and-click-tracking guesswork entirely with accurate, real-time data straight from the provider. Bigger infrastructure change (new account, API integration, likely a cost) — not started.
 
+## Release 166 — 2026-11-08 — Three release notes published, and the banner says "New Features Are Released"
+
+- **Published, approved by the owner:** the release notes for game pages, the parent portal's assigned games and lesson connections, and favorites (`game-pages`, `parent-portal-games`, `favorites`).
+- **The banner now reads "New Features Are Released"** with a "Read the release notes" link to the release notes page (the list), instead of naming the newest note and linking to it. It still appears only while the newest published note is under 30 days old, never for a draft, still dismissible (remembered per newest note id, so the next published note brings it back), still off the release notes page, print, the student pages and staff admin.
+- Because the banner script changed, its address is `release-banner.js?v=2` in all three navs, and the navs moved to `nav.js?v=22` (117 pages and the generated game pages), `school-admin-nav.js?v=28` (10 pages) and `district-admin-nav.js?v=14` (6 pages) so browsers fetch the new script. `release-notes.js` is `?v=10`.
+- Static files only: no restart, no database change.
+
 ## Release 165 — 2026-11-08 — Favorites for lessons and games, and one My favorites page
 
 - **Star lessons and games.** Signed-in site users (teachers, administrators, parents, affiliates) get a star on lesson cards in the Lesson Library, a Save button on each lesson page and on each card when a teacher browses lessons to add to their library, a star on every card on the games page, and a Save button on each game page (Release 163). A signed-out tap opens the sign-in box and saves the item after sign-in. Students (PIN logins) get no stars; the games page checks the new `principalType` field on `/api/brain-games/me/progress`.

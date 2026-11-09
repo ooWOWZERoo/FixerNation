@@ -35,7 +35,7 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
-    N('favorites', false, '2026-11-08', 'Release 165', 'Save lessons and games, and see them all in My favorites', EVERYONE,
+    N('favorites', true, '2026-11-08', 'Release 165', 'Save lessons and games, and see them all in My favorites', EVERYONE,
       'Star any lesson or game, and find everything you\'ve saved, along with Morning Boost posts, on one My favorites page.',
       'Anyone with a Fixer Nation account can now star lessons and games. The My favorites link in your account menu opens one page with everything you\'ve saved, including Morning Boost posts, with a filter for each.',
       {
@@ -56,7 +56,7 @@
       },
       'Account menu, then My favorites. Stars are on the Lesson Library, the games page, and each lesson and game page.',
       []),
-    N('parent-portal-games', false, '2026-11-08', 'Release 164', 'Parents can see assigned games and how a lesson connects to SEL', ['families', 'teachers'],
+    N('parent-portal-games', true, '2026-11-08', 'Release 164', 'Parents can see assigned games and how a lesson connects to SEL', ['families', 'teachers'],
       'The Parent Portal now lists the games your child\'s teacher assigned and whether your child has played each one, and every lesson page shows the state goals it supports.',
       'Parents who are linked to a classroom now see two additions. Each child has a Games section that lists the games the teacher assigned and whether the child has played them. Each lesson page has a new section that explains which state SEL and Portrait of a Graduate goals the lesson supports.',
       {
@@ -72,7 +72,7 @@
       },
       'Parent Portal, under each child. Open any lesson from there to see its connections.',
       []),
-    N('game-pages', false, '2026-11-08', 'Release 163', 'A page for every game', EVERYONE,
+    N('game-pages', true, '2026-11-08', 'Release 163', 'A page for every game', EVERYONE,
       'Every Tune Your Brain game now has its own page with what it practices, the grades it is for and how it connects to state standards, and you can share the link with anyone.',
       'On the games page, each game card has a new About button. It opens a page for that one game: what students practice, the grade band, and the state standards our team has checked it against. The page is open to anyone, so a teacher can send the link to a parent or a principal who has no account.',
       {
