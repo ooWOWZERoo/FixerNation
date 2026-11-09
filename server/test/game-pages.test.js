@@ -162,7 +162,7 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 test('WIRING: game.html loads the shared scripts, escapes database text and only follows https links', () => {
   const html = read('game.html');
-  for (const s of ['fonts.css?v=1', 'brain-games.css?v=7', 'nav.js?v=21', 'site-auth.js?v=11', 'footer.js?v=18']) assert.ok(html.includes(s), s);
+  for (const s of ['fonts.css?v=1', 'brain-games.css?v=7', 'nav.js?v=21', 'site-auth.js?v=12', 'footer.js?v=18']) assert.ok(html.includes(s), s);
   assert.ok(!/fonts\.googleapis|cdn\./i.test(html), 'no third-party font or CDN script');
   assert.match(html, /function esc\(/);
   assert.match(html, /function safeUrl\(/);

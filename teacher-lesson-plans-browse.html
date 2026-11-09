@@ -98,9 +98,10 @@ h1{font-family:'Fraunces',serif;color:var(--teal-dark);font-size:28px;margin-bot
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=21"></script>
-<script src="site-auth.js?v=11"></script>
+<script src="site-auth.js?v=12"></script>
 <script src="admin-common.js?v=17"></script>
 <script src="lesson-library-ui.js?v=1"></script>
+<script src="favorites.js?v=1"></script>
 <script>fnTrackPageview();</script>
 <script>
 let allCurricula = [];
@@ -137,6 +138,18 @@ function updateCounter() {
   }
 }
 
+// Favorites (Release 165): a Save button on each card, so a teacher can keep a lesson to come back to without adding it to the library.
+let favStore = null;
+function starFor(c) {
+  return (typeof FnFav !== 'undefined' && favStore) ? FnFav.starHtml('lessons', c, favStore.isFav('lessons', c.id), 'text') : '';
+}
+async function startFavorites() {
+  if (typeof FnFav === 'undefined') return;
+  favStore = FnFav.createStore();
+  await favStore.load();
+  FnFav.bind({ store: favStore, rerender: applyFilters, signIn: (message) => FnFav.showToast(message) });
+}
+
 function renderCards(curricula) {
   const grid = document.getElementById('cardGrid');
   const empty = document.getElementById('emptyMsg');
@@ -157,6 +170,7 @@ function renderCards(curricula) {
         <div class="card-title">${fnLibEsc(c.title)}</div>
         ${c.overview ? `<div class="card-desc">${fnLibEsc(c.overview)}</div>` : (c.shortDescription ? `<div class="card-desc">${fnLibEsc(c.shortDescription)}</div>` : '')}
         <div class="card-foot">
+          ${starFor(c)}
           ${added
             ? '<span class="btn-outline">In Your Library</span>'
             : `<button class="btn-add" data-id="${c.id}"${disabled}>${swapOut ? 'Swap in' : 'Add to Library'}</button>`
@@ -320,6 +334,7 @@ async function loadPage() {
     say('You have no swaps left. Contact us if you need to change your library.', true);
   }
   updateCounter();
+  await startFavorites().catch(() => {});
   applyFilters();
   document.getElementById('mainWrap').style.visibility = 'visible';
 }

@@ -87,6 +87,7 @@
       <div class="gp-actions">
         <a class="btn btn-primary" id="playBtn" href="brain-games.html">Play now</a>
         <a class="btn btn-outline" id="assignBtn" href="teacher-classrooms.html" hidden>Assign to a classroom</a>
+        <span id="gameStar"></span>
       </div>
       <p class="gp-note" id="signInNote" hidden>Sign in and we'll save your progress. You can play without signing in, but your scores won't be saved.</p>
       <div class="gp-grid">
@@ -111,9 +112,65 @@
 
 <footer></footer>
 
+<!-- Log In / Sign Up modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthOAuthRow">
+      <a href="#" onclick="fnAuthStartMicrosoft(); return false;" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:11px; border-radius:999px; border:1px solid rgba(22,79,74,0.18); background:#fff; color:#2A2420; font-weight:600; font-size:13.5px; text-decoration:none; box-sizing:border-box;">
+        <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+        Continue with Microsoft
+      </a>
+      <div style="display:flex; align-items:center; gap:10px; margin:14px 0;"><div style="flex:1; height:1px; background:rgba(22,79,74,0.12);"></div><span style="font-size:11.5px; color:#B8AFA6; font-weight:600;">OR</span><div style="flex:1; height:1px; background:rgba(22,79,74,0.12);"></div></div>
+    </div>
+
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+        <p style="font-size:12px; color:#6B5F55; line-height:1.5; margin:12px 0 0; text-align:center;">By signing up you agree to our <a href="terms.html" style="color:#164F4A; font-weight:700;">Terms of Use</a> and acknowledge our <a href="privacy-policy.html" style="color:#164F4A; font-weight:700;">Privacy Policy</a>.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=21"></script>
-<script src="site-auth.js?v=11"></script>
+<script src="site-auth.js?v=12"></script>
+<script src="favorites.js?v=1"></script>
 <script src="footer.js?v=18"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -187,6 +244,30 @@ function renderPage(data) {
   document.getElementById('page').hidden = false;
 }
 
+// Favorites (Release 165): a Save button next to Play now. A signed-out tap opens the sign-in box and saves the game after sign-in.
+var favStore = null, favGame = null;
+function paintGameStar() {
+  document.getElementById('gameStar').innerHTML = (favStore && favGame) ? FnFav.starHtml('games', favGame, favStore.isFav('games', favGame.id), 'text') : '';
+}
+async function startFavorites(game) {
+  if (typeof FnFav === 'undefined') return;
+  favGame = { id: game.id, name: game.name };
+  favStore = FnFav.createStore();
+  await favStore.load();
+  paintGameStar();
+  FnFav.bind({
+    store: favStore,
+    rerender: paintGameStar,
+    signIn: function (message) { FnFav.showToast(message); fnAuthOpenModal('login'); }
+  });
+  document.addEventListener('fn-auth-changed', async function () {
+    await favStore.load();
+    var saved = await favStore.applyPending();
+    if (saved) FnFav.showToast(FnFav.MSG.added);
+    paintGameStar();
+  });
+}
+
 async function load() {
   var slug = new URLSearchParams(window.location.search).get('slug') || '';
   if (!slug || slug.length > 50 || !SLUG_OK.test(slug)) { showMissing(); return; }
@@ -198,6 +279,7 @@ async function load() {
   var data = await r.json().catch(function () { return null; });
   if (!data || !data.game) { showLoadError(); return; }
   renderPage(data);
+  startFavorites(data.game).catch(function () {});
 
   // Signed-in teachers get a shortcut to their classrooms; everyone else is told scores are not saved.
   fetch('/api/site-auth/me', { credentials: 'include' }).then(function (m) { return m.json(); }).then(function (me) {

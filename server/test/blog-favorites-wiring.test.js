@@ -48,12 +48,12 @@ test('PAGE: Morning Boost loads the favorites script and wires stars, chips, sig
 });
 
 test('MENU: "My Favorites" is in the signed-in menu, and every public page loads the new site-auth', () => {
-  assert.match(read('site-auth.js'), /li\('morning-boost-blog\.html\?view=favorites', 'My Favorites'\)/);
+  assert.match(read('site-auth.js'), /li\('my-favorites\.html', 'My Favorites'\)/, 'since Release 165 the menu link opens the combined My Favorites page');
   const stale = [];
   let withScript = 0;
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const m = /<script src="site-auth\.js\?v=(\d+)"/.exec(read(f));
-    if (m) { withScript++; if (m[1] !== '11') stale.push(f); }
+    if (m) { withScript++; if (m[1] !== '12') stale.push(f); }
   }
   assert.deepEqual(stale, []); assert.ok(withScript >= 70, `${withScript} pages`);
 });

@@ -571,6 +571,18 @@ CREATE TABLE IF NOT EXISTS blog_post_favorites (
   FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Lessons and games a signed-in site user has starred (Release 165). Private to the user; deleting a user, a lesson or a game removes the row.
+-- Server rules (routes/favorites.js): own rows only, published lessons and active games only, 500 per kind per user.
+CREATE TABLE IF NOT EXISTS lesson_favorites (
+  site_user_id INT UNSIGNED NOT NULL,
+  curriculum_id INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (site_user_id, curriculum_id),
+  KEY idx_lesson_fav_curriculum (curriculum_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (curriculum_id) REFERENCES curricula(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Every category a post belongs to (a Morning Boost post is typically in
 -- several at once: Morning Boost + Health + Positivity + Wellness, etc.) —
 -- backfilled from each post's single `category` column when this table was
@@ -1079,6 +1091,17 @@ CREATE TABLE IF NOT EXISTS brain_games (
   -- SEL games, literacy / math / thinking for the skills games). casel_competencies is the secondary list. See lib/brain-game-focus.js.
   focus ENUM('self_awareness','self_management','social_awareness','relationship_skills','responsible_decision_making','literacy','math','thinking') NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Games a signed-in site user has starred (Release 165); see lesson_favorites. Defined here because it needs brain_games.
+CREATE TABLE IF NOT EXISTS game_favorites (
+  site_user_id INT UNSIGNED NOT NULL,
+  game_id INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (site_user_id, game_id),
+  KEY idx_game_fav_game (game_id),
+  FOREIGN KEY (site_user_id) REFERENCES site_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (game_id) REFERENCES brain_games(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS brain_game_sessions (

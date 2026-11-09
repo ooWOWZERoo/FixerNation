@@ -627,6 +627,7 @@ router.get('/me/progress', async (req, res) => {
     longestStreak: streakRow[0]?.longest_streak || 0,
     lastPlayedAt: streakRow[0]?.last_qualifying_date || null,
     firstName: principal.displayName,
+    principalType: principal.type, // 'user' or 'student': the games page shows favorite stars to site users only
   });
 });
 

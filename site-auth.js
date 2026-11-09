@@ -162,7 +162,7 @@ function fnAuthRenderNav(loggedIn, firstName, role, hasLicense, isParent, isScho
         <a href="#" onclick="fnAuthToggleUserMenu(event); return false;" style="font-weight:600; font-size:14px;">${firstName} ▾</a>
         <div id="fnAuthUserMenu" style="display:none; position:absolute; right:0; top:26px; background:#fff; border-radius:10px; box-shadow:0 12px 26px -10px rgba(22,79,74,0.35); padding:8px; min-width:175px; z-index:300;">
           ${li('my-profile.html', 'My Profile')}
-          ${li('morning-boost-blog.html?view=favorites', 'My Favorites')}
+          ${li('my-favorites.html', 'My Favorites')}
           ${showTeacherLinks ? li('my-license.html', 'My Licenses') : ''}
           ${showTeacherLinks ? li('teacher-lesson-plans.html', 'My Lesson Plans') : ''}
           ${showTeacherLinks ? li('teacher-classrooms.html', 'My Classrooms') : ''}

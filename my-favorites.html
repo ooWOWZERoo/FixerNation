@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>My favorites - Fixer Nation Education</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+:root{
+  --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+  --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+  --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+h1,h2,h3,h4{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+a{color:inherit; text-decoration:none;}
+.wrap{max-width:1100px; margin:0 auto; padding:0 28px;}
+.page-head{padding:44px 0 18px;}
+.page-head h1{font-size:38px; margin-bottom:8px;}
+.page-head p{color:var(--ink-soft); font-size:16px; max-width:620px;}
+.btn{display:inline-flex; align-items:center; justify-content:center; padding:12px 26px; border-radius:999px; font-family:inherit; font-weight:700; font-size:14.5px; cursor:pointer; border:none; background:var(--coral); color:#fff; box-shadow:0 12px 24px -10px rgba(242,107,77,0.45);}
+.btn:hover{background:var(--coral-dark);}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 26px;}
+.chip{padding:9px 18px; min-height:44px; border-radius:999px; font-weight:700; font-size:14px; font-family:inherit; cursor:pointer; background:var(--cream-soft); border:2px solid transparent; color:var(--teal-dark);}
+.chip:hover{background:#e6dccb;}
+.chip.active{background:var(--teal); color:#fff; border-color:var(--teal-dark);}
+.chip:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; padding-bottom:70px;}
+.fav-card{position:relative; background:#fff; border-radius:16px; padding:22px; box-shadow:0 12px 26px -20px rgba(22,79,74,0.25); display:flex; flex-direction:column; gap:6px; transition:transform .15s ease, box-shadow .15s ease;}
+.fav-card:hover{transform:translateY(-3px); box-shadow:0 18px 34px -20px rgba(22,79,74,0.38);}
+.fav-kind{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--coral-dark);}
+.fav-card h3{font-size:17px; padding-right:48px;}
+.fav-card h3 a:hover{text-decoration:underline;}
+.fav-sub{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+.fav-desc{font-size:13.5px; color:var(--ink-soft); line-height:1.55; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+.fav-locked{font-size:13px; background:var(--cream-soft); border-radius:10px; padding:8px 12px; margin-top:4px;}
+.fav-locked a{color:var(--coral-dark); font-weight:700;}
+.fav-cta{margin-top:8px; font-size:13px; font-weight:700; color:var(--coral-dark);}
+.fav-icon{font-size:20px; margin-right:6px;}
+.state-box{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:44px 32px; text-align:center; max-width:560px; margin:30px auto 80px;}
+.state-box h2{font-size:26px; margin-bottom:10px;}
+.state-box p{color:var(--ink-soft); margin-bottom:22px;}
+.empty{background:var(--cream-soft); border-radius:14px; padding:26px; color:var(--ink-soft); grid-column:1 / -1; font-size:15px;}
+@media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr);} }
+@media (max-width:600px){ .grid{grid-template-columns:1fr;} .wrap{padding:0 20px;} .page-head h1{font-size:30px;} }
+</style>
+</head>
+<body>
+<header></header>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>My favorites</h1>
+    <p>Everything you've saved, in one place, on any device you sign in to.</p>
+  </div>
+
+  <div id="loading" style="padding:50px 0; text-align:center; color:var(--ink-soft);">Loading&hellip;</div>
+
+  <div id="signedOut" class="state-box" hidden>
+    <h2>Sign in to see your favorites.</h2>
+    <p>Whatever you've saved shows up here once you sign in.</p>
+    <button type="button" class="btn" id="signInBtn">Sign in</button>
+  </div>
+
+  <div id="loadError" class="state-box" hidden>
+    <h2>Your favorites didn't load.</h2>
+    <p>Check your connection and try again.</p>
+    <button type="button" class="btn" id="retryBtn">Try again</button>
+  </div>
+
+  <div id="content" hidden>
+    <div class="chips" id="chips" role="group" aria-label="Show"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<footer></footer>
+
+<!-- Log In / Sign Up modal (site-auth.js) -->
+<div class="fn-auth-modal-overlay" id="fnAuthModalOverlay" style="position:fixed; inset:0; background:rgba(14,55,51,0.55); display:none; align-items:center; justify-content:center; z-index:400; padding:24px;">
+  <div class="fn-auth-modal" style="background:#fff; border-radius:22px; max-width:420px; width:100%; box-shadow:0 40px 80px -20px rgba(0,0,0,0.4); padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; gap:18px;">
+        <button type="button" id="fnAuthTabLogin" onclick="fnAuthSwitchTab('login')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#164F4A;">Log In</button>
+        <button type="button" id="fnAuthTabSignup" onclick="fnAuthSwitchTab('signup')" style="border:none; background:none; font-family:'Fraunces',serif; font-size:19px; font-weight:700; cursor:pointer; padding:0; color:#B8AFA6;">Sign Up</button>
+      </div>
+      <button type="button" onclick="fnAuthCloseModal()" style="border:none; background:#F3EBDD; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:14px;">✕</button>
+    </div>
+
+    <div id="fnAuthMessage" style="display:none; font-size:13px; font-weight:600; padding:10px 14px; border-radius:10px; margin-bottom:14px;"></div>
+    <div id="fnAuthOAuthRow">
+      <a href="#" onclick="fnAuthStartMicrosoft(); return false;" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:11px; border-radius:999px; border:1px solid rgba(22,79,74,0.18); background:#fff; color:#2A2420; font-weight:600; font-size:13.5px; text-decoration:none; box-sizing:border-box;">
+        <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+        Continue with Microsoft
+      </a>
+      <div style="display:flex; align-items:center; gap:10px; margin:14px 0;"><div style="flex:1; height:1px; background:rgba(22,79,74,0.12);"></div><span style="font-size:11.5px; color:#B8AFA6; font-weight:600;">OR</span><div style="flex:1; height:1px; background:rgba(22,79,74,0.12);"></div></div>
+    </div>
+
+    <div id="fnAuthLoginView">
+      <form id="fnAuthLoginForm">
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthLoginEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:8px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthLoginPassword" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="text-align:right; margin-bottom:16px;"><a href="#" onclick="fnAuthShowForgotPassword(); return false;" style="font-size:12.5px; color:#D9502F; font-weight:600;">Forgot password?</a></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Log In</button>
+      </form>
+      <div id="fnAuthResendWrap" style="display:none; text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthResendVerification(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">Resend verification email</a></div>
+    </div>
+
+    <div id="fnAuthForgotView" style="display:none;">
+      <p style="font-size:13.5px; color:#6B5F55; margin-bottom:14px;">Enter your email and we'll send you a link to reset your password.</p>
+      <form id="fnAuthForgotForm">
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthForgotEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Send Reset Link</button>
+      </form>
+      <div style="text-align:center; margin-top:12px;"><a href="#" onclick="fnAuthShowLoginForm(); return false;" style="font-size:12.5px; color:#164F4A; font-weight:600;">← Back to Log In</a></div>
+    </div>
+
+    <div id="fnAuthSignupView" style="display:none;">
+      <form id="fnAuthSignupForm">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">First Name</label><input type="text" id="fnAuthSignupFirstName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+          <div style="flex:1;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Last Name</label><input type="text" id="fnAuthSignupLastName" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        </div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Email</label><input type="email" id="fnAuthSignupEmail" required style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:12px; font-weight:700; margin-bottom:5px; color:#6B5F55;">Password</label><input type="password" id="fnAuthSignupPassword" required minlength="8" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(22,79,74,0.15); font-size:14px;"></div>
+        <button type="submit" style="width:100%; padding:13px; border-radius:999px; border:none; background:#F26B4D; color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;">Sign Up</button>
+        <p style="font-size:12px; color:#6B5F55; line-height:1.5; margin:12px 0 0; text-align:center;">By signing up you agree to our <a href="terms.html" style="color:#164F4A; font-weight:700;">Terms of Use</a> and acknowledge our <a href="privacy-policy.html" style="color:#164F4A; font-weight:700;">Privacy Policy</a>.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script src="referral.js?v=1"></script>
+<script src="nav.js?v=21"></script>
+<script src="site-auth.js?v=12"></script>
+<script src="favorites.js?v=1"></script>
+<script src="footer.js?v=18"></script>
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+var BAND_GRADES = { discover: 'K-2', explore: '3-5', challenge: '6-8', advance: '9-12' };
+var BAND_LABELS = { discover: 'Discover', explore: 'Explore', challenge: 'Challenge', advance: 'Advance' };
+var VIEWS = ['all', 'lessons', 'games', 'posts'];
+var EMPTY = {
+  all: "Nothing saved yet. Tap the star on a lesson, game or post to keep it here.",
+  lessons: 'No lessons saved yet.',
+  games: 'No games saved yet.',
+  posts: 'No Morning Boost posts saved yet.'
+};
+var CHIP_LABEL = { all: 'All', lessons: 'Lessons', games: 'Games', posts: 'Morning Boost' };
+
+var store = null, catalogs = null, view = 'all';
+
+function readView() {
+  var v = new URLSearchParams(location.search).get('view');
+  return VIEWS.indexOf(v) !== -1 ? v : 'all';
+}
+
+function show(id) {
+  ['loading', 'signedOut', 'loadError', 'content'].forEach(function (x) { document.getElementById(x).hidden = (x !== id); });
+}
+
+async function getJson(url) {
+  var r = await fetch(url, { credentials: 'include' });
+  if (!r.ok) throw new Error(url + ' ' + r.status);
+  return r.json();
+}
+
+// The favorites list holds ids; the catalogs (what the public pages already use) hold the words. An id with no match is skipped.
+function buildItems() {
+  var byId = function (list, key) { var m = {}; (list || []).forEach(function (x) { m[x[key || 'id']] = x; }); return m; };
+  var lessons = byId(catalogs.curricula), games = byId(catalogs.games), posts = byId(catalogs.posts);
+  var out = { lessons: [], games: [], posts: [] };
+  store.ids('lessons').forEach(function (id) {
+    var c = lessons[id]; if (!c) return;
+    out.lessons.push({ kind: 'lessons', id: id, title: c.title, sub: c.series || '', desc: c.shortDescription || c.overview || '',
+      href: 'lesson-detail.html?id=' + encodeURIComponent(id), cta: 'Open lesson', locked: !!(c.access && !c.access.licensed),
+      lockedText: 'This lesson needs an active license to open.' });
+  });
+  store.ids('games').forEach(function (id) {
+    var g = games[id]; if (!g) return;
+    out.games.push({ kind: 'games', id: id, title: g.name, icon: g.icon || '', sub: g.band ? (BAND_LABELS[g.band] + ' (' + BAND_GRADES[g.band] + ')') : (g.primarySkill || ''),
+      desc: g.description || '', href: 'game.html?slug=' + encodeURIComponent(g.slug), cta: 'Open game', locked: false });
+  });
+  store.ids('posts').forEach(function (id) {
+    var p = posts[id]; if (!p) return;
+    out.posts.push({ kind: 'posts', id: id, title: p.title, sub: 'Morning Boost', desc: p.excerpt || '',
+      href: 'morning-boost-blog.html?post=' + encodeURIComponent(p.slug || ''), cta: 'Read post', locked: !!p.locked,
+      lockedText: 'This post needs an active license to open.' });
+  });
+  return out;
+}
+
+var KIND_LABEL = { lessons: 'Lesson', games: 'Game', posts: 'Morning Boost' };
+
+function cardHtml(it) {
+  var star = FnFav.starHtml(it.kind, { id: it.id, title: it.title }, true, 'icon');
+  var locked = it.locked
+    ? '<div class="fav-locked">' + esc(it.lockedText) + ' <a href="licenses.html">See licenses</a></div>'
+    : '';
+  return '<article class="fav-card">' + star +
+    '<div class="fav-kind">' + esc(KIND_LABEL[it.kind]) + '</div>' +
+    '<h3>' + (it.icon ? '<span class="fav-icon">' + esc(it.icon) + '</span>' : '') + '<a href="' + esc(it.href) + '">' + esc(it.title) + '</a></h3>' +
+    (it.sub ? '<div class="fav-sub">' + esc(it.sub) + '</div>' : '') +
+    (it.desc ? '<p class="fav-desc">' + esc(it.desc) + '</p>' : '') +
+    locked +
+    (it.locked ? '' : '<a class="fav-cta" href="' + esc(it.href) + '">' + esc(it.cta) + ' &#8594;</a>') +
+    '</article>';
+}
+
+function render() {
+  var items = buildItems();
+  var counts = { lessons: items.lessons.length, games: items.games.length, posts: items.posts.length };
+  counts.all = counts.lessons + counts.games + counts.posts;
+  document.getElementById('chips').innerHTML = VIEWS.map(function (v) {
+    return '<button type="button" class="chip' + (v === view ? ' active' : '') + '" data-view="' + v + '" aria-pressed="' + (v === view) + '">' +
+      esc(CHIP_LABEL[v]) + ' (' + counts[v] + ')</button>';
+  }).join('');
+  var shown = view === 'all' ? items.lessons.concat(items.games, items.posts) : items[view];
+  document.getElementById('grid').innerHTML = shown.length
+    ? shown.map(cardHtml).join('')
+    : '<div class="empty">' + esc(counts.all === 0 ? EMPTY.all : EMPTY[view]) + '</div>';
+}
+
+async function load() {
+  show('loading');
+  view = readView();
+  store = FnFav.createStore();
+  await store.load();
+  if (!store.signedIn) { show('signedOut'); return; }
+  try {
+    var res = await Promise.all([getJson('/api/curricula'), getJson('/api/brain-games'), getJson('/api/blog/posts')]);
+    catalogs = { curricula: res[0].curricula, games: res[1].games, posts: res[2].posts };
+  } catch (e) { show('loadError'); return; }
+  render();
+  show('content');
+}
+
+document.getElementById('chips').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-view]');
+  if (!b) return;
+  view = b.getAttribute('data-view');
+  try { var url = new URL(location.href); url.searchParams.set('view', view); history.replaceState(null, '', url); } catch (err) { /* keep going */ }
+  render();
+});
+document.getElementById('signInBtn').addEventListener('click', function () { fnAuthOpenModal('login'); });
+document.getElementById('retryBtn').addEventListener('click', load);
+
+FnFav.bind({
+  store: { toggle: function (k, i) { return store.toggle(k, i); }, set: function (k, i, f) { return store.set(k, i, f); } },
+  rerender: function () { if (store && store.signedIn) render(); else show('signedOut'); },
+  signIn: function (message) { FnFav.showToast(message); show('signedOut'); },
+  undoOnRemove: true
+});
+// Signing in does not reload the page.
+document.addEventListener('fn-auth-changed', load);
+load();
+</script>
+</body>
+</html>

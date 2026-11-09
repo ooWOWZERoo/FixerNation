@@ -1,6 +1,6 @@
 # Game pages, parent games and standards line, lesson and game favorites (requirements)
 
-Written 2026-11-08. **Approved by the owner 2026-11-08 (build order and the three decisions at the end, as recommended). Release 163 (game pages) is committed; Release 164 (parent view) is built and staged; 165 (favorites) is not started.** Three features, built in this order because each leans on the one before: (1) a public page for every game, (2) the parent portal shows a child's assigned games and the SEL / Portrait connections of a lesson, (3) favorites for lessons and games with one My Favorites page. Owner answers already given: parent view adds **games assigned to my child** and the **SEL and Portrait of a Graduate line**; game pages are **public**; favorites are for signed-in site users, **not students**, with one combined page.
+Written 2026-11-08. **Approved by the owner 2026-11-08 (build order and the three decisions at the end, as recommended). Release 163 (game pages) is committed; Release 164 (parent view) is committed; Release 165 (favorites) is built and staged.** Three features, built in this order because each leans on the one before: (1) a public page for every game, (2) the parent portal shows a child's assigned games and the SEL / Portrait connections of a lesson, (3) favorites for lessons and games with one My Favorites page. Owner answers already given: parent view adds **games assigned to my child** and the **SEL and Portrait of a Graduate line**; game pages are **public**; favorites are for signed-in site users, **not students**, with one combined page.
 
 What already exists (so we do not rebuild it): `parent-lesson.html` + `GET /api/parent/lesson/:curriculumId` (overview, goals, materials, three PDFs, videos, no quiz, no reflections); `brain-games.html` (the games hub); `brain-<slug>.html` (each game, playable by anyone); `student-game.html` (iframe for assigned games); blog favorites (`/api/blog-favorites`, `blog-favorites.js`, Release 91).
 
@@ -63,6 +63,10 @@ Second-level check: games come from the classroom ids returned by `getParentClas
 | Signed-in site user | Own only | Published lesson, active game | Always |
 | Student (PIN), FNE admin session | No | No | No |
 | Anyone, another person's favorites | Impossible | | |
+
+## As built (Release 165)
+
+Built as written, with these refinements: one `favorites.js` store covers lessons, games and Morning Boost posts (posts still save through `/api/blog-favorites`); `GET /api/favorites` returns ids only and `my-favorites.html` reads the words from the existing public catalogs; the star click handler runs in the capture phase so a card that is itself a link never opens; the games page skips stars for a signed-in PIN student (new `principalType` on `/api/brain-games/me/progress`); a teacher browsing lessons to add to the library sees a Save button on each card; the Parent Portal has no stars yet.
 
 ## Releases, deploy and the rest
 

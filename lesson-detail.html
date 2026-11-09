@@ -128,6 +128,7 @@
         <h1 id="lessonTitle">Lesson Title</h1>
         <div class="meta" id="lessonMeta"></div>
         <div id="lessonAudiences" style="margin-bottom:16px;"></div>
+        <div id="lessonStar" style="margin-bottom:16px;"></div>
         <p class="desc" id="lessonShortDesc"></p>
         <div class="res-row" id="detailResources"></div>
         <div id="detailVideo" style="margin-top:20px; max-width:760px;"></div>
@@ -182,6 +183,7 @@
 <footer></footer>
 
 <script src="admin-common.js?v=17"></script>
+<script src="favorites.js?v=1"></script>
 <script>fnTrackPageview();</script>
 <script>
 async function getCurriculumFromQuery() {
@@ -376,6 +378,32 @@ function renderDetailVideo(c) {
   slot.innerHTML = videos.map(v => `<div style="margin-bottom:16px;">${fnVideoEmbedHtml(v.url)}</div>`).join('');
 }
 
+// Favorites (Release 165): a Save button under the title for signed-in visitors; a signed-out tap opens the sign-in box.
+let favStore = null;
+let favLesson = null;
+function paintLessonStar() {
+  const el = document.getElementById('lessonStar');
+  if (el) el.innerHTML = (favStore && favLesson) ? FnFav.starHtml('lessons', favLesson, favStore.isFav('lessons', favLesson.id), 'text') : '';
+}
+async function startLessonFavorite(c) {
+  if (typeof FnFav === 'undefined') return;
+  favLesson = { id: c.id, title: c.title };
+  favStore = FnFav.createStore();
+  await favStore.load();
+  paintLessonStar();
+  FnFav.bind({
+    store: favStore,
+    rerender: paintLessonStar,
+    signIn: (message) => { FnFav.showToast(message); fnAuthOpenModal('login'); },
+  });
+  document.addEventListener('fn-auth-changed', async () => {
+    await favStore.load();
+    const saved = await favStore.applyPending();
+    if (saved) FnFav.showToast(FnFav.MSG.added);
+    paintLessonStar();
+  });
+}
+
 async function renderLessonDetail() {
   const c = await getCurriculumFromQuery();
   document.getElementById('lessonLoading').style.display = 'none';
@@ -420,6 +448,7 @@ async function renderLessonDetail() {
     : '<li>No materials listed yet.</li>';
 
   document.getElementById('lessonContent').style.display = 'block';
+  startLessonFavorite(c).catch(() => {});
 }
 
 renderLessonDetail();
@@ -481,7 +510,7 @@ renderLessonDetail();
 
 <script src="referral.js?v=1"></script>
 <script src="nav.js?v=21"></script>
-<script src="site-auth.js?v=11"></script>
+<script src="site-auth.js?v=12"></script>
 <script src="cart.js"></script>
 
 <script src="pdf-modal.js?v=2"></script>

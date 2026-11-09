@@ -224,6 +224,9 @@ id 🔑 · tag ⭐
 ### `blog_post_favorites` (Release 91)
 🔑 (site_user_id 🔗→site_users, post_id 🔗→blog_posts) · created_at — both CASCADE. A signed-in site user's starred posts; private to that user. Created by `scripts/alter-add-blog-post-favorites.js` and in `schema.sql`. Route: `routes/blog-favorites.js`.
 
+### `lesson_favorites` / `game_favorites` (Release 165)
+Each: 🔑 (site_user_id 🔗→site_users, curriculum_id 🔗→curricula | game_id 🔗→brain_games) · created_at — all CASCADE. A signed-in site user's starred lessons and games; private to that user. Created by `scripts/alter-add-lesson-game-favorites.js` (safe to run twice). `game_favorites` sits after `brain_games` in `schema.sql`.
+
 ### `morning_boost_calendar`
 id 🔑 · boost_date date ⭐ · theme, series · blog_post_id 🔗→blog_posts (SET NULL) · created_at
 

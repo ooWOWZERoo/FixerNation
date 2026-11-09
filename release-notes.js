@@ -35,6 +35,27 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('favorites', false, '2026-11-08', 'Release 165', 'Save lessons and games, and see them all in My favorites', EVERYONE,
+      'Star any lesson or game, and find everything you\'ve saved, along with Morning Boost posts, on one My favorites page.',
+      'Anyone with a Fixer Nation account can now star lessons and games. The My favorites link in your account menu opens one page with everything you\'ve saved, including Morning Boost posts, with a filter for each.',
+      {
+        new: [
+          item('Star a lesson', EVERYONE, 'Select the star on a lesson card in the Lesson Library, or Save on the lesson\'s own page. Teachers also see Save on each card when they browse lessons to add to their library, so they can keep one without adding it yet.'),
+          item('Star a game', EVERYONE, 'Select the star on a game card on the games page, or Save on the game\'s own page.'),
+          item('One page for everything you\'ve saved', EVERYONE, 'Open My favorites from your account menu. Filter by lessons, games or Morning Boost posts, and remove a star right there. An Undo button stays for a few seconds.')
+        ],
+        changed: [
+          item('My favorites in the menu', EVERYONE, 'The link used to open only your Morning Boost posts. It now opens the combined page.')
+        ],
+        know: [
+          'Favorites are private. No one else sees what you\'ve saved, and they follow you to any device you sign in on.',
+          'You can keep up to 500 lessons and 500 games.',
+          'Students who sign in with a classroom code don\'t have favorites, because their teacher chooses their games.',
+          'If a saved lesson needs a license you no longer have, it stays in your list and says it needs one.'
+        ]
+      },
+      'Account menu, then My favorites. Stars are on the Lesson Library, the games page, and each lesson and game page.',
+      []),
     N('parent-portal-games', false, '2026-11-08', 'Release 164', 'Parents can see assigned games and how a lesson connects to SEL', ['families', 'teachers'],
       'The Parent Portal now lists the games your child\'s teacher assigned and whether your child has played each one, and every lesson page shows the state goals it supports.',
       'Parents who are linked to a classroom now see two additions. Each child has a Games section that lists the games the teacher assigned and whether the child has played them. Each lesson page has a new section that explains which state SEL and Portrait of a Graduate goals the lesson supports.',

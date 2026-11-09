@@ -1,6 +1,8 @@
 const pool = require('../db/pool');
 const standards = require('./standards');
 const { FOCUS_LABELS, FOCUS_HELP, SEL_FOCUSES } = require('./brain-game-focus');
+const { isFeatureEnabled } = require('./feature-flags');
+const { resolveSchoolIdForTeacher } = require('./branding');
 
 // The public page for one game (Release 163, game.html). Everything returned here is public catalog text plus the verified
 // standards connections; nothing about any player. Access rules: docs/reference/game-pages-parent-view-favorites-requirements.md.
@@ -56,4 +58,9 @@ async function getChildGames(classroomId, studentId) {
   }));
 }
 
-module.exports = { getGamePage, getChildGames, validSlug, BAND_LABELS, BAND_GRADES };
+// The same pilot-flag rule GET /api/brain-games uses, for a signed-in site user (favorites, Release 165).
+async function pilotEnabledForUser(userId) {
+  return isFeatureEnabled('tune_your_brain_pilot_enabled', { schoolId: await resolveSchoolIdForTeacher(userId) });
+}
+
+module.exports = { getGamePage, getChildGames, pilotEnabledForUser, validSlug, BAND_LABELS, BAND_GRADES };
