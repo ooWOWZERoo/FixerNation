@@ -104,7 +104,7 @@ test('feelings-detective: clues and feelings are short and carry a picture; prom
 test('ENGINES: the audio engine speaks the story, the answers and every outcome, and Discover has its own words', () => {
   const src = read('engine-audio-choice.js');
   assert.match(src, /item\.choices\.map\(\(c\) => c\.say \|\| c\.caption \|\| c\.aria\)/, 'choices are read aloud');
-  assert.match(src, /if \(item\.stimulusType === 'audio'\) \{[\s\S]*?V\.say\(pieces, \{ rate: speechRate/, 'feedback is always spoken for audio rounds (recorded clips first, the browser voice otherwise)');
+  assert.match(src, /if \(item\.stimulusType === 'audio'\) \{[\s\S]*?V\.say\(pieces, \{ gapMs: 250/, 'feedback is always spoken for audio rounds (the recorded clip for each line)');
   assert.match(src, /t\('audRight'\)/); assert.match(src, /t\('audMiss'\)/);
   assert.match(src, /hint_requested', \{ index, kind: 'show_words' \}/);
   assert.ok(!/Not quite —/.test(src), 'no hard-coded old outcome line left in the engine');
@@ -117,8 +117,8 @@ test('ENGINES: the audio engine speaks the story, the answers and every outcome,
   assert.match(sc, /if \(voiced\) speak\(P\.afterCues\)/);
   assert.match(sc, /if \(voiced\) speak\(messageLines\)/);
   assert.match(sc, /kind: 'show_words'/);
-  // emoji are stripped before the browser voice sees any text
-  assert.match(sc, /Extended_Pictographic/); assert.match(src, /Extended_Pictographic/);
+  // emoji are stripped before a line is looked up for its recording (the voice player does it for both engines)
+  assert.match(read('engine-voice.js'), /Extended_Pictographic/);
 });
 
 test('PRIVACY: the new Discover buttons log only that a hint was used, never what a child picked in the check-in', () => {
@@ -136,6 +136,6 @@ test('CSS: Discover has caption tiles, readable text rows and a words box; pages
   for (const f of fs.readdirSync(ROOT).filter((n) => n.endsWith('.html'))) {
     const html = read(f);
     const tag = /<script[^>]+engine-audio-choice\.js[^>]*>/.exec(html);
-    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=7'), `${f} loads an old audio engine`);
+    if (tag) assert.ok(tag[0].includes('engine-audio-choice.js?v=8'), `${f} loads an old audio engine`);
   }
 });

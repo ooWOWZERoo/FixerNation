@@ -209,7 +209,7 @@ test('YOUR TURN: all three packs hold to the writing rules; Strength Spotter and
 });
 
 test('YOUR TURN: the page versions and the engine contract are in place', () => {
-  for (const f of ['brain-strength-spotter.html', 'brain-values-compass.html', 'brain-feelings-detective.html']) assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /engine-scenario-choice\.js\?v=9/);
+  for (const f of ['brain-strength-spotter.html', 'brain-values-compass.html', 'brain-feelings-detective.html']) assert.match(fs.readFileSync(path.join(ROOT, f), 'utf8'), /engine-scenario-choice\.js\?v=10/);
   const eng = fs.readFileSync(path.join(ROOT, 'engine-scenario-choice.js'), 'utf8');
   assert.match(eng, /Deliberately NOT logging what was picked/);
   assert.ok(!/onEvidence\([^)]*(picks|chosen|opt\.text)/.test(eng), 'the engine never passes a pick to onEvidence');

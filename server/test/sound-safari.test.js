@@ -1,11 +1,11 @@
-// Sound Safari (Release 130): a pool of at least 50 sound-to-picture rounds, said once at a slow pace by the recorded Ava
-// voice, with the page generated from server/scripts/build-sound-safari.js. Run:  cd server && npm test
+// Sound Safari (Release 130): a pool of at least 50 sound-to-picture rounds, said once at a slow pace by the recorded game
+// voice (Kokoro "Heart"), with the page generated from server/scripts/build-sound-safari.js. Run:  cd server && npm test
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { extractPack, ROOT } = require(path.join(__dirname, '..', 'scripts', 'audit-brain-games.js'));
-const { buildRounds, clipList, pageBlock, SOUNDS, LOOKALIKE, pictureOf, CLIPS_DIR } = require(path.join(__dirname, '..', 'scripts', 'build-sound-safari.js'));
+const { buildRounds, clipList, pageBlock, SOUNDS, LOOKALIKE, pictureOf, CLIPS_DIR, CLIP_VERSION } = require(path.join(__dirname, '..', 'scripts', 'build-sound-safari.js'));
 
 const page = fs.readFileSync(path.join(ROOT, 'brain-sound-safari.html'), 'utf8');
 const pack = extractPack(page);
@@ -52,19 +52,17 @@ test('every clip the page names exists, and every round plays the voice instead 
     it.feedbackAudio.right.concat(it.feedbackAudio.miss).forEach((u) => urls.add(u));
     it.choices.forEach((c) => { assert.ok(c.audioUrl, `${it.id}/${c.id}: name clip`); urls.add(c.audioUrl); });
   });
-  [...urls].forEach((u) => assert.ok(fs.existsSync(path.join(ROOT, u)) && fs.statSync(path.join(ROOT, u)).size > 1000, `missing or empty clip ${u}`));
+  [...urls].forEach((u) => { const file = u.replace(/\?v=[^?]*$/, ''); assert.ok(u.endsWith(`?v=${CLIP_VERSION}`), `${u} carries the voice version`); assert.ok(fs.existsSync(path.join(ROOT, file)) && fs.statSync(path.join(ROOT, file)).size > 1000, `missing or empty clip ${u}`); });
   const needed = [...clipList(rounds).keys()];
   needed.forEach((f) => assert.ok(fs.existsSync(path.join(CLIPS_DIR, f)), `clip ${f} was not rendered`));
   assert.equal(fs.readdirSync(CLIPS_DIR).filter((f) => f.endsWith('.mp3')).length, needed.length, 'no stray clips');
 });
 
-test('the slow fallback voice and the pacing gap are set, and the page loads the newer engine', () => {
-  assert.ok(pack.speechRate > 0 && pack.speechRate <= 0.9, 'browser-voice fallback is a little slower than normal');
+test('the pacing gap is set, there is no browser-voice setting left, and the page loads the newer engine', () => {
   assert.ok(pack.audioGapMs >= 250 && pack.audioGapMs <= 600);
-  assert.match(page, /engine-audio-choice\.js\?v=7/);
-  const engine = fs.readFileSync(path.join(ROOT, 'engine-audio-choice.js'), 'utf8');
-  assert.match(engine, /V\.playUrls/);
-  assert.match(engine, /speechRate/);
+  assert.equal(pack.speechRate, undefined, 'the browser voice is gone, so there is no speech rate');
+  assert.match(page, /engine-audio-choice\.js\?v=8/);
+  assert.match(fs.readFileSync(path.join(ROOT, 'engine-audio-choice.js'), 'utf8'), /V\.playUrls/);
 });
 
 test('every clip starts and ends with a little silence, so no browser clips the first or last sound', () => {
@@ -92,10 +90,7 @@ test('the isolated sounds are long enough to hear', () => {
 });
 
 test('no sound is spelled as a repeated letter the voice would read as three letter names', () => {
-  const ALLOWED_TRIPLES = new Set(['mmm', 'zzz', 'shhh']); // read as one hum, buzz and hush
-  Object.entries(SOUNDS).forEach(([k, say]) => {
-    if (/(.)\1\1/.test(say)) assert.ok(ALLOWED_TRIPLES.has(say), `sound ${k} is spelled "${say}", which the voice reads as three letter names`);
-  });
+  Object.entries(SOUNDS).forEach(([k, say]) => assert.ok(!/(.)\1\1/.test(say), `sound ${k} is spelled "${say}", which a voice reads as three letter names`));
   // The spelled sounds, once each, with no "el el el" style repeats in any spoken line of a round.
   rounds.forEach((r) => assert.ok(!/(.)\1\1/.test(r.line.replace(r.say, '')), `${r.key}: a repeated-letter spelling in the line`));
 });

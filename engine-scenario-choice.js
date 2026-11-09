@@ -63,22 +63,8 @@
 // It is private by design, exactly like Branching Scenario's reflection step: the child's answers are never
 // logged, sent or stored; the only thing recorded is that the step was reached.
 (function () {
-  // The voice (recorded Ava clips, with the browser voice as the fallback) lives in engine-voice.js. If a page forgot to load it,
-  // a plain browser-voice stand-in keeps the game talking.
-  const V = window.FnVoice || (function () {
-    const clean = (s) => String(s == null ? '' : s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
-    return {
-      say(pieces) {
-        try {
-          if (!window.speechSynthesis) return { done: null };
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(new SpeechSynthesisUtterance([].concat(pieces).map(clean).filter(Boolean).map((x) => (/[.?!]$/.test(x) ? x : x + '.')).join(' ')));
-        } catch (e) { /* no browser voice */ }
-        return { done: null };
-      },
-      stop() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* none */ } },
-    };
-  })();
+  // The voice (recorded clips of the game voice; no browser voice) lives in engine-voice.js. If a page forgot to load it, the game is silent.
+  const V = window.FnVoice || { say() { return { done: null }; }, stop() {} };
   // Each line is spoken on its own so a recorded clip can be found for it (see engine-voice.js); the second argument is kept
   // from the older calls and no longer matters, because every new line now stops the one before it.
   function speak(pieces) { V.say(pieces, { gapMs: 300 }); }
@@ -594,8 +580,9 @@
         if (res.closing) feedbackHolder.appendChild(FnGameShell.renderFeedback('correct', res.closing));
         const spoken = lines.concat(res.closing ? [res.closing] : []);
         selfNarration = spoken;
-        renderReplayFor(spoken);
-        speak(spoken);
+        // The finished card is spoken in Discover only (its lines are fixed sentences with a recorded clip). In the reader bands the card is
+        // built from the child's own words ("My strength: patience, kindness."), which no recording can hold, so it stays on screen.
+        if (voiced) { renderReplayFor(spoken); speak(spoken); }
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn btn-primary tap-target';

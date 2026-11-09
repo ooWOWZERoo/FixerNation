@@ -35,6 +35,25 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('game-voice', false, '2026-11-08', 'Release 167', 'A new, warmer voice for every game', ['teachers', 'families'],
+      'Every Tune Your Brain game that speaks now uses one new voice, and more games speak, including the games for older students.',
+      'We replaced the voices in the games with one warmer voice that is easier to follow. Games that used to sound robotic on some devices now play a recorded voice on every device.',
+      {
+        new: [
+          item('One new voice in every game', ['teachers', 'families'], 'Stories, questions, answers and feedback in the audio-led games for younger children, and the sounds and words in Sound Safari, are all recorded again in the new voice.'),
+          item('Recorded voice for older students\' games', ['teachers', 'families'], 'Strength Spotter, Values Compass, Know Yourself, Know Your Triggers, Stress Signals and What Helps Me now read their stories and questions aloud in the recorded voice. Before, they used whatever voice the device had, which often sounded robotic.')
+        ],
+        fixed: [
+          item('Add It Up says one correctly', ['teachers', 'families'], 'Stories with the number one now read "One bird is in a tree. One more flies in." instead of "One birds are in a tree", on screen and in the recording.'),
+          item('Letters and sounds', ['teachers', 'families'], 'Letter names in Letter Sounds and the sounds in Sound Safari are now said the way children are taught them.')
+        ],
+        know: [
+          'The finished card in Strength Spotter, Values Compass, Know Yourself, Know Your Triggers, Stress Signals and What Helps Me is built from your student\'s own words, so it is shown on screen and not read aloud.',
+          'If a recording ever fails to load, the game stays quiet. It no longer switches to the device\'s voice.'
+        ]
+      },
+      'Games page, then any game that speaks.',
+      []),
     N('favorites', true, '2026-11-08', 'Release 165', 'Save lessons and games, and see them all in My favorites', EVERYONE,
       'Star any lesson or game, and find everything you\'ve saved, along with Morning Boost posts, on one My favorites page.',
       'Anyone with a Fixer Nation account can now star lessons and games. The My favorites link in your account menu opens one page with everything you\'ve saved, including Morning Boost posts, with a filter for each.',

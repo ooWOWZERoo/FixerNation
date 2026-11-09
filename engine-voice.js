@@ -1,36 +1,44 @@
-// Tune Your Brain: the shared voice for the audio-led (Discover) games.
+// Tune Your Brain: the shared voice for the games that speak.
 //
-// Every spoken line used to come from the browser's built-in voice. This plays recorded Ava (Premium) clips instead, and falls back to
-// the browser voice for any line that has no clip, so a game is never silent.
+// Every spoken line is a recorded clip of the game voice (Kokoro "Heart"), made ahead of time (server/scripts/build-discover-audio.js and
+// build-sound-safari.js) and played from here. There is NO browser voice: a line with no clip is silent, and a test fails if a game can
+// speak a line that has no clip. (Before Release 167 a missing clip fell back to the browser's built-in voice.)
 //
 //   window.FnAudioManifest   { "the exact text of a line": "assets/audio/discover/<hash>.mp3", ... }
 //                            written by server/scripts/build-discover-audio.js into assets/audio/discover/<game>.js, which a game
 //                            page loads before its engine. The key is the line exactly as the game's content has it, with pictures
 //                            (emoji) removed and spaces collapsed (see clean() below; the build script uses the same rule).
-//   FnVoice.say(pieces, { rate, gapMs })   speaks a list of lines in order. If every line has a clip, the clips play one after another
-//                            with a short pause between them; otherwise the whole list is read by the browser voice at `rate`.
-//                            Returns { done } where done is a promise (true when the last clip ends, false if one failed or it was
-//                            stopped) when clips are playing, or null when the browser voice is reading.
+//   FnVoice.say(pieces, { gapMs })   plays the clip for each line, in order, with a short pause between them. A line with no clip is
+//                            skipped. Returns { done } where done is a promise (true when the last clip ends, false if one failed or it
+//                            was stopped), or { done: null } when nothing could play.
 //   FnVoice.playUrls(urls, gapMs, onFail)  plays explicit clip files in order (Sound Safari). Same return value.
 //   FnVoice.stop()           stops whatever is playing.
+//
+// Browsers do not let a page play sound before the person has tapped or clicked something on it. When that stops a clip, a small "Tap to hear"
+// button appears at the bottom of the screen; one tap plays the line from where it was held up. (Before Release 167 the browser voice quietly
+// covered for this; with no browser voice the child needs to be told.)
 (function () {
   const clean = (s) => String(s == null ? '' : s).replace(/[\p{Extended_Pictographic}️‍]/gu, '').replace(/\s+/g, ' ').trim();
-  const sentence = (x) => (/[.?!]$/.test(x) ? x : x + '.');
 
   let active = null;
+  function hidePill() {
+    try { const el = document.getElementById('fnVoicePill'); if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) { /* no page */ }
+  }
+  function showPill(resume) {
+    try {
+      hidePill();
+      const b = document.createElement('button');
+      b.id = 'fnVoicePill'; b.type = 'button'; b.textContent = '\uD83D\uDD0A Tap to hear';
+      b.setAttribute('aria-label', 'Tap to hear this');
+      b.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:2147483000;padding:14px 26px;min-height:48px;border:0;border-radius:999px;background:#164F4A;color:#fff;font:700 17px system-ui,sans-serif;box-shadow:0 14px 30px -10px rgba(0,0,0,.5);cursor:pointer';
+      b.addEventListener('click', () => { hidePill(); resume(); });
+      document.body.appendChild(b);
+    } catch (e) { /* no page to show it on */ }
+  }
   function stop() {
+    hidePill();
     if (active) active.stop();
     active = null;
-    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* no browser voice */ }
-  }
-
-  function browserSpeak(text, rate) {
-    if (!window.speechSynthesis || !text) return;
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      if (rate && rate !== 1) u.rate = rate;
-      window.speechSynthesis.speak(u);
-    } catch (e) { /* no browser voice */ }
   }
 
   function playUrls(urls, gapMs, onFail) {
@@ -45,11 +53,15 @@
       if (stopped) return;
       if (i >= urls.length) { finish(true); return; }
       let a;
-      try { a = new Audio(urls[i++]); } catch (e) { fail(); return; } // no Audio in this browser: the browser voice takes over
+      try { a = new Audio(urls[i++]); } catch (e) { fail(); return; } // no Audio in this browser: nothing can play
       current = a;
       a.addEventListener('ended', () => { timer = setTimeout(next, i < urls.length ? gapMs : 0); });
       a.addEventListener('error', fail);
-      a.play().catch(fail);
+      a.addEventListener('playing', hidePill);
+      a.play().catch((err) => {
+        if (err && err.name === 'NotAllowedError' && !stopped) { showPill(() => { if (!stopped) { i -= 1; next(); } }); return; } // wait for a tap
+        fail();
+      });
     }
     active = seq;
     next();
@@ -59,15 +71,11 @@
   function say(pieces, opts) {
     const o = opts || {};
     stop();
-    const lines = [].concat(pieces).map(clean).filter(Boolean);
-    if (!lines.length) return { done: null };
     const map = window.FnAudioManifest || {};
-    const urls = lines.map((l) => map[l]);
+    const urls = [].concat(pieces).map(clean).filter(Boolean).map((l) => map[l]).filter(Boolean); // a line with no clip is skipped, never read by a robot
+    if (!urls.length) return { done: null };
     const gap = Number.isFinite(Number(o.gapMs)) ? Number(o.gapMs) : 350;
-    const spoken = lines.map(sentence).join(' ');
-    if (urls.every(Boolean)) return playUrls(urls, gap, () => browserSpeak(spoken, o.rate));
-    browserSpeak(spoken, o.rate);
-    return { done: null };
+    return playUrls(urls, gap);
   }
 
   window.FnVoice = { say, playUrls, stop, clean };

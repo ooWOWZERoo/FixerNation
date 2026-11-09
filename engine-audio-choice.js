@@ -24,13 +24,13 @@
 // a choice can carry a short `caption` shown under its picture, and an item can give separate on-screen `words`
 // (default: stimulusText) behind a "Show the words" button. A pack with none of these plays as before.
 //
-// Recorded voice: every spoken line goes through engine-voice.js, which plays the recorded Ava clip for that exact line when
-// window.FnAudioManifest has one (built by server/scripts/build-discover-audio.js) and the browser voice when it does not.
-// Sound Safari (Release 130) names its clips directly instead: a pack can use real clips instead of the browser voice. stimulusAudioUrl is the clip (or a list of clips, played in order) for the
+// Recorded voice: every spoken line goes through engine-voice.js, which plays the recorded clip for that exact line from
+// window.FnAudioManifest (built by server/scripts/build-discover-audio.js). A line with no clip is silent; there is no browser voice.
+// Sound Safari (Release 130) names its clips directly instead: a pack names its own clips. stimulusAudioUrl is the clip (or a list of clips, played in order) for the
 // question, a choice's audioUrl is the clip that says its name (played after the question, left to right, when every choice has
 // one), and an item's feedbackAudio { right: [urls], miss: [urls] } plays in order after an answer. Clips play one after another
 // with contentPack.audioGapMs between them (default 500). If a clip will not load or play, the same words are spoken by the
-// browser voice at contentPack.speechRate (default 1) so a round is never silent. A pack with none of these plays as before.
+// manifest clips for the same words. A pack with none of these plays as before.
 //
 // Feedback that teaches: when a round supplies a choice's feedback and/or an explanation, that text replaces the
 // generic "Correct!" / "Not quite" line, is read aloud for audio rounds (so non-readers get it too), and stays on
@@ -41,30 +41,12 @@
 // still logged in evidence for a content author who DOES want it, without
 // visually pressuring every learner with a countdown by default.
 (function () {
-  // The voice (recorded Ava clips, with the browser voice as the fallback) lives in engine-voice.js. If a page forgot to load it,
-  // a plain browser-voice stand-in keeps the game talking.
-  const V = window.FnVoice || (function () {
-    const clean = (s) => String(s == null ? '' : s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\s+/g, ' ').trim();
-    return {
-      say(pieces, o) {
-        try {
-          if (!window.speechSynthesis) return { done: null };
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance([].concat(pieces).map(clean).filter(Boolean).map((x) => (/[.?!]$/.test(x) ? x : x + '.')).join(' '));
-          if (o && o.rate && o.rate !== 1) u.rate = o.rate;
-          window.speechSynthesis.speak(u);
-        } catch (e) { /* no browser voice */ }
-        return { done: null };
-      },
-      playUrls() { return { done: Promise.resolve(false), stop() {} }; },
-      stop() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* none */ } },
-    };
-  })();
+  // The voice (recorded clips of the game voice; no browser voice) lives in engine-voice.js. If a page forgot to load it, the game is silent.
+  const V = window.FnVoice || { say() { return { done: null }; }, playUrls() { return { done: null, stop() {} }; }, stop() {} };
 
   function mount(container, { contentPack, band, onEvidence, onComplete }) {
     const t = (key) => window.FnEngineSDK.t(key, band, contentPack);
     const items = contentPack.items;
-    const speechRate = Number(contentPack.speechRate) || 1;
     const gapMs = Number.isFinite(Number(contentPack.audioGapMs)) && contentPack.audioGapMs !== undefined ? Number(contentPack.audioGapMs) : 500;
     let index = 0, correct = 0, incorrect = 0, answered = false, qStart = null, replayCount = 0;
 
@@ -93,9 +75,9 @@
         const names = item.speakChoices === false ? [] : item.choices.map((c) => c.audioUrl);
         const urls = [].concat(item.stimulusAudioUrl).concat(names.length && names.every(Boolean) ? names : []);
         V.stop();
-        V.playUrls(urls, gapMs, () => V.say(spokenPieces(item), { rate: speechRate, gapMs }));
+        V.playUrls(urls, gapMs, () => V.say(spokenPieces(item), { gapMs }));
       } else {
-        V.say(spokenPieces(item), { rate: speechRate, gapMs });
+        V.say(spokenPieces(item), { gapMs });
       }
     }
     function wordsFor(item) { return item.words || item.stimulusText || item.transcript || ''; } // a declaration, so renderItem() above can call it on first paint
@@ -212,8 +194,8 @@
       if (item.stimulusType === 'audio') {
         const clips = item.feedbackAudio && item.feedbackAudio[isCorrect ? 'right' : 'miss'];
         const pieces = custom ? [choice.feedback, item.explanation].filter(Boolean) : [message];
-        if (clips && clips.length) spoken = V.playUrls(clips, 300, () => V.say(pieces, { rate: speechRate, gapMs: 250 }));
-        else spoken = V.say(pieces, { rate: speechRate, gapMs: 250 });
+        if (clips && clips.length) spoken = V.playUrls(clips, 300, () => V.say(pieces, { gapMs: 250 }));
+        else spoken = V.say(pieces, { gapMs: 250 });
       }
       const clipsDone = spoken && spoken.done;
 
@@ -231,7 +213,7 @@
           renderItem();
         }
       };
-      // With recorded feedback, move on a moment after the last clip ends; if a clip failed the browser voice reads it instead.
+      // With recorded feedback, move on a moment after the last clip ends; if a clip failed, any manifest clips for the same words play instead.
       if (clipsDone) clipsDone.then((ok) => setTimeout(advance, ok ? 900 : typical));
       else setTimeout(advance, typical);
     }

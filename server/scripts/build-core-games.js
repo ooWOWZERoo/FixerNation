@@ -69,21 +69,29 @@ function moreOrFewer() {
 }
 
 function addItUp() {
-  const ADD = [['birds', '🐦', 'are in a tree', 'fly in'], ['cookies', '🍪', 'are on a plate', 'are added'], ['dogs', '🐶', 'play in the park', 'join them'], ['stars', '⭐', 'are in the sky', 'come out'], ['cars', '🚗', 'are in a lot', 'drive in'], ['fish', '🐟', 'swim in a pond', 'swim in']];
-  const SUB = [['balloons', '🎈', 'float in the air', 'float away'], ['apples', '🍎', 'are in a basket', 'are eaten'], ['ducks', '🦆', 'are on a pond', 'swim off'], ['kites', '🪁', 'fly in the sky', 'come down']];
+  // Each story is written twice, for one and for more than one: "One bird is in a tree. One more flies in." not "One birds are in a tree."
+  // [noun for one, noun for more, emoji, state for one, state for more, verb for one, verb for more]
+  const ADD = [['bird', 'birds', '🐦', 'is in a tree', 'are in a tree', 'flies in', 'fly in'], ['cookie', 'cookies', '🍪', 'is on a plate', 'are on a plate', 'is added', 'are added'],
+    ['dog', 'dogs', '🐶', 'plays in the park', 'play in the park', 'joins them', 'join them'], ['star', 'stars', '⭐', 'is in the sky', 'are in the sky', 'comes out', 'come out'],
+    ['car', 'cars', '🚗', 'is in a lot', 'are in a lot', 'drives in', 'drive in'], ['fish', 'fish', '🐟', 'swims in a pond', 'swim in a pond', 'swims in', 'swim in']];
+  const SUB = [['balloon', 'balloons', '🎈', 'floats in the air', 'float in the air', 'floats away', 'float away'], ['apple', 'apples', '🍎', 'is in a basket', 'are in a basket', 'is eaten', 'are eaten'],
+    ['duck', 'ducks', '🦆', 'is on a pond', 'are on a pond', 'swims off', 'swim off'], ['kite', 'kites', '🪁', 'flies in the sky', 'fly in the sky', 'comes down', 'come down']];
   const adds = [[1, 1], [2, 1], [2, 2], [3, 1], [1, 4], [3, 2], [4, 3], [5, 2], [6, 3], [4, 5], [7, 2], [5, 5]];
   const subs = [[3, 1], [5, 2], [4, 3], [6, 2], [8, 3], [9, 4]];
   const r = rng(41);
   const opts = (answer, max) => { const pool = [answer - 2, answer - 1, answer + 1, answer + 2].filter((n) => n >= 0 && n <= max && n !== answer); return shuffle([answer, ...pick(pool, 2, r)], r); };
   const item = (q, answer, max, why) => ({ stimulusType: 'audio', stimulusText: q, transcript: q, choices: opts(answer, max).map((n) => ({ id: String(n), label: String(n), caption: cap(NW[n]), aria: NW[n], feedback: n === answer ? RIGHT : MISS })), correctId: String(answer), explanation: why });
+  const noun = (t, n) => (n === 1 ? t[0] : t[1]);
+  const state = (t, n) => (n === 1 ? t[3] : t[4]);
+  const verb = (t, n) => (n === 1 ? t[5] : t[6]);
   const out = [];
   adds.forEach(([a, b], i) => {
-    const [pl, , state, verb] = ADD[i % ADD.length];
-    out.push(item(`${cap(NW[a])} ${pl} ${state}. ${cap(NW[b])} more ${verb}. How many now?`, a + b, 12, `${cap(NW[a])} and ${NW[b]} more makes ${NW[a + b]}.`));
+    const t = ADD[i % ADD.length];
+    out.push(item(`${cap(NW[a])} ${noun(t, a)} ${state(t, a)}. ${cap(NW[b])} more ${verb(t, b)}. How many now?`, a + b, 12, `${cap(NW[a])} and ${NW[b]} more makes ${NW[a + b]}.`));
   });
   subs.forEach(([a, b], i) => {
-    const [pl, , state, verb] = SUB[i % SUB.length];
-    out.push(item(`${cap(NW[a])} ${pl} ${state}. ${cap(NW[b])} ${verb}. How many are left?`, a - b, 12, `${cap(NW[a])} take away ${NW[b]} leaves ${NW[a - b]}.`));
+    const t = SUB[i % SUB.length];
+    out.push(item(`${cap(NW[a])} ${noun(t, a)} ${state(t, a)}. ${cap(NW[b])} ${verb(t, b)}. How many are left?`, a - b, 12, `${cap(NW[a])} take away ${NW[b]} leaves ${NW[a - b]}.`));
   });
   return out;
 }
@@ -300,17 +308,21 @@ GAMES.push(...require('./core-games-relationships').REL);
 GAMES.push(...require('./core-games-last-group').LAST);
 
 const ENGINE_SCRIPTS = {
-  audioChoice: ['engine-audio-choice.js?v=7'],
+  audioChoice: ['engine-audio-choice.js?v=8'],
   evidenceHunt: ['engine-evidence-hunt.js?v=2'],
-  scenarioChoice: ['engine-scenario-choice.js?v=9'],
+  scenarioChoice: ['engine-scenario-choice.js?v=10'],
   memory: ['engine-memory.js'],
 };
 
+const VOICE_SLUGS = new Set(require('./build-discover-audio').GAMES.map((v) => v.slug));
+
 function page(g) {
-  const voiced = g.band === 'discover' && g.engine !== 'memory';
+  // A game that speaks has a clip manifest (scripts/build-discover-audio.js lists them): the Discover games and, since Release 167, the
+  // scenario games for older children too.
+  const voiced = g.engine !== 'memory' && VOICE_SLUGS.has(g.slug);
   const scripts = [
     'referral.js?v=1', 'nav.js?v=22', 'site-auth.js?v=12', 'footer.js?v=18', 'accessibility-utils.js', 'game-shell.js?v=3', 'engine-sdk.js?v=6',
-  ].concat(voiced ? ['assets/audio/discover/' + g.slug + '.js?v=00000000', 'engine-voice.js?v=1'] : ['audioChoice', 'scenarioChoice'].includes(g.engine) ? ['engine-voice.js?v=1'] : [], ENGINE_SCRIPTS[g.engine]);
+  ].concat(voiced ? ['assets/audio/discover/' + g.slug + '.js?v=00000000', 'engine-voice.js?v=3'] : ['audioChoice', 'scenarioChoice'].includes(g.engine) ? ['engine-voice.js?v=3'] : [], ENGINE_SCRIPTS[g.engine]);
   const json = JSON.stringify(g.pack, null, 2).replace(/\n/g, '\n  ');
   const engineKind = { audioChoice: 'Audio Choice', evidenceHunt: 'Evidence Hunt', scenarioChoice: 'Scenario Choice (a "Your turn" check-in with no stories)', memory: 'Memory' }[g.engine];
   const skipStart = g.engine === 'memory' ? `

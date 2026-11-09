@@ -1,8 +1,8 @@
-// Builds Sound Safari (brain-sound-safari.html): the pool of sound-to-picture rounds and the Ava voice clips for them.
+// Builds Sound Safari (brain-sound-safari.html): the pool of sound-to-picture rounds and the voice clips for them.
 //
 //   node scripts/build-sound-safari.js            rewrite the rounds in brain-sound-safari.html (any computer)
-//   node scripts/build-sound-safari.js --audio    also render any missing voice clips (macOS only: needs the "Ava (Premium)"
-//                                                 voice, the same one the how-to videos use, and tests/node_modules/ffmpeg-static)
+//   node scripts/build-sound-safari.js --audio    also render any missing voice clips with the game voice, Kokoro "Heart"
+//                                                 (see lib/kokoro-render.js and docs/tune-your-brain/VOICE.md for the setup)
 //   node scripts/build-sound-safari.js --audio --force   re-render every clip
 //
 // This file is the single source of truth for the content. Edit the lists below, run it, commit the page and the clips.
@@ -19,24 +19,30 @@ const ROOT = path.join(__dirname, '..', '..');
 const PAGE = path.join(ROOT, 'brain-sound-safari.html');
 const CLIPS_DIR = path.join(ROOT, 'assets', 'audio', 'sound-safari');
 const URL_PREFIX = 'assets/audio/sound-safari/';
-const VOICE = 'Ava (Premium)';
-const RATE = '135'; // say -r words per minute for sentences: slower than the how-to videos (165) but natural, for kindergarten to 2nd grade
-const WORD_RATE = '120';
-const SOUND_RATE = '60'; // each isolated sound is said slowly, then stretched further below if it is still short
+// Appended to every clip address in the page: change it with the voice so no browser keeps playing a clip from the old voice (the clip file names do not change).
+const CLIP_VERSION = 'kokoro1';
+const { SPEED, SOUND_SPEED } = require('../lib/kokoro-render');
 const QUESTION = 'Which picture starts with the same sound?';
 
-// How the voice says each sound. The voice reads a triple like "lll" or "sss" as three letter names ("el el el"), which is what a
-// child heard as the sound repeated three times, so those sounds are spelled with a short "uh" (one syllable, never a letter name).
-// "mmm", "zzz" and "shhh" are read as one hum, buzz and hush, so they keep their long spelling and are held.
+// How the voice says each sound. An isolated sound has no word to hang on, so each is written as phonemes (Kokoro's own pronunciation
+// markup, [text](/phonemes/)) and said as a short syllable after a lead-in word, keeping only what follows the pause (the owner chose
+// this by ear): "buh", "tuh", "kuh", and the same for the sounds a mouth could hold ("muh", "shuh"), so every sound is taught the same way.
+// "zzz" is "zee" (the owner's choice). The voice cannot hold a consonant (Kokoro says one in about 30 ms), and a held "mmm", "zzz" or "shhh"
+// made from the word "Michael", "Zebra" or "Shame", or from scratch, was tried and not chosen. SOUNDS is what the game and the audition
+// page show; SOUND_IPA is what the voice is given (docs/tune-your-brain/VOICE.md).
 const SOUNDS = {
-  m: 'mmm', s: 'suh', t: 'tuh', b: 'buh', p: 'puh', d: 'duh', f: 'fuh', g: 'guh', h: 'huh', j: 'juh',
-  k: 'kuh', l: 'luh', n: 'nuh', r: 'ruh', w: 'wuh', v: 'vuh', z: 'zzz', sh: 'shhh', ch: 'chuh',
+  m: 'muh', s: 'suh', t: 'tuh', b: 'buh', p: 'puh', d: 'duh', f: 'fuh', g: 'guh', h: 'huh', j: 'juh',
+  k: 'kuh', l: 'luh', n: 'nuh', r: 'ruh', w: 'wuh', v: 'vuh', z: 'zee', sh: 'shuh', ch: 'chuh',
 };
+const SOUND_IPA = {
+  m: 'mˈʌ', s: 'sˈʌ', t: 'tˈʌ', b: 'bˈʌ', p: 'pˈʌ', d: 'dˈʌ', f: 'fˈʌ', g: 'ɡˈʌ', h: 'hˈʌ', j: 'ʤˈʌ',
+  k: 'kˈʌ', l: 'lˈʌ', n: 'nˈʌ', r: 'ɹˈʌ', w: 'wˈʌ', v: 'vˈʌ', z: 'zˈi', sh: 'ʃˈʌ', ch: 'ʧˈʌ',
+};
+const soundVoice = (sound) => `Sound. [${SOUNDS[sound]}](/${SOUND_IPA[sound]}/).`;
 // Sounds that are easy to mix up (same mouth shape, voiced or not). They never sit side by side in a round.
 const LOOKALIKE = { b: 'p', p: 'b', d: 't', t: 'd', k: 'g', g: 'k', f: 'v', v: 'f', s: 'z', z: 's', sh: 'ch', ch: 'sh', j: 'ch', m: 'n', n: 'm' };
 
-// Sounds a mouth can hold on to (a stretched "mmm"); the others are short pops and get a shorter minimum.
-const HELD = new Set(['m', 'z', 'sh']);
+const HELD = new Set(); // no sound is held any more: the voice cannot hold a consonant, so every sound is a short syllable
 
 // Pictures: the word, its picture, and the sound it starts with. Only older emoji, so they draw on school Chromebooks.
 const PICTURES = {
@@ -116,39 +122,40 @@ function buildRounds() {
 }
 
 function clipList(rounds) {
-  const clips = new Map(); // file -> { text, rate, minSeconds? }
-  clips.set('yes.mp3', { text: 'Yes!', rate: RATE });
-  clips.set('not-quite.mp3', { text: 'Not quite.', rate: RATE });
-  clips.set('question.mp3', { text: QUESTION, rate: RATE });
+  const clips = new Map(); // file -> { text, voice? (what the voice is given when it differs), speed?, minSeconds? }
+  clips.set('yes.mp3', { text: 'Yes!' });
+  clips.set('not-quite.mp3', { text: 'Not quite.' });
+  clips.set('question.mp3', { text: QUESTION });
   // Each sound is its own clip, said slowly and held (a stretched "mmm" or "sss", a clear "tuh"), so it is never swallowed by a sentence.
-  for (const [sound, say] of Object.entries(SOUNDS)) clips.set(`s-${sound}.mp3`, { text: say, rate: SOUND_RATE, minSeconds: HELD.has(sound) ? 1.0 : 0.7 });
+  for (const [sound, say] of Object.entries(SOUNDS)) clips.set(`s-${sound}.mp3`, { text: say, voice: soundVoice(sound), keepLast: !HELD.has(sound), speed: SOUND_SPEED, minSeconds: HELD.has(sound) ? 1.0 : 0.7 });
   for (const r of rounds) {
-    clips.set(`i-${r.key}.mp3`, { text: r.intro, rate: RATE });
-    clips.set(`e-${r.key}.mp3`, { text: r.lead, rate: RATE });
-    for (const c of r.choices) clips.set(`w-${c.word}.mp3`, { text: cap(c.word) + '.', rate: WORD_RATE });
+    clips.set(`i-${r.key}.mp3`, { text: r.intro });
+    clips.set(`e-${r.key}.mp3`, { text: r.lead });
+    for (const c of r.choices) clips.set(`w-${c.word}.mp3`, { text: cap(c.word) + '.' });
   }
   return clips;
 }
 
 const q = (s) => JSON.stringify(s);
+const u = (name) => `${URL_PREFIX}${name}?v=${CLIP_VERSION}`; // clip address with its version, so a new voice is never shadowed by a cached old one
 function pageBlock(rounds) {
   const out = [];
   for (const r of rounds) {
     out.push('      {');
     out.push(`        id: ${q(r.key)}, stimulusType: 'audio',`);
-    out.push(`        stimulusAudioUrl: [${q(URL_PREFIX + `i-${r.key}.mp3`)}, ${q(URL_PREFIX + `s-${r.sound}.mp3`)}, ${q(URL_PREFIX + 'question.mp3')}],`);
+    out.push(`        stimulusAudioUrl: [${q(u(`i-${r.key}.mp3`))}, ${q(u(`s-${r.sound}.mp3`))}, ${q(u('question.mp3'))}],`);
     out.push(`        stimulusText: ${q(r.line)},`);
     out.push(`        words: ${q(r.line)},`);
     out.push(`        transcript: ${q(r.line)},`);
     out.push('        choices: [');
     for (const c of r.choices) {
       const ok = c.word === r.answer;
-      out.push(`          { id: ${q(c.word)}, label: ${q(c.emoji)}, aria: ${q(c.word)}, audioUrl: ${q(URL_PREFIX + `w-${c.word}.mp3`)}, feedback: ${q(ok ? 'Yes!' : 'Not quite.')} },`);
+      out.push(`          { id: ${q(c.word)}, label: ${q(c.emoji)}, aria: ${q(c.word)}, audioUrl: ${q(u(`w-${c.word}.mp3`))}, feedback: ${q(ok ? 'Yes!' : 'Not quite.')} },`);
     }
     out.push('        ],');
     out.push(`        correctId: ${q(r.answer)}, explanation: ${q(r.explain)},`);
-    const tail = `${q(URL_PREFIX + `e-${r.key}.mp3`)}, ${q(URL_PREFIX + `s-${r.sound}.mp3`)}`;
-    out.push(`        feedbackAudio: { right: [${q(URL_PREFIX + 'yes.mp3')}, ${tail}], miss: [${q(URL_PREFIX + 'not-quite.mp3')}, ${tail}] },`);
+    const tail = `${q(u(`e-${r.key}.mp3`))}, ${q(u(`s-${r.sound}.mp3`))}`;
+    out.push(`        feedbackAudio: { right: [${q(u('yes.mp3'))}, ${tail}], miss: [${q(u('not-quite.mp3'))}, ${tail}] },`);
     out.push('      },');
   }
   return out.join('\n');
@@ -164,24 +171,22 @@ function writePage(rounds) {
 }
 
 function render(clips, force) {
-  const { renderer } = require('../lib/ava-render');
-  const { render: renderOne, done } = renderer();
+  const { renderAll } = require('../lib/kokoro-render');
   fs.mkdirSync(CLIPS_DIR, { recursive: true });
-  let made = 0;
-  try {
-    for (const [file, spec] of clips) {
-      const dest = path.join(CLIPS_DIR, file);
-      if (!force && fs.existsSync(dest)) continue;
-      renderOne(spec, dest);
-      made++;
-    }
-  } finally { done(); }
+  const todo = [];
+  for (const [file, spec] of clips) {
+    const dest = path.join(CLIPS_DIR, file);
+    if (!force && fs.existsSync(dest)) continue;
+    todo.push({ dest, text: spec.voice || spec.text, speed: spec.speed, minSeconds: spec.minSeconds, keepLast: spec.keepLast, sustain: spec.sustain });
+  }
+  const { made } = renderAll(todo);
   for (const f of fs.readdirSync(CLIPS_DIR)) if (f.endsWith('.mp3') && !clips.has(f)) fs.rmSync(path.join(CLIPS_DIR, f)); // clips no round uses any more
   return made;
 }
 
 // A page for a person to listen to every isolated sound and one full round of each, with the clip names to report back.
 function writeAudition(rounds) {
+  const rowsFor = () => null; // (kept simple: the page is built once per location below)
   const file = path.join(ROOT, 'docs', 'tune-your-brain', 'sound-safari-audition.html');
   const rows = Object.entries(SOUNDS).map(([sound, say]) => {
     const r = rounds.find((x) => x.sound === sound);
@@ -190,29 +195,39 @@ function writeAudition(rounds) {
       + `<td><button onclick="play(['s-${sound}.mp3'])">Play the sound</button></td>`
       + `<td><button onclick="play(${JSON.stringify(seq)})">Play a question: ${r.line.replace(/"/g, '&quot;')}</button></td></tr>`;
   }).join('\n');
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Sound Safari audition</title>
+  const build = (base) => `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Sound Safari audition</title>
 <style>body{font-family:system-ui,sans-serif;max-width:900px;margin:32px auto;padding:0 16px;color:#2A2420}td{padding:8px 10px;border-bottom:1px solid #ddd;vertical-align:middle}button{padding:8px 12px;border-radius:8px;border:1px solid #164F4A;background:#fff;cursor:pointer;font-size:14px}button:hover{background:#E4F3EE}</style></head><body>
 <h1>Sound Safari: listen to the sounds</h1>
 <p>Generated by <code>server/scripts/build-sound-safari.js</code>. Open this file from the repository (it plays the clips in <code>assets/audio/sound-safari/</code>). For any sound that is hard to hear, cut off, or wrong, tell Claude the sound (for example "p" or "sh").</p>
 <table>${rows}</table>
 <script>
+const BASE = ${JSON.stringify(base)};
 let current = null;
 function play(files) {
   if (current) current.stop = true;
   const token = { stop: false }; current = token; let i = 0;
   (function next() {
     if (token.stop || i >= files.length) return;
-    const a = new Audio('../../assets/audio/sound-safari/' + files[i++]);
+    const a = new Audio(BASE + files[i++]);
     a.onended = () => setTimeout(next, 350);
     a.play();
   })();
 }
 </script></body></html>
 `;
-  fs.writeFileSync(file, html);
+  fs.writeFileSync(file, build('../../assets/audio/sound-safari/'));
+  // A second copy that sits NEXT TO its clips, with copies of just the clips it plays. Some browsers (Safari in particular) will not load a
+  // clip from a folder above the page when the page is opened as a file, so this one opens by double-click anywhere. Git-ignored.
+  const local = path.join(ROOT, 'tests', 'howto-out', 'kokoro-pilot', 'sound-safari-audition');
+  fs.rmSync(local, { recursive: true, force: true });
+  fs.mkdirSync(local, { recursive: true });
+  const used = new Set(['question.mp3']);
+  for (const sound of Object.keys(SOUNDS)) { const r = rounds.find((x) => x.sound === sound); used.add(`s-${sound}.mp3`); used.add(`i-${r.key}.mp3`); }
+  for (const f of used) fs.copyFileSync(path.join(CLIPS_DIR, f), path.join(local, f));
+  fs.writeFileSync(path.join(local, 'index.html'), build(''));
 }
 
-module.exports = { buildRounds, clipList, pageBlock, SOUNDS, LOOKALIKE, pictureOf, CLIPS_DIR, URL_PREFIX };
+module.exports = { CLIP_VERSION, buildRounds, clipList, pageBlock, SOUNDS, SOUND_IPA, soundVoice, LOOKALIKE, pictureOf, CLIPS_DIR, URL_PREFIX };
 
 if (require.main === module) {
   const args = process.argv.slice(2);
