@@ -19,6 +19,7 @@
     'concierge': ['A strong start for every school', '', 'Guide each school from an accepted quote to a connected, ready-to-learn community.', 'Sales & Schools'],
     'content-safety': ['Care at the center', '', 'Review content and maintain the safeguards that support a positive learning experience.', 'Community'],
     'curriculum': ['Build brighter futures', '', 'Shape practical lessons that help students grow in confidence, character, and life skills.', 'Content'],
+    'demo': ['Let them try it first', '', 'Open a hands-on demo for a district, pick when it closes, and share the access details in one message.', 'Sales & Schools'],
     'districts': ['Progress, together', '', 'Connect schools, support district leaders, and keep every learning community moving.', 'Sales & Schools'],
     'downloads': ['Resources in action', '', 'Explore the materials your community is using and the lessons reaching classrooms.', 'Reports'],
     'invoices': ['Keep progress on track', '', 'Follow purchase orders, payments, and the next steps that unlock school access.', 'Sales & Schools'],

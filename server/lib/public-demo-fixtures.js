@@ -26,7 +26,22 @@ const STUDENTS = [
   { username: 'demo-student-3', name: 'Demo Student C', shared: false },
 ];
 
+// The unlisted page a prospect opens (phase 4). The file is committed to a public repository, so its name is not a secret: the access code and the
+// switch are the protection. PAGE_READY is false until that page is published; the admin page keeps "Copy message for the district" off until then.
+const PUBLIC_DEMO_PAGE_PATH = '/demo-welcome.html';
+const PUBLIC_DEMO_PAGE_READY = false;
+
+// Where each login signs in, for the admin page and the demo page.
+const LOGIN_PAGES = {
+  district: 'district-admin-login.html',
+  school: 'school-admin-login.html',
+  teacher: 'teacher-classrooms.html',
+  parent: 'parent-portal.html',
+  student: 'student-login.html',
+};
+
 module.exports = {
+  PUBLIC_DEMO_PAGE_PATH, PUBLIC_DEMO_PAGE_READY, LOGIN_PAGES,
   PUBLIC_DEMO_DISTRICT_NAME, PUBLIC_DEMO_SCHOOL_DOMAIN, DEMO_SOURCE, DEMO_DOMAIN,
   DEMO_SCHOOL_NAME, DEMO_PRODUCT_NAME, DEMO_CONTACT_EMAIL, DEMO_CLASSROOM_NAME, DEMO_LESSON_COUNT, ACCOUNTS, STUDENTS,
 };

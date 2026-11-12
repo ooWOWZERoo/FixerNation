@@ -275,6 +275,10 @@ test('SWITCH: on, then off, then left on past its date', async () => {
   assert.equal((await sw.describe(conn, now)).open, false);
   const { endsAt } = await sw.turnOn(conn, { days: 14, now, rounds: 4 });
   assert.equal(endsAt.toISOString(), '2026-12-04T12:00:00.000Z');
+  const code = await seedLib.getSettingRaw(conn, 'public_demo_access_code');
+  assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/, 'turning the demo on makes sure an access code exists');
+  await sw.turnOn(conn, { days: 3, now, rounds: 4, reset: false });
+  assert.equal(await seedLib.getSettingRaw(conn, 'public_demo_access_code'), code, 'moving the end date keeps the same code');
   const on = await sw.describe(conn, now);
   assert.equal(on.open, true);
   assert.match(on.text, /ON until .*EST/);
@@ -288,7 +292,7 @@ test('SWITCH: on, then off, then left on past its date', async () => {
 
 test('SWITCH: refuses to turn on a demo that was never seeded, and turning on clears the previous window\'s leftovers', async () => {
   const empty = freshDb();
-  await assert.rejects(sw.turnOn(empty.conn, { days: 7, rounds: 4 }), /has not been seeded/);
+  await assert.rejects(sw.turnOn(empty.conn, { days: 7, rounds: 4 }), /has not been set up/);
   const m = await messyDemo();
   await sw.turnOn(m.conn, { days: 7, rounds: 4 });
   assert.equal(m.count('SELECT COUNT(*) AS n FROM student_reflections'), 0, 'each window starts clean');

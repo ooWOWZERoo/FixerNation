@@ -246,3 +246,19 @@ test('DOWNLOAD: a demo session may not download a lesson file; viewing and ordin
   const plain = await call('GET', '/api/curricula/1/file?download=1', { cookie: plainCookie() });
   assert.equal(plain.status, 400);
 });
+
+test('LOCKOUT HELPERS: the admin Demo page can see that a demo login is locked, and clear it', async () => {
+  const siteAuth = require(path.join(SERVER, 'routes/site-auth.js'));
+  const email = 'demo-teacher@public-demo.example.com';
+  openDemo();
+  assert.equal(siteAuth.siteLoginBlockedFor(email), 0);
+  for (let i = 0; i < 8; i++) await call('POST', '/api/site-auth/login', { body: { email, password: 'wrong-wrong-wrong-' + i } });
+  assert.ok(siteAuth.siteLoginBlockedFor(email) > 0, 'eight wrong guesses lock the shared login');
+  assert.equal(siteAuth.siteLoginBlockedFor(email.toUpperCase()), siteAuth.siteLoginBlockedFor(email), 'the email is matched ignoring case');
+  const locked = await call('POST', '/api/site-auth/login', { body: { email, password: PASSWORD } });
+  assert.equal(locked.status, 429, 'even the right password is refused while locked');
+  siteAuth.unlockSiteLogin(email);
+  assert.equal(siteAuth.siteLoginBlockedFor(email), 0);
+  const ok = await call('POST', '/api/site-auth/login', { body: { email, password: PASSWORD } });
+  assert.equal(ok.status, 200, 'unlocking lets the real password back in');
+});

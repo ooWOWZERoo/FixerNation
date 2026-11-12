@@ -717,4 +717,13 @@ router.delete('/site-users/:id', requireAuth, async (req, res) => {
   }
 });
 
-module.exports = { router, requireSiteAuth };
+// The sign-in lockout for one email, for the admin Demo page (a stranger's wrong guesses can lock a shared demo login): how many seconds it is
+// locked for (0 = not locked), and clearing it. Only the per-account tracker: the per-IP one is deliberately left alone.
+function siteLoginBlockedFor(email) {
+  return loginFailsByAccount.blockedFor(String(email || '').trim().toLowerCase());
+}
+function unlockSiteLogin(email) {
+  loginFailsByAccount.clear(String(email || '').trim().toLowerCase());
+}
+
+module.exports = { router, requireSiteAuth, siteLoginBlockedFor, unlockSiteLogin };

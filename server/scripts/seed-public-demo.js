@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const F = require('../lib/public-demo-fixtures');
 const { isValidPin } = require('../lib/pin');
+const { getSettingRaw, putSettingRaw } = require('../lib/public-demo-admin');
 
 // Creates (or tops up) the SHARED DEMO ENVIRONMENT: one login per role for a prospect to try, all sharing one published password
 // (docs/reference/shared-demo-environment-requirements.md, R4). Everything is fake: its own demo district, school, licence, a demo classroom
@@ -57,15 +58,6 @@ function makeReport() {
 async function one(conn, sql, params) {
   const [rows] = await conn.query(sql, params);
   return rows[0] || null;
-}
-async function getSettingRaw(conn, key) {
-  const row = await one(conn, 'SELECT setting_value FROM settings WHERE setting_key = ?', [key]);
-  return row ? row.setting_value : '';
-}
-async function putSettingRaw(conn, key, value) {
-  const row = await one(conn, 'SELECT setting_key FROM settings WHERE setting_key = ?', [key]);
-  if (row) await conn.query('UPDATE settings SET setting_value = ? WHERE setting_key = ?', [value, key]);
-  else await conn.query('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)', [key, value]);
 }
 
 // The classroom, its students, its lessons and the parent link. Shared with the nightly reset, which deletes the classroom and calls this to

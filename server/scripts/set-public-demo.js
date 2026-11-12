@@ -1,7 +1,8 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const F = require('../lib/public-demo-fixtures');
 const { evaluateDemoWindow, formatEastern } = require('../lib/public-demo-window');
-const { getSettingRaw, putSettingRaw, makeReport } = require('./seed-public-demo');
+const { makeReport } = require('./seed-public-demo');
+const { getSettingRaw, putSettingRaw, ensureAccessCode } = require('../lib/public-demo-admin');
 const { resetDemo } = require('./reset-public-demo');
 
 // The shared demo's on/off switch from the command line (docs/reference/shared-demo-environment-requirements.md, R1). It is the switch until the
@@ -15,6 +16,9 @@ const { resetDemo } = require('./reset-public-demo');
 // --on needs an end time (never open-ended): either --days N, or --until with a date, time and time zone. The longest window is the setting
 // public_demo_max_days (30 unless changed). Turning the demo on also resets the demo data (so each window starts clean); add --no-reset to skip that.
 // Turning it off takes effect at once: the logins are refused and every open demo session ends on its next request.
+
+// Mistakes the person asking can fix (a bad date, too long a window) carry status 400 so the admin page can show them as they are.
+const bad = (message) => Object.assign(new Error(message), { status: 400 });
 
 const DEFAULT_MAX_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -39,22 +43,23 @@ async function turnOn(conn, { days, until, now = new Date(), reset = true, round
   let end;
   if (days !== undefined) {
     const n = Number(days);
-    if (!Number.isFinite(n) || n <= 0) throw new Error('--days must be a number above 0.');
+    if (!Number.isFinite(n) || n <= 0) throw bad('The number of days must be above 0.');
     end = new Date(now.getTime() + n * DAY_MS);
   } else if (until !== undefined) {
-    if (!/(Z|[+-]\d\d:?\d\d)$/i.test(String(until))) throw new Error('--until needs a time zone, for example 2026-11-21T17:00:00-05:00 or ...Z.');
+    if (!/(Z|[+-]\d\d:?\d\d)$/i.test(String(until))) throw bad('The end time needs a time zone, for example 2026-11-21T17:00:00-05:00 or ending in Z.');
     end = new Date(until);
-    if (Number.isNaN(end.getTime())) throw new Error('--until is not a valid date and time.');
+    if (Number.isNaN(end.getTime())) throw bad('The end time is not a valid date and time.');
   } else {
-    throw new Error('Turning the demo on needs an end time: --days N or --until <date and time with time zone>.');
+    throw bad('Turning the demo on needs an end time (a number of days, or a date and time).');
   }
-  if (end.getTime() <= now.getTime()) throw new Error('The end time is already in the past.');
-  if (end.getTime() - now.getTime() > limit * DAY_MS + 1000) throw new Error(`The longest demo window is ${limit} days (setting public_demo_max_days).`);
+  if (end.getTime() <= now.getTime()) throw bad('The end time is already in the past.');
+  if (end.getTime() - now.getTime() > limit * DAY_MS + 1000) throw bad(`The longest demo window is ${limit} days (setting public_demo_max_days).`);
 
   const seeded = await conn.query('SELECT id FROM site_users WHERE email = ? AND is_shared_demo = 1', [F.ACCOUNTS.teacher.email]);
-  if (!seeded[0][0]) throw new Error('The shared demo has not been seeded yet. Run scripts/seed-public-demo.js --apply first.');
+  if (!seeded[0][0]) throw Object.assign(new Error('The shared demo has not been set up yet. Use "Set up the demo" on the Demo page (or run scripts/seed-public-demo.js --apply) first.'), { status: 409 });
 
   if (reset) await resetDemo(conn, { rounds }, report);
+  await ensureAccessCode(conn); // a code always exists while the demo is on (the admin Demo page shows it)
   await putSettingRaw(conn, 'public_demo_ends_at', end.toISOString());
   await putSettingRaw(conn, 'public_demo_enabled', 'true');
   report.note(`switched ON until ${end.toISOString()}`);
