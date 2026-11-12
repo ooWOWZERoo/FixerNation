@@ -6,6 +6,7 @@ const { STUDENT_COOKIE_NAME, STUDENT_COOKIE_MAX_AGE_MS } = require('../lib/sessi
 const { requireStudentAuth } = require('../middleware/studentAuth');
 const crypto = require('crypto');
 const { isPublicDemoOpen, isSharedDemoClassroom } = require('../lib/public-demo');
+const { recordDemoEvent } = require('../lib/public-demo-admin');
 
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
@@ -208,6 +209,7 @@ router.post('/login', async (req, res) => {
   pinFailsByStudent.clear(usernameKey);
 
   setStudentCookie(res, student, demoStudent);
+  if (demoStudent) await recordDemoEvent('sign_in', 'student'); // a count for the admin Demo page; never blocks
   res.json({ classroomName: student.classroom_name, displayName: student.display_name, username: student.username });
 });
 

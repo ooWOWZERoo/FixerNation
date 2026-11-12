@@ -81,6 +81,7 @@ async function getState() {
   }));
   state.logins.push({ role: 'Student', userId: F.STUDENTS[0].username, signIn: F.LOGIN_PAGES.student, lockedSeconds: lockStatus(F.STUDENTS[0].username).seconds });
   state.lockedCount = state.logins.filter(l => l.lockedSeconds > 0).length;
+  state.counts = await A.demoCounts(pool);
   if (window.open && code && F.PUBLIC_DEMO_PAGE_READY) {
     state.message = A.buildInviteMessage({ siteUrl: process.env.SITE_URL, code, endsAt: window.endsAt });
   }

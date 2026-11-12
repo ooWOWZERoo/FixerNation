@@ -130,6 +130,7 @@ test('SETUP: creates the demo, generates a shared password and PIN once, never t
   assert.deepEqual(r.json.logins.map(l => l.signIn), ['district-admin-login.html', 'school-admin-login.html', 'teacher-classrooms.html', 'parent-portal.html', 'student-login.html']);
   assert.equal(r.json.logins[2].lockedSeconds, 540, 'a locked login is reported');
   assert.equal(r.json.lockedCount, 1);
+  assert.deepEqual(r.json.counts, { windowId: 1, gateEntries: 0, signIns: { district: 0, school: 0, teacher: 0, parent: 0, student: 0 }, tickets: 0, quotes: 0 }, 'counts are zero (and a table that does not exist yet counts as zero)');
   assert.equal(get('public_demo_enabled'), undefined, 'setup never touches the switch');
   const again = await call('POST', '/setup');
   assert.equal(again.json.password, r.json.password, 'a second setup keeps the same password');
@@ -164,6 +165,7 @@ test('ON, then extend, then off: reset on a fresh start only, a code is made, ev
   const end7 = new Date(on.json.endsAt).getTime();
   assert.ok(Math.abs(end7 - (Date.now() + 7 * 86400000)) < 60000);
 
+  assert.equal(get('public_demo_window_id'), '1', 'a fresh turn-on starts a new window');
   const code = on.json.accessCode;
   const room = db.prepare('SELECT id FROM classrooms LIMIT 1').get().id;
   const kid2 = Number(db.prepare("INSERT INTO classroom_students (classroom_id, display_name, username, password_hash) VALUES (?, 'Mid-visit', 'visitor-2', 'x')").run(room).lastInsertRowid);
@@ -172,6 +174,7 @@ test('ON, then extend, then off: reset on a fresh start only, a code is made, ev
   assert.equal(ext.status, 200);
   assert.ok(new Date(ext.json.endsAt).getTime() > end7 + 6 * 86400000, 'the end date moved');
   assert.equal(ext.json.accessCode, code, 'extending keeps the same code');
+  assert.equal(get('public_demo_window_id'), '1', 'changing the end date does not start a new window');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM student_reflections').get().n, 1, 'extending clears nothing: people inside keep their place');
 
   const off = await call('POST', '/off');
@@ -243,19 +246,19 @@ test('UNLOCK: clears the lockout on all five logins', async () => {
   assert.equal(audits().at(-1).action, 'public_demo.unlocked');
 });
 
-test('MESSAGE: the district note is held back until the demo page is published, then carries the link, code and end date', async () => {
+test('MESSAGE: the district note carries the link, code and end date while the demo is open, and is not offered while it is closed or the page is not published', async () => {
+  await call('POST', '/off');
+  assert.equal((await call('GET', '')).json.message, undefined, 'no message while the demo is closed');
   await call('POST', '/on', { body: { days: 3 } });
-  assert.equal((await call('GET', '')).json.message, undefined, 'page not published yet');
-  F.PUBLIC_DEMO_PAGE_READY = true;
-  try {
-    const r = await call('GET', '');
-    assert.match(r.json.message, /https:\/\/example\.test\/demo-welcome\.html/);
-    assert.ok(r.json.message.includes(r.json.accessCode));
-    assert.ok(r.json.message.includes(r.json.endsAtEastern));
-    assert.ok(!/[—–]/.test(r.json.message), 'no dashes');
-    await call('POST', '/off');
-    assert.equal((await call('GET', '')).json.message, undefined, 'no message while the demo is closed');
-  } finally { F.PUBLIC_DEMO_PAGE_READY = false; }
+  const r = await call('GET', '');
+  assert.match(r.json.message, /https:\/\/example\.test\/demo-welcome\.html/);
+  assert.ok(r.json.message.includes(r.json.accessCode));
+  assert.ok(r.json.message.includes(r.json.endsAtEastern));
+  assert.ok(!/[\u2014\u2013]/.test(r.json.message), 'no dashes');
+  assert.equal(r.json.pageReady, true);
+  F.PUBLIC_DEMO_PAGE_READY = false;
+  try { assert.equal((await call('GET', '')).json.message, undefined, 'held back if the page is not published'); } finally { F.PUBLIC_DEMO_PAGE_READY = true; }
+  await call('POST', '/off');
 });
 
 test('ACCESS CODE: eight characters from an alphabet with no look-alikes; read back ignoring case and the hyphen', () => {

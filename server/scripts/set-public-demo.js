@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const F = require('../lib/public-demo-fixtures');
 const { evaluateDemoWindow, formatEastern } = require('../lib/public-demo-window');
 const { makeReport } = require('./seed-public-demo');
-const { getSettingRaw, putSettingRaw, ensureAccessCode } = require('../lib/public-demo-admin');
+const { getSettingRaw, putSettingRaw, ensureAccessCode, startNewWindow } = require('../lib/public-demo-admin');
 const { resetDemo } = require('./reset-public-demo');
 
 // The shared demo's on/off switch from the command line (docs/reference/shared-demo-environment-requirements.md, R1). It is the switch until the
@@ -58,7 +58,8 @@ async function turnOn(conn, { days, until, now = new Date(), reset = true, round
   const seeded = await conn.query('SELECT id FROM site_users WHERE email = ? AND is_shared_demo = 1', [F.ACCOUNTS.teacher.email]);
   if (!seeded[0][0]) throw Object.assign(new Error('The shared demo has not been set up yet. Use "Set up the demo" on the Demo page (or run scripts/seed-public-demo.js --apply) first.'), { status: 409 });
 
-  if (reset) await resetDemo(conn, { rounds }, report);
+  // A fresh start is a new window: the counts on the admin Demo page start again from zero. Moving the end date of an open demo is not.
+  if (reset) { await resetDemo(conn, { rounds }, report); await startNewWindow(conn); }
   await ensureAccessCode(conn); // a code always exists while the demo is on (the admin Demo page shows it)
   await putSettingRaw(conn, 'public_demo_ends_at', end.toISOString());
   await putSettingRaw(conn, 'public_demo_enabled', 'true');

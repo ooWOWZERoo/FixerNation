@@ -81,6 +81,12 @@
         </div>
       </div>
 
+      <div class="a-card" id="countsCard" style="display:none;">
+        <div class="a-card-head"><h2>This window</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">Counts since the demo was last turned on. Changing the end date doesn't start a new window.</div>
+        <div id="countsBody"></div>
+      </div>
+
       <div class="a-card">
         <div class="a-card-head"><h2>What visitors can and can't do</h2></div>
         <ul class="demo-list">
@@ -89,7 +95,6 @@
           <li>They can't change the password or PIN, upload files, or reach the community.</li>
           <li>Everyone shares the same sample data until the nightly reset.</li>
         </ul>
-        <div class="a-note" style="margin:14px 0 0;">Visit counts, tickets and quote requests from the demo will show here once the demo page is published.</div>
       </div>
 
     </div>
@@ -168,6 +173,7 @@ function render(s) {
   show('loginsCard', s.seeded);
   show('messageCard', s.seeded);
   show('tidyCard', s.seeded);
+  show('countsCard', s.seeded);
   if (!s.seeded) return;
 
   document.getElementById('codeBody').innerHTML = secretRow('code', 'Access code', s.accessCode || '(made when you turn the demo on)', s.accessCode ? 'New code' : '');
@@ -181,6 +187,18 @@ function render(s) {
     secretRow('pin', 'Student PIN', s.pin, 'New PIN') +
     '<div class="demo-row"><span class="demo-label">Class join code</span><span class="demo-secret">' + esc(s.joinCode) + '</span></div>';
 
+  var c = s.counts || { signIns: {}, gateEntries: 0, tickets: 0, quotes: 0 };
+  var order = [['district', 'District administrator'], ['school', 'School administrator'], ['teacher', 'Teacher'], ['parent', 'Parent'], ['student', 'Student']];
+  var total = order.reduce(function (n, r) { return n + (c.signIns[r[0]] || 0); }, 0);
+  document.getElementById('countsBody').innerHTML =
+    '<table class="a-table"><tbody>' +
+    '<tr><td>People who entered the access code</td><td><strong>' + esc(c.gateEntries) + '</strong></td></tr>' +
+    '<tr><td>Sign-ins with a demo login</td><td><strong>' + esc(total) + '</strong>' +
+      (total ? '<br><span class="a-cell-sub">' + order.filter(function (r) { return c.signIns[r[0]]; }).map(function (r) { return esc(r[1]) + ': ' + esc(c.signIns[r[0]]); }).join(' &middot; ') + '</span>' : '') + '</td></tr>' +
+    '<tr><td>Questions and tickets</td><td><strong>' + esc(c.tickets) + '</strong>' + (c.tickets ? ' <a href="admin-support.html">Open the inbox</a>' : '') + '</td></tr>' +
+    '<tr><td>Quote requests</td><td><strong>' + esc(c.quotes) + '</strong>' + (c.quotes ? ' <a href="admin-quotes.html">Open quotes</a>' : '') + '</td></tr>' +
+    '</tbody></table>';
+
   var msg = document.getElementById('messageBody');
   if (s.message) {
     msg.innerHTML = '<div class="a-note" style="margin:0 0 12px;">A note you can send to the district. Copy it into your email and sign it.</div>' +
@@ -188,7 +206,7 @@ function render(s) {
       '<div style="margin-top:10px;"><button class="a-btn a-btn-primary" data-action="copy" data-key="message">Copy message</button></div>';
     document.getElementById('demoMessage').value = s.message;
   } else {
-    msg.innerHTML = '<div class="a-note" style="margin:0;">This note shows up once the demo page is published and the demo is open.</div>';
+    msg.innerHTML = '<div class="a-note" style="margin:0;">This note shows up once the demo is open. Turn it on above and it appears here, ready to copy.</div>';
   }
   document.getElementById('unlockHint').textContent = s.lockedCount
     ? s.lockedCount + ' login' + (s.lockedCount === 1 ? ' is' : 's are') + ' locked right now. This clears the locks right away.'

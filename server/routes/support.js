@@ -16,7 +16,9 @@
 // the form. Internal staff notes are never selected by a query on this side.
 const express = require('express');
 const pool = require('../db/pool');
-const { getSiteUser } = require('../lib/site-user');
+const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
+const { isDemoVisitor } = require('../lib/public-demo');
+const { currentWindowId } = require('../lib/public-demo-admin');
 const { limiter, clientIp, FailureTracker, rejectIfBlocked } = require('../lib/rate-limit');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail, sendSupportEmail } = require('../lib/mailer');
@@ -36,8 +38,27 @@ const LOOKUP_WINDOW = 15 * 60 * 1000;
 const lookupMissesByIp = new FailureTracker({ name: 'support-lookup-ip', windowMs: LOOKUP_WINDOW, max: 10 });
 const lookupMissesByRef = new FailureTracker({ name: 'support-lookup-ref', windowMs: LOOKUP_WINDOW, max: 5 });
 
+// A shared-demo login (docs/reference/shared-demo-environment-requirements.md, R8) has no real email address, so for this page it counts as nobody
+// being signed in: the visitor types a name and an address, like anyone else, and the request is tagged as coming from the demo (below).
+async function getSiteUser(req) {
+  const user = await resolveSiteUser(req);
+  return user && user.is_shared_demo ? null : user;
+}
+
 function demoRefused(user) {
   return user && user.is_sales_demo ? 'Demo accounts cannot send support requests.' : null;
+}
+
+// Marks a request as coming from the shared demo (a valid access-code visit, or a demo login's session). The tag comes from the server's own
+// cookies, never from anything in the request body. Tolerates the column not existing yet (code deployed before its alter script ran).
+async function tagIfFromDemo(req, id) {
+  if (!(await isDemoVisitor(req))) return false;
+  try {
+    await pool.query('UPDATE support_requests SET demo_window = ? WHERE id = ?', [await currentWindowId(pool), id]);
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column|no column named/i.test(String(err.message))) throw err;
+  }
+  return true;
 }
 
 async function requireSignedIn(req, res) {
@@ -102,11 +123,14 @@ router.post('/', ipLimit, emailLimit, async (req, res) => {
     clientSessionId: typeof body.sessionId === 'string' && /^[a-zA-Z0-9-]{8,64}$/.test(body.sessionId) ? body.sessionId : null,
   });
 
+  const fromDemo = await tagIfFromDemo(req, created.id);
+
   await tellStaff({
     subject: `New support request ${created.ref}`,
     id: created.id,
     fields: {
       Reference: created.ref,
+      Source: fromDemo ? 'Shared demo' : undefined,
       Topic: CATEGORIES[category],
       From: who.name,
       Email: who.email,

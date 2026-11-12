@@ -48,7 +48,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
   const [rows] = await pool.query(
     `SELECT r.id, r.ref, r.status, r.category, r.subject, r.requester_name, r.requester_email, r.roles, r.school_domain,
-            r.assigned_admin_id, a.username AS assigned_to, r.created_at, r.updated_at
+            r.assigned_admin_id, a.username AS assigned_to, r.created_at, r.updated_at, r.demo_window
      FROM support_requests r LEFT JOIN admin_users a ON a.id = r.assigned_admin_id
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
      ORDER BY r.updated_at DESC, r.id DESC LIMIT 300`,

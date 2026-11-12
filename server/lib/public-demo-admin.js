@@ -67,6 +67,58 @@ function buildInviteMessage({ siteUrl, code, endsAt }) {
   ].join('\n');
 }
 
+// ---- Windows, events and counts (docs/reference/shared-demo-environment-requirements.md, R9) ---------------------------------------------------
+// A "window" is one stretch the demo was open for one round of visitors: a fresh turn-on starts a new one, and changing the end date does not.
+// Sign-ins, tickets and quote requests carry the window number they happened in, so "this window" needs no date arithmetic (and no database
+// time-zone worries). No IP address, name or email is ever stored for an event.
+async function currentWindowId(conn) {
+  const n = Number(await getSettingRaw(conn, 'public_demo_window_id'));
+  return Number.isInteger(n) && n > 0 ? n : 1;
+}
+async function startNewWindow(conn) {
+  const next = (Number(await getSettingRaw(conn, 'public_demo_window_id')) || 0) + 1;
+  await putSettingRaw(conn, 'public_demo_window_id', String(next));
+  return next;
+}
+
+const ROLE_BY_EMAIL = Object.fromEntries(Object.entries(require('./public-demo-fixtures').ACCOUNTS).map(([key, a]) => [a.email, key]));
+function demoRoleKeyForEmail(email) {
+  return ROLE_BY_EMAIL[String(email || '').trim().toLowerCase()] || null;
+}
+
+// Counted, never blocking: a failure here must not stop a visitor from getting in.
+async function recordDemoEvent(kind, detail = null) {
+  try {
+    const pool = require('../db/pool');
+    await pool.query('INSERT INTO public_demo_events (window_id, kind, detail) VALUES (?, ?, ?)', [await currentWindowId(pool), kind, detail]);
+  } catch (err) {
+    console.error('public demo event not recorded:', err.message);
+  }
+}
+
+// A table or column that does not exist yet (code deployed before scripts/alter-add-public-demo-phase4.js ran) is simply zero.
+async function countOr0(conn, sql, params) {
+  try { const [[row]] = await conn.query(sql, params); return Number(row.n) || 0; } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR' || /no such (table|column)/i.test(String(err.message))) return 0;
+    throw err;
+  }
+}
+async function demoCounts(conn) {
+  const windowId = await currentWindowId(conn);
+  const signIns = {};
+  for (const key of ['district', 'school', 'teacher', 'parent', 'student']) {
+    signIns[key] = await countOr0(conn, "SELECT COUNT(*) AS n FROM public_demo_events WHERE window_id = ? AND kind = 'sign_in' AND detail = ?", [windowId, key]);
+  }
+  return {
+    windowId,
+    gateEntries: await countOr0(conn, "SELECT COUNT(*) AS n FROM public_demo_events WHERE window_id = ? AND kind = 'gate_entry'", [windowId]),
+    signIns,
+    tickets: await countOr0(conn, 'SELECT COUNT(*) AS n FROM support_requests WHERE demo_window = ?', [windowId]),
+    quotes: await countOr0(conn, 'SELECT COUNT(*) AS n FROM quote_requests WHERE demo_window = ?', [windowId]),
+  };
+}
+
 module.exports = {
+  currentWindowId, startNewWindow, demoRoleKeyForEmail, recordDemoEvent, demoCounts,
   getSettingRaw, putSettingRaw, generateAccessCode, formatAccessCode, normalizeAccessCode, ensureAccessCode, regenerateAccessCode, buildInviteMessage,
 };

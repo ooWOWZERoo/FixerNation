@@ -115,7 +115,7 @@ async function loadList() {
   const tbody = document.querySelector('#listTable tbody');
   tbody.innerHTML = d.requests.map(r =>
     '<tr style="cursor:pointer;" data-id="' + esc(r.id) + '">' +
-      '<td>' + esc(r.ref) + '</td>' +
+      '<td>' + esc(r.ref) + (r.demo_window > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Demo</span>' : '') + '</td>' +
       '<td>' + esc(r.requester_name) + '<br><span style="font-size:12px; opacity:.7;">' + esc(r.roles || 'Not signed in') + (r.school_domain ? ' · ' + esc(r.school_domain) : '') + '</span></td>' +
       '<td><strong>' + esc(r.categoryLabel) + '</strong><br>' + esc(r.subject) + '</td>' +
       '<td>' + pill(r.status) + '</td>' +
@@ -139,7 +139,7 @@ async function openRequest(id) {
   currentId = id;
   const r = d.request;
   document.getElementById('detailCard').style.display = 'block';
-  document.getElementById('dSubject').textContent = r.ref + ' · ' + r.subject;
+  document.getElementById('dSubject').textContent = r.ref + ' · ' + r.subject + (r.demo_window > 0 ? ' · From the shared demo' : '');
   document.getElementById('dFacts').innerHTML =
     '<strong>' + esc(r.requester_name) + '</strong> · ' + esc(r.requester_email) + '<br>' +
     'Topic: ' + esc(r.categoryLabel) + '<br>' +

@@ -27,9 +27,9 @@ const STUDENTS = [
 ];
 
 // The unlisted page a prospect opens (phase 4). The file is committed to a public repository, so its name is not a secret: the access code and the
-// switch are the protection. PAGE_READY is false until that page is published; the admin page keeps "Copy message for the district" off until then.
+// switch are the protection. PAGE_READY says the page is published (phase 4); the admin page keeps "Copy message for the district" off while it is false.
 const PUBLIC_DEMO_PAGE_PATH = '/demo-welcome.html';
-const PUBLIC_DEMO_PAGE_READY = false;
+const PUBLIC_DEMO_PAGE_READY = true;
 
 // Where each login signs in, for the admin page and the demo page.
 const LOGIN_PAGES = {

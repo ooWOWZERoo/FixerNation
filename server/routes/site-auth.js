@@ -27,6 +27,7 @@ const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context'
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 const msOAuth = require('../lib/microsoft-oauth');
 const { isPublicDemoOpen, isSharedDemoUser, refuseSharedDemo, DEMO_SESSION_LENGTH, DEMO_SESSION_MS } = require('../lib/public-demo');
+const { recordDemoEvent, demoRoleKeyForEmail } = require('../lib/public-demo-admin');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
@@ -399,6 +400,7 @@ router.post('/login', async (req, res) => {
   // A seat bought for this address and left pending (a purchase made before this account signed in) is theirs once they sign in.
   await claimForAccountByEmail(pool, user.email);
   setSiteSessionCookie(res, user);
+  if (isSharedDemoUser(user)) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email)); // a count for the admin Demo page; never blocks
   // isSchoolAdmin/isDistrictAdmin/isAffiliate are real entitlement checks (an
   // active school_license_admins/district_license_admins/affiliates row),
   // independent of the single site_users.role string — school-admin-login.html

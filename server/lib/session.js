@@ -13,4 +13,9 @@ module.exports = {
   // have no email and use PIN-based login, not password + email.
   STUDENT_COOKIE_NAME: 'fn_student_session',
   STUDENT_COOKIE_MAX_AGE_MS: 8 * 60 * 60 * 1000, // 8-hour school-day session
+
+  // The shared demo's access-code gate (lib/public-demo.js). Not a login: it only lets the demo page show the demo logins. Its own audience
+  // (session-tokens kind 'demoGate') means it can never stand in for a site, student or admin session.
+  DEMO_GATE_COOKIE_NAME: 'fn_demo_gate',
+  DEMO_GATE_MAX_AGE_MS: 8 * 60 * 60 * 1000,
 };

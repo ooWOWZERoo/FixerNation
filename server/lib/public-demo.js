@@ -16,7 +16,7 @@ const { AsyncLocalStorage } = require('node:async_hooks');
 const { getSetting } = require('./settings');
 const { evaluateDemoWindow } = require('./public-demo-window');
 const { verifySession } = require('./session-tokens');
-const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME, COOKIE_NAME: ADMIN_COOKIE_NAME } = require('./session');
+const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME, COOKIE_NAME: ADMIN_COOKIE_NAME, DEMO_GATE_COOKIE_NAME } = require('./session');
 
 const DEMO_EMAIL_DOMAIN = 'public-demo.example.com';
 const DEMO_STUDENT_USERNAME = 'demo-student';
@@ -98,6 +98,28 @@ function refuseSharedDemo(req, res, message) {
   return true;
 }
 
+// ---- The access-code gate ---------------------------------------------------------------------------------------------------------------------
+
+// True when this request carries a demo gate cookie that is still good: signed by us, issued for the CURRENT access code (the code's version is in
+// the cookie, so a new code ends every visit at once), and the demo is open. Never throws.
+async function hasValidDemoGate(req) {
+  const token = req && req.cookies && req.cookies[DEMO_GATE_COOKIE_NAME];
+  if (!token) return false;
+  try {
+    const payload = verifySession('demoGate', token);
+    if (!(await isPublicDemoOpen())) return false;
+    return String(payload.v) === String(await getSetting('public_demo_code_version'));
+  } catch {
+    return false;
+  }
+}
+
+// Someone who is using the shared demo: a valid access-code visit, or a demo login's session. Used to tag support and quote requests as coming
+// from the demo. The answer comes from the server's own cookies and never from anything the visitor typed.
+async function isDemoVisitor(req) {
+  return isSharedDemoRequest() || hasValidDemoGate(req);
+}
+
 // ---- The gate -----------------------------------------------------------------------------------------------------------------------------------
 
 // Mounted once in app.js, after cookie-parser and before every route. For each site or student cookie that carries the demo claim:
@@ -158,4 +180,5 @@ module.exports = {
   isSharedDemoUser, isSharedDemoClassroom,
   isSharedDemoRequest, noteSuppressedMail, refuseSharedDemo, sharedDemoGate,
   demoRecipientAllowed, assertDemoRecipient, assertNotSharedDemoRequest,
+  hasValidDemoGate, isDemoVisitor,
 };

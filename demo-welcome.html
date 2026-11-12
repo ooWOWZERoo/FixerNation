@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Fixer Nation Education - Demo</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+  :root{
+    --cream:#FBF5EC; --cream-soft:#F3EBDD; --teal:#164F4A; --teal-dark:#0E3733;
+    --coral:#F26B4D; --coral-dark:#D9502F; --gold:#EBA657; --ink:#2A2420; --ink-soft:#6B5F55;
+    --radius-md:18px; --shadow:0 20px 45px -18px rgba(22,79,74,0.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif; background:var(--cream); color:var(--ink); line-height:1.6;}
+  h1,h2,h3{font-family:'Fraunces', serif; color:var(--teal-dark); line-height:1.15; font-weight:600;}
+  a{color:var(--teal); }
+  .wrap{max-width:980px; margin:0 auto; padding:0 24px;}
+  header.top{background:rgba(251,245,236,0.9); border-bottom:1px solid rgba(22,79,74,0.1);}
+  header.top .wrap{display:flex; align-items:center; gap:14px; padding-top:14px; padding-bottom:14px;}
+  header.top img{height:42px; width:auto; display:block;}
+  header.top span{font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:var(--teal-dark);}
+  main{padding:44px 0 64px;}
+  .eyebrow{display:inline-block; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); margin-bottom:10px;}
+  h1{font-size:clamp(30px, 5vw, 44px); margin-bottom:14px;}
+  .lead{font-size:18px; max-width:700px; margin-bottom:8px;}
+  .ends{display:inline-block; margin:14px 0 4px; padding:8px 16px; border-radius:999px; background:var(--teal); color:#fff; font-weight:700; font-size:15px;}
+  .card{background:#fff; border-radius:var(--radius-md); box-shadow:var(--shadow); padding:28px; margin-top:26px;}
+  .card h2{font-size:24px; margin-bottom:10px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; padding:13px 26px; border-radius:999px; font-weight:700; font-size:15px; cursor:pointer; border:none; text-decoration:none; font-family:inherit;}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 14px 28px -10px rgba(242,107,77,0.55);}
+  .btn-primary:hover{background:var(--coral-dark);}
+  .btn-outline{background:#fff; color:var(--teal-dark); border:2px solid var(--teal);}
+  .btn-outline:hover{background:var(--cream-soft);}
+  .btn-small{padding:6px 14px; font-size:13px;}
+  .btn[disabled]{opacity:.6; cursor:default;}
+  label{display:block; font-weight:600; margin-bottom:6px;}
+  input[type=text]{width:100%; max-width:340px; padding:13px 16px; font-size:20px; letter-spacing:0.12em; text-transform:uppercase; border:2px solid var(--cream-soft); border-radius:12px; background:var(--cream); font-family:ui-monospace, SFMono-Regular, Menlo, monospace;}
+  input[type=text]:focus{outline:3px solid rgba(242,107,77,0.35); border-color:var(--coral);}
+  .error{color:var(--coral-dark); font-weight:600; margin-top:12px; min-height:1.4em;}
+  .table-wrap{overflow-x:auto; margin-top:14px;}
+  table{width:100%; border-collapse:collapse; font-size:15px;}
+  th{text-align:left; font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); padding:8px 12px; border-bottom:2px solid var(--cream-soft);}
+  td{padding:12px; border-bottom:1px solid var(--cream-soft); vertical-align:top;}
+  td.role{font-weight:700; white-space:nowrap;}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; word-break:break-all;}
+  .secret{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0;}
+  .secret .mono{font-size:16px; background:var(--cream); padding:6px 12px; border-radius:10px;}
+  ul.facts{margin:10px 0 0 20px; line-height:1.7;}
+  .help-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;}
+  .small{font-size:14px; color:var(--ink-soft); margin-top:22px;}
+  footer.bottom{padding:24px 0 40px; font-size:14px; color:var(--ink-soft);}
+  footer.bottom a{color:var(--ink-soft);}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap"><a href="index.html" aria-label="Fixer Nation Education home"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"></a><span>Fixer Nation Education</span></div></header>
+
+<main><div class="wrap">
+
+  <section id="loadingView"><p class="lead">Loading...</p></section>
+
+  <section id="closedView" hidden>
+    <h1>This page isn't available</h1>
+    <p class="lead">The page you're looking for can't be found.</p>
+    <p class="lead"><a href="index.html">Go to the home page</a></p>
+  </section>
+
+  <section id="gateView" hidden>
+    <span class="eyebrow">Product demo</span>
+    <h1>Welcome to the Fixer Nation demo</h1>
+    <p class="lead">Enter the access code from your invitation to open the demo.</p>
+    <div class="card">
+      <form id="gateForm" autocomplete="off">
+        <label for="gateCode">Access code</label>
+        <input type="text" id="gateCode" maxlength="20" inputmode="text" autocapitalize="characters" spellcheck="false" required>
+        <div style="margin-top:16px;"><button type="submit" class="btn btn-primary" id="gateButton">Continue</button></div>
+        <div class="error" id="gateError" role="alert"></div>
+      </form>
+    </div>
+  </section>
+
+  <section id="demoView" hidden>
+    <span class="eyebrow">Product demo</span>
+    <h1>Welcome to the Fixer Nation demo</h1>
+    <p class="lead">Thanks for taking a look. This demo is a working copy of Fixer Nation Education with sample classrooms, students and lessons. Everything in it is made up, so click around as much as you like.</p>
+    <p class="ends" id="endsLine"></p>
+
+    <div class="card">
+      <h2>How to explore</h2>
+      <p>Each role has its own sign-in. Start as a teacher, then see what a student and a parent see, and finish with the school and district views.</p>
+    </div>
+
+    <div class="card">
+      <h2>Your sign-ins</h2>
+      <div class="secret"><span id="passwordLine"></span></div>
+      <div class="secret"><span id="pinLine"></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Role</th><th>What you'll see</th><th>User ID</th><th>Sign in</th></tr></thead>
+          <tbody id="loginRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Good to know</h2>
+      <ul class="facts">
+        <li>Everyone using the demo shares the same sample data, and we reset it every night.</li>
+        <li>You can view every lesson, but downloads and uploads are turned off.</li>
+        <li>The demo can't send email. Invitations only work with example.com addresses, like teacher2@example.com.</li>
+        <li>Please don't enter real student information.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Questions? We'd like to hear them.</h2>
+      <p>Ask us anything while you explore, now or after the demo ends. We're glad to help.</p>
+      <div class="help-actions">
+        <a class="btn btn-primary" href="support.html">Ask a question or submit a ticket</a>
+        <a class="btn btn-outline" href="school-licensing.html#inquiry-form">Request a quote</a>
+      </div>
+    </div>
+
+    <p class="small">This page remembers you for about eight hours. If you come back later, enter the code again.</p>
+  </section>
+
+</div></main>
+
+<footer class="bottom"><div class="wrap"><a href="privacy-policy.html">Privacy policy</a> &middot; <a href="terms.html">Terms</a></div></footer>
+
+<script>
+(function () {
+  function $(id) { return document.getElementById(id); }
+  var views = ['loadingView', 'closedView', 'gateView', 'demoView'];
+  function show(name) { views.forEach(function (v) { $(v).hidden = v !== name; }); }
+
+  function api(path, opts) {
+    opts = opts || {};
+    var init = { method: opts.method || 'GET', credentials: 'include' };
+    if (init.method !== 'GET') { init.headers = { 'Content-Type': 'application/json' }; init.body = JSON.stringify(opts.body || {}); }
+    return fetch('/api/demo' + path, init).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, json: j }; });
+    });
+  }
+
+  function showClosed() {
+    document.title = 'Page not found';
+    show('closedView');
+  }
+
+  function showGate() {
+    show('gateView');
+    $('gateCode').focus();
+  }
+
+  function copyButton(text, label) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn btn-outline btn-small'; b.textContent = label || 'Copy';
+    b.addEventListener('click', function () {
+      function done() { b.textContent = 'Copied'; setTimeout(function () { b.textContent = label || 'Copy'; }, 1500); }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { window.prompt('Copy this:', text); });
+      else window.prompt('Copy this:', text);
+    });
+    return b;
+  }
+
+  function secretLine(el, before, value, after) {
+    el.textContent = '';
+    el.appendChild(document.createTextNode(before + ' '));
+    var m = document.createElement('span'); m.className = 'mono'; m.textContent = value; el.appendChild(m);
+    el.appendChild(document.createTextNode(after || ''));
+    el.parentNode.appendChild(copyButton(value));
+  }
+
+  function cell(tr, text, cls) {
+    var td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; tr.appendChild(td); return td;
+  }
+
+  function renderDemo(d) {
+    $('endsLine').textContent = 'The demo is open until ' + d.endsAtEastern + '.';
+    var pw = $('passwordLine'), pin = $('pinLine');
+    pw.parentNode.querySelectorAll('button').forEach(function (b) { b.remove(); });
+    pin.parentNode.querySelectorAll('button').forEach(function (b) { b.remove(); });
+    secretLine(pw, 'Everyone except the student signs in with the password', d.password, '.');
+    secretLine(pin, 'The student signs in with the PIN', d.pin, ' instead.');
+    var rows = $('loginRows'); rows.textContent = '';
+    d.logins.forEach(function (l) {
+      var tr = document.createElement('tr');
+      cell(tr, l.role, 'role'); cell(tr, l.what); cell(tr, l.userId, 'mono');
+      var td = document.createElement('td');
+      // the page name comes from our own server, but only ever use it as a plain page on this site
+      if (/^[a-z0-9-]+\.html$/.test(l.signIn)) {
+        var a = document.createElement('a'); a.href = l.signIn; a.textContent = 'Open sign-in'; td.appendChild(a);
+      }
+      tr.appendChild(td); rows.appendChild(tr);
+    });
+    show('demoView');
+  }
+
+  function loadCredentials() {
+    return api('/credentials').then(function (r) {
+      if (r.ok) renderDemo(r.json);
+      else if (r.status === 401) showGate();
+      else showClosed();
+    });
+  }
+
+  $('gateForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = $('gateError'); err.textContent = '';
+    $('gateButton').disabled = true;
+    api('/enter', { method: 'POST', body: { code: $('gateCode').value } }).then(function (r) {
+      $('gateButton').disabled = false;
+      if (r.ok) { $('gateCode').value = ''; return loadCredentials(); }
+      err.textContent = r.status === 429 ? 'Too many tries. Please wait a few minutes and try again.' : "That code didn't work. Check it and try again.";
+    }).catch(function () {
+      $('gateButton').disabled = false;
+      err.textContent = "That didn't go through. Check your connection and try again.";
+    });
+  });
+
+  api('/state').then(function (r) {
+    if (!r.ok || !r.json.open) return showClosed();
+    if (r.json.unlocked) return loadCredentials();
+    showGate();
+  }).catch(showClosed);
+})();
+</script>
+<script src="error-capture.js?v=1" defer></script>
+</body>
+</html>

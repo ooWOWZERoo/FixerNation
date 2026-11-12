@@ -5,6 +5,8 @@ const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 const { limiter } = require('../lib/rate-limit');
+const { isDemoVisitor } = require('../lib/public-demo');
+const { currentWindowId } = require('../lib/public-demo-admin');
 const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-parties');
 
 const router = express.Router();
@@ -60,11 +62,13 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
   const defaultProfileId = await getDefaultContentProfileId();
 
   let inserted = false;
+  let quoteNumber = null;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
+      quoteNumber = generateQuoteNumber();
       await pool.query(
         'INSERT INTO quote_requests (quote_number, first_name, last_name, email, school, phone, message, content_profile_id, origin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [generateQuoteNumber(), firstName || '', lastName || '', email, school || '', phone || '', message || '', defaultProfileId, 'inbound']
+        [quoteNumber, firstName || '', lastName || '', email, school || '', phone || '', message || '', defaultProfileId, 'inbound']
       );
       inserted = true;
       break;
@@ -74,6 +78,17 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
     }
   }
   if (!inserted) throw new Error('Could not generate unique quote number');
+
+  // A request from someone using the shared demo is tagged so staff can see where it came from (docs/reference/shared-demo-environment-requirements.md,
+  // R8). The tag comes from the server's own cookies, never from the form. Tolerates the column not existing yet.
+  const fromDemo = await isDemoVisitor(req);
+  if (fromDemo) {
+    try {
+      await pool.query('UPDATE quote_requests SET demo_window = ? WHERE quote_number = ?', [await currentWindowId(pool), quoteNumber]);
+    } catch (err) {
+      if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column|no column named/i.test(String(err.message))) throw err;
+    }
+  }
 
   await pool.query(
     `INSERT INTO newsletter_contacts (name, email, company, source, status)
@@ -94,6 +109,7 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
       School: school,
       Phone: phone,
       Message: message,
+      Source: fromDemo ? 'Shared demo' : undefined,
     },
     replyTo: email,
   });

@@ -65,6 +65,8 @@ const DEFAULTS = {
   public_demo_password: '',
   public_demo_pin: '',
   public_demo_code_version: '1',
+  // Counts the demo's windows (each fresh turn-on starts a new one). Requests and sign-ins from the demo are tagged with the window they happened in.
+  public_demo_window_id: '0',
   public_demo_max_days: '30',
 };
 
