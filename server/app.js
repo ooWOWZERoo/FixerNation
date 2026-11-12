@@ -24,6 +24,7 @@ const adminSupportConsoleRoutes = require('./routes/admin-support-console');
 const clientErrorRoutes = require('./routes/client-errors');
 const adminClientErrorRoutes = require('./routes/admin-client-errors');
 const { recordServerError } = require('./lib/client-errors');
+const { sharedDemoGate } = require('./lib/public-demo');
 const dashboardRoutes = require('./routes/dashboard');
 const analyticsRoutes = require('./routes/analytics');
 const settingsRoutes = require('./routes/settings');
@@ -75,6 +76,9 @@ app.post('/api/checkout/webhook', express.raw({ type: 'application/json' }), che
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
+// Shared demo sessions end when the demo closes, and run with restrictions (no outside email, downloads or uploads) while it is open.
+// Must come before every route: lib/public-demo.js.
+app.use('/api', sharedDemoGate);
 app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store, private'); next(); });
 
 // Defense-in-depth against cross-site request forgery. Session cookies are

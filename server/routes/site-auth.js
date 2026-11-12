@@ -26,6 +26,7 @@ const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 const msOAuth = require('../lib/microsoft-oauth');
+const { isPublicDemoOpen, isSharedDemoUser, refuseSharedDemo, DEMO_SESSION_LENGTH, DEMO_SESSION_MS } = require('../lib/public-demo');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
@@ -82,12 +83,16 @@ async function requireSiteAuth(req, res, next) {
 }
 
 function setSiteSessionCookie(res, user) {
-  const token = signSession('site', { userId: user.id, firstName: user.first_name, role: user.role || 'teacher' }, '30d');
+  // A shared demo account (lib/public-demo.js) gets a short session carrying a `demo` claim, which is how the demo gate in app.js recognises it
+  // and ends it when the demo closes.
+  const demo = isSharedDemoUser(user);
+  const token = signSession('site', { userId: user.id, firstName: user.first_name, role: user.role || 'teacher', ...(demo ? { demo: true } : {}) },
+    demo ? DEMO_SESSION_LENGTH : '30d');
   res.cookie(SITE_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: SITE_COOKIE_MAX_AGE_MS,
+    maxAge: demo ? DEMO_SESSION_MS : SITE_COOKIE_MAX_AGE_MS,
   });
 }
 
@@ -370,8 +375,8 @@ router.post('/login', async (req, res) => {
   // password_hash is NULL, and bcrypt.compare throws on a non-string hash --
   // that was a 500). Compare against a dummy hash either way so the response
   // takes the same time as a real wrong-password attempt and doesn't reveal
-  // which emails have accounts.
-  if (!user || !user.password_hash) {
+  // which emails have accounts. A shared demo account while the demo is closed is treated exactly like "no such account" (lib/public-demo.js).
+  if (!user || !user.password_hash || (isSharedDemoUser(user) && !(await isPublicDemoOpen()))) {
     await bcrypt.compare(String(password), DUMMY_HASH);
     loginFailsByAccount.fail(acctKey);
     loginFailsByIp.fail(ip);
@@ -461,10 +466,11 @@ router.post('/forgot-password', forgotLimitIp, forgotLimitAcct, async (req, res)
   // this into an open redirect via an emailed link.
   const nextPath = safeLocalPath(req.body && req.body.next, '');
 
-  const [rows] = await pool.query('SELECT id, first_name, closed_at FROM site_users WHERE email = ?', [email]);
+  const [rows] = await pool.query('SELECT * FROM site_users WHERE email = ?', [email]);
   const user = rows[0];
-  // Always respond ok, regardless of whether the email is registered. A closed account is sent nothing.
-  if (user && !user.closed_at) {
+  // Always respond ok, regardless of whether the email is registered. A closed account is sent nothing, and neither is a shared demo account
+  // (its password is published and only FNE staff change it).
+  if (user && !user.closed_at && !isSharedDemoUser(user)) {
     const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
     const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}` + (nextPath ? `&next=${encodeURIComponent(nextPath)}` : '');
     await sendPasswordResetEmail({ to: email, firstName: user.first_name, resetUrl });
@@ -480,8 +486,10 @@ router.post('/reset-password', async (req, res) => {
   const record = await consumeToken(token, 'reset');
   if (!record) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
   // A reset link must not bring a closed account back (it is reopened by staff only)
-  const [[owner]] = await pool.query('SELECT closed_at FROM site_users WHERE id = ?', [record.user_id]);
+  const [[owner]] = await pool.query('SELECT * FROM site_users WHERE id = ?', [record.user_id]);
   if (owner && owner.closed_at) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
+  // A shared demo account's password is changed only by FNE staff, never by a reset link.
+  if (isSharedDemoUser(owner)) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   // Invalidate any other browser's session for this account — a stolen
@@ -551,6 +559,7 @@ router.post('/profile/avatar', requireSiteAuth, function(req, res, next) {
 });
 
 router.put('/profile', requireSiteAuth, async (req, res) => {
+  if (refuseSharedDemo(req, res, 'Profile details cannot be changed on the demo accounts.')) return;
   const b = req.body || {};
   const firstName = (b.firstName || '').trim();
   const lastName = (b.lastName || '').trim();
@@ -564,6 +573,7 @@ router.put('/profile', requireSiteAuth, async (req, res) => {
 });
 
 router.put('/change-password', requireSiteAuth, async (req, res) => {
+  if (refuseSharedDemo(req, res, 'The demo password cannot be changed. It is shared by everyone using the demo.')) return;
   const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Current and new passwords are required' });

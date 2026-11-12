@@ -2,6 +2,28 @@
 
 Things we have agreed to do later. Newest section first. Nothing here is started unless it says so. When an item is done, move it to `CHANGELOG.md` as part of its release and delete it here.
 
+## Shared demo environment (added 2026-11-12)
+
+Requirements drafted in `docs/reference/shared-demo-environment-requirements.md`. One global on/off switch and end date in the admin, an unlisted page behind an access code, one account per role with a shared published password, view-only content, no outbound email. Nothing is built. The owner has answered account shape, page access, switch scope and content access; decisions D1 to D7 (time zone, page address, longest window, branding, safety alerts, release note, separate fixtures) were accepted as recommended on 2026-11-12.
+
+- [x] **Owner decisions D1 to D7** accepted as recommended (section 9 of the requirements): US Eastern, an unguessable page path, 30-day maximum, color-only branding changes, silent safety alerts, no customer release note, separate demo fixtures.
+- [x] **Phase 1: server foundation.** Built 2026-11-12 (879 server tests pass), **not yet committed or deployed**: `is_shared_demo` column (alter script), `lib/public-demo.js` and its gate, login, join-code and session refusal when closed, view-only downloads, no password, PIN or profile change, a mailer-level email guard (with a test that nothing else can send), no uploads. To deploy: run `alter-add-shared-demo-flag.js`, then restart the Node app.
+- [ ] **Phase 2: seed and nightly reset scripts** (dry run by default) and the cron line.
+- [ ] **Phase 3: admin Demo page** (switch, end date, code, password, copy message, reset, unlock, audit).
+- [ ] **Phase 4: public demo page** with the access-code flow, "demo" tag on tickets and quote requests, analytics exclusion.
+- [ ] **Phase 5: docs and checks.** PROJECT.md, CHANGELOG, staff how-to, video check.
+
+## Password and sign-in security (added 2026-11-09)
+
+Requirements drafted in `docs/reference/password-and-sign-in-security-requirements.md`. Today the only rule is "8 characters or more", copied into five places; there is no common-password check, no second factor and no forced-reset flag. Nothing is built.
+
+- [x] **Owner decisions D1 to D5** accepted as recommended on 2026-11-09 (section 6 of the requirements): three length tiers (14 / 12 / 10), MFA offered then required after a 60-day grace period for school and district admins, no rotation timer, 7-day sessions for school and district admins, nudge for teachers and parents and force for admin roles.
+- [ ] **Phase 1: one shared password policy.** `lib/password-policy.js`, a bundled common-password list, use it in the five places that check length, a test that fails on a stray `password.length`, and the one-line hint on the forms. No migration.
+- [ ] **Phase 2: must-change flag and gentle notice.** `must_change_password` column (alter script plus `schema.sql`), Account Lookup button with an audit entry, sign-in notice for passwords below the new minimum.
+- [ ] **Phase 3: authenticator-app MFA.** Admin account first, then school and district admins after D2. Needs its own access-matrix review before code.
+- [ ] **Phase 4: shorter sessions and a password re-check** before sensitive actions.
+- [ ] **Phase 5: public wording.** Update the Student Data Privacy page and the Help center security answer only once phases 1 to 3 are live; release note and a video check on the sign-up and sign-in videos.
+
 ## Owner housekeeping (added 2026-11-07)
 
 Things only the owner can do (cPanel, the live admin, own devices). None affects the site today. The repo is public, so the specific email addresses are in the private memory notes, not here.

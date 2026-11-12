@@ -5,6 +5,7 @@ const AdmZip = require('adm-zip');
 const pool = require('../db/pool');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
 const { getSiteUser, hasActiveLicense, hasParentAccessToCurriculum, isLinkedParent } = require('../lib/access');
+const { isSharedDemoRequest } = require('../lib/public-demo');
 
 const quizUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -493,6 +494,11 @@ router.get('/:id/file', async (req, res) => {
   const resourceType = req.query.resource;
   const docIndex = req.query.doc !== undefined ? parseInt(req.query.doc, 10) : null;
   const forceDownload = req.query.download === '1';
+
+  // A shared demo session can view every lesson file in the viewer but never download one (lib/public-demo.js).
+  if (forceDownload && isSharedDemoRequest()) {
+    return res.status(403).json({ error: 'Downloads are turned off in the demo. You can view every lesson here in the viewer.', demo: true });
+  }
 
   if (!resourceType && docIndex === null) {
     return res.status(400).json({ error: 'resource or doc query param required' });

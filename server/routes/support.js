@@ -55,6 +55,7 @@ async function tellStaff({ subject, fields, id }) {
       fields,
       linkUrl: `${siteUrl()}/admin-support.html?id=${id}`,
       linkLabel: 'Open in the support inbox',
+      demoAllowed: true, // a demo visitor's question or ticket must still reach staff
     });
   } catch (err) {
     console.error('support: staff notice failed:', err.message);

@@ -8,6 +8,7 @@ const { resolveSchoolIdForTeacher, getPublishedBranding } = require('../lib/bran
 const { sendParentInvitationEmail } = require('../lib/mailer');
 const { isValidPin, PIN_ERROR } = require('../lib/pin');
 const { lockStatus, clearLock } = require('../lib/pin-lockout');
+const { refuseSharedDemo } = require('../lib/public-demo');
 
 const PARENT_INVITE_EXPIRY_DAYS = 14;
 
@@ -292,6 +293,8 @@ router.put('/:id/students/:sid', requireSiteAuth, async (req, res) => {
   if (!classroom) return;
 
   const { displayName, studentNumber, isActive, pin } = req.body;
+  // The demo student PIN is shared and published; only FNE staff change it.
+  if (pin && refuseSharedDemo(req, res, 'The demo student PINs cannot be changed. They are shared by everyone using the demo.')) return;
   const [[student]] = await pool.query(
     'SELECT * FROM classroom_students WHERE id = ? AND classroom_id = ?',
     [req.params.sid, classroom.id]

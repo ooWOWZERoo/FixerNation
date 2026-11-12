@@ -13,6 +13,9 @@ const AUD = {
   // Not a login session: a 1-hour token carried in the "confirm your Microsoft
   // sign-in" email. Its own audience means it can never be used as a session.
   msLink: 'fn:ms-link',
+  // Not a login session: the cookie a visitor gets after entering the shared demo's access code, which lets the demo page show the demo
+  // logins. Its own audience means it can never stand in for a site, student or admin session.
+  demoGate: 'fn:demo-gate',
 };
 const ISSUER = 'fixernation';
 

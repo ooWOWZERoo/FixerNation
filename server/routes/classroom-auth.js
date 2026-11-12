@@ -5,6 +5,7 @@ const pool = require('../db/pool');
 const { STUDENT_COOKIE_NAME, STUDENT_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { requireStudentAuth } = require('../middleware/studentAuth');
 const crypto = require('crypto');
+const { isPublicDemoOpen, isSharedDemoClassroom } = require('../lib/public-demo');
 
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
@@ -23,8 +24,10 @@ const PIN_WINDOW = 15 * 60 * 1000;
 const joinCodeMissesByIp = new FailureTracker({ name: 'join-code-miss-ip', windowMs: PIN_WINDOW, max: 30 });
 const joinLimit = limiter({ name: 'student-join', windowMs: 60 * 60 * 1000, max: 150 });
 
-function setStudentCookie(res, student) {
-  const token = signSession('student', { studentId: student.id, classroomId: student.classroom_id }, '8h');
+// `demo` is true for a student in a shared demo classroom (lib/public-demo.js): the claim lets the demo gate in app.js end the session when the
+// demo closes. The session is 8 hours either way.
+function setStudentCookie(res, student, demo = false) {
+  const token = signSession('student', { studentId: student.id, classroomId: student.classroom_id, ...(demo ? { demo: true } : {}) }, '8h');
   res.cookie(STUDENT_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -89,6 +92,12 @@ router.post('/join', joinLimit, async (req, res) => {
     return res.status(404).json({ error: 'Classroom not found — check your join code' });
   }
   const classroom = classrooms[0];
+  // A shared demo classroom answers a join code only while the demo is open; closed, it looks like any code that does not exist.
+  const demoClassroom = await isSharedDemoClassroom(classroom.id);
+  if (demoClassroom && !(await isPublicDemoOpen())) {
+    joinCodeMissesByIp.fail(ip);
+    return res.status(404).json({ error: 'Classroom not found — check your join code' });
+  }
 
   if (!displayName) return res.status(400).json({ error: 'Display name required', classroomName: classroom.name });
   if (pin && !isValidPin(pin)) return res.status(400).json({ error: PIN_ERROR, classroomName: classroom.name });
@@ -107,7 +116,7 @@ router.post('/join', joinLimit, async (req, res) => {
       const matches = await bcrypt.compare(String(pin), existingByName[0].password_hash);
       if (matches) {
         pinFailsByStudent.clear(studentKey);
-        setStudentCookie(res, existingByName[0]);
+        setStudentCookie(res, existingByName[0], demoClassroom);
         return res.json({
           classroomName: classroom.name,
           displayName: existingByName[0].display_name,
@@ -141,7 +150,7 @@ router.post('/join', joinLimit, async (req, res) => {
 
     await conn.commit();
 
-    setStudentCookie(res, student);
+    setStudentCookie(res, student, demoClassroom);
     res.json({
       classroomName: classroom.name,
       displayName: student.display_name,
@@ -179,7 +188,9 @@ router.post('/login', async (req, res) => {
     [String(username).toLowerCase().trim()]
   );
   const student = rows[0];
-  if (!student) {
+  // A demo student while the demo is closed is treated exactly like a username that does not exist (lib/public-demo.js).
+  const demoStudent = !!student && await isSharedDemoClassroom(student.classroom_id);
+  if (!student || (demoStudent && !(await isPublicDemoOpen()))) {
     pinFailsByStudent.fail(usernameKey);
     pinFailsByIp.fail(ip);
     return res.status(401).json({ error: 'Invalid username or PIN' });
@@ -196,7 +207,7 @@ router.post('/login', async (req, res) => {
   }
   pinFailsByStudent.clear(usernameKey);
 
-  setStudentCookie(res, student);
+  setStudentCookie(res, student, demoStudent);
   res.json({ classroomName: student.classroom_name, displayName: student.display_name, username: student.username });
 });
 

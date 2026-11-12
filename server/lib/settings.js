@@ -57,6 +57,13 @@ const DEFAULTS = {
   program_report_regular_weeks: '3',
   program_report_low_use_pct: '50',
   program_report_min_teachers: '5',
+  // Shared demo environment (docs/reference/shared-demo-environment-requirements.md). The demo is open only while the switch is 'true' AND the
+  // end time (an ISO UTC string) is in the future: see lib/public-demo.js. It is off by default and stays off after any deploy.
+  public_demo_enabled: 'false',
+  public_demo_ends_at: '',
+  public_demo_access_code: '',
+  public_demo_password: '',
+  public_demo_max_days: '30',
 };
 
 async function getSetting(key) {

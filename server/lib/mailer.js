@@ -2,7 +2,44 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 let transporter = null;
-function getTransporter() {
+
+// A shared-demo session (lib/public-demo.js) must never make FNE's mail server send to an outsider: its published password would otherwise let
+// any visitor mail any address from our domain. So while a request runs as a demo session, every email is held back unless the caller marks it
+// demoAllowed (a public form's notice to staff) AND every recipient is an FNE staff address. Held-back mail is counted so the response can say so.
+// This is the only place that creates the transport (test/shared-demo.test.js fails if any other file sends mail), so no route can bypass it.
+async function staffAddresses() {
+  const pool = require('../db/pool');
+  const { DEFAULTS } = require('./settings');
+  const [rows] = await pool.query("SELECT setting_value FROM settings WHERE setting_key LIKE 'contact_email_%'");
+  const all = [CONTACT_INBOX, ...Object.keys(DEFAULTS).filter(k => k.startsWith('contact_email_')).map(k => DEFAULTS[k]), ...rows.map(r => r.setting_value)];
+  return new Set(all.map(a => String(a || '').trim().toLowerCase()).filter(Boolean));
+}
+
+function recipientsOf(mail) {
+  return [mail.to, mail.cc, mail.bcc].flat().filter(Boolean)
+    .flatMap(v => String(v).split(',')).map(v => String(v).replace(/^.*<|>.*$/g, '').trim().toLowerCase()).filter(Boolean);
+}
+
+function demoGuardedTransport(demoAllowed) {
+  return {
+    sendMail: async (mail) => {
+      if (demoAllowed) {
+        const staff = await staffAddresses();
+        const to = recipientsOf(mail);
+        if (to.length && to.every(a => staff.has(a))) return getRealTransporter().sendMail(mail);
+      }
+      require('./public-demo').noteSuppressedMail();
+      return { suppressed: true, reason: 'shared demo session' };
+    },
+  };
+}
+
+function getTransporter(opts = {}) {
+  if (require('./public-demo').isSharedDemoRequest()) return demoGuardedTransport(!!opts.demoAllowed);
+  return getRealTransporter();
+}
+
+function getRealTransporter() {
   if (transporter) return transporter;
   if (!process.env.SMTP_HOST) {
     throw new Error('SMTP is not configured — set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD in server/.env');
@@ -161,7 +198,8 @@ async function sendContactFormEmail({ to, formName, fields, replyTo }) {
     .join('');
   const text = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
 
-  await getTransporter().sendMail({
+  // A public form's notice to staff: a demo visitor's question or quote request must still reach FNE (the guard checks the recipient is staff).
+  await getTransporter({ demoAllowed: true }).sendMail({
     from: systemFromAddress(),
     to: to || CONTACT_INBOX,
     replyTo,
@@ -177,13 +215,15 @@ async function sendContactFormEmail({ to, formName, fields, replyTo }) {
 // is customer-facing. Callers wrap this in try/catch and never let a failed
 // alert block the underlying purchase/response, same convention as
 // fireAutomation() elsewhere.
-async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel }) {
+// demoAllowed is for the one caller whose alert must reach staff even when a demo visitor triggers it (a new support request). Every other
+// caller (safety incidents, quote and order alerts) is held back during a demo session.
+async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel, demoAllowed = false }) {
   const rows = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `<p><strong>${esc(label)}:</strong> ${esc(value)}</p>`).join('');
   const text = Object.entries(fields).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
   const linkHtml = linkUrl ? `<p style="margin-top:14px;"><a href="${safeUrl(linkUrl)}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">${esc(linkLabel || 'View in Admin')}</a></p>` : '';
   const linkText = linkUrl ? `\n\n${linkLabel || 'View in Admin'}: ${linkUrl}` : '';
 
-  await getTransporter().sendMail({
+  await getTransporter({ demoAllowed }).sendMail({
     from: systemFromAddress(),
     to: to || CONTACT_INBOX,
     subject: `${subject} — Fixer Nation`,

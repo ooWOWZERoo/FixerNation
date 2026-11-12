@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS site_users (
   closed_reason VARCHAR(64) NULL, -- e.g. 'crm_contact_deleted'
   is_fne_staff TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-fne-staff-flag.js on existing installs; 1 = Fixer Nation staff account, may join and see every Community group; set only with scripts/set-fne-staff-account.js
   is_sales_demo TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-sales-demo-flag.js on existing installs; 1 = FNE sales-demo account, confined to demo data (see lib/sales-demo.js)
+  is_shared_demo TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-shared-demo-flag.js on existing installs; 1 = a login of the shared demo environment, usable only while the demo is open (see lib/public-demo.js)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
