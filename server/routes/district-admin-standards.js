@@ -3,7 +3,7 @@ const ds = require('../lib/district-standards');
 const { requireDistrictAdmin } = require('../middleware/districtAdminAuth');
 const { limiter } = require('../lib/rate-limit');
 const { getSetting } = require('../lib/settings');
-const { DEMO_DISTRICT_NAME } = require('../lib/sales-demo');
+const { isDemoDistrictName } = require('../lib/sales-demo');
 
 // A district admin records their OWN district's Portrait of a Graduate / SEL framework.
 // Mounted at /api/district-admin/standards. Every handler passes req.districtAdmin.districtIds
@@ -40,7 +40,7 @@ router.post('/frameworks/:id/withdraw', writes, wrap(async (req) => { await ds.w
 router.post('/frameworks/:id/submit', writes, wrap(async (req) => {
   const sub = await ds.submitOwn(ids(req), req.districtAdmin.siteUserId, req.params.id, body(req));
   // Short staff notice. The demo district never notifies anyone, and a failed email never fails the submit.
-  if (sub.districtName !== DEMO_DISTRICT_NAME) {
+  if (!isDemoDistrictName(sub.districtName)) {
     try {
       const { sendSalesAlertEmail } = require('../lib/mailer');
       const siteUrl = (process.env.SITE_URL || 'https://fixernationeducation.com').replace(/\/$/, '');

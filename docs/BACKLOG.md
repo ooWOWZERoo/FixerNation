@@ -8,7 +8,8 @@ Requirements drafted in `docs/reference/shared-demo-environment-requirements.md`
 
 - [x] **Owner decisions D1 to D7** accepted as recommended (section 9 of the requirements): US Eastern, an unguessable page path, 30-day maximum, color-only branding changes, silent safety alerts, no customer release note, separate demo fixtures.
 - [x] **Phase 1: server foundation.** Built 2026-11-12 (879 server tests pass), **not yet committed or deployed**: `is_shared_demo` column (alter script), `lib/public-demo.js` and its gate, login, join-code and session refusal when closed, view-only downloads, no password, PIN or profile change, a mailer-level email guard (with a test that nothing else can send), no uploads. To deploy: run `alter-add-shared-demo-flag.js`, then restart the Node app.
-- [ ] **Phase 2: seed and nightly reset scripts** (dry run by default) and the cron line.
+- [x] **Phase 2: seed, reset and switch scripts.** Built 2026-11-12 (897 server tests pass), **not yet committed or deployed**: `seed-public-demo.js`, `reset-public-demo.js`, `set-public-demo.js` (on/off from the command line, also the emergency off), the nightly cron line, and the demo confinement now covering both the salesperson demo and the shared demo. To deploy: pull, restart the Node app, run the seed dry run then `--apply`, run `set-public-demo.js --on --days N` to test, add the cron line with `setup-cron-jobs.sh`.
+- [ ] **Phase 4 note (found in phase 2):** a demo session cannot send a support request today (the logins have no real email). The demo page's ticket button must use the signed-out form (name and email) and a demo session must be allowed to use it.
 - [ ] **Phase 3: admin Demo page** (switch, end date, code, password, copy message, reset, unlock, audit).
 - [ ] **Phase 4: public demo page** with the access-code flow, "demo" tag on tickets and quote requests, analytics exclusion.
 - [ ] **Phase 5: docs and checks.** PROJECT.md, CHANGELOG, staff how-to, video check.

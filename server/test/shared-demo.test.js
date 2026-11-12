@@ -59,6 +59,12 @@ app.post('/api/alert', async (req, res) => {
   res.json({ ok: true });
 });
 app.post('/api/upload', (req, res) => res.json({ ok: true }));
+app.post('/api/assert-recipient', (req, res) => {
+  try { demo.assertDemoRecipient(req.body.email); res.json({ ok: true }); } catch (e) { res.status(e.status || 500).json({ error: e.message, demo: !!e.demo }); }
+});
+app.post('/api/assert-not-demo', (req, res) => {
+  try { demo.assertNotSharedDemoRequest(); res.json({ ok: true }); } catch (e) { res.status(e.status || 500).json({ error: e.message, demo: !!e.demo }); }
+});
 app.use((err, req, res, next) => res.status(500).json({ error: String(err.message) }));
 let server, port;
 test.before(async () => { server = app.listen(0); port = server.address().port; });
@@ -208,6 +214,43 @@ test('UPLOADS: a demo session cannot upload a file; an ordinary one is untouched
   assert.equal(r.json.demo, true);
   const ok = await call('POST', '/api/upload', { cookie: plainSite(), body, type: 'multipart/form-data; boundary=b' });
   assert.equal(ok.status, 200);
+});
+
+test('RECIPIENTS: a demo session may only name a fake (example.com) address; an ordinary session is not restricted', async () => {
+  for (const ok of ['teacher2@example.com', 'a@public-demo.example.com', 'A@Sub.Example.COM ']) assert.equal(demo.demoRecipientAllowed(ok), true, ok);
+  for (const no of ['someone@school.org', 'x@notexample.com', 'x@example.com.evil.org', 'example.com', '', null, undefined]) assert.equal(demo.demoRecipientAllowed(no), false, String(no));
+  reset(); openDemo();
+  const bad = await call('POST', '/api/assert-recipient', { cookie: demoSite(), body: { email: 'real.teacher@school.org' } });
+  assert.equal(bad.status, 403);
+  assert.equal(bad.json.demo, true);
+  assert.match(bad.json.error, /example\.com/);
+  assert.equal((await call('POST', '/api/assert-recipient', { cookie: demoSite(), body: { email: 'teacher2@example.com' } })).status, 200);
+  assert.equal((await call('POST', '/api/assert-recipient', { cookie: plainSite(), body: { email: 'real.teacher@school.org' } })).status, 200, 'an ordinary session is unaffected');
+  assert.equal((await call('POST', '/api/assert-recipient', { body: { email: 'real.teacher@school.org' } })).status, 200);
+});
+
+test('RESEND AND RESET: refused in a demo session, allowed otherwise', async () => {
+  reset(); openDemo();
+  assert.equal((await call('POST', '/api/assert-not-demo', { cookie: demoSite(), body: {} })).status, 403);
+  assert.equal((await call('POST', '/api/assert-not-demo', { cookie: plainSite(), body: {} })).status, 200);
+  assert.equal((await call('POST', '/api/assert-not-demo', { body: {} })).status, 200);
+});
+
+test('TWO DEMOS: confinement knows both the salesperson demo and the shared demo, and keeps each to its own school', () => {
+  const s = require(path.join(SERVER, 'lib/sales-demo.js'));
+  assert.equal(s.isDemoDistrictName('FNE Sales Demo District'), true);
+  assert.equal(s.isDemoDistrictName('FNE Demo District'), true);
+  assert.equal(s.isDemoDistrictName('Riverbend Schools'), false);
+  assert.equal(s.isDemoSchoolDomain('sales-demo.example.com'), true);
+  assert.equal(s.isDemoSchoolDomain('public-demo.example.com'), true);
+  assert.equal(s.isDemoSchoolDomain('school.org'), false);
+  assert.equal(s.demoKindOfDistrict('FNE Sales Demo District'), s.demoKindOfSchool('sales-demo.example.com'));
+  assert.equal(s.demoKindOfDistrict('FNE Demo District'), s.demoKindOfSchool('public-demo.example.com'));
+  assert.notEqual(s.demoKindOfDistrict('FNE Demo District'), s.demoKindOfSchool('sales-demo.example.com'), 'the shared demo district cannot hold the salesperson demo school');
+  assert.equal(s.demoKindOfDistrict('Riverbend Schools'), s.demoKindOfSchool('school.org'), 'two real ones match (both null), so the rule only bites on demo mixing');
+  assert.notEqual(s.demoKindOfDistrict('FNE Demo District'), s.demoKindOfSchool('school.org'), 'a real school cannot join a demo district');
+  // and neither demo district may ever be public on the standards pages
+  assert.deepEqual(s.DEMO_DISTRICT_NAMES, ['FNE Sales Demo District', 'FNE Demo District']);
 });
 
 test('NO BACK DOOR: nothing outside lib/mailer.js creates a mail transport or sends mail', () => {

@@ -19,8 +19,11 @@ const { syncRoleToAssignments } = require('./school-admin-roles');
 const { getSetting } = require('./settings');
 const { syncMorningBoostForUser } = require('./morning-boost-group');
 const crypto = require('crypto');
+const { assertDemoRecipient, assertNotSharedDemoRequest } = require('./public-demo');
 
 async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = 'primary', notes, createdByAdminId = null, firstName: bodyFirstName, lastName: bodyLastName }) {
+  // In a shared demo session only a fake (example.com) address may be named: the demo never emails anyone, but this writes the person's address.
+  assertDemoRecipient(email);
   if (!['primary', 'secondary', 'read_only'].includes(permissionLevel)) {
     throw Object.assign(new Error('Invalid permission level'), { status: 400 });
   }
@@ -137,6 +140,7 @@ async function assignSchoolLicenseAdmin({ email, purchaseId, permissionLevel = '
 // (unscoped, FNE staff) and district-admin.js (scoped to the caller's own
 // district(s) before this is ever called).
 async function resendSchoolAdminWelcome(assignmentId) {
+  assertNotSharedDemoRequest('The demo never sends email, so there is nothing to resend.');
   const [[assignment]] = await pool.query(
     'SELECT sla.site_user_id, p.school_domain FROM school_license_admins sla JOIN purchases p ON p.id = sla.purchase_id WHERE sla.id = ?',
     [assignmentId]
@@ -165,6 +169,7 @@ async function resendSchoolAdminWelcome(assignmentId) {
 // Password" would — for an already-verified account that just needs a new
 // password, not a full account setup.
 async function sendSchoolAdminPasswordReset(siteUserId) {
+  assertNotSharedDemoRequest('The demo never sends email, so passwords cannot be reset here.');
   const [[user]] = await pool.query('SELECT id, first_name, email FROM site_users WHERE id = ?', [siteUserId]);
   if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
 

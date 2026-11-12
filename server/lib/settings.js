@@ -63,6 +63,7 @@ const DEFAULTS = {
   public_demo_ends_at: '',
   public_demo_access_code: '',
   public_demo_password: '',
+  public_demo_pin: '',
   public_demo_max_days: '30',
 };
 

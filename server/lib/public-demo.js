@@ -14,6 +14,7 @@
 
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { getSetting } = require('./settings');
+const { evaluateDemoWindow } = require('./public-demo-window');
 const { verifySession } = require('./session-tokens');
 const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME, COOKIE_NAME: ADMIN_COOKIE_NAME } = require('./session');
 
@@ -25,14 +26,7 @@ const DEMO_MAIL_NOTICE = 'This is a demo, so no email was sent.';
 
 // ---- Is the demo open? ------------------------------------------------------------------------------------------------------------------------
 
-// Pure, so the rule can be tested without a database. `enabled` is the setting's text, `endsAt` its ISO string (or empty).
-function evaluateDemoWindow({ enabled, endsAt }, now = new Date()) {
-  if (String(enabled).trim().toLowerCase() !== 'true') return { open: false, reason: 'off' };
-  const end = endsAt ? new Date(endsAt) : null;
-  if (!end || Number.isNaN(end.getTime())) return { open: false, reason: 'no_end_date' };
-  if (end.getTime() <= now.getTime()) return { open: false, reason: 'expired', endsAt: end };
-  return { open: true, reason: 'open', endsAt: end };
-}
+// The rule itself is pure and lives in lib/public-demo-window.js, so the command-line scripts apply exactly the same one.
 
 async function getPublicDemoStatus(now = new Date()) {
   const [enabled, endsAt] = await Promise.all([getSetting('public_demo_enabled'), getSetting('public_demo_ends_at')]);
@@ -76,6 +70,25 @@ function isSharedDemoRequest() {
 function noteSuppressedMail() {
   const ctx = als.getStore();
   if (ctx) ctx.mailSuppressed += 1;
+}
+
+// The demo never emails anyone, but an invitation still writes a row that names the invitee. So in a demo session only a fake address may be named:
+// anything under example.com (which can never receive mail), for example teacher2@example.com. Throws a 403 for the caller's error handler.
+function demoRecipientAllowed(email) {
+  const at = String(email || '').trim().toLowerCase().lastIndexOf('@');
+  const domain = at === -1 ? '' : String(email).trim().toLowerCase().slice(at + 1);
+  return domain === 'example.com' || domain.endsWith('.example.com');
+}
+
+function assertDemoRecipient(email) {
+  if (isSharedDemoRequest() && !demoRecipientAllowed(email)) {
+    throw Object.assign(new Error('In the demo, use an example.com address (for example teacher2@example.com). The demo never sends email.'), { status: 403, demo: true });
+  }
+}
+
+// For actions that only make sense with a real person at the other end (resend a welcome, send a password reset).
+function assertNotSharedDemoRequest(message) {
+  if (isSharedDemoRequest()) throw Object.assign(new Error(message || 'This is turned off in the demo, because the demo never sends email.'), { status: 403, demo: true });
 }
 
 // A route that must never run for a demo session (changing the shared password, resetting a PIN) calls this and returns when it is true.
@@ -144,4 +157,5 @@ module.exports = {
   evaluateDemoWindow, getPublicDemoStatus, isPublicDemoOpen,
   isSharedDemoUser, isSharedDemoClassroom,
   isSharedDemoRequest, noteSuppressedMail, refuseSharedDemo, sharedDemoGate,
+  demoRecipientAllowed, assertDemoRecipient, assertNotSharedDemoRequest,
 };

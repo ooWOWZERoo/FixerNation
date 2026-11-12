@@ -8,7 +8,7 @@ const { resolveSchoolIdForTeacher, getPublishedBranding } = require('../lib/bran
 const { sendParentInvitationEmail } = require('../lib/mailer');
 const { isValidPin, PIN_ERROR } = require('../lib/pin');
 const { lockStatus, clearLock } = require('../lib/pin-lockout');
-const { refuseSharedDemo } = require('../lib/public-demo');
+const { refuseSharedDemo, isSharedDemoRequest, demoRecipientAllowed } = require('../lib/public-demo');
 
 const PARENT_INVITE_EXPIRY_DAYS = 14;
 
@@ -354,6 +354,10 @@ router.post('/:id/students/:sid/invite-parent', requireSiteAuth, async (req, res
     return res.status(400).json({ error: 'A valid email is required' });
   }
   const normalEmail = email.trim().toLowerCase();
+  // In a shared demo session only a fake (example.com) address may be named: the invitation stores the address, and the demo never emails anyone.
+  if (isSharedDemoRequest() && !demoRecipientAllowed(normalEmail)) {
+    return res.status(403).json({ error: 'In the demo, use an example.com address (for example parent2@example.com). The demo never sends email.', demo: true });
+  }
 
   const [[student]] = await pool.query(
     'SELECT id, display_name FROM classroom_students WHERE id = ? AND classroom_id = ?',

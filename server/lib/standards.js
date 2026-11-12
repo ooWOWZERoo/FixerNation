@@ -1,5 +1,5 @@
 const pool = require('../db/pool');
-const { DEMO_DISTRICT_NAME } = require('./sales-demo');
+const { DEMO_DISTRICT_NAMES, isDemoDistrictName } = require('./sales-demo');
 
 // State standards / Portrait-of-a-Graduate crosswalk -- data layer and review gate.
 // Design, rules and access matrix: docs/standards-crosswalk/DESIGN.md.
@@ -417,7 +417,7 @@ async function getPublicOverview() {
   const byState = Object.fromEntries(counts.map(c => [c.state_code, Number(c.n)]));
   const [dcounts] = await pool.query(
     `SELECT f.state_code, COUNT(DISTINCT f.district_id) AS n FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
-     WHERE f.review_status = 'verified' AND d.name <> ? GROUP BY f.state_code`, [DEMO_DISTRICT_NAME]);
+     WHERE f.review_status = 'verified' AND d.name NOT IN (?, ?) GROUP BY f.state_code`, DEMO_DISTRICT_NAMES);
   const districtsBy = Object.fromEntries(dcounts.map(c => [c.state_code, Number(c.n)]));
   return {
     verifiedStates: rows.length,
@@ -465,12 +465,12 @@ async function assembleFrameworks(fws, includeDrafts) {
 // Districts that have a framework in this state. Public: verified frameworks only, and never the
 // sales-demo district. Preview (admin only): everything, each row marked.
 async function districtsForState(code, includeDrafts) {
-  const V = includeDrafts ? '' : " AND f.review_status = 'verified' AND d.name <> ?";
+  const V = includeDrafts ? '' : " AND f.review_status = 'verified' AND d.name NOT IN (?, ?)";
   const [rows] = await pool.query(
     `SELECT f.district_id, d.name AS district_name, f.id AS framework_id, f.framework_type, f.name, f.review_status
      FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
      WHERE f.state_code = ?${V} ORDER BY d.name, f.framework_type, f.name`,
-    includeDrafts ? [code] : [code, DEMO_DISTRICT_NAME]);
+    includeDrafts ? [code] : [code, ...DEMO_DISTRICT_NAMES]);
   const out = new Map();
   for (const r of rows) {
     if (!out.has(r.district_id)) out.set(r.district_id, { id: r.district_id, name: r.district_name, frameworks: [] });
@@ -502,7 +502,7 @@ async function buildDistrict(districtIdIn, includeDrafts) {
   if (!Number.isInteger(districtId) || districtId <= 0) return null;
   const [[d]] = await pool.query('SELECT id, name FROM districts WHERE id = ?', [districtId]);
   if (!d) return null;
-  const isDemo = d.name === DEMO_DISTRICT_NAME;
+  const isDemo = isDemoDistrictName(d.name);
   if (isDemo && !includeDrafts) return null;
   const V = includeDrafts ? '' : " AND review_status = 'verified'";
   const [fws] = await pool.query(`SELECT * FROM standards_frameworks WHERE district_id = ?${V} ORDER BY framework_type, name`, [districtId]);
@@ -633,7 +633,7 @@ async function getAdminDistrictQueue() {
      ORDER BY CASE WHEN f.review_status = 'draft' AND f.submitted_at IS NOT NULL THEN 0 WHEN f.review_status = 'draft' THEN 1 ELSE 2 END,
        f.submitted_at, d.name, f.name`);
   return rows.map(r => ({
-    id: r.id, districtId: r.district_id, districtName: r.district_name, demo: r.district_name === DEMO_DISTRICT_NAME,
+    id: r.id, districtId: r.district_id, districtName: r.district_name, demo: isDemoDistrictName(r.district_name),
     stateCode: r.state_code, stateName: STATES[r.state_code], type: r.framework_type, name: r.name,
     reviewStatus: r.review_status, submittedAt: r.submitted_at || null, awaitingReview: r.review_status === 'draft' && !!r.submitted_at,
     itemCount: Number(r.item_count), draftConnections: Number(r.draft_connections), suggestedConnections: Number(r.suggested_connections),

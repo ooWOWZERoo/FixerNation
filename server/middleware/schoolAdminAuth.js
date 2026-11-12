@@ -1,7 +1,7 @@
 const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
-const { isSalesDemoAccount, DEMO_SCHOOL_DOMAIN } = require('../lib/sales-demo');
+const { isSalesDemoAccount, isDemoSchoolDomain } = require('../lib/sales-demo');
 
 // Verifies that the requester is a logged-in site_user with at least one
 // active school_license_admins assignment. Deliberately does NOT also
@@ -59,7 +59,7 @@ async function requireSchoolAdmin(req, res, next) {
   // assigns it to a real customer's purchase, that purchase is filtered out here, so
   // the real school's teachers and invitations can never reach a salesperson.
   if (assignments.length && await isSalesDemoAccount(user.id)) {
-    assignments = assignments.filter(a => a.school_domain === DEMO_SCHOOL_DOMAIN);
+    assignments = assignments.filter(a => isDemoSchoolDomain(a.school_domain));
   }
 
   if (!assignments.length) {

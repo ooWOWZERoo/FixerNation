@@ -1,7 +1,7 @@
 const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
-const { isSalesDemoAccount, DEMO_DISTRICT_NAME } = require('../lib/sales-demo');
+const { isSalesDemoAccount, isDemoDistrictName } = require('../lib/sales-demo');
 
 // District admins are a THIRD role on the existing site_user / fn_user_session
 // system, structurally identical to requireSchoolAdmin (school_license_admin)
@@ -52,7 +52,7 @@ async function requireDistrictAdmin(req, res, next) {
   // Same confinement as the school-admin portal: a sales-demo account only ever
   // sees the demo district, whatever else it gets assigned to later.
   if (assignments.length && await isSalesDemoAccount(user.id)) {
-    assignments = assignments.filter(a => a.district_name === DEMO_DISTRICT_NAME);
+    assignments = assignments.filter(a => isDemoDistrictName(a.district_name));
   }
 
   if (!assignments.length) {

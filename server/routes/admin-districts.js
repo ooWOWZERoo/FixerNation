@@ -19,7 +19,7 @@ const { getSetting } = require('../lib/settings');
 const { syncMorningBoostForUser } = require('../lib/morning-boost-group');
 const { notAdminSeatClause } = require('../lib/seat-counts');
 const crypto = require('crypto');
-const { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN } = require('../lib/sales-demo');
+const { demoKindOfDistrict, demoKindOfSchool } = require('../lib/sales-demo');
 
 const router = express.Router();
 
@@ -441,8 +441,9 @@ router.put('/:id/schools', requireAuth, async (req, res) => {
   // admins of the demo district, so putting a real school in it would show that
   // school's teachers and students to every salesperson; putting the demo school
   // in a real district would show fake data to that customer's district admin.
-  if ((district.name === DEMO_DISTRICT_NAME) !== (school.domain === DEMO_SCHOOL_DOMAIN)) {
-    return res.status(409).json({ error: 'The sales demo district can only contain the demo school (and the demo school can only be in the demo district).' });
+  // There are two demos (the salesperson demo and the shared prospect demo); each district holds only its own demo's school.
+  if (demoKindOfDistrict(district.name) !== demoKindOfSchool(school.domain)) {
+    return res.status(409).json({ error: 'A demo district can only contain its own demo school (and a demo school can only be in its own demo district).' });
   }
 
   if (!school.id) {

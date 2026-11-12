@@ -20,6 +20,7 @@ ENTRIES=(
   "30 2 * * * $NODE $SCRIPTS/backup-nightly.js >> $LOGS/cron-backup-nightly.log 2>&1"
   "15 4 1 * * $NODE $SCRIPTS/snapshot-program-use.js --apply >> $LOGS/cron-snapshot-program-use.log 2>&1"
   "30 4 1 8 * $NODE $SCRIPTS/snapshot-pog-evidence.js --apply >> $LOGS/cron-snapshot-pog-evidence.log 2>&1"
+  "10 3 * * * $NODE $SCRIPTS/reset-public-demo.js --apply >> $LOGS/cron-reset-public-demo.log 2>&1"
 )
 
 CURRENT=$(crontab -l 2>/dev/null || true)

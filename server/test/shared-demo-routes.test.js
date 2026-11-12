@@ -223,6 +223,18 @@ test('PIN: a demo teacher cannot change a student PIN; an ordinary teacher still
   assert.equal(plain.status, 404, 'not blocked by the demo rule (this student simply does not exist)');
 });
 
+test('PARENT INVITE: a demo teacher may only name a fake address; an ordinary teacher is not restricted', async () => {
+  openDemo();
+  const real = await call('POST', `/api/classrooms/${demoRoom}/students/1/invite-parent`, { cookie: demoCookie(), body: { email: 'someones.mum@gmail.com' } });
+  assert.equal(real.status, 403);
+  assert.equal(real.json.demo, true);
+  assert.match(real.json.error, /example\.com/);
+  const fake = await call('POST', `/api/classrooms/${demoRoom}/students/9999/invite-parent`, { cookie: demoCookie(), body: { email: 'parent2@example.com' } });
+  assert.equal(fake.status, 404, 'a fake address passes the demo rule (this student simply does not exist)');
+  const plain = await call('POST', `/api/classrooms/${plainRoom}/students/9999/invite-parent`, { cookie: plainCookie(), body: { email: 'someones.mum@gmail.com' } });
+  assert.equal(plain.status, 404, 'an ordinary teacher can name any address');
+});
+
 test('DOWNLOAD: a demo session may not download a lesson file; viewing and ordinary users are untouched', async () => {
   openDemo();
   const demo = await call('GET', '/api/curricula/1/file?resource=Teacher%20Copy&download=1', { cookie: demoCookie() });

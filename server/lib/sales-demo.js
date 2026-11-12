@@ -18,6 +18,21 @@ const DEMO_DISTRICT_NAME = 'FNE Sales Demo District';
 const DEMO_SCHOOL_DOMAIN = 'sales-demo.example.com';
 const DEMO_SOURCE = 'Sales Demo';
 
+// The shared demo environment (lib/public-demo.js) has its own fixtures, so a salesperson changing their demo never disturbs a prospect. Its
+// logins are flagged is_sales_demo too, so every "demo accounts are kept apart from real people" rule applies to them; what differs is WHICH fake
+// district and school they are confined to, which is why the confinement checks ask isDemoDistrictName / isDemoSchoolDomain, not a single name.
+const PUBLIC_DEMO_DISTRICT_NAME = 'FNE Demo District';
+const PUBLIC_DEMO_SCHOOL_DOMAIN = 'public-demo.example.com';
+
+const DEMO_DISTRICT_NAMES = [DEMO_DISTRICT_NAME, PUBLIC_DEMO_DISTRICT_NAME];
+const DEMO_SCHOOL_DOMAINS = [DEMO_SCHOOL_DOMAIN, PUBLIC_DEMO_SCHOOL_DOMAIN];
+
+function isDemoDistrictName(name) { return DEMO_DISTRICT_NAMES.includes(name); }
+function isDemoSchoolDomain(domain) { return DEMO_SCHOOL_DOMAINS.includes(domain); }
+// Which demo a district or school belongs to ('sales', 'public' or null): a demo district may only hold its own demo's school.
+function demoKindOfDistrict(name) { return name === DEMO_DISTRICT_NAME ? 'sales' : name === PUBLIC_DEMO_DISTRICT_NAME ? 'public' : null; }
+function demoKindOfSchool(domain) { return domain === DEMO_SCHOOL_DOMAIN ? 'sales' : domain === PUBLIC_DEMO_SCHOOL_DOMAIN ? 'public' : null; }
+
 // True if this site_user is a sales-demo account. If the column doesn't exist yet
 // (code deployed before scripts/alter-add-sales-demo-flag.js has run), no demo
 // accounts can exist either -- the seed script refuses to run without the column --
@@ -84,4 +99,8 @@ function demoInviteAllowed(inviteeEmail, inviterEmail) {
   return !!mine && mailboxBase(emailLocal(inviteeEmail)) === mine;
 }
 
-module.exports = { DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN, DEMO_SOURCE, isSalesDemoAccount, demoInviteAllowed, emailDomain };
+module.exports = {
+  DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN, DEMO_SOURCE, PUBLIC_DEMO_DISTRICT_NAME, PUBLIC_DEMO_SCHOOL_DOMAIN,
+  DEMO_DISTRICT_NAMES, DEMO_SCHOOL_DOMAINS, isDemoDistrictName, isDemoSchoolDomain, demoKindOfDistrict, demoKindOfSchool,
+  isSalesDemoAccount, demoInviteAllowed, emailDomain,
+};
