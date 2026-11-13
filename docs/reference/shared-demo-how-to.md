@@ -91,6 +91,17 @@ These are enforced by the server, not just hidden on the page, so you don't need
 2. In **Support > Support Inbox** and **Sales > Quotes**, follow up on anything tagged **Demo**.
 3. If the prospect becomes a customer, set them up the normal way (quote, purchase order or purchase). Nothing in the demo carries over, and nothing real was ever stored in it.
 
+## Automated check (for whoever maintains the site)
+
+`tests/e2e/shared-demo.spec.ts` runs the whole demo in a real browser against the local test site: closed page, set up, turn on, the access-code gate, all five sign-ins, the restrictions, a ticket and a quote request (tagged, counted, and staff mailed), turn off, and a new access code. It skips itself against production. To run it, start the test site (`tests/howto/stack.sh up`), then:
+
+```bash
+cd /Users/john.shaw/Documents/Claude/Projects/FixerNation/tests && \
+  PLAYWRIGHT_BASE_URL=http://localhost:3002 node --env-file=howto/.env.howto.local node_modules/.bin/playwright test shared-demo --retries=0
+```
+
+It can't see production itself (the live database, the cPanel proxy, or whether the alter script ran), so after a deploy that touches the demo, do a short manual pass on the live site as well.
+
 ## Don't
 
 - Don't point a district at the salesperson demo account. That one is for FNE staff walking someone through the site on a call.
