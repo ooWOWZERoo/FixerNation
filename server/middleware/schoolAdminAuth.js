@@ -1,7 +1,7 @@
 const { verifySession } = require('../lib/session-tokens');
 const pool = require('../db/pool');
 const { SITE_COOKIE_NAME } = require('../lib/session');
-const { isSalesDemoAccount, isDemoSchoolDomain } = require('../lib/sales-demo');
+const { demoKindOfAccountId, demoKindOfSchool } = require('../lib/sales-demo');
 
 // Verifies that the requester is a logged-in site_user with at least one
 // active school_license_admins assignment. Deliberately does NOT also
@@ -55,11 +55,12 @@ async function requireSchoolAdmin(req, res, next) {
     [user.id]
   );
 
-  // A sales-demo account only ever sees the demo school -- even if someone later
-  // assigns it to a real customer's purchase, that purchase is filtered out here, so
-  // the real school's teachers and invitations can never reach a salesperson.
-  if (assignments.length && await isSalesDemoAccount(user.id)) {
-    assignments = assignments.filter(a => isDemoSchoolDomain(a.school_domain));
+  // A demo account only ever sees the school of its OWN demo (the salesperson demo, the original shared demo, or its own workspace) -- even if
+  // someone later assigns it to a real customer's purchase or to another demo's school, that purchase is filtered out here, so a real school's
+  // teachers and invitations can never reach a demo login and one workspace can never reach another.
+  if (assignments.length) {
+    const kind = await demoKindOfAccountId(user.id);
+    if (kind) assignments = assignments.filter(a => demoKindOfSchool(a.school_domain) === kind);
   }
 
   if (!assignments.length) {

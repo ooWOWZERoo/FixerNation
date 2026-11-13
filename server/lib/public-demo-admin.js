@@ -83,7 +83,9 @@ async function startNewWindow(conn) {
 
 const ROLE_BY_EMAIL = Object.fromEntries(Object.entries(require('./public-demo-fixtures').ACCOUNTS).map(([key, a]) => [a.email, key]));
 function demoRoleKeyForEmail(email) {
-  return ROLE_BY_EMAIL[String(email || '').trim().toLowerCase()] || null;
+  const key = String(email || '').trim().toLowerCase();
+  const wl = require('./public-demo-workspaces').workspaceLoginOf(key); // a workspace login counts under its role too
+  return ROLE_BY_EMAIL[key] || (wl ? wl.role : null) || null;
 }
 
 // Counted, never blocking: a failure here must not stop a visitor from getting in.

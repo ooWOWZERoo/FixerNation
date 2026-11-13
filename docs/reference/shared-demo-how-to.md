@@ -37,9 +37,17 @@ The message contains the access code but not the password. The district sees the
 | Give them more time | Under **Demo status**, pick a new length or date and press **Change end date**. People already inside keep their place. |
 | End it now | Press **Turn off now**. Every demo session ends immediately. |
 | Let it end on its own | Do nothing. At the end time the logins stop working and the page says it isn't available, even if the switch is still on. |
-| Start for a different district | Turn it off if it's open, then turn it on again. That starts a new window, so the counts begin at zero and the sample data is reset. |
+| Start for a different district | Only when no one is using it: turn it off, then on again. That starts a new window, so the counts begin at zero and the sample data is reset. |
 
-Only one demo window is open at a time. Two districts looking at once will see each other's changes, so run them one after the other when you can.
+## Two groups at the same time (until private workspaces are built)
+
+Right now there is one demo, so every group in it shares the same sample data and the same end date. Until each group gets its own workspace (planned in `shared-demo-workspaces-requirements.md`):
+
+1. **Run groups one after another when you can.**
+2. **If a second group starts while the first is still in, use Change end date, never turn the demo off and on.** Turning it on from closed resets the sample data and would wipe the first group's work.
+3. **Never use New code, New password or New PIN while anyone is mid-demo.** Each one signs everyone out.
+4. **Tell both groups the data is shared.** Suggest they use different names so they can tell their work apart.
+5. **Tell the groups apart by what they type.** Tickets carry a name and email and the quote form asks for the school or district. The counts on the Demo page are for everyone together.
 
 ## If the access code gets out
 

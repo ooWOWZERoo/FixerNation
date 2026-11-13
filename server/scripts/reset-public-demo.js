@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-const F = require('../lib/public-demo-fixtures');
+const { legacyFixtures } = require('../lib/public-demo-workspaces');
 const { evaluateDemoWindow } = require('../lib/public-demo-window');
 const { seedClassroom, makeReport, getSettingRaw } = require('./seed-public-demo');
 
@@ -68,29 +68,42 @@ async function purgeFakeAccounts(conn, report, candidateIds) {
   }
 }
 
-async function resetDemo(conn, { rounds = 10 } = {}, report = makeReport()) {
-  const district = await one(conn, 'SELECT id FROM districts WHERE name = ?', [F.PUBLIC_DEMO_DISTRICT_NAME]);
-  const school = await one(conn, 'SELECT id FROM schools WHERE domain = ?', [F.DEMO_DOMAIN]);
-  const purchase = school && await one(conn, "SELECT id FROM purchases WHERE school_domain = ? AND product_type = 'group_license'", [F.DEMO_DOMAIN]);
+// Puts one demo back to the state the seed made: the original single demo (no `fx`) or one workspace (`fx = workspaceFixtures(n)`). Everything it
+// touches is found through that demo's own district, school, purchase and logins, so resetting one workspace cannot touch another.
+async function resetDemo(conn, { rounds = 10, fx = legacyFixtures() } = {}, report = makeReport()) {
+  const workspace = fx.number;
+  const seedHint = workspace === null ? 'scripts/seed-public-demo.js --apply' : 'scripts/seed-demo-workspaces.js --apply';
+  const district = await one(conn, 'SELECT id FROM districts WHERE name = ?', [fx.districtName]);
+  const school = await one(conn, 'SELECT id FROM schools WHERE domain = ?', [fx.domain]);
+  const purchase = school && await one(conn, "SELECT id FROM purchases WHERE school_domain = ? AND product_type = 'group_license'", [fx.domain]);
   const ids = {};
-  for (const key of Object.keys(F.ACCOUNTS)) {
-    const u = await one(conn, 'SELECT id, is_shared_demo FROM site_users WHERE email = ?', [F.ACCOUNTS[key].email]);
+  for (const key of Object.keys(fx.accounts)) {
+    const u = await one(conn, 'SELECT id, is_shared_demo FROM site_users WHERE email = ?', [fx.accounts[key].email]);
     if (u && u.is_shared_demo) ids[key] = u.id;
   }
-  if (!district || !school || !purchase || Object.keys(ids).length !== Object.keys(F.ACCOUNTS).length) {
-    throw new Error('The shared demo has not been seeded yet. Run scripts/seed-public-demo.js --apply first.');
+  if (!district || !school || !purchase || Object.keys(ids).length !== Object.keys(fx.accounts).length) {
+    throw new Error(`${workspace === null ? 'The shared demo has' : `Demo workspace ${fx.number} has`} not been seeded yet. Run ${seedHint} first.`);
   }
-  const pin = await getSettingRaw(conn, 'public_demo_pin');
-  if (!pin) throw new Error('No demo PIN is stored (setting public_demo_pin). Run scripts/seed-public-demo.js --apply first.');
+  // The shared student's PIN. The original demo keeps it in a setting; a workspace keeps it only on the student, so a reset hands back the hash it
+  // finds (the PIN the group was given keeps working).
+  let pin = null, pinHash = null;
+  if (workspace === null) {
+    pin = await getSettingRaw(conn, 'public_demo_pin');
+    if (!pin) throw new Error('No demo PIN is stored (setting public_demo_pin). Run scripts/seed-public-demo.js --apply first.');
+  } else {
+    const shared = fx.students.find(st => st.shared);
+    const found = shared && await one(conn, 'SELECT password_hash FROM classroom_students WHERE username = ?', [shared.username]);
+    pinHash = found ? found.password_hash : null;
+  }
 
   // 1. The classroom: keep its codes, delete every classroom the demo teacher owns (this removes the students and all their work), rebuild it.
-  const old = await one(conn, 'SELECT join_code, parent_code FROM classrooms WHERE teacher_site_user_id = ? AND name = ? ORDER BY id', [ids.teacher, F.DEMO_CLASSROOM_NAME]);
+  const old = await one(conn, 'SELECT join_code, parent_code FROM classrooms WHERE teacher_site_user_id = ? AND name = ? ORDER BY id', [ids.teacher, fx.classroomName]);
   const rooms = await many(conn, 'SELECT id FROM classrooms WHERE teacher_site_user_id = ?', [ids.teacher]);
   if (rooms.length) {
     await conn.query('DELETE FROM classrooms WHERE teacher_site_user_id = ?', [ids.teacher]);
     report.updated(`cleared ${rooms.length} classroom(s) with their students, lessons, parent links and work`);
   }
-  await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, rounds, codes: old }, report);
+  await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, pinHash, rounds, codes: old, fx }, report);
 
   // 2. Invitations, extra licence seats and extra administrators (and the fake accounts they created).
   const fake = [];
@@ -127,6 +140,10 @@ async function resetDemo(conn, { rounds = 10 } = {}, report = makeReport()) {
     await clear(conn, report, label, `DELETE FROM ${table} WHERE site_user_id IN (${marks(mine)})`, mine);
   }
   await clear(conn, report, 'password-reset token(s)', `DELETE FROM site_user_tokens WHERE user_id IN (${marks(mine)})`, mine);
+
+  if (workspace !== null) {
+    await clear(conn, report, 'workspace record time', 'UPDATE public_demo_workspaces SET last_reset_at = CURRENT_TIMESTAMP WHERE id = ?', [workspace]);
+  }
   return report;
 }
 

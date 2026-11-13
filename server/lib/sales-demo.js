@@ -27,11 +27,53 @@ const PUBLIC_DEMO_SCHOOL_DOMAIN = 'public-demo.example.com';
 const DEMO_DISTRICT_NAMES = [DEMO_DISTRICT_NAME, PUBLIC_DEMO_DISTRICT_NAME];
 const DEMO_SCHOOL_DOMAINS = [DEMO_SCHOOL_DOMAIN, PUBLIC_DEMO_SCHOOL_DOMAIN];
 
-function isDemoDistrictName(name) { return DEMO_DISTRICT_NAMES.includes(name); }
-function isDemoSchoolDomain(domain) { return DEMO_SCHOOL_DOMAINS.includes(domain); }
-// Which demo a district or school belongs to ('sales', 'public' or null): a demo district may only hold its own demo's school.
-function demoKindOfDistrict(name) { return name === DEMO_DISTRICT_NAME ? 'sales' : name === PUBLIC_DEMO_DISTRICT_NAME ? 'public' : null; }
-function demoKindOfSchool(domain) { return domain === DEMO_SCHOOL_DOMAIN ? 'sales' : domain === PUBLIC_DEMO_SCHOOL_DOMAIN ? 'public' : null; }
+// ---- Prospect demo WORKSPACES (docs/reference/shared-demo-workspaces-requirements.md) ----------------------------------------------------------
+// Each group of prospects gets its own private copy of the demo: workspace 07 is the district "FNE Demo District 07" and the school
+// "w07.public-demo.example.com". The number is part of both names, so which workspace a district or school belongs to is known from its name alone,
+// with no database lookup. (Only an FNE admin can create a district or school, and example.com can never be a real school's domain.)
+const MAX_DEMO_WORKSPACES = 40;
+const WORKSPACE_DISTRICT_PREFIX = `${PUBLIC_DEMO_DISTRICT_NAME} `;
+const WORKSPACE_DISTRICT_NAME_LIKE = `${WORKSPACE_DISTRICT_PREFIX}%`; // for SQL: every workspace district
+const WORKSPACE_DISTRICT_RE = /^FNE Demo District (\d{2})$/;
+const WORKSPACE_SCHOOL_RE = /^w(\d{2})\.public-demo\.example\.com$/;
+
+const workspaceTag = (n) => String(n).padStart(2, '0');
+// Every two-digit number is a reserved workspace name, so a stray district called "FNE Demo District 99" is still treated as a demo; MAX_DEMO_WORKSPACES only limits how many the seed makes.
+const validWorkspaceNumber = (n) => Number.isInteger(n) && n >= 1 && n <= 99;
+function workspaceDistrictName(n) { return `${WORKSPACE_DISTRICT_PREFIX}${workspaceTag(n)}`; }
+function workspaceSchoolDomain(n) { return `w${workspaceTag(n)}.${PUBLIC_DEMO_SCHOOL_DOMAIN}`; }
+// The workspace number a district name or school domain belongs to, or null (not a workspace, or a number outside 1..MAX).
+function workspaceOfDistrictName(name) { const m = WORKSPACE_DISTRICT_RE.exec(String(name || '')); const n = m ? Number(m[1]) : NaN; return validWorkspaceNumber(n) ? n : null; }
+function workspaceOfSchoolDomain(domain) { const m = WORKSPACE_SCHOOL_RE.exec(String(domain || '')); const n = m ? Number(m[1]) : NaN; return validWorkspaceNumber(n) ? n : null; }
+
+function isDemoDistrictName(name) { return DEMO_DISTRICT_NAMES.includes(name) || workspaceOfDistrictName(name) !== null; }
+function isDemoSchoolDomain(domain) { return DEMO_SCHOOL_DOMAINS.includes(domain) || workspaceOfSchoolDomain(domain) !== null; }
+
+// Which demo a district or school belongs to: 'sales' (a salesperson's demo), 'public' (the original single shared demo), 'public:07' (workspace 07)
+// or null (not a demo). A demo district may only hold a school of its own kind, and a demo login may only reach assignments of its own kind.
+function demoKindOfDistrict(name) {
+  if (name === DEMO_DISTRICT_NAME) return 'sales';
+  if (name === PUBLIC_DEMO_DISTRICT_NAME) return 'public';
+  const n = workspaceOfDistrictName(name);
+  return n === null ? null : `public:${workspaceTag(n)}`;
+}
+function demoKindOfSchool(domain) {
+  if (domain === DEMO_SCHOOL_DOMAIN) return 'sales';
+  if (domain === PUBLIC_DEMO_SCHOOL_DOMAIN) return 'public';
+  const n = workspaceOfSchoolDomain(domain);
+  return n === null ? null : `public:${workspaceTag(n)}`;
+}
+
+// The kind of demo an ACCOUNT belongs to, from its three explicit columns (never derived from its assignments): a workspace login ->
+// 'public:07'; a login of the original shared demo -> 'public'; any other sales-demo login -> 'sales'; an ordinary account -> null.
+function demoKindOfAccount(row) {
+  if (!row) return null;
+  const ws = row.demo_workspace_id === null || row.demo_workspace_id === undefined ? null : Number(row.demo_workspace_id);
+  if (ws !== null && Number.isFinite(ws) && ws !== 0) return validWorkspaceNumber(ws) ? `public:${workspaceTag(ws)}` : 'public:invalid'; // an unknown workspace matches no school
+  if (row.is_shared_demo) return 'public';
+  if (row.is_sales_demo) return 'sales';
+  return null;
+}
 
 // True if this site_user is a sales-demo account. If the column doesn't exist yet
 // (code deployed before scripts/alter-add-sales-demo-flag.js has run), no demo
@@ -49,6 +91,24 @@ async function isSalesDemoAccount(siteUserId) {
     if (err.code === 'ER_BAD_FIELD_ERROR') return false;
     throw err;
   }
+}
+
+// The kind of demo this account belongs to (see demoKindOfAccount), or null. Tolerates a database that has not had the newer columns added yet
+// (code deployed before its alter script ran): no such column means no such accounts either, so the older answer is the right one.
+async function demoKindOfAccountId(siteUserId) {
+  if (!siteUserId) return null;
+  const pool = require('../db/pool');
+  const attempts = ['is_sales_demo, is_shared_demo, demo_workspace_id', 'is_sales_demo, is_shared_demo', 'is_sales_demo'];
+  for (const cols of attempts) {
+    try {
+      const [[row]] = await pool.query(`SELECT ${cols} FROM site_users WHERE id = ?`, [siteUserId]);
+      return demoKindOfAccount(row);
+    } catch (err) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' || /no such column/i.test(String(err.message))) continue;
+      throw err;
+    }
+  }
+  return null;
 }
 
 function emailDomain(email) {
@@ -102,5 +162,7 @@ function demoInviteAllowed(inviteeEmail, inviterEmail) {
 module.exports = {
   DEMO_DISTRICT_NAME, DEMO_SCHOOL_DOMAIN, DEMO_SOURCE, PUBLIC_DEMO_DISTRICT_NAME, PUBLIC_DEMO_SCHOOL_DOMAIN,
   DEMO_DISTRICT_NAMES, DEMO_SCHOOL_DOMAINS, isDemoDistrictName, isDemoSchoolDomain, demoKindOfDistrict, demoKindOfSchool,
+  MAX_DEMO_WORKSPACES, WORKSPACE_DISTRICT_NAME_LIKE, workspaceTag, validWorkspaceNumber, workspaceDistrictName, workspaceSchoolDomain,
+  workspaceOfDistrictName, workspaceOfSchoolDomain, demoKindOfAccount, demoKindOfAccountId,
   isSalesDemoAccount, demoInviteAllowed, emailDomain,
 };

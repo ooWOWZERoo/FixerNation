@@ -43,7 +43,9 @@ CREATE TABLE IF NOT EXISTS site_users (
   is_fne_staff TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-fne-staff-flag.js on existing installs; 1 = Fixer Nation staff account, may join and see every Community group; set only with scripts/set-fne-staff-account.js
   is_sales_demo TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-sales-demo-flag.js on existing installs; 1 = FNE sales-demo account, confined to demo data (see lib/sales-demo.js)
   is_shared_demo TINYINT(1) NOT NULL DEFAULT 0, -- added by scripts/alter-add-shared-demo-flag.js on existing installs; 1 = a login of the shared demo environment, usable only while the demo is open (see lib/public-demo.js)
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  demo_workspace_id INT NULL DEFAULT NULL, -- added by scripts/alter-add-demo-workspaces.js on existing installs; which private prospect-demo workspace (1..99) this login belongs to; NULL = none (docs/reference/shared-demo-workspaces-requirements.md)
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_site_users_demo_workspace (demo_workspace_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Single-use tokens for email verification and password reset.
@@ -1675,4 +1677,17 @@ CREATE TABLE IF NOT EXISTS public_demo_events (
   detail VARCHAR(40) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_window_kind (window_id, kind)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Prospect demo workspaces (docs/reference/shared-demo-workspaces-requirements.md): one row per private copy of the demo. id is the workspace number (1..99), which
+-- is also the number in its district name, school domain and logins. status is 'free' or 'in_use' (an invitation holds it, from phase 2). Created on existing
+-- installs by scripts/alter-add-demo-workspaces.js.
+CREATE TABLE IF NOT EXISTS public_demo_workspaces (
+  id INT NOT NULL PRIMARY KEY,
+  district_id INT NULL,
+  school_id INT NULL,
+  purchase_id INT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'free',
+  last_reset_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

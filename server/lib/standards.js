@@ -1,5 +1,5 @@
 const pool = require('../db/pool');
-const { DEMO_DISTRICT_NAMES, isDemoDistrictName } = require('./sales-demo');
+const { DEMO_DISTRICT_NAMES, WORKSPACE_DISTRICT_NAME_LIKE, isDemoDistrictName } = require('./sales-demo');
 
 // State standards / Portrait-of-a-Graduate crosswalk -- data layer and review gate.
 // Design, rules and access matrix: docs/standards-crosswalk/DESIGN.md.
@@ -417,7 +417,7 @@ async function getPublicOverview() {
   const byState = Object.fromEntries(counts.map(c => [c.state_code, Number(c.n)]));
   const [dcounts] = await pool.query(
     `SELECT f.state_code, COUNT(DISTINCT f.district_id) AS n FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
-     WHERE f.review_status = 'verified' AND d.name NOT IN (?, ?) GROUP BY f.state_code`, DEMO_DISTRICT_NAMES);
+     WHERE f.review_status = 'verified' AND d.name NOT IN (?, ?) AND d.name NOT LIKE ? GROUP BY f.state_code`, [...DEMO_DISTRICT_NAMES, WORKSPACE_DISTRICT_NAME_LIKE]);
   const districtsBy = Object.fromEntries(dcounts.map(c => [c.state_code, Number(c.n)]));
   return {
     verifiedStates: rows.length,
@@ -465,12 +465,12 @@ async function assembleFrameworks(fws, includeDrafts) {
 // Districts that have a framework in this state. Public: verified frameworks only, and never the
 // sales-demo district. Preview (admin only): everything, each row marked.
 async function districtsForState(code, includeDrafts) {
-  const V = includeDrafts ? '' : " AND f.review_status = 'verified' AND d.name NOT IN (?, ?)";
+  const V = includeDrafts ? '' : " AND f.review_status = 'verified' AND d.name NOT IN (?, ?) AND d.name NOT LIKE ?";
   const [rows] = await pool.query(
     `SELECT f.district_id, d.name AS district_name, f.id AS framework_id, f.framework_type, f.name, f.review_status
      FROM standards_frameworks f JOIN districts d ON d.id = f.district_id
      WHERE f.state_code = ?${V} ORDER BY d.name, f.framework_type, f.name`,
-    includeDrafts ? [code] : [code, ...DEMO_DISTRICT_NAMES]);
+    includeDrafts ? [code] : [code, ...DEMO_DISTRICT_NAMES, WORKSPACE_DISTRICT_NAME_LIKE]);
   const out = new Map();
   for (const r of rows) {
     if (!out.has(r.district_id)) out.set(r.district_id, { id: r.district_id, name: r.district_name, frameworks: [] });

@@ -2,6 +2,17 @@
 
 Things we have agreed to do later. Newest section first. Nothing here is started unless it says so. When an item is done, move it to `CHANGELOG.md` as part of its release and delete it here.
 
+## Prospect demo for many overlapping groups (added 2026-11-12)
+
+The owner expects a continuous stream of groups demoing at the same time. The shared demo has one set of sample data, one end date and one code, so overlapping groups would see and wipe each other's work. Requirements drafted in `docs/reference/shared-demo-workspaces-requirements.md`: a pool of private workspaces (each its own fake district, school, classroom and five logins), one invitation per group (own code, password, PIN, end date, label), per-group tags and counts. Nothing is built.
+
+- [x] **Owner decisions D1 to D9** accepted as recommended on 2026-11-12 (section 9 of the requirements): private workspace per group, pool of 10 up to 40, password and PIN per workspace, no nightly wipe of an active workspace, 14 days default and 30 at most, global pause kept, retire the single demo at phase 5, group label stored in the database only, refuse when the pool is full.
+- [x] **Phase 1: workspaces, server only.** Built 2026-11-12 (958 server tests pass), **not yet committed or deployed**: `site_users.demo_workspace_id` and `public_demo_workspaces` (alter script), `seed-demo-workspaces.js`, `reset-demo-workspace.js`, per-workspace fixtures, and the confinement rewritten to compare demo kinds, with tests that two workspaces cannot reach each other. To deploy: run `alter-add-demo-workspaces.js`, restart, then `seed-demo-workspaces.js --apply`.
+- [ ] **Phase 2: invitations and the gate.** Create, extend, end and new-code per invitation; per-invitation credentials; release sweep; `set-public-demo.js` gains `--invite`, `--end`, `--list`.
+- [ ] **Phase 3: admin Demo page** rebuilt as an invitation list with pool status and Add workspaces.
+- [ ] **Phase 4: per-invitation tags and counts**, demo page wording, district message.
+- [ ] **Phase 5: retire the single demo**, rewrite the how-to, and rewrite `tests/e2e/shared-demo.spec.ts` to run two overlapping groups.
+
 ## Shared demo environment (added 2026-11-12)
 
 Requirements drafted in `docs/reference/shared-demo-environment-requirements.md`. One global on/off switch and end date in the admin, an unlisted page behind an access code, one account per role with a shared published password, view-only content, no outbound email. All five phases are built; phases 1 to 4 are deployed and phase 5 is documentation. The owner has answered account shape, page access, switch scope and content access; decisions D1 to D7 (time zone, page address, longest window, branding, safety alerts, release note, separate fixtures) were accepted as recommended on 2026-11-12.

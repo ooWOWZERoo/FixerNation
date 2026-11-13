@@ -2,6 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const F = require('../lib/public-demo-fixtures');
+const { legacyFixtures } = require('../lib/public-demo-workspaces');
 const { isValidPin } = require('../lib/pin');
 const { getSettingRaw, putSettingRaw } = require('../lib/public-demo-admin');
 
@@ -62,32 +63,35 @@ async function one(conn, sql, params) {
 
 // The classroom, its students, its lessons and the parent link. Shared with the nightly reset, which deletes the classroom and calls this to
 // build it again (the join and parent codes are passed back in so they stay the same across resets).
-async function seedClassroom(conn, { teacherId, parentId, pin, rounds = 10, codes = null }, report) {
+//
+// The shared student's PIN: `pin` (the original demo, whose PIN is a setting), or `pinHash` (a workspace reset hands back the hash it found, so the PIN
+// the group was given keeps working), or neither (a new workspace: a random PIN nobody is told, until an invitation sets one).
+async function seedClassroom(conn, { teacherId, parentId, pin, pinHash = null, rounds = 10, codes = null, fx = legacyFixtures() }, report) {
   let classroom = await one(conn,
-    'SELECT id, join_code, parent_code FROM classrooms WHERE teacher_site_user_id = ? AND name = ? AND archived_at IS NULL', [teacherId, F.DEMO_CLASSROOM_NAME]);
-  if (classroom) report.reused(`demo classroom "${F.DEMO_CLASSROOM_NAME}" (#${classroom.id})`);
+    'SELECT id, join_code, parent_code FROM classrooms WHERE teacher_site_user_id = ? AND name = ? AND archived_at IS NULL', [teacherId, fx.classroomName]);
+  if (classroom) report.reused(`demo classroom "${fx.classroomName}" (#${classroom.id})`);
   else {
     const joinCode = (codes && codes.join_code) || crypto.randomBytes(4).toString('hex').toUpperCase();
     const parentCode = (codes && codes.parent_code) || `${crypto.randomBytes(2).toString('hex').toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
     const [r] = await conn.query(
       `INSERT INTO classrooms (name, teacher_site_user_id, join_code, parent_code, grade_level, subject, academic_year)
-       VALUES (?, ?, ?, ?, '5th Grade', 'Homeroom', '2026-2027')`, [F.DEMO_CLASSROOM_NAME, teacherId, joinCode, parentCode]);
+       VALUES (?, ?, ?, ?, '5th Grade', 'Homeroom', '2026-2027')`, [fx.classroomName, teacherId, joinCode, parentCode]);
     classroom = { id: r.insertId, join_code: joinCode, parent_code: parentCode };
-    report.created(`demo classroom "${F.DEMO_CLASSROOM_NAME}"`);
+    report.created(`demo classroom "${fx.classroomName}"`);
   }
 
   const students = [];
   let madeStudents = 0;
-  for (const s of F.STUDENTS) {
+  for (const s of fx.students) {
     let row = await one(conn, 'SELECT id, classroom_id, password_hash FROM classroom_students WHERE username = ?', [s.username]);
     if (row && row.classroom_id !== classroom.id) throw new Error(`The username "${s.username}" already belongs to a student in another classroom. Refusing to touch it.`);
     if (!row) {
-      const hash = await bcrypt.hash(s.shared ? pin : generatePin(), rounds);
+      const hash = s.shared && pinHash ? pinHash : await bcrypt.hash(s.shared && pin !== null && pin !== undefined ? pin : generatePin(), rounds);
       const [r] = await conn.query(
         'INSERT INTO classroom_students (classroom_id, display_name, username, password_hash, is_active) VALUES (?, ?, ?, ?, 1)', [classroom.id, s.name, s.username, hash]);
       row = { id: r.insertId };
       madeStudents += 1;
-    } else if (s.shared && !(await bcrypt.compare(pin, row.password_hash))) {
+    } else if (s.shared && pin !== null && pin !== undefined && !(await bcrypt.compare(pin, row.password_hash))) {
       await conn.query('UPDATE classroom_students SET password_hash = ?, is_active = 1 WHERE id = ?', [await bcrypt.hash(pin, rounds), row.id]);
       report.updated(`student PIN for ${s.username}`);
     }
@@ -95,7 +99,7 @@ async function seedClassroom(conn, { teacherId, parentId, pin, rounds = 10, code
   }
   report[madeStudents ? 'created' : 'reused'](madeStudents ? `${madeStudents} fake student(s) in the demo classroom` : 'fake students');
 
-  const [lessons] = await conn.query(`SELECT id FROM curricula WHERE published = 1 ORDER BY id LIMIT ${Number(F.DEMO_LESSON_COUNT)}`);
+  const [lessons] = await conn.query(`SELECT id FROM curricula WHERE published = 1 ORDER BY id LIMIT ${Number(fx.lessonCount)}`);
   for (const lesson of lessons) {
     const has = await one(conn, 'SELECT id FROM classroom_assignments WHERE classroom_id = ? AND curriculum_id = ?', [classroom.id, lesson.id]);
     if (!has) await conn.query('INSERT INTO classroom_assignments (classroom_id, curriculum_id, assigned_by_id) VALUES (?, ?, ?)', [classroom.id, lesson.id, teacherId]);
@@ -121,82 +125,90 @@ async function seedClassroom(conn, { teacherId, parentId, pin, rounds = 10, code
   return { classroom, students, lessonCount: lessons.length };
 }
 
-async function seed(conn, { password, pin, rounds = 12 }, report) {
+// Builds (or tops up) one demo: the original single demo (no `fx`) or one workspace (`fx = workspaceFixtures(n)`).
+// password / pin may be null for a workspace: its logins then get random passwords nobody is told (they cannot be signed in to), and an account that
+// already exists keeps the password it has, so topping up the pool never signs anyone out. An invitation sets the real ones (phase 2).
+async function seed(conn, { password, pin, rounds = 12, fx = legacyFixtures() }, report) {
   const out = {};
+  const workspace = fx.number;
 
   // ---- Fixtures: the demo district, school, $0 licence and purchase ---------------------------------------------------------------------------
-  let district = await one(conn, 'SELECT id FROM districts WHERE name = ?', [F.PUBLIC_DEMO_DISTRICT_NAME]);
-  if (district) report.reused(`district "${F.PUBLIC_DEMO_DISTRICT_NAME}" (#${district.id})`);
+  let district = await one(conn, 'SELECT id FROM districts WHERE name = ?', [fx.districtName]);
+  if (district) report.reused(`district "${fx.districtName}" (#${district.id})`);
   else {
-    const [r] = await conn.query('INSERT INTO districts (name) VALUES (?)', [F.PUBLIC_DEMO_DISTRICT_NAME]);
+    const [r] = await conn.query('INSERT INTO districts (name) VALUES (?)', [fx.districtName]);
     district = { id: r.insertId };
-    report.created(`district "${F.PUBLIC_DEMO_DISTRICT_NAME}"`);
+    report.created(`district "${fx.districtName}"`);
   }
 
-  let school = await one(conn, 'SELECT id, district_id FROM schools WHERE domain = ?', [F.DEMO_DOMAIN]);
+  let school = await one(conn, 'SELECT id, district_id FROM schools WHERE domain = ?', [fx.domain]);
   if (school) {
     if (school.district_id !== district.id) {
       await conn.query('UPDATE schools SET district_id = ? WHERE id = ?', [district.id, school.id]);
-      report.note(`school ${F.DEMO_DOMAIN} was not in the demo district -- moved it`);
+      report.note(`school ${fx.domain} was not in the demo district -- moved it`);
     }
-    report.reused(`school ${F.DEMO_DOMAIN} (#${school.id})`);
+    report.reused(`school ${fx.domain} (#${school.id})`);
   } else {
-    const [r] = await conn.query('INSERT INTO schools (domain, district_id, display_name) VALUES (?, ?, ?)', [F.DEMO_DOMAIN, district.id, F.DEMO_SCHOOL_NAME]);
+    const [r] = await conn.query('INSERT INTO schools (domain, district_id, display_name) VALUES (?, ?, ?)', [fx.domain, district.id, fx.schoolName]);
     school = { id: r.insertId };
-    report.created(`school ${F.DEMO_DOMAIN}`);
+    report.created(`school ${fx.domain}`);
   }
 
   // $0 and inactive: invisible in the public catalog and adds nothing to revenue reports.
-  let product = await one(conn, 'SELECT id FROM license_products WHERE name = ?', [F.DEMO_PRODUCT_NAME]);
-  if (product) report.reused(`licence product "${F.DEMO_PRODUCT_NAME}" (#${product.id})`);
+  let product = await one(conn, 'SELECT id FROM license_products WHERE name = ?', [fx.productName]);
+  if (product) report.reused(`licence product "${fx.productName}" (#${product.id})`);
   else {
     const [r] = await conn.query(
       `INSERT INTO license_products (name, description, seat_count, price_cents, call_for_quote, variable_seats, active, sort_order)
-       VALUES (?, 'Internal shared-demo fixture -- not a real product. Do not display or sell.', 25, 0, 0, 0, 0, 997)`, [F.DEMO_PRODUCT_NAME]);
+       VALUES (?, 'Internal shared-demo fixture -- not a real product. Do not display or sell.', 25, 0, 0, 0, 0, 997)`, [fx.productName]);
     product = { id: r.insertId };
-    report.created(`licence product "${F.DEMO_PRODUCT_NAME}" ($0, inactive, 25 seats)`);
+    report.created(`licence product "${fx.productName}" ($0, inactive, 25 seats)`);
   }
 
-  let contact = await one(conn, 'SELECT id FROM newsletter_contacts WHERE email = ?', [F.DEMO_CONTACT_EMAIL]);
+  let contact = await one(conn, 'SELECT id FROM newsletter_contacts WHERE email = ?', [fx.contactEmail]);
   if (!contact) {
-    const [r] = await conn.query(`INSERT INTO newsletter_contacts (name, email, source, status) VALUES ('FNE Public Demo', ?, ?, 'Unsubscribed')`, [F.DEMO_CONTACT_EMAIL, F.DEMO_SOURCE]);
+    const [r] = await conn.query(`INSERT INTO newsletter_contacts (name, email, source, status) VALUES ('FNE Public Demo', ?, ?, 'Unsubscribed')`, [fx.contactEmail, fx.source]);
     contact = { id: r.insertId };
-    report.created(`CRM contact ${F.DEMO_CONTACT_EMAIL} (Unsubscribed)`);
+    report.created(`CRM contact ${fx.contactEmail} (Unsubscribed)`);
   }
 
-  let purchase = await one(conn, "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license' AND school_domain = ?", [contact.id, F.DEMO_DOMAIN]);
+  let purchase = await one(conn, "SELECT id FROM purchases WHERE contact_id = ? AND product_type = 'group_license' AND school_domain = ?", [contact.id, fx.domain]);
   if (purchase) report.reused(`demo group-licence purchase (#${purchase.id})`);
   else {
     const [r] = await conn.query(
       `INSERT INTO purchases (contact_id, product_type, license_product_id, seat_count, source, payment_method, payment_status, school_domain, school_id)
-       VALUES (?, 'group_license', ?, 25, ?, 'manual', 'paid', ?, ?)`, [contact.id, product.id, F.DEMO_SOURCE, F.DEMO_DOMAIN, school.id]);
+       VALUES (?, 'group_license', ?, 25, ?, 'manual', 'paid', ?, ?)`, [contact.id, product.id, fx.source, fx.domain, school.id]);
     purchase = { id: r.insertId };
-    report.created(`demo group-licence purchase (25 seats, source "${F.DEMO_SOURCE}")`);
+    report.created(`demo group-licence purchase (25 seats, source "${fx.source}")`);
   }
   out.districtId = district.id; out.schoolId = school.id; out.purchaseId = purchase.id;
 
   // ---- The four site logins --------------------------------------------------------------------------------------------------------------------
+  // A workspace passes password = null: a NEW login gets a random password nobody is told, and an existing one keeps the password it has.
   const ids = {};
-  for (const key of Object.keys(F.ACCOUNTS)) {
-    const a = F.ACCOUNTS[key];
+  for (const key of Object.keys(fx.accounts)) {
+    const a = fx.accounts[key];
     const existing = await one(conn, 'SELECT id, password_hash, is_shared_demo FROM site_users WHERE email = ?', [a.email]);
     if (existing) {
       if (!existing.is_shared_demo) throw new Error(`${a.email} already exists and is not a shared demo account. Refusing to convert it.`);
       let changed = false;
-      if (!existing.password_hash || !(await bcrypt.compare(password, existing.password_hash))) {
+      if (password !== null && password !== undefined && (!existing.password_hash || !(await bcrypt.compare(password, existing.password_hash)))) {
         // A new password signs every other browser out (session_invalidated_at), exactly as a real password change does.
         await conn.query('UPDATE site_users SET password_hash = ?, session_invalidated_at = NOW() WHERE id = ?', [await bcrypt.hash(password, rounds), existing.id]);
         changed = true;
       }
       await conn.query('UPDATE site_users SET email_verified = 1, role = ?, is_sales_demo = 1, is_shared_demo = 1, closed_at = NULL, closed_reason = NULL WHERE id = ?', [a.role, existing.id]);
+      if (workspace !== null) await conn.query('UPDATE site_users SET demo_workspace_id = ? WHERE id = ?', [workspace, existing.id]);
       report[changed ? 'updated' : 'reused'](`login ${a.email} (#${existing.id})${changed ? ' -- password changed' : ''}`);
       ids[key] = existing.id;
     } else {
+      const hash = await bcrypt.hash(password !== null && password !== undefined ? password : crypto.randomBytes(32).toString('hex'), rounds);
       const [r] = await conn.query(
         `INSERT INTO site_users (first_name, last_name, email, password_hash, email_verified, role, is_sales_demo, is_shared_demo) VALUES (?, ?, ?, ?, 1, ?, 1, 1)`,
-        [a.first, a.last, a.email, await bcrypt.hash(password, rounds), a.role]);
+        [a.first, a.last, a.email, hash, a.role]);
       ids[key] = r.insertId;
-      report.created(`login ${a.email} (verified, role "${a.role}", flagged shared demo and sales demo)`);
+      if (workspace !== null) await conn.query('UPDATE site_users SET demo_workspace_id = ? WHERE id = ?', [workspace, ids[key]]);
+      report.created(`login ${a.email} (verified, role "${a.role}", flagged shared demo and sales demo${workspace !== null ? `, workspace ${fx.number}` : ''})`);
     }
   }
   out.ids = ids;
@@ -206,7 +218,7 @@ async function seed(conn, { password, pin, rounds = 12 }, report) {
   if (seat) report.reused('teacher licence seat');
   else {
     await conn.query("INSERT INTO license_seats (purchase_id, invited_email, status, registered_site_user_id, registered_at) VALUES (?, ?, 'registered', ?, NOW())",
-      [purchase.id, F.ACCOUNTS.teacher.email, ids.teacher]);
+      [purchase.id, fx.accounts.teacher.email, ids.teacher]);
     report.created('teacher licence seat (demo purchase)');
   }
 
@@ -219,8 +231,20 @@ async function seed(conn, { password, pin, rounds = 12 }, report) {
   else { if (!da.is_active) await conn.query('UPDATE district_license_admins SET is_active = 1 WHERE id = ?', [da.id]); report.reused('district administrator assignment'); }
 
   // ---- The classroom, students, lessons and parent link ----------------------------------------------------------------------------------------
-  const room = await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, rounds: Math.min(rounds, 10) }, report);
+  const room = await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, rounds: Math.min(rounds, 10), fx }, report);
   out.classroom = room.classroom;
+
+  // A workspace is also recorded in public_demo_workspaces (which district, school and purchase make it up).
+  if (workspace !== null) {
+    const row = await one(conn, 'SELECT id FROM public_demo_workspaces WHERE id = ?', [workspace]);
+    if (!row) {
+      await conn.query('INSERT INTO public_demo_workspaces (id, district_id, school_id, purchase_id, status) VALUES (?, ?, ?, ?, ?)', [workspace, district.id, school.id, purchase.id, 'free']);
+      report.created(`workspace record #${workspace}`);
+    } else {
+      await conn.query('UPDATE public_demo_workspaces SET district_id = ?, school_id = ?, purchase_id = ? WHERE id = ?', [district.id, school.id, purchase.id, workspace]);
+      report.reused(`workspace record #${workspace}`);
+    }
+  }
   return out;
 }
 
