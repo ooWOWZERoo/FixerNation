@@ -26,6 +26,9 @@
   .inv-link { background: none; border: none; padding: 0; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; text-align: left; }
   .inv-sub { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--a-border, rgba(0,0,0,.12)); }
   .inv-grid { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .inv-grid .a-field { margin: 0; }
+  /* one height for every box, dropdown and button in these rows, so they line up side by side */
+  .inv-grid .a-btn, .demo-controls .a-btn, .inv-grid select, .demo-controls select, .inv-grid input, .demo-controls input { height: 43px; box-sizing: border-box; }
   #invHeadCard .a-hint, #invNewCard .a-hint, #invDetailCard .a-hint { text-align: left; }
 </style>
 </head>
@@ -355,7 +358,7 @@ function renderInvStatus() {
     var opts = [1, 2, 5, 10].filter(function (n) { return n <= p.canAdd; });
     if (opts.indexOf(p.canAdd) === -1 && p.total === 0) opts.push(p.canAdd);
     html += '<div class="inv-sub"><div class="inv-grid"><div class="a-field"><label for="invAddCount">Add workspaces</label><select id="invAddCount" class="a-filter-select">' +
-      opts.map(function (n) { return '<option value="' + esc(n) + '"' + (n === Math.min(10, p.canAdd) ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') +
+      opts.map(function (n) { return '<option value="' + esc(n) + '"' + (n === 1 ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') +
       '</select></div><button class="a-btn a-btn-outline" data-inv="add">Add</button></div>' +
       '<div class="a-hint" style="margin-top:8px;">A workspace is one private copy, and you can have up to ' + esc(p.max) + '. Groups already in a workspace aren\'t affected.</div></div>';
   }

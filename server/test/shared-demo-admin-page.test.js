@@ -193,3 +193,13 @@ test('INVITATIONS: the new copy has no placeholder text and no em dashes, and th
   assert.match(page, /Each group gets its own private copy of the demo, with its own access code, password, student PIN and end date\./);
   assert.match(page, /A group has its own private copy of the sample data\./);
 });
+
+test('INVITATIONS: Add workspaces starts at 1, and every box, dropdown and button in a row is the same height so they line up', () => {
+  // the dropdown offers 1, 2, 5 and 10, and only the "1" option is the one picked first
+  assert.match(page, /\[1, 2, 5, 10\]\.filter\(function \(n\) \{ return n <= p\.canAdd; \}\)/);
+  assert.match(page, /\(n === 1 \? ' selected' : ''\)/);
+  assert.ok(!/Math\.min\(10, p\.canAdd\)/.test(page), 'no longer starts at 10');
+  // one height for the fields and buttons that sit side by side, and no extra margin pushing a button below its dropdown
+  assert.match(page, /\.inv-grid \.a-field \{ margin: 0; \}/);
+  assert.match(page, /\.inv-grid \.a-btn, \.demo-controls \.a-btn, \.inv-grid select, \.demo-controls select, \.inv-grid input, \.demo-controls input \{ height: 43px; box-sizing: border-box; \}/);
+});
