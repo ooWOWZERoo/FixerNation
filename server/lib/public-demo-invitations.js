@@ -291,11 +291,26 @@ async function endInvitation(conn, id, { reason = 'ended', now = new Date(), rou
   if (row.status === 'ended') return present(row, { now });
   const [r] = await conn.query("UPDATE public_demo_invitations SET status = 'ended', ended_at = ?, end_reason = ?, password = '', pin = '' WHERE id = ? AND status = 'active'", [toDb(now), reason, id]);
   invalidateCache(); // from here on the gate refuses every session of this workspace
+  let pauseCleared = false;
   if (r.affectedRows === 1) {
     await wipeAndClose(conn, Number(row.workspace_id), { rounds });
     await conn.query("UPDATE public_demo_workspaces SET status = 'free' WHERE id = ?", [row.workspace_id]);
+    pauseCleared = await resumeIfNothingOpen(conn, { now });
   }
-  return getInvitation(conn, id, { now });
+  const out = await getInvitation(conn, id, { now });
+  if (pauseCleared) out.pauseCleared = true; // the caller can say that demos are running again
+  return out;
+}
+
+// "Pause all demos" holds the live demos closed. Once the last open invitation has ended there is nothing left for it to hold, so the pause is lifted (and
+// the Resume button goes away) instead of lingering with nothing to resume. Returns true when it lifted one. Pausing while nothing is open stays paused until
+// someone resumes, because that was asked for on purpose; this only runs when an invitation actually ends.
+async function resumeIfNothingOpen(conn, { now = new Date() } = {}) {
+  if (!(await isPaused(conn))) return false;
+  const open = await listInvitations(conn, { includeEnded: false, now });
+  if (open.some(i => i.open)) return false;
+  await setPaused(conn, false);
+  return true;
 }
 
 // A new access code for one group: everyone who entered the old one is shut out, nobody else is affected.
@@ -323,11 +338,16 @@ async function regenerateSecret(conn, id, what, { now = new Date(), rounds = 10 
 // interrupted). Safe to run at any time and as often as you like; run by cron every few minutes.
 async function sweep(conn, { now = new Date(), rounds = 10 } = {}) {
   const ended = [], repaired = [];
+  let pauseCleared = false;
   let rows;
   try { [rows] = await conn.query("SELECT id, ends_at FROM public_demo_invitations WHERE status = 'active'"); } catch (err) { if (isMissing(err)) return { ended, repaired }; throw err; }
   for (const r of rows) {
     const end = fromDb(r.ends_at);
-    if (!end || end.getTime() <= now.getTime()) { await endInvitation(conn, r.id, { reason: 'expired', now, rounds }); ended.push(Number(r.id)); }
+    if (!end || end.getTime() <= now.getTime()) {
+      const done = await endInvitation(conn, r.id, { reason: 'expired', now, rounds });
+      ended.push(Number(r.id));
+      if (done.pauseCleared) pauseCleared = true;
+    }
   }
   const [stuck] = await conn.query("SELECT id FROM public_demo_workspaces WHERE status = 'in_use' AND id NOT IN (SELECT workspace_id FROM public_demo_invitations WHERE status = 'active')");
   for (const w of stuck) {
@@ -336,7 +356,7 @@ async function sweep(conn, { now = new Date(), rounds = 10 } = {}) {
     repaired.push(Number(w.id));
   }
   if (ended.length || repaired.length) invalidateCache();
-  return { ended, repaired };
+  return pauseCleared ? { ended, repaired, pauseCleared } : { ended, repaired }; // pauseCleared: demos were paused and the last open one ran out
 }
 
 // ---- What the server asks on every demo request ----------------------------------------------------------------------------------------------
@@ -410,7 +430,7 @@ async function anyOpenInvitation(now = new Date()) {
 
 module.exports = {
   DEFAULT_DAYS, DEFAULT_MAX_DAYS, toDb, fromDb, present, loginsFor,
-  isPaused, setPaused, maxDays, resolveEnd, cleanLabel,
+  isPaused, setPaused, resumeIfNothingOpen, maxDays, resolveEnd, cleanLabel,
   getInvitation, listInvitations, poolStatus, addWorkspaces, renameInvitation, groupForLogin, createInvitation, extendInvitation, endInvitation, regenerateCode, regenerateSecret, sweep,
   applySecrets, resetWorkspace, wipeAndClose,
   getOpenInvitationForWorkspace, getOpenInvitationById, findOpenInvitationByCode, anyOpenInvitation, invalidateCache, setCacheTtl,

@@ -4,6 +4,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const fs = require('node:fs');
 const os = require('node:os');
 const http = require('node:http');
 const Module = require('node:module');
@@ -465,4 +466,90 @@ test('THE LIBRARY: which group is behind a login, from any spelling, with no sec
   assert.equal(status.inUse, 1);
   void a;
   await endAll();
+});
+
+// ============================================================================================================================================
+// Pause and end together: once the last open invitation has ended, a pause has nothing left to hold, so it is lifted and there is no Resume to press
+// ============================================================================================================================================
+
+test('PAUSE THEN END: ending the last open invitation lifts the pause, and ending the others first does not', async () => {
+  await endAll();
+  await inv.setPaused(poolStub, false);
+  const a = (await create('A')).json, b = (await create('B')).json;
+  await call('POST', '/pause', { body: { paused: true } });
+  assert.equal((await call('GET', '/invitations')).json.paused, true);
+
+  const first = await call('POST', `/invitations/${a.id}/end`);
+  assert.equal(first.status, 200);
+  assert.equal(first.json.pauseCleared, false, 'group B is still open, so the pause still has something to hold');
+  assert.equal((await call('GET', '/invitations')).json.paused, true);
+  assert.equal(await inv.getOpenInvitationForWorkspace(b.workspaceId), null, 'and group B is still closed by it');
+
+  const last = await call('POST', `/invitations/${b.id}/end`);
+  assert.equal(last.status, 200);
+  assert.equal(last.json.pauseCleared, true, 'the last one ended, so demos are running again');
+  assert.equal((await call('GET', '/invitations')).json.paused, false, 'no Resume button to show');
+  assert.equal(await inv.isPaused(poolStub), false);
+  // recorded: the end, and then the pause lifting by itself (no secret)
+  const log = audits().slice(-2);
+  assert.deepEqual(log.map(x => x.action), ['public_demo.invitation_ended', 'public_demo.resumed']);
+  assert.deepEqual(JSON.parse(log[1].prev_value), { paused: true });
+  assert.deepEqual(JSON.parse(log[1].new_value), { paused: false, automatic: 'the last open invitation ended' });
+  // and a new group can start straight away
+  assert.equal((await create('C')).status, 200);
+  await endAll();
+});
+
+test('PAUSE THEN END: it only lifts a pause when an invitation really ends now, never for one that had already ended, and never when nothing is paused', async () => {
+  await endAll();
+  const a = (await create('A')).json;
+  // not paused: ending the last one reports nothing was lifted
+  const plain = await call('POST', `/invitations/${a.id}/end`);
+  assert.equal(plain.json.pauseCleared, false);
+  assert.equal((await inv.endInvitation(poolStub, a.id, { rounds: 4 })).pauseCleared, undefined);
+
+  // paused with nothing open is deliberate: it stays until someone resumes (even if an old, already-ended invitation is ended "again")
+  await call('POST', '/pause', { body: { paused: true } });
+  const again = await call('POST', `/invitations/${a.id}/end`);
+  assert.equal(again.json.pauseCleared, false);
+  assert.equal((await call('GET', '/invitations')).json.paused, true, 'paused on purpose, so still paused');
+  assert.equal((await create('X')).status, 409, 'and a new invitation is refused until resumed');
+  await call('POST', '/pause', { body: { paused: false } });
+  assert.equal((await create('X')).status, 200);
+  await endAll();
+});
+
+test('PAUSE THEN RUN OUT: when the last open invitation\'s time runs out the sweep lifts the pause too, and the command line says so', async () => {
+  await endAll();
+  const T0 = new Date();
+  const a = await inv.createInvitation(poolStub, { label: 'Runs out', days: 1, rounds: 4, now: T0 });
+  const b = await inv.createInvitation(poolStub, { label: 'Longer', days: 20, rounds: 4, now: T0 });
+  await inv.setPaused(poolStub, true);
+  const later = new Date(T0.getTime() + 2 * 86400000);
+  const s1 = await inv.sweep(poolStub, { now: later, rounds: 4 });
+  assert.deepEqual(s1.ended, [a.id]);
+  assert.equal(s1.pauseCleared, undefined, 'B is still open');
+  assert.equal(await inv.isPaused(poolStub), true);
+  const much = new Date(T0.getTime() + 25 * 86400000);
+  const s2 = await inv.sweep(poolStub, { now: much, rounds: 4 });
+  assert.deepEqual(s2.ended, [b.id]);
+  assert.equal(s2.pauseCleared, true);
+  assert.equal(await inv.isPaused(poolStub), false);
+  assert.match(await cli.run(poolStub, cli.parseArgs(['sweep']), { now: much }), /Nothing to sweep/);
+
+  // the command line's own end says so
+  const c = (await create('C')).json;
+  await inv.setPaused(poolStub, true);
+  const out = await cli.run(poolStub, cli.parseArgs(['end', String(c.id)]));
+  assert.match(out, /is ended\./);
+  assert.match(out, /Demos were paused\. This was the last open invitation, so they are running again\./);
+  const d = (await create('D')).json;
+  assert.ok(!/running again/.test(await cli.run(poolStub, cli.parseArgs(['end', String(d.id)]))), 'nothing to say when nothing was paused');
+});
+
+test('PAUSE THEN END: the Demo page tells staff the pause was lifted, with no Resume left on screen', () => {
+  const page = fs.readFileSync(path.join(SERVER, '..', 'admin-demo.html'), 'utf8');
+  assert.match(page, /endedDetail && endedDetail\.pauseCleared \? 'The invitation is ended\. Nothing else is open, so demos are running again\.' : 'The invitation is ended'/);
+  // the Resume button is drawn from the server's state, which no longer says paused
+  assert.match(page, /d\.paused \? '<button class="a-btn a-btn-primary a-btn-sm" data-inv="resume">Resume demos<\/button>'/);
 });

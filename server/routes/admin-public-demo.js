@@ -294,7 +294,9 @@ router.post('/invitations/:id/extend', handle(async (req, res) => {
 router.post('/invitations/:id/end', handle(async (req, res) => {
   const ended = await withConn((conn) => inv.endInvitation(conn, invId(req), { reason: 'ended' }));
   await logAction(req, 'invitation_ended', null, { id: ended.id, label: ended.label, workspace: workspaceTag(ended.workspaceId) });
-  res.json(await invitationDetails(invId(req)));
+  // If demos were paused and this was the last open invitation, the pause was lifted (nothing left to hold); say so, and record it.
+  if (ended.pauseCleared) await logAction(req, 'resumed', { paused: true }, { paused: false, automatic: 'the last open invitation ended' });
+  res.json({ ...(await invitationDetails(invId(req))), pauseCleared: !!ended.pauseCleared });
 }));
 
 // A new access code for this group only: everyone who entered the old one is shut out.

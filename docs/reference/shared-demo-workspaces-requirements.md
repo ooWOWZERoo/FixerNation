@@ -40,6 +40,7 @@ What stays the same: unlisted page behind a code, view-only content, no outbound
 ### R1. The server decides, per invitation
 - A demo login works only while **its workspace's invitation is active** (not ended, not revoked, end time ahead) **and** the master switch is on. It is checked on the server for every demo request and fails closed: if the invitation cannot be read, the session is refused.
 - A demo session's signed claim carries its **workspace number**, not just `demo: true`. Ending an invitation ends only the sessions of that workspace, within a few seconds (the lookup may be cached for at most 15 seconds).
+- Once the last open invitation has ended (by staff, or because its time ran out), a pause that was holding it is lifted automatically, so no Resume is left with nothing to resume (found by the owner 2026-11-13). Pausing while nothing is open is deliberate and stays until someone resumes.
 - The **master switch** (today's global on/off) stays as an emergency "pause all demos". Off means every invitation behaves as closed, and `scripts/set-public-demo.js --off` still works when the website is down.
 
 ### R2. Closed means invisible

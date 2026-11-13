@@ -90,13 +90,17 @@ async function run(conn, args, { siteUrl = process.env.SITE_URL || 'https://fixe
     case 'create': return renderDetails(await inv.createInvitation(conn, { label: args.label, days: args.days, until: args.until, createdBy, now }), siteUrl) + 'These are shown once here; "show" prints them again while the invitation is open.\n';
     case 'rename': { const r = await inv.renameInvitation(conn, args.id, args.label, { now }); return `Invitation ${r.invitation.id} (workspace ${workspaceTag(r.invitation.workspaceId)}) is now called "${r.invitation.label}" (it was "${r.previous}").\n`; }
     case 'extend': { const r = await inv.extendInvitation(conn, args.id, { days: args.days, until: args.until, now }); return `Invitation ${r.id} now runs until ${r.endsAtEastern}.\n`; }
-    case 'end': { const r = await inv.endInvitation(conn, args.id, { now }); return `Invitation ${r.id} ("${r.label}") is ended. Its logins stopped working at once, and workspace ${workspaceTag(r.workspaceId)} was wiped and is free again.\n`; }
+    case 'end': {
+      const r = await inv.endInvitation(conn, args.id, { now });
+      return `Invitation ${r.id} ("${r.label}") is ended. Its logins stopped working at once, and workspace ${workspaceTag(r.workspaceId)} was wiped and is free again.\n` +
+        (r.pauseCleared ? 'Demos were paused. This was the last open invitation, so they are running again.\n' : '');
+    }
     case 'new-code': { const r = await inv.regenerateCode(conn, args.id, { now }); return `New access code for invitation ${r.id}: ${r.accessCodeFormatted}\nThe old code and every visit made with it stopped working. Other groups are unaffected.\n`; }
     case 'new-password': { const r = await inv.regenerateSecret(conn, args.id, 'password', { now }); return `New password for invitation ${r.id}: ${r.password}\nThis group was signed out; other groups are unaffected.\n`; }
     case 'new-pin': { const r = await inv.regenerateSecret(conn, args.id, 'pin', { now }); return `New student PIN for invitation ${r.id}: ${r.pin}\n`; }
     case 'sweep': {
       const r = await inv.sweep(conn, { now });
-      return r.ended.length || r.repaired.length ? `Ended ${r.ended.length} invitation(s) whose time ran out (${r.ended.join(', ') || 'none'}); put right ${r.repaired.length} workspace(s).\n` : 'Nothing to sweep.\n';
+      return r.ended.length || r.repaired.length ? `Ended ${r.ended.length} invitation(s) whose time ran out (${r.ended.join(', ') || 'none'}); put right ${r.repaired.length} workspace(s).\n` + (r.pauseCleared ? 'Demos were paused. The last open invitation ran out, so they are running again.\n' : '') : 'Nothing to sweep.\n';
     }
     default: throw new Error('Unknown command.');
   }

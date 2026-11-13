@@ -536,7 +536,9 @@ document.addEventListener('click', async function (e) {
       await invAfter(await invApi('/invitations/' + id + '/reset', 'POST', {}), 'Cleared', true);
     } else if (action === 'end') {
       if (!confirm('End this invitation now? The group will be signed out and its copy cleared.')) return;
-      await invAfter(await invApi('/invitations/' + id + '/end', 'POST', {}), 'The invitation is ended');
+      var endedDetail = await invApi('/invitations/' + id + '/end', 'POST', {});
+      // If demos were paused and this was the last open invitation, the server lifted the pause (nothing left to hold), so there is no Resume to press.
+      await invAfter(endedDetail, endedDetail && endedDetail.pauseCleared ? 'The invitation is ended. Nothing else is open, so demos are running again.' : 'The invitation is ended');
     }
   } finally {
     btn.disabled = false;
