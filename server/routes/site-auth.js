@@ -26,7 +26,7 @@ const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 const msOAuth = require('../lib/microsoft-oauth');
-const { isPublicDemoOpen, isSharedDemoUser, refuseSharedDemo, DEMO_SESSION_LENGTH, DEMO_SESSION_MS } = require('../lib/public-demo');
+const { isDemoOpenFor, isSharedDemoUser, refuseSharedDemo, DEMO_SESSION_LENGTH, DEMO_SESSION_MS } = require('../lib/public-demo');
 const { recordDemoEvent, demoRoleKeyForEmail } = require('../lib/public-demo-admin');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
@@ -87,7 +87,9 @@ function setSiteSessionCookie(res, user) {
   // A shared demo account (lib/public-demo.js) gets a short session carrying a `demo` claim, which is how the demo gate in app.js recognises it
   // and ends it when the demo closes.
   const demo = isSharedDemoUser(user);
-  const token = signSession('site', { userId: user.id, firstName: user.first_name, role: user.role || 'teacher', ...(demo ? { demo: true } : {}) },
+  // `ws` is the private workspace the login belongs to (none for the original single demo): the gate asks that workspace's invitation, not the original switch.
+  const ws = demo && user.demo_workspace_id !== null && user.demo_workspace_id !== undefined ? Number(user.demo_workspace_id) : null;
+  const token = signSession('site', { userId: user.id, firstName: user.first_name, role: user.role || 'teacher', ...(demo ? { demo: true } : {}), ...(ws !== null ? { ws } : {}) },
     demo ? DEMO_SESSION_LENGTH : '30d');
   res.cookie(SITE_COOKIE_NAME, token, {
     httpOnly: true,
@@ -377,7 +379,7 @@ router.post('/login', async (req, res) => {
   // that was a 500). Compare against a dummy hash either way so the response
   // takes the same time as a real wrong-password attempt and doesn't reveal
   // which emails have accounts. A shared demo account while the demo is closed is treated exactly like "no such account" (lib/public-demo.js).
-  if (!user || !user.password_hash || (isSharedDemoUser(user) && !(await isPublicDemoOpen()))) {
+  if (!user || !user.password_hash || (isSharedDemoUser(user) && !(await isDemoOpenFor(user.demo_workspace_id)))) {
     await bcrypt.compare(String(password), DUMMY_HASH);
     loginFailsByAccount.fail(acctKey);
     loginFailsByIp.fail(ip);
@@ -400,7 +402,8 @@ router.post('/login', async (req, res) => {
   // A seat bought for this address and left pending (a purchase made before this account signed in) is theirs once they sign in.
   await claimForAccountByEmail(pool, user.email);
   setSiteSessionCookie(res, user);
-  if (isSharedDemoUser(user)) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email)); // a count for the admin Demo page; never blocks
+  // A count for the admin Demo page; never blocks. (A private workspace's sign-ins are counted per invitation in a later phase, not in the original demo's window.)
+  if (isSharedDemoUser(user) && (user.demo_workspace_id === null || user.demo_workspace_id === undefined)) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email));
   // isSchoolAdmin/isDistrictAdmin/isAffiliate are real entitlement checks (an
   // active school_license_admins/district_license_admins/affiliates row),
   // independent of the single site_users.role string — school-admin-login.html

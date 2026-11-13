@@ -39,9 +39,47 @@ The message contains the access code but not the password. The district sees the
 | Let it end on its own | Do nothing. At the end time the logins stop working and the page says it isn't available, even if the switch is still on. |
 | Start for a different district | Only when no one is using it: turn it off, then on again. That starts a new window, so the counts begin at zero and the sample data is reset. |
 
-## Two groups at the same time (until private workspaces are built)
+## Group invitations: a private copy of the demo for each group (command line, until the Demo page is rebuilt)
 
-Right now there is one demo, so every group in it shares the same sample data and the same end date. Until each group gets its own workspace (planned in `shared-demo-workspaces-requirements.md`):
+Once the invitation tool is deployed, each group can have its **own** copy of the demo: its own access code, password, student PIN and end date, and its own sample data that no other group can see. Groups can overlap freely. The Demo page doesn't show invitations yet (that is the next phase), so for now you run these from the cPanel Terminal. Every block starts with the full path and the Node activation, as always.
+
+**Start one (takes a free workspace, wipes it, and prints everything once):**
+
+```bash
+source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
+  cd /home/fixernat/repositories/fixernation/server && \
+  node scripts/demo-invitations.js create --label "Springfield USD" --days 14
+```
+
+It prints the access code, the password, the student PIN, the five sign-ins, and a message to paste into your email. The group's name (`--label`) is for you; the group never sees it. `--days` can be up to 30, or use `--until 2026-11-21T17:00:00-05:00`.
+
+**See what's open (never shows a password):**
+
+```bash
+source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
+  cd /home/fixernat/repositories/fixernation/server && \
+  node scripts/demo-invitations.js list
+```
+
+Then `show 4` prints invitation 4's details and message again, `extend 4 --days 7` moves its end date (the group keeps its place), `end 4` ends it now, `new-code 4` gives that group a new code (the old one stops, other groups are unaffected), and `new-password 4` or `new-pin 4` change those (that group is signed out). Use the same prefix, replacing `list` with the command.
+
+**When a group's time runs out** its logins stop on their own within seconds. A sweep that runs every 10 minutes (the cron line in `setup-cron-jobs.sh`) then wipes its copy and frees it for the next group. You can also run `sweep` by hand.
+
+**If all the workspaces are in use** the tool says so. End one, or add more:
+
+```bash
+source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
+  cd /home/fixernat/repositories/fixernation/server && \
+  node scripts/seed-demo-workspaces.js --count 15
+```
+
+Add `--apply` to the end to make it real (it's a dry run without it). It only adds the new ones; nobody is signed out.
+
+**To close everything at once** (an emergency stop, which also works when the website is down): `node scripts/set-public-demo.js --pause`. `--resume` lets the invitations work again with their end dates intact. Don't send invitations to real groups until tags and counts per group arrive in a later phase: a ticket from a group still gets a Demo tag, but the counts on the Demo page don't separate groups yet.
+
+## Two groups at the same time (the original single demo)
+
+The original single demo (the Demo page's switch) is one demo, so every group in it shares the same sample data and the same end date. If you use that one for more than one group, instead of the invitations above:
 
 1. **Run groups one after another when you can.**
 2. **If a second group starts while the first is still in, use Change end date, never turn the demo off and on.** Turning it on from closed resets the sample data and would wipe the first group's work.

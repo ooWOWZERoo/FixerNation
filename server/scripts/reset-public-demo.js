@@ -70,7 +70,8 @@ async function purgeFakeAccounts(conn, report, candidateIds) {
 
 // Puts one demo back to the state the seed made: the original single demo (no `fx`) or one workspace (`fx = workspaceFixtures(n)`). Everything it
 // touches is found through that demo's own district, school, purchase and logins, so resetting one workspace cannot touch another.
-async function resetDemo(conn, { rounds = 10, fx = legacyFixtures() } = {}, report = makeReport()) {
+// `newCodes` gives the rebuilt classroom a new join code and parent code (a workspace changing hands must not keep the codes the last group knew).
+async function resetDemo(conn, { rounds = 10, fx = legacyFixtures(), newCodes = false } = {}, report = makeReport()) {
   const workspace = fx.number;
   const seedHint = workspace === null ? 'scripts/seed-public-demo.js --apply' : 'scripts/seed-demo-workspaces.js --apply';
   const district = await one(conn, 'SELECT id FROM districts WHERE name = ?', [fx.districtName]);
@@ -103,7 +104,7 @@ async function resetDemo(conn, { rounds = 10, fx = legacyFixtures() } = {}, repo
     await conn.query('DELETE FROM classrooms WHERE teacher_site_user_id = ?', [ids.teacher]);
     report.updated(`cleared ${rooms.length} classroom(s) with their students, lessons, parent links and work`);
   }
-  await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, pinHash, rounds, codes: old, fx }, report);
+  await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, pinHash, rounds, codes: newCodes ? null : old, fx }, report);
 
   // 2. Invitations, extra licence seats and extra administrators (and the fake accounts they created).
   const fake = [];

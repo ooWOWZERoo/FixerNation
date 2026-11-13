@@ -15,6 +15,7 @@
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { getSetting } = require('./settings');
 const { evaluateDemoWindow } = require('./public-demo-window');
+const invitations = require('./public-demo-invitations');
 const { verifySession } = require('./session-tokens');
 const { SITE_COOKIE_NAME, STUDENT_COOKIE_NAME, COOKIE_NAME: ADMIN_COOKIE_NAME, DEMO_GATE_COOKIE_NAME } = require('./session');
 
@@ -37,6 +38,13 @@ async function isPublicDemoOpen(now = new Date()) {
   return (await getPublicDemoStatus(now)).open;
 }
 
+// Is the demo open for THIS account or session? A login that belongs to a private workspace (demo_workspace_id) works only while that workspace's invitation
+// is open (and demos are not paused); a login of the original single demo (no workspace) works while the original switch is on. Fails closed.
+async function isDemoOpenFor(workspaceId, now = new Date()) {
+  if (workspaceId === null || workspaceId === undefined || workspaceId === '') return isPublicDemoOpen(now);
+  return (await invitations.getOpenInvitationForWorkspace(workspaceId, now)) !== null;
+}
+
 // ---- Which accounts are demo accounts ---------------------------------------------------------------------------------------------------------
 
 // A site_users row (or a login query result) counts as a shared demo account when is_shared_demo is set.
@@ -44,18 +52,27 @@ function isSharedDemoUser(user) {
   return !!(user && user.is_shared_demo);
 }
 
-// True when the classroom belongs to a shared demo teacher (so its students are demo students). Before the column exists no classroom can be one.
-async function isSharedDemoClassroom(classroomId) {
-  if (!classroomId) return false;
+// What a classroom is to the demo: null when it is an ordinary classroom, otherwise { workspace } (the teacher's workspace number, or null for the
+// original single demo). Before the columns exist no classroom can be a demo classroom.
+async function sharedDemoClassroomInfo(classroomId) {
+  if (!classroomId) return null;
   const pool = require('../db/pool');
+  let row;
   try {
-    const [[row]] = await pool.query(
-      'SELECT su.is_shared_demo FROM classrooms c JOIN site_users su ON su.id = c.teacher_site_user_id WHERE c.id = ?', [classroomId]);
-    return !!(row && row.is_shared_demo);
+    [[row]] = await pool.query('SELECT su.is_shared_demo, su.demo_workspace_id FROM classrooms c JOIN site_users su ON su.id = c.teacher_site_user_id WHERE c.id = ?', [classroomId]);
   } catch (err) {
-    if (err.code === 'ER_BAD_FIELD_ERROR' || /no such column/i.test(String(err.message))) return false;
-    throw err;
+    if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column/i.test(String(err.message))) throw err;
+    try { [[row]] = await pool.query('SELECT su.is_shared_demo FROM classrooms c JOIN site_users su ON su.id = c.teacher_site_user_id WHERE c.id = ?', [classroomId]); }
+    catch (err2) { if (err2.code === 'ER_BAD_FIELD_ERROR' || /no such column/i.test(String(err2.message))) return null; throw err2; }
   }
+  if (!row || !row.is_shared_demo) return null;
+  const ws = row.demo_workspace_id === null || row.demo_workspace_id === undefined ? null : Number(row.demo_workspace_id);
+  return { workspace: ws };
+}
+
+// True when the classroom belongs to a shared demo teacher (so its students are demo students).
+async function isSharedDemoClassroom(classroomId) {
+  return (await sharedDemoClassroomInfo(classroomId)) !== null;
 }
 
 // ---- The demo request context -----------------------------------------------------------------------------------------------------------------
@@ -100,24 +117,38 @@ function refuseSharedDemo(req, res, message) {
 
 // ---- The access-code gate ---------------------------------------------------------------------------------------------------------------------
 
-// True when this request carries a demo gate cookie that is still good: signed by us, issued for the CURRENT access code (the code's version is in
-// the cookie, so a new code ends every visit at once), and the demo is open. Never throws.
-async function hasValidDemoGate(req) {
+// The visit this request's demo gate cookie stands for, or null. Signed by us, and still good:
+//   - { legacy: true }             the original single demo: issued for the CURRENT access code (the code's version is in the cookie, so a new code ends
+//                                  every visit at once) and the demo is open;
+//   - { invitation, workspace }    a group's own invitation: it is open, and the cookie carries the invitation's CURRENT code version.
+// Never throws; any doubt means null.
+async function getDemoGate(req) {
   const token = req && req.cookies && req.cookies[DEMO_GATE_COOKIE_NAME];
-  if (!token) return false;
+  if (!token) return null;
   try {
     const payload = verifySession('demoGate', token);
-    if (!(await isPublicDemoOpen())) return false;
-    return String(payload.v) === String(await getSetting('public_demo_code_version'));
+    if (payload.inv !== undefined && payload.inv !== null) {
+      const inv = await invitations.getOpenInvitationById(payload.inv);
+      if (!inv || String(inv.code_version) !== String(payload.v)) return null;
+      return { invitation: inv, workspace: Number(inv.workspace_id) };
+    }
+    if (!(await isPublicDemoOpen())) return null;
+    return String(payload.v) === String(await getSetting('public_demo_code_version')) ? { legacy: true } : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-// Someone who is using the shared demo: a valid access-code visit, or a demo login's session. Used to tag support and quote requests as coming
-// from the demo. The answer comes from the server's own cookies and never from anything the visitor typed.
+// True for a valid gate cookie of the ORIGINAL single demo only (an invitation's cookie is read with getDemoGate).
+async function hasValidDemoGate(req) {
+  const gate = await getDemoGate(req);
+  return !!(gate && gate.legacy);
+}
+
+// Someone who is using a demo: a valid access-code visit (either kind), or a demo login's session. Used to tag support and quote requests as coming from
+// the demo. The answer comes from the server's own cookies and never from anything the visitor typed.
 async function isDemoVisitor(req) {
-  return isSharedDemoRequest() || hasValidDemoGate(req);
+  return isSharedDemoRequest() || (await getDemoGate(req)) !== null;
 }
 
 // ---- The gate -----------------------------------------------------------------------------------------------------------------------------------
@@ -136,7 +167,7 @@ async function sharedDemoGate(req, res, next) {
       try { payload = verifySession(kind, token); } catch { continue; }
       if (!payload.demo) continue;
       let open = false;
-      try { open = await isPublicDemoOpen(); } catch { open = false; }
+      try { open = await isDemoOpenFor(payload.ws); } catch { open = false; } // payload.ws: the workspace a private-workspace login belongs to (none = the original demo)
       if (!open) {
         res.clearCookie(name);
         delete req.cookies[name];
@@ -177,7 +208,7 @@ async function sharedDemoGate(req, res, next) {
 module.exports = {
   DEMO_EMAIL_DOMAIN, DEMO_STUDENT_USERNAME, DEMO_SESSION_LENGTH, DEMO_SESSION_MS, DEMO_MAIL_NOTICE,
   evaluateDemoWindow, getPublicDemoStatus, isPublicDemoOpen,
-  isSharedDemoUser, isSharedDemoClassroom,
+  isSharedDemoUser, isSharedDemoClassroom, sharedDemoClassroomInfo, isDemoOpenFor, getDemoGate,
   isSharedDemoRequest, noteSuppressedMail, refuseSharedDemo, sharedDemoGate,
   demoRecipientAllowed, assertDemoRecipient, assertNotSharedDemoRequest,
   hasValidDemoGate, isDemoVisitor,

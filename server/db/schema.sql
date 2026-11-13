@@ -1691,3 +1691,26 @@ CREATE TABLE IF NOT EXISTS public_demo_workspaces (
   last_reset_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Prospect demo invitations (docs/reference/shared-demo-workspaces-requirements.md, phase 2): one row per group's visit. label is typed by staff (the group's name; staff
+-- see it, visitors never do); access_code is 8 letters and digits, never reused; code_version goes up with each new code; password and pin are the shared sign-in
+-- details of the group's workspace while it is active and are emptied when it ends; times are UTC. Created on existing installs by
+-- scripts/alter-add-demo-invitations.js.
+CREATE TABLE IF NOT EXISTS public_demo_invitations (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  label VARCHAR(120) NOT NULL,
+  workspace_id INT NOT NULL,
+  access_code VARCHAR(20) NOT NULL,
+  code_version INT NOT NULL DEFAULT 1,
+  password VARCHAR(100) NOT NULL DEFAULT '',
+  pin VARCHAR(20) NOT NULL DEFAULT '',
+  status VARCHAR(12) NOT NULL DEFAULT 'active',
+  starts_at DATETIME NOT NULL,
+  ends_at DATETIME NOT NULL,
+  ended_at DATETIME NULL,
+  end_reason VARCHAR(20) NULL,
+  created_by VARCHAR(80) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_public_demo_invitation_code (access_code),
+  INDEX idx_public_demo_invitation_ws (workspace_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -113,7 +113,7 @@
     <div class="card">
       <h2>Good to know</h2>
       <ul class="facts">
-        <li>Everyone using the demo shares the same sample data, and we reset it every night.</li>
+        <li id="know1">Everyone using the demo shares the same sample data, and we reset it every night.</li>
         <li>You can view every lesson, but downloads and uploads are turned off.</li>
         <li>The demo can't send email. Invitations only work with example.com addresses, like teacher2@example.com.</li>
         <li>Please don't enter real student information.</li>
@@ -186,6 +186,8 @@
 
   function renderDemo(d) {
     $('endsLine').textContent = 'The demo is open until ' + d.endsAtEastern + '.';
+    // A group with its own invitation has a private copy of the demo, so the shared-data line would not be true for it.
+    if (d.privateCopy) $('know1').textContent = "This demo is yours alone. Other groups work in their own copies and can't see what you do here, and we clear yours when your demo ends.";
     var pw = $('passwordLine'), pin = $('pinLine');
     pw.parentNode.querySelectorAll('button').forEach(function (b) { b.remove(); });
     pin.parentNode.querySelectorAll('button').forEach(function (b) { b.remove(); });

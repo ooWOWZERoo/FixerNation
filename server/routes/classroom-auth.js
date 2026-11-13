@@ -5,7 +5,7 @@ const pool = require('../db/pool');
 const { STUDENT_COOKIE_NAME, STUDENT_COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { requireStudentAuth } = require('../middleware/studentAuth');
 const crypto = require('crypto');
-const { isPublicDemoOpen, isSharedDemoClassroom } = require('../lib/public-demo');
+const { isDemoOpenFor, sharedDemoClassroomInfo } = require('../lib/public-demo');
 const { recordDemoEvent } = require('../lib/public-demo-admin');
 
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
@@ -27,8 +27,9 @@ const joinLimit = limiter({ name: 'student-join', windowMs: 60 * 60 * 1000, max:
 
 // `demo` is true for a student in a shared demo classroom (lib/public-demo.js): the claim lets the demo gate in app.js end the session when the
 // demo closes. The session is 8 hours either way.
-function setStudentCookie(res, student, demo = false) {
-  const token = signSession('student', { studentId: student.id, classroomId: student.classroom_id, ...(demo ? { demo: true } : {}) }, '8h');
+// `workspace` is the private workspace the classroom belongs to (none for the original single demo): the gate asks that workspace's invitation.
+function setStudentCookie(res, student, demo = false, workspace = null) {
+  const token = signSession('student', { studentId: student.id, classroomId: student.classroom_id, ...(demo ? { demo: true } : {}), ...(demo && workspace !== null ? { ws: workspace } : {}) }, '8h');
   res.cookie(STUDENT_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -94,8 +95,9 @@ router.post('/join', joinLimit, async (req, res) => {
   }
   const classroom = classrooms[0];
   // A shared demo classroom answers a join code only while the demo is open; closed, it looks like any code that does not exist.
-  const demoClassroom = await isSharedDemoClassroom(classroom.id);
-  if (demoClassroom && !(await isPublicDemoOpen())) {
+  const demoInfo = await sharedDemoClassroomInfo(classroom.id);
+  const demoClassroom = demoInfo !== null;
+  if (demoClassroom && !(await isDemoOpenFor(demoInfo.workspace))) {
     joinCodeMissesByIp.fail(ip);
     return res.status(404).json({ error: 'Classroom not found — check your join code' });
   }
@@ -117,7 +119,7 @@ router.post('/join', joinLimit, async (req, res) => {
       const matches = await bcrypt.compare(String(pin), existingByName[0].password_hash);
       if (matches) {
         pinFailsByStudent.clear(studentKey);
-        setStudentCookie(res, existingByName[0], demoClassroom);
+        setStudentCookie(res, existingByName[0], demoClassroom, demoClassroom ? demoInfo.workspace : null);
         return res.json({
           classroomName: classroom.name,
           displayName: existingByName[0].display_name,
@@ -151,7 +153,7 @@ router.post('/join', joinLimit, async (req, res) => {
 
     await conn.commit();
 
-    setStudentCookie(res, student, demoClassroom);
+    setStudentCookie(res, student, demoClassroom, demoClassroom ? demoInfo.workspace : null);
     res.json({
       classroomName: classroom.name,
       displayName: student.display_name,
@@ -190,8 +192,9 @@ router.post('/login', async (req, res) => {
   );
   const student = rows[0];
   // A demo student while the demo is closed is treated exactly like a username that does not exist (lib/public-demo.js).
-  const demoStudent = !!student && await isSharedDemoClassroom(student.classroom_id);
-  if (!student || (demoStudent && !(await isPublicDemoOpen()))) {
+  const studentDemoInfo = student ? await sharedDemoClassroomInfo(student.classroom_id) : null;
+  const demoStudent = studentDemoInfo !== null;
+  if (!student || (demoStudent && !(await isDemoOpenFor(studentDemoInfo.workspace)))) {
     pinFailsByStudent.fail(usernameKey);
     pinFailsByIp.fail(ip);
     return res.status(401).json({ error: 'Invalid username or PIN' });
@@ -208,8 +211,8 @@ router.post('/login', async (req, res) => {
   }
   pinFailsByStudent.clear(usernameKey);
 
-  setStudentCookie(res, student, demoStudent);
-  if (demoStudent) await recordDemoEvent('sign_in', 'student'); // a count for the admin Demo page; never blocks
+  setStudentCookie(res, student, demoStudent, demoStudent ? studentDemoInfo.workspace : null);
+  if (demoStudent && studentDemoInfo.workspace === null) await recordDemoEvent('sign_in', 'student'); // a count for the admin Demo page; never blocks (a private workspace is counted per invitation later)
   res.json({ classroomName: student.classroom_name, displayName: student.display_name, username: student.username });
 });
 

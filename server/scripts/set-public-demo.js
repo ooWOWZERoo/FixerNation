@@ -3,6 +3,7 @@ const F = require('../lib/public-demo-fixtures');
 const { evaluateDemoWindow, formatEastern } = require('../lib/public-demo-window');
 const { makeReport } = require('./seed-public-demo');
 const { getSettingRaw, putSettingRaw, ensureAccessCode, startNewWindow } = require('../lib/public-demo-admin');
+const invitationsLib = require('../lib/public-demo-invitations');
 const { resetDemo } = require('./reset-public-demo');
 
 // The shared demo's on/off switch from the command line (docs/reference/shared-demo-environment-requirements.md, R1). It is the switch until the
@@ -12,6 +13,11 @@ const { resetDemo } = require('./reset-public-demo');
 //   node scripts/set-public-demo.js --on --days 14
 //   node scripts/set-public-demo.js --on --until 2026-11-21T17:00:00-05:00
 //   node scripts/set-public-demo.js --off
+//   node scripts/set-public-demo.js --pause     pause EVERY demo, including every group's invitation (the emergency stop)
+//   node scripts/set-public-demo.js --resume    allow invitations to work again
+//
+// Groups' own invitations (private workspaces, each with its own code, password, PIN and end time) are managed with scripts/demo-invitations.js. --off also
+// pauses them, so it stays the one command that closes everything; invitations keep their end times and open again on --resume.
 //
 // --on needs an end time (never open-ended): either --days N, or --until with a date, time and time zone. The longest window is the setting
 // public_demo_max_days (30 unless changed). Turning the demo on also resets the demo data (so each window starts clean); add --no-reset to skip that.
@@ -75,12 +81,14 @@ async function turnOff(conn) {
 function parseArgs(argv) {
   const args = { reset: true };
   let action = null;
-  const setAction = (a) => { if (action && action !== a) throw new Error('Choose one of --status, --on or --off.'); action = a; };
+  const setAction = (a) => { if (action && action !== a) throw new Error('Choose one of --status, --on, --off, --pause or --resume.'); action = a; };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--status') setAction('status');
     else if (a === '--on') setAction('on');
     else if (a === '--off') setAction('off');
+    else if (a === '--pause') setAction('pause');
+    else if (a === '--resume') setAction('resume');
     else if (a === '--days') args.days = argv[++i];
     else if (a === '--until') args.until = argv[++i];
     else if (a === '--no-reset') args.reset = false;
@@ -98,10 +106,23 @@ async function main() {
     user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
   });
   try {
-    if (args.action === 'status') { console.log('\n' + (await describe(conn)).text + '\n'); return; }
+    if (args.action === 'status') {
+      const paused = await invitationsLib.isPaused(conn);
+      let open = 0;
+      try { open = (await invitationsLib.listInvitations(conn, { includeEnded: false })).filter(i => i.open).length; } catch { /* the invitations table is not there yet */ }
+      console.log('\n' + (await describe(conn)).text);
+      console.log(`Group invitations: ${paused ? 'PAUSED' : 'running'}, ${open} open. (node scripts/demo-invitations.js list)\n`);
+      return;
+    }
+    if (args.action === 'pause' || args.action === 'resume') {
+      await invitationsLib.setPaused(conn, args.action === 'pause');
+      console.log(args.action === 'pause' ? '\nEvery group invitation is paused: their logins and pages are closed. Resume with --resume.\n' : '\nGroup invitations are running again.\n');
+      return;
+    }
     if (args.action === 'off') {
       await turnOff(conn);
-      console.log('\n' + (await describe(conn)).text + ' Open demo sessions end on their next request.\n');
+      await invitationsLib.setPaused(conn, true); // from the command line, --off is the one command that closes everything (the admin page's own "Turn off" only closes the original demo)
+      console.log('\n' + (await describe(conn)).text + ' Group invitations are paused too. Open demo sessions end on their next request (within a few seconds for a group).\n');
       return;
     }
     await conn.beginTransaction();
@@ -123,4 +144,4 @@ async function main() {
 
 if (require.main === module) main().catch(err => { console.error(err.message || err); process.exit(1); });
 
-module.exports = { turnOn, turnOff, describe, maxDays };
+module.exports = { turnOn, turnOff, describe, maxDays, parseArgs };
