@@ -14,7 +14,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const A = require('./public-demo-admin');
-const { workspaceFixtures, workspaceLogins } = require('./public-demo-workspaces');
+const { workspaceFixtures, workspaceLogins, workspaceLoginOf, MAX_DEMO_WORKSPACES } = require('./public-demo-workspaces');
 const { formatEastern } = require('./public-demo-window');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -186,10 +186,55 @@ async function getInvitation(conn, id, { secrets = false, now = new Date() } = {
   return present(await getRow(conn, id), { secrets, now });
 }
 
-// Newest first. Ended invitations are included unless `onlyOpen`.
-async function listInvitations(conn, { includeEnded = true, now = new Date() } = {}) {
+// Newest first. Ended invitations are included unless `includeEnded` is false; with `endedWithinDays`, an invitation that ended longer ago than that is left
+// out of the list (the row stays, so its access code is never reused).
+async function listInvitations(conn, { includeEnded = true, endedWithinDays = null, now = new Date() } = {}) {
   const [rows] = await conn.query(`SELECT * FROM public_demo_invitations ${includeEnded ? '' : "WHERE status = 'active'"} ORDER BY id DESC`);
-  return rows.map(r => present(r, { now }));
+  const cutoff = endedWithinDays ? now.getTime() - endedWithinDays * DAY_MS : null;
+  return rows
+    .filter(r => cutoff === null || r.status === 'active' || ((fromDb(r.ended_at) || new Date(0)).getTime() >= cutoff))
+    .map(r => present(r, { now }));
+}
+
+// How many private workspaces there are, how many a group is using, and how many more can be added.
+async function poolStatus(conn) {
+  const [rows] = await conn.query('SELECT id, status FROM public_demo_workspaces ORDER BY id');
+  const inUse = rows.filter(r => r.status === 'in_use').length;
+  const highest = rows.reduce((m, r) => Math.max(m, Number(r.id)), 0);
+  return { total: rows.length, inUse, free: rows.length - inUse, highest, max: MAX_DEMO_WORKSPACES, canAdd: Math.max(0, MAX_DEMO_WORKSPACES - highest) };
+}
+
+// Adds `count` more workspaces after the highest one (nobody already in a workspace is touched). The seed creates only what is missing.
+async function addWorkspaces(conn, count, { rounds = 12 } = {}) {
+  const n = Number(count);
+  if (!Number.isInteger(n) || n < 1) throw bad('Say how many workspaces to add (a whole number, at least 1).', 'count');
+  const status = await poolStatus(conn);
+  if (status.highest + n > MAX_DEMO_WORKSPACES) throw bad(`The pool can have at most ${MAX_DEMO_WORKSPACES} workspaces; there are ${status.highest}, so ${status.canAdd} more can be added.`, 'count');
+  const { seedWorkspaces } = require('../scripts/seed-demo-workspaces');
+  await inTransaction(conn, () => seedWorkspaces(conn, status.highest + n, { rounds }));
+  invalidateCache();
+  return poolStatus(conn);
+}
+
+// A label can be corrected at any time, even after the invitation has ended (it is only for staff).
+async function renameInvitation(conn, id, label, { now = new Date() } = {}) {
+  const name = cleanLabel(label);
+  const row = await getRow(conn, id);
+  if (!row) throw notFound();
+  await conn.query('UPDATE public_demo_invitations SET label = ? WHERE id = ?', [name, id]);
+  invalidateCache();
+  return { previous: row.label, invitation: await getInvitation(conn, id, { now }) };
+}
+
+// Which group is behind a demo login? `identifier` is a sign-in address or student username. Returns null for anything that is not a demo workspace login;
+// otherwise the workspace, the role, and the group now using it (or the last one that did), without any secret.
+async function groupForLogin(conn, identifier, { now = new Date() } = {}) {
+  const login = workspaceLoginOf(identifier);
+  if (!login) return null;
+  let rows;
+  try { [rows] = await conn.query('SELECT * FROM public_demo_invitations WHERE workspace_id = ? ORDER BY (status = ?) DESC, id DESC LIMIT 1', [login.number, 'active']); }
+  catch (err) { if (isMissing(err)) return { workspaceId: login.number, role: login.role, invitation: null }; throw err; }
+  return { workspaceId: login.number, role: login.role, invitation: present(rows[0], { now }) };
 }
 
 // Takes a free workspace, wipes it, gives it a new password and PIN, and records the invitation. Returns it WITH its secrets (the one time they are
@@ -366,7 +411,7 @@ async function anyOpenInvitation(now = new Date()) {
 module.exports = {
   DEFAULT_DAYS, DEFAULT_MAX_DAYS, toDb, fromDb, present, loginsFor,
   isPaused, setPaused, maxDays, resolveEnd, cleanLabel,
-  getInvitation, listInvitations, createInvitation, extendInvitation, endInvitation, regenerateCode, regenerateSecret, sweep,
+  getInvitation, listInvitations, poolStatus, addWorkspaces, renameInvitation, groupForLogin, createInvitation, extendInvitation, endInvitation, regenerateCode, regenerateSecret, sweep,
   applySecrets, resetWorkspace, wipeAndClose,
   getOpenInvitationForWorkspace, getOpenInvitationById, findOpenInvitationByCode, anyOpenInvitation, invalidateCache, setCacheTtl,
 };

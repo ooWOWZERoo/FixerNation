@@ -39,19 +39,43 @@ The message contains the access code but not the password. The district sees the
 | Let it end on its own | Do nothing. At the end time the logins stop working and the page says it isn't available, even if the switch is still on. |
 | Start for a different district | Only when no one is using it: turn it off, then on again. That starts a new window, so the counts begin at zero and the sample data is reset. |
 
-## Group invitations: a private copy of the demo for each group (command line, until the Demo page is rebuilt)
+## Group invitations: a private copy of the demo for each group
 
-Once the invitation tool is deployed, each group can have its **own** copy of the demo: its own access code, password, student PIN and end date, and its own sample data that no other group can see. Groups can overlap freely. The Demo page doesn't show invitations yet (that is the next phase), so for now you run these from the cPanel Terminal. Every block starts with the full path and the Node activation, as always.
+Each group gets its **own** copy of the demo: its own access code, password, student PIN and end date, and sample data that no other group can see. Groups can overlap freely. You run all of this from **Sales > Demo**; the Terminal commands further down do the same things and are there for when the website is down.
 
-**Start one (takes a free workspace, wipes it, and prints everything once):**
+### From the admin (Sales > Demo)
+
+1. **Start one.** Under **Start an invitation**, type the group's name (the district's name works well; only staff see it), choose how long it stays open (up to 30 days) or an exact date and time, and press **Start the invitation**. It takes a free workspace and clears it, so the group starts fresh.
+2. **Send it.** The group's details open right away. Press **Copy message**, paste it into your own email and sign it. It has the demo link, the access code and the end date. The password and PIN aren't in it: the group sees them after entering the code. Press **Show** next to any secret to read it, **Copy** to copy it.
+3. **Watch it.** The **Invitations** table shows each group, its workspace number, its status (Open, Ending soon, Ran out, Ended) and when it ends. Click a group's name to open its details. The **Group demos** card at the top shows how many workspaces are in use.
+4. **Look after it.** In a group's details:
+   - **Rename** fixes a typo in the group's name, any time, even after it ends.
+   - **Change end date** gives more (or less) time. People already in the demo keep their place.
+   - **New code**, **New password** and **New PIN** change just that group's; the group is shut out or signed out, and nobody else is affected.
+   - **Unlock logins** clears the 15-minute lock that too many wrong guesses cause.
+   - **Clear what this group added** removes the classrooms, students and work the group made, keeping its codes, password and PIN.
+   - **End now** ends it: the logins stop at once, the copy is wiped, and the workspace goes back in the pool.
+5. **When time runs out** the logins stop on their own within seconds, and a sweep that runs every 10 minutes then wipes the copy and frees it. Ended invitations stay in the **Ended invitations** list for 90 days.
+
+**Who is using workspace 03?** Open **Support > Account Lookup** and look up any demo login's address, such as `demo-teacher-03@public-demo.example.com`. It says "Demo login for workspace 03. Group: Springfield USD" and links to the invitation. The same group name shows in the Invitations table beside the workspace number. A workspace nobody has used says so.
+
+**If all the workspaces are in use** the page says so when you try to start another. End one, or use **Add workspaces** under **Group demos** (up to 40 in all). Adding workspaces never affects groups already in one.
+
+**To pause every demo at once**, press **Pause all demos**. Every group is signed out and no new invitation can start; nothing is lost, and each group keeps its end date. **Resume demos** brings them back.
+
+Don't send invitations to real groups until tags and counts per group arrive in a later phase: a ticket from a group still gets a Demo tag, but the counts on the original demo's card don't separate groups yet.
+
+### From the Terminal (when the website is down)
+
+Every block starts with the full path and the Node activation, as always.
+
+**Start one (prints everything once):**
 
 ```bash
 source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
   cd /home/fixernat/repositories/fixernation/server && \
   node scripts/demo-invitations.js create --label "Springfield USD" --days 14
 ```
-
-It prints the access code, the password, the student PIN, the five sign-ins, and a message to paste into your email. The group's name (`--label`) is for you; the group never sees it. `--days` can be up to 30, or use `--until 2026-11-21T17:00:00-05:00`.
 
 **See what's open (never shows a password):**
 
@@ -61,21 +85,11 @@ source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate &
   node scripts/demo-invitations.js list
 ```
 
-Then `show 4` prints invitation 4's details and message again, `extend 4 --days 7` moves its end date (the group keeps its place), `end 4` ends it now, `new-code 4` gives that group a new code (the old one stops, other groups are unaffected), and `new-password 4` or `new-pin 4` change those (that group is signed out). Use the same prefix, replacing `list` with the command.
+Replace `list` with `show 4` (details and message), `rename 4 --label "New name"`, `extend 4 --days 7`, `end 4`, `new-code 4`, `new-password 4`, `new-pin 4` or `sweep`.
 
-**When a group's time runs out** its logins stop on their own within seconds. A sweep that runs every 10 minutes (the cron line in `setup-cron-jobs.sh`) then wipes its copy and frees it for the next group. You can also run `sweep` by hand.
+**To close everything at once** (an emergency stop that works even when the website is down): `node scripts/set-public-demo.js --pause`. `--resume` lets the invitations work again with their end dates intact.
 
-**If all the workspaces are in use** the tool says so. End one, or add more:
-
-```bash
-source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
-  cd /home/fixernat/repositories/fixernation/server && \
-  node scripts/seed-demo-workspaces.js --count 15
-```
-
-Add `--apply` to the end to make it real (it's a dry run without it). It only adds the new ones; nobody is signed out.
-
-**To close everything at once** (an emergency stop, which also works when the website is down): `node scripts/set-public-demo.js --pause`. `--resume` lets the invitations work again with their end dates intact. Don't send invitations to real groups until tags and counts per group arrive in a later phase: a ticket from a group still gets a Demo tag, but the counts on the Demo page don't separate groups yet.
+**To add workspaces:** `node scripts/seed-demo-workspaces.js --count 15` (a dry run; add `--apply` to the end to make it real).
 
 ## Two groups at the same time (the original single demo)
 

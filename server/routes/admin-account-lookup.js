@@ -13,6 +13,9 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { reopenAccount } = require('../lib/account-closing');
+const { groupForLogin } = require('../lib/public-demo-invitations');
+const { workspaceTag } = require('../lib/sales-demo');
+const { ACCOUNTS: ORIGINAL_DEMO_ACCOUNTS } = require('../lib/public-demo-fixtures');
 
 const router = express.Router();
 
@@ -70,7 +73,21 @@ router.get('/', requireAuth, async (req, res) => {
     );
   }
 
-  res.json({ account: account || null, invitations, seats, schoolAdminAssignments, districtAdminAssignments });
+  // A demo login (docs/reference/shared-demo-workspaces-requirements.md): which private workspace it belongs to and which group is using it now (or last did),
+  // so staff who find "demo-teacher-03@..." know it is Springfield USD's copy. The group's name is for staff only.
+  let demo = null;
+  const group = await groupForLogin(pool, email);
+  if (group) {
+    const g = group.invitation;
+    demo = {
+      kind: 'workspace', workspaceId: group.workspaceId, workspace: workspaceTag(group.workspaceId), role: group.role,
+      group: g ? { id: g.id, label: g.label, open: g.open, state: g.state, endsAtEastern: g.endsAtEastern } : null,
+    };
+  } else if (Object.values(ORIGINAL_DEMO_ACCOUNTS).some(a => a.email === email)) {
+    demo = { kind: 'original' };
+  }
+
+  res.json({ account: account || null, demo, invitations, seats, schoolAdminAssignments, districtAdminAssignments });
 });
 
 // PUT /api/admin/account-lookup/invitations/:id/cancel

@@ -20,6 +20,13 @@
   .demo-controls .a-field { margin: 0; }
   .demo-message { width: 100%; min-height: 260px; font-family: inherit; font-size: 14px; line-height: 1.5; }
   .demo-list { margin: 8px 0 0 18px; padding: 0; line-height: 1.6; }
+  .demo-legacy { margin-top: 24px; }
+  .demo-legacy > summary { cursor: pointer; font-weight: 700; font-size: 16px; padding: 10px 0; }
+  .demo-legacy > .a-note { margin: 0 0 16px; }
+  .inv-link { background: none; border: none; padding: 0; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; text-align: left; }
+  .inv-sub { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--a-border, rgba(0,0,0,.12)); }
+  .inv-grid { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  #invHeadCard .a-hint, #invNewCard .a-hint, #invDetailCard .a-hint { text-align: left; }
 </style>
 </head>
 <body class="fn-mission-admin">
@@ -36,6 +43,44 @@
     </div>
 
     <div class="a-content">
+
+      <div class="a-card" id="invHeadCard">
+        <div class="a-card-head"><h2>Group demos</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">Each group gets its own private copy of the demo, with its own access code, password, student PIN and end date. Groups can use the demo at the same time and never see each other.</div>
+        <div id="invStatusBody"><div class="a-empty">Loading...</div></div>
+      </div>
+
+      <div class="a-card" id="invNewCard" style="display:none;">
+        <div class="a-card-head"><h2>Start an invitation</h2></div>
+        <div class="demo-controls">
+          <div class="a-field"><label for="invLabel">Group name</label><input type="text" id="invLabel" maxlength="120" placeholder="Springfield USD" style="min-width:260px;"></div>
+          <div class="a-field"><label for="invDays">Stay open for</label><select id="invDays" class="a-filter-select"></select></div>
+          <div class="a-field"><label for="invUntil">or until (your computer's time zone)</label><input type="datetime-local" id="invUntil"></div>
+          <button class="a-btn a-btn-primary" id="invStart" data-inv="start">Start the invitation</button>
+        </div>
+        <div class="a-hint" style="margin-top:8px;">Only staff see this name. Use the district's name so you can tell groups apart.</div>
+        <div class="a-hint">This takes a free workspace and clears it, so the group starts fresh. The details show up below.</div>
+      </div>
+
+      <div class="a-card" id="invListCard" style="display:none;">
+        <div class="a-card-head"><h2>Invitations</h2></div>
+        <div id="invListBody"></div>
+      </div>
+
+      <div class="a-card" id="invDetailCard" style="display:none;">
+        <div class="a-card-head"><h2 id="invDetailTitle"></h2></div>
+        <div id="invDetailBody"></div>
+      </div>
+
+      <div class="a-card" id="invEndedCard" style="display:none;">
+        <div class="a-card-head"><h2>Ended invitations</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">Kept here for 90 days. Their workspaces are already cleared and back in the pool.</div>
+        <div id="invEndedBody"></div>
+      </div>
+
+      <details class="demo-legacy" id="legacyDemo">
+        <summary>The original single demo</summary>
+        <div class="a-note">Before groups had their own copies, everyone shared this one demo. It still works, and we'll retire it once invitations have been in use for a while.</div>
 
       <div class="a-card" id="statusCard">
         <div class="a-card-head"><h2>Demo status</h2></div>
@@ -87,13 +132,15 @@
         <div id="countsBody"></div>
       </div>
 
+      </details>
+
       <div class="a-card">
         <div class="a-card-head"><h2>What visitors can and can't do</h2></div>
         <ul class="demo-list">
           <li>They can view every lesson in the viewer, but they can't download files.</li>
           <li>They can't send email. Invitations only work with example.com addresses.</li>
           <li>They can't change the password or PIN, upload files, or reach the community.</li>
-          <li>Everyone shares the same sample data until the nightly reset.</li>
+          <li>A group has its own private copy of the sample data. (The original single demo shares one copy and resets every night.)</li>
         </ul>
       </div>
 
@@ -275,7 +322,216 @@ document.addEventListener('click', async function (e) {
   }
 });
 
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// Group invitations (docs/reference/shared-demo-workspaces-requirements.md, section 5). Everything below uses data-inv attributes, so it never
+// touches the original demo's data-action buttons above, and nothing from the server goes into an inline handler.
+// ---------------------------------------------------------------------------------------------------------------------------------------
+var inv = { data: null, selected: null, detail: null, shown: {}, opened: false };
+
+async function invApi(path, method, body) {
+  var opts = { method: method || 'GET', credentials: 'include' };
+  if (opts.method !== 'GET') { opts.headers = { 'Content-Type': 'application/json' }; opts.body = JSON.stringify(body || {}); }
+  var r = await fetch('/api/admin/public-demo' + path, opts);
+  if (fnHandleUnauthorized(r)) return null;
+  var j = await r.json().catch(function () { return {}; });
+  if (!r.ok) { fnToast(j.error || 'Something went wrong'); return null; }
+  return j;
+}
+
+var INV_STATES = {
+  active: ['a-pill-success', 'Open'], ending_soon: ['a-pill-warning', 'Ending soon'], expired: ['a-pill-warning', 'Ran out'], ended: ['a-pill-neutral', 'Ended']
+};
+function invPill(state) { var p = INV_STATES[state] || INV_STATES.ended; return '<span class="a-pill ' + p[0] + '">' + esc(p[1]) + '</span>'; }
+
+function renderInvStatus() {
+  var d = inv.data, p = d.pool;
+  var html = '<div class="demo-row">' +
+    (d.paused ? '<span class="a-pill a-pill-warning">Demos are paused</span>' : '<span class="a-pill a-pill-success">Demos are running</span>') +
+    '<strong>' + esc(p.inUse) + ' of ' + esc(p.total) + '</strong> workspaces in use' +
+    (d.paused ? '<button class="a-btn a-btn-primary a-btn-sm" data-inv="resume">Resume demos</button>' : '<button class="a-btn a-btn-outline a-btn-sm" data-inv="pause">Pause all demos</button>') +
+    '</div>' +
+    '<div class="a-hint">Pausing closes every group\'s demo right away. Nothing is lost, and each group keeps its end date.</div>';
+  if (p.canAdd > 0) {
+    var opts = [1, 2, 5, 10].filter(function (n) { return n <= p.canAdd; });
+    if (opts.indexOf(p.canAdd) === -1 && p.total === 0) opts.push(p.canAdd);
+    html += '<div class="inv-sub"><div class="inv-grid"><div class="a-field"><label for="invAddCount">Add workspaces</label><select id="invAddCount" class="a-filter-select">' +
+      opts.map(function (n) { return '<option value="' + esc(n) + '"' + (n === Math.min(10, p.canAdd) ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') +
+      '</select></div><button class="a-btn a-btn-outline" data-inv="add">Add</button></div>' +
+      '<div class="a-hint" style="margin-top:8px;">A workspace is one private copy, and you can have up to ' + esc(p.max) + '. Groups already in a workspace aren\'t affected.</div></div>';
+  }
+  if (p.total === 0) html += '<div class="a-note" style="margin-top:12px;">There are no workspaces yet. Add some to get started.</div>';
+  document.getElementById('invStatusBody').innerHTML = html;
+}
+
+function renderInvLists() {
+  var d = inv.data, p = d.pool;
+  var open = d.invitations.filter(function (i) { return i.state !== 'ended'; });
+  var ended = d.invitations.filter(function (i) { return i.state === 'ended'; });
+  document.getElementById('invNewCard').style.display = p.total > 0 ? '' : 'none';
+  document.getElementById('invListCard').style.display = p.total > 0 ? '' : 'none';
+  document.getElementById('invEndedCard').style.display = ended.length ? '' : 'none';
+
+  var days = [1, 3, 7, 14, 21, 30].filter(function (n) { return n <= d.maxDays; });
+  var sel = document.getElementById('invDays');
+  if (!sel.options.length) sel.innerHTML = days.map(function (n) { return '<option value="' + esc(n) + '"' + (n === d.defaultDays ? ' selected' : '') + '>' + esc(n) + ' day' + (n === 1 ? '' : 's') + '</option>'; }).join('');
+
+  document.getElementById('invListBody').innerHTML = open.length
+    ? '<table class="a-table"><thead><tr><th>Group</th><th>Workspace</th><th>Status</th><th>Ends (US Eastern)</th></tr></thead><tbody>' +
+      open.map(function (i) {
+        return '<tr><td><button class="inv-link" data-inv="open" data-id="' + esc(i.id) + '">' + esc(i.label) + '</button></td><td>' + esc(i.workspace) + '</td><td>' + invPill(i.state) + '</td><td>' + esc(i.endsAtEastern) + '</td></tr>';
+      }).join('') + '</tbody></table>'
+    : '<div class="a-empty">No invitations yet. Start one above when a group shows interest.</div>';
+
+  document.getElementById('invEndedBody').innerHTML = '<table class="a-table"><thead><tr><th>Group</th><th>Workspace</th><th>Ended</th></tr></thead><tbody>' +
+    ended.map(function (i) {
+      var when = i.endedAt ? new Date(i.endedAt).toLocaleString() : '';
+      return '<tr><td><button class="inv-link" data-inv="open" data-id="' + esc(i.id) + '">' + esc(i.label) + '</button></td><td>' + esc(i.workspace) + '</td><td>' + esc(when) + (i.endReason === 'expired' ? ' (time ran out)' : '') + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+function invSecretRow(key, label, value, newKind) {
+  var shown = inv.shown[key];
+  return '<div class="demo-row"><span class="demo-label">' + esc(label) + '</span>' +
+    '<span class="demo-secret">' + (shown ? esc(value) : '••••••••') + '</span>' +
+    '<button class="a-btn a-btn-outline a-btn-sm" data-inv="toggle" data-key="' + esc(key) + '">' + (shown ? 'Hide' : 'Show') + '</button>' +
+    '<button class="a-btn a-btn-outline a-btn-sm" data-inv="copy" data-key="' + esc(key) + '">Copy</button>' +
+    (newKind ? '<button class="a-btn a-btn-outline a-btn-sm" data-inv="' + esc(newKind[0]) + '">' + esc(newKind[1]) + '</button>' : '') + '</div>';
+}
+
+function renderInvDetail() {
+  var d = inv.detail, card = document.getElementById('invDetailCard');
+  if (!d) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  document.getElementById('invDetailTitle').textContent = d.label + ' (workspace ' + d.workspace + ')';
+  var open = d.open;
+  var html = '<div class="demo-row">' + invPill(d.state) + '<span>' + (open ? 'Open until ' + esc(d.endsAtEastern) + '.' : 'This invitation has ended. Its copy was cleared and the workspace went back in the pool.') + '</span></div>' +
+    '<div class="inv-grid" style="margin-top:10px;"><div class="a-field"><label for="invRename">Group name</label><input type="text" id="invRename" maxlength="120" style="min-width:260px;"></div>' +
+    '<button class="a-btn a-btn-outline" data-inv="rename">Rename</button></div>';
+  if (open) {
+    html += '<div class="a-note" style="margin:14px 0;">Send the access code along with the demo link. The group sees the password and PIN once it enters the code.</div>' +
+      invSecretRow('code', 'Access code', d.accessCode, ['new-code', 'New code']) +
+      invSecretRow('password', 'Shared password', d.password, ['new-password', 'New password']) +
+      invSecretRow('pin', 'Student PIN', d.pin, ['new-pin', 'New PIN']) +
+      '<div class="demo-row"><span class="demo-label">Class join code</span><span class="demo-secret">' + esc(d.joinCode) + '</span></div>' +
+      '<table class="a-table" style="margin-top:14px;"><thead><tr><th>Who</th><th>User ID</th><th>Signs in at</th><th></th></tr></thead><tbody>' +
+      d.logins.map(function (l) {
+        return '<tr><td>' + esc(l.role) + (l.lockedSeconds > 0 ? ' <span class="a-pill a-pill-warning">Locked for ' + esc(Math.ceil(l.lockedSeconds / 60)) + ' min</span>' : '') + '</td><td><span class="demo-secret">' + esc(l.userId) + '</span></td><td>' + esc(l.signIn) + '</td><td></td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="inv-sub"><div style="font-weight:600; margin-bottom:6px;">Message for the group</div><textarea class="demo-message" id="invMessage" readonly aria-label="Message for the group"></textarea>' +
+      '<div style="margin-top:10px;"><button class="a-btn a-btn-primary" data-inv="copy" data-key="message">Copy message</button></div></div>' +
+      '<div class="inv-sub"><div class="inv-grid"><div class="a-field"><label for="invExtendDays">Change the end date</label><select id="invExtendDays" class="a-filter-select">' +
+      [1, 3, 7, 14, 21, 30].filter(function (n) { return n <= inv.data.maxDays; }).map(function (n) { return '<option value="' + esc(n) + '"' + (n === 7 ? ' selected' : '') + '>' + esc(n) + ' day' + (n === 1 ? '' : 's') + ' from now</option>'; }).join('') +
+      '</select></div><div class="a-field"><label for="invExtendUntil">or until (your computer\'s time zone)</label><input type="datetime-local" id="invExtendUntil"></div>' +
+      '<button class="a-btn a-btn-primary" data-inv="extend">Change end date</button></div><div class="a-hint" style="margin-top:8px;">People already in the demo keep their place.</div></div>' +
+      '<div class="inv-sub"><div class="demo-row"><button class="a-btn a-btn-outline" data-inv="unlock">Unlock logins</button><span class="a-hint">' +
+      (d.lockedCount ? esc(d.lockedCount) + ' login' + (d.lockedCount === 1 ? ' is' : 's are') + ' locked right now. ' : '') + 'Too many wrong guesses lock a shared login for 15 minutes. This clears the locks right away.</span></div>' +
+      '<div class="demo-row"><button class="a-btn a-btn-outline" data-inv="clear">Clear what this group added</button><span class="a-hint">Removes the classrooms, students, work and invitations the group added. Their codes, password and PIN stay the same.</span></div>' +
+      '<div class="demo-row"><button class="a-btn a-btn-danger" data-inv="end">End now</button></div></div>';
+  }
+  document.getElementById('invDetailBody').innerHTML = html;
+  document.getElementById('invRename').value = d.label;
+  if (open) document.getElementById('invMessage').value = d.message;
+}
+
+async function loadInvitations() {
+  var data = await invApi('/invitations');
+  if (!data) return;
+  inv.data = data;
+  renderInvStatus();
+  renderInvLists();
+  if (inv.selected && !data.invitations.some(function (i) { return i.id === inv.selected; })) { inv.selected = null; inv.detail = null; }
+  if (!inv.opened) {
+    inv.opened = true;
+    var want = Number(new URLSearchParams(location.search).get('invitation'));
+    if (want) await invOpen(want);
+  }
+  renderInvDetail();
+}
+
+async function invOpen(id) {
+  var d = await invApi('/invitations/' + encodeURIComponent(id));
+  if (!d) return;
+  inv.selected = d.id; inv.detail = d; inv.shown = {};
+  renderInvDetail();
+  document.getElementById('invDetailCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// An answer that is one invitation's details: show it, then refresh the lists behind it.
+async function invAfter(detail, toast, keepShown) {
+  if (!detail) return;
+  inv.selected = detail.id; inv.detail = detail;
+  if (!keepShown) inv.shown = {};
+  if (toast) fnToast(toast);
+  await loadInvitations();
+  renderInvDetail();
+}
+
+function invCopy(text) { if (text) copyText(text); }
+
+document.addEventListener('click', async function (e) {
+  var btn = e.target.closest('[data-inv]');
+  if (!btn || !inv.data) return;
+  var action = btn.dataset.inv, id = inv.selected, d = inv.detail, r;
+  if (action === 'open') { await invOpen(Number(btn.dataset.id)); return; }
+  if (action === 'toggle') { inv.shown[btn.dataset.key] = !inv.shown[btn.dataset.key]; renderInvDetail(); return; }
+  if (action === 'copy') {
+    var map = d ? { code: d.accessCode, password: d.password, pin: d.pin, message: d.message } : {};
+    invCopy(map[btn.dataset.key]);
+    return;
+  }
+  btn.disabled = true;
+  try {
+    if (action === 'start') {
+      var label = document.getElementById('invLabel').value.trim();
+      if (!label) { fnToast('Give the group a name first.'); return; }
+      var until = document.getElementById('invUntil').value;
+      var body = until ? { label: label, until: new Date(until).toISOString() } : { label: label, days: Number(document.getElementById('invDays').value) };
+      r = await invApi('/invitations', 'POST', body);
+      if (r) { document.getElementById('invLabel').value = ''; document.getElementById('invUntil').value = ''; inv.shown = { code: true, password: true, pin: true }; await invAfter(r, 'The invitation is open', true); document.getElementById('invDetailCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    } else if (action === 'pause') {
+      if (!confirm('Pause every demo? Every group will be signed out until you resume.')) return;
+      r = await invApi('/pause', 'POST', { paused: true });
+      if (r) { inv.data = r; fnToast('Demos are paused'); await loadInvitations(); }
+    } else if (action === 'resume') {
+      r = await invApi('/pause', 'POST', { paused: false });
+      if (r) { fnToast('Demos are running'); await loadInvitations(); }
+    } else if (action === 'add') {
+      r = await invApi('/workspaces', 'POST', { count: Number(document.getElementById('invAddCount').value) });
+      if (r) { fnToast('Workspaces added'); await loadInvitations(); }
+    } else if (!id || !d) {
+      return;
+    } else if (action === 'rename') {
+      var name = document.getElementById('invRename').value.trim();
+      if (!name) { fnToast('Give the group a name.'); return; }
+      await invAfter(await invApi('/invitations/' + id + '/rename', 'POST', { label: name }), 'Renamed', true);
+    } else if (action === 'extend') {
+      var u = document.getElementById('invExtendUntil').value;
+      await invAfter(await invApi('/invitations/' + id + '/extend', 'POST', u ? { until: new Date(u).toISOString() } : { days: Number(document.getElementById('invExtendDays').value) }), 'End date changed', true);
+    } else if (action === 'new-code') {
+      if (!confirm('Make a new access code? Everyone in this group who used the old one will be shut out.')) return;
+      inv.shown = { code: true }; await invAfter(await invApi('/invitations/' + id + '/new-code', 'POST', {}), 'New access code', true);
+    } else if (action === 'new-password') {
+      if (!confirm('Make a new password? Everyone in this group will be signed out.')) return;
+      inv.shown = { password: true }; await invAfter(await invApi('/invitations/' + id + '/new-secret', 'POST', { what: 'password' }), 'New password', true);
+    } else if (action === 'new-pin') {
+      if (!confirm('Make a new student PIN? Anyone with the old one will need the new one.')) return;
+      inv.shown = { pin: true }; await invAfter(await invApi('/invitations/' + id + '/new-secret', 'POST', { what: 'pin' }), 'New PIN', true);
+    } else if (action === 'unlock') {
+      await invAfter(await invApi('/invitations/' + id + '/unlock', 'POST', {}), 'The logins are unlocked', true);
+    } else if (action === 'clear') {
+      if (!confirm('Clear what this group added? Their classrooms, students and work will be removed. Their codes, password and PIN stay.')) return;
+      await invAfter(await invApi('/invitations/' + id + '/reset', 'POST', {}), 'Cleared', true);
+    } else if (action === 'end') {
+      if (!confirm('End this invitation now? The group will be signed out and its copy cleared.')) return;
+      await invAfter(await invApi('/invitations/' + id + '/end', 'POST', {}), 'The invitation is ended');
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 load();
+loadInvitations();
 </script>
 <script src="admin-shell.js?v=5"></script>
 <script src="help-videos.js?v=24" defer></script>

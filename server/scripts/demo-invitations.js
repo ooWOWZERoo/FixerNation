@@ -12,6 +12,8 @@ const { workspaceTag } = require('../lib/sales-demo');
 //   node scripts/demo-invitations.js show ID                   one invitation WITH its code, password, PIN and the message to send
 //   node scripts/demo-invitations.js create --label "Springfield USD" [--days 14 | --until 2026-11-21T17:00:00-05:00]
 //                                                              takes a free workspace, wipes it, makes a code, password and PIN, and prints them once
+//   node scripts/demo-invitations.js rename ID --label "Springfield Unified"
+//                                                              corrects the group's name (staff only; the group never sees it)
 //   node scripts/demo-invitations.js extend ID --days 7        (or --until ...) moves the end time; the group keeps its session
 //   node scripts/demo-invitations.js end ID                    ends it now: logins stop, the workspace is wiped and goes back in the pool
 //   node scripts/demo-invitations.js new-code ID               a new access code for this group only (the old one stops working)
@@ -22,7 +24,7 @@ const { workspaceTag } = require('../lib/sales-demo');
 // An invitation lasts 14 days unless you say otherwise, and never more than public_demo_max_days (30). To pause every demo at once, use
 // node scripts/set-public-demo.js --pause (or --off), and --resume to allow demos again.
 
-const COMMANDS = ['list', 'show', 'create', 'extend', 'end', 'new-code', 'new-password', 'new-pin', 'sweep'];
+const COMMANDS = ['list', 'show', 'create', 'rename', 'extend', 'end', 'new-code', 'new-password', 'new-pin', 'sweep'];
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -37,9 +39,9 @@ function parseArgs(argv) {
     else if (/^\d+$/.test(a) && args.id === undefined) args.id = Number(a);
     else throw new Error(`Unknown argument: ${a}`);
   }
-  const needsId = ['show', 'extend', 'end', 'new-code', 'new-password', 'new-pin'];
+  const needsId = ['show', 'rename', 'extend', 'end', 'new-code', 'new-password', 'new-pin'];
   if (needsId.includes(command) && !(Number.isInteger(args.id) && args.id > 0)) throw new Error(`"${command}" needs the invitation's number (see: node scripts/demo-invitations.js list).`);
-  if (command === 'create' && args.label === undefined) throw new Error('"create" needs --label "the group\'s name".');
+  if ((command === 'create' || command === 'rename') && args.label === undefined) throw new Error(`"${command}" needs --label "the group's name".`);
   if (command === 'extend' && args.days === undefined && args.until === undefined) throw new Error('"extend" needs --days N or --until <date and time with a time zone>.');
   return args;
 }
@@ -86,6 +88,7 @@ async function run(conn, args, { siteUrl = process.env.SITE_URL || 'https://fixe
       return r.status === 'ended' ? `Invitation ${r.id} ("${r.label}") ended ${r.endedAt ? r.endedAt.toISOString() : ''} (${r.endReason}). Its workspace is back in the pool.\n` : renderDetails(r, siteUrl);
     }
     case 'create': return renderDetails(await inv.createInvitation(conn, { label: args.label, days: args.days, until: args.until, createdBy, now }), siteUrl) + 'These are shown once here; "show" prints them again while the invitation is open.\n';
+    case 'rename': { const r = await inv.renameInvitation(conn, args.id, args.label, { now }); return `Invitation ${r.invitation.id} (workspace ${workspaceTag(r.invitation.workspaceId)}) is now called "${r.invitation.label}" (it was "${r.previous}").\n`; }
     case 'extend': { const r = await inv.extendInvitation(conn, args.id, { days: args.days, until: args.until, now }); return `Invitation ${r.id} now runs until ${r.endsAtEastern}.\n`; }
     case 'end': { const r = await inv.endInvitation(conn, args.id, { now }); return `Invitation ${r.id} ("${r.label}") is ended. Its logins stopped working at once, and workspace ${workspaceTag(r.workspaceId)} was wiped and is free again.\n`; }
     case 'new-code': { const r = await inv.regenerateCode(conn, args.id, { now }); return `New access code for invitation ${r.id}: ${r.accessCodeFormatted}\nThe old code and every visit made with it stopped working. Other groups are unaffected.\n`; }
