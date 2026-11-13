@@ -22,8 +22,9 @@
   .wrap{max-width:980px; margin:0 auto; padding:0 24px;}
   header.top{background:rgba(251,245,236,0.9); border-bottom:1px solid rgba(22,79,74,0.1);}
   header.top .wrap{display:flex; align-items:center; gap:14px; padding-top:14px; padding-bottom:14px;}
-  header.top img{height:42px; width:auto; display:block;}
-  header.top span{font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:var(--teal-dark);}
+  header.top img{height:56px; width:auto; display:block;}
+  header.top img.custom{height:96px; max-width:240px; object-fit:contain;}
+  @media(max-width:600px){header.top img.custom{height:72px; max-width:160px;}}
   main{padding:44px 0 64px;}
   .eyebrow{display:inline-block; font-size:12.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral-dark); margin-bottom:10px;}
   h1{font-size:clamp(30px, 5vw, 44px); margin-bottom:14px;}
@@ -60,7 +61,7 @@
 </head>
 <body>
 
-<header class="top"><div class="wrap"><a href="index.html" aria-label="Fixer Nation Education home"><img src="logo-fne.png?v=2" alt="Fixer Nation Education"></a><span>Fixer Nation Education</span></div></header>
+<header class="top"><div class="wrap"><a href="index.html" aria-label="Fixer Nation Education home"><img id="siteLogo" src="logo-fne.png?v=2" alt="Fixer Nation Education"></a></div></header>
 
 <main><div class="wrap">
 
@@ -231,6 +232,19 @@
     if (r.json.unlocked) return loadCredentials();
     showGate();
   }).catch(showClosed);
+})();
+</script>
+<script>
+// Same logo as the rest of the site: the one set in the admin's Website Logo card, with the built-in logo as the fallback.
+(function () {
+  var img = document.getElementById('siteLogo');
+  function show(u, custom) { if (img.getAttribute('src') !== u) img.setAttribute('src', u); img.classList.toggle('custom', !!custom); }
+  try { var cached = localStorage.getItem('fn_site_logo'); if (cached) show(cached, true); } catch (e) { /* storage blocked */ }
+  fetch('/api/settings/site-logo').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (d) {
+    var u = (d && d.url) || '';
+    try { if (u) localStorage.setItem('fn_site_logo', u); else localStorage.removeItem('fn_site_logo'); } catch (e) { /* storage blocked */ }
+    show(u || 'logo-fne.png?v=2', !!u);
+  });
 })();
 </script>
 <script src="error-capture.js?v=1" defer></script>
