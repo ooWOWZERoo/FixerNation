@@ -15,6 +15,7 @@ const { requireAuth } = require('../middleware/auth');
 const { audit } = require('../lib/audit');
 const { clientIp } = require('../lib/rate-limit');
 const { CATEGORIES, STATUSES, LIMITS, cleanText, addMessage } = require('../lib/support');
+const { invitationLabels } = require('../lib/public-demo-admin');
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ router.get('/', requireAuth, async (req, res) => {
   if (STATUSES.includes(status)) { where.push('r.status = ?'); params.push(status); }
   else if (status === 'active') where.push("r.status <> 'resolved'");
   if (typeof req.query.category === 'string' && CATEGORIES[req.query.category]) { where.push('r.category = ?'); params.push(req.query.category); }
+  // Only the requests from one group's demo (the Demo page links here): ?demo=<invitation id>
+  const demoId = /^\d{1,9}$/.test(String(req.query.demo || '')) ? Number(req.query.demo) : 0;
+  if (demoId) { where.push('r.demo_invitation_id = ?'); params.push(demoId); }
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
   if (q) {
     where.push('(r.ref LIKE ? OR r.requester_email LIKE ? OR r.requester_name LIKE ? OR r.subject LIKE ? OR r.school_domain LIKE ?)');
@@ -48,16 +52,23 @@ router.get('/', requireAuth, async (req, res) => {
   }
   const [rows] = await pool.query(
     `SELECT r.id, r.ref, r.status, r.category, r.subject, r.requester_name, r.requester_email, r.roles, r.school_domain,
-            r.assigned_admin_id, a.username AS assigned_to, r.created_at, r.updated_at, r.demo_window
+            r.assigned_admin_id, a.username AS assigned_to, r.created_at, r.updated_at, r.demo_window, r.demo_invitation_id
      FROM support_requests r LEFT JOIN admin_users a ON a.id = r.assigned_admin_id
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
      ORDER BY r.updated_at DESC, r.id DESC LIMIT 300`,
     params
   );
-  const [countRows] = await pool.query('SELECT status, COUNT(*) AS n FROM support_requests GROUP BY status');
+  // The status counts follow the one-group view when there is one.
+  const [countRows] = await pool.query(`SELECT status, COUNT(*) AS n FROM support_requests ${demoId ? 'WHERE demo_invitation_id = ?' : ''} GROUP BY status`, demoId ? [demoId] : []);
   const counts = { new: 0, open: 0, waiting_on_user: 0, resolved: 0 };
   for (const c of countRows) if (c.status in counts) counts[c.status] = Number(c.n);
-  res.json({ requests: rows.map(r => ({ ...r, categoryLabel: CATEGORIES[r.category] || CATEGORIES.other })), counts, categories: CATEGORIES });
+  // The group behind each request that came from a group's demo (staff only), for the "Demo: <name>" tag.
+  const labels = await invitationLabels(pool, rows.map(r => r.demo_invitation_id));
+  res.json({
+    requests: rows.map(r => ({ ...r, categoryLabel: CATEGORIES[r.category] || CATEGORIES.other, demo_label: r.demo_invitation_id > 0 ? (labels[Number(r.demo_invitation_id)] || null) : null })),
+    counts, categories: CATEGORIES,
+    demoFilter: demoId ? { id: demoId, label: (await invitationLabels(pool, [demoId]))[demoId] || null } : null,
+  });
 });
 
 // GET /api/admin/support/summary -- declared before '/:id' so "summary" is not read as an id
@@ -89,7 +100,8 @@ router.get('/:id', requireAuth, async (req, res) => {
     `SELECT m.id, m.author_type, m.visibility, m.body, m.created_at, a.username AS admin_name
      FROM support_request_messages m LEFT JOIN admin_users a ON a.id = m.author_admin_id
      WHERE m.request_id = ? ORDER BY m.created_at, m.id`, [id]);
-  res.json({ request: { ...row, categoryLabel: CATEGORIES[row.category] || CATEGORIES.other }, messages });
+  const demoLabel = row.demo_invitation_id > 0 ? ((await invitationLabels(pool, [row.demo_invitation_id]))[Number(row.demo_invitation_id)] || null) : null;
+  res.json({ request: { ...row, categoryLabel: CATEGORIES[row.category] || CATEGORIES.other, demo_label: demoLabel }, messages });
 });
 
 // PUT /api/admin/support/:id -- body: { status?, assignedAdminId? (number, or null to unassign) }

@@ -48,12 +48,13 @@ async function regenerateAccessCode(conn) {
 }
 
 // The note staff paste into an email to the district. Plain text, written to sound like a person.
-function buildInviteMessage({ siteUrl, code, endsAt }) {
+// `privateCopy` is for a group's own invitation: it tells the group its copy is theirs alone (the original single demo is shared, so it does not say this).
+function buildInviteMessage({ siteUrl, code, endsAt, privateCopy = false }) {
   const base = String(siteUrl || '').replace(/\/$/, '');
   return [
     'Hi,',
     '',
-    'Thanks for your interest in Fixer Nation Education. We set up a demo you can explore whenever it suits you. It has sample classrooms, students and lessons, and none of it is real student information.',
+    'Thanks for your interest in Fixer Nation Education. We set up a demo you can explore whenever it suits you. It has sample classrooms, students and lessons, and none of it is real student information.' + (privateCopy ? ' This copy of the demo is just for your group. Nothing you do in it is visible to anyone else.' : ''),
     '',
     `Open the demo: ${base}${PUBLIC_DEMO_PAGE_PATH}`,
     `Access code: ${formatAccessCode(code)}`,
@@ -88,11 +89,13 @@ function demoRoleKeyForEmail(email) {
   return ROLE_BY_EMAIL[key] || (wl ? wl.role : null) || null;
 }
 
-// Counted, never blocking: a failure here must not stop a visitor from getting in.
-async function recordDemoEvent(kind, detail = null) {
+// Counted, never blocking: a failure here must not stop a visitor from getting in. An event for a group's own invitation carries that invitation's id (and
+// window 0, so it never shows in the original demo's counts); an event for the original demo carries the current window and invitation 0.
+async function recordDemoEvent(kind, detail = null, invitationId = 0) {
   try {
     const pool = require('../db/pool');
-    await pool.query('INSERT INTO public_demo_events (window_id, kind, detail) VALUES (?, ?, ?)', [await currentWindowId(pool), kind, detail]);
+    if (invitationId) await pool.query('INSERT INTO public_demo_events (window_id, kind, detail, invitation_id) VALUES (0, ?, ?, ?)', [kind, detail, Number(invitationId)]);
+    else await pool.query('INSERT INTO public_demo_events (window_id, kind, detail) VALUES (?, ?, ?)', [await currentWindowId(pool), kind, detail]);
   } catch (err) {
     console.error('public demo event not recorded:', err.message);
   }
@@ -120,7 +123,43 @@ async function demoCounts(conn) {
   };
 }
 
+// Counts for each group's invitation, in one pass: access-code entries, sign-ins by role, tickets and quote requests. No address, name or email is ever stored for
+// an event. Returns { [invitationId]: { gateEntries, signIns: {district, school, teacher, parent, student}, signInTotal, tickets, quotes } }; an invitation with
+// no activity is absent (callers treat it as zeros). A column that is not there yet (code deployed before its alter script) is simply zero.
+const ROLE_KEYS = ['district', 'school', 'teacher', 'parent', 'student'];
+async function invitationCounts(conn) {
+  const out = {};
+  const slot = (id) => (out[id] = out[id] || { gateEntries: 0, signIns: Object.fromEntries(ROLE_KEYS.map(k => [k, 0])), signInTotal: 0, tickets: 0, quotes: 0 });
+  const safe = async (sql) => {
+    try { const [rows] = await conn.query(sql); return rows; } catch (err) {
+      if (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR' || /no such (table|column)/i.test(String(err.message))) return [];
+      throw err;
+    }
+  };
+  for (const r of await safe('SELECT invitation_id AS id, kind, detail, COUNT(*) AS n FROM public_demo_events WHERE invitation_id > 0 GROUP BY invitation_id, kind, detail')) {
+    const c = slot(r.id);
+    if (r.kind === 'gate_entry') c.gateEntries += Number(r.n);
+    else if (r.kind === 'sign_in') { if (c.signIns[r.detail] !== undefined) c.signIns[r.detail] += Number(r.n); c.signInTotal += Number(r.n); }
+  }
+  for (const r of await safe('SELECT demo_invitation_id AS id, COUNT(*) AS n FROM support_requests WHERE demo_invitation_id > 0 GROUP BY demo_invitation_id')) slot(r.id).tickets = Number(r.n);
+  for (const r of await safe('SELECT demo_invitation_id AS id, COUNT(*) AS n FROM quote_requests WHERE demo_invitation_id > 0 GROUP BY demo_invitation_id')) slot(r.id).quotes = Number(r.n);
+  return out;
+}
+
+// The staff-only label for each of these invitation ids, for tagging a ticket or quote "Demo: Springfield USD". A missing table means no labels.
+async function invitationLabels(conn, ids) {
+  const unique = [...new Set((ids || []).map(Number).filter(n => Number.isInteger(n) && n > 0))];
+  if (!unique.length) return {};
+  try {
+    const [rows] = await conn.query(`SELECT id, label FROM public_demo_invitations WHERE id IN (${unique.map(() => '?').join(', ')})`, unique);
+    return Object.fromEntries(rows.map(r => [Number(r.id), r.label]));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE' || /no such table/i.test(String(err.message))) return {};
+    throw err;
+  }
+}
+
 module.exports = {
-  currentWindowId, startNewWindow, demoRoleKeyForEmail, recordDemoEvent, demoCounts,
+  currentWindowId, startNewWindow, demoRoleKeyForEmail, recordDemoEvent, demoCounts, invitationCounts, invitationLabels,
   getSettingRaw, putSettingRaw, generateAccessCode, formatAccessCode, normalizeAccessCode, ensureAccessCode, regenerateAccessCode, buildInviteMessage,
 };

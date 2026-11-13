@@ -151,6 +151,22 @@ async function isDemoVisitor(req) {
   return isSharedDemoRequest() || (await getDemoGate(req)) !== null;
 }
 
+// WHERE a demo request came from, decided from the server's own cookies and never from anything the visitor typed:
+//   { invitationId }   someone in a group's own demo (a demo login's session in its workspace, or that group's access-code visit);
+//   { original: true } someone in the original single demo;
+//   null               anyone else.
+async function demoOrigin(req) {
+  const ctx = als.getStore();
+  if (ctx) {
+    if (ctx.workspace === null || ctx.workspace === undefined) return { original: true };
+    const inv = await invitations.getOpenInvitationForWorkspace(ctx.workspace);
+    return inv ? { invitationId: Number(inv.id) } : null; // (a closed group's sessions never get this far: the gate drops them)
+  }
+  const gate = await getDemoGate(req);
+  if (!gate) return null;
+  return gate.invitation ? { invitationId: Number(gate.invitation.id) } : { original: true };
+}
+
 // ---- The gate -----------------------------------------------------------------------------------------------------------------------------------
 
 // Mounted once in app.js, after cookie-parser and before every route. For each site or student cookie that carries the demo claim:
@@ -160,6 +176,7 @@ async function isDemoVisitor(req) {
 async function sharedDemoGate(req, res, next) {
   try {
     let demo = false;
+    let workspace = null; // the private workspace this demo session belongs to (none for the original demo)
     for (const [name, kind] of [[SITE_COOKIE_NAME, 'site'], [STUDENT_COOKIE_NAME, 'student']]) {
       const token = req.cookies && req.cookies[name];
       if (!token) continue;
@@ -174,6 +191,7 @@ async function sharedDemoGate(req, res, next) {
         continue;
       }
       demo = true;
+      if (workspace === null && payload.ws !== undefined && payload.ws !== null) workspace = Number(payload.ws);
     }
     if (!demo) return next();
 
@@ -199,7 +217,7 @@ async function sharedDemoGate(req, res, next) {
       }
       return origJson(body);
     };
-    als.run({ mailSuppressed: 0 }, () => next());
+    als.run({ mailSuppressed: 0, workspace }, () => next());
   } catch (err) {
     next(err);
   }
@@ -211,5 +229,5 @@ module.exports = {
   isSharedDemoUser, isSharedDemoClassroom, sharedDemoClassroomInfo, isDemoOpenFor, getDemoGate,
   isSharedDemoRequest, noteSuppressedMail, refuseSharedDemo, sharedDemoGate,
   demoRecipientAllowed, assertDemoRecipient, assertNotSharedDemoRequest,
-  hasValidDemoGate, isDemoVisitor,
+  hasValidDemoGate, isDemoVisitor, demoOrigin,
 };

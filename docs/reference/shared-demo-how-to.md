@@ -63,7 +63,9 @@ Each group gets its **own** copy of the demo: its own access code, password, stu
 
 **To pause every demo at once**, press **Pause all demos**. Every group is signed out and no new invitation can start; nothing is lost, and each group keeps its end date. **Resume demos** brings them back.
 
-Don't send invitations to real groups until tags and counts per group arrive in a later phase: a ticket from a group still gets a Demo tag, but the counts on the original demo's card don't separate groups yet.
+**Tickets, quotes and counts per group.** A question, ticket or quote request that comes from a group's demo shows **Demo: Springfield USD** (the group's name) beside it in the **Support Inbox** and in **Quotes**, and the staff email says "Source: Shared demo (Springfield USD)". The visitor never sees the name. In a group's details, **Activity** shows how many people entered its code, how many signed in (and as which role), and how many tickets and quote requests it sent, with links that open the Support Inbox or Quotes showing only that group's requests ("Showing only requests from Springfield USD. Show all"). The same counts sit in the Invitations table (Visits, Sign-ins, Tickets, Quotes). Counts keep no names or email addresses, and an ended group keeps its final counts. Renaming a group changes the tag on its old requests too.
+
+The group's message also tells the group its copy is private: "This copy of the demo is just for your group. Nothing you do in it is visible to anyone else."
 
 ### From the Terminal (when the website is down)
 

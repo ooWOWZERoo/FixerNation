@@ -7,6 +7,7 @@ const { requireStudentAuth } = require('../middleware/studentAuth');
 const crypto = require('crypto');
 const { isDemoOpenFor, sharedDemoClassroomInfo } = require('../lib/public-demo');
 const { recordDemoEvent } = require('../lib/public-demo-admin');
+const { getOpenInvitationForWorkspace } = require('../lib/public-demo-invitations');
 
 const { limiter, FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 
@@ -212,7 +213,10 @@ router.post('/login', async (req, res) => {
   pinFailsByStudent.clear(usernameKey);
 
   setStudentCookie(res, student, demoStudent, demoStudent ? studentDemoInfo.workspace : null);
-  if (demoStudent && studentDemoInfo.workspace === null) await recordDemoEvent('sign_in', 'student'); // a count for the admin Demo page; never blocks (a private workspace is counted per invitation later)
+  if (demoStudent) { // a count for the admin Demo page; never blocks (a private workspace is counted for the group using it)
+    if (studentDemoInfo.workspace === null) await recordDemoEvent('sign_in', 'student');
+    else { const group = await getOpenInvitationForWorkspace(studentDemoInfo.workspace); if (group) await recordDemoEvent('sign_in', 'student', group.id); }
+  }
   res.json({ classroomName: student.classroom_name, displayName: student.display_name, username: student.username });
 });
 

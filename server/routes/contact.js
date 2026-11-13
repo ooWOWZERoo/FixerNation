@@ -5,8 +5,8 @@ const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 const { limiter } = require('../lib/rate-limit');
-const { isDemoVisitor } = require('../lib/public-demo');
-const { currentWindowId } = require('../lib/public-demo-admin');
+const { demoOrigin } = require('../lib/public-demo');
+const { currentWindowId, invitationLabels } = require('../lib/public-demo-admin');
 const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-parties');
 
 const router = express.Router();
@@ -79,12 +79,21 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
   }
   if (!inserted) throw new Error('Could not generate unique quote number');
 
-  // A request from someone using the shared demo is tagged so staff can see where it came from (docs/reference/shared-demo-environment-requirements.md,
-  // R8). The tag comes from the server's own cookies, never from the form. Tolerates the column not existing yet.
-  const fromDemo = await isDemoVisitor(req);
-  if (fromDemo) {
+  // A request from someone using a demo is tagged so staff can see where it came from (docs/reference/shared-demo-environment-requirements.md, R8; for a group's
+  // own invitation, docs/reference/shared-demo-workspaces-requirements.md, R8). The tag comes from the server's own cookies, never from the form. Tolerates a
+  // column that does not exist yet.
+  const origin = await demoOrigin(req);
+  let demoSource;
+  if (origin) {
+    demoSource = 'Shared demo';
     try {
-      await pool.query('UPDATE quote_requests SET demo_window = ? WHERE quote_number = ?', [await currentWindowId(pool), quoteNumber]);
+      if (origin.invitationId) {
+        await pool.query('UPDATE quote_requests SET demo_invitation_id = ? WHERE quote_number = ?', [origin.invitationId, quoteNumber]);
+        const label = (await invitationLabels(pool, [origin.invitationId]))[origin.invitationId];
+        if (label) demoSource = `Shared demo (${label})`;
+      } else {
+        await pool.query('UPDATE quote_requests SET demo_window = ? WHERE quote_number = ?', [await currentWindowId(pool), quoteNumber]);
+      }
     } catch (err) {
       if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column|no column named/i.test(String(err.message))) throw err;
     }
@@ -109,7 +118,7 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
       School: school,
       Phone: phone,
       Message: message,
-      Source: fromDemo ? 'Shared demo' : undefined,
+      Source: demoSource,
     },
     replyTo: email,
   });
@@ -315,9 +324,18 @@ router.get('/quotes', requireAuth, async (req, res) => {
     params.push(like, like, like, like);
   }
 
+  // Only the quote requests from one group's demo (the Demo page links here): ?demo=<invitation id>
+  const demoId = /^\d{1,9}$/.test(String(req.query.demo || '')) ? Number(req.query.demo) : 0;
+  if (demoId) { sql += ' AND demo_invitation_id = ?'; params.push(demoId); }
+
   sql += ' ORDER BY created_at DESC';
   const [rows] = await pool.query(sql, params);
-  res.json({ quotes: rows });
+  // The group behind each request that came from a group's demo (staff only), for the "Demo: <name>" tag.
+  const labels = await invitationLabels(pool, rows.map(r => r.demo_invitation_id));
+  res.json({
+    quotes: rows.map(r => ({ ...r, demo_label: r.demo_invitation_id > 0 ? (labels[Number(r.demo_invitation_id)] || null) : null })),
+    demoFilter: demoId ? { id: demoId, label: (await invitationLabels(pool, [demoId]))[demoId] || null } : null,
+  });
 });
 
 router.put('/quotes/:id', requireAuth, async (req, res) => {

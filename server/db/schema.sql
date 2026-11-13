@@ -723,6 +723,7 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   quote_valid_until DATE NULL,
   expiring_reminder_sent_at DATETIME NULL, -- dedup flag for quote-expiring-reminder.js, same pattern as purchases.renewal_reminder_sent_at
   demo_window INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-public-demo-phase4.js on existing installs; 0 = an ordinary request, N = sent by someone using the shared demo during its Nth window
+  demo_invitation_id INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-demo-invitation-tags.js on existing installs; 0 = not from a group's demo, N = sent by someone in demo invitation N (docs/reference/shared-demo-workspaces-requirements.md, R8)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -1547,6 +1548,7 @@ CREATE TABLE IF NOT EXISTS support_requests (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   resolved_at DATETIME NULL,
   demo_window INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-public-demo-phase4.js on existing installs; 0 = an ordinary request, N = sent by someone using the shared demo during its Nth window (see lib/public-demo-admin.js)
+  demo_invitation_id INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-demo-invitation-tags.js on existing installs; 0 = not from a group's demo, N = sent by someone in demo invitation N (docs/reference/shared-demo-workspaces-requirements.md, R8)
   INDEX idx_status (status, updated_at),
   INDEX idx_user (site_user_id),
   INDEX idx_email (requester_email),
@@ -1675,8 +1677,10 @@ CREATE TABLE IF NOT EXISTS public_demo_events (
   window_id INT UNSIGNED NOT NULL,
   kind VARCHAR(24) NOT NULL,
   detail VARCHAR(40) NULL,
+  invitation_id INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-demo-invitation-tags.js on existing installs; 0 = the original demo's event, N = an event for group invitation N
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_window_kind (window_id, kind)
+  INDEX idx_window_kind (window_id, kind),
+  INDEX idx_invitation_kind (invitation_id, kind)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Prospect demo workspaces (docs/reference/shared-demo-workspaces-requirements.md): one row per private copy of the demo. id is the workspace number (1..99), which

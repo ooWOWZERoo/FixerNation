@@ -128,6 +128,7 @@
             </select>
           </div>
         </div>
+        <div class="a-note" id="demoBanner" style="display:none; margin:0 0 12px;"></div>
         <table class="a-table" id="quotesTable">
           <thead>
             <tr>
@@ -362,16 +363,29 @@ function profileSelectOptions(selectedId) {
 const STATUS_LABELS  = { new: 'New', contacted: 'Contacted', converted: 'Converted', closed: 'Closed' };
 const STATUS_CLASSES = { new: 'a-pill-neutral', contacted: 'a-pill-info', converted: 'a-pill-success', closed: 'a-pill-danger' };
 
+// ?demo=<invitation id> (the Demo page links here): show only the quote requests from that group's demo.
+const demoFilter = /^\d{1,9}$/.test(new URLSearchParams(location.search).get('demo') || '') ? new URLSearchParams(location.search).get('demo') : '';
+
+function showDemoBanner(f) {
+  const el = document.getElementById('demoBanner');
+  if (!f) { el.style.display = 'none'; return; }
+  el.textContent = 'Showing only quote requests from ' + (f.label || 'this group') + '. ';
+  const a = document.createElement('a'); a.href = 'admin-quotes.html'; a.textContent = 'Show all'; el.appendChild(a);
+  el.style.display = '';
+}
+
 async function init() {
   const [qRes, lpRes, sRes, pfRes] = await Promise.all([
-    fetch('/api/contact/quotes', { credentials: 'include' }),
+    fetch('/api/contact/quotes' + (demoFilter ? '?demo=' + encodeURIComponent(demoFilter) : ''), { credentials: 'include' }),
     fetch('/api/license-products?all=true', { credentials: 'include' }),
     fetch('/api/settings/quote', { credentials: 'include' }),
     fetch('/api/contact/quote-profiles', { credentials: 'include' }),
   ]);
   if (fnHandleUnauthorized(qRes)) return;
   if (!qRes.ok) { fnToast('Could not load quotes'); return; }
-  allQuotes    = (await qRes.json()).quotes || [];
+  const qBody = await qRes.json();
+  allQuotes    = qBody.quotes || [];
+  showDemoBanner(qBody.demoFilter);
   licenseProds = lpRes.ok ? ((await lpRes.json()).licenseProducts || []) : [];
   if (sRes.ok) {
     const sd = await sRes.json();
@@ -480,7 +494,7 @@ function renderTable(quotes) {
     tr.innerHTML = `
       <td style="white-space:nowrap;font-family:monospace;font-size:12px;">${q.quote_number ? '#' + fnEscape(q.quote_number) : '—'}</td>
       <td style="white-space:nowrap;">${fnFormatDate(q.created_at)}</td>
-      <td class="a-cell-title">${fnEscape(fullName)}${q.origin === 'admin' ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Outbound</span>' : ''}${q.demo_window > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Demo</span>' : ''}</td>
+      <td class="a-cell-title">${fnEscape(fullName)}${q.origin === 'admin' ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Outbound</span>' : ''}${q.demo_window > 0 || q.demo_invitation_id > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">' + (q.demo_label ? 'Demo: ' + fnEscape(q.demo_label) : 'Demo') + '</span>' : ''}</td>
       <td class="q-school-cell">${fnEscape(q.school || '—')}</td>
       <td><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></td>
       <td>${quoted}</td>

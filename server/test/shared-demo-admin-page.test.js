@@ -94,9 +94,9 @@ test('the Demo page shows this window\'s counts, and the Support Inbox and Quote
   assert.match(page, /Questions and tickets/);
   assert.match(page, /Quote requests/);
   assert.ok(!/once the demo page is published/.test(page), 'the placeholder note is gone');
-  assert.match(read('admin-support.html'), /r\.demo_window > 0 \? ' <span class="a-pill a-pill-info"[^>]*>Demo<\/span>'/);
+  assert.match(read('admin-support.html'), /r\.demo_window > 0 \|\| r\.demo_invitation_id > 0 \? ' <span class="a-pill a-pill-info"[^>]*>' \+ \(r\.demo_label \? 'Demo: ' \+ esc\(r\.demo_label\) : 'Demo'\)/);
   assert.match(read('admin-support.html'), /From the shared demo/);
-  assert.match(read('admin-quotes.html'), /q\.demo_window > 0 \? ' <span class="a-pill a-pill-info"[^>]*>Demo<\/span>'/);
+  assert.match(read('admin-quotes.html'), /q\.demo_window > 0 \|\| q\.demo_invitation_id > 0 \? ' <span class="a-pill a-pill-info"[^>]*>' \+ \(q\.demo_label \? 'Demo: ' \+ fnEscape\(q\.demo_label\) : 'Demo'\)/);
   assert.match(read('server/routes/admin-support.js'), /r\.demo_window/);
 });
 

@@ -204,21 +204,24 @@ const handle = (fn) => async (req, res) => {
 
 const invId = (req) => { const n = Number(req.params.id); return Number.isInteger(n) && n > 0 ? n : 0; };
 
-// One invitation as the list shows it (no password, PIN or code).
-const rowFor = (i) => ({
+const NO_COUNTS = { gateEntries: 0, signIns: { district: 0, school: 0, teacher: 0, parent: 0, student: 0 }, signInTotal: 0, tickets: 0, quotes: 0 };
+
+// One invitation as the list shows it (no password, PIN or code), with its own counts: access-code entries, sign-ins, questions and tickets, quote requests.
+const rowFor = (i, counts) => ({
+  counts: counts || NO_COUNTS,
   id: i.id, label: i.label, workspaceId: i.workspaceId, workspace: workspaceTag(i.workspaceId), state: i.state, open: i.open,
   startsAt: i.startsAt ? i.startsAt.toISOString() : null, endsAt: i.endsAt ? i.endsAt.toISOString() : null, endsAtEastern: i.endsAtEastern,
   endedAt: i.endedAt ? i.endedAt.toISOString() : null, endReason: i.endReason, createdBy: i.createdBy,
 });
 
 async function invitationsState() {
-  const [paused, poolInfo, maxDays, list] = await Promise.all([
-    inv.isPaused(pool), inv.poolStatus(pool), inv.maxDays(pool), inv.listInvitations(pool, { endedWithinDays: ENDED_LIST_DAYS }),
+  const [paused, poolInfo, maxDays, list, counts] = await Promise.all([
+    inv.isPaused(pool), inv.poolStatus(pool), inv.maxDays(pool), inv.listInvitations(pool, { endedWithinDays: ENDED_LIST_DAYS }), A.invitationCounts(pool),
   ]);
   return {
     paused, pool: poolInfo, maxDays, defaultDays: inv.DEFAULT_DAYS,
     pageUrl: `${(process.env.SITE_URL || '').replace(/\/$/, '')}${F.PUBLIC_DEMO_PAGE_PATH}`,
-    invitations: list.map(rowFor),
+    invitations: list.map(i => rowFor(i, counts[i.id])),
   };
 }
 
@@ -234,12 +237,13 @@ async function invitationDetails(id) {
   const [[room]] = await pool.query(
     'SELECT c.join_code FROM classrooms c JOIN site_users u ON u.id = c.teacher_site_user_id WHERE u.email = ? AND c.name = ? ORDER BY c.id LIMIT 1',
     [workspaceFixtures(i.workspaceId).accounts.teacher.email, F.DEMO_CLASSROOM_NAME]);
-  const out = { ...rowFor(i), logins, lockedCount: logins.filter(l => l.lockedSeconds > 0).length, joinCode: room ? room.join_code : '' };
+  const counts = (await A.invitationCounts(pool))[i.id];
+  const out = { ...rowFor(i, counts), logins, lockedCount: logins.filter(l => l.lockedSeconds > 0).length, joinCode: room ? room.join_code : '' };
   if (i.open) {
     out.accessCode = i.accessCodeFormatted;
     out.password = i.password;
     out.pin = i.pin;
-    out.message = A.buildInviteMessage({ siteUrl: process.env.SITE_URL, code: i.accessCode, endsAt: i.endsAt });
+    out.message = A.buildInviteMessage({ siteUrl: process.env.SITE_URL, code: i.accessCode, endsAt: i.endsAt, privateCopy: true });
   }
   return out;
 }

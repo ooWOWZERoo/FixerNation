@@ -81,7 +81,8 @@ router.post('/enter', async (req, res) => {
     const maxAge = Math.max(1000, Math.min(DEMO_GATE_MAX_AGE_MS, msToEnd));
     const token = signSession('demoGate', { inv: Number(invitation.id), v: String(invitation.code_version) }, Math.floor(maxAge / 1000));
     res.cookie(DEMO_GATE_COOKIE_NAME, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge });
-    return res.json({ ok: true }); // (gate entries are counted per invitation in a later phase)
+    await A.recordDemoEvent('gate_entry', null, invitation.id); // counted for this group only (never blocks)
+    return res.json({ ok: true });
   }
 
   const status = await getPublicDemoStatus();

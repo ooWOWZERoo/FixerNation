@@ -73,7 +73,7 @@ function renderDetails(r, siteUrl) {
     '',
     'Message to send:',
     '',
-    A.buildInviteMessage({ siteUrl, code: r.accessCode, endsAt: r.endsAt }).replace(/^/gm, '  '),
+    A.buildInviteMessage({ siteUrl, code: r.accessCode, endsAt: r.endsAt, privateCopy: true }).replace(/^/gm, '  '),
     '',
   ];
   return out.join('\n');

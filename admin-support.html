@@ -34,6 +34,7 @@
           arrive with their role and school already filled in. Students have no way to write here by design.
         </div>
         <div id="counts" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"></div>
+        <div class="a-note" id="demoBanner" style="display:none; margin:0 0 12px;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
           <select id="fStatus" class="a-filter-select">
             <option value="active">Open (not resolved)</option>
@@ -104,18 +105,23 @@ function send(method, body) {
   return { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) };
 }
 
+// ?demo=<invitation id> (the Demo page links here): show only the requests from that group's demo.
+const demoFilter = /^\d{1,9}$/.test(new URLSearchParams(location.search).get('demo') || '') ? new URLSearchParams(location.search).get('demo') : '';
+
 async function loadList() {
   const qs = new URLSearchParams({ status: document.getElementById('fStatus').value, q: document.getElementById('fQuery').value.trim() });
   if (document.getElementById('fCategory').value) qs.set('category', document.getElementById('fCategory').value);
+  if (demoFilter) qs.set('demo', demoFilter);
   const d = await api('?' + qs.toString());
   if (!d) return;
+  showDemoBanner(d.demoFilter);
   const catSel = document.getElementById('fCategory');
   if (catSel.options.length === 1) Object.keys(d.categories).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = d.categories[k]; catSel.appendChild(o); });
   document.getElementById('counts').innerHTML = ['new', 'open', 'waiting_on_user', 'resolved'].map(k => pill(k) + ' <strong style="margin-right:10px;">' + d.counts[k] + '</strong>').join('');
   const tbody = document.querySelector('#listTable tbody');
   tbody.innerHTML = d.requests.map(r =>
     '<tr style="cursor:pointer;" data-id="' + esc(r.id) + '">' +
-      '<td>' + esc(r.ref) + (r.demo_window > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Demo</span>' : '') + '</td>' +
+      '<td>' + esc(r.ref) + (r.demo_window > 0 || r.demo_invitation_id > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">' + (r.demo_label ? 'Demo: ' + esc(r.demo_label) : 'Demo') + '</span>' : '') + '</td>' +
       '<td>' + esc(r.requester_name) + '<br><span style="font-size:12px; opacity:.7;">' + esc(r.roles || 'Not signed in') + (r.school_domain ? ' · ' + esc(r.school_domain) : '') + '</span></td>' +
       '<td><strong>' + esc(r.categoryLabel) + '</strong><br>' + esc(r.subject) + '</td>' +
       '<td>' + pill(r.status) + '</td>' +
@@ -124,6 +130,14 @@ async function loadList() {
     '</tr>').join('');
   document.getElementById('listEmpty').style.display = d.requests.length ? 'none' : 'block';
   tbody.querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => openRequest(Number(tr.dataset.id))));
+}
+
+function showDemoBanner(f) {
+  const el = document.getElementById('demoBanner');
+  if (!f) { el.style.display = 'none'; return; }
+  el.textContent = 'Showing only requests from ' + (f.label || 'this group') + '. ';
+  const a = document.createElement('a'); a.href = 'admin-support.html'; a.textContent = 'Show all'; el.appendChild(a);
+  el.style.display = '';
 }
 
 async function loadAdmins() {
@@ -139,7 +153,7 @@ async function openRequest(id) {
   currentId = id;
   const r = d.request;
   document.getElementById('detailCard').style.display = 'block';
-  document.getElementById('dSubject').textContent = r.ref + ' · ' + r.subject + (r.demo_window > 0 ? ' · From the shared demo' : '');
+  document.getElementById('dSubject').textContent = r.ref + ' · ' + r.subject + (r.demo_label ? ' · From the demo (group: ' + r.demo_label + ')' : (r.demo_window > 0 || r.demo_invitation_id > 0 ? ' · From the shared demo' : ''));
   document.getElementById('dFacts').innerHTML =
     '<strong>' + esc(r.requester_name) + '</strong> · ' + esc(r.requester_email) + '<br>' +
     'Topic: ' + esc(r.categoryLabel) + '<br>' +

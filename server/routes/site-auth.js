@@ -28,6 +28,7 @@ const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 const msOAuth = require('../lib/microsoft-oauth');
 const { isDemoOpenFor, isSharedDemoUser, refuseSharedDemo, DEMO_SESSION_LENGTH, DEMO_SESSION_MS } = require('../lib/public-demo');
 const { recordDemoEvent, demoRoleKeyForEmail } = require('../lib/public-demo-admin');
+const { getOpenInvitationForWorkspace } = require('../lib/public-demo-invitations');
 
 const avatarsDir = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'), 'avatars');
 fs.mkdirSync(avatarsDir, { recursive: true });
@@ -402,8 +403,14 @@ router.post('/login', async (req, res) => {
   // A seat bought for this address and left pending (a purchase made before this account signed in) is theirs once they sign in.
   await claimForAccountByEmail(pool, user.email);
   setSiteSessionCookie(res, user);
-  // A count for the admin Demo page; never blocks. (A private workspace's sign-ins are counted per invitation in a later phase, not in the original demo's window.)
-  if (isSharedDemoUser(user) && (user.demo_workspace_id === null || user.demo_workspace_id === undefined)) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email));
+  // A count for the admin Demo page; never blocks. A private workspace's sign-ins are counted for the group using it; the original demo's in its own window.
+  if (isSharedDemoUser(user)) {
+    if (user.demo_workspace_id === null || user.demo_workspace_id === undefined) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email));
+    else {
+      const group = await getOpenInvitationForWorkspace(user.demo_workspace_id);
+      if (group) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email), group.id);
+    }
+  }
   // isSchoolAdmin/isDistrictAdmin/isAffiliate are real entitlement checks (an
   // active school_license_admins/district_license_admins/affiliates row),
   // independent of the single site_users.role string — school-admin-login.html

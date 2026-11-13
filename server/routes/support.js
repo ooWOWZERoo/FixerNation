@@ -17,8 +17,8 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
-const { isDemoVisitor } = require('../lib/public-demo');
-const { currentWindowId } = require('../lib/public-demo-admin');
+const { demoOrigin } = require('../lib/public-demo');
+const { currentWindowId, invitationLabels } = require('../lib/public-demo-admin');
 const { limiter, clientIp, FailureTracker, rejectIfBlocked } = require('../lib/rate-limit');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail, sendSupportEmail } = require('../lib/mailer');
@@ -49,16 +49,25 @@ function demoRefused(user) {
   return user && user.is_sales_demo ? 'Demo accounts cannot send support requests.' : null;
 }
 
-// Marks a request as coming from the shared demo (a valid access-code visit, or a demo login's session). The tag comes from the server's own
-// cookies, never from anything in the request body. Tolerates the column not existing yet (code deployed before its alter script ran).
+// Marks a request as coming from the demo, and says where it came from for the staff email ("Shared demo", or "Shared demo (Springfield USD)" for a group's own
+// invitation), or returns null for anyone else. The tag comes from the server's own cookies, never from anything in the request body. Tolerates a column that does
+// not exist yet (code deployed before its alter script ran).
 async function tagIfFromDemo(req, id) {
-  if (!(await isDemoVisitor(req))) return false;
+  const origin = await demoOrigin(req);
+  if (!origin) return null;
+  let source = 'Shared demo';
   try {
-    await pool.query('UPDATE support_requests SET demo_window = ? WHERE id = ?', [await currentWindowId(pool), id]);
+    if (origin.invitationId) {
+      await pool.query('UPDATE support_requests SET demo_invitation_id = ? WHERE id = ?', [origin.invitationId, id]);
+      const label = (await invitationLabels(pool, [origin.invitationId]))[origin.invitationId];
+      if (label) source = `Shared demo (${label})`;
+    } else {
+      await pool.query('UPDATE support_requests SET demo_window = ? WHERE id = ?', [await currentWindowId(pool), id]);
+    }
   } catch (err) {
     if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column|no column named/i.test(String(err.message))) throw err;
   }
-  return true;
+  return source;
 }
 
 async function requireSignedIn(req, res) {
@@ -130,7 +139,7 @@ router.post('/', ipLimit, emailLimit, async (req, res) => {
     id: created.id,
     fields: {
       Reference: created.ref,
-      Source: fromDemo ? 'Shared demo' : undefined,
+      Source: fromDemo || undefined,
       Topic: CATEGORIES[category],
       From: who.name,
       Email: who.email,

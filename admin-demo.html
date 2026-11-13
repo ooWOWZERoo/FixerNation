@@ -376,9 +376,9 @@ function renderInvLists() {
   if (!sel.options.length) sel.innerHTML = days.map(function (n) { return '<option value="' + esc(n) + '"' + (n === d.defaultDays ? ' selected' : '') + '>' + esc(n) + ' day' + (n === 1 ? '' : 's') + '</option>'; }).join('');
 
   document.getElementById('invListBody').innerHTML = open.length
-    ? '<table class="a-table"><thead><tr><th>Group</th><th>Workspace</th><th>Status</th><th>Ends (US Eastern)</th></tr></thead><tbody>' +
+    ? '<table class="a-table"><thead><tr><th>Group</th><th>Workspace</th><th>Status</th><th>Ends (US Eastern)</th><th>Visits</th><th>Sign-ins</th><th>Tickets</th><th>Quotes</th></tr></thead><tbody>' +
       open.map(function (i) {
-        return '<tr><td><button class="inv-link" data-inv="open" data-id="' + esc(i.id) + '">' + esc(i.label) + '</button></td><td>' + esc(i.workspace) + '</td><td>' + invPill(i.state) + '</td><td>' + esc(i.endsAtEastern) + '</td></tr>';
+        return '<tr><td><button class="inv-link" data-inv="open" data-id="' + esc(i.id) + '">' + esc(i.label) + '</button></td><td>' + esc(i.workspace) + '</td><td>' + invPill(i.state) + '</td><td>' + esc(i.endsAtEastern) + '</td><td>' + esc(i.counts.gateEntries) + '</td><td>' + esc(i.counts.signInTotal) + '</td><td>' + esc(i.counts.tickets) + '</td><td>' + esc(i.counts.quotes) + '</td></tr>';
       }).join('') + '</tbody></table>'
     : '<div class="a-empty">No invitations yet. Start one above when a group shows interest.</div>';
 
@@ -428,6 +428,16 @@ function renderInvDetail() {
       '<div class="demo-row"><button class="a-btn a-btn-outline" data-inv="clear">Clear what this group added</button><span class="a-hint">Removes the classrooms, students, work and invitations the group added. Their codes, password and PIN stay the same.</span></div>' +
       '<div class="demo-row"><button class="a-btn a-btn-danger" data-inv="end">End now</button></div></div>';
   }
+  var c = d.counts, roles = [['district', 'District administrator'], ['school', 'School administrator'], ['teacher', 'Teacher'], ['parent', 'Parent'], ['student', 'Student']];
+  html += '<div class="inv-sub"><div style="font-weight:600; margin-bottom:6px;">Activity</div>' +
+    '<div class="a-hint" style="margin-bottom:8px;">Counted since this invitation started. No names or email addresses are kept.</div>' +
+    '<table class="a-table"><tbody>' +
+    '<tr><td>People who entered the access code</td><td><strong>' + esc(c.gateEntries) + '</strong></td></tr>' +
+    '<tr><td>Sign-ins with a demo login</td><td><strong>' + esc(c.signInTotal) + '</strong>' +
+      (c.signInTotal ? '<br><span class="a-cell-sub">' + roles.filter(function (r) { return c.signIns[r[0]]; }).map(function (r) { return esc(r[1]) + ': ' + esc(c.signIns[r[0]]); }).join(' &middot; ') + '</span>' : '') + '</td></tr>' +
+    '<tr><td>Questions and tickets</td><td><strong>' + esc(c.tickets) + '</strong>' + (c.tickets ? ' <a href="admin-support.html?demo=' + encodeURIComponent(d.id) + '">See them in the Support Inbox</a>' : '') + '</td></tr>' +
+    '<tr><td>Quote requests</td><td><strong>' + esc(c.quotes) + '</strong>' + (c.quotes ? ' <a href="admin-quotes.html?demo=' + encodeURIComponent(d.id) + '">See them in Quotes</a>' : '') + '</td></tr>' +
+    '</tbody></table></div>';
   document.getElementById('invDetailBody').innerHTML = html;
   document.getElementById('invRename').value = d.label;
   if (open) document.getElementById('invMessage').value = d.message;
