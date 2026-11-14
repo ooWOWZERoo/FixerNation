@@ -1,0 +1,63 @@
+tables in production but not in the code build: none
+tables in the code build but not in production: none
+
+affiliates:
+  key only in production: idx_territory_status KEY (`status`)
+
+campaigns:
+  column differs: from_email
+      code:       varchar(255) NOT NULL DEFAULT 'noreply@fixernationeducation.com'
+      production: varchar(255) NOT NULL DEFAULT 'hello@fixernation.org'
+
+contact_groups:
+  key only in production: idx_system_key UNIQUE KEY (`system_key`)
+  key only in the code build: system_key UNIQUE KEY (`system_key`)
+
+district_branding:
+  key only in production: fk_district_branding_updated_by KEY (`updated_by`)
+  key only in the code build: updated_by KEY (`updated_by`)
+
+license_products:
+  column differs: description
+      code:       text DEFAULT NULL
+      production: varchar(500) DEFAULT NULL
+
+morning_boost_audio_clips:
+  column differs: created_at
+      code:       timestamp NULL DEFAULT current_timestamp()
+      production: timestamp NOT NULL DEFAULT current_timestamp()
+
+morning_boost_send_recipients:
+  key only in the code build: contact_id KEY (`contact_id`)
+  foreign key only in the code build: (`contact_id`) REFERENCES `newsletter_contacts` (`id`) ON DELETE SET NULL
+  foreign key only in the code build: (`send_id`) REFERENCES `morning_boost_sends` (`id`) ON DELETE CASCADE
+
+morning_boost_sends:
+  key only in the code build: blog_post_id KEY (`blog_post_id`)
+  foreign key only in the code build: (`blog_post_id`) REFERENCES `blog_posts` (`id`) ON DELETE SET NULL
+
+public_demo_events:
+  key only in the code build: idx_invitation_kind KEY (`invitation_id`,`kind`)
+  key only in production: idx_public_demo_events_invitation_id KEY (`invitation_id`)
+
+purchases:
+  key only in production: fk_purchases_school_id KEY (`school_id`)
+  foreign key only in production: (`school_id`) REFERENCES `schools` (`id`) ON DELETE SET NULL
+
+quote_requests:
+  key only in production: idx_quote_requests_demo_invitation_id KEY (`demo_invitation_id`)
+
+school_branding:
+  key only in production: fk_school_branding_updated_by KEY (`updated_by`)
+  key only in the code build: updated_by KEY (`updated_by`)
+
+schools:
+  key only in the code build: district_id KEY (`district_id`)
+  key only in production: fk_schools_district_id KEY (`district_id`)
+
+social_groups:
+  column differs: type
+      code:       enum('all_teachers','school','custom') NOT NULL DEFAULT 'custom'
+      production: enum('all_teachers','school','membership','custom') NOT NULL DEFAULT 'custom'
+
+tables with differences: 14 of 120 shared
