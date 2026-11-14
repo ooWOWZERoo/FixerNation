@@ -6,23 +6,121 @@ Per CLAUDE.md: requirements first, owner confirms the decisions in section 5, th
 
 ## 1. Scale and shape of the data (why the plan is lighter than the PRD)
 
-The snapshot's `AUTO_INCREMENT` values (the highest id ever used, **not** a row count) are about 4,790 contacts, 36 quotes, 119 purchases, 42 invoices, 8 admin users, 42 districts, 47 schools, 3 demo invitations, 2 support requests. The real row counts are lower: the 2026-09-05 go-live cutover deleted every test purchase and quote (see `CHANGELOG.md`) and left contacts in place, and QA and demo contacts use `@example.com`. So this is a small-volume business, and part of what is in the tables is test data. The preflight script (Phase 0) counts the real rows and the `@example.com` ones separately. Backfills are cheap and can be checked by hand, but report-heavy and queue-heavy features (custom-field engines, funnel science, mailbox sync at scale) are worth less here than the PRD assumes. Section 6 says what to defer.
+The first draft of this plan used the snapshot's `AUTO_INCREMENT` values, which are the highest id ever used, not row counts. The real counts from the 2026-11-14 preflight are: **4,540 contacts (27 of them `@example.com`), 6 quotes, 21 purchases (15 owned by `@example.com` contacts), 3 invoices, 4 admin users, 20 districts, 30 schools, 3 demo invitations, 2 support tickets.** The 2026-09-05 go-live cutover deleted every test purchase and quote and kept contacts. So this is a very small sales operation today: the useful part of the CRM is the workflow going forward (leads, deals, follow-ups, quotes), not reporting on history. Section 6 says what to defer, and section 1b adds a checkpoint after Phase 3.
 
 ## Status (2026-11-14)
 
 - **Decisions D1 to D14 (section 5): confirmed by the owner as recommended ("Accept all").** Where a recommendation was a question, the recommended answer stands: Sales can see everything and edit only their own deals (D1); a NULL-amount manual purchase never counts until the owner confirms it (D3); the `closed` quotes become Inactive until the owner says won or lost (D5); AI is deferred (D8); the Phase 6 deferred list stays deferred (D9).
-- **Phase 0:** test baseline recorded (`cd server && npm test`: 1,002 pass, 0 fail, 0 skipped, about 16 seconds, on 2026-11-14). `server/scripts/report-crm-preflight.js` is written (read-only, counts only); **the owner runs it on cPanel and the output is pasted below before Phase 1 starts**. The stale CLAUDE.md lines (admin accounts, where `requireSiteAuth` lives) are corrected.
-- **Phase 1:** not started. Start it in a fresh session, after reading the preflight output (the quote-to-contact match counts, the orphan `quote_id` count and the NULL-amount list decide the backfill wording).
+- **Phase 0: done.** Test baseline recorded (`cd server && npm test`: 1,002 pass, 0 fail, 0 skipped, about 16 seconds, on 2026-11-14). `server/scripts/report-crm-preflight.js` is written (read-only, counts only); the owner ran it on production and the output is below. The stale CLAUDE.md lines (admin accounts, where `requireSiteAuth` lives) are corrected.
+- **Phase 1:** not started. Start it in a fresh session. The preflight changes its scope in the ways listed in section 1b.
 
-### Preflight output (paste here)
+### Preflight output (run on production, 2026-11-14)
 
-_Not run yet._
+```text
+1. Size
+    4540  newsletter_contacts
+       6  quote_requests
+      21  purchases
+       3  invoices
+       4  admin_users
+      30  schools
+      20  districts
+       2  support_requests
+       3  public_demo_invitations
+
+1b. Test and internal rows (the 2026-09-05 go-live reset cleared purchases and quotes, but contacts were kept)
+      27  contacts with an @example.com address (QA and demo)  (the backfill should skip these)
+       0  quotes from an @example.com address
+      15  purchases owned by an @example.com contact
+
+2. Contacts: duplicate and untidy emails
+       0  contacts whose email differs only by case or spaces from another contact (extra rows)  (the unique index already stops exact duplicates; this is the normalized check)
+       0  emails with leading or trailing spaces
+     110  emails not already lowercase
+  subscription status (must be untouched by the CRM): Subscribed = 4481, Unsubscribed = 59
+       5  contacts with a purchase but in no group
+
+3. Quotes
+  status: converted = 5, contacted = 1
+  origin: admin = 6
+       5  quotes with a send date
+       5  quotes accepted
+       0  quotes with no quote number (inbound, never priced)
+       4  quotes that match exactly one contact by normalized email
+       2  quotes that match NO contact  (these go to the exceptions report)
+       0  quotes that match MORE THAN ONE contact  (ambiguous: reviewed, never auto-linked)
+       0  quotes from a group demo
+
+4. purchases.quote_id (before any foreign key)
+       3  purchases that carry a quote_id
+       0  of those, quote_id points at no quote (orphans)  (must be 0, or fixed, before a foreign key)
+       0  quotes that have more than one purchase  (card clicks make extra pending purchases; no unique key)
+       0  quotes whose purchases are all still pending and number more than one
+
+5. Purchases against the draft Customer rule (D3)
+  payment_status: paid = 18, pending = 3
+  payment_method: manual = 15, po = 4, stripe = 2
+  product_type: group_license = 20, single_license = 1
+       0  QUALIFYING (paid, amount > 0, not a trial)
+      15  paid with a NULL amount (manual entries)  (review list: you confirm each before it counts)
+       1  paid with a zero amount, not a trial  (never a Customer on its own)
+       3  trial-like purchases (any of: trial product, lesson limit, trial end date)
+       2  trial-like purchases marked paid  (the column default is paid; these must not become Customers)
+       0  trial-like purchases marked paid WITH an amount > 0  (a paid trial: look at these by hand)
+       1  trial purchases with a trial product but no lesson limit and no end date  (the trial-detection gap found in the code)
+       3  pending purchases
+       0  purchases tied to an invoice that is paid while the purchase is not  (payment drift)
+       0  purchases tied to an invoice that is unpaid or cancelled while the purchase is paid  (payment drift the other way)
+  invoice status: unpaid = 2, paid = 1
+       0  invoices with no purchase attached
+
+6. Account links for qualifying purchases (D4)
+       0  qualifying purchases with a school_id
+       0  qualifying purchases with NO school_id  (the organization stays "unresolved, needs review")
+       0  ...of those, a school_domain that matches a school (explicit collation)  (schools and districts are latin1, everything else utf8mb4)
+      11  schools with no district
+
+7. Projected classification (a first look, not the final backfill)
+       0  contacts that would be CUSTOMER (a qualifying purchase of their own)
+       4  contacts that would be PROSPECT (a quote request, no qualifying purchase)
+    4536  contacts that would stay SUSPECT
+       7  contacts with only trial, zero-amount, NULL-amount or pending purchases (not Customer; check by hand)
+
+8. Staff and owners
+       4  admin accounts  (all become CRM Admin in Phase 1)
+       1  admin accounts without an email
+       1  site users flagged FNE staff (Community only; grants no CRM access)
+       2  support tickets with an assigned admin
+
+9. Demo hand-off
+  demo invitation status: ended = 2, active = 1
+       0  tickets from a group demo
+```
+
+### What the preflight showed
+
+Section 1b lists what it changes in the plan.
+
+## 1b. What the 2026-11-14 preflight changed
+
+1. **Customer starts at zero.** No purchase passes the D3 rule today. The 15 paid purchases with no amount are manual entries, and 15 purchases belong to `@example.com` contacts, which very likely means they are the same QA rows (the script did not prove that). The other six are one zero-amount paid purchase, two unpaid PO purchases and three trial-like ones. So on day one every contact is Suspect or Prospect, and Customer can only be proven by tests with made-up rows, and in production by one `@example.com` purchase created and removed (CLAUDE.md's curl practice). If real customers paid outside the platform before go-live, they need the "Set Customer with evidence" override that is already in the access matrix; no new workflow.
+2. **Prospects: 4.** Six quotes, all `origin = admin` (none from the public form), five sent and accepted, one contacted. Four match one contact; **two match no contact**. The likely cause is the known gap (editing a contact's email does not update the quote), so these two go to the exceptions report and the owner links them by hand. The backfill makes 6 opportunities (D5): five Won (payment shown separately), one at Proposal / Quote Sent or Qualified by its send date.
+3. **Open question on the five accepted quotes:** only 3 purchases carry a `quote_id`. Phase 1's dry run must list accepted quotes with no purchase pointing at them, so the owner can say whether a purchase is missing or the link was never set. Nothing is written until that is understood.
+4. **Test rows are 27 contacts, 15 purchases, 0 quotes.** The backfill creates no accounts or opportunities from `@example.com` rows, and the Overview and reports leave them out through one shared helper (an address pattern, not a new column).
+5. **110 stored emails are not lowercase.** All matching uses `LOWER(TRIM())`; stored emails are never rewritten (it would not change the unique index, and nothing needs it).
+6. **No duplicate contacts and no orphan `quote_id`:** nothing to clean before the `purchases.quote_id` foreign key. Do not add a unique key (card clicks can still make several purchases per quote).
+7. **Payment drift: none today** (no invoice and purchase disagree). **Trial-detection gap: 1 real row** (a trial product with no lesson limit and no end date); Phase 1's predicate treats a trial product as a trial regardless, and the row is listed for the owner. One paid, zero-amount, non-trial purchase is also listed (never a Customer on its own).
+8. **Staff:** 4 admins, one with no email. A role assignment screen and any "assigned to me" email need an email, so Phase 1 shows that admin as "no email on file". One FNE-staff site user (Community only; no CRM access).
+9. **Schools:** 11 of 30 have no district; account hierarchy is optional, so they become stand-alone accounts. Account-level Customer is unresolved for everyone (there are no qualifying purchases to resolve).
+10. **Demo hand-off:** 3 invitations (2 ended, 1 active), no group tickets or quotes yet. D14 is cheap now and tests itself with the next real demo.
+
+**Recommendation (not a change to D1-D14):** with 6 quotes and no paid sale on record, add a checkpoint after Phase 3. By then the owner will have used the pipeline, tasks and timeline for real deals; Phases 5 to 7 (email sync, reports, hardening) then get confirmed, trimmed or dropped based on what actually hurt. Phases 4a to 4d protect checkout and acceptance and stay in either way.
 
 ## 2. What the PRD assumes versus what the code does
 
 | PRD assumption | What the code and schema show | Effect on the plan |
 |---|---|---|
-| Staff roles exist or can be reused (CRM Admin / Sales / Read-only) | `admin_users` has 8 rows and **no roles**. Every route is `requireAuth` only; any admin can invite, edit and hard-delete other admins. The JWT carries only `{userId, username}`. `site_users.is_fne_staff` is a Community flag, not a CRM role. The Oct 2026 "CRM Roles & Assignments" is a read-only card showing a contact's customer role, not staff ownership. (CLAUDE.md's "single admin account" and `middleware/siteAuth.js` are stale.) | Roles are new. Access matrix first (section 4). Owner columns are nullable FKs to `admin_users` with `ON DELETE SET NULL`, the existing pattern. Admin deletion needs a reassign step. |
+| Staff roles exist or can be reused (CRM Admin / Sales / Read-only) | `admin_users` has 4 rows (one without an email) and **no roles**. Every route is `requireAuth` only; any admin can invite, edit and hard-delete other admins. The JWT carries only `{userId, username}`. `site_users.is_fne_staff` is a Community flag, not a CRM role. The Oct 2026 "CRM Roles & Assignments" is a read-only card showing a contact's customer role, not staff ownership. (CLAUDE.md's "single admin account" and `middleware/siteAuth.js` are stale.) | Roles are new. Access matrix first (section 4). Owner columns are nullable FKs to `admin_users` with `ON DELETE SET NULL`, the existing pattern. Admin deletion needs a reassign step. |
 | Contacts have no owner, stage or CRM fields | Correct. `status` is just Subscribed / Unsubscribed; `source` is free text with about 14 writers. | Additive columns only, as the PRD says. Subscription code untouched. |
 | `quote_requests` has no `contact_id`; `purchases.quote_id` has no FK | Confirmed. The link is the email string only. Editing a contact's email does not update the quote, and `createPurchaseFromQuote` then creates a duplicate contact. Several purchases can share one `quote_id` (every card click creates a new pending purchase). | Backfill by normalized email; record ambiguity; **do not make `quote_id` unique**. FK only after an orphan check. |
 | Won hands off to invoice, purchase and license "exactly once" | Purchases and seats come from one function (`createPurchase`, `routes/newsletter.js:608`) with **no idempotency**. The PO quote path claims the quote with `UPDATE ... WHERE accepted_at IS NULL` but outside a transaction with the purchase and invoice creation, so a mid-way failure leaves a converted quote with a dead token. The card webhook updates without `AND accepted_at IS NULL`. "Latest purchase for this quote" lookups use `ORDER BY id DESC` and can pick an abandoned duplicate. | Phase 4 starts with a hardening step in billing code. Needs its own confirmation under CLAUDE.md's access-control rule before anyone codes it. The CRM never writes purchases or invoices itself: it calls the existing functions. |
@@ -83,7 +181,7 @@ Server-side check on every route and every job. A deleted admin's records go to 
 
 ## 5. Decisions for the owner (each with a recommendation)
 
-- **D1. Staff roles.** Add `admin_users.crm_role` (`admin` / `sales` / `readonly`), existing 8 admins default to `admin`. Do Sales see only their own and unassigned records, or everything? *Recommend: everything is visible, only the owner can edit (smallest team, simplest rule).*
+- **D1. Staff roles.** Add `admin_users.crm_role` (`admin` / `sales` / `readonly`), the 4 existing admins default to `admin`. Do Sales see only their own and unassigned records, or everything? *Recommend: everything is visible, only the owner can edit (smallest team, simplest rule).*
 - **D2. Classification storage.** Store `crm_classification` on the contact, derive it from facts through one function, log every change in `crm_classification_events`. Suspect is the default; Prospect needs a recorded event; Customer is derived, never typed. *Recommend yes.*
 - **D3. What counts as a qualifying paid purchase.** `payment_status = 'paid'`, `amount_cents > 0`, the product is not a trial (`license_products.is_trial = 0` and no `trial_lesson_limit` / `trial_expiration_date` on the purchase), and the purchase is not converted-from-trial credit only. Purchases with a NULL amount (manual entries) go to a review list for the owner to confirm one by one. *Recommend yes; the owner reviews the NULL-amount list once.*
 - **D4. Account-level Customer.** A school or district is a Customer only when a qualifying purchase has a resolved `school_id` (the `backfill-purchases-school-id.js` script exists for older rows); otherwise "unresolved, needs review". *Recommend yes.*
@@ -111,6 +209,7 @@ Each phase ships as its own release, dark behind `crm_v2_enabled` until the owne
 - **Migrations:** `alter-create-crm-core.js` (the eight Phase 1 tables, stable unique `stage_key`, indexes the PRD lists), `alter-add-crm-columns.js` (contact, quote and admin columns, all nullable or defaulted, no FKs that can fail on legacy data until step 2), seed script for stages and loss reasons. Each reruns as a no-op.
 - **Backfill scripts** (dry run by default, `--apply` to write, counts logged, ambiguity written to an exceptions report): contact-to-quote by normalized email, one-to-one only; accounts from existing `schools` and `districts` and unambiguous quote `school` text; opportunities per D5; classification per D2 and D3; `crm_account_contacts` from `school_license_admins` and purchase links. Existing `status` is never read for writing.
 - **Code:** `lib/crm-classification.js` (predicate, reconcile, event writer), `lib/crm-permissions.js`, `routes/crm-accounts.js`, `crm-contacts.js`, `crm-opportunities.js`, `crm-settings.js`; hook into `createPurchase`, the invoice paid/unpaid route and the Stripe webhook **only to call reconcile after the existing work finishes** (read-only with respect to money; failures are logged and never block the payment path). Nightly reconcile cron as the safety net so a missed hook self-heals. Admin deletion reassign step (D13).
+- **Scope set by the preflight (section 1b):** backfill skips `@example.com` rows; 6 opportunities; 2 unmatched quotes and any accepted quote with no purchase go to the exceptions report, nothing guessed; Customer is proven by synthetic tests, not production data.
 - **Risks:** a hook in a payment route is the one regression danger (wrap in try/catch, after commit); backfill touching 4,790 contacts (dry run first, owner reads the counts); duplicate contacts created by the existing email-change gap (report them, do not auto-merge).
 - **Tests:** classification table (trial, $0, NULL amount, paid, pending, refunded-by-hand, converted trial); one contact in two accounts; backfill idempotent on a second run; subscription `status` byte-identical before and after; role matrix for every new route (readonly cannot write, sales cannot override); no `hot|warm|cold` strings in CRM files; payment routes still return the same responses with the hook failing.
 - **Acceptance (PRD section 22, domain/data items):** every contact reads Suspect, Prospect or Customer; trial and $0 never Customer; multiple accounts per contact; Customer persists after license expiry; quote acceptance alone does not create a Customer.
