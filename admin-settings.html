@@ -622,9 +622,25 @@ async function saveAdminEdit() {
 
 async function deleteAdmin(id) {
   if (!confirm('Delete this admin account? This cannot be undone.')) return;
-  const r = await fetch(`/api/auth/admins/${id}`, { method: 'DELETE', credentials: 'include' });
+  let r = await fetch(`/api/auth/admins/${id}`, { method: 'DELETE', credentials: 'include' });
   if (fnHandleUnauthorized(r)) return;
-  const result = await r.json().catch(() => ({}));
+  let result = await r.json().catch(() => ({}));
+  // This admin owns Sales CRM records: ask who takes them over (a username), or leave them unassigned (blank), then try again.
+  if (r.status === 409 && result.code === 'owns_crm_records') {
+    const answer = prompt(`${result.error}\n\nType the username of the admin who should take them over. Leave it blank to leave them unassigned.`, '');
+    if (answer === null) return;
+    const body = { unassign: true };
+    const name = answer.trim().toLowerCase();
+    if (name) {
+      const target = adminsCache.find(a => a.id !== id && a.username.toLowerCase() === name);
+      if (!target) { fnToast('No other admin has that username'); return; }
+      delete body.unassign;
+      body.reassignTo = target.id;
+    }
+    r = await fetch(`/api/auth/admins/${id}`, { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (fnHandleUnauthorized(r)) return;
+    result = await r.json().catch(() => ({}));
+  }
   if (!r.ok) { fnToast(result.error || 'Could not delete admin'); return; }
   loadAdmins();
   fnToast('Admin deleted');

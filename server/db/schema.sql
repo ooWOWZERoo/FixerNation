@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   email VARCHAR(255) UNIQUE,
   email_verified TINYINT(1) NOT NULL DEFAULT 1, -- 1 for the original admin (no invite flow); a newly-invited admin starts at 0 until they accept
   session_invalidated_at DATETIME NULL, -- any admin session token issued before this moment is rejected (stamped on password change/reset)
+  crm_role VARCHAR(12) NOT NULL DEFAULT 'admin', -- Sales CRM role: 'admin' | 'sales' | 'readonly' (added by scripts/alter-create-crm-core.js; gates only the /api/crm routes)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -188,7 +189,18 @@ CREATE TABLE IF NOT EXISTS newsletter_contacts (
   source VARCHAR(128) NOT NULL DEFAULT 'Homepage',
   status VARCHAR(32) NOT NULL DEFAULT 'Subscribed',
   notes TEXT, -- catch-all for rarely-populated imported fields (secondary email/phone, extra addresses, etc.) so bulk imports don't have to silently drop them
-  morning_boost_unsubscribed_at DATETIME NULL -- set when the contact clicks the MB-specific unsubscribe link; does not affect other email types
+  morning_boost_unsubscribed_at DATETIME NULL, -- set when the contact clicks the MB-specific unsubscribe link; does not affect other email types
+  -- Sales CRM (added by scripts/alter-create-crm-core.js). crm_classification is the lifecycle label Suspect / Prospect / Customer: it is NOT the
+  -- subscription status above, an opportunity stage, or a score. classification_locked = a staff override that automatic reconciliation never changes.
+  crm_classification VARCHAR(12) NOT NULL DEFAULT 'suspect', -- 'suspect' | 'prospect' | 'customer'
+  classification_updated_at DATETIME NULL,
+  classification_locked TINYINT(1) NOT NULL DEFAULT 0,
+  assigned_admin_id INT UNSIGNED NULL,
+  last_contacted_at DATETIME NULL,
+  crm_source VARCHAR(64) NULL,
+  KEY idx_contacts_crm_classification (crm_classification),
+  KEY idx_contacts_assigned_admin (assigned_admin_id),
+  CONSTRAINT fk_contacts_assigned_admin FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Contact groups, for categorizing contacts. A contact may belong to any
@@ -724,7 +736,14 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   expiring_reminder_sent_at DATETIME NULL, -- dedup flag for quote-expiring-reminder.js, same pattern as purchases.renewal_reminder_sent_at
   demo_window INT UNSIGNED NOT NULL DEFAULT 0, -- RETIRED (phase 5): was the original single demo's window number; always 0 now and nothing reads it. A group's demo is tagged by demo_invitation_id. Added by scripts/alter-add-public-demo-phase4.js.
   demo_invitation_id INT UNSIGNED NOT NULL DEFAULT 0, -- added by scripts/alter-add-demo-invitation-tags.js on existing installs; 0 = not from a group's demo, N = sent by someone in demo invitation N (docs/reference/shared-demo-workspaces-requirements.md, R8)
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  -- Sales CRM links (scripts/alter-create-crm-core.js). Both empty for a legacy quote, which keeps working. On a fresh install contact_id has its foreign key here;
+  -- opportunity_id's foreign key to crm_opportunities is added by the alter script (that table is created later in this file, after schools).
+  contact_id INT UNSIGNED NULL,
+  opportunity_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_quote_requests_contact (contact_id),
+  KEY idx_quote_requests_opportunity (opportunity_id),
+  CONSTRAINT fk_quote_requests_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
@@ -1718,3 +1737,162 @@ CREATE TABLE IF NOT EXISTS public_demo_invitations (
   UNIQUE KEY uq_public_demo_invitation_code (access_code),
   INDEX idx_public_demo_invitation_ws (workspace_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Sales CRM core (docs/reference/sales-crm-update-requirements.md, phase 1). Created on existing installs by scripts/alter-create-crm-core.js, which also
+-- seeds crm_pipeline_stages and crm_loss_reasons. The quote_requests.opportunity_id foreign key to crm_opportunities is added there too.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS crm_pipeline_stages (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  stage_key VARCHAR(32) NOT NULL,
+  label VARCHAR(64) NOT NULL,
+  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+  default_probability TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_crm_stage_key (stage_key),
+  KEY idx_crm_stage_sort (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_loss_reasons (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  reason_key VARCHAR(32) NOT NULL,
+  label VARCHAR(96) NOT NULL,
+  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_crm_loss_reason_key (reason_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_accounts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  account_type VARCHAR(16) NOT NULL DEFAULT 'school',
+  website_domain VARCHAR(255) NULL,
+  state VARCHAR(64) NULL,
+  assigned_admin_id INT UNSIGNED NULL,
+  source VARCHAR(128) NULL,
+  parent_account_id INT UNSIGNED NULL,
+  school_id INT UNSIGNED NULL,
+  district_id INT UNSIGNED NULL,
+  description TEXT NULL,
+  archived_at DATETIME NULL,
+  created_by_admin_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_crm_account_school (school_id),
+  UNIQUE KEY uq_crm_account_district (district_id),
+  KEY idx_crm_account_owner (assigned_admin_id),
+  KEY idx_crm_account_parent (parent_account_id),
+  KEY idx_crm_account_name (name),
+  CONSTRAINT fk_crm_account_owner FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+  CONSTRAINT fk_crm_account_parent FOREIGN KEY (parent_account_id) REFERENCES crm_accounts (id) ON DELETE SET NULL,
+  CONSTRAINT fk_crm_account_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE SET NULL,
+  CONSTRAINT fk_crm_account_district FOREIGN KEY (district_id) REFERENCES districts (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_account_contacts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  account_id INT UNSIGNED NOT NULL,
+  contact_id INT UNSIGNED NOT NULL,
+  title VARCHAR(128) NULL,
+  is_primary TINYINT(1) NOT NULL DEFAULT 0,
+  is_champion TINYINT(1) NOT NULL DEFAULT 0,
+  is_decision_maker TINYINT(1) NOT NULL DEFAULT 0,
+  is_procurement TINYINT(1) NOT NULL DEFAULT 0,
+  is_finance TINYINT(1) NOT NULL DEFAULT 0,
+  started_on DATE NULL,
+  ended_on DATE NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_crm_account_contact (account_id, contact_id),
+  KEY idx_crm_account_contacts_contact (contact_id),
+  CONSTRAINT fk_crm_ac_account FOREIGN KEY (account_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+  CONSTRAINT fk_crm_ac_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_opportunities (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  account_id INT UNSIGNED NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  owner_admin_id INT UNSIGNED NULL,
+  stage_id INT UNSIGNED NOT NULL,
+  state VARCHAR(12) NOT NULL DEFAULT 'open',
+  stage_entered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  primary_contact_id INT UNSIGNED NULL,
+  opp_type VARCHAR(16) NOT NULL DEFAULT 'new_business',
+  amount_cents INT UNSIGNED NULL,
+  source VARCHAR(128) NULL,
+  product_focus VARCHAR(255) NULL,
+  expected_close_date DATE NULL,
+  target_implementation_date DATE NULL,
+  probability_override TINYINT UNSIGNED NULL,
+  next_step VARCHAR(255) NULL,
+  next_step_due_at DATETIME NULL,
+  loss_reason_id INT UNSIGNED NULL,
+  competitor VARCHAR(128) NULL,
+  reengage_on DATE NULL,
+  closed_at DATETIME NULL,
+  renewal_of_purchase_id INT UNSIGNED NULL,
+  created_by_admin_id INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_crm_opp_owner_state (owner_admin_id, state, stage_id, expected_close_date),
+  KEY idx_crm_opp_stage_updated (stage_id, updated_at),
+  KEY idx_crm_opp_next_step (next_step_due_at, state),
+  KEY idx_crm_opp_account_state (account_id, state),
+  KEY idx_crm_opp_primary_contact (primary_contact_id),
+  CONSTRAINT fk_crm_opp_account FOREIGN KEY (account_id) REFERENCES crm_accounts (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_crm_opp_owner FOREIGN KEY (owner_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+  CONSTRAINT fk_crm_opp_stage FOREIGN KEY (stage_id) REFERENCES crm_pipeline_stages (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_crm_opp_contact FOREIGN KEY (primary_contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL,
+  CONSTRAINT fk_crm_opp_loss FOREIGN KEY (loss_reason_id) REFERENCES crm_loss_reasons (id) ON DELETE SET NULL,
+  CONSTRAINT fk_crm_opp_renewal FOREIGN KEY (renewal_of_purchase_id) REFERENCES purchases (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_opportunity_contacts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  opportunity_id INT UNSIGNED NOT NULL,
+  contact_id INT UNSIGNED NOT NULL,
+  role VARCHAR(24) NOT NULL DEFAULT 'other',
+  influence VARCHAR(12) NULL,
+  stance VARCHAR(12) NULL,
+  notes VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_crm_opp_contact (opportunity_id, contact_id),
+  KEY idx_crm_opp_contacts_contact (contact_id),
+  CONSTRAINT fk_crm_oc_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+  CONSTRAINT fk_crm_oc_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_opportunity_stage_history (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  opportunity_id INT UNSIGNED NOT NULL,
+  from_stage_id INT UNSIGNED NULL,
+  to_stage_id INT UNSIGNED NOT NULL,
+  from_state VARCHAR(12) NULL,
+  to_state VARCHAR(12) NOT NULL,
+  actor_admin_id INT UNSIGNED NULL,
+  reason VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_crm_stage_history_opp (opportunity_id, created_at),
+  CONSTRAINT fk_crm_sh_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+  CONSTRAINT fk_crm_sh_actor FOREIGN KEY (actor_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_classification_events (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  contact_id INT UNSIGNED NOT NULL,
+  from_classification VARCHAR(12) NULL,
+  to_classification VARCHAR(12) NOT NULL,
+  event_type VARCHAR(32) NOT NULL,
+  source_ref VARCHAR(64) NULL,
+  actor_admin_id INT UNSIGNED NULL,
+  reason VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_crm_class_events_contact (contact_id, created_at),
+  KEY idx_crm_class_events_ref (event_type, source_ref),
+  CONSTRAINT fk_crm_ce_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE,
+  CONSTRAINT fk_crm_ce_actor FOREIGN KEY (actor_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

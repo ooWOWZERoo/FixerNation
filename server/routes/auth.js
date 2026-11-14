@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { COOKIE_NAME, COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendAdminInviteEmail, sendAdminPasswordResetEmail } = require('../lib/mailer');
 const { FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
+const { ownedRecordCounts, reassignOwned } = require('../lib/crm-ownership');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -252,9 +253,42 @@ router.delete('/admins/:id', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'At least one admin must remain.' });
   }
 
+  // Sales CRM (decision D13): an admin who owns contacts, accounts or deals must say who takes them over (or choose to leave them unassigned).
+  // Without an answer nothing is deleted. A database without the CRM tables owns nothing, so this is a no-op there.
+  const adminId = Number(req.params.id);
+  const owned = await ownedRecordCounts(pool, adminId);
+  const b = req.body || {};
+  let reassignedTo = null;
+  if (owned.total > 0) {
+    const to = Number(b.reassignTo);
+    if (!Number.isInteger(to) && b.unassign !== true) {
+      return res.status(409).json({
+        code: 'owns_crm_records', owned,
+        error: `This admin owns ${owned.total} CRM record${owned.total === 1 ? '' : 's'} (${owned.contacts} contact${owned.contacts === 1 ? '' : 's'}, ${owned.accounts} account${owned.accounts === 1 ? '' : 's'}, ${owned.opportunities} deal${owned.opportunities === 1 ? '' : 's'}). Choose who takes them over, or leave them unassigned.`,
+      });
+    }
+    if (Number.isInteger(to)) {
+      if (to === adminId) return res.status(400).json({ error: 'Choose a different admin to take them over.' });
+      const [[target]] = await pool.query('SELECT id FROM admin_users WHERE id = ? AND email_verified = 1', [to]);
+      if (!target) return res.status(400).json({ error: 'That admin does not exist or has not activated their account.' });
+      reassignedTo = to;
+    }
+  }
+  // The last CRM Admin cannot be deleted either, or nobody could edit CRM settings or roles. (Skipped where the role column does not exist yet.)
+  try {
+    const [[me]] = await pool.query('SELECT crm_role FROM admin_users WHERE id = ?', [adminId]);
+    if (me && me.crm_role === 'admin') {
+      const [[{ n }]] = await pool.query("SELECT COUNT(*) AS n FROM admin_users WHERE crm_role = 'admin' AND email_verified = 1 AND id <> ?", [adminId]);
+      if (Number(n) === 0) return res.status(400).json({ error: 'This is the last Sales CRM admin. Give another admin the CRM Admin role first.' });
+    }
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+  }
+  if (owned.total > 0) await reassignOwned(pool, adminId, reassignedTo);
+
   const [result] = await pool.query('DELETE FROM admin_users WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Admin not found' });
-  res.json({ ok: true });
+  res.json({ ok: true, reassigned: owned.total, reassignedTo });
 });
 
 router.post('/accept-invite', async (req, res) => {

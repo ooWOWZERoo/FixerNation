@@ -61,6 +61,10 @@ const standardsRoutes = require('./routes/standards');
 const pogEvidenceRoutes = require('./routes/pog-evidence');
 const adminStandardsRoutes = require('./routes/admin-standards');
 const districtAdminStandardsRoutes = require('./routes/district-admin-standards');
+const crmSettingsRoutes = require('./routes/crm-settings');
+const crmAccountsRoutes = require('./routes/crm-accounts');
+const crmContactsRoutes = require('./routes/crm-contacts');
+const crmOpportunitiesRoutes = require('./routes/crm-opportunities');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -166,6 +170,11 @@ app.use('/api/affiliate-portal', affiliatePortalRoutes);
 app.use('/api/standards', standardsRoutes);
 app.use('/api/graduate-evidence', pogEvidenceRoutes);
 app.use('/api/admin/standards', adminStandardsRoutes);
+// Sales CRM (docs/reference/sales-crm-update-requirements.md). Dark until the setting crm_v2_enabled is 'true': every route answers 404 before that.
+app.use('/api/crm/accounts', crmAccountsRoutes);
+app.use('/api/crm/contacts', crmContactsRoutes);
+app.use('/api/crm/opportunities', crmOpportunitiesRoutes);
+app.use('/api/crm', crmSettingsRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
 // In production LiteSpeed checks public_html/uploads/ first; if the file isn't

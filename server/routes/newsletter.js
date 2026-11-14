@@ -12,6 +12,8 @@ const { notAdminSeatClause } = require('../lib/seat-counts');
 const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal');
 const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 const { describeConsequences, consequencesText, hasRoles, closeAccount } = require('../lib/account-closing');
+const { dealCountForContact } = require('../lib/crm-ownership');
+const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -261,6 +263,14 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
     return res.status(409).json({
       code: 'contact_owns_purchases', purchases: nPurchases, invoices: nInvoices,
       error: `This contact owns ${parts.join(' and ')}. Deleting it would erase them and every license seat on them. Remove or cancel those first.`,
+    });
+  }
+  // Sales CRM: a contact on a live deal (buying committee or primary contact) is taken off the deal first, never deleted out from under it.
+  const nDeals = await dealCountForContact(pool, req.params.id);
+  if (nDeals) {
+    return res.status(409).json({
+      code: 'contact_on_deals', deals: nDeals,
+      error: `This contact is on ${nDeals} sales deal${nDeals === 1 ? '' : 's'}. Take them off the deal${nDeals === 1 ? '' : 's'} first.`,
     });
   }
   // The CRM is the record of who is on the platform: deleting a contact that has a sign-in account closes the account
@@ -705,6 +715,7 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
     // A buyer who already has an account (signed up earlier, or signed in before paying) never goes through the sign-up that
     // claims a pending seat, so claim it here (lib/own-seat-claim.js). A new account claims it when it is created.
     if (ownSeatEmail) await claimForAccountByEmail(pool, ownSeatEmail);
+    await crmHooks.contactChanged(contactId);
 
     // Automated thank-you email — best-effort (fireAutomation swallows its
     // own errors), so a template/lookup issue here never fails the purchase
@@ -940,6 +951,7 @@ router.put('/purchases/:id', requireAuth, async (req, res) => {
     );
   }
 
+  await crmHooks.purchaseChanged(purchase.id);
   const [updatedRows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchase.id]);
   const [purchase2] = await attachPurchaseDetails(updatedRows, { excludeAdminSeats: true });
   res.json({ purchase: purchase2 });

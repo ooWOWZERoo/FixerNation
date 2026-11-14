@@ -15,6 +15,8 @@
 - **Demo (shared prospect demo)** (3): [public_demo_events](#public_demo_events), [public_demo_invitations](#public_demo_invitations), [public_demo_workspaces](#public_demo_workspaces)
 - **Settings, analytics, content safety and everything else** (14): [analytics_events](#analytics_events), [analytics_sessions](#analytics_sessions), [automation_executions](#automation_executions), [book_tags](#book_tags), [books](#books), [safety_alert_recipients](#safety_alert_recipients), [safety_alerts](#safety_alerts), [safety_findings](#safety_findings), [safety_incidents](#safety_incidents), [safety_rules](#safety_rules), [safety_scans](#safety_scans), [safety_terms](#safety_terms), [territories](#territories), [territory_requests](#territory_requests)
 
+> **Pending (Sales CRM phase 1, built 2026-11-14, not yet in the live dump above):** tables `crm_pipeline_stages`, `crm_loss_reasons`, `crm_accounts`, `crm_account_contacts`, `crm_opportunities`, `crm_opportunity_contacts`, `crm_opportunity_stage_history`, `crm_classification_events`; columns `admin_users.crm_role`, `newsletter_contacts.crm_classification` / `classification_updated_at` / `classification_locked` / `assigned_admin_id` / `last_contacted_at` / `crm_source`, `quote_requests.contact_id` / `opportunity_id`. Definitions: `server/scripts/alter-create-crm-core.js` and the end of `server/db/schema.sql`. Refresh this file from production after that script has run.
+
 ## Users, licensing, sales, CRM and email
 
 ### admin_invite_tokens

@@ -15,7 +15,7 @@ const {
 const {
   sendInvitationReminderEmail,
 } = require('../lib/mailer');
-const { audit, AFFILIATE_ENTITY_TYPES } = require('../lib/audit');
+const { audit, AFFILIATE_ENTITY_TYPES, CRM_ENTITY_TYPES = [] } = require('../lib/audit');
 const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
 const { getSeatCounts, notAdminSeatClause } = require('../lib/seat-counts');
 const { licenseAccess, NOT_OPEN_MESSAGES } = require('../lib/license-access');
@@ -34,7 +34,9 @@ function licenseBanner(purchase) {
 // referred by an affiliate. Without this, a purchase that's both a
 // group_license sale AND an affiliate-attributed sale would leak commission
 // detail into a completely unrelated admin's view.
-const NOT_AFFILIATE_ENTITY = `entity_type NOT IN (${AFFILIATE_ENTITY_TYPES.map(() => '?').join(', ')})`;
+// Sales CRM audit rows (lib/audit.js CRM_ENTITY_TYPES) never carry a purchase_id, so they cannot reach these views; they are listed anyway so it stays true if one ever does.
+const HIDDEN_ENTITY_TYPES = [...AFFILIATE_ENTITY_TYPES, ...CRM_ENTITY_TYPES];
+const NOT_AFFILIATE_ENTITY = `entity_type NOT IN (${HIDDEN_ENTITY_TYPES.map(() => '?').join(', ')})`;
 
 const router = express.Router();
 
@@ -140,7 +142,7 @@ router.get('/dashboard', requireSchoolAdmin, async (req, res) => {
      WHERE purchase_id = ? AND ${NOT_AFFILIATE_ENTITY}
      ORDER BY created_at DESC
      LIMIT 10`,
-    [purchaseId, ...AFFILIATE_ENTITY_TYPES]
+    [purchaseId, ...HIDDEN_ENTITY_TYPES]
   );
 
   res.json({
@@ -1062,7 +1064,7 @@ router.get('/reports', requireSchoolAdmin, async (req, res) => {
        WHERE purchase_id = ? AND ${NOT_AFFILIATE_ENTITY}
        ORDER BY created_at DESC
        LIMIT 500`,
-      [purchaseId, ...AFFILIATE_ENTITY_TYPES]
+      [purchaseId, ...HIDDEN_ENTITY_TYPES]
     );
     return res.json({ activity: rows });
   }
@@ -1152,7 +1154,7 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
 
   const [[{ total }]] = await pool.query(
     `SELECT COUNT(*) AS total FROM school_audit_log WHERE purchase_id = ? AND ${NOT_AFFILIATE_ENTITY}`,
-    [purchaseId, ...AFFILIATE_ENTITY_TYPES]
+    [purchaseId, ...HIDDEN_ENTITY_TYPES]
   );
 
   const [rows] = await pool.query(
@@ -1165,7 +1167,7 @@ router.get('/audit', requireSchoolAdmin, async (req, res) => {
      WHERE sal.purchase_id = ? AND sal.${NOT_AFFILIATE_ENTITY}
      ORDER BY sal.created_at DESC
      LIMIT ? OFFSET ?`,
-    [purchaseId, ...AFFILIATE_ENTITY_TYPES, limit, offset]
+    [purchaseId, ...HIDDEN_ENTITY_TYPES, limit, offset]
   );
 
   res.json({ entries: rows, total: Number(total), page, limit });

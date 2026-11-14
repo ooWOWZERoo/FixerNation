@@ -12,6 +12,7 @@ const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail } = require('../lib/mailer');
 const { refCodeFromRequest, codeForAffiliateId } = require('../lib/affiliate-attribution');
+const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Customer once a card quote is paid (never throws; off unless crm_v2_enabled)
 const { limiter } = require('../lib/rate-limit');
 
 const router = express.Router();
@@ -544,6 +545,7 @@ async function webhookHandler(req, res) {
         );
         if (metadata.purchaseId) {
           await pool.query("UPDATE purchases SET payment_status = 'paid' WHERE id = ?", [Number(metadata.purchaseId)]);
+          await crmHooks.purchaseChanged(Number(metadata.purchaseId));
         }
         const siteUrl = process.env.SITE_URL || '';
         let setupUrl = '';

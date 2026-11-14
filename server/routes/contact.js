@@ -5,6 +5,7 @@ const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 const { limiter } = require('../lib/rate-limit');
+const crmHooks = require('../lib/crm-hooks'); // Sales CRM: a quote request makes the person a Prospect (never throws; off unless crm_v2_enabled)
 const { demoOrigin } = require('../lib/public-demo');
 const { invitationLabels } = require('../lib/public-demo-admin');
 const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-parties');
@@ -105,6 +106,7 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
        company = IF(company = '' OR company IS NULL, VALUES(company), company)`,
     [`${firstName || ''} ${lastName || ''}`.trim() || email, email, school || null]
   );
+  await crmHooks.contactChangedByEmail(email);
 
   await sendContactFormEmail({
     to: await getSetting('contact_email_quote'),
@@ -195,6 +197,7 @@ router.post('/quotes', requireAuth, async (req, res) => {
        company = IF(company = '' OR company IS NULL, VALUES(company), company)`,
     [`${firstName || ''} ${lastName || ''}`.trim() || trimmedEmail, trimmedEmail, school || null]
   );
+  await crmHooks.contactChangedByEmail(trimmedEmail);
 
   const [[created]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [newId]);
   res.status(201).json({ ok: true, quote: created });

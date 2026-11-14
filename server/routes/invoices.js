@@ -6,6 +6,7 @@ const { sendInvoiceEmail } = require('../lib/mailer');
 const { fireAutomation } = require('../lib/automations');
 const { approveForInvoice, reverseForInvoice } = require('../lib/affiliate-attribution');
 const { audit } = require('../lib/audit');
+const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Customer after an invoice flips paid or unpaid (never throws; off unless crm_v2_enabled)
 const { cleanParty, isEmptyParty, invoiceBillTo, invoiceShipTo, invoiceColumns } = require('../lib/invoice-parties');
 
 const router = express.Router();
@@ -297,6 +298,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
   }
 
+  await crmHooks.invoiceChanged(req.params.id);
   res.json({ ok: true, affiliateCommission: affiliateEffect });
 });
 
