@@ -36,8 +36,8 @@ const [[row]] = await pool.query('SELECT ... LIMIT 1', [id]);
 | | Admin auth | Site-user auth |
 |---|---|---|
 | Cookie name | `fn_session` | `fn_user_session` |
-| Middleware | `requireAuth` (`middleware/auth.js`) | `requireSiteAuth` (`middleware/siteAuth.js`) |
-| Identity | Single admin account | Teachers / consumers who sign up on the site |
+| Middleware | `requireAuth` (`middleware/auth.js`) | `requireSiteAuth` (`routes/site-auth.js`) |
+| Identity | Several `admin_users` accounts, all with full access (no roles yet; CRM roles are planned: `docs/reference/sales-crm-update-requirements.md`) | Teachers / consumers who sign up on the site |
 | Used in | All `admin-*.html` pages, all `requireAuth` routes | Public-facing `/api/site-auth/*`, membership, curriculum access |
 
 **All three session types are signed with the same `SESSION_SECRET`, so they are separated by a JWT `aud` claim, not just by cookie name** (an attacker controls their own cookie jar — without `aud`, a free site-user's token pasted into `fn_session` passed `requireAuth` as admin). Every sign/verify goes through `server/lib/session-tokens.js` (`signSession(kind, …)` / `verifySession(kind, …)`, kinds `admin` / `site` / `student` / `msLink`). **Never call `jwt.sign`/`jwt.verify` directly.** `requireAuth` additionally confirms the admin row still exists. `getAuthUser(req)` returns the admin user if the `fn_session` cookie is valid. `getSiteUser(req)` returns the site user from `fn_user_session`. A licensed teacher accessing curriculum uses `getSiteUser` + `hasActiveLicense` — never `getAuthUser`.
