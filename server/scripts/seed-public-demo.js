@@ -1,36 +1,15 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const F = require('../lib/public-demo-fixtures');
-const { legacyFixtures } = require('../lib/public-demo-workspaces');
-const { isValidPin } = require('../lib/pin');
 const { getSettingRaw, putSettingRaw } = require('../lib/public-demo-admin');
 
-// Creates (or tops up) the SHARED DEMO ENVIRONMENT: one login per role for a prospect to try, all sharing one published password
-// (docs/reference/shared-demo-environment-requirements.md, R4). Everything is fake: its own demo district, school, licence, a demo classroom
-// with three fake students and one lesson set, and these logins:
-//
-//   demo-district@public-demo.example.com   district administrator   (district-admin-login.html)
-//   demo-school@public-demo.example.com     school administrator     (school-admin-login.html)
-//   demo-teacher@public-demo.example.com    teacher                  (any sign-in box, then teacher-classrooms.html)
-//   demo-parent@public-demo.example.com     parent, linked to Demo Student A (parent-portal.html)
-//   demo-student                            student, with a shared 6-digit PIN (student-login.html)
-//
-//   node scripts/seed-public-demo.js
-//       DRY RUN (default): runs every statement inside a transaction against the real schema, reports what it would create or change, then ROLLS
-//       BACK. Nothing is written and no password is shown.
-//   node scripts/seed-public-demo.js --apply
-//       Does it for real, stores the shared password and PIN in the settings table (public_demo_password, public_demo_pin; generated the first
-//       time, reused after), and prints them once.
-//   ... --password "demo-some-long-password" --pin 123456
-//       Use these instead of generated ones (the password needs at least 14 characters; the PIN is 6 digits). Changing either re-hashes the
-//       accounts and signs everyone out.
-//
-// Safe to re-run: every step finds-or-creates, so a second run only fills in whatever is missing. This script never turns the demo ON: the demo
-// stays closed until the switch is turned on (scripts/set-public-demo.js, later the admin Demo page).
+// The seed library for the prospect demo (docs/reference/shared-demo-workspaces-requirements.md). seed(conn, { fx }) creates or tops up one workspace
+// (fx = workspaceFixtures(n)): its own fake district, school, $0 licence and purchase, four logins, and a demo classroom with three fake students and one
+// lesson set. scripts/seed-demo-workspaces.js builds the pool with it; an invitation (lib/public-demo-invitations.js) gives the logins a password and PIN.
+// Everything is fake. (The original single shared demo, which this script used to build from the command line, was retired in phase 5; its leftovers are
+// removed by scripts/retire-original-demo.js.)
 //
 // Run scripts/alter-add-sales-demo-flag.js and scripts/alter-add-shared-demo-flag.js first. Both flags are set on every demo login: is_shared_demo
-// makes it work only while the demo is open, is_sales_demo keeps it out of the community, analytics and the Morning Boost group, and confines it to
+// makes it work only while its invitation is open, is_sales_demo keeps it out of the community, analytics and the Morning Boost group, and confines it to
 // demo data (lib/sales-demo.js).
 
 const WORDS = ('amber anchor apple aspen badge basil beach birch bloom bramble breeze bridge brook cabin candle canyon cedar chalk cherry cliff clover cobalt comet coral cotton crane creek crest daisy delta dune ember falcon fern field finch flint forest fox garden ginger glacier grove harbor hazel heron hill honey indigo iris island ivory jasper juniper kettle lake lantern lark laurel lemon lilac linen lotus maple marble meadow mesa mint moss mountain nectar oak olive orchid otter pearl pebble pine plum pond poppy prairie quartz quill rain raven reef ridge river robin saffron sage sandy shell sparrow spruce stone summit sunny thistle thorn tide timber tulip valley velvet violet walnut willow winter wren yarrow zephyr').split(' ');
@@ -64,9 +43,9 @@ async function one(conn, sql, params) {
 // The classroom, its students, its lessons and the parent link. Shared with the nightly reset, which deletes the classroom and calls this to
 // build it again (the join and parent codes are passed back in so they stay the same across resets).
 //
-// The shared student's PIN: `pin` (the original demo, whose PIN is a setting), or `pinHash` (a workspace reset hands back the hash it found, so the PIN
+// The shared student's PIN: `pin`, or `pinHash` (a workspace reset hands back the hash it found, so the PIN
 // the group was given keeps working), or neither (a new workspace: a random PIN nobody is told, until an invitation sets one).
-async function seedClassroom(conn, { teacherId, parentId, pin, pinHash = null, rounds = 10, codes = null, fx = legacyFixtures() }, report) {
+async function seedClassroom(conn, { teacherId, parentId, pin, pinHash = null, rounds = 10, codes = null, fx }, report) {
   let classroom = await one(conn,
     'SELECT id, join_code, parent_code FROM classrooms WHERE teacher_site_user_id = ? AND name = ? AND archived_at IS NULL', [teacherId, fx.classroomName]);
   if (classroom) report.reused(`demo classroom "${fx.classroomName}" (#${classroom.id})`);
@@ -125,10 +104,11 @@ async function seedClassroom(conn, { teacherId, parentId, pin, pinHash = null, r
   return { classroom, students, lessonCount: lessons.length };
 }
 
-// Builds (or tops up) one demo: the original single demo (no `fx`) or one workspace (`fx = workspaceFixtures(n)`).
+// Builds (or tops up) one workspace (`fx = workspaceFixtures(n)`).
 // password / pin may be null for a workspace: its logins then get random passwords nobody is told (they cannot be signed in to), and an account that
 // already exists keeps the password it has, so topping up the pool never signs anyone out. An invitation sets the real ones (phase 2).
-async function seed(conn, { password, pin, rounds = 12, fx = legacyFixtures() }, report) {
+async function seed(conn, { password, pin, rounds = 12, fx }, report) {
+  if (!fx || fx.number === null || fx.number === undefined) throw new Error('seed needs a workspace (fx = workspaceFixtures(n)). The original single demo was retired.');
   const out = {};
   const workspace = fx.number;
 
@@ -247,77 +227,5 @@ async function seed(conn, { password, pin, rounds = 12, fx = legacyFixtures() },
   }
   return out;
 }
-
-function parseArgs(argv) {
-  const args = { apply: false };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--apply') args.apply = true;
-    else if (a === '--password') args.password = argv[++i];
-    else if (a === '--pin') args.pin = argv[++i];
-    else throw new Error(`Unknown argument: ${a}`);
-  }
-  if (args.password !== undefined && String(args.password).length < 14) throw new Error('--password needs at least 14 characters.');
-  if (args.pin !== undefined && !(isValidPin(args.pin) && String(args.pin).length === 6)) throw new Error('--pin must be exactly 6 digits.');
-  return args;
-}
-
-async function main() {
-  const mysql = require('mysql2/promise');
-  const args = parseArgs(process.argv.slice(2));
-  const conn = await mysql.createConnection({
-    host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
-  });
-
-  for (const col of ['is_sales_demo', 'is_shared_demo']) {
-    const [has] = await conn.query(
-      `SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'site_users' AND COLUMN_NAME = ?`, [process.env.DB_NAME, col]);
-    if (!has.length) {
-      await conn.end();
-      throw new Error(`site_users.${col} does not exist yet. Run scripts/alter-add-${col === 'is_sales_demo' ? 'sales' : 'shared'}-demo-flag.js first -- without the flag the logins would NOT be confined.`);
-    }
-  }
-
-  console.log(`\n${args.apply ? 'APPLYING' : 'DRY RUN (nothing will be written)'} -- shared demo environment\n`);
-  const report = makeReport();
-  let out, password, pin;
-  await conn.beginTransaction();
-  try {
-    password = args.password || await getSettingRaw(conn, 'public_demo_password') || generatePassword();
-    pin = args.pin || await getSettingRaw(conn, 'public_demo_pin') || generatePin();
-    if (!(isValidPin(pin) && String(pin).length === 6)) throw new Error('The stored demo PIN is not 6 digits. Pass --pin to set a new one.');
-    out = await seed(conn, { password, pin }, report);
-    for (const [key, value] of [['public_demo_password', password], ['public_demo_pin', pin]]) {
-      if (await getSettingRaw(conn, key) !== value) { await putSettingRaw(conn, key, value); report.note(`stored ${key} in the settings table`); }
-    }
-    if (args.apply) await conn.commit(); else await conn.rollback();
-  } catch (err) {
-    await conn.rollback();
-    await conn.end();
-    console.error('\nFAILED -- the transaction was rolled back, nothing was changed.');
-    throw err;
-  }
-  await conn.end();
-
-  report.print(args.apply ? '' : 'would ');
-  if (!args.apply) {
-    console.log('\nDry run complete: every statement ran against the real schema and was rolled back.');
-    console.log('Re-run with --apply to make it real.\n');
-    return;
-  }
-
-  console.log('\nThe demo is still OFF. Turn it on with: node scripts/set-public-demo.js --on --days 14\n');
-  console.log('Logins (shown once here; the password and PIN are also stored in the settings table):');
-  console.log(`  Password for every site login ...... ${password}`);
-  console.log(`  District administrator ............. ${F.ACCOUNTS.district.email}   (district-admin-login.html)`);
-  console.log(`  School administrator ............... ${F.ACCOUNTS.school.email}   (school-admin-login.html)`);
-  console.log(`  Teacher ............................ ${F.ACCOUNTS.teacher.email}   (teacher-classrooms.html)`);
-  console.log(`  Parent ............................. ${F.ACCOUNTS.parent.email}   (parent-portal.html)`);
-  console.log(`  Student ............................ ${F.STUDENTS[0].username}  PIN ${pin}   (student-login.html)`);
-  console.log(`  Classroom join code ................ ${out.classroom.join_code}\n`);
-}
-
-if (require.main === module) main().catch(err => { console.error(err.message || err); process.exit(1); });
 
 module.exports = { seed, seedClassroom, makeReport, generatePassword, generatePin, getSettingRaw, putSettingRaw, WORDS };

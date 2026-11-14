@@ -1,43 +1,16 @@
 # Running a prospect demo: staff how-to
 
-For FNE staff. Use this when a district, school or teacher wants to try Fixer Nation before buying. Everything is done from the admin, in **Sales > Demo** (`admin-demo.html`). The design and rules are in `shared-demo-environment-requirements.md`; this page is only the steps.
+For FNE staff. Use this when a district, school or teacher wants to try Fixer Nation before buying. Everything is done from the admin, in **Sales > Demo** (`admin-demo.html`). The design and rules are in `shared-demo-workspaces-requirements.md` (the earlier single-demo design is in `shared-demo-environment-requirements.md`, which this replaced); this page is only the steps.
 
 ## What a prospect gets
 
-One access code, one page and five sign-ins (district administrator, school administrator, teacher, parent, student). Everything in it is made-up data. They can view every lesson, but they can't download files, upload files or send email. They can ask a question, submit a ticket or request a quote at any time.
+A private copy of the demo, just for their group: one access code, one page and five sign-ins (district administrator, school administrator, teacher, parent, student), with their own password, student PIN and end date. Everything in it is made-up data. They can view every lesson, but they can't download files, upload files or send email. They can ask a question, submit a ticket or request a quote at any time. Other groups can be in their own copies at the same time and never see each other.
 
-The demo is **closed by default**. While it's closed, none of the logins work and the page says it isn't available.
+Nothing works until you start an invitation. While none is open, none of the logins work and the demo page says it isn't available.
 
 ## Before the first demo (once only)
 
-The demo is already set up in production. If **Sales > Demo** ever shows "Set up the demo first", press **Set up the demo**. It is safe to press twice.
-
-## Start a demo for a district
-
-1. Open **Sales > Demo**.
-2. Under **Demo status**, choose how long it stays open (1 to 30 days) or pick an end date and time. Dates you type use your computer's time zone, and the page shows the end in US Eastern.
-3. Press **Turn the demo on**. This also clears whatever the last visitors left behind, so each district starts fresh.
-4. Under **Message for the district**, press **Copy message**. It has the page address, the access code, the end date and a reminder that they can ask questions or request a quote any time.
-5. Paste it into your own email, add a line or two of your own, and send it from your mailbox. The site never emails the district for you.
-
-The message contains the access code but not the password. The district sees the password and PIN only after entering the code on the demo page.
-
-## While it's open
-
-- **Check the counts.** The **This window** card shows how many people entered the code, how many signed in (by role), and how many questions and quote requests came from the demo. It counts from the moment you last turned the demo on. Extending the date doesn't start a new count.
-- **Answer questions.** Tickets from the demo land in **Support > Support Inbox** with a **Demo** tag. Quote requests land in **Sales > Quotes** with the same tag. The visitor types their own name and email, because the demo logins have no real mailbox.
-- **Reply by email too.** A reply in the inbox shows up on the Get help page, but a prospect may never go back to look. For a demo ticket, send a short note from your own mailbox as well.
-- **Someone says they're locked out.** Too many wrong guesses lock a shared login for 15 minutes. Press **Unlock the demo logins** to clear it at once.
-- **Someone has made a mess.** Press **Reset the demo data now**. It puts the sample classroom and students back. It also runs by itself every night around 3:10 a.m.
-
-## Extend, end early, or start again
-
-| I want to... | Do this |
-|---|---|
-| Give them more time | Under **Demo status**, pick a new length or date and press **Change end date**. People already inside keep their place. |
-| End it now | Press **Turn off now**. Every demo session ends immediately. |
-| Let it end on its own | Do nothing. At the end time the logins stop working and the page says it isn't available, even if the switch is still on. |
-| Start for a different district | Only when no one is using it: turn it off, then on again. That starts a new window, so the counts begin at zero and the sample data is reset. |
+The workspaces are already set up in production. If **Sales > Demo** says "There are no workspaces yet", press **Add workspaces** (a handful is plenty to start; the most you can have is 40). Adding workspaces is safe to repeat and never affects a group already in one.
 
 ## Group invitations: a private copy of the demo for each group
 
@@ -93,35 +66,25 @@ Replace `list` with `show 4` (details and message), `rename 4 --label "New name"
 
 **To add workspaces:** `node scripts/seed-demo-workspaces.js --count 15` (a dry run; add `--apply` to the end to make it real).
 
-## Two groups at the same time (the original single demo)
+## If an access code gets out
 
-The original single demo (the Demo page's switch) is one demo, so every group in it shares the same sample data and the same end date. If you use that one for more than one group, instead of the invitations above:
+Open that group's details and press **New code**. Everyone in that group who entered the old code is shut out at once, and the next message you copy has the new one. Other groups are not affected. **New password** and **New PIN** work the same way and also sign that group out.
 
-1. **Run groups one after another when you can.**
-2. **If a second group starts while the first is still in, use Change end date, never turn the demo off and on.** Turning it on from closed resets the sample data and would wipe the first group's work.
-3. **Never use New code, New password or New PIN while anyone is mid-demo.** Each one signs everyone out.
-4. **Tell both groups the data is shared.** Suggest they use different names so they can tell their work apart.
-5. **Tell the groups apart by what they type.** Tickets carry a name and email and the quote form asks for the school or district. The counts on the Demo page are for everyone together.
-
-## If the access code gets out
-
-Under **Access code**, press **New code**. Everyone who entered the old code is shut out at once, and the next message you copy has the new one. The password and PIN can be replaced the same way (**New password**, **New PIN**), which also signs everyone out.
-
-Regenerate the code if it was posted somewhere public, forwarded to people you don't know, or the district's evaluation is over but you want to keep the demo open for someone else.
+Make a new code if it was posted somewhere public, or forwarded to people you don't know.
 
 ## If the website is down or the admin won't load
 
 Use the Terminal on cPanel. Every block starts with the full path, as always.
 
-Turn it off:
+Close every demo at once (an emergency stop):
 
 ```bash
 source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
   cd /home/fixernat/repositories/fixernation/server && \
-  node scripts/set-public-demo.js --off
+  node scripts/set-public-demo.js --pause
 ```
 
-Check where it stands:
+Check where things stand:
 
 ```bash
 source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
@@ -129,13 +92,7 @@ source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate &
   node scripts/set-public-demo.js --status
 ```
 
-Turn it on for 7 days (an end time is always required):
-
-```bash
-source /home/fixernat/nodevenv/repositories/fixernation/server/24/bin/activate && \
-  cd /home/fixernat/repositories/fixernation/server && \
-  node scripts/set-public-demo.js --on --days 7
-```
+`--resume` lets the invitations work again, with their end dates intact. To end one group, use `node scripts/demo-invitations.js end 4` (see the list above).
 
 ## What a demo visitor can't do
 
@@ -145,28 +102,28 @@ These are enforced by the server, not just hidden on the page, so you don't need
 - No email goes out, except a ticket or quote notice to FNE staff. Invitations only work with example.com addresses.
 - No changing the shared password, PIN or profile.
 - No Community.
-- Each demo login can only see its own sample district and school, never a real one.
+- Each demo login can only see its own workspace's sample district and school, never a real one or another group's.
 
 ## After the demo
 
-1. Turn it off, or let it expire.
+1. End the invitation, or let it expire.
 2. In **Support > Support Inbox** and **Sales > Quotes**, follow up on anything tagged **Demo**.
 3. If the prospect becomes a customer, set them up the normal way (quote, purchase order or purchase). Nothing in the demo carries over, and nothing real was ever stored in it.
 
 ## Automated check (for whoever maintains the site)
 
-`tests/e2e/shared-demo.spec.ts` runs the whole demo in a real browser against the local test site: closed page, set up, turn on, the access-code gate, all five sign-ins, the restrictions, a ticket and a quote request (tagged, counted, and staff mailed), turn off, and a new access code. It skips itself against production. To run it, start the test site (`tests/howto/stack.sh up`), then:
+`tests/e2e/shared-demo.spec.ts` runs two groups at once in real browsers against the local test site: nothing open, the original demo's admin routes gone, two invitations with different workspaces, codes, passwords and PINs, each group's code opening only its own sign-ins, all five logins for each group (and not across groups), a classroom made by one group invisible and unreachable to the other, the restrictions (no password or profile change, no reset email), a ticket from each group and a quote from one (tagged with that group's name, counted per group, staff mailed), a new code for one group shutting out only that group, ending one group while the other carries on (and its workspace coming back clean), and the pause (closing everything, and lifting itself when the last open invitation ends). It skips itself against production. To run it, start the test site (`tests/howto/stack.sh up`), then:
 
 ```bash
 cd /Users/john.shaw/Documents/Claude/Projects/FixerNation/tests && \
   PLAYWRIGHT_BASE_URL=http://localhost:3002 node --env-file=howto/.env.howto.local node_modules/.bin/playwright test shared-demo --retries=0
 ```
 
-It can't see production itself (the live database, the cPanel proxy, or whether the alter script ran), so after a deploy that touches the demo, do a short manual pass on the live site as well.
+It can't see production itself (the live database, the cPanel proxy, or whether an alter script ran), so after a deploy that touches the demo, do a short manual pass on the live site as well.
 
 ## Don't
 
 - Don't point a district at the salesperson demo account. That one is for FNE staff walking someone through the site on a call.
 - Don't enter a real school, student or email address when you show the demo yourself.
-- Don't leave the demo on with a far-off end date "just in case". Turn it on when someone asks.
+- Don't start an invitation with a far-off end date "just in case". Start one when someone asks.
 - Don't commit the access code, password or PIN anywhere. This repository is public.

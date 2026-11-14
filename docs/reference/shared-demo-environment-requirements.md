@@ -1,5 +1,7 @@
 # Shared demo environment: requirements
 
+> **Superseded (2026-11-14).** This is the design of the original single shared demo (one global switch, one access code, one shared password). It was replaced by private workspaces and per-group invitations (`shared-demo-workspaces-requirements.md`) and retired in phase 5. Kept for the history and for the rules that carried over (the server decides when logins work, no outbound email, view-only content, no password or PIN changes).
+
 Status: **DECISIONS CONFIRMED 2026-11-12 (owner answered the four design questions and accepted the recommended answers for D1 to D7).** Nothing is built. Per the project rule, access and auth work is confirmed before any code.
 
 Written because the owner wants a prospect (for example a district that shows interest) to try Fixer Nation as a district admin, school admin, teacher, parent and student **without a salesperson present**, using one published set of logins, and wants FNE staff to switch that demo on and off from the admin.

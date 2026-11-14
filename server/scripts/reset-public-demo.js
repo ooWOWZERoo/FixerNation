@@ -1,24 +1,15 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-const { legacyFixtures } = require('../lib/public-demo-workspaces');
-const { evaluateDemoWindow } = require('../lib/public-demo-window');
-const { seedClassroom, makeReport, getSettingRaw } = require('./seed-public-demo');
+const { seedClassroom, makeReport } = require('./seed-public-demo');
 
-// Puts the SHARED DEMO ENVIRONMENT back to the state seed-public-demo.js made (docs/reference/shared-demo-environment-requirements.md, R7).
-// Visitors share the demo, so what one person adds the next person sees; this clears it. Run nightly by cron while the demo is open (about 3:10 a.m.),
-// once whenever the demo is switched on (scripts/set-public-demo.js), and by hand.
+// Puts ONE DEMO WORKSPACE back to the state its seed made (docs/reference/shared-demo-workspaces-requirements.md). It is a library: the admin Demo page's
+// "Clear what this group added", the invitation start and end, and scripts/reset-demo-workspace.js all call resetDemo(). (The nightly reset of the original
+// single shared demo was retired in phase 5.)
 //
-//   node scripts/reset-public-demo.js
-//       DRY RUN (default): does everything inside a transaction, reports what it would clear, then ROLLS BACK.
-//   node scripts/reset-public-demo.js --apply
-//       Does it. Without --force it does nothing while the demo is closed (nothing changes while the logins are refused, so there is nothing to clear).
-//   ... --force
-//       Reset even though the demo is closed (for example after a long closed spell, or to test it).
-//
-// What it touches, and only this: the demo teacher's classrooms (deleted, then the seeded one rebuilt with the same join code; deleting a classroom
-// removes its students and everything they did), invitations and extra licence seats on the demo purchase, school and district administrator
-// assignments other than the two demo logins, demo school and district branding, district frameworks recorded under the demo district, and the four
-// logins' own favorites, lesson plan picks and password-reset tokens. Fake example.com accounts that an invitation made are removed too, but only
-// when nothing else points at them. It never touches any row that belongs to a real school, district, teacher or student.
+// What it touches, and only this: the workspace teacher's classrooms (deleted, then the seeded one rebuilt; deleting a classroom removes its students and
+// everything they did), invitations and extra licence seats on the workspace purchase, school and district administrator assignments other than the
+// workspace's own two logins, the workspace's school and district branding, district frameworks recorded under its district, and its four logins' own
+// favorites, lesson plan picks and password-reset tokens. Fake example.com accounts that an invitation made are removed too, but only when nothing else
+// points at them. It never touches any row that belongs to a real school, district, teacher or student, or to another workspace.
 
 const isExampleDomain = (email) => /@([a-z0-9-]+\.)*example\.com$/i.test(String(email || '').trim());
 const isMissingTable = (err) => err && (err.code === 'ER_NO_SUCH_TABLE' || /no such table/i.test(String(err.message)));
@@ -68,12 +59,13 @@ async function purgeFakeAccounts(conn, report, candidateIds) {
   }
 }
 
-// Puts one demo back to the state the seed made: the original single demo (no `fx`) or one workspace (`fx = workspaceFixtures(n)`). Everything it
-// touches is found through that demo's own district, school, purchase and logins, so resetting one workspace cannot touch another.
+// Puts one workspace back to the state the seed made (`fx = workspaceFixtures(n)`, required). Everything it touches is found through that workspace's own
+// district, school, purchase and logins, so resetting one workspace cannot touch another.
 // `newCodes` gives the rebuilt classroom a new join code and parent code (a workspace changing hands must not keep the codes the last group knew).
-async function resetDemo(conn, { rounds = 10, fx = legacyFixtures(), newCodes = false } = {}, report = makeReport()) {
+async function resetDemo(conn, { rounds = 10, fx, newCodes = false } = {}, report = makeReport()) {
+  if (!fx || fx.number === null || fx.number === undefined) throw new Error('resetDemo needs a workspace (fx = workspaceFixtures(n)). The original single demo was retired.');
   const workspace = fx.number;
-  const seedHint = workspace === null ? 'scripts/seed-public-demo.js --apply' : 'scripts/seed-demo-workspaces.js --apply';
+  const seedHint = 'scripts/seed-demo-workspaces.js --apply';
   const district = await one(conn, 'SELECT id FROM districts WHERE name = ?', [fx.districtName]);
   const school = await one(conn, 'SELECT id FROM schools WHERE domain = ?', [fx.domain]);
   const purchase = school && await one(conn, "SELECT id FROM purchases WHERE school_domain = ? AND product_type = 'group_license'", [fx.domain]);
@@ -83,19 +75,12 @@ async function resetDemo(conn, { rounds = 10, fx = legacyFixtures(), newCodes = 
     if (u && u.is_shared_demo) ids[key] = u.id;
   }
   if (!district || !school || !purchase || Object.keys(ids).length !== Object.keys(fx.accounts).length) {
-    throw new Error(`${workspace === null ? 'The shared demo has' : `Demo workspace ${fx.number} has`} not been seeded yet. Run ${seedHint} first.`);
+    throw new Error(`Demo workspace ${fx.number} has not been seeded yet. Run ${seedHint} first.`);
   }
-  // The shared student's PIN. The original demo keeps it in a setting; a workspace keeps it only on the student, so a reset hands back the hash it
-  // finds (the PIN the group was given keeps working).
-  let pin = null, pinHash = null;
-  if (workspace === null) {
-    pin = await getSettingRaw(conn, 'public_demo_pin');
-    if (!pin) throw new Error('No demo PIN is stored (setting public_demo_pin). Run scripts/seed-public-demo.js --apply first.');
-  } else {
-    const shared = fx.students.find(st => st.shared);
-    const found = shared && await one(conn, 'SELECT password_hash FROM classroom_students WHERE username = ?', [shared.username]);
-    pinHash = found ? found.password_hash : null;
-  }
+  // The shared student's PIN lives only on the student, so a reset hands back the hash it finds (the PIN the group was given keeps working).
+  const shared = fx.students.find(st => st.shared);
+  const found = shared && await one(conn, 'SELECT password_hash FROM classroom_students WHERE username = ?', [shared.username]);
+  const pinHash = found ? found.password_hash : null;
 
   // 1. The classroom: keep its codes, delete every classroom the demo teacher owns (this removes the students and all their work), rebuild it.
   const old = await one(conn, 'SELECT join_code, parent_code FROM classrooms WHERE teacher_site_user_id = ? AND name = ? ORDER BY id', [ids.teacher, fx.classroomName]);
@@ -104,7 +89,7 @@ async function resetDemo(conn, { rounds = 10, fx = legacyFixtures(), newCodes = 
     await conn.query('DELETE FROM classrooms WHERE teacher_site_user_id = ?', [ids.teacher]);
     report.updated(`cleared ${rooms.length} classroom(s) with their students, lessons, parent links and work`);
   }
-  await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pin, pinHash, rounds, codes: newCodes ? null : old, fx }, report);
+  await seedClassroom(conn, { teacherId: ids.teacher, parentId: ids.parent, pinHash, rounds, codes: newCodes ? null : old, fx }, report);
 
   // 2. Invitations, extra licence seats and extra administrators (and the fake accounts they created).
   const fake = [];
@@ -142,47 +127,8 @@ async function resetDemo(conn, { rounds = 10, fx = legacyFixtures(), newCodes = 
   }
   await clear(conn, report, 'password-reset token(s)', `DELETE FROM site_user_tokens WHERE user_id IN (${marks(mine)})`, mine);
 
-  if (workspace !== null) {
-    await clear(conn, report, 'workspace record time', 'UPDATE public_demo_workspaces SET last_reset_at = CURRENT_TIMESTAMP WHERE id = ?', [workspace]);
-  }
+  await clear(conn, report, 'workspace record time', 'UPDATE public_demo_workspaces SET last_reset_at = CURRENT_TIMESTAMP WHERE id = ?', [workspace]);
   return report;
 }
-
-async function main() {
-  const mysql = require('mysql2/promise');
-  const argv = process.argv.slice(2);
-  const unknown = argv.filter(a => !['--apply', '--force'].includes(a));
-  if (unknown.length) throw new Error(`Unknown argument: ${unknown[0]}`);
-  const apply = argv.includes('--apply'), force = argv.includes('--force');
-
-  const conn = await mysql.createConnection({
-    host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
-  });
-  try {
-    const window = evaluateDemoWindow({ enabled: await getSettingRaw(conn, 'public_demo_enabled'), endsAt: await getSettingRaw(conn, 'public_demo_ends_at') });
-    if (!window.open && !force) {
-      console.log(`Shared demo is closed (${window.reason}); nothing to reset. Use --force to reset anyway.`);
-      return;
-    }
-    console.log(`\n${apply ? 'APPLYING' : 'DRY RUN (nothing will be written)'} -- reset the shared demo environment\n`);
-    await conn.beginTransaction();
-    let report;
-    try {
-      report = await resetDemo(conn);
-      if (apply) await conn.commit(); else await conn.rollback();
-    } catch (err) {
-      await conn.rollback();
-      console.error('\nFAILED -- the transaction was rolled back, nothing was changed.');
-      throw err;
-    }
-    report.print(apply ? '' : 'would ');
-    console.log(apply ? '\nDemo reset.\n' : '\nDry run complete. Re-run with --apply to make it real.\n');
-  } finally {
-    await conn.end();
-  }
-}
-
-if (require.main === module) main().catch(err => { console.error(err.message || err); process.exit(1); });
 
 module.exports = { resetDemo, purgeFakeAccounts };

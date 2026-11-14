@@ -136,8 +136,6 @@ function renderAccount(account, demo) {
     demoNote = '<div class="a-note">Demo login for <strong>workspace ' + esc(demo.workspace) + '</strong>. ' +
       (g ? 'Group: <strong>' + esc(g.label) + '</strong> (' + (g.open ? 'open until ' + esc(g.endsAtEastern) : 'ended') + '). <a href="admin-demo.html?invitation=' + encodeURIComponent(g.id) + '">Open this invitation</a>'
          : 'No group has used this workspace yet. <a href="admin-demo.html">Open the Demo page</a>') + '</div>';
-  } else if (demo && demo.kind === 'original') {
-    demoNote = '<div class="a-note">A login of the original shared demo, not a private group workspace. <a href="admin-demo.html">Open the Demo page</a></div>';
   }
   el.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">' +

@@ -1,4 +1,5 @@
-// Shared demo environment, phase 3: the admin API behind the Demo page (docs/reference/shared-demo-environment-requirements.md, section 5).
+// The admin API behind the Demo page: every route is the admin's, and the routes of the retired original single demo (on/off, one code, one password) are gone.
+// The invitation routes themselves are tested in shared-demo-admin-invitations.test.js.
 // Run:  cd server && npm test
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -85,180 +86,28 @@ function call(method, p, { admin = true, body = null } = {}) {
     if (admin) headers['x-admin'] = '1';
     if (data) { headers['Content-Type'] = 'application/json'; headers['Content-Length'] = Buffer.byteLength(data); }
     const req = http.request({ port, method, path: '/api/admin/public-demo' + p, headers }, (res) => {
-      let b = ''; res.on('data', (d) => b += d); res.on('end', () => resolve({ status: res.statusCode, json: b ? JSON.parse(b) : {} }));
+      let b = ''; res.on('data', (d) => b += d); res.on('end', () => resolve({ status: res.statusCode, json: (() => { try { return b ? JSON.parse(b) : {}; } catch { return { html: b }; } })() }));
     });
     req.on('error', reject); if (data) req.write(data); req.end();
   });
 }
-const get = (k) => (db.prepare('SELECT setting_value AS v FROM settings WHERE setting_key = ?').get(k) || {}).v;
-const audits = () => db.prepare("SELECT * FROM school_audit_log WHERE entity_type = 'public_demo' ORDER BY id").all();
-const teacher = () => db.prepare('SELECT id FROM site_users WHERE email = ?').get(F.ACCOUNTS.teacher.email).id;
 
 test('AUTH: every route needs the admin, and the file gates itself once for all of them', async () => {
-  for (const [m, p] of [['GET', ''], ['POST', '/setup'], ['POST', '/on'], ['POST', '/off'], ['POST', '/regenerate-code'], ['POST', '/regenerate-password'], ['POST', '/reset'], ['POST', '/unlock']]) {
+  for (const [m, p] of [['GET', '/invitations'], ['POST', '/invitations'], ['GET', '/invitations/1'], ['POST', '/invitations/1/end'], ['POST', '/pause'], ['POST', '/workspaces']]) {
     assert.equal((await call(m, p, { admin: false, body: { days: 1 } })).status, 401, `${m} ${p}`);
   }
   const src = fs.readFileSync(path.join(SERVER, 'routes/admin-public-demo.js'), 'utf8');
   assert.match(src, /router\.use\(requireAuth\)/);
-  assert.ok(src.indexOf('router.use(requireAuth)') < src.indexOf("router.get('/'"), 'the gate comes before the first route');
+  assert.ok(src.indexOf('router.use(requireAuth)') < src.indexOf("router.get('/invitations'"), 'the gate comes before the first route');
   assert.match(fs.readFileSync(path.join(SERVER, 'app.js'), 'utf8'), /app\.use\('\/api\/admin\/public-demo', adminPublicDemoRoutes\)/);
 });
 
-test('BEFORE SETUP: closed, nothing seeded, and no secrets in the answer', async () => {
-  const r = await call('GET', '');
-  assert.equal(r.status, 200);
-  assert.equal(r.json.open, false);
-  assert.equal(r.json.seeded, false);
-  assert.equal(r.json.password, undefined);
-  assert.equal(r.json.accessCode, undefined);
-  assert.equal(r.json.maxDays, 30);
-  assert.equal(r.json.pageUrl, 'https://example.test/demo-welcome.html');
-  assert.equal((await call('POST', '/regenerate-password', { body: { what: 'both' } })).status, 409);
-  assert.equal((await call('POST', '/reset')).status, 409);
-  assert.equal((await call('POST', '/on', { body: { days: 7 } })).status, 409, 'cannot turn on a demo that does not exist');
-});
-
-test('SETUP: creates the demo, generates a shared password and PIN once, never turns it on', async () => {
-  const r = await call('POST', '/setup');
-  assert.equal(r.status, 200);
-  assert.equal(r.json.seeded, true);
-  assert.equal(r.json.open, false);
-  assert.match(r.json.password, /^demo(-[a-z]+){4}$/);
-  assert.match(r.json.pin, /^\d{6}$/);
-  assert.match(r.json.joinCode, /^[0-9A-F]{8}$/);
-  assert.equal(r.json.logins.length, 5, 'four site logins and the student');
-  assert.deepEqual(r.json.logins.map(l => l.signIn), ['district-admin-login.html', 'school-admin-login.html', 'teacher-classrooms.html', 'parent-portal.html', 'student-login.html']);
-  assert.equal(r.json.logins[2].lockedSeconds, 540, 'a locked login is reported');
-  assert.equal(r.json.lockedCount, 1);
-  assert.deepEqual(r.json.counts, { windowId: 1, gateEntries: 0, signIns: { district: 0, school: 0, teacher: 0, parent: 0, student: 0 }, tickets: 0, quotes: 0 }, 'counts are zero (and a table that does not exist yet counts as zero)');
-  assert.equal(get('public_demo_enabled'), undefined, 'setup never touches the switch');
-  const again = await call('POST', '/setup');
-  assert.equal(again.json.password, r.json.password, 'a second setup keeps the same password');
-  assert.equal(again.json.pin, r.json.pin);
-  const hash = db.prepare('SELECT password_hash FROM site_users WHERE email = ?').get(F.ACCOUNTS.district.email).password_hash;
-  assert.ok(await bcrypt.compare(r.json.password, hash));
-});
-
-test('ON: needs an end time, inside the window and in the future; refusals change nothing', async () => {
-  const bad = async (body, re) => { const r = await call('POST', '/on', { body }); assert.equal(r.status, 400, JSON.stringify(body)); assert.match(r.json.error, re); };
-  await bad({}, /Choose how long/);
-  await bad({ days: '7' }, /must be a number/);
-  await bad({ days: 0 }, /above 0/);
-  await bad({ days: 31 }, /longest demo window is 30 days/);
-  await bad({ until: 12345 }, /must be text/);
-  await bad({ until: '2030-01-01T10:00:00' }, /needs a time zone/);
-  await bad({ until: '2020-01-01T10:00:00Z' }, /already in the past/);
-  assert.equal(get('public_demo_enabled'), undefined);
-  assert.equal((await call('GET', '')).json.open, false);
-});
-
-test('ON, then extend, then off: reset on a fresh start only, a code is made, every change is audited without secrets', async () => {
-  const kid = Number(db.prepare("INSERT INTO classroom_students (classroom_id, display_name, username, password_hash) VALUES ((SELECT id FROM classrooms LIMIT 1), 'Visitor', 'visitor-1', 'x')").run().lastInsertRowid);
-  db.prepare("INSERT INTO student_reflections (student_id, body) VALUES (?, 'left by the last visitor')").run(kid);
-
-  const on = await call('POST', '/on', { body: { days: 7 } });
-  assert.equal(on.status, 200);
-  assert.equal(on.json.open, true);
-  assert.match(on.json.endsAtEastern, /E[SD]T$/);
-  assert.match(on.json.accessCode, /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM student_reflections').get().n, 0, 'turning it on from closed clears the last visitors\' work');
-  const end7 = new Date(on.json.endsAt).getTime();
-  assert.ok(Math.abs(end7 - (Date.now() + 7 * 86400000)) < 60000);
-
-  assert.equal(get('public_demo_window_id'), '1', 'a fresh turn-on starts a new window');
-  const code = on.json.accessCode;
-  const room = db.prepare('SELECT id FROM classrooms LIMIT 1').get().id;
-  const kid2 = Number(db.prepare("INSERT INTO classroom_students (classroom_id, display_name, username, password_hash) VALUES (?, 'Mid-visit', 'visitor-2', 'x')").run(room).lastInsertRowid);
-  db.prepare("INSERT INTO student_reflections (student_id, body) VALUES (?, 'in progress')").run(kid2);
-  const ext = await call('POST', '/on', { body: { days: 14 } });
-  assert.equal(ext.status, 200);
-  assert.ok(new Date(ext.json.endsAt).getTime() > end7 + 6 * 86400000, 'the end date moved');
-  assert.equal(ext.json.accessCode, code, 'extending keeps the same code');
-  assert.equal(get('public_demo_window_id'), '1', 'changing the end date does not start a new window');
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM student_reflections').get().n, 1, 'extending clears nothing: people inside keep their place');
-
-  const off = await call('POST', '/off');
-  assert.equal(off.json.open, false);
-  assert.equal(get('public_demo_enabled'), 'false');
-  assert.equal(get('public_demo_ends_at'), '');
-
-  assert.deepEqual(audits().map(a => a.action), ['public_demo.setup', 'public_demo.setup', 'public_demo.on', 'public_demo.extended', 'public_demo.off']);
-  assert.ok(audits().every(a => a.actor_type === 'admin' && a.actor_id === 7 && a.actor_email === 'admin'));
-  const everything = JSON.stringify(audits());
-  for (const secret of [get('public_demo_password'), get('public_demo_pin'), get('public_demo_access_code')]) assert.ok(secret && !everything.includes(secret), 'no secret reaches the audit log');
-});
-
-test('SWITCH LEFT ON PAST ITS DATE: reported as closed with the reason', async () => {
-  db.prepare("UPDATE settings SET setting_value = 'true' WHERE setting_key = 'public_demo_enabled'").run();
-  db.prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('public_demo_ends_at', ?) ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value").run(new Date(Date.now() - 3600000).toISOString());
-  const r = await call('GET', '');
-  assert.equal(r.json.open, false);
-  assert.equal(r.json.reason, 'expired');
-  assert.equal(r.json.switchOn, true);
-  assert.ok(r.json.endsAtEastern);
-});
-
-test('NEW CODE: changes the code, raises the version, and is audited', async () => {
-  const before = { code: get('public_demo_access_code'), version: Number(get('public_demo_code_version')) };
-  const r = await call('POST', '/regenerate-code');
-  assert.notEqual(get('public_demo_access_code'), before.code);
-  assert.equal(Number(get('public_demo_code_version')), before.version + 1);
-  assert.equal(r.json.accessCode, A.formatAccessCode(get('public_demo_access_code')));
-  assert.equal(audits().at(-1).action, 'public_demo.code_regenerated');
-});
-
-test('NEW PASSWORD or PIN: re-hashes the logins, signs everyone out, and keeps the one not changed', async () => {
-  const before = { password: get('public_demo_password'), pin: get('public_demo_pin') };
-  assert.equal((await call('POST', '/regenerate-password', { body: { what: 'everything' } })).status, 400);
-  const p = await call('POST', '/regenerate-password', { body: { what: 'password' } });
-  assert.notEqual(p.json.password, before.password);
-  assert.equal(p.json.pin, before.pin, 'only the password changed');
-  for (const u of db.prepare('SELECT * FROM site_users WHERE is_shared_demo = 1').all()) {
-    assert.ok(await bcrypt.compare(p.json.password, u.password_hash));
-    assert.ok(u.session_invalidated_at, 'every demo browser is signed out');
+test('RETIRED: the original single demo\'s admin routes are gone (a signed-in admin gets "not found"), so nothing can switch it on again', async () => {
+  for (const [m, p] of [['GET', ''], ['POST', '/setup'], ['POST', '/on'], ['POST', '/off'], ['POST', '/regenerate-code'], ['POST', '/regenerate-password'], ['POST', '/reset'], ['POST', '/unlock']]) {
+    assert.equal((await call(m, p, { body: { days: 1 } })).status, 404, `${m} ${p}`);
   }
-  const q = await call('POST', '/regenerate-password', { body: { what: 'pin' } });
-  assert.equal(q.json.password, p.json.password, 'only the PIN changed');
-  assert.notEqual(q.json.pin, before.pin);
-  assert.ok(await bcrypt.compare(q.json.pin, db.prepare("SELECT password_hash FROM classroom_students WHERE username = 'demo-student'").get().password_hash));
-  const both = await call('POST', '/regenerate-password', { body: { what: 'both' } });
-  assert.notEqual(both.json.password, p.json.password);
-  assert.notEqual(both.json.pin, q.json.pin);
-});
-
-test('RESET NOW: clears visitors\' work whether or not the demo is open', async () => {
-  const room = db.prepare('SELECT id FROM classrooms WHERE teacher_site_user_id = ?').get(teacher()).id;
-  const kid = Number(db.prepare("INSERT INTO classroom_students (classroom_id, display_name, username, password_hash) VALUES (?, 'Late visitor', 'visitor-3', 'x')").run(room).lastInsertRowid);
-  db.prepare("INSERT INTO student_reflections (student_id, body) VALUES (?, 'x')").run(kid);
-  const r = await call('POST', '/reset');
-  assert.equal(r.status, 200);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM student_reflections').get().n, 0);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM classroom_students').get().n, 3);
-  assert.equal(audits().at(-1).action, 'public_demo.reset');
-});
-
-test('UNLOCK: clears the lockout on all five logins', async () => {
-  unlocked.length = 0;
-  const r = await call('POST', '/unlock');
-  assert.equal(r.status, 200);
-  assert.deepEqual(unlocked.sort(), Object.values(F.ACCOUNTS).map(a => a.email).sort());
-  assert.equal(lockStatus('demo-student').locked, false);
-  assert.equal(audits().at(-1).action, 'public_demo.unlocked');
-});
-
-test('MESSAGE: the district note carries the link, code and end date while the demo is open, and is not offered while it is closed or the page is not published', async () => {
-  await call('POST', '/off');
-  assert.equal((await call('GET', '')).json.message, undefined, 'no message while the demo is closed');
-  await call('POST', '/on', { body: { days: 3 } });
-  const r = await call('GET', '');
-  assert.match(r.json.message, /https:\/\/example\.test\/demo-welcome\.html/);
-  assert.ok(r.json.message.includes(r.json.accessCode));
-  assert.ok(r.json.message.includes(r.json.endsAtEastern));
-  assert.ok(!/[\u2014\u2013]/.test(r.json.message), 'no dashes');
-  assert.equal(r.json.pageReady, true);
-  F.PUBLIC_DEMO_PAGE_READY = false;
-  try { assert.equal((await call('GET', '')).json.message, undefined, 'held back if the page is not published'); } finally { F.PUBLIC_DEMO_PAGE_READY = true; }
-  await call('POST', '/off');
+  const src = fs.readFileSync(path.join(SERVER, 'routes/admin-public-demo.js'), 'utf8');
+  assert.ok(!/public_demo_(enabled|ends_at|access_code|password|pin|code_version|window_id)/.test(src), 'the file no longer touches the original demo\'s settings');
 });
 
 test('ACCESS CODE: eight characters from an alphabet with no look-alikes; read back ignoring case and the hyphen', () => {

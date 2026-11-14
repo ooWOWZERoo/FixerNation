@@ -494,7 +494,7 @@ function renderTable(quotes) {
     tr.innerHTML = `
       <td style="white-space:nowrap;font-family:monospace;font-size:12px;">${q.quote_number ? '#' + fnEscape(q.quote_number) : '—'}</td>
       <td style="white-space:nowrap;">${fnFormatDate(q.created_at)}</td>
-      <td class="a-cell-title">${fnEscape(fullName)}${q.origin === 'admin' ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Outbound</span>' : ''}${q.demo_window > 0 || q.demo_invitation_id > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">' + (q.demo_label ? 'Demo: ' + fnEscape(q.demo_label) : 'Demo') + '</span>' : ''}</td>
+      <td class="a-cell-title">${fnEscape(fullName)}${q.origin === 'admin' ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">Outbound</span>' : ''}${q.demo_invitation_id > 0 ? ' <span class="a-pill a-pill-info" style="font-size:10px;padding:2px 7px;">' + (q.demo_label ? 'Demo: ' + fnEscape(q.demo_label) : 'Demo') + '</span>' : ''}</td>
       <td class="q-school-cell">${fnEscape(q.school || '—')}</td>
       <td><a href="mailto:${fnEscape(q.email)}">${fnEscape(q.email)}</a></td>
       <td>${quoted}</td>

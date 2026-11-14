@@ -88,7 +88,7 @@ function setSiteSessionCookie(res, user) {
   // A shared demo account (lib/public-demo.js) gets a short session carrying a `demo` claim, which is how the demo gate in app.js recognises it
   // and ends it when the demo closes.
   const demo = isSharedDemoUser(user);
-  // `ws` is the private workspace the login belongs to (none for the original single demo): the gate asks that workspace's invitation, not the original switch.
+  // `ws` is the private workspace the login belongs to: the gate asks that workspace's invitation. A demo login with no workspace (the retired original demo) is never open.
   const ws = demo && user.demo_workspace_id !== null && user.demo_workspace_id !== undefined ? Number(user.demo_workspace_id) : null;
   const token = signSession('site', { userId: user.id, firstName: user.first_name, role: user.role || 'teacher', ...(demo ? { demo: true } : {}), ...(ws !== null ? { ws } : {}) },
     demo ? DEMO_SESSION_LENGTH : '30d');
@@ -403,13 +403,10 @@ router.post('/login', async (req, res) => {
   // A seat bought for this address and left pending (a purchase made before this account signed in) is theirs once they sign in.
   await claimForAccountByEmail(pool, user.email);
   setSiteSessionCookie(res, user);
-  // A count for the admin Demo page; never blocks. A private workspace's sign-ins are counted for the group using it; the original demo's in its own window.
-  if (isSharedDemoUser(user)) {
-    if (user.demo_workspace_id === null || user.demo_workspace_id === undefined) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email));
-    else {
-      const group = await getOpenInvitationForWorkspace(user.demo_workspace_id);
-      if (group) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email), group.id);
-    }
+  // A count for the admin Demo page, for the group using the workspace; never blocks.
+  if (isSharedDemoUser(user) && user.demo_workspace_id !== null && user.demo_workspace_id !== undefined) {
+    const group = await getOpenInvitationForWorkspace(user.demo_workspace_id);
+    if (group) await recordDemoEvent('sign_in', demoRoleKeyForEmail(user.email), group.id);
   }
   // isSchoolAdmin/isDistrictAdmin/isAffiliate are real entitlement checks (an
   // active school_license_admins/district_license_admins/affiliates row),

@@ -28,7 +28,7 @@ const joinLimit = limiter({ name: 'student-join', windowMs: 60 * 60 * 1000, max:
 
 // `demo` is true for a student in a shared demo classroom (lib/public-demo.js): the claim lets the demo gate in app.js end the session when the
 // demo closes. The session is 8 hours either way.
-// `workspace` is the private workspace the classroom belongs to (none for the original single demo): the gate asks that workspace's invitation.
+// `workspace` is the private workspace the classroom belongs to: the gate asks that workspace's invitation.
 function setStudentCookie(res, student, demo = false, workspace = null) {
   const token = signSession('student', { studentId: student.id, classroomId: student.classroom_id, ...(demo ? { demo: true } : {}), ...(demo && workspace !== null ? { ws: workspace } : {}) }, '8h');
   res.cookie(STUDENT_COOKIE_NAME, token, {
@@ -213,9 +213,9 @@ router.post('/login', async (req, res) => {
   pinFailsByStudent.clear(usernameKey);
 
   setStudentCookie(res, student, demoStudent, demoStudent ? studentDemoInfo.workspace : null);
-  if (demoStudent) { // a count for the admin Demo page; never blocks (a private workspace is counted for the group using it)
-    if (studentDemoInfo.workspace === null) await recordDemoEvent('sign_in', 'student');
-    else { const group = await getOpenInvitationForWorkspace(studentDemoInfo.workspace); if (group) await recordDemoEvent('sign_in', 'student', group.id); }
+  if (demoStudent && studentDemoInfo.workspace !== null) { // a count for the admin Demo page, for the group using the workspace; never blocks
+    const group = await getOpenInvitationForWorkspace(studentDemoInfo.workspace);
+    if (group) await recordDemoEvent('sign_in', 'student', group.id);
   }
   res.json({ classroomName: student.classroom_name, displayName: student.display_name, username: student.username });
 });

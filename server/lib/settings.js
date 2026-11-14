@@ -57,16 +57,8 @@ const DEFAULTS = {
   program_report_regular_weeks: '3',
   program_report_low_use_pct: '50',
   program_report_min_teachers: '5',
-  // Shared demo environment (docs/reference/shared-demo-environment-requirements.md). The demo is open only while the switch is 'true' AND the
-  // end time (an ISO UTC string) is in the future: see lib/public-demo.js. It is off by default and stays off after any deploy.
-  public_demo_enabled: 'false',
-  public_demo_ends_at: '',
-  public_demo_access_code: '',
-  public_demo_password: '',
-  public_demo_pin: '',
-  public_demo_code_version: '1',
-  // Counts the demo's windows (each fresh turn-on starts a new one). Requests and sign-ins from the demo are tagged with the window they happened in.
-  public_demo_window_id: '0',
+  // Prospect demo (docs/reference/shared-demo-workspaces-requirements.md): the longest an invitation may last, in days. Each invitation has its own end time,
+  // code, password and PIN (table public_demo_invitations); the master pause is the setting public_demo_paused.
   public_demo_max_days: '30',
 };
 

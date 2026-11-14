@@ -80,7 +80,8 @@ CREATE TABLE public_demo_workspaces (id INTEGER PRIMARY KEY, district_id INTEGER
   return { db, run, conn: { query: run }, count: (sql, ...p) => db.prepare(sql).get(...p).n };
 }
 
-const seedLegacy = (conn) => seedLib.seed(conn, { password: 'demo-shared-test-password-1', pin: '482915', rounds: 4 }, seedLib.makeReport());
+// The original single demo was retired in phase 5, but a demo of that kind may still be in the database until scripts/retire-original-demo.js has been run, so it must stay confined.
+const { seedLegacy } = require(path.join(SERVER, 'test/helpers/legacy-demo.js'));
 const seedPool = (conn, count) => seedWorkspaces(conn, count, { rounds: 4 });
 const kinds = (report) => report.lines.map(l => l[0].trim());
 
@@ -154,7 +155,7 @@ test('FIXTURES: every name in workspace n carries n, and two workspaces share no
   assert.equal(W.workspaceLogins(3).length, 5);
   const wl = require(path.join(SERVER, 'lib/public-demo-admin.js'));
   assert.equal(wl.demoRoleKeyForEmail('demo-teacher-07@public-demo.example.com'), 'teacher');
-  assert.equal(wl.demoRoleKeyForEmail('demo-teacher@public-demo.example.com'), 'teacher');
+  assert.equal(wl.demoRoleKeyForEmail('demo-teacher@public-demo.example.com'), null, 'the retired original demo\'s logins are no demo role any more');
   assert.equal(wl.demoRoleKeyForEmail('someone@real.org'), null);
 });
 
@@ -275,10 +276,7 @@ test('SEED: workspaces and the original demo live side by side, and neither is c
   assert.equal(count('SELECT COUNT(*) AS n FROM classroom_students'), 12);
   assert.equal(count('SELECT COUNT(*) AS n FROM site_users WHERE demo_workspace_id IS NULL'), 4);
   assert.equal(db.prepare("SELECT district_id FROM public_demo_workspaces WHERE id = 1").get().district_id !== legacy.districtId, true);
-  // the original demo's own re-run is unaffected by the workspaces (and sets no workspace on its logins)
-  const rerun = await seedLib.seed(conn, { password: 'demo-shared-test-password-1', pin: '482915', rounds: 4 }, seedLib.makeReport());
-  assert.ok(rerun.ids.teacher === legacy.ids.teacher);
-  assert.equal(count('SELECT COUNT(*) AS n FROM site_users WHERE demo_workspace_id IS NULL'), 4);
+  assert.equal(count('SELECT COUNT(*) AS n FROM site_users WHERE demo_workspace_id IS NULL'), 4, 'topping up the pool sets no workspace on the original demo\'s logins');
 });
 
 test('SEED: refuses to take over a real account that has a workspace login\'s address', async () => {
@@ -384,19 +382,17 @@ test('RESET: it works on every workspace in turn, and a second reset leaves noth
   assert.equal(count('SELECT COUNT(*) AS n FROM classrooms'), 2);
 });
 
-test('RESET: a workspace that was never seeded is refused with a message, and the original demo\'s reset still works beside the workspaces', async () => {
+test('RESET: a workspace that was never seeded is refused with a message, the original demo cannot be reset any more, and a reset never touches it', async () => {
   const { db, conn, count } = buildDb();
   await assert.rejects(resetWorkspaces(conn, [5], { rounds: 4 }), /Demo workspace 5 has not been seeded yet/);
   const legacy = await seedLegacy(conn);
-  await seedLib.putSettingRaw(conn, 'public_demo_pin', '482915');
   await seedPool(conn, 2);
   db.prepare("INSERT INTO classrooms (name, teacher_site_user_id, join_code) VALUES ('My own class', ?, 'VISITOR1')").run(legacy.ids.teacher);
   db.prepare("INSERT INTO classrooms (name, teacher_site_user_id, join_code) VALUES ('Group 1 class', (SELECT id FROM site_users WHERE email = 'demo-teacher-01@public-demo.example.com'), 'GROUP001')").run();
-  await resetDemo(conn, { rounds: 4 }); // the original demo
-  assert.equal(count('SELECT COUNT(*) AS n FROM classrooms WHERE teacher_site_user_id = ?', legacy.ids.teacher), 1);
-  assert.equal(count("SELECT COUNT(*) AS n FROM classrooms WHERE join_code = 'GROUP001'"), 1, 'resetting the original demo never touches a workspace');
+  await assert.rejects(resetDemo(conn, { rounds: 4 }), /needs a workspace/, 'the original demo is retired: a reset with no workspace is refused');
   await resetWorkspaces(conn, [1], { rounds: 4 });
   assert.equal(count("SELECT COUNT(*) AS n FROM classrooms WHERE join_code = 'GROUP001'"), 0);
+  assert.equal(count('SELECT COUNT(*) AS n FROM classrooms WHERE teacher_site_user_id = ?', legacy.ids.teacher), 2, 'resetting a workspace never touches the original demo\'s classrooms (the seeded one and the extra)');
   assert.ok(await bcrypt.compare('482915', db.prepare("SELECT password_hash FROM classroom_students WHERE username = 'demo-student'").get().password_hash), 'the original demo PIN is unchanged');
 });
 

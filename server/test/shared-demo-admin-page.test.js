@@ -54,23 +54,15 @@ test('everything that came from the server is escaped before it goes into the pa
   // no inline handler carries data from the server (the escaping rule in CLAUDE.md): handlers are static, data lives in data- attributes
   const inline = page.match(/on[a-z]+="[^"]*"/g) || [];
   assert.deepEqual(inline.filter(h => h.includes("'+") || h.includes('+ ') || h.includes('${')), []);
-  // the places server text is turned into HTML
-  for (const field of ['s.endsAtEastern', 'l.role', 'l.userId', 'l.signIn', 's.joinCode', 'value', 'label']) {
-    const uses = page.split('\n').filter(line => line.includes(field) && /innerHTML|\+ /.test(line) && !/esc\(/.test(line) && !/\.value\s*=/.test(line));
-    assert.deepEqual(uses.filter(l => /['"]\s*\+\s*(s|l)\.[a-zA-Z]+\s*\+/.test(l)), [], `${field} must go through esc()`);
-  }
-  // the message is put into a textarea with .value, never as HTML
-  assert.match(page, /document\.getElementById\('demoMessage'\)\.value = s\.message/);
 });
 
 test('secrets stay hidden until asked for, and every dangerous action asks first', () => {
   assert.match(page, /(\\u2022|\u2022){6,}/, 'a hidden secret shows as dots');
-  assert.match(page, /data-action="toggle"/);
-  for (const ask of ['Turn the demo off now?', 'Make a new access code?', 'Make a new password?', 'Make a new student PIN?', 'Reset the demo data now?']) {
+  assert.match(page, /data-inv="toggle"/);
+  for (const ask of ['Make a new access code?', 'Make a new password?', 'Make a new student PIN?', 'End this invitation now?', 'Clear what this group added?']) {
     assert.ok(page.includes(ask), ask);
   }
-  // off, reset, and the shared renew handler that covers a new code, password and PIN
-  assert.ok((page.match(/confirm\(/g) || []).length >= 3);
+  assert.ok((page.match(/confirm\(/g) || []).length >= 5);
 });
 
 test('no outside scripts, fonts or images, and no placeholder wording', () => {
@@ -88,29 +80,26 @@ test('the visible copy matches what the requirements promise visitors can and ca
   ]) assert.ok(page.includes(line), line);
 });
 
-test('the Demo page shows this window\'s counts, and the Support Inbox and Quotes mark requests that came from the demo', () => {
-  assert.match(page, /id="countsCard"/);
-  assert.match(page, /People who entered the access code/);
-  assert.match(page, /Questions and tickets/);
-  assert.match(page, /Quote requests/);
+test('the Demo page shows each group\'s counts, and the Support Inbox and Quotes mark requests that came from a group\'s demo', () => {
+  assert.match(page, /<th>Visits<\/th><th>Sign-ins<\/th><th>Tickets<\/th><th>Quotes<\/th>/);
   assert.ok(!/once the demo page is published/.test(page), 'the placeholder note is gone');
-  assert.match(read('admin-support.html'), /r\.demo_window > 0 \|\| r\.demo_invitation_id > 0 \? ' <span class="a-pill a-pill-info"[^>]*>' \+ \(r\.demo_label \? 'Demo: ' \+ esc\(r\.demo_label\) : 'Demo'\)/);
-  assert.match(read('admin-support.html'), /From the shared demo/);
-  assert.match(read('admin-quotes.html'), /q\.demo_window > 0 \|\| q\.demo_invitation_id > 0 \? ' <span class="a-pill a-pill-info"[^>]*>' \+ \(q\.demo_label \? 'Demo: ' \+ fnEscape\(q\.demo_label\) : 'Demo'\)/);
-  assert.match(read('server/routes/admin-support.js'), /r\.demo_window/);
+  assert.match(read('admin-support.html'), /r\.demo_invitation_id > 0 \? ' <span class="a-pill a-pill-info"[^>]*>' \+ \(r\.demo_label \? 'Demo: ' \+ esc\(r\.demo_label\) : 'Demo'\)/);
+  assert.match(read('admin-support.html'), /From the demo/);
+  assert.match(read('admin-quotes.html'), /q\.demo_invitation_id > 0 \? ' <span class="a-pill a-pill-info"[^>]*>' \+ \(q\.demo_label \? 'Demo: ' \+ fnEscape\(q\.demo_label\) : 'Demo'\)/);
+  assert.ok(!/demo_window/.test(read('admin-support.html') + read('admin-quotes.html') + read('server/routes/admin-support.js')), 'the original demo\'s window numbers are no longer read');
 });
 
 // ---- Group invitations (docs/reference/shared-demo-workspaces-requirements.md, section 5) -------------------------------------------------------
 
-test('INVITATIONS: the page leads with the group demos, and the original single demo sits in a collapsible section below them', () => {
-  for (const id of ['invHeadCard', 'invNewCard', 'invListCard', 'invDetailCard', 'invEndedCard', 'legacyDemo']) assert.match(page, new RegExp(`id="${id}"`), id);
+test('INVITATIONS: the page leads with the group demos, and the original single demo is gone from it', () => {
+  for (const id of ['invHeadCard', 'invNewCard', 'invListCard', 'invDetailCard', 'invEndedCard']) assert.match(page, new RegExp(`id="${id}"`), id);
   assert.ok(page.indexOf('id="invHeadCard"') < page.indexOf('id="invNewCard"') && page.indexOf('id="invNewCard"') < page.indexOf('id="invListCard"'));
-  assert.ok(page.indexOf('id="invEndedCard"') < page.indexOf('id="legacyDemo"'), 'groups first, the original demo after');
-  // the original demo's cards are all inside the collapsible section
-  const legacy = page.slice(page.indexOf('<details class="demo-legacy"'), page.indexOf('</details>'));
-  for (const id of ['statusCard', 'setupCard', 'codeCard', 'loginsCard', 'messageCard', 'tidyCard', 'countsCard']) assert.ok(legacy.includes(`id="${id}"`), `${id} stays on the page, inside the original demo section`);
-  assert.match(page, /<summary>The original single demo<\/summary>/);
+  assert.ok(page.indexOf('id="invListCard"') < page.indexOf('id="invEndedCard"'));
+  for (const gone of ['legacyDemo', 'demo-legacy', 'The original single demo', 'statusCard', 'setupCard', 'codeCard', 'loginsCard', 'messageCard', 'tidyCard', 'countsCard', 'data-action=', "api('/on'", "api('/off'", "api('/setup'", 'regenerate-password', 'regenerate-code']) {
+    assert.ok(!page.includes(gone), `${gone} is gone`);
+  }
   assert.match(page, /Group demos/); assert.match(page, /Start an invitation/); assert.match(page, /Ended invitations/);
+  assert.match(page, /\nloadInvitations\(\);/); assert.ok(!/\nload\(\);/.test(page), 'nothing still loads the original demo\'s state');
 });
 
 test('INVITATIONS: the page asks for the group\'s name, and says only staff see it', () => {
@@ -120,7 +109,7 @@ test('INVITATIONS: the page asks for the group\'s name, and says only staff see 
   assert.match(page, /data-inv="rename"/);
 });
 
-test('INVITATIONS: its buttons use their own data-inv attribute, so the original demo\'s data-action handler never sees them', () => {
+test('INVITATIONS: its buttons use the data-inv attribute and one handler', () => {
   const buttons = new Set((page.match(/data-inv="([a-z-]+)"/g) || []).map(m => m.slice(10, -1)));
   for (const b of ['start', 'open', 'toggle', 'copy', 'extend', 'end', 'unlock', 'clear', 'rename', 'pause', 'resume', 'add']) assert.ok(buttons.has(b), b);
   // the three "new ..." buttons are made from a pair in the secret rows, and each has its branch in the handler

@@ -7,7 +7,7 @@
 //   workspaceFixtures(7)  -> "FNE Demo District 07", school w07.public-demo.example.com, demo-teacher-07@public-demo.example.com, student demo-student-07
 //   legacyFixtures()      -> the original single demo ("FNE Demo District", public-demo.example.com, demo-teacher@public-demo.example.com, demo-student)
 //
-// The legacy set stays until the workspaces replace it (requirements, phase 5).
+// The legacy set is kept only so scripts/retire-original-demo.js knows which rows to remove (phase 5); nothing seeds or serves it any more.
 
 const F = require('./public-demo-fixtures');
 const { workspaceDistrictName, workspaceSchoolDomain, workspaceTag, validWorkspaceNumber, MAX_DEMO_WORKSPACES } = require('./sales-demo');
@@ -20,7 +20,7 @@ const ROLE_NAMES = {
   parent: { first: 'Demo', last: 'Parent', role: 'parent' },
 };
 
-// The original single demo, in the same shape as a workspace.
+// The original single demo (retired in phase 5), in the same shape as a workspace: the names scripts/retire-original-demo.js looks for.
 function legacyFixtures() {
   return {
     number: null, label: 'the shared demo',

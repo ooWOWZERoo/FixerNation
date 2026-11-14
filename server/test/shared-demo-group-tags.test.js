@@ -258,27 +258,21 @@ test('INBOX AND QUOTES: staff see the group on each request, can show one group\
   await endAll();
 });
 
-test('THE ORIGINAL DEMO: its tickets and quotes are tagged and worded exactly as before', async () => {
+test('THE ORIGINAL DEMO IS RETIRED: its old settings open nothing, so nothing is tagged as coming from it', async () => {
   await endAll();
   await A.putSettingRaw(poolStub, 'public_demo_enabled', 'true');
   await A.putSettingRaw(poolStub, 'public_demo_ends_at', new Date(Date.now() + 3600000).toISOString());
   await A.putSettingRaw(poolStub, 'public_demo_access_code', 'ORIGINAL');
   await A.putSettingRaw(poolStub, 'public_demo_code_version', '2');
-  await A.putSettingRaw(poolStub, 'public_demo_window_id', '4');
-  const gate = await enter('ORIGINAL');
-  assert.ok(gate);
-  mail.staff.length = 0; mail.form.length = 0;
-  await ticket(gate, 'orig@example.org');
-  assert.equal(lastTicket().demo_window, 4); assert.equal(lastTicket().demo_invitation_id, 0);
-  assert.equal(mail.staff.at(-1).fields.Source, 'Shared demo');
-  await quote(gate, 'origq@example.org');
-  assert.equal(lastQuote().demo_window, 4); assert.equal(lastQuote().demo_invitation_id, 0);
-  assert.equal(mail.form.at(-1).fields.Source, 'Shared demo');
-  assert.equal((await admin('GET', '/api/admin/support?status=all')).json.requests.find(r => r.requester_email === 'orig@example.org').demo_label, null);
-  await A.putSettingRaw(poolStub, 'public_demo_enabled', 'false');
+  assert.equal(await enter('ORIGINAL'), null, 'the old code no longer opens anything');
+  mail.staff.length = 0;
+  await ticket(null, 'orig@example.org');
+  assert.equal(lastTicket().demo_invitation_id, 0); assert.equal(lastTicket().demo_window, 0);
+  assert.equal(mail.staff.at(-1).fields.Source, undefined);
+  for (const key of ['public_demo_enabled', 'public_demo_ends_at', 'public_demo_access_code', 'public_demo_code_version']) await A.putSettingRaw(poolStub, key, '');
 });
 
-test('COUNTS: each group has its own, never another group\'s and never the original demo\'s; wrong tries and failed sign-ins are not counted', async () => {
+test('COUNTS: each group has its own, never another group\'s; wrong tries and failed sign-ins are not counted', async () => {
   await endAll();
   db.exec('DELETE FROM public_demo_events; DELETE FROM support_requests; DELETE FROM quote_requests;');
   const a = await make('Springfield USD'), b = await make('Shelbyville Schools');
@@ -303,7 +297,6 @@ test('COUNTS: each group has its own, never another group\'s and never the origi
   // the original demo's own window is untouched: a group's events carry window 0
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM public_demo_events WHERE window_id > 0').get().n, 0);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM public_demo_events WHERE invitation_id = 0').get().n, 0);
-  assert.deepEqual((await A.demoCounts(poolStub)).signIns, { district: 0, school: 0, teacher: 0, parent: 0, student: 0 });
   // nothing identifying is kept
   const cols = db.prepare('PRAGMA table_info(public_demo_events)').all().map(c => c.name);
   assert.deepEqual(cols, ['id', 'window_id', 'kind', 'detail', 'invitation_id', 'created_at']);
@@ -327,15 +320,13 @@ test('COUNTS: each group has its own, never another group\'s and never the origi
   await endAll();
 });
 
-test('MESSAGE: a group\'s message says its copy is private; the original demo\'s does not', async () => {
+test('MESSAGE: a group\'s message says its copy is private', async () => {
   await endAll();
   const a = await make('Springfield USD');
   const d = (await admin('GET', `/api/admin/public-demo/invitations/${a.id}`)).json;
   assert.match(d.message, /none of it is real student information\. This copy of the demo is just for your group\. Nothing you do in it is visible to anyone else\./);
   assert.ok(d.message.includes(d.accessCode));
   assert.ok(!d.message.includes('Springfield'), 'the group\'s name is not in the message');
-  const original = A.buildInviteMessage({ siteUrl: 'https://example.test', code: 'ABCD2345', endsAt: new Date('2026-12-01T17:00:00Z') });
-  assert.ok(!/just for your group/.test(original), 'the original shared demo is shared, so it does not say this');
   const shown = await cli.run(poolStub, cli.parseArgs(['show', String(a.id)]), { siteUrl: 'https://example.test' });
   assert.match(shown, /This copy of the demo is just for your group/);
   await endAll();

@@ -1,5 +1,5 @@
-// Helpers shared by the admin Demo page (routes/admin-public-demo.js) and the command-line switch (scripts/set-public-demo.js): the demo's
-// settings, its access code, and the message staff send a district (docs/reference/shared-demo-environment-requirements.md, R3 and section 5).
+// Helpers shared by the admin Demo page (routes/admin-public-demo.js), the command-line tools and the public demo routes: settings, access codes, the
+// events and counts for each group, and the message staff send a district (docs/reference/shared-demo-workspaces-requirements.md).
 // Everything takes a database connection (or the pool) so the scripts can use their own connection and open no second pool.
 
 const crypto = require('crypto');
@@ -32,23 +32,8 @@ function normalizeAccessCode(input) {
   return String(input || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-// A code exists whenever the demo is on. The version goes up each time the code changes, so a visitor's gate cookie (phase 4) from the old code
-// stops working at once.
-async function ensureAccessCode(conn) {
-  let code = await getSettingRaw(conn, 'public_demo_access_code');
-  if (code) return code;
-  return regenerateAccessCode(conn);
-}
-async function regenerateAccessCode(conn) {
-  const code = generateAccessCode();
-  const version = (Number(await getSettingRaw(conn, 'public_demo_code_version')) || 1) + 1;
-  await putSettingRaw(conn, 'public_demo_access_code', code);
-  await putSettingRaw(conn, 'public_demo_code_version', String(version));
-  return code;
-}
-
 // The note staff paste into an email to the district. Plain text, written to sound like a person.
-// `privateCopy` is for a group's own invitation: it tells the group its copy is theirs alone (the original single demo is shared, so it does not say this).
+// `privateCopy` tells the group its copy is theirs alone (every invitation is a private copy since the original shared demo was retired).
 function buildInviteMessage({ siteUrl, code, endsAt, privateCopy = false }) {
   const base = String(siteUrl || '').replace(/\/$/, '');
   return [
@@ -68,59 +53,24 @@ function buildInviteMessage({ siteUrl, code, endsAt, privateCopy = false }) {
   ].join('\n');
 }
 
-// ---- Windows, events and counts (docs/reference/shared-demo-environment-requirements.md, R9) ---------------------------------------------------
-// A "window" is one stretch the demo was open for one round of visitors: a fresh turn-on starts a new one, and changing the end date does not.
-// Sign-ins, tickets and quote requests carry the window number they happened in, so "this window" needs no date arithmetic (and no database
-// time-zone worries). No IP address, name or email is ever stored for an event.
-async function currentWindowId(conn) {
-  const n = Number(await getSettingRaw(conn, 'public_demo_window_id'));
-  return Number.isInteger(n) && n > 0 ? n : 1;
-}
-async function startNewWindow(conn) {
-  const next = (Number(await getSettingRaw(conn, 'public_demo_window_id')) || 0) + 1;
-  await putSettingRaw(conn, 'public_demo_window_id', String(next));
-  return next;
-}
+// ---- Events and counts -------------------------------------------------------------------------------------------------------------------------
+// Access-code entries and sign-ins are recorded for the group (invitation) they belong to. No IP address, name or email is ever stored for an event.
 
-const ROLE_BY_EMAIL = Object.fromEntries(Object.entries(require('./public-demo-fixtures').ACCOUNTS).map(([key, a]) => [a.email, key]));
 function demoRoleKeyForEmail(email) {
-  const key = String(email || '').trim().toLowerCase();
-  const wl = require('./public-demo-workspaces').workspaceLoginOf(key); // a workspace login counts under its role too
-  return ROLE_BY_EMAIL[key] || (wl ? wl.role : null) || null;
+  const wl = require('./public-demo-workspaces').workspaceLoginOf(String(email || '').trim().toLowerCase()); // a workspace login counts under its role
+  return wl ? wl.role : null;
 }
 
-// Counted, never blocking: a failure here must not stop a visitor from getting in. An event for a group's own invitation carries that invitation's id (and
-// window 0, so it never shows in the original demo's counts); an event for the original demo carries the current window and invitation 0.
+// Counted, never blocking: a failure here must not stop a visitor from getting in. An event belongs to one group's invitation (window 0: windows belonged to the
+// retired original demo); an event with no invitation is not recorded.
 async function recordDemoEvent(kind, detail = null, invitationId = 0) {
+  if (!Number(invitationId)) return;
   try {
     const pool = require('../db/pool');
-    if (invitationId) await pool.query('INSERT INTO public_demo_events (window_id, kind, detail, invitation_id) VALUES (0, ?, ?, ?)', [kind, detail, Number(invitationId)]);
-    else await pool.query('INSERT INTO public_demo_events (window_id, kind, detail) VALUES (?, ?, ?)', [await currentWindowId(pool), kind, detail]);
+    await pool.query('INSERT INTO public_demo_events (window_id, kind, detail, invitation_id) VALUES (0, ?, ?, ?)', [kind, detail, Number(invitationId)]);
   } catch (err) {
     console.error('public demo event not recorded:', err.message);
   }
-}
-
-// A table or column that does not exist yet (code deployed before scripts/alter-add-public-demo-phase4.js ran) is simply zero.
-async function countOr0(conn, sql, params) {
-  try { const [[row]] = await conn.query(sql, params); return Number(row.n) || 0; } catch (err) {
-    if (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR' || /no such (table|column)/i.test(String(err.message))) return 0;
-    throw err;
-  }
-}
-async function demoCounts(conn) {
-  const windowId = await currentWindowId(conn);
-  const signIns = {};
-  for (const key of ['district', 'school', 'teacher', 'parent', 'student']) {
-    signIns[key] = await countOr0(conn, "SELECT COUNT(*) AS n FROM public_demo_events WHERE window_id = ? AND kind = 'sign_in' AND detail = ?", [windowId, key]);
-  }
-  return {
-    windowId,
-    gateEntries: await countOr0(conn, "SELECT COUNT(*) AS n FROM public_demo_events WHERE window_id = ? AND kind = 'gate_entry'", [windowId]),
-    signIns,
-    tickets: await countOr0(conn, 'SELECT COUNT(*) AS n FROM support_requests WHERE demo_window = ?', [windowId]),
-    quotes: await countOr0(conn, 'SELECT COUNT(*) AS n FROM quote_requests WHERE demo_window = ?', [windowId]),
-  };
 }
 
 // Counts for each group's invitation, in one pass: access-code entries, sign-ins by role, tickets and quote requests. No address, name or email is ever stored for
@@ -160,6 +110,6 @@ async function invitationLabels(conn, ids) {
 }
 
 module.exports = {
-  currentWindowId, startNewWindow, demoRoleKeyForEmail, recordDemoEvent, demoCounts, invitationCounts, invitationLabels,
-  getSettingRaw, putSettingRaw, generateAccessCode, formatAccessCode, normalizeAccessCode, ensureAccessCode, regenerateAccessCode, buildInviteMessage,
+  demoRoleKeyForEmail, recordDemoEvent, invitationCounts, invitationLabels,
+  getSettingRaw, putSettingRaw, generateAccessCode, formatAccessCode, normalizeAccessCode, buildInviteMessage,
 };

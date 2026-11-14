@@ -5,8 +5,8 @@ const { formatEastern } = require('../lib/public-demo-window');
 const { workspaceTag } = require('../lib/sales-demo');
 
 // Prospect demo INVITATIONS from the command line (docs/reference/shared-demo-workspaces-requirements.md, section 3). One invitation is one group's visit: its own
-// access code, password, student PIN, end time and private workspace. Until the admin Demo page can do this (a later phase) this is how staff start and end one,
-// and it keeps working when the website is down.
+// access code, password, student PIN, end time and private workspace. The admin Demo page does the same; this is the command-line way, and it keeps working when
+// the website is down.
 //
 //   node scripts/demo-invitations.js list [--all]              open invitations (with --all, ended ones too); never shows a password or PIN
 //   node scripts/demo-invitations.js show ID                   one invitation WITH its code, password, PIN and the message to send
@@ -22,7 +22,7 @@ const { workspaceTag } = require('../lib/sales-demo');
 //   node scripts/demo-invitations.js sweep                     ends every invitation whose time has run out (cron runs this every few minutes)
 //
 // An invitation lasts 14 days unless you say otherwise, and never more than public_demo_max_days (30). To pause every demo at once, use
-// node scripts/set-public-demo.js --pause (or --off), and --resume to allow demos again.
+// node scripts/set-public-demo.js --pause, and --resume to allow demos again.
 
 const COMMANDS = ['list', 'show', 'create', 'rename', 'extend', 'end', 'new-code', 'new-password', 'new-pin', 'sweep'];
 

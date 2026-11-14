@@ -6,7 +6,7 @@ const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 const { limiter } = require('../lib/rate-limit');
 const { demoOrigin } = require('../lib/public-demo');
-const { currentWindowId, invitationLabels } = require('../lib/public-demo-admin');
+const { invitationLabels } = require('../lib/public-demo-admin');
 const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-parties');
 
 const router = express.Router();
@@ -91,8 +91,6 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
         await pool.query('UPDATE quote_requests SET demo_invitation_id = ? WHERE quote_number = ?', [origin.invitationId, quoteNumber]);
         const label = (await invitationLabels(pool, [origin.invitationId]))[origin.invitationId];
         if (label) demoSource = `Shared demo (${label})`;
-      } else {
-        await pool.query('UPDATE quote_requests SET demo_window = ? WHERE quote_number = ?', [await currentWindowId(pool), quoteNumber]);
       }
     } catch (err) {
       if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column|no column named/i.test(String(err.message))) throw err;

@@ -1,5 +1,6 @@
-// Shared demo environment, phase 4: the public side (docs/reference/shared-demo-environment-requirements.md, R2, R3, R8, R9): the access-code gate, the
-// credentials only behind it, tickets and quote requests tagged as coming from the demo, and the counts. Plus the unlisted page itself (static checks).
+// The unlisted demo page and what stays true of the public side (docs/reference/shared-demo-environment-requirements.md, R2, R3, R8): the page itself (static
+// checks), the alter script and schema, a demo login treated as nobody signed in on the Get help page, and the role of a workspace login's email. The access-code
+// gate, credentials, tickets, quotes and counts for private workspaces are tested in shared-demo-invitations.test.js and shared-demo-group-tags.test.js.
 // Run:  cd server && npm test
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -91,194 +92,23 @@ function call(method, p, { cookie = null, body = null, ip = '203.0.113.10' } = {
     req.on('error', reject); if (data) req.write(data); req.end();
   });
 }
-const setSetting = (k, v) => db.prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value').run(k, v);
-const setting = (k) => (db.prepare('SELECT setting_value AS v FROM settings WHERE setting_key = ?').get(k) || {}).v;
-const CODE = 'K7MQ4XPD';
-const openDemo = (msFromNow = 3 * 3600 * 1000) => {
-  setSetting('public_demo_enabled', 'true');
-  setSetting('public_demo_ends_at', new Date(Date.now() + msFromNow).toISOString());
-  setSetting('public_demo_access_code', CODE);
-  setSetting('public_demo_code_version', '3');
-  setSetting('public_demo_window_id', '2');
-  setSetting('public_demo_password', 'demo-thorn-hill-poppy-pine');
-  setSetting('public_demo_pin', '482915');
-};
-const closeDemo = () => { setSetting('public_demo_enabled', 'false'); setSetting('public_demo_ends_at', ''); };
-const gateCookie = (cookies) => 'fn_demo_gate=' + (cookies || []).find(c => c.startsWith('fn_demo_gate=')).split(';')[0].slice('fn_demo_gate='.length);
-
-test('STATE: closed shows nothing at all, so the page can look like one that does not exist', async () => {
-  closeDemo();
-  const r = await call('GET', '/api/demo/state');
-  assert.deepEqual(r.json, { open: false });
-});
-
-test('STATE: open says when it ends and whether this browser has already entered the code', async () => {
-  openDemo();
-  const r = await call('GET', '/api/demo/state');
-  assert.equal(r.json.open, true);
-  assert.match(r.json.endsAtEastern, /E[SD]T$/);
-  assert.equal(r.json.unlocked, false);
-  assert.equal(JSON.stringify(r.json).includes('password'), false);
-});
-
-test('ENTER: a wrong code and a closed demo get exactly the same answer, and no cookie', async () => {
-  openDemo();
-  const wrong = await call('POST', '/api/demo/enter', { body: { code: 'AAAAAAAA' } });
-  closeDemo();
-  const closed = await call('POST', '/api/demo/enter', { body: { code: CODE } });
-  assert.equal(wrong.status, 401);
-  assert.equal(closed.status, 401);
-  assert.deepEqual(wrong.json, closed.json);
-  assert.equal(wrong.headers['set-cookie'], undefined);
-  assert.equal(closed.headers['set-cookie'], undefined);
-  openDemo();
-  for (const bad of [undefined, null, 12345, ['K7MQ4XPD'], { code: CODE }, 'x'.repeat(500)]) {
-    assert.equal((await call('POST', '/api/demo/enter', { body: { code: bad } })).status, 401, JSON.stringify(bad));
-  }
-});
-
-test('ENTER: the right code (any case, with or without the hyphen) sets a gate cookie that carries the code version and ends with the demo', async () => {
-  openDemo(2 * 3600 * 1000);
-  const r = await call('POST', '/api/demo/enter', { body: { code: ' k7mq-4xpd ' } });
-  assert.equal(r.status, 200);
-  const token = gateCookie(r.headers['set-cookie']).slice('fn_demo_gate='.length);
-  const payload = verifySession('demoGate', token);
-  assert.equal(payload.v, '3');
-  assert.ok(payload.exp - payload.iat <= 2 * 3600, 'never outlasts the demo');
-  assert.ok(payload.exp - payload.iat > 3600);
-  assert.match(r.headers['set-cookie'].join(';'), /HttpOnly/i);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM public_demo_events WHERE kind = 'gate_entry' AND window_id = 2").get().n, 1);
-
-  openDemo(30 * 3600 * 1000);
-  const long = await call('POST', '/api/demo/enter', { body: { code: CODE } });
-  const longPayload = verifySession('demoGate', gateCookie(long.headers['set-cookie']).slice('fn_demo_gate='.length));
-  assert.equal(longPayload.exp - longPayload.iat, 8 * 3600, 'capped at eight hours');
-  assert.notEqual(longPayload.aud, undefined);
-});
-
-test('CREDENTIALS: only behind a valid gate cookie while the demo is open, and never with the join code', async () => {
-  openDemo();
-  assert.equal((await call('GET', '/api/demo/credentials')).status, 401);
-  const none = await call('GET', '/api/demo/credentials');
-  assert.equal(JSON.stringify(none.json).includes('demo-thorn'), false);
-
-  const entered = await call('POST', '/api/demo/enter', { body: { code: CODE } });
-  const cookie = gateCookie(entered.headers['set-cookie']);
-  assert.equal((await call('GET', '/api/demo/state', { cookie })).json.unlocked, true);
-  const r = await call('GET', '/api/demo/credentials', { cookie });
-  assert.equal(r.status, 200);
-  assert.equal(r.json.password, 'demo-thorn-hill-poppy-pine');
-  assert.equal(r.json.pin, '482915');
-  assert.deepEqual(r.json.logins.map(l => l.key), ['district', 'school', 'teacher', 'parent', 'student']);
-  assert.deepEqual(r.json.logins.map(l => l.userId), [...Object.values(F.ACCOUNTS).map(a => a.email), 'demo-student']);
-  assert.equal(r.json.logins[4].secretKind, 'pin');
-  assert.ok(r.json.logins.every(l => /^[a-z0-9-]+\.html$/.test(l.signIn) && l.what && l.role));
-  assert.equal(JSON.stringify(r.json).toLowerCase().includes('join'), false, 'the join code is not shown to visitors');
-
-  closeDemo();
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie })).status, 401, 'the moment the demo closes the cookie stops working');
-  assert.equal((await call('GET', '/api/demo/state', { cookie })).json.open, false);
-});
-
-test('CREDENTIALS: a new access code shuts out every earlier visit; forged and wrong-audience tokens are refused', async () => {
-  openDemo();
-  const cookie = gateCookie((await call('POST', '/api/demo/enter', { body: { code: CODE } })).headers['set-cookie']);
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie })).status, 200);
-  setSetting('public_demo_code_version', '4'); // what "New code" does
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie })).status, 401);
-  assert.equal((await call('GET', '/api/demo/state', { cookie })).json.unlocked, false);
-
-  const wrongAudience = 'fn_demo_gate=' + signSession('site', { v: '4', userId: 1 }, '1h');
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie: wrongAudience })).status, 401, 'a site-user token is not a gate token');
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie: 'fn_demo_gate=not.a.token' })).status, 401);
-  setSetting('public_demo_code_version', '3');
-});
-
-// ---- tickets and quote requests tagged as coming from the demo --------------------------------------------------------------------------------
-
 const ticket = (cookie, email, extra = {}) => call('POST', '/api/support', { cookie, body: { name: 'Pat Visitor', email, subject: 'A question', message: 'How does reporting work?', category: 'other', ...extra } });
-const lastTicket = () => db.prepare('SELECT * FROM support_requests ORDER BY id DESC LIMIT 1').get();
 
-test('TICKET: from someone who entered the access code, it is tagged with the demo window and the staff notice says so', async () => {
-  openDemo(); mail.staff.length = 0;
-  const cookie = gateCookie((await call('POST', '/api/demo/enter', { body: { code: CODE } })).headers['set-cookie']);
-  const r = await ticket(cookie, 'pat1@district.test');
-  assert.equal(r.status, 200);
-  assert.equal(lastTicket().demo_window, 2, 'the window the visit happened in');
-  assert.equal(lastTicket().requester_email, 'pat1@district.test');
-  assert.equal(mail.staff.at(-1).fields.Source, 'Shared demo');
-  assert.equal(mail.staff.at(-1).demoAllowed, true);
-});
-
-test('TICKET: an ordinary request is not tagged, and a body field cannot tag one', async () => {
-  openDemo(); mail.staff.length = 0;
+test('TICKET: a salesperson demo account is still refused; a ticket from nobody signed in is not tagged as a demo ticket', async () => {
+  const salesUser = Number(db.prepare("INSERT INTO site_users (email, first_name, last_name, is_sales_demo, is_shared_demo) VALUES ('rep+demo@fullsteam.test', 'Rep', 'Demo', 1, 0)").run().lastInsertRowid);
+  const salesCookie = 'fn_user_session=' + signSession('site', { userId: salesUser }, '1h');
+  assert.equal((await ticket(salesCookie, 'rep@fullsteam.test')).status, 403, 'salesperson demo accounts cannot send support requests');
   const r = await ticket(null, 'pat2@district.test', { demo_window: 2, fromDemo: true, from_demo: 1, source: 'Shared demo' });
   assert.equal(r.status, 200);
-  assert.equal(lastTicket().demo_window, 0);
+  const row = db.prepare('SELECT * FROM support_requests ORDER BY id DESC LIMIT 1').get();
+  assert.equal(row.demo_window, 0, 'a body field cannot tag a request');
   assert.equal(mail.staff.at(-1).fields.Source, undefined);
-  // a gate cookie after the demo closed counts for nothing either
-  const cookie = gateCookie((await call('POST', '/api/demo/enter', { body: { code: CODE } })).headers['set-cookie']);
-  closeDemo();
-  await ticket(cookie, 'pat3@district.test');
-  assert.equal(lastTicket().demo_window, 0);
-  openDemo();
 });
 
-test('TICKET: a demo LOGIN is treated as nobody signed in (it has no real email), so the visitor types a name and address; a salesperson demo account is still refused', async () => {
-  openDemo();
-  const demoUser = Number(db.prepare("INSERT INTO site_users (email, first_name, last_name, is_sales_demo, is_shared_demo) VALUES ('demo-teacher@public-demo.example.com', 'Demo', 'Teacher', 1, 1)").run().lastInsertRowid);
-  const salesUser = Number(db.prepare("INSERT INTO site_users (email, first_name, last_name, is_sales_demo, is_shared_demo) VALUES ('rep+demo@fullsteam.test', 'Rep', 'Demo', 1, 0)").run().lastInsertRowid);
-  const demoCookie = 'fn_user_session=' + signSession('site', { userId: demoUser, demo: true }, '1h');
-
-  const ctx = await call('GET', '/api/support/context', { cookie: demoCookie });
-  assert.equal(ctx.json.signedIn, false, 'the Get help page shows the normal name and email form');
-  const r = await ticket(demoCookie, 'visitor-from-demo@district.test');
-  assert.equal(r.status, 200);
-  const row = lastTicket();
-  assert.equal(row.requester_email, 'visitor-from-demo@district.test', 'the typed address, never the demo login\'s');
-  assert.equal(row.site_user_id, null);
-  assert.equal(row.demo_window, 2);
-  assert.equal((await call('GET', '/api/support/mine', { cookie: demoCookie })).status, 401);
-
-  const salesCookie = 'fn_user_session=' + signSession('site', { userId: salesUser }, '1h');
-  assert.equal((await ticket(salesCookie, 'rep@fullsteam.test')).status, 403, 'salesperson demo accounts still cannot send support requests');
-});
-
-const quote = (cookie, email) => call('POST', '/api/contact/quote', { cookie, body: { firstName: 'Pat', lastName: 'Visitor', email, school: 'Riverbend', phone: '(555) 867-5309', message: 'Please quote 40 seats.' } });
-const lastQuote = () => db.prepare('SELECT * FROM quote_requests ORDER BY id DESC LIMIT 1').get();
-
-test('QUOTE: from the demo it is tagged with the window and the staff email says so; an ordinary one is not', async () => {
-  openDemo(); mail.form.length = 0;
-  const cookie = gateCookie((await call('POST', '/api/demo/enter', { body: { code: CODE } })).headers['set-cookie']);
-  assert.equal((await quote(cookie, 'buyer1@district.test')).status, 200);
-  assert.equal(lastQuote().demo_window, 2);
-  assert.equal(lastQuote().origin, 'inbound');
-  assert.equal(mail.form.at(-1).fields.Source, 'Shared demo');
-  assert.equal((await quote(null, 'buyer2@district.test')).status, 200);
-  assert.equal(lastQuote().demo_window, 0);
-  assert.equal(mail.form.at(-1).fields.Source, undefined);
-});
-
-test('COUNTS: this window only, by role, and a fresh window starts at zero', async () => {
-  openDemo();
-  const before = await A.demoCounts({ query: run });
-  assert.equal(before.windowId, 2);
-  assert.ok(before.gateEntries >= 3);
-  assert.equal(before.tickets, 2, 'the two demo tickets above (not the ordinary ones)');
-  assert.equal(before.quotes, 1);
-  for (const role of ['teacher', 'teacher', 'student', 'district']) await A.recordDemoEvent('sign_in', role);
-  const c = await A.demoCounts({ query: run });
-  assert.deepEqual(c.signIns, { district: 1, school: 0, teacher: 2, parent: 0, student: 1 });
-  assert.equal(await A.startNewWindow({ query: run }), 3);
-  const fresh = await A.demoCounts({ query: run });
-  assert.equal(fresh.windowId, 3);
-  assert.deepEqual([fresh.gateEntries, fresh.tickets, fresh.quotes, ...Object.values(fresh.signIns)], [0, 0, 0, 0, 0, 0, 0, 0]);
-  assert.equal(setting('public_demo_window_id'), '3');
-});
-
-test('SIGN-IN ROLES: a demo login email maps to its role key, and anything else to nothing', () => {
-  assert.equal(A.demoRoleKeyForEmail('Demo-District@public-demo.example.com'), 'district');
-  assert.equal(A.demoRoleKeyForEmail('demo-parent@public-demo.example.com'), 'parent');
+test('SIGN-IN ROLES: a workspace login email maps to its role key, and anything else (including the retired original logins) to nothing', () => {
+  assert.equal(A.demoRoleKeyForEmail('Demo-District-07@public-demo.example.com'), 'district');
+  assert.equal(A.demoRoleKeyForEmail('demo-parent-12@public-demo.example.com'), 'parent');
+  assert.equal(A.demoRoleKeyForEmail('demo-parent@public-demo.example.com'), null, 'the original demo is retired');
   assert.equal(A.demoRoleKeyForEmail('someone@school.org'), null);
 });
 
@@ -327,14 +157,14 @@ test('PAGE: the closed state looks like a page that does not exist, and the thre
   for (const line of [
     'Enter the access code from your invitation to open the demo.',
     'Everything in it is made up, so click around as much as you like.',
-    'Everyone using the demo shares the same sample data, and we reset it every night.',
+    'This demo is yours alone. Other groups work in their own copies and can\'t see what you do here, and we clear yours when your demo ends.',
     'Please don\'t enter real student information.',
     'This page remembers you for about eight hours.',
   ]) assert.ok(page.includes(line), line);
   assert.ok(!/[—–]/.test(page), 'no dashes in the copy');
 });
 
-test('ALTER SCRIPT and SCHEMA: both new request columns and the events table are in the fresh-install schema and the idempotent alter script', () => {
+test('ALTER SCRIPT and SCHEMA: the request columns and the events table are in the fresh-install schema and the idempotent alter script', () => {
   const alter = fs.readFileSync(path.join(SERVER, 'scripts/alter-add-public-demo-phase4.js'), 'utf8');
   const schema = fs.readFileSync(path.join(SERVER, 'db/schema.sql'), 'utf8');
   for (const t of ['support_requests', 'quote_requests']) {
@@ -346,16 +176,4 @@ test('ALTER SCRIPT and SCHEMA: both new request columns and the events table are
   assert.match(alter, /information_schema\.TABLES/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS public_demo_events/);
   assert.ok(!/DROP |DELETE |TRUNCATE /i.test(alter), 'the alter script only adds');
-});
-
-// Keep this one LAST: it uses up the throttle for this address.
-test('THROTTLE: ten wrong codes from one address block that address (even for the right code), and a right code never counts against it', async () => {
-  openDemo();
-  const ip = '203.0.113.99';
-  for (let i = 0; i < 3; i++) assert.equal((await call('POST', '/api/demo/enter', { body: { code: CODE }, ip })).status, 200, 'right codes never use tries up');
-  for (let i = 0; i < 10; i++) assert.equal((await call('POST', '/api/demo/enter', { body: { code: 'WRONGONE' }, ip })).status, 401);
-  const blocked = await call('POST', '/api/demo/enter', { body: { code: CODE }, ip });
-  assert.equal(blocked.status, 429);
-  assert.equal(blocked.headers['set-cookie'], undefined);
-  assert.equal((await call('POST', '/api/demo/enter', { body: { code: CODE }, ip: '203.0.113.50' })).status, 200, 'another address is not affected');
 });

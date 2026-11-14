@@ -15,7 +15,6 @@ const { requireAuth } = require('../middleware/auth');
 const { reopenAccount } = require('../lib/account-closing');
 const { groupForLogin } = require('../lib/public-demo-invitations');
 const { workspaceTag } = require('../lib/sales-demo');
-const { ACCOUNTS: ORIGINAL_DEMO_ACCOUNTS } = require('../lib/public-demo-fixtures');
 
 const router = express.Router();
 
@@ -83,8 +82,6 @@ router.get('/', requireAuth, async (req, res) => {
       kind: 'workspace', workspaceId: group.workspaceId, workspace: workspaceTag(group.workspaceId), role: group.role,
       group: g ? { id: g.id, label: g.label, open: g.open, state: g.state, endsAtEastern: g.endsAtEastern } : null,
     };
-  } else if (Object.values(ORIGINAL_DEMO_ACCOUNTS).some(a => a.email === email)) {
-    demo = { kind: 'original' };
   }
 
   res.json({ account: account || null, demo, invitations, seats, schoolAdminAssignments, districtAdminAssignments });

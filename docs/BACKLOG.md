@@ -11,9 +11,9 @@ The owner expects a continuous stream of groups demoing at the same time. The sh
 - [x] **Phase 2: invitations and the gate.** Built and **deployed 2026-11-12** (982 server tests pass): `public_demo_invitations` (alter script), `lib/public-demo-invitations.js`, per-group code, password, PIN and end date, the gate and sign-ins asking the group's own invitation, `scripts/demo-invitations.js`, `--pause` and `--resume`, and a sweep cron line. The alter script ran, the Node app was restarted, and the pool and sweep cron line are the owner's to confirm.
 - [x] **Phase 3: admin Demo page** rebuilt as an invitation list with pool status, pause, Add workspaces, rename, and Account Lookup naming the group behind a demo login. Built and **deployed 2026-11-12** (1,006 server tests pass).
 - [x] **Phase 4: per-invitation tags and counts**, demo page wording, district message, staff email source line. Built and **deployed 2026-11-13** (1,015 server tests pass).
-- [ ] **Phase 5: retire the single demo**, rewrite the how-to, and rewrite `tests/e2e/shared-demo.spec.ts` to run two overlapping groups.
+- [x] **Phase 5: retire the single demo**, rewrite the how-to, and rewrite `tests/e2e/shared-demo.spec.ts` to run two overlapping groups. Built 2026-11-14 (1,002 server tests pass; e2e spec passes on the local site; retire script checked on a real MariaDB), **not yet deployed**. After the deploy the owner runs `retire-original-demo.js` (dry run, then `--apply`) and removes the old nightly-reset cron line (`bash setup-cron-jobs.sh` does it). The D7 check found only the owner's own try-out.
 
-## Shared demo environment (added 2026-11-12)
+## Shared demo environment (added 2026-11-12; superseded by the section above, retired 2026-11-14)
 
 Requirements drafted in `docs/reference/shared-demo-environment-requirements.md`. One global on/off switch and end date in the admin, an unlisted page behind an access code, one account per role with a shared published password, view-only content, no outbound email. All five phases are built; phases 1 to 4 are deployed and phase 5 is documentation. The owner has answered account shape, page access, switch scope and content access; decisions D1 to D7 (time zone, page address, longest window, branding, safety alerts, release note, separate fixtures) were accepted as recommended on 2026-11-12.
 
@@ -23,7 +23,7 @@ Requirements drafted in `docs/reference/shared-demo-environment-requirements.md`
 - [x] **Phase 3: admin Demo page.** Built and **deployed 2026-11-12** (918 server tests pass): `admin-demo.html` in the Sales group (switch, end date, access code, shared password and PIN, set up, reset, unlock, audit) over `/api/admin/public-demo`.
 - [x] **Phase 4: public demo page.** Built and **deployed 2026-11-12** (937 server tests pass): `demo-welcome.html` with the access-code gate, the logins behind it, tickets and quote requests tagged "demo" (and the demo-login ticket fix), sign-in and visit counts on the admin Demo page, the district message turned on. The alter script `alter-add-public-demo-phase4.js` ran before the restart.
 - [x] **Phase 5: docs and checks.** PROJECT.md, CHANGELOG (Release 170), staff how-to `docs/reference/shared-demo-how-to.md`, video check. Done 2026-11-12.
-- [ ] **Owner's end-to-end test of the live demo** (the one thing not checked from outside): turn it on for 1 day, open the demo page in a private window, enter the code, try the five sign-ins, send a test ticket and a test quote request, confirm the Demo tags and the counts, then turn it off.
+- [ ] **Owner's end-to-end test of the live demo** (the one thing not checked from outside), now for a group invitation: on Sales > Demo start an invitation called "Test" for 1 day, open the demo page in a private window, enter the code, try the five sign-ins, send a test ticket and a test quote request, confirm "Demo: Test" and the counts, then end it. (The original single demo this item was first written for is retired.)
 
 ## Password and sign-in security (added 2026-11-09)
 

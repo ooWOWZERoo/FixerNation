@@ -18,7 +18,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 const { demoOrigin } = require('../lib/public-demo');
-const { currentWindowId, invitationLabels } = require('../lib/public-demo-admin');
+const { invitationLabels } = require('../lib/public-demo-admin');
 const { limiter, clientIp, FailureTracker, rejectIfBlocked } = require('../lib/rate-limit');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail, sendSupportEmail } = require('../lib/mailer');
@@ -61,8 +61,6 @@ async function tagIfFromDemo(req, id) {
       await pool.query('UPDATE support_requests SET demo_invitation_id = ? WHERE id = ?', [origin.invitationId, id]);
       const label = (await invitationLabels(pool, [origin.invitationId]))[origin.invitationId];
       if (label) source = `Shared demo (${label})`;
-    } else {
-      await pool.query('UPDATE support_requests SET demo_window = ? WHERE id = ?', [await currentWindowId(pool), id]);
     }
   } catch (err) {
     if (err.code !== 'ER_BAD_FIELD_ERROR' && !/no such column|no column named/i.test(String(err.message))) throw err;

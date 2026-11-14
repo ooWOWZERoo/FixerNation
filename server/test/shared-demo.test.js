@@ -1,5 +1,6 @@
-// Shared demo environment, phase 1 (docs/reference/shared-demo-environment-requirements.md): the open/closed rule, the gate that ends demo sessions,
-// and the mailer guard that stops a demo session emailing anyone but FNE staff.
+// The demo gate (docs/reference/shared-demo-environment-requirements.md, phase 1, as reworked for private workspaces): a demo session works only while its
+// workspace's invitation is open, the gate ends it the moment it is not, and the mailer guard stops a demo session emailing anyone but FNE staff.
+// (The original single demo and its on/off window were retired in phase 5: a demo session with no workspace is never open.)
 // Run:  cd server && npm test
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -44,6 +45,14 @@ const cookieParser = require('cookie-parser');
 const { signSession } = require(path.join(SERVER, 'lib/session-tokens.js'));
 const demo = require(path.join(SERVER, 'lib/public-demo.js'));
 const mailer = require(path.join(SERVER, 'lib/mailer.js'));
+const invitations = require(path.join(SERVER, 'lib/public-demo-invitations.js'));
+
+// Which workspaces have an open invitation (the real lookup is tested in shared-demo-invitations.test.js; here the gate only needs the answer).
+const openWorkspaces = new Set();
+invitations.getOpenInvitationForWorkspace = async (ws) => {
+  if (poolBroken) throw new Error('database is down');
+  return openWorkspaces.has(Number(ws)) ? { id: Number(ws) * 10, workspace_id: Number(ws) } : null;
+};
 
 const app = express();
 app.use(express.json());
@@ -83,36 +92,26 @@ function call(method, p, { cookie = null, body = null, type = 'application/json'
   });
 }
 
+const WS = 7;
 const setSetting = (k, v) => db.prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value').run(k, v);
-const inAnHour = () => new Date(Date.now() + 3600 * 1000).toISOString();
-const openDemo = () => { setSetting('public_demo_enabled', 'true'); setSetting('public_demo_ends_at', inAnHour()); };
-const closeDemo = () => { setSetting('public_demo_enabled', 'false'); setSetting('public_demo_ends_at', ''); };
-const demoSite = () => `fn_user_session=${signSession('site', { userId: 5, demo: true }, '1h')}`;
+const openDemo = () => { openWorkspaces.add(WS); };
+const closeDemo = () => { openWorkspaces.clear(); };
+const demoSite = () => `fn_user_session=${signSession('site', { userId: 5, demo: true, ws: WS }, '1h')}`;
+const demoSiteNoWorkspace = () => `fn_user_session=${signSession('site', { userId: 5, demo: true }, '1h')}`;
 const plainSite = () => `fn_user_session=${signSession('site', { userId: 6 }, '1h')}`;
-const demoStudent = () => `fn_student_session=${signSession('student', { studentId: 9, demo: true }, '1h')}`;
+const demoStudent = () => `fn_student_session=${signSession('student', { studentId: 9, demo: true, ws: WS }, '1h')}`;
 const reset = () => { closeDemo(); sent.length = 0; poolBroken = false; };
 
-test('the window rule: open only when switched on AND the end time is still ahead', () => {
-  const now = new Date('2026-11-20T12:00:00Z');
-  const w = (enabled, endsAt) => demo.evaluateDemoWindow({ enabled, endsAt }, now);
-  assert.equal(w('false', '2026-11-25T00:00:00Z').open, false);
-  assert.equal(w('', '2026-11-25T00:00:00Z').open, false);
-  assert.equal(w('true', '').open, false, 'on with no end date is off');
-  assert.equal(w('true', 'not a date').open, false);
-  assert.equal(w('true', '2026-11-20T11:59:59Z').open, false, 'a switch left on past its date is off');
-  assert.equal(w('true', '2026-11-20T12:00:00Z').open, false, 'the end moment itself is closed');
-  assert.equal(w('true', '2026-11-20T12:00:01Z').open, true);
-  assert.equal(w(' TRUE ', '2026-11-25T00:00:00Z').open, true);
-  assert.equal(w('true', '2026-11-25T00:00:00Z').reason, 'open');
-});
-
-test('the demo is off with nothing set, and isPublicDemoOpen reads the settings', async () => {
+test('the demo is off with nothing open, and a demo session with no workspace (the retired original demo) is never open', async () => {
   reset();
-  assert.equal(await demo.isPublicDemoOpen(), false);
+  assert.equal(await demo.isDemoOpenFor(WS), false);
+  assert.equal(await demo.isDemoOpenFor(null), false);
+  assert.equal(await demo.isDemoOpenFor(undefined), false);
+  assert.equal(await demo.isDemoOpenFor(''), false);
   openDemo();
-  assert.equal(await demo.isPublicDemoOpen(), true);
-  setSetting('public_demo_ends_at', new Date(Date.now() - 1000).toISOString());
-  assert.equal(await demo.isPublicDemoOpen(), false, 'flag still on, date passed');
+  assert.equal(await demo.isDemoOpenFor(WS), true);
+  assert.equal(await demo.isDemoOpenFor(8), false, 'another workspace is not open');
+  assert.equal(await demo.isDemoOpenFor(null), false, 'still closed for a login with no workspace, even while a workspace is open');
 });
 
 test('CLOSED: a demo site cookie and a demo student cookie are dropped, and the browser is told to clear them', async () => {
@@ -138,14 +137,21 @@ test('OPEN: demo sessions are kept and run inside the demo context', async () =>
   assert.deepEqual((await call('GET', '/api/whoami', { cookie: plainSite() })).json, { demo: false, site: true, student: false });
 });
 
-test('OPEN, then the end time passes: the same demo cookie stops working', async () => {
+test('OPEN, then the invitation ends: the same demo cookie stops working', async () => {
   reset(); openDemo();
   assert.equal((await call('GET', '/api/whoami', { cookie: demoSite() })).json.site, true);
-  setSetting('public_demo_ends_at', new Date(Date.now() - 1000).toISOString());
+  closeDemo();
   assert.equal((await call('GET', '/api/whoami', { cookie: demoSite() })).json.site, false);
 });
 
-test('if the settings cannot be read, the gate fails closed', async () => {
+test('OPEN: a demo session with no workspace claim (the retired original demo) is dropped even while a workspace is open', async () => {
+  reset(); openDemo();
+  const r = await call('GET', '/api/whoami', { cookie: demoSiteNoWorkspace() });
+  assert.deepEqual(r.json, { demo: false, site: false, student: false });
+  assert.match((r.headers['set-cookie'] || []).join('|'), /fn_user_session=;/);
+});
+
+test('if the invitation cannot be looked up, the gate fails closed', async () => {
   reset(); openDemo();
   poolBroken = true;
   const r = await call('GET', '/api/whoami', { cookie: demoSite() });

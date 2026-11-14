@@ -20,9 +20,6 @@
   .demo-controls .a-field { margin: 0; }
   .demo-message { width: 100%; min-height: 260px; font-family: inherit; font-size: 14px; line-height: 1.5; }
   .demo-list { margin: 8px 0 0 18px; padding: 0; line-height: 1.6; }
-  .demo-legacy { margin-top: 24px; }
-  .demo-legacy > summary { cursor: pointer; font-weight: 700; font-size: 16px; padding: 10px 0; }
-  .demo-legacy > .a-note { margin: 0 0 16px; }
   .inv-link { background: none; border: none; padding: 0; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; text-align: left; }
   .inv-sub { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--a-border, rgba(0,0,0,.12)); }
   .inv-grid { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
@@ -81,69 +78,13 @@
         <div id="invEndedBody"></div>
       </div>
 
-      <details class="demo-legacy" id="legacyDemo">
-        <summary>The original single demo</summary>
-        <div class="a-note">Before groups had their own copies, everyone shared this one demo. It still works, and we'll retire it once invitations have been in use for a while.</div>
-
-      <div class="a-card" id="statusCard">
-        <div class="a-card-head"><h2>Demo status</h2></div>
-        <div id="statusBody"><div class="a-empty">Loading...</div></div>
-      </div>
-
-      <div class="a-card" id="setupCard" style="display:none;">
-        <div class="a-card-head"><h2>Set up the demo</h2></div>
-        <div class="a-note" style="margin:0 0 12px;">The demo hasn't been created yet. This adds the sample district, school and classroom, plus the five logins. It doesn't turn the demo on.</div>
-        <button class="a-btn a-btn-primary" id="setupBtn" data-action="setup">Set up the demo</button>
-      </div>
-
-      <div class="a-card" id="codeCard" style="display:none;">
-        <div class="a-card-head"><h2>Access code</h2></div>
-        <div class="a-note" style="margin:0 0 12px;">Send this code to the district along with the demo link. A new code shuts out everyone who used the old one.</div>
-        <div id="codeBody"></div>
-      </div>
-
-      <div class="a-card" id="loginsCard" style="display:none;">
-        <div class="a-card-head"><h2>Sign-in details</h2></div>
-        <div class="a-note" style="margin:0 0 12px;">Everyone shares one password. The student signs in with a PIN instead.</div>
-        <table class="a-table" id="loginsTable">
-          <thead><tr><th>Who</th><th>User ID</th><th>Signs in at</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div id="secretsBody" style="margin-top:14px;"></div>
-      </div>
-
-      <div class="a-card" id="messageCard" style="display:none;">
-        <div class="a-card-head"><h2>Message for the district</h2></div>
-        <div id="messageBody"></div>
-      </div>
-
-      <div class="a-card" id="tidyCard" style="display:none;">
-        <div class="a-card-head"><h2>Keep it tidy</h2></div>
-        <div class="demo-row">
-          <button class="a-btn a-btn-outline" data-action="reset">Reset the demo data now</button>
-          <span class="a-hint">Puts the sample classroom back the way it started and removes anything visitors added. This also happens on its own every night while the demo is open.</span>
-        </div>
-        <div class="demo-row">
-          <button class="a-btn a-btn-outline" data-action="unlock">Unlock the demo logins</button>
-          <span class="a-hint" id="unlockHint">Too many wrong guesses lock a shared login for 15 minutes. This clears those locks right away.</span>
-        </div>
-      </div>
-
-      <div class="a-card" id="countsCard" style="display:none;">
-        <div class="a-card-head"><h2>This window</h2></div>
-        <div class="a-note" style="margin:0 0 12px;">Counts since the demo was last turned on. Changing the end date doesn't start a new window.</div>
-        <div id="countsBody"></div>
-      </div>
-
-      </details>
-
       <div class="a-card">
         <div class="a-card-head"><h2>What visitors can and can't do</h2></div>
         <ul class="demo-list">
           <li>They can view every lesson in the viewer, but they can't download files.</li>
           <li>They can't send email. Invitations only work with example.com addresses.</li>
           <li>They can't change the password or PIN, upload files, or reach the community.</li>
-          <li>A group has its own private copy of the sample data. (The original single demo shares one copy and resets every night.)</li>
+          <li>A group has its own private copy of the sample data. No other group can see or change it, and it's cleared when the invitation ends.</li>
         </ul>
       </div>
 
@@ -155,119 +96,6 @@
 <script>
 function esc(v) { return fnEscape(v); }
 
-var state = null;
-var revealed = {};
-
-async function api(path, method, body) {
-  var opts = { method: method || 'GET', credentials: 'include' };
-  if (opts.method !== 'GET') { opts.headers = { 'Content-Type': 'application/json' }; opts.body = JSON.stringify(body || {}); }
-  var r = await fetch('/api/admin/public-demo' + path, opts);
-  if (fnHandleUnauthorized(r)) return null;
-  var j = await r.json().catch(function () { return {}; });
-  if (!r.ok) { fnToast(j.error || 'Something went wrong'); return null; }
-  return j;
-}
-
-function show(id, on) { document.getElementById(id).style.display = on ? '' : 'none'; }
-
-function whenControls(s) {
-  var opts = [1, 3, 7, 14, 21, 30].filter(function (d) { return d <= s.maxDays; });
-  var days = opts.map(function (d) { return '<option value="' + d + '"' + (d === 14 ? ' selected' : '') + '>' + d + ' day' + (d === 1 ? '' : 's') + '</option>'; }).join('');
-  return '<div class="demo-controls">' +
-    '<div class="a-field"><label for="demoDays">Stay open for</label><select id="demoDays" class="a-filter-select">' + days + '</select></div>' +
-    '<div class="a-field"><label for="demoUntil">or until (your computer\'s time zone)</label><input type="datetime-local" id="demoUntil"></div>' +
-    '</div>';
-}
-
-function renderStatus(s) {
-  var html;
-  if (s.open) {
-    html = '<p class="demo-big"><span class="a-pill a-pill-success">Open</span> The demo is open until ' + esc(s.endsAtEastern) + '.</p>' +
-      '<div class="a-note" style="margin:0;">Anyone with the access code can sign in as a district administrator, school administrator, teacher, parent or student. Everything they see is sample data.</div>' +
-      '<div style="margin-top:16px; font-weight:600;">Change the end date</div>' + whenControls(s) +
-      '<div class="a-hint" style="margin-top:8px;">Changing the end date clears nothing, so people already inside keep their place.</div>' +
-      '<div class="demo-controls"><button class="a-btn a-btn-primary" data-action="on">Change end date</button>' +
-      '<button class="a-btn a-btn-danger" data-action="off">Turn off now</button></div>';
-  } else {
-    var why = s.reason === 'expired'
-      ? 'The demo closed on ' + esc(s.endsAtEastern) + '. The switch was still on, so it counts as off. Turn it on again to start a new window.'
-      : "The demo logins don't work and the demo page can't be opened. Turn it on when a district shows interest.";
-    html = '<p class="demo-big"><span class="a-pill a-pill-neutral">Closed</span> The demo is closed.</p>' +
-      '<div class="a-note" style="margin:0;">' + why + '</div>';
-    if (s.seeded) {
-      html += whenControls(s) +
-        '<div class="a-hint" style="margin-top:8px;">Turning it on clears whatever the last visitors left behind, so each district starts fresh.</div>' +
-        '<div class="demo-controls"><button class="a-btn a-btn-primary" data-action="on">Turn the demo on</button></div>';
-    } else {
-      html += '<div class="a-hint" style="margin-top:8px;">Set up the demo first (below).</div>';
-    }
-  }
-  document.getElementById('statusBody').innerHTML = html;
-}
-
-function secretRow(key, label, value, newLabel) {
-  var shown = revealed[key];
-  return '<div class="demo-row"><span class="demo-label">' + esc(label) + '</span>' +
-    '<span class="demo-secret">' + (shown ? esc(value) : '••••••••') + '</span>' +
-    '<button class="a-btn a-btn-outline a-btn-sm" data-action="toggle" data-key="' + esc(key) + '">' + (shown ? 'Hide' : 'Show') + '</button>' +
-    '<button class="a-btn a-btn-outline a-btn-sm" data-action="copy" data-key="' + esc(key) + '">Copy</button>' +
-    (newLabel ? '<button class="a-btn a-btn-outline a-btn-sm" data-action="renew" data-key="' + esc(key) + '">' + esc(newLabel) + '</button>' : '') +
-    '</div>';
-}
-
-function render(s) {
-  state = s;
-  renderStatus(s);
-  show('setupCard', !s.seeded);
-  show('codeCard', s.seeded);
-  show('loginsCard', s.seeded);
-  show('messageCard', s.seeded);
-  show('tidyCard', s.seeded);
-  show('countsCard', s.seeded);
-  if (!s.seeded) return;
-
-  document.getElementById('codeBody').innerHTML = secretRow('code', 'Access code', s.accessCode || '(made when you turn the demo on)', s.accessCode ? 'New code' : '');
-
-  document.querySelector('#loginsTable tbody').innerHTML = s.logins.map(function (l) {
-    var lock = l.lockedSeconds > 0 ? ' <span class="a-pill a-pill-warning">Locked for ' + Math.ceil(l.lockedSeconds / 60) + ' min</span>' : '';
-    return '<tr><td>' + esc(l.role) + lock + '</td><td><span class="demo-secret">' + esc(l.userId) + '</span></td><td>' + esc(l.signIn) + '</td><td></td></tr>';
-  }).join('');
-  document.getElementById('secretsBody').innerHTML =
-    secretRow('password', 'Shared password', s.password, 'New password') +
-    secretRow('pin', 'Student PIN', s.pin, 'New PIN') +
-    '<div class="demo-row"><span class="demo-label">Class join code</span><span class="demo-secret">' + esc(s.joinCode) + '</span></div>';
-
-  var c = s.counts || { signIns: {}, gateEntries: 0, tickets: 0, quotes: 0 };
-  var order = [['district', 'District administrator'], ['school', 'School administrator'], ['teacher', 'Teacher'], ['parent', 'Parent'], ['student', 'Student']];
-  var total = order.reduce(function (n, r) { return n + (c.signIns[r[0]] || 0); }, 0);
-  document.getElementById('countsBody').innerHTML =
-    '<table class="a-table"><tbody>' +
-    '<tr><td>People who entered the access code</td><td><strong>' + esc(c.gateEntries) + '</strong></td></tr>' +
-    '<tr><td>Sign-ins with a demo login</td><td><strong>' + esc(total) + '</strong>' +
-      (total ? '<br><span class="a-cell-sub">' + order.filter(function (r) { return c.signIns[r[0]]; }).map(function (r) { return esc(r[1]) + ': ' + esc(c.signIns[r[0]]); }).join(' &middot; ') + '</span>' : '') + '</td></tr>' +
-    '<tr><td>Questions and tickets</td><td><strong>' + esc(c.tickets) + '</strong>' + (c.tickets ? ' <a href="admin-support.html">Open the inbox</a>' : '') + '</td></tr>' +
-    '<tr><td>Quote requests</td><td><strong>' + esc(c.quotes) + '</strong>' + (c.quotes ? ' <a href="admin-quotes.html">Open quotes</a>' : '') + '</td></tr>' +
-    '</tbody></table>';
-
-  var msg = document.getElementById('messageBody');
-  if (s.message) {
-    msg.innerHTML = '<div class="a-note" style="margin:0 0 12px;">A note you can send to the district. Copy it into your email and sign it.</div>' +
-      '<textarea class="demo-message" id="demoMessage" readonly aria-label="Message for the district"></textarea>' +
-      '<div style="margin-top:10px;"><button class="a-btn a-btn-primary" data-action="copy" data-key="message">Copy message</button></div>';
-    document.getElementById('demoMessage').value = s.message;
-  } else {
-    msg.innerHTML = '<div class="a-note" style="margin:0;">This note shows up once the demo is open. Turn it on above and it appears here, ready to copy.</div>';
-  }
-  document.getElementById('unlockHint').textContent = s.lockedCount
-    ? s.lockedCount + ' login' + (s.lockedCount === 1 ? ' is' : 's are') + ' locked right now. This clears the locks right away.'
-    : 'Too many wrong guesses lock a shared login for 15 minutes. This clears those locks right away.';
-}
-
-async function load() {
-  var s = await api('');
-  if (s) render(s);
-}
-
 function copyText(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function () { fnToast('Copied'); }, function () { window.prompt('Copy this:', text); });
@@ -276,58 +104,9 @@ function copyText(text) {
   }
 }
 
-var RENEW = {
-  code: { path: '/regenerate-code', body: {}, ask: 'Make a new access code? Everyone who entered the old code will be shut out right away.' },
-  password: { path: '/regenerate-password', body: { what: 'password' }, ask: 'Make a new password? Everyone using the demo will be signed out, and anyone holding the old password will need the new one.' },
-  pin: { path: '/regenerate-password', body: { what: 'pin' }, ask: 'Make a new student PIN? Anyone with the old one will need the new one.' }
-};
-
-document.addEventListener('click', async function (e) {
-  var btn = e.target.closest('[data-action]');
-  if (!btn || !state) return;
-  var action = btn.dataset.action, key = btn.dataset.key, s;
-  if (action === 'toggle') { revealed[key] = !revealed[key]; render(state); return; }
-  if (action === 'copy') {
-    var map = { code: state.accessCode, password: state.password, pin: state.pin, message: state.message };
-    if (map[key]) copyText(map[key]);
-    return;
-  }
-  btn.disabled = true;
-  try {
-    if (action === 'setup') {
-      s = await api('/setup', 'POST', {});
-      if (s) { fnToast('The demo is set up'); revealed.password = true; revealed.pin = true; }
-    } else if (action === 'on') {
-      var until = document.getElementById('demoUntil').value;
-      var body = until ? { until: new Date(until).toISOString() } : { days: Number(document.getElementById('demoDays').value) };
-      s = await api('/on', 'POST', body);
-      if (s) fnToast(state.open ? 'End date changed' : 'The demo is open');
-    } else if (action === 'off') {
-      if (!confirm('Turn the demo off now? Anyone using it will be signed out.')) return;
-      s = await api('/off', 'POST', {});
-      if (s) fnToast('The demo is closed');
-    } else if (action === 'renew') {
-      var r = RENEW[key];
-      if (!r || !confirm(r.ask)) return;
-      s = await api(r.path, 'POST', r.body);
-      if (s) { revealed[key] = true; fnToast('Done'); }
-    } else if (action === 'reset') {
-      if (!confirm('Reset the demo data now? Anything visitors added will be removed.')) return;
-      s = await api('/reset', 'POST', {});
-      if (s) fnToast('The demo data is reset');
-    } else if (action === 'unlock') {
-      s = await api('/unlock', 'POST', {});
-      if (s) fnToast('The demo logins are unlocked');
-    }
-    if (s) render(s);
-  } finally {
-    btn.disabled = false;
-  }
-});
-
 // ---------------------------------------------------------------------------------------------------------------------------------------
 // Group invitations (docs/reference/shared-demo-workspaces-requirements.md, section 5). Everything below uses data-inv attributes, so it never
-// touches the original demo's data-action buttons above, and nothing from the server goes into an inline handler.
+// uses data-inv buttons only, and nothing from the server goes into an inline handler.
 // ---------------------------------------------------------------------------------------------------------------------------------------
 var inv = { data: null, selected: null, detail: null, shown: {}, opened: false };
 
@@ -545,7 +324,6 @@ document.addEventListener('click', async function (e) {
   }
 });
 
-load();
 loadInvitations();
 </script>
 <script src="admin-shell.js?v=5"></script>

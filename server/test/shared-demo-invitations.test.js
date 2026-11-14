@@ -20,7 +20,8 @@ const inv = require(path.join(SERVER, 'lib/public-demo-invitations.js'));
 const A = require(path.join(SERVER, 'lib/public-demo-admin.js'));
 const W = require(path.join(SERVER, 'lib/public-demo-workspaces.js'));
 const F = require(path.join(SERVER, 'lib/public-demo-fixtures.js'));
-const seedLib = require(path.join(SERVER, 'scripts/seed-public-demo.js'));
+const { seedLegacy } = require(path.join(SERVER, 'test/helpers/legacy-demo.js'));
+const { signSession } = require(path.join(SERVER, 'lib/session-tokens.js'));
 const { seedWorkspaces } = require(path.join(SERVER, 'scripts/seed-demo-workspaces.js'));
 const cli = require(path.join(SERVER, 'scripts/demo-invitations.js'));
 const sw = require(path.join(SERVER, 'scripts/set-public-demo.js'));
@@ -472,16 +473,16 @@ test('COMMAND LINE: it reads its arguments strictly, and prints the details staf
   await assert.rejects(cli.run(conn, cli.parseArgs(['show', '999999'])), (e) => e.status === 404);
 });
 
-test('PAUSE: --pause and --resume are accepted, and the one --off the admin page uses leaves invitations running', async () => {
+test('PAUSE: --pause and --resume are accepted, and --on and --off (the retired original demo\'s switch) are refused with a pointer to the right tool', async () => {
   assert.equal(sw.parseArgs(['--pause']).action, 'pause');
   assert.equal(sw.parseArgs(['--resume']).action, 'resume');
-  assert.throws(() => sw.parseArgs(['--pause', '--on']), /Choose one/);
-  await endAll();
-  const a = await make('Survives the original demo being turned off');
-  await sw.turnOff(conn); // what the admin page's "Turn off" calls: it closes the original demo only
-  assert.equal(await inv.isPaused(conn), false);
-  assert.equal(Number((await inv.getOpenInvitationForWorkspace(a.workspaceId)).id), a.id);
-  await endAll();
+  assert.equal(sw.parseArgs([]).action, 'status');
+  assert.throws(() => sw.parseArgs(['--pause', '--resume']), /Choose one/);
+  assert.throws(() => sw.parseArgs(['--on']), /retired.*demo-invitations\.js/);
+  assert.throws(() => sw.parseArgs(['--off']), /retired/);
+  assert.throws(() => sw.parseArgs(['--on', '--days', '3']), /retired/);
+  assert.equal(typeof sw.turnOn, 'undefined', 'the original demo\'s switch is gone from the script');
+  assert.equal(typeof sw.turnOff, 'undefined');
 });
 
 // ============================================================================================================================================
@@ -723,56 +724,46 @@ test('ROUTES: an invitation whose end time passes is closed at once, even before
   await endAll();
 });
 
-test('ROUTES: the original single demo works exactly as before, beside the groups', async () => {
+test('ROUTES: the original single demo is retired: a leftover login, old code or old settings open nothing, and the groups are unaffected', async () => {
   await endAll();
-  const legacy = await seedLib.seed(conn, { password: 'original-demo-password-1', pin: '482915', rounds: ROUNDS }, seedLib.makeReport());
+  const legacy = await seedLegacy(conn, { password: 'original-demo-password-1', pin: '482915', rounds: ROUNDS });
+  // the settings the old switch used to read (still in the database until scripts/retire-original-demo.js runs)
   await A.putSettingRaw(conn, 'public_demo_password', 'original-demo-password-1');
   await A.putSettingRaw(conn, 'public_demo_pin', '482915');
-  const a = await make('A');
-  const ip = (n) => `198.51.100.${n}`;
-
-  // closed: its logins are refused, and the group is unaffected
-  assert.equal((await siteLogin(F.ACCOUNTS.teacher.email, 'original-demo-password-1', ip(80))).status, 401);
-  assert.equal((await siteLogin('demo-teacher-01@public-demo.example.com', a.password, ip(81))).status, 200);
-
-  // open: both work, side by side, and neither session names the other's workspace
   await A.putSettingRaw(conn, 'public_demo_enabled', 'true');
   await A.putSettingRaw(conn, 'public_demo_ends_at', new Date(Date.now() + 3600000).toISOString());
   await A.putSettingRaw(conn, 'public_demo_access_code', 'ORIGINAL');
   await A.putSettingRaw(conn, 'public_demo_code_version', '3');
-  const lg = await siteLogin(F.ACCOUNTS.teacher.email, 'original-demo-password-1', ip(82));
-  assert.equal(lg.status, 200);
-  const lc = sessionOf(lg, 'fn_user_session');
-  assert.equal(decode(lc).demo, true); assert.equal(decode(lc).ws, undefined, 'the original demo has no workspace');
-  const gl = await enter('ORIGINAL', ip(83));
-  assert.equal(gl.res.status, 200);
-  assert.equal(decode(gl.cookie).inv, undefined);
-  const cr = await call('GET', '/api/demo/credentials', { cookie: gl.cookie });
-  assert.equal(cr.json.password, 'original-demo-password-1');
-  assert.equal(cr.json.privateCopy, undefined, 'the original demo is shared, and the page keeps saying so');
-  assert.equal(cr.json.logins[0].userId, F.ACCOUNTS.district.email);
-  const ga = await enter(a.accessCode, ip(84));
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie: ga.cookie })).json.logins[0].userId, 'demo-district-01@public-demo.example.com');
-  assert.equal((await studentLogin('demo-student', '482915', ip(85))).status, 200);
-  // the original's code does not open a group's workspace, and a group's code does not open the original
-  assert.equal((await siteLogin(F.ACCOUNTS.teacher.email, a.password, ip(86))).status, 401);
-  assert.equal((await siteLogin('demo-teacher-01@public-demo.example.com', 'original-demo-password-1', ip(87))).status, 401);
+  const a = await make('A');
+  const ip = (n) => `198.51.100.${n}`;
 
-  // turning the original off closes the original only
-  const ta = sessionOf(await siteLogin('demo-teacher-01@public-demo.example.com', a.password, ip(88)), 'fn_user_session');
-  await sw.turnOff(conn);
-  assert.equal((await me(lc)).json.loggedIn, false);
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie: gl.cookie })).status, 401);
-  assert.equal((await me(ta)).json.loggedIn, true, 'the group is still in');
-  assert.equal((await call('GET', '/api/demo/credentials', { cookie: ga.cookie })).status, 200);
-  // and closing the group does not touch the original (turn it back on)
-  await A.putSettingRaw(conn, 'public_demo_enabled', 'true');
-  await A.putSettingRaw(conn, 'public_demo_ends_at', new Date(Date.now() + 3600000).toISOString());
-  await inv.endInvitation(conn, a.id, { rounds: ROUNDS });
-  assert.equal((await me(lc)).json.loggedIn, true);
-  assert.equal((await me(ta)).json.loggedIn, false);
-  void legacy;
-  await A.putSettingRaw(conn, 'public_demo_enabled', 'false');
+  // even with the old switch left on, the original logins and the old code are refused exactly like wrong ones
+  const wrong = await siteLogin(F.ACCOUNTS.teacher.email, 'not-the-password-1', ip(80));
+  const refused = await siteLogin(F.ACCOUNTS.teacher.email, 'original-demo-password-1', ip(81));
+  assert.equal(refused.status, 401);
+  assert.deepEqual(refused.json, wrong.json, 'no way to tell "retired" from "wrong password"');
+  assert.equal(sessionOf(refused, 'fn_user_session'), null);
+  assert.equal((await studentLogin('demo-student', '482915', ip(82))).status, 401);
+  const old = await enter('ORIGINAL', ip(83));
+  assert.equal(old.res.status, 401);
+  assert.equal(old.cookie, null);
+  assert.equal((await call('GET', '/api/demo/credentials')).status, 401);
+
+  // a session or gate cookie issued before the retirement is dead too
+  const staleSession = `fn_user_session=${signSession('site', { userId: legacy.ids.teacher, demo: true }, '1h')}`;
+  assert.equal((await me(staleSession)).json.loggedIn, false);
+  const staleGate = `fn_demo_gate=${signSession('demoGate', { v: '3' }, '1h')}`;
+  assert.equal((await call('GET', '/api/demo/credentials', { cookie: staleGate })).status, 401);
+  assert.equal((await call('GET', '/api/demo/state', { cookie: staleGate })).json.unlocked, false);
+
+  // the group is untouched, and its credentials never name the original demo
+  assert.equal((await siteLogin('demo-teacher-01@public-demo.example.com', a.password, ip(84))).status, 200);
+  const ga = await enter(a.accessCode, ip(85));
+  const cr = await call('GET', '/api/demo/credentials', { cookie: ga.cookie });
+  assert.equal(cr.json.logins[0].userId, 'demo-district-01@public-demo.example.com');
+  assert.equal(cr.json.privateCopy, true);
+  await endAll();
+  for (const key of ['public_demo_enabled', 'public_demo_ends_at', 'public_demo_access_code', 'public_demo_code_version']) await A.putSettingRaw(conn, key, '');
 });
 
 test('ROUTES: the new gate keeps the old safeguards: wrong tries are throttled, and a right code never counts against anyone', async () => {

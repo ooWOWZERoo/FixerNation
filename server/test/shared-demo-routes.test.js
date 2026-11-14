@@ -1,4 +1,4 @@
-// Shared demo environment, phase 1: the routes. Demo logins are refused while the demo is closed and get a short, marked session while it is open;
+// Shared demo environment, phase 1 (reworked for private workspaces): the routes. Demo logins are refused while their workspace's invitation is closed and get a short, marked session while it is open;
 // a demo session cannot change the shared password or PIN, download a lesson file, or trigger a password-reset email.
 // Run:  cd server && npm test
 const test = require('node:test');
@@ -17,7 +17,7 @@ const db = new DatabaseSync(':memory:');
 db.exec(`
 CREATE TABLE settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, first_name TEXT, last_name TEXT, role TEXT DEFAULT 'teacher', password_hash TEXT,
-  email_verified INTEGER DEFAULT 1, closed_at TEXT, session_invalidated_at TEXT, is_sales_demo INTEGER DEFAULT 0, is_shared_demo INTEGER DEFAULT 0);
+  email_verified INTEGER DEFAULT 1, closed_at TEXT, session_invalidated_at TEXT, is_sales_demo INTEGER DEFAULT 0, is_shared_demo INTEGER DEFAULT 0, demo_workspace_id INTEGER);
 CREATE TABLE site_user_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, token TEXT, type TEXT, expires_at TEXT);
 CREATE TABLE classrooms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, join_code TEXT, teacher_site_user_id INTEGER, archived_at TEXT);
 CREATE TABLE classroom_students (id INTEGER PRIMARY KEY AUTOINCREMENT, classroom_id INTEGER, display_name TEXT, username TEXT UNIQUE, password_hash TEXT, is_active INTEGER DEFAULT 1);
@@ -58,6 +58,12 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const { signSession, verifySession } = require(path.join(SERVER, 'lib/session-tokens.js'));
 const { sharedDemoGate } = require(path.join(SERVER, 'lib/public-demo.js'));
+const invitations = require(path.join(SERVER, 'lib/public-demo-invitations.js'));
+
+// Which workspaces have an open invitation (the real lookup is tested in shared-demo-invitations.test.js; here the routes only need the answer).
+const WS = 7;
+const openWorkspaces = new Set();
+invitations.getOpenInvitationForWorkspace = async (ws) => (openWorkspaces.has(Number(ws)) ? { id: Number(ws) * 10, workspace_id: Number(ws) } : null);
 
 const app = express();
 app.use(express.json());
@@ -84,14 +90,13 @@ function call(method, p, { cookie = null, body = null } = {}) {
     req.on('error', reject); if (data) req.write(data); req.end();
   });
 }
-const setSetting = (k, v) => db.prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value').run(k, v);
-const openDemo = () => { setSetting('public_demo_enabled', 'true'); setSetting('public_demo_ends_at', new Date(Date.now() + 3600 * 1000).toISOString()); };
-const closeDemo = () => { setSetting('public_demo_enabled', 'false'); setSetting('public_demo_ends_at', ''); };
+const openDemo = () => { openWorkspaces.add(WS); };
+const closeDemo = () => { openWorkspaces.clear(); };
 
 const PASSWORD = 'demo-shared-password-1';
 const hash = bcrypt.hashSync(PASSWORD, 4);
-const addUser = (email, shared) => Number(db.prepare('INSERT INTO site_users (email, first_name, last_name, password_hash, is_shared_demo, is_sales_demo) VALUES (?, ?, ?, ?, ?, ?)')
-  .run(email, 'Demo', 'User', hash, shared ? 1 : 0, shared ? 1 : 0).lastInsertRowid);
+const addUser = (email, shared) => Number(db.prepare('INSERT INTO site_users (email, first_name, last_name, password_hash, is_shared_demo, is_sales_demo, demo_workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  .run(email, 'Demo', 'User', hash, shared ? 1 : 0, shared ? 1 : 0, shared ? WS : null).lastInsertRowid);
 const demoTeacher = addUser('demo-teacher@public-demo.example.com', true);
 const plainTeacher = addUser('real-teacher@school.test', false);
 const demoRoom = Number(db.prepare("INSERT INTO classrooms (name, join_code, teacher_site_user_id) VALUES ('Demo class', 'DEMOJOIN', ?)").run(demoTeacher).lastInsertRowid);
@@ -100,7 +105,7 @@ const pinHash = bcrypt.hashSync('123456', 4);
 db.prepare("INSERT INTO classroom_students (classroom_id, display_name, username, password_hash) VALUES (?, 'Demo Student', 'demo-student', ?)").run(demoRoom, pinHash);
 db.prepare("INSERT INTO classroom_students (classroom_id, display_name, username, password_hash) VALUES (?, 'Real Student', 'real-student', ?)").run(plainRoom, pinHash);
 
-const demoCookie = () => `fn_user_session=${signSession('site', { userId: demoTeacher, demo: true }, '1h')}`;
+const demoCookie = () => `fn_user_session=${signSession('site', { userId: demoTeacher, demo: true, ws: WS }, '1h')}`;
 const plainCookie = () => `fn_user_session=${signSession('site', { userId: plainTeacher }, '1h')}`;
 const cookieValue = (res, name) => {
   const line = (res.headers['set-cookie'] || []).find(c => c.startsWith(name + '='));
@@ -261,4 +266,15 @@ test('LOCKOUT HELPERS: the admin Demo page can see that a demo login is locked, 
   assert.equal(siteAuth.siteLoginBlockedFor(email), 0);
   const ok = await call('POST', '/api/site-auth/login', { body: { email, password: PASSWORD } });
   assert.equal(ok.status, 200, 'unlocking lets the real password back in');
+});
+
+test('RETIRED ORIGINAL DEMO: a demo login that belongs to no workspace is refused, even while a workspace is open', async () => {
+  openDemo();
+  addUser('demo-teacher@orphan-demo.example.com', true);
+  db.prepare("UPDATE site_users SET demo_workspace_id = NULL WHERE email = 'demo-teacher@orphan-demo.example.com'").run();
+  const r = await call('POST', '/api/site-auth/login', { body: { email: 'demo-teacher@orphan-demo.example.com', password: PASSWORD } });
+  assert.equal(r.status, 401);
+  assert.equal(r.json.error, 'Invalid email or password');
+  assert.equal(cookieValue(r, 'fn_user_session'), null);
+  closeDemo();
 });

@@ -385,13 +385,9 @@ test('PAUSE: it closes every group at once, stops new ones from starting, and re
   await endAll();
 });
 
-test('THE ORIGINAL DEMO\'S ROUTES ARE UNTOUCHED: its state still loads beside the invitations', async () => {
-  const state = await call('GET', '');
-  assert.equal(state.status, 200);
-  assert.equal(state.json.seeded, false, 'not set up in this test database, which is fine');
-  assert.equal(state.json.open, false);
-  assert.equal((await call('POST', '/off')).status, 200);
-  assert.equal(await inv.isPaused(poolStub), false, 'the admin page\'s own Turn off closes the original demo and does not pause the groups');
+test('THE ORIGINAL DEMO IS RETIRED: its admin routes are gone, and nothing it used to do pauses or opens the groups', async () => {
+  for (const [m, p] of [['GET', ''], ['POST', '/off'], ['POST', '/on']]) assert.equal((await call(m, p, { body: { days: 1 } })).status, 404, `${m} ${p}`);
+  assert.equal(await inv.isPaused(poolStub), false);
 });
 
 // ============================================================================================================================================
@@ -400,7 +396,7 @@ test('THE ORIGINAL DEMO\'S ROUTES ARE UNTOUCHED: its state still loads beside th
 
 const lookup = (email) => call('GET', `?email=${encodeURIComponent(email)}`, { base: '/api/admin/account-lookup' });
 
-test('ACCOUNT LOOKUP: a workspace login shows its workspace and the group using it; a free one, the original demo and an ordinary address show what they are', async () => {
+test('ACCOUNT LOOKUP: a workspace login shows its workspace and the group using it; a free one and an ordinary address show what they are', async () => {
   await endAll();
   const a = (await create('Springfield USD')).json;
   const r = await lookup('demo-teacher-01@public-demo.example.com');
@@ -431,9 +427,8 @@ test('ACCOUNT LOOKUP: a workspace login shows its workspace and the group using 
   assert.equal(b.workspaceId, 1);
   assert.equal((await lookup('demo-teacher-01@public-demo.example.com')).json.demo.group.label, 'Shelbyville Schools');
 
-  // the original single demo, and an ordinary address
-  await seedLib.seed(poolStub, { password: 'original-demo-password-1', pin: '482915', rounds: 4 }, seedLib.makeReport());
-  assert.deepEqual((await lookup(F.ACCOUNTS.teacher.email)).json.demo, { kind: 'original' });
+  // an ordinary address, and the retired original demo's address (no longer recognised as a demo)
+  assert.equal((await lookup(F.ACCOUNTS.teacher.email)).json.demo, null);
   db.prepare("INSERT INTO site_users (email, first_name, last_name, role, password_hash) VALUES ('real@school.org', 'Real', 'Person', 'teacher', 'x')").run();
   assert.equal((await lookup('real@school.org')).json.demo, null);
   assert.equal((await lookup('nobody@school.org')).json.demo, null);
