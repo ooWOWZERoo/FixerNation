@@ -35,7 +35,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=32"></script>
+<script src="admin-nav.js?v=33"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -72,6 +72,12 @@
               <option>Unsubscribed</option>
             </select>
             <select class="a-filter-select" id="filterSource"><option value="">All Sources</option></select>
+            <select class="a-filter-select" id="filterClass" aria-label="Customer Hub label" style="display:none;">
+              <option value="">All Labels</option>
+              <option value="suspect">Suspect</option>
+              <option value="prospect">Prospect</option>
+              <option value="customer">Customer</option>
+            </select>
             <button class="a-btn a-btn-outline" onclick="openGroupsModal()">🏷️ Manage Groups</button>
             <button class="a-btn a-btn-outline" onclick="openImportModal()">⬆ Import CSV</button>
             <button class="a-btn a-btn-outline" onclick="exportCsv()">⬇ Export CSV</button>
@@ -294,6 +300,7 @@ let searchTerm = '';
 let filterGroupId = '';
 let filterStatus = '';
 let filterSource = '';
+let filterClass = '';
 let sortField = 'signupDate';
 let sortDir = 'desc';
 let currentPage = 1;
@@ -461,6 +468,7 @@ function applyFiltersAndRender() {
     if (filterGroupId && !(c.groups || []).some(g => String(g.id) === filterGroupId)) return false;
     if (filterStatus && c.status !== filterStatus) return false;
     if (filterSource && c.source !== filterSource) return false;
+    if (filterClass && (c.crmClassification || 'suspect') !== filterClass) return false;
     return true;
   });
 
@@ -517,6 +525,7 @@ function applyFiltersAndRender() {
       status: `<td><span class="a-pill ${subscribed ? 'a-pill-success' : 'a-pill-neutral'}">${fnEscape(c.status)}</span></td>`,
       role: `<td>${c.role ? `<span class="a-pill a-pill-neutral">${ROLE_LABELS_SHORT[c.role] || c.role}</span>` : '—'}</td>`,
       gradeLevels: `<td>${gradeCodes(c).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${g}</span>`).join('') || '—'}</td>`,
+      crmClassification: `<td>${crmLabelHtml(c)}</td>`,
       groups: `<td>${(c.groups || []).map(g => `<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">${fnEscape(g.name)}</span>`).join('') || '—'}</td>`,
     };
     tr.innerHTML = CONTACT_COLUMNS.filter(col => visibleColumns.has(col.key)).map(col => cellsByKey[col.key]).join('') + `
@@ -1401,10 +1410,40 @@ document.getElementById('filterSource').addEventListener('change', function(e){
   applyFiltersAndRender();
 });
 
+// Customer Hub label (Suspect / Prospect / Customer). Shown only while the Customer Hub is switched on for this login (GET /api/crm/me answers 404
+// otherwise). It is the CRM lifecycle label, separate from the Status column above (the email subscription), and it is read-only here.
+const CRM_LABELS = { suspect: ['Suspect', 'a-pill-neutral'], prospect: ['Prospect', 'a-pill-warning'], customer: ['Customer', 'a-pill-success'] };
+function crmLabelHtml(c) {
+  const k = CRM_LABELS[c.crmClassification] ? c.crmClassification : 'suspect';
+  return `<a href="admin-crm-contact.html?id=${encodeURIComponent(c.id)}" style="text-decoration:none;"><span class="a-pill ${CRM_LABELS[k][1]}">${CRM_LABELS[k][0]}</span></a>`;
+}
+document.getElementById('filterClass').addEventListener('change', function(e){
+  filterClass = e.target.value;
+  currentPage = 1;
+  applyFiltersAndRender();
+});
+function enableCrmLabel() {
+  if (CONTACT_COLUMNS.some(c => c.key === 'crmClassification')) return;
+  CONTACT_COLUMNS.splice(8, 0, { key: 'crmClassification', label: 'Customer Hub Label', sortable: true });
+  // A saved column choice from before this column existed would hide it for good; show it once, then respect the choice.
+  try {
+    if (!localStorage.getItem('fnContactsCrmColumnSeen')) {
+      localStorage.setItem('fnContactsCrmColumnSeen', '1');
+      const saved = JSON.parse(localStorage.getItem(COLUMNS_STORAGE_KEY));
+      if (Array.isArray(saved) && saved.length) { visibleColumns.add('crmClassification'); localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify([...visibleColumns])); }
+    }
+  } catch (e) {}
+  if (!localStorage.getItem(COLUMNS_STORAGE_KEY)) visibleColumns.add('crmClassification');
+  document.getElementById('filterClass').style.display = '';
+  renderTableHead();
+  if (contactsCache.length) applyFiltersAndRender();
+}
+fetch('/api/crm/me', { credentials: 'include' }).then(r => { if (r.ok) enableCrmLabel(); }).catch(() => {});
+
 renderTableHead();
 fetchAndRenderContacts();
 </script>
 
-<script src="admin-shell.js?v=5"></script>
+<script src="admin-shell.js?v=6"></script>
 </body>
 </html>

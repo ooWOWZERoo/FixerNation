@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Overview</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=1">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=33"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Overview</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=1"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var state = { tab: 'nodeal', page: 1, data: null };
+
+  C.boot(root).then(function (me) { if (me) load(); });
+
+  function load() {
+    C.loading(root);
+    C.api('GET', '/api/crm/overview').then(function (r) {
+      if (!r.ok) { C.errorBox(root, C.problem(r)); return; }
+      state.data = r.data;
+      draw();
+    });
+  }
+
+  function tile(label, value, note, href) {
+    var l = href ? '<a href="' + esc(href) + '">' + esc(label) + '</a>' : esc(label);
+    return '<div class="a-stat-card"><div class="label">' + l + '</div><div class="value">' + value + '</div>' + (note ? '<div class="crm-stat-note">' + note + '</div>' : '') + '</div>';
+  }
+
+  function dealRows(items, mode) {
+    if (!items.length) return '';
+    return '<table class="a-table" aria-label="' + (mode === 'late' ? 'Deals with an overdue next step' : 'Deals with no next step') + '"><thead><tr><th scope="col">Deal</th><th scope="col">Organization</th><th scope="col">Stage</th><th scope="col">Owner</th><th scope="col">' + (mode === 'late' ? 'Was due' : 'In stage') + '</th></tr></thead><tbody>' +
+      items.map(function (d) {
+        return '<tr><td><a class="crm-link" href="admin-crm-opportunity.html?id=' + esc(d.id) + '">' + esc(d.name) + '</a>' + (d.nextStep ? '<div class="crm-small crm-muted">' + esc(d.nextStep) + '</div>' : '') + '</td><td>' + esc(d.accountName) + '</td><td>' + esc(d.stage) + '</td><td>' + (d.ownerName ? esc(d.ownerName) : '<span class="crm-muted">Nobody yet</span>') + '</td><td>' +
+          (mode === 'late' ? '<span class="crm-flag">' + esc(C.date(d.nextStepDueAt)) + '</span>' : esc(C.days(d.daysInStage))) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function draw() {
+    var d = state.data, p = d.pipeline, cnt = d.counts;
+    var html = '<div class="crm-stats" role="list" aria-label="Contacts by label">' +
+      '<div role="listitem">' + tile('Suspects', C.num(cnt.suspect), 'Signed up or imported. No sign of buying interest yet.', 'admin-crm-contacts.html?classification=suspect') + '</div>' +
+      '<div role="listitem">' + tile('Prospects', C.num(cnt.prospect), 'Asked for a quote, or a teammate moved them up.', 'admin-crm-contacts.html?classification=prospect') + '</div>' +
+      '<div role="listitem">' + tile('Customers', C.num(cnt.customer), 'Own a paid, non-trial purchase.', 'admin-crm-contacts.html?classification=customer') + '</div>' +
+      '</div>' +
+      '<div class="crm-stats" role="list" aria-label="Pipeline">' +
+      '<div role="listitem">' + tile('Open deals', C.num(p.openCount), p.myOpen + ' yours' + (p.unowned ? ', ' + p.unowned + ' with no owner' : ''), 'admin-crm-opportunities.html') + '</div>' +
+      '<div role="listitem">' + tile('Pipeline value', esc(C.money(p.grossCents, '$0')), p.openWithoutValue ? p.openWithoutValue + ' open deal' + (p.openWithoutValue === 1 ? ' has' : 's have') + ' no value yet and add nothing here.' : 'Every open deal has a value.') + '</div>' +
+      '<div role="listitem">' + tile('Weighted pipeline', esc(C.money(p.weightedCents, '$0')), 'Each deal’s value times its stage’s chance of closing.') + '</div>' +
+      '</div>' +
+      '<p class="crm-small crm-muted" style="margin:-8px 0 22px;">Test addresses ending in @example.com are left out of the counts.</p>';
+
+    // Needs a decision
+    var dec = d.decisions;
+    var tabDefs = [['nodeal', 'Quotes with no deal', dec.quotesWithoutDeal.total], ['nocontact', 'Quotes with no contact', dec.quotesWithoutContact.total], ['purchases', 'Purchases to confirm', dec.purchases.total]];
+    html += '<div class="a-card" id="decisionCard"><div class="a-card-head"><h2>Needs a decision</h2></div>' +
+      '<div class="crm-tabs" role="tablist" aria-label="Things that need a decision">' +
+      tabDefs.map(function (t) { return '<button type="button" role="tab" id="tab-' + t[0] + '" aria-selected="' + (state.tab === t[0]) + '" data-tab="' + t[0] + '">' + esc(t[1]) + ' (' + C.num(t[2]) + ')</button>'; }).join('') +
+      '</div><div id="decisionBody" role="tabpanel" aria-live="polite"></div><div id="decisionPager"></div></div>';
+
+    // Next steps
+    html += '<div class="crm-two">' +
+      '<div class="a-card"><div class="a-card-head"><h2>Overdue next steps (' + C.num(d.nextSteps.overdue.total) + ')</h2>' + (d.nextSteps.overdue.total ? '<a class="crm-link" href="admin-crm-opportunities.html?overdue=true">See all</a>' : '') + '</div>' +
+        (d.nextSteps.overdue.items.length ? dealRows(d.nextSteps.overdue.items, 'late') : C.empty('No deal has a next step past its date.', '✅')) + '</div>' +
+      '<div class="a-card"><div class="a-card-head"><h2>Deals with no next step (' + C.num(d.nextSteps.missing.total) + ')</h2>' + (d.nextSteps.missing.total ? '<a class="crm-link" href="admin-crm-opportunities.html?noNextStep=true">See all</a>' : '') + '</div>' +
+        (d.nextSteps.missing.items.length ? dealRows(d.nextSteps.missing.items, 'none') : C.empty('Every open deal has a next step.', '✅')) + '</div>' +
+      '</div>';
+
+    // By stage
+    html += '<div class="a-card"><div class="a-card-head"><h2>Pipeline by stage</h2></div>' + (p.byStage.length ?
+      '<table class="a-table" aria-label="Open deals by stage"><thead><tr><th scope="col">Stage</th><th scope="col">Open deals</th><th scope="col">Value</th></tr></thead><tbody>' +
+      p.byStage.map(function (s) { return '<tr><td><a class="crm-link" href="admin-crm-opportunities.html?stage=' + esc(s.key) + '">' + esc(s.label) + '</a></td><td>' + C.num(s.count) + '</td><td>' + esc(C.money(s.grossCents, '$0')) + '</td></tr>'; }).join('') + '</tbody></table>'
+      : C.empty('No open deals yet. Start one from an account, or from a quote above.', '🎯')) + '</div>';
+
+    root.innerHTML = html;
+    root.querySelectorAll('[data-tab]').forEach(function (b) {
+      b.addEventListener('click', function () { state.tab = b.getAttribute('data-tab'); state.page = 1; root.querySelectorAll('[data-tab]').forEach(function (x) { x.setAttribute('aria-selected', String(x === b)); }); loadTab(); });
+    });
+    loadTab();
+  }
+
+  function loadTab() {
+    var body = document.getElementById('decisionBody'), pg = document.getElementById('decisionPager');
+    C.loading(body);
+    if (state.tab === 'purchases') {
+      C.api('GET', '/api/crm/contacts/review/purchases' + C.qstr({ page: state.page, pageSize: 10 })).then(function (r) {
+        if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
+        if (!r.data.total) { body.innerHTML = C.empty('Nothing to confirm. Every paid purchase has an amount.', '✅'); pg.innerHTML = ''; return; }
+        body.innerHTML = '<p class="crm-notice">These purchases are marked paid but have no amount, or an amount of zero. They never make someone a Customer on their own. Open the person to see why, and a CRM Admin can confirm with evidence.</p>' +
+          '<table class="a-table" aria-label="Paid purchases with no amount"><thead><tr><th scope="col">Purchase</th><th scope="col">Person</th><th scope="col">Amount</th><th scope="col"><span class="crm-sr">Open</span></th></tr></thead><tbody>' +
+          r.data.purchases.map(function (p) {
+            return '<tr><td>#' + esc(p.purchaseId) + '</td><td>' + (p.contactName ? esc(p.contactName) : '<span class="crm-muted">No name</span>') + '<div class="crm-small crm-muted">' + esc(p.contactEmail || '') + '</div></td><td>' + (p.amountCents === null ? 'Not recorded' : esc(C.money(p.amountCents))) + '</td><td><a class="a-btn a-btn-outline a-btn-sm" href="admin-crm-contact.html?id=' + esc(p.contactId) + '">Open person</a></td></tr>';
+          }).join('') + '</tbody></table>';
+        C.pager(pg, r.data, function (n) { state.page = n; loadTab(); });
+      });
+      return;
+    }
+    var gap = state.tab === 'nodeal' ? 'no_deal' : 'no_contact';
+    C.api('GET', '/api/crm/quotes' + C.qstr({ gap: gap, page: state.page, pageSize: 10 })).then(function (r) {
+      if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
+      if (!r.data.total) { body.innerHTML = C.empty(gap === 'no_deal' ? 'Every quote is on a deal.' : 'Every quote has a contact.', '✅'); pg.innerHTML = ''; return; }
+      body.innerHTML = '<table class="a-table" aria-label="Quotes that need a deal or a contact"><thead><tr><th scope="col">Quote</th><th scope="col">From</th><th scope="col">Organization</th><th scope="col">Status</th><th scope="col">Amount</th><th scope="col">Missing</th><th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
+        r.data.quotes.map(function (q) {
+          var missing = [];
+          if (!q.opportunityId) missing.push('deal');
+          if (!q.contactId) missing.push(q.emailMatches === 1 ? 'contact (one match)' : q.emailMatches > 1 ? 'contact (several match)' : 'contact (no match)');
+          var acts = '';
+          if (!q.opportunityId && C.can('edit_deal')) acts += '<button type="button" class="a-btn a-btn-primary a-btn-sm" data-act="deal" data-id="' + esc(q.id) + '">Make a deal</button> <button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="adddeal" data-id="' + esc(q.id) + '">Add to a deal</button> ';
+          if (!q.contactId && C.can('write')) acts += '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="contact" data-id="' + esc(q.id) + '" data-email="' + esc(q.email) + '">Link a contact</button>';
+          return '<tr><td>' + esc(q.quoteNumber || '#' + q.id) + '<div class="crm-small crm-muted">' + esc(C.date(q.sentAt || q.createdAt)) + '</div></td><td>' + (q.name ? esc(q.name) : '') + '<div class="crm-small crm-muted">' + esc(q.email) + '</div></td><td>' + esc(q.school || '') + '</td><td>' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</td><td>' + esc(C.money(q.amountCents, 'Not priced')) + '</td><td>' + esc(missing.join(' and ')) + '</td><td><div class="crm-row-actions">' + acts + '</div></td></tr>';
+        }).join('') + '</tbody></table>';
+      var byId = {}; r.data.quotes.forEach(function (q) { byId[q.id] = q; });
+      body.querySelectorAll('[data-act]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var q = byId[b.getAttribute('data-id')];
+          var act = b.getAttribute('data-act');
+          if (act === 'deal') makeDeal(q); else if (act === 'adddeal') addToDeal(q); else linkContact(q);
+        });
+      });
+      C.pager(pg, r.data, function (n) { state.page = n; loadTab(); });
+    });
+  }
+
+  function makeDeal(q) {
+    var dlg = C.dialog({
+      title: 'Make a deal from this quote',
+      submit: 'Make the deal',
+      body: '<p class="crm-small crm-muted">The quote itself is not changed. The deal starts where the quote’s history says it should' + (q.emailMatches === 1 ? ', and the person with this email is added to it.' : '. No single contact has this email, so you can link one afterward.') + '</p>' +
+        '<div class="crm-check"><input type="radio" name="mode" id="modeExisting" value="existing" checked><label for="modeExisting">Use an account that already exists</label></div>' +
+        C.pickerFields('accounts', 'an account') +
+        '<div class="crm-check"><input type="radio" name="mode" id="modeNew" value="new"><label for="modeNew">Make a new account</label></div>' +
+        C.field('New account name', '<input type="text" id="newAcctName" maxlength="255" value="' + esc(q.school || '') + '">', q.school ? '' : 'This quote has no organization, so type one.', 'newAcctName'),
+      onSubmit: function (form) {
+        var mode = form.querySelector('input[name=mode]:checked').value;
+        var body = {};
+        if (mode === 'existing') { body.accountId = Number(form.querySelector('[data-pick=accounts]').value); if (!body.accountId) return 'Pick an account, or choose to make a new one.'; }
+        else { body.createAccount = true; body.accountName = form.querySelector('#newAcctName').value; }
+        return C.api('POST', '/api/crm/quotes/' + q.id + '/create-deal', body).then(function (r) {
+          if (r.ok) { C.toast('Deal made'); window.location.href = 'admin-crm-opportunity.html?id=' + r.data.opportunityId; return 'Opening the deal…'; }
+          if (r.data.code === 'possible_duplicate') {
+            form.querySelector('#modeExisting').checked = true;
+            form.querySelector('[data-pick-q=accounts]').value = form.querySelector('#newAcctName').value;
+            form.querySelector('[data-pick-q=accounts]').dispatchEvent(new Event('input'));
+            return r.data.error;
+          }
+          return C.problem(r);
+        });
+      }
+    });
+    C.picker(dlg.form, 'accounts');
+  }
+
+  function addToDeal(q) {
+    var dlg = C.dialog({
+      title: 'Add this quote to a deal', submit: 'Add to the deal',
+      body: C.pickerFields('opportunities', 'a deal', 'Only open deals are listed.'),
+      onSubmit: function (form) {
+        var id = Number(form.querySelector('[data-pick=opportunities]').value);
+        if (!id) return 'Pick a deal.';
+        return C.api('POST', '/api/crm/quotes/' + q.id + '/link-deal', { opportunityId: id }).then(function (r) {
+          if (r.ok) { C.toast('Quote added to the deal'); load(); return; }
+          return C.problem(r);
+        });
+      }
+    });
+    C.picker(dlg.form, 'opportunities');
+  }
+
+  function linkContact(q) {
+    var dlg = C.dialog({
+      title: 'Link a contact to this quote', submit: 'Link the contact',
+      body: '<p class="crm-small crm-muted">The quote was sent to ' + esc(q.email) + '. Pick the person it belongs to. The quote’s own email is not changed.</p>' + C.pickerFields('contacts', 'a contact'),
+      onSubmit: function (form) {
+        var id = Number(form.querySelector('[data-pick=contacts]').value);
+        if (!id) return 'Pick a contact.';
+        return C.api('POST', '/api/crm/quotes/' + q.id + '/link-contact', { contactId: id }).then(function (r) {
+          if (r.ok) { C.toast('Contact linked'); load(); return; }
+          return C.problem(r);
+        });
+      }
+    });
+    dlg.form.querySelector('[data-pick-q=contacts]').value = q.email;
+    C.picker(dlg.form, 'contacts');
+  }
+})();
+</script>
+<script src="admin-shell.js?v=6"></script>
+</body>
+</html>

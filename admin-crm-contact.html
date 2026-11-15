@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Contact</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=1">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=33"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Contact</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=1"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var id = Number(C.readQuery().id);
+  var staff = [], data = null;
+  var EVENT = {
+    purchase_verified: 'A paid, non-trial purchase was found.',
+    quote_request: 'A quote request exists for this person.',
+    manual_promotion: 'A teammate moved them up.',
+    manual_override: 'A CRM Admin set this by hand, with evidence.',
+    override_released: 'The hand-set label was released.',
+    needs_review: 'Their purchase no longer qualifies. Look at it.',
+    backfill: 'Set when the Customer Hub was first filled in.'
+  };
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    if (!id) { root.innerHTML = '<div class="a-card">' + C.empty('No person was chosen. Go back to the list and pick one.', '👤') + '</div>'; return; }
+    C.staff().then(function (list) { staff = list; load(); });
+  });
+
+  function load() {
+    C.loading(root);
+    C.api('GET', '/api/crm/contacts/' + id).then(function (r) {
+      if (!r.ok) { root.innerHTML = '<div class="a-card">' + C.empty(r.status === 404 ? 'That person does not exist.' : C.problem(r), '👤') + '</div>'; return; }
+      data = r.data; draw();
+    });
+  }
+
+  function check(ok, yes, no) { return '<td class="' + (ok ? 'yes' : 'no') + '">' + (ok ? '✓ ' + esc(yes) : '✗ ' + esc(no)) + '</td>'; }
+
+  function draw() {
+    var c = data.contact, cls = c.classification;
+    document.getElementById('pageTitle').textContent = c.name || c.email;
+    document.title = 'Fixer Nation Education - ' + (c.name || c.email);
+    var h = '<p><a class="crm-link" href="admin-crm-contacts.html">← All contacts</a></p>';
+    h += '<div class="a-card"><div class="a-card-head"><h2>' + C.classPill(cls) + (c.classificationLocked ? ' <span class="crm-small crm-muted">set by hand</span>' : '') + '</h2><div class="crm-row-actions">' +
+      (C.can('promote_prospect') && cls === 'suspect' ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="promote">Move to Prospect</button>' : '') +
+      (C.can('set_customer') && cls !== 'customer' ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="override">Mark as Customer…</button>' : '') +
+      (C.can('set_customer') && c.classificationLocked ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="release">Release the hand-set label</button>' : '') +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="recheck">Check again</button>' : '') +
+      (C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeC">Merge into another…</button>' : '') +
+      '</div></div><p class="crm-small crm-muted" style="margin:0 0 14px;">' + esc(C.classHelp(cls)) + '</p><dl class="crm-kv">' +
+      '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' +
+      '<dt>Company</dt><dd>' + (c.company ? esc(c.company) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>State</dt><dd>' + (c.state ? esc(c.state) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Owner</dt><dd>' + (C.can('write') ? '<label class="crm-sr" for="ownerSel">Owner</label><select id="ownerSel" class="a-filter-select">' + C.ownerOptions(staff, c.assignedAdminId, 'Nobody yet') + '</select>' : esc(C.staffName(staff, c.assignedAdminId) || 'Nobody yet')) + '</dd>' +
+      '<dt>Last contacted</dt><dd>' + (c.lastContactedAt ? esc(C.date(c.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</dd>' +
+      '<dt>Email list</dt><dd>' + esc(c.subscriptionStatus || '') + ' <span class="crm-small crm-muted">(a marketing choice, separate from the label above)</span></dd>' +
+      '</dl></div>';
+
+    // Why a purchase does or does not count
+    h += '<div class="a-card"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
+    h += data.purchases.length ? '<table class="a-table crm-check-table" aria-label="Purchases and whether each one counts"><thead><tr><th scope="col">Purchase</th><th scope="col">Paid?</th><th scope="col">Amount over $0?</th><th scope="col">Not a trial?</th><th scope="col">Counts?</th></tr></thead><tbody>' +
+      data.purchases.map(function (p) {
+        var paid = p.paymentStatus === 'paid', amt = p.amountCents !== null && p.amountCents > 0;
+        return '<tr><td>#' + esc(p.id) + '<div class="crm-small crm-muted">' + esc(C.date(p.purchasedAt)) + ' · ' + esc(p.paymentMethod || '') + '</div></td>' +
+          check(paid, 'Paid', C.label(C.PAYMENT, p.paymentStatus) || 'Not paid') +
+          check(amt, C.money(p.amountCents), p.amountCents === null ? 'No amount recorded' : 'Zero amount') +
+          check(!p.isTrial, 'Not a trial', 'A trial') +
+          '<td class="' + (p.qualifies ? 'yes' : 'no') + '"><strong>' + (p.qualifies ? 'Yes' : 'No') + '</strong></td></tr>';
+      }).join('') + '</tbody></table>' : C.empty('No purchases on record for this person.', '🧾');
+    h += '</div>';
+
+    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Accounts (' + data.accounts.length + ')</h2></div>' +
+      (data.accounts.length ? '<ul class="crm-list">' + data.accounts.map(function (a) { return '<li><div><a href="admin-crm-account.html?id=' + esc(a.accountId) + '">' + esc(a.name) + '</a><div class="crm-small crm-muted">' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + (a.title ? ' · ' + esc(a.title) : '') + '</div></div></li>'; }).join('') + '</ul>' : C.empty('Not on any account yet. Add them from an account page.', '🏫')) + '</div>' +
+      '<div class="a-card"><div class="a-card-head"><h2>Deals (' + data.opportunities.length + ')</h2></div>' +
+      (data.opportunities.length ? '<ul class="crm-list">' + data.opportunities.map(function (o) { return '<li><div><a href="admin-crm-opportunity.html?id=' + esc(o.id) + '">' + esc(o.name) + '</a><div class="crm-small crm-muted">' + esc(o.stage) + ' · ' + esc(C.label(C.COMMITTEE_ROLES, o.role)) + '</div></div>' + C.statePill(o.state) + '</li>'; }).join('') + '</ul>' : C.empty('Not on any deal.', '🎯')) + '</div></div>';
+
+    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Quotes (' + data.quotes.length + ')</h2></div>' +
+      (data.quotes.length ? '<ul class="crm-list">' + data.quotes.map(function (q) { return '<li><div>' + esc(q.quoteNumber || '#' + q.id) + '<div class="crm-small crm-muted">' + esc(C.label(C.QUOTE_STATUS, q.status)) + ' · ' + esc(C.money(q.amountCents, 'Not priced')) + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : '') + '</div></div>' + (q.opportunityId ? '<a href="admin-crm-opportunity.html?id=' + esc(q.opportunityId) + '">Open the deal</a>' : '<span class="crm-small crm-muted">No deal yet</span>') + '</li>'; }).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-quotes.html">Open Quotes</a></p>' : C.empty('No quotes for this person.', '💬')) + '</div>' +
+      '<div class="a-card"><div class="a-card-head"><h2>How the label changed</h2></div>' +
+      (data.events.length ? '<ul class="crm-timeline">' + data.events.map(function (e) {
+        return '<li><strong>' + (e.from && e.from !== e.to ? esc(C.CLASS_LABEL[e.from] || e.from) + ' → ' : '') + esc(C.CLASS_LABEL[e.to] || e.to) + '</strong><div>' + esc(EVENT[e.type] || e.type) + (e.reason ? ' <span class="crm-muted">“' + esc(e.reason) + '”</span>' : '') + '</div><div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + '</div></li>';
+      }).join('') + '</ul>' : C.empty('No changes recorded. They have been a Suspect since they arrived.', '🕒')) + '</div></div>';
+    root.innerHTML = h;
+
+    function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
+    on('#promote', promote); on('#override', override); on('#release', release); on('#mergeC', mergeContact);
+    on('#recheck', function () { C.api('POST', '/api/crm/contacts/' + id + '/reconcile', {}).then(function (r) { if (!r.ok) { C.toast(C.problem(r)); return; } C.toast(r.data.changed ? 'The label changed' : r.data.needsReview ? 'Their purchase no longer qualifies. Take a look.' : 'Still the same'); load(); }); });
+    var ow = document.getElementById('ownerSel');
+    if (ow) ow.addEventListener('change', function () {
+      C.api('PUT', '/api/crm/contacts/' + id, { assignedAdminId: ow.value ? Number(ow.value) : null }).then(function (r) { if (r.ok) C.toast('Owner saved'); else { C.toast(C.problem(r)); load(); } });
+    });
+  }
+
+  function promote() {
+    C.dialog({
+      title: 'Move to Prospect', submit: 'Move to Prospect',
+      body: '<p class="crm-small crm-muted">Use this when they have shown real buying interest but have not asked for a quote. The reason is saved with the change.</p>' + C.field('Why are they a Prospect?', '<input type="text" id="pWhy" maxlength="255" required placeholder="e.g. Asked about pricing at a conference">', '', 'pWhy'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/contacts/' + id + '/promote', { reason: f.querySelector('#pWhy').value }).then(function (r) { if (r.ok) { C.toast('Moved to Prospect'); load(); return; } return C.problem(r); }); }
+    });
+  }
+  function override() {
+    C.dialog({
+      title: 'Mark as Customer', submit: 'Mark as Customer',
+      body: '<p class="crm-notice">Use this only when you can point to proof of payment that is not in the system. The label is then locked, so it will not change on its own. Both fields are saved in the audit trail.</p>' +
+        C.field('Why', '<input type="text" id="oWhy" maxlength="255" required>', '', 'oWhy') + C.field('Evidence', '<input type="text" id="oEv" maxlength="255" required placeholder="e.g. Check 4821 received 2026-10-02">', 'Do not paste account or card numbers.', 'oEv'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/contacts/' + id + '/customer-override', { reason: f.querySelector('#oWhy').value, evidence: f.querySelector('#oEv').value }).then(function (r) { if (r.ok) { C.toast('Marked as Customer'); load(); return; } return C.problem(r); }); }
+    });
+  }
+  function release() {
+    C.dialog({
+      title: 'Release the hand-set label?', submit: 'Release',
+      body: '<p class="crm-small crm-muted">The label stays as it is for now, but it can change on its own again when their purchases change.</p>' + C.field('Why', '<input type="text" id="rWhy" maxlength="255" required>', '', 'rWhy'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/contacts/' + id + '/release-override', { reason: f.querySelector('#rWhy').value }).then(function (r) { if (r.ok) { C.toast('Released'); load(); return; } return C.problem(r); }); }
+    });
+  }
+  function mergeContact() {
+    var dlg = C.dialog({
+      title: 'Merge “' + (data.contact.name || data.contact.email) + '” into another person', submit: 'Merge', danger: true,
+      body: '<p>This person is removed. Their accounts, deals, quotes and email lists move to the person you pick. It is refused if this person has purchases, a sign-in account or a hand-set Customer label. This cannot be undone.</p>' + C.pickerFields('contacts', 'the person to keep') +
+        C.field('Why', '<input type="text" id="mReason" maxlength="255" placeholder="Optional, kept in the audit trail">', '', 'mReason'),
+      onSubmit: function (f) {
+        var into = Number(f.querySelector('[data-pick=contacts]').value);
+        if (!into || into === id) return 'Pick a different person to keep.';
+        return C.api('POST', '/api/crm/contacts/' + id + '/merge', { intoId: into, reason: f.querySelector('#mReason').value }).then(function (r) {
+          if (r.ok) { C.toast('Merged'); window.location.href = 'admin-crm-contact.html?id=' + into; return; }
+          return C.problem(r);
+        });
+      }
+    });
+    C.picker(dlg.form, 'contacts');
+  }
+})();
+</script>
+<script src="admin-shell.js?v=6"></script>
+</body>
+</html>

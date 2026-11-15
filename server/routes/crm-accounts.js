@@ -211,4 +211,56 @@ router.delete('/:id/contacts/:contactId', requireAuth, requireCrm('write'), asyn
   res.json({ ok: true });
 });
 
+// Merge a duplicate account into the one you keep: CRM Admin only. Everything moves (people, deals, sub-accounts, a school or district link the kept
+// account does not already have, the owner if the kept one has none). The duplicate is archived with a note, never deleted, so it can be looked at
+// or restored. Never done automatically, and never suggested from a shared email domain.
+router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => {
+  const fromId = posInt(req.params.id);
+  const intoId = posInt((req.body || {}).intoId);
+  if (!fromId || !intoId) return res.status(400).json({ error: 'Pick the account to keep.' });
+  if (fromId === intoId) return res.status(400).json({ error: 'Pick a different account to keep.' });
+  const [[from]] = await pool.query('SELECT * FROM crm_accounts WHERE id = ?', [fromId]);
+  const [[into]] = await pool.query('SELECT * FROM crm_accounts WHERE id = ?', [intoId]);
+  if (!from || !into) return res.status(404).json({ error: 'Account not found' });
+  if (from.archived_at) return res.status(409).json({ code: 'already_archived', error: 'The account you are merging away is already archived.' });
+  if (into.archived_at) return res.status(409).json({ code: 'account_archived', error: 'The account you are keeping is archived. Restore it first.' });
+  if (await wouldCycle(fromId, intoId)) return res.status(409).json({ code: 'sub_account', error: 'The account you are keeping sits under the one you are merging away. Move it out first.' });
+
+  const conn = await pool.getConnection();
+  const moved = { people: 0, deals: 0, subAccounts: 0 };
+  try {
+    await conn.beginTransaction();
+    const [keptPeople] = await conn.query('SELECT contact_id FROM crm_account_contacts WHERE account_id = ?', [intoId]);
+    const have = new Set(keptPeople.map(r => r.contact_id));
+    const [fromPeople] = await conn.query('SELECT id, contact_id FROM crm_account_contacts WHERE account_id = ?', [fromId]);
+    for (const m of fromPeople) {
+      if (have.has(m.contact_id)) await conn.query('DELETE FROM crm_account_contacts WHERE id = ?', [m.id]);
+      else { await conn.query('UPDATE crm_account_contacts SET account_id = ? WHERE id = ?', [intoId, m.id]); moved.people++; }
+    }
+    const [d] = await conn.query('UPDATE crm_opportunities SET account_id = ? WHERE account_id = ?', [intoId, fromId]);
+    moved.deals = d.affectedRows;
+    const [k] = await conn.query('UPDATE crm_accounts SET parent_account_id = ? WHERE parent_account_id = ?', [intoId, fromId]);
+    moved.subAccounts = k.affectedRows;
+    // Each school and district can be linked to one account only, so free the duplicate's link first, then give it to the kept account if that has none.
+    const sets = [];
+    const vals = [];
+    if (from.school_id) { await conn.query('UPDATE crm_accounts SET school_id = NULL WHERE id = ?', [fromId]); if (!into.school_id) { sets.push('school_id = ?'); vals.push(from.school_id); } }
+    if (from.district_id) { await conn.query('UPDATE crm_accounts SET district_id = NULL WHERE id = ?', [fromId]); if (!into.district_id) { sets.push('district_id = ?'); vals.push(from.district_id); } }
+    if (!into.assigned_admin_id && from.assigned_admin_id) { sets.push('assigned_admin_id = ?'); vals.push(from.assigned_admin_id); }
+    if (!into.website_domain && from.website_domain) { sets.push('website_domain = ?'); vals.push(from.website_domain); }
+    if (sets.length) await conn.query(`UPDATE crm_accounts SET ${sets.join(', ')} WHERE id = ?`, [...vals, intoId]);
+    const note = `Merged into "${into.name}" (account ${intoId}) on ${require('../lib/crm-classification').sqlNow().slice(0, 10)}.`;
+    await conn.query('UPDATE crm_accounts SET archived_at = ?, description = ? WHERE id = ?',
+      [require('../lib/crm-classification').sqlNow(), `${note}${from.description ? ' ' + from.description : ''}`.slice(0, 4000), fromId]);
+    await conn.commit();
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* the original error matters */ }
+    throw err;
+  } finally {
+    if (conn.release) conn.release();
+  }
+  await crmAudit(req, { action: 'crm_account_merged', entityType: 'crm_account', entityId: intoId, prev: { mergedAwayId: fromId, name: from.name, schoolId: from.school_id || null, districtId: from.district_id || null }, next: moved, reason: text((req.body || {}).reason, 255) });
+  res.json({ ok: true, keptId: intoId, moved });
+});
+
 module.exports = router;

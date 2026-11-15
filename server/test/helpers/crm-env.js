@@ -12,7 +12,7 @@ const SERVER = path.join(__dirname, '..', '..');
 const SCHEMA = `
 CREATE TABLE admin_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, email TEXT, email_verified INTEGER NOT NULL DEFAULT 1, crm_role TEXT NOT NULL DEFAULT 'admin', password_hash TEXT DEFAULT 'x');
 CREATE TABLE settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
-CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, company TEXT, state TEXT, signup_date TEXT DEFAULT '2026-01-01 00:00:00',
+CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, phone TEXT, company TEXT, state TEXT, signup_date TEXT DEFAULT '2026-01-01 00:00:00',
   source TEXT DEFAULT 'Homepage', status TEXT NOT NULL DEFAULT 'Subscribed',
   crm_classification TEXT NOT NULL DEFAULT 'suspect', classification_updated_at TEXT, classification_locked INTEGER NOT NULL DEFAULT 0,
   assigned_admin_id INTEGER, last_contacted_at TEXT, crm_source TEXT);
@@ -21,7 +21,10 @@ CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER
   payment_status TEXT NOT NULL DEFAULT 'paid', payment_method TEXT DEFAULT 'manual', amount_cents INTEGER, trial_lesson_limit INTEGER, trial_expiration_date TEXT,
   purchased_at TEXT DEFAULT '2026-01-01 00:00:00', license_status TEXT DEFAULT 'active', quote_id INTEGER, invoice_id INTEGER, school_id INTEGER);
 CREATE TABLE quote_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_number TEXT, email TEXT NOT NULL, status TEXT DEFAULT 'new', accept_token TEXT,
-  quoted_amount_cents INTEGER, quote_sent_at TEXT, quote_valid_until TEXT, accepted_at TEXT, contact_id INTEGER, opportunity_id INTEGER);
+  quoted_amount_cents INTEGER, quote_sent_at TEXT, quote_valid_until TEXT, accepted_at TEXT, contact_id INTEGER, opportunity_id INTEGER,
+  first_name TEXT, last_name TEXT, school TEXT, quoted_product_name TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00');
+CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, closed_at TEXT);
+CREATE TABLE contact_group_members (contact_id INTEGER NOT NULL, group_id INTEGER NOT NULL, PRIMARY KEY (contact_id, group_id));
 CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, status TEXT DEFAULT 'unpaid');
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER, display_name TEXT);
 CREATE TABLE districts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
@@ -147,8 +150,9 @@ const addPurchase = (db, contactId, f = {}) =>
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(contactId, f.productId || null, f.paymentStatus || 'paid', f.method || 'manual', f.amountCents === undefined ? 10000 : f.amountCents,
     f.trialLessonLimit === undefined ? null : f.trialLessonLimit, f.trialExpirationDate || null, f.quoteId || null, f.invoiceId || null).lastInsertRowid);
 const addQuote = (db, email, f = {}) =>
-  Number(db.prepare('INSERT INTO quote_requests (quote_number, email, status, accept_token, quoted_amount_cents, contact_id, opportunity_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(f.number || '123456', email, f.status || 'new', 'secret-token-value', f.amountCents === undefined ? null : f.amountCents, f.contactId || null, f.opportunityId || null).lastInsertRowid);
+  Number(db.prepare('INSERT INTO quote_requests (quote_number, email, status, accept_token, quoted_amount_cents, contact_id, opportunity_id, first_name, last_name, school, quoted_product_name, quote_sent_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(f.number || '123456', email, f.status || 'new', 'secret-token-value', f.amountCents === undefined ? null : f.amountCents, f.contactId || null, f.opportunityId || null,
+      f.firstName || 'Pat', f.lastName || 'Example', f.school === undefined ? 'Sample Elementary' : f.school, f.product || 'Group license', f.sentAt || null).lastInsertRowid);
 const enable = (db, on = true) => db.prepare('INSERT OR REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)').run('crm_v2_enabled', on ? 'true' : 'false');
 const classOf = (db, id) => db.prepare('SELECT crm_classification AS c FROM newsletter_contacts WHERE id = ?').get(id).c;
 

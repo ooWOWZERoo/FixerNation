@@ -121,12 +121,12 @@ test('CACHE VERSIONS: every admin page loads the same admin-nav.js and admin-she
   for (const f of files) {
     const s = read(f);
     const nav = s.match(/src="admin-nav\.js\?v=(\d+)"/);
-    if (nav) assert.equal(nav[1], '32', `${f} loads admin-nav.js v32`);
+    if (nav) assert.equal(nav[1], '33', `${f} loads admin-nav.js v33`);
     const sh = s.match(/src="admin-shell\.js\?v=(\d+)"/);
-    if (sh) assert.equal(sh[1], '5', `${f} loads admin-shell.js v5`);
+    if (sh) assert.equal(sh[1], '6', `${f} loads admin-shell.js v6`);
   }
-  for (const f of SUPPORT_PAGES) { assert.match(read(f), /admin-nav\.js\?v=32/, f); assert.match(read(f), /admin-shell\.js\?v=5/, f); }
-  assert.match(read('admin-nav.js'), /admin-nav\.js\?v=32/);
+  for (const f of SUPPORT_PAGES) { assert.match(read(f), /admin-nav\.js\?v=33/, f); assert.match(read(f), /admin-shell.js\?v=6/, f); }
+  assert.match(read('admin-nav.js'), /admin-nav\.js\?v=33/);
 });
 
 test('HELP VIDEO G3: the staff video button is on the Inbox and on the Errors page it also walks through', () => {

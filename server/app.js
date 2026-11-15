@@ -65,6 +65,8 @@ const crmSettingsRoutes = require('./routes/crm-settings');
 const crmAccountsRoutes = require('./routes/crm-accounts');
 const crmContactsRoutes = require('./routes/crm-contacts');
 const crmOpportunitiesRoutes = require('./routes/crm-opportunities');
+const crmQuotesRoutes = require('./routes/crm-quotes');
+const crmOverviewRoutes = require('./routes/crm-overview');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -174,6 +176,8 @@ app.use('/api/admin/standards', adminStandardsRoutes);
 app.use('/api/crm/accounts', crmAccountsRoutes);
 app.use('/api/crm/contacts', crmContactsRoutes);
 app.use('/api/crm/opportunities', crmOpportunitiesRoutes);
+app.use('/api/crm/quotes', crmQuotesRoutes);
+app.use('/api/crm/overview', crmOverviewRoutes);
 app.use('/api/crm', crmSettingsRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.

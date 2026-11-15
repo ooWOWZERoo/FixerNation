@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Accounts</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=1">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=33"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Accounts</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=1"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var q = C.readQuery();
+  var staff = [];
+  var st = { q: q.q || '', type: q.type || '', owner: q.owner || '', archived: q.archived === 'true', page: Math.max(1, Number(q.page) || 1) };
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    C.staff().then(function (list) { staff = list; shell(); fetchList(); });
+  });
+
+  function shell() {
+    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Accounts</h2>' +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addAcct">+ Add account</button>' : '') + '</div>' +
+      '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search accounts</label><input type="search" id="fQ" placeholder="Search by name or website" value="' + esc(st.q) + '"></div>' +
+      '<label class="crm-sr" for="fType">Type</label><select id="fType" class="a-filter-select">' + C.options(C.ACCOUNT_TYPES, st.type, 'Every type') + '</select>' +
+      '<label class="crm-sr" for="fOwner">Owner</label><select id="fOwner" class="a-filter-select"><option value="">Every owner</option><option value="none"' + (st.owner === 'none' ? ' selected' : '') + '>Nobody yet</option>' +
+        staff.map(function (s) { return '<option value="' + esc(s.id) + '"' + (String(s.id) === st.owner ? ' selected' : '') + '>' + esc(s.username) + '</option>'; }).join('') + '</select>' +
+      '<label class="crm-check" style="margin:0;"><input type="checkbox" id="fArch"' + (st.archived ? ' checked' : '') + '> Show archived</label></div>' +
+      '<div id="acctBody" aria-live="polite"></div><div id="acctPager"></div></div>';
+    var go = C.debounce(function () { st.page = 1; fetchList(); }, 250);
+    document.getElementById('fQ').addEventListener('input', function (e) { st.q = e.target.value; go(); });
+    document.getElementById('fType').addEventListener('change', function (e) { st.type = e.target.value; st.page = 1; fetchList(); });
+    document.getElementById('fOwner').addEventListener('change', function (e) { st.owner = e.target.value; st.page = 1; fetchList(); });
+    document.getElementById('fArch').addEventListener('change', function (e) { st.archived = e.target.checked; st.page = 1; fetchList(); });
+    var add = document.getElementById('addAcct');
+    if (add) add.addEventListener('click', addAccount);
+  }
+
+  function fetchList() {
+    C.writeQuery({ q: st.q, type: st.type, owner: st.owner, archived: st.archived ? 'true' : '', page: st.page > 1 ? st.page : '' });
+    var body = document.getElementById('acctBody');
+    C.loading(body);
+    C.api('GET', '/api/crm/accounts' + C.qstr({ q: st.q, type: st.type, owner: st.owner, archived: st.archived ? 'true' : '', page: st.page, pageSize: 25 })).then(function (r) {
+      if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
+      if (!r.data.total) { body.innerHTML = C.empty(st.q || st.type || st.owner ? 'No account matches those filters.' : 'No accounts yet. Add the first school or district you are working with.', '🏫'); document.getElementById('acctPager').innerHTML = ''; return; }
+      body.innerHTML = '<table class="a-table" aria-label="Accounts"><thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">State</th><th scope="col">Owner</th><th scope="col">People</th><th scope="col">Open deals</th></tr></thead><tbody>' +
+        r.data.accounts.map(function (a) {
+          return '<tr><td><a class="crm-link" href="admin-crm-account.html?id=' + esc(a.id) + '">' + esc(a.name) + '</a>' + (a.archivedAt ? ' <span class="a-pill a-pill-neutral">Archived</span>' : '') + (a.websiteDomain ? '<div class="crm-small crm-muted">' + esc(a.websiteDomain) + '</div>' : '') + '</td><td>' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + '</td><td>' + esc(a.state || '') + '</td><td>' + (a.assignedAdminId ? esc(C.staffName(staff, a.assignedAdminId) || 'Former staff') : '<span class="crm-muted">Nobody yet</span>') + '</td><td>' + C.num(a.contactCount) + '</td><td>' + C.num(a.openDeals) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      C.pager(document.getElementById('acctPager'), r.data, function (n) { st.page = n; fetchList(); window.scrollTo(0, 0); });
+    });
+  }
+
+  function addAccount() {
+    var allowDup = false;
+    C.dialog({
+      title: 'Add an account', submit: 'Add account',
+      body: C.field('Name', '<input type="text" id="aName" maxlength="255" required>', 'The school, district or organization.', 'aName') +
+        '<div class="a-form-row">' + C.field('Type', '<select id="aType">' + C.options(C.ACCOUNT_TYPES, 'school') + '</select>', '', 'aType') + C.field('State', '<input type="text" id="aState" maxlength="64">', '', 'aState') + '</div>' +
+        C.field('Website', '<input type="text" id="aWeb" maxlength="255" placeholder="example.org">', '', 'aWeb') +
+        C.field('Owner', '<select id="aOwner">' + C.ownerOptions(staff, C.adminId, 'Nobody yet') + '</select>', '', 'aOwner'),
+      onSubmit: function (f) {
+        var body = { name: f.querySelector('#aName').value, accountType: f.querySelector('#aType').value, state: f.querySelector('#aState').value, websiteDomain: f.querySelector('#aWeb').value, assignedAdminId: f.querySelector('#aOwner').value ? Number(f.querySelector('#aOwner').value) : null, source: 'Added in the Customer Hub' };
+        if (allowDup) body.allowDuplicate = true;
+        return C.api('POST', '/api/crm/accounts', body).then(function (r) {
+          if (r.ok) { window.location.href = 'admin-crm-account.html?id=' + r.data.id; return; }
+          if (r.data.code === 'possible_duplicate') { allowDup = true; return r.data.error.replace(' Open it, or send allowDuplicate to create another.', '') + ' Choose Add account again to make a second one anyway.'; }
+          return C.problem(r);
+        });
+      }
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=6"></script>
+</body>
+</html>

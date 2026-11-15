@@ -1,6 +1,6 @@
 /* Fixer Nation — shared admin sidebar navigation.
    Every admin page has an empty <aside class="a-sidebar"></aside> placeholder
-   followed immediately by <script src="admin-nav.js?v=32"></script>.
+   followed immediately by <script src="admin-nav.js?v=33"></script>.
    This script populates it synchronously and marks the active link. */
 (function () {
   // Error capture (Release 122): load the shared reporter once per page.
@@ -37,9 +37,9 @@
   var page = window.location.pathname.split('/').pop() || 'admin-dashboard.html';
   var STORAGE_KEY = 'fnAdminNavCollapsedSections';
 
-  var ICONS = {"demo": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M8 20h8M12 16v4M10.5 8.5l4 2.5-4 2.5z\"/>", "dashboard": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "analytics": "<path d=\"M4 20V10m8 10V4m8 16v-7M2 22h20\"/>", "curriculum": "<path d=\"M12 5v16M3 4q5-2 9 1 4-3 9-1v15q-5-2-9 2-4-4-9-2z\"/>", "campaigns": "<path d=\"m3 10 17-6v15L3 14zM7 15l2 6h4l-2-5M20 9h2\"/>", "morning-boost": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2\"/>", "content-safety": "<path d=\"m12 2 9 4v6q-1 6-9 10-8-4-9-10V6z\"/><path d=\"m8 12 3 3 5-6\"/>", "account-lookup": "<circle cx=\"10\" cy=\"10\" r=\"7\"/><path d=\"m15 15 7 7\"/>", "settings": "<path d=\"M3 6h18M3 12h18M3 18h18\"/><circle cx=\"8\" cy=\"6\" r=\"2\"/><circle cx=\"16\" cy=\"12\" r=\"2\"/><circle cx=\"10\" cy=\"18\" r=\"2\"/>", "newsletter": "<rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/><path d=\"m2 5 10 8L22 5\"/>", "districts": "<path d=\"m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15\"/>", "school-admins": "<path d=\"m2 9 10-7 10 7M4 9h16v12H4zM9 21v-7h6v7\"/>", "affiliates": "<circle cx=\"8\" cy=\"7\" r=\"3\"/><circle cx=\"18\" cy=\"9\" r=\"2\"/><path d=\"M1 21v-4a7 7 0 0 1 14 0v4m1-7a5 5 0 0 1 7 5v2\"/>", "downloads": "<path d=\"M12 2v14m-5-5 5 5 5-5M3 16v5h18v-5\"/>", "automations": "<path d=\"m13 2-9 12h7l-1 8 10-13h-8z\"/>", "social": "<path d=\"M21 11a9 9 0 0 1-9 9H3l2-4a9 9 0 1 1 16-5z\"/><path d=\"M7 10h10m-10 4h6\"/>", "orders": "<path d=\"m3 7 9-5 9 5v11l-9 4-9-4zM3 7l9 5 9-5M12 12v10M7 4l10 5\"/>", "licenses": "<path d=\"M5 2h14v13H5zM8 15v7l4-3 4 3v-7M8 6h8M8 10h5\"/>", "quotes": "<path d=\"M4 3h16v14H9l-5 4zM8 7h8M8 11h6\"/>", "blogs": "<path d=\"M14 3H4v18h16V11M11 13l1-4 7-7 3 3-7 7z\"/>", "invoices": "<path d=\"M5 2h14v20l-3-2-4 2-4-2-3 2zM8 7h8M8 11h8M8 15h5\"/>", "standards": "<path d=\"m9 11 3 3 9-9\"/><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11\"/>", "support-classrooms": "<path d=\"m2 9 10-6 10 6-10 6zM6 11v5q6 4 12 0v-5\"/>", "support-errors": "<path d=\"M12 3 2 21h20zM12 10v5M12 18v.5\"/>", "support-help": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17v.5\"/>", "support": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"3.5\"/><path d=\"M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9\"/>"};
+  var ICONS = {"demo": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M8 20h8M12 16v4M10.5 8.5l4 2.5-4 2.5z\"/>", "dashboard": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "analytics": "<path d=\"M4 20V10m8 10V4m8 16v-7M2 22h20\"/>", "curriculum": "<path d=\"M12 5v16M3 4q5-2 9 1 4-3 9-1v15q-5-2-9 2-4-4-9-2z\"/>", "campaigns": "<path d=\"m3 10 17-6v15L3 14zM7 15l2 6h4l-2-5M20 9h2\"/>", "morning-boost": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2\"/>", "content-safety": "<path d=\"m12 2 9 4v6q-1 6-9 10-8-4-9-10V6z\"/><path d=\"m8 12 3 3 5-6\"/>", "account-lookup": "<circle cx=\"10\" cy=\"10\" r=\"7\"/><path d=\"m15 15 7 7\"/>", "settings": "<path d=\"M3 6h18M3 12h18M3 18h18\"/><circle cx=\"8\" cy=\"6\" r=\"2\"/><circle cx=\"16\" cy=\"12\" r=\"2\"/><circle cx=\"10\" cy=\"18\" r=\"2\"/>", "newsletter": "<rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/><path d=\"m2 5 10 8L22 5\"/>", "districts": "<path d=\"m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15\"/>", "school-admins": "<path d=\"m2 9 10-7 10 7M4 9h16v12H4zM9 21v-7h6v7\"/>", "affiliates": "<circle cx=\"8\" cy=\"7\" r=\"3\"/><circle cx=\"18\" cy=\"9\" r=\"2\"/><path d=\"M1 21v-4a7 7 0 0 1 14 0v4m1-7a5 5 0 0 1 7 5v2\"/>", "downloads": "<path d=\"M12 2v14m-5-5 5 5 5-5M3 16v5h18v-5\"/>", "automations": "<path d=\"m13 2-9 12h7l-1 8 10-13h-8z\"/>", "social": "<path d=\"M21 11a9 9 0 0 1-9 9H3l2-4a9 9 0 1 1 16-5z\"/><path d=\"M7 10h10m-10 4h6\"/>", "orders": "<path d=\"m3 7 9-5 9 5v11l-9 4-9-4zM3 7l9 5 9-5M12 12v10M7 4l10 5\"/>", "licenses": "<path d=\"M5 2h14v13H5zM8 15v7l4-3 4 3v-7M8 6h8M8 10h5\"/>", "quotes": "<path d=\"M4 3h16v14H9l-5 4zM8 7h8M8 11h6\"/>", "blogs": "<path d=\"M14 3H4v18h16V11M11 13l1-4 7-7 3 3-7 7z\"/>", "invoices": "<path d=\"M5 2h14v20l-3-2-4 2-4-2-3 2zM8 7h8M8 11h8M8 15h5\"/>", "standards": "<path d=\"m9 11 3 3 9-9\"/><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11\"/>", "support-classrooms": "<path d=\"m2 9 10-6 10 6-10 6zM6 11v5q6 4 12 0v-5\"/>", "support-errors": "<path d=\"M12 3 2 21h20zM12 10v5M12 18v.5\"/>", "support-help": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17v.5\"/>", "support": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"3.5\"/><path d=\"M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9\"/>", "crm-overview": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1\"/>", "crm-accounts": "<path d=\"M3 21V8l9-5 9 5v13M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01\"/>", "crm-contacts": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21v-1a7 7 0 0 1 16 0v1\"/>", "crm-opportunities": "<path d=\"M3 6h18l-7 8v6l-4-2v-4z\"/>", "crm-settings": "<path d=\"M3 6h18M3 12h18M3 18h18\"/><circle cx=\"8\" cy=\"6\" r=\"2\"/><circle cx=\"16\" cy=\"12\" r=\"2\"/><circle cx=\"10\" cy=\"18\" r=\"2\"/>"};
   function link(href, icon, label, extra) {
-    var parent = {'admin-morning-boost-calendar.html':'admin-morning-boost.html','admin-concierge.html':'admin-quotes.html'};
+    var parent = {'admin-morning-boost-calendar.html':'admin-morning-boost.html','admin-concierge.html':'admin-quotes.html','admin-crm-account.html':'admin-crm-accounts.html','admin-crm-contact.html':'admin-crm-contacts.html','admin-crm-opportunity.html':'admin-crm-opportunities.html'};
     var active = page === href || parent[page] === href;
     var cls = active ? ' class="active" aria-current="page"' : '';
     var key = href.replace('admin-', '').replace('.html', '');
@@ -60,6 +60,15 @@
       link('admin-invoices.html',           '🧾', 'Invoices'),
       link('admin-licenses.html',           '🏷️', 'License Products'),
       link('admin-demo.html',               '🎬', 'Demo'),
+    ]},
+    // Customer Hub (the Sales CRM). Hidden until GET /api/crm/me succeeds: the server answers 404 while the setting crm_v2_enabled is off, and a role
+    // with no CRM access never sees it. Links tagged data-crm-perm show only when that permission is true for the signed-in role.
+    { key: 'customer-hub', cat: 'sales', label: 'Customer Hub', crm: true, links: [
+      link('admin-crm-overview.html',       '📈', 'Overview'),
+      link('admin-crm-accounts.html',       '🏫', 'Accounts'),
+      link('admin-crm-contacts.html',       '👤', 'Contacts'),
+      link('admin-crm-opportunities.html',  '🎯', 'Opportunities'),
+      link('admin-crm-settings.html',       '⚙️', 'Hub Settings', ' data-crm-perm="edit_settings"'),
     ]},
     { key: 'support', cat: 'sales', label: 'Support', links: [
       link('admin-support.html',            '🛟', 'Support Inbox'),
@@ -103,7 +112,8 @@
     var hasActive = s.links.some(function (html) { return html.indexOf('class="active"') !== -1; });
     var isCollapsed = !hasActive && collapsed.indexOf(s.key) !== -1;
     var catAttr = s.cat ? ' data-cat="' + s.cat + '"' : '';
-    return '<div class="a-nav-section' + (isCollapsed ? ' collapsed' : '') + '" data-key="' + s.key + '"' + catAttr + '>' +
+    var hiddenAttr = s.crm ? ' hidden data-crm-nav="1"' : '';
+    return '<div class="a-nav-section' + (isCollapsed ? ' collapsed' : '') + '" data-key="' + s.key + '"' + catAttr + hiddenAttr + '>' +
       '<button type="button" class="a-nav-section-head" aria-expanded="' + (!isCollapsed) + '" data-key="' + s.key + '">' +
         '<span class="a-nav-section-label">' + s.label + '</span>' +
         '<span class="a-nav-section-arrow">▾</span>' +
@@ -153,6 +163,29 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     });
   });
+
+  // Customer Hub visibility. The last answer is remembered for 5 minutes in this tab so the group does not pop in on every page; it is always
+  // re-checked, so switching the CRM off (or lowering a role) shows within one page load. Failure of any kind leaves it hidden.
+  function showCrmNav(perms) {
+    var group = aside.querySelector('[data-crm-nav]');
+    if (!group) return;
+    if (!perms) { group.hidden = true; return; }
+    group.querySelectorAll('a[data-crm-perm]').forEach(function (a) { a.style.display = perms[a.getAttribute('data-crm-perm')] ? '' : 'none'; });
+    group.hidden = false;
+  }
+  if (window.fetch) {
+    var cachedCrm = null;
+    try { cachedCrm = JSON.parse(sessionStorage.getItem('fnCrmNav')); } catch (e) { /* storage blocked */ }
+    if (cachedCrm && cachedCrm.perms && Date.now() - cachedCrm.at < 300000) showCrmNav(cachedCrm.perms);
+    fetch('/api/crm/me', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var perms = d && d.permissions ? d.permissions : null;
+        try { if (perms) sessionStorage.setItem('fnCrmNav', JSON.stringify({ at: Date.now(), perms: perms })); else sessionStorage.removeItem('fnCrmNav'); } catch (e) { /* storage blocked */ }
+        showCrmNav(perms);
+      })
+      .catch(function () { showCrmNav(null); });
+  }
 
   // Counts beside two Support links, so a new request or a burst of errors is noticed even when no email is. Best effort: any
   // failure (signed out, older server) just leaves the link as it is.

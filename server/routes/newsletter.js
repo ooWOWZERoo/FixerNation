@@ -83,6 +83,7 @@ function serialize(row) {
     accountVerified: row.siteUser ? !!row.siteUser.email_verified : false,
     role: row.siteUser ? row.siteUser.role : null,
     gradeLevels: row.siteUser ? row.siteUser.audiences || [] : [], // full names; the CRM page shows ES/MS/HS/HE
+    crmClassification: row.crm_classification || null, // Sales CRM label (Suspect / Prospect / Customer); null until scripts/alter-create-crm-core.js has run. Read-only here.
   };
 }
 

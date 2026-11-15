@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Account</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=1">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=33"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Account</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=1"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var id = Number(C.readQuery().id);
+  var staff = [], data = null;
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    if (!id) { root.innerHTML = '<div class="a-card">' + C.empty('No account was chosen. Go back to the list and pick one.', '🏫') + '</div>'; return; }
+    C.staff().then(function (list) { staff = list; load(); });
+  });
+
+  function load() {
+    C.loading(root);
+    C.api('GET', '/api/crm/accounts/' + id).then(function (r) {
+      if (!r.ok) { root.innerHTML = '<div class="a-card">' + C.empty(r.status === 404 ? 'That account does not exist.' : C.problem(r), '🏫') + '</div>'; return; }
+      data = r.data; draw();
+    });
+  }
+
+  function flags(c) {
+    var f = [];
+    if (c.isPrimary) f.push('Main contact'); if (c.isChampion) f.push('Champion'); if (c.isDecisionMaker) f.push('Decision maker'); if (c.isProcurement) f.push('Procurement'); if (c.isFinance) f.push('Finance');
+    return f.join(', ');
+  }
+
+  function draw() {
+    var a = data.account;
+    document.getElementById('pageTitle').textContent = a.name;
+    document.title = 'Fixer Nation Education - ' + a.name;
+    var h = '<p><a class="crm-link" href="admin-crm-accounts.html">← All accounts</a></p>';
+    if (a.archivedAt) h += '<div class="crm-notice">This account is archived' + (a.description && /^Merged into/.test(a.description) ? ': ' + esc(a.description.split('. ')[0] + '.') : '.') + ' It is hidden from the default list.</div>';
+    h += '<div class="a-card"><div class="a-card-head"><h2>Summary</h2><div class="crm-row-actions">' +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editAcct">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="addPerson">Add a person</button>' : '') +
+      (C.can('edit_deal') && !a.archivedAt ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="newDeal">New deal</button>' : '') +
+      (C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeAcct">Merge into another…</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="archAcct">' + (a.archivedAt ? 'Restore' : 'Archive') + '</button>' : '') +
+      '</div></div><dl class="crm-kv">' +
+      '<dt>Type</dt><dd>' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + '</dd>' +
+      '<dt>State</dt><dd>' + (a.state ? esc(a.state) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Website</dt><dd>' + (a.websiteDomain ? esc(a.websiteDomain) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Owner</dt><dd>' + (C.can('write') ? '<label class="crm-sr" for="ownerSel">Owner</label><select id="ownerSel" class="a-filter-select">' + C.ownerOptions(staff, a.assignedAdminId, 'Nobody yet') + '</select>' : esc(C.staffName(staff, a.assignedAdminId) || 'Nobody yet')) + '</dd>' +
+      '<dt>Source</dt><dd>' + (a.source ? esc(a.source) : '<span class="crm-muted">Not recorded</span>') + '</dd>' +
+      (a.schoolId || a.districtId ? '<dt>Linked to</dt><dd>' + (a.schoolId ? 'School record #' + esc(a.schoolId) : '') + (a.districtId ? 'District record #' + esc(a.districtId) : '') + '</dd>' : '') +
+      (a.description && !a.archivedAt ? '<dt>Notes</dt><dd>' + esc(a.description) + '</dd>' : '') +
+      '</dl></div>';
+
+    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>People (' + data.contacts.length + ')</h2></div>';
+    h += data.contacts.length ? '<table class="a-table" aria-label="People at this account"><thead><tr><th scope="col">Name</th><th scope="col">Label</th><th scope="col">Role here</th><th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
+      data.contacts.map(function (c) {
+        return '<tr><td><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.contactId) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + esc(c.email) + (c.title ? ' · ' + esc(c.title) : '') + '</div></td><td>' + C.classPill(c.classification) + '</td><td>' + esc(flags(c)) + '</td><td>' +
+          (C.can('write') ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="editp" data-cid="' + esc(c.contactId) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="rmp" data-cid="' + esc(c.contactId) + '" data-name="' + esc(c.name || c.email) + '">Remove</button></div>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' : C.empty('Nobody is on this account yet.', '👤');
+    h += '</div><div class="a-card"><div class="a-card-head"><h2>Deals (' + data.opportunities.length + ')</h2></div>';
+    h += data.opportunities.length ? '<table class="a-table" aria-label="Deals at this account"><thead><tr><th scope="col">Deal</th><th scope="col">Stage</th><th scope="col">Value</th><th scope="col">Next step</th></tr></thead><tbody>' +
+      data.opportunities.map(function (o) {
+        return '<tr><td><a class="crm-link" href="admin-crm-opportunity.html?id=' + esc(o.id) + '">' + esc(o.name) + '</a><div class="crm-small">' + C.statePill(o.state) + '</div></td><td>' + esc(o.stage) + '</td><td>' + esc(C.money(o.amountCents, 'No value')) + '</td><td>' + (o.nextStep ? esc(o.nextStep) + (o.nextStepDueAt ? '<div class="crm-small ' + (o.state === 'open' && C.isOverdue(o.nextStepDueAt) ? 'crm-flag' : 'crm-muted') + '">' + esc(C.date(o.nextStepDueAt)) + '</div>' : '') : '<span class="crm-muted">None</span>') + '</td></tr>';
+      }).join('') + '</tbody></table>' : C.empty('No deals yet.', '🎯');
+    h += '</div></div>';
+    if (data.children.length) h += '<div class="a-card"><div class="a-card-head"><h2>Sub-accounts</h2></div><ul class="crm-list">' + data.children.map(function (c) { return '<li><a href="admin-crm-account.html?id=' + esc(c.id) + '">' + esc(c.name) + '</a><span class="crm-muted">' + esc(C.label(C.ACCOUNT_TYPES, c.account_type)) + '</span></li>'; }).join('') + '</ul></div>';
+    root.innerHTML = h;
+
+    function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
+    on('#editAcct', editAccount); on('#addPerson', addPerson); on('#newDeal', newDeal); on('#mergeAcct', mergeAccount); on('#archAcct', archive);
+    var ow = document.getElementById('ownerSel');
+    if (ow) ow.addEventListener('change', function () {
+      C.api('PUT', '/api/crm/accounts/' + id, { assignedAdminId: ow.value ? Number(ow.value) : null }).then(function (r) { if (r.ok) C.toast('Owner saved'); else { C.toast(C.problem(r)); load(); } });
+    });
+    root.querySelectorAll('[data-act=editp]').forEach(function (b) { b.addEventListener('click', function () { editPerson(Number(b.getAttribute('data-cid'))); }); });
+    root.querySelectorAll('[data-act=rmp]').forEach(function (b) { b.addEventListener('click', function () { removePerson(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
+  }
+
+  function editAccount() {
+    var a = data.account;
+    C.dialog({
+      title: 'Edit this account', submit: 'Save',
+      body: C.field('Name', '<input type="text" id="eName" maxlength="255" required value="' + esc(a.name) + '">', '', 'eName') +
+        '<div class="a-form-row">' + C.field('Type', '<select id="eType">' + C.options(C.ACCOUNT_TYPES, a.accountType) + '</select>', '', 'eType') + C.field('State', '<input type="text" id="eState" maxlength="64" value="' + esc(a.state || '') + '">', '', 'eState') + '</div>' +
+        C.field('Website', '<input type="text" id="eWeb" maxlength="255" value="' + esc(a.websiteDomain || '') + '">', '', 'eWeb') +
+        C.field('Notes', '<textarea id="eDesc" maxlength="4000">' + esc(a.description || '') + '</textarea>', '', 'eDesc'),
+      onSubmit: function (f) {
+        return C.api('PUT', '/api/crm/accounts/' + id, { name: f.querySelector('#eName').value, accountType: f.querySelector('#eType').value, state: f.querySelector('#eState').value, websiteDomain: f.querySelector('#eWeb').value, description: f.querySelector('#eDesc').value }).then(function (r) {
+          if (r.ok) { C.toast('Saved'); load(); return; }
+          return C.problem(r);
+        });
+      }
+    });
+  }
+
+  function personFlagsHtml(c) {
+    c = c || {};
+    return C.field('Title', '<input type="text" id="pTitle" maxlength="128" value="' + esc(c.title || '') + '">', '', 'pTitle') +
+      [['pPrimary', 'Main contact', c.isPrimary], ['pChampion', 'Champion', c.isChampion], ['pDecision', 'Decision maker', c.isDecisionMaker], ['pProc', 'Procurement', c.isProcurement], ['pFin', 'Finance', c.isFinance]]
+        .map(function (x) { return '<div class="crm-check"><input type="checkbox" id="' + x[0] + '"' + (x[2] ? ' checked' : '') + '><label for="' + x[0] + '">' + x[1] + '</label></div>'; }).join('');
+  }
+  function personFlagsRead(f) {
+    return { title: f.querySelector('#pTitle').value, isPrimary: f.querySelector('#pPrimary').checked, isChampion: f.querySelector('#pChampion').checked, isDecisionMaker: f.querySelector('#pDecision').checked, isProcurement: f.querySelector('#pProc').checked, isFinance: f.querySelector('#pFin').checked };
+  }
+
+  function addPerson() {
+    var dlg = C.dialog({
+      title: 'Add a person to this account', submit: 'Add',
+      body: '<div class="crm-check"><input type="radio" name="mode" id="pmExisting" value="existing" checked><label for="pmExisting">Someone already in the CRM</label></div>' + C.pickerFields('contacts', 'a contact') +
+        '<div class="crm-check"><input type="radio" name="mode" id="pmNew" value="new"><label for="pmNew">Someone new</label></div>' +
+        '<div class="a-form-row">' + C.field('Name', '<input type="text" id="nName" maxlength="255">', '', 'nName') + C.field('Email', '<input type="email" id="nEmail" maxlength="254">', 'A new person is added as a Suspect and is not put on the newsletter.', 'nEmail') + '</div>' +
+        personFlagsHtml(),
+      onSubmit: function (f) {
+        var mode = f.querySelector('input[name=mode]:checked').value;
+        var roles = personFlagsRead(f);
+        if (mode === 'new') {
+          var body = { name: f.querySelector('#nName').value, email: f.querySelector('#nEmail').value, accountId: id, title: roles.title };
+          return C.api('POST', '/api/crm/contacts', body).then(function (r) {
+            if (!r.ok) return C.problem(r);
+            var flagsOn = roles.isPrimary || roles.isChampion || roles.isDecisionMaker || roles.isProcurement || roles.isFinance;
+            if (!flagsOn) { C.toast('Person added'); load(); return; }
+            return C.api('PUT', '/api/crm/accounts/' + id + '/contacts/' + r.data.id, roles).then(function () { C.toast('Person added'); load(); });
+          });
+        }
+        var cid = Number(f.querySelector('[data-pick=contacts]').value);
+        if (!cid) return 'Pick a contact, or choose Someone new.';
+        roles.contactId = cid;
+        return C.api('POST', '/api/crm/accounts/' + id + '/contacts', roles).then(function (r) { if (r.ok) { C.toast('Person added'); load(); return; } return C.problem(r); });
+      }
+    });
+    C.picker(dlg.form, 'contacts');
+  }
+
+  function editPerson(cid) {
+    var c = data.contacts.filter(function (x) { return x.contactId === cid; })[0];
+    if (!c) return;
+    C.dialog({
+      title: 'Their role at ' + data.account.name, submit: 'Save', body: personFlagsHtml(c),
+      onSubmit: function (f) { return C.api('PUT', '/api/crm/accounts/' + id + '/contacts/' + cid, personFlagsRead(f)).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return C.problem(r); }); }
+    });
+  }
+  function removePerson(cid, name) {
+    C.dialog({
+      title: 'Take ' + name + ' off this account?', submit: 'Remove', danger: true,
+      body: '<p>They stay in the CRM. Only their place on this account goes away.</p>',
+      onSubmit: function () { return C.api('DELETE', '/api/crm/accounts/' + id + '/contacts/' + cid).then(function (r) { if (r.ok) { C.toast('Removed'); load(); return; } return C.problem(r); }); }
+    });
+  }
+
+  function newDeal() { C.newDealDialog({ accountId: id, accountName: data.account.name }); }
+
+  function mergeAccount() {
+    var dlg = C.dialog({
+      title: 'Merge “' + data.account.name + '” into another account', submit: 'Merge', danger: true,
+      body: '<p>Everything on this account (people, deals, sub-accounts, and any school or district link the other account does not have) moves to the account you pick. This account is then archived, not deleted. You can restore it later, but the moved items stay where they went.</p>' + C.pickerFields('accounts', 'the account to keep') +
+        C.field('Why', '<input type="text" id="mReason" maxlength="255" placeholder="Optional, kept in the audit trail">', '', 'mReason'),
+      onSubmit: function (f) {
+        var into = Number(f.querySelector('[data-pick=accounts]').value);
+        if (!into || into === id) return 'Pick a different account to keep.';
+        return C.api('POST', '/api/crm/accounts/' + id + '/merge', { intoId: into, reason: f.querySelector('#mReason').value }).then(function (r) {
+          if (r.ok) { C.toast('Merged'); window.location.href = 'admin-crm-account.html?id=' + into; return; }
+          return C.problem(r);
+        });
+      }
+    });
+    C.picker(dlg.form, 'accounts');
+  }
+
+  function archive() {
+    var restoring = !!data.account.archivedAt;
+    C.dialog({
+      title: restoring ? 'Restore this account?' : 'Archive this account?', submit: restoring ? 'Restore' : 'Archive', danger: !restoring,
+      body: '<p>' + (restoring ? 'It will show in the account list again.' : 'It is hidden from the default list. An account with open deals cannot be archived.') + '</p>',
+      onSubmit: function () { return C.api('POST', '/api/crm/accounts/' + id + (restoring ? '/unarchive' : '/archive'), {}).then(function (r) { if (r.ok) { C.toast(restoring ? 'Restored' : 'Archived'); load(); return; } return C.problem(r); }); }
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=6"></script>
+</body>
+</html>

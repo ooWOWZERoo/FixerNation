@@ -95,13 +95,21 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   if (typeof req.query.stage === 'string' && /^[a-z_]{2,32}$/.test(req.query.stage)) { where.push('s.stage_key = ?'); params.push(req.query.stage); }
   if (posInt(req.query.accountId)) { where.push('o.account_id = ?'); params.push(posInt(req.query.accountId)); }
   if (req.query.noNextStep === 'true') where.push("(o.next_step IS NULL OR o.next_step = '')");
+  // Saved views are just these filters in the page address: overdue next steps, and deals that have sat in their stage for N days or more.
+  if (req.query.overdue === 'true') { where.push('o.next_step_due_at IS NOT NULL AND o.next_step_due_at < ?'); params.push(sqlNow()); }
+  const stale = posInt(req.query.staleDays);
+  if (stale) { where.push('o.stage_entered_at < ?'); params.push(new Date(Date.now() - stale * 86400000).toISOString().slice(0, 19).replace('T', ' ')); }
   const like = likeTerm(req.query.q);
   if (like) { where.push("(o.name LIKE ? ESCAPE '!' OR a.name LIKE ? ESCAPE '!')"); params.push(like, like); }
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const from = 'FROM crm_opportunities o JOIN crm_pipeline_stages s ON s.id = o.stage_id JOIN crm_accounts a ON a.id = o.account_id';
 
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total ${from} ${w}`, params);
-  const [rows] = await pool.query(`${OPP_SELECT} ${w} ORDER BY o.updated_at DESC, o.id DESC LIMIT ? OFFSET ?`, [...params, size, offset]);
+  const order = { updated: 'o.updated_at', name: 'o.name', amount: 'o.amount_cents', stage: 's.sort_order', nextstep: 'o.next_step_due_at', daysinstage: 'o.stage_entered_at', close: 'o.expected_close_date' }[req.query.sort] || 'o.updated_at';
+  // More days in a stage means an EARLIER entry date, so that one sort key reads the other way round.
+  const flip = req.query.sort === 'daysinstage';
+  const dir = (req.query.dir === 'asc') !== flip ? 'ASC' : 'DESC';
+  const [rows] = await pool.query(`${OPP_SELECT} ${w} ORDER BY ${order} ${dir}, o.id DESC LIMIT ? OFFSET ?`, [...params, size, offset]);
 
   // Forecast figures: one row per deal (each deal has exactly one stage and one value), so nothing can be counted twice.
   const [open] = await pool.query(

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Settings</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=1">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=33"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Hub Settings</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=1"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var ROLE = { admin: 'CRM Admin', sales: 'Sales', readonly: 'Read-only' };
+  var ROLE_HELP = { admin: 'Can do everything, including merge, settings and roles.', sales: 'Sees everything. Edits their own deals and the ones nobody owns.', readonly: 'Can look, cannot change anything.' };
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    if (!C.can('edit_settings')) { root.innerHTML = '<div class="a-card"><div class="a-empty"><div class="big" aria-hidden="true">🔒</div><p>Only a CRM Admin can change these settings.</p></div></div>'; return; }
+    load();
+  });
+
+  function load() {
+    Promise.all([C.api('GET', '/api/crm/stages'), C.api('GET', '/api/crm/loss-reasons'), C.api('GET', '/api/crm/staff')]).then(function (res) {
+      for (var i = 0; i < res.length; i++) if (!res[i].ok) { C.errorBox(root, C.problem(res[i])); return; }
+      draw(res[0].data.stages, res[1].data.lossReasons, res[2].data.staff);
+    });
+  }
+
+  function draw(stages, reasons, staff) {
+    var h = '<div class="a-card"><div class="a-card-head"><h2>Pipeline stages</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">The chance of closing is what the pipeline total uses for every deal in that stage. A deal can have its own chance on its page. “New Inquiry” and “Won” cannot be turned off.</p>' +
+      '<table class="a-table" aria-label="Pipeline stages"><thead><tr><th scope="col">Order</th><th scope="col">Name</th><th scope="col">Chance of closing</th><th scope="col">On</th><th scope="col"><span class="crm-sr">Save</span></th></tr></thead><tbody>' +
+      stages.map(function (s, i) {
+        var locked = s.key === 'won' || s.key === 'new_inquiry';
+        return '<tr data-stage="' + esc(s.id) + '"><td><label class="crm-sr" for="so' + esc(s.id) + '">Order for ' + esc(s.label) + '</label><input type="number" id="so' + esc(s.id) + '" data-f="sortOrder" min="1" value="' + esc(s.sortOrder) + '" style="width:70px;" class="a-filter-select"></td>' +
+          '<td><label class="crm-sr" for="sl' + esc(s.id) + '">Name</label><input type="text" id="sl' + esc(s.id) + '" data-f="label" maxlength="64" value="' + esc(s.label) + '" class="a-filter-select"></td>' +
+          '<td><label class="crm-sr" for="sp' + esc(s.id) + '">Chance for ' + esc(s.label) + '</label><input type="number" id="sp' + esc(s.id) + '" data-f="prob" min="0" max="100" value="' + esc(s.defaultProbability) + '" style="width:80px;" class="a-filter-select"> %</td>' +
+          '<td><label class="crm-sr" for="sa' + esc(s.id) + '">' + esc(s.label) + ' is on</label><input type="checkbox" id="sa' + esc(s.id) + '" data-f="active"' + (s.isActive ? ' checked' : '') + (locked ? ' disabled' : '') + '></td>' +
+          '<td><button type="button" class="a-btn a-btn-outline a-btn-sm" data-save-stage="' + esc(s.id) + '">Save</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+
+    h += '<div class="a-card"><div class="a-card-head"><h2>Why deals are lost</h2><button type="button" class="a-btn a-btn-outline a-btn-sm" id="addReason">+ Add a reason</button></div>' +
+      '<ul class="crm-list">' + reasons.map(function (r) {
+        return '<li><div>' + esc(r.label) + (r.isActive ? '' : ' <span class="a-pill a-pill-neutral">Off</span>') + '</div><div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-rename="' + esc(r.id) + '" data-label="' + esc(r.label) + '">Rename</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-toggle="' + esc(r.id) + '" data-on="' + (r.isActive ? '1' : '0') + '" data-label="' + esc(r.label) + '">' + (r.isActive ? 'Turn off' : 'Turn on') + '</button></div></li>';
+      }).join('') + '</ul></div>';
+
+    h += '<div class="a-card"><div class="a-card-head"><h2>Who can do what</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">' + Object.keys(ROLE).map(function (k) { return '<strong>' + ROLE[k] + ':</strong> ' + ROLE_HELP[k]; }).join(' ') + ' At least one CRM Admin must always remain.</p>' +
+      '<table class="a-table" aria-label="Staff roles"><thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col"><span class="crm-sr">Save</span></th></tr></thead><tbody>' +
+      staff.map(function (p) {
+        return '<tr><td>' + esc(p.username) + (p.hasEmail ? '' : '<div class="crm-small crm-muted">No email on file</div>') + (p.active ? '' : '<div class="crm-small crm-muted">Invitation not accepted yet</div>') + '</td><td><label class="crm-sr" for="r' + esc(p.id) + '">Role for ' + esc(p.username) + '</label><select id="r' + esc(p.id) + '" class="a-filter-select" data-role-for="' + esc(p.id) + '">' + C.options(ROLE, p.crmRole || 'admin') + '</select></td><td><button type="button" class="a-btn a-btn-outline a-btn-sm" data-save-role="' + esc(p.id) + '">Save</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    root.innerHTML = h;
+
+    root.querySelectorAll('[data-save-stage]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var row = b.closest('tr'), val = function (f) { return row.querySelector('[data-f=' + f + ']'); };
+        var prob = Number(val('prob').value);
+        if (!/^\d+$/.test(val('prob').value) || prob > 100) { C.toast('The chance must be a whole number from 0 to 100.'); return; }
+        C.api('PUT', '/api/crm/stages/' + b.getAttribute('data-save-stage'), { label: val('label').value, defaultProbability: prob, sortOrder: Number(val('sortOrder').value), isActive: val('active').checked }).then(function (r) { if (r.ok) { C.toast('Stage saved'); load(); } else C.toast(C.problem(r)); });
+      });
+    });
+    root.querySelectorAll('[data-save-role]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var pid = b.getAttribute('data-save-role');
+        C.api('PUT', '/api/crm/staff/' + pid + '/role', { role: root.querySelector('[data-role-for="' + pid + '"]').value }).then(function (r) { if (r.ok) { C.toast('Role saved'); load(); } else { C.toast(C.problem(r)); load(); } });
+      });
+    });
+    var add = document.getElementById('addReason');
+    if (add) add.addEventListener('click', function () {
+      C.dialog({
+        title: 'Add a loss reason', submit: 'Add',
+        body: C.field('Name', '<input type="text" id="lrLabel" maxlength="96" required placeholder="e.g. Waiting on the next budget year">', '', 'lrLabel'),
+        onSubmit: function (f) {
+          var label = f.querySelector('#lrLabel').value.trim();
+          var key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 31);
+          if (!label || key.length < 2) return 'Type a name using letters or numbers.';
+          if (!/^[a-z]/.test(key)) key = 'r_' + key.slice(0, 29);
+          return C.api('POST', '/api/crm/loss-reasons', { label: label, key: key }).then(function (r) { if (r.ok) { C.toast('Added'); load(); return; } return C.problem(r); });
+        }
+      });
+    });
+    root.querySelectorAll('[data-rename]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        C.dialog({ title: 'Rename this reason', submit: 'Save', body: C.field('Name', '<input type="text" id="lrLabel" maxlength="96" required value="' + esc(b.getAttribute('data-label')) + '">', '', 'lrLabel'),
+          onSubmit: function (f) { return C.api('PUT', '/api/crm/loss-reasons/' + b.getAttribute('data-rename'), { label: f.querySelector('#lrLabel').value }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return C.problem(r); }); } });
+      });
+    });
+    root.querySelectorAll('[data-toggle]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        C.api('PUT', '/api/crm/loss-reasons/' + b.getAttribute('data-toggle'), { label: b.getAttribute('data-label'), isActive: b.getAttribute('data-on') !== '1' }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); } else C.toast(C.problem(r)); });
+      });
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=6"></script>
+</body>
+</html>

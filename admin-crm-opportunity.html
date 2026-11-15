@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Opportunity</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=1">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=33"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Opportunity</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=1"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var id = Number(C.readQuery().id);
+  var staff = [], stages = [], reasons = [], data = null;
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    if (!id) { root.innerHTML = '<div class="a-card">' + C.empty('No deal was chosen. Go back to the list and pick one.', '🎯') + '</div>'; return; }
+    Promise.all([C.staff(), C.api('GET', '/api/crm/stages'), C.api('GET', '/api/crm/loss-reasons')]).then(function (res) {
+      staff = res[0]; stages = (res[1].data.stages || []).filter(function (s) { return s.isActive; }); reasons = (res[2].data.lossReasons || []).filter(function (x) { return x.isActive; });
+      load();
+    });
+  });
+
+  function load() {
+    C.loading(root);
+    C.api('GET', '/api/crm/opportunities/' + id).then(function (r) {
+      if (!r.ok) { root.innerHTML = '<div class="a-card">' + C.empty(r.status === 404 ? 'That deal does not exist.' : C.problem(r), '🎯') + '</div>'; return; }
+      data = r.data; draw();
+    });
+  }
+
+  function mayEdit() { var o = data.opportunity; return C.can('edit_deal') && (C.role === 'admin' || !o.ownerAdminId || Number(o.ownerAdminId) === Number(C.adminId)); }
+
+  function draw() {
+    var o = data.opportunity, edit = mayEdit(), open = o.state === 'open';
+    document.getElementById('pageTitle').textContent = o.name;
+    document.title = 'Fixer Nation Education - ' + o.name;
+    var late = open && o.nextStepDueAt && C.isOverdue(o.nextStepDueAt);
+    var h = '<p><a class="crm-link" href="admin-crm-opportunities.html">← All deals</a> · <a class="crm-link" href="admin-crm-account.html?id=' + esc(o.accountId) + '">' + esc(o.accountName) + '</a></p>';
+
+    // The next step comes first: it is the one thing a deal must always have.
+    if (open) {
+      h += '<div class="crm-next ' + (!o.nextStep ? 'missing' : late ? 'overdue' : '') + '" role="region" aria-label="Next step"><div class="crm-next-label">Next step</div>' +
+        (o.nextStep ? '<div class="what">' + esc(o.nextStep) + '</div>' : '<div class="what">No next step yet</div>') +
+        '<div class="who">' + (o.ownerName ? 'Owner: ' + esc(o.ownerName) : 'No owner yet') + (o.nextStepDueAt ? ' · Due ' + esc(C.date(o.nextStepDueAt)) + (late ? ' (overdue)' : '') : (o.nextStep ? ' · No due date' : '')) + '</div>' +
+        (edit ? '<p style="margin:10px 0 0;"><button type="button" class="a-btn a-btn-outline a-btn-sm" id="nextBtn">' + (o.nextStep ? 'Update the next step' : 'Add a next step') + '</button></p>' : '') + '</div>';
+    }
+
+    h += '<div class="a-card"><div class="a-card-head"><h2>' + C.statePill(o.state) + ' ' + esc(o.stageLabel) + '</h2><div class="crm-row-actions">' +
+      (edit ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editDeal">Edit details</button>' : '') +
+      (edit && open ? '<label class="crm-sr" for="stageSel">Move to stage</label><select id="stageSel" class="a-filter-select"><option value="">Move to stage…</option>' + stages.filter(function (s) { return s.key !== 'won' && s.key !== o.stage; }).map(function (s) { return '<option value="' + esc(s.key) + '">' + esc(s.label) + '</option>'; }).join('') + '</select>' : '') +
+      (edit && open ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="winBtn">Close as Won</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="loseBtn">Close as Lost</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="idleBtn">Mark inactive</button>' : '') +
+      (!open && C.can('reopen_deal') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="reopenBtn">Reopen</button>' : '') +
+      '</div></div>';
+    if (!edit && C.can('edit_deal')) h += '<p class="crm-notice">This deal belongs to ' + esc(o.ownerName || 'someone else') + '. Ask them or a CRM Admin to change it.</p>';
+    h += '<dl class="crm-kv">' +
+      '<dt>Value</dt><dd>' + esc(C.money(o.amountCents)) + '</dd>' +
+      '<dt>Chance of closing</dt><dd>' + esc(o.probability) + '%' + (o.probabilityIsOverride ? ' <span class="crm-small crm-muted">(set by a CRM Admin)</span>' : ' <span class="crm-small crm-muted">(from the stage)</span>') + '</dd>' +
+      '<dt>Type</dt><dd>' + esc(C.label(C.OPP_TYPES, o.oppType)) + '</dd>' +
+      '<dt>Owner</dt><dd>' + (o.ownerName ? esc(o.ownerName) : '<span class="crm-muted">Nobody yet</span>') + '</dd>' +
+      '<dt>In this stage</dt><dd>' + esc(open ? C.days(o.daysInStage) : 'Closed') + '</dd>' +
+      '<dt>Expected close</dt><dd>' + (o.expectedCloseDate ? esc(C.date(o.expectedCloseDate)) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Start of use</dt><dd>' + (o.targetImplementationDate ? esc(C.date(o.targetImplementationDate)) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Product</dt><dd>' + (o.productFocus ? esc(o.productFocus) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Source</dt><dd>' + (o.source ? esc(o.source) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Competitor</dt><dd>' + (o.competitor ? esc(o.competitor) : '<span class="crm-muted">None noted</span>') + '</dd>' +
+      (o.state === 'lost' ? '<dt>Why it was lost</dt><dd>' + esc(o.lossReason || 'No reason recorded') + (o.reengageOn ? ' · Check back ' + esc(C.date(o.reengageOn)) : '') + '</dd>' : '') +
+      '</dl></div>';
+
+    // Buying committee
+    h += '<div class="a-card"><div class="a-card-head"><h2>Buying committee (' + data.committee.length + ')</h2>' + (edit ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="addMember">Add a person</button>' : '') + '</div>';
+    h += data.committee.length ? '<table class="a-table" aria-label="Buying committee"><thead><tr><th scope="col">Person</th><th scope="col">Role in this deal</th><th scope="col">Influence</th><th scope="col">Stance</th><th scope="col">Notes</th><th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
+      data.committee.map(function (m) {
+        return '<tr><td><a class="crm-link" href="admin-crm-contact.html?id=' + esc(m.contactId) + '">' + esc(m.name || m.email) + '</a> ' + C.classPill(m.classification) + '<div class="crm-small crm-muted">' + esc(m.email) + '</div></td><td>' + esc(C.label(C.COMMITTEE_ROLES, m.role)) + '</td><td>' + esc(C.label(C.INFLUENCE, m.influence) || '—') + '</td><td>' + esc(C.label(C.STANCE, m.stance) || '—') + '</td><td>' + esc(m.notes || '') + '</td><td>' +
+          (edit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="editm" data-cid="' + esc(m.contactId) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="rmm" data-cid="' + esc(m.contactId) + '" data-name="' + esc(m.name || m.email) + '">Remove</button></div>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' : C.empty('Nobody is on the buying committee yet. Add the people who decide, influence, approve and pay.', '👥');
+    h += '</div>';
+
+    // Quotes and payment: the deal's state and the money are two different facts.
+    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Quotes (' + data.quotes.length + ')</h2></div>' +
+      (data.quotes.length ? '<ul class="crm-list">' + data.quotes.map(function (q) { return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div></div><span class="a-pill a-pill-neutral">' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</span></li>'; }).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-quotes.html">Open Quotes</a></p>' : C.empty('No quote is linked to this deal.', '💬')) + '</div>' +
+      '<div class="a-card"><div class="a-card-head"><h2>Purchases and payment (' + data.purchases.length + ')</h2></div><p class="crm-small crm-muted" style="margin:0 0 10px;">A deal marked Won means they said yes. Payment comes only from the purchase.</p>' +
+      (data.purchases.length ? '<ul class="crm-list">' + data.purchases.map(function (p) { return '<li><div><strong>Purchase #' + esc(p.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(p.amountCents, 'No amount recorded')) + ' · ' + esc(p.paymentMethod || '') + (p.licenseStatus ? ' · license ' + esc(p.licenseStatus) : '') + '</div></div><span class="a-pill ' + (p.paymentStatus === 'paid' ? 'a-pill-success' : 'a-pill-warning') + '">' + esc(C.label(C.PAYMENT, p.paymentStatus)) + '</span></li>'; }).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-orders.html">Open Orders</a> · <a class="crm-link" href="admin-invoices.html">Open Invoices</a></p>' : C.empty(o.state === 'won' ? 'This deal is Won, but no purchase exists yet. Nothing has been paid.' : 'No purchase yet.', '🧾')) + '</div></div>';
+
+    // History
+    h += '<div class="a-card"><div class="a-card-head"><h2>Stage history</h2></div>' + (data.history.length ? '<ul class="crm-timeline">' + data.history.slice().reverse().map(function (e) {
+      var change = e.from && e.from !== e.to ? esc(e.from) + ' → ' + esc(e.to) : esc(e.to);
+      if (e.fromState && e.toState && e.fromState !== e.toState) change += ' · ' + esc(C.stateLabel(e.fromState)) + ' → ' + esc(C.stateLabel(e.toState));
+      return '<li><strong>' + change + '</strong>' + (e.reason ? '<div class="crm-muted">' + esc(e.reason) + '</div>' : '') + '<div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + '</div></li>';
+    }).join('') + '</ul>' : C.empty('No history yet.', '🕒')) + '</div>';
+    root.innerHTML = h;
+
+    function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
+    on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember);
+    var sel = document.getElementById('stageSel');
+    if (sel) sel.addEventListener('change', function () { var to = sel.value; if (to) moveStage(to); });
+    root.querySelectorAll('[data-act=editm]').forEach(function (b) { b.addEventListener('click', function () { editMember(Number(b.getAttribute('data-cid'))); }); });
+    root.querySelectorAll('[data-act=rmm]').forEach(function (b) { b.addEventListener('click', function () { removeMember(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
+  }
+
+  function save(r, done) { if (r.ok) { C.toast(done || 'Saved'); load(); return; } return C.problem(r); }
+
+  function moveStage(to, reason) {
+    C.api('POST', '/api/crm/opportunities/' + id + '/stage', { stageKey: to, overrideReason: reason }).then(function (r) {
+      if (r.ok) { C.toast('Moved'); load(); return; }
+      if (r.data.code === 'next_step_required') {
+        C.dialog({
+          title: 'This deal needs a next step', submit: 'Move the deal',
+          body: '<p class="crm-small crm-muted">A deal needs a next step before it moves past Qualified. Say what happens next, or why there is none.</p>' +
+            C.field('Next step', '<input type="text" id="nsText" maxlength="255">', '', 'nsText') + C.field('Due', '<input type="date" id="nsDue">', '', 'nsDue') + C.field('Or: why there is no next step', '<input type="text" id="nsWhy" maxlength="200">', 'Saved with the stage change.', 'nsWhy'),
+          onSubmit: function (f) {
+            var text = f.querySelector('#nsText').value.trim(), why = f.querySelector('#nsWhy').value.trim(), due = f.querySelector('#nsDue').value;
+            if (!text && !why) return 'Add a next step or a reason.';
+            var first = text ? C.api('PUT', '/api/crm/opportunities/' + id, due ? { nextStep: text, nextStepDueAt: due } : { nextStep: text }) : Promise.resolve({ ok: true });
+            return first.then(function (r1) {
+              if (!r1.ok) return C.problem(r1);
+              return C.api('POST', '/api/crm/opportunities/' + id + '/stage', text ? { stageKey: to } : { stageKey: to, overrideReason: why }).then(function (r2) { return save(r2, 'Moved'); });
+            });
+          }
+        });
+        return;
+      }
+      C.toast(C.problem(r)); load();
+    });
+  }
+
+  function nextStep() {
+    var o = data.opportunity;
+    C.dialog({
+      title: 'Next step', submit: 'Save',
+      body: C.field('What happens next?', '<input type="text" id="nsText" maxlength="255" value="' + esc(o.nextStep || '') + '">', 'Owner: ' + (o.ownerName || 'nobody yet') + '. Change the owner under Edit details.', 'nsText') + C.field('Due', '<input type="date" id="nsDue" value="' + esc(C.isoDay(o.nextStepDueAt)) + '">', '', 'nsDue'),
+      onSubmit: function (f) {
+        var text = f.querySelector('#nsText').value.trim(), due = f.querySelector('#nsDue').value;
+        return C.api('PUT', '/api/crm/opportunities/' + id, { nextStep: text || null, nextStepDueAt: due || null }).then(function (r) { return save(r); });
+      }
+    });
+  }
+
+  function editDeal() {
+    var o = data.opportunity;
+    var ownerSel = C.role === 'admin' ? C.ownerOptions(staff, o.ownerAdminId, 'Nobody yet') : '<option value="' + esc(C.adminId) + '" selected>Me</option>';
+    var people = '<option value="">None</option>' + data.committee.map(function (m) { return '<option value="' + esc(m.contactId) + '"' + (Number(m.contactId) === Number(o.primaryContactId) ? ' selected' : '') + '>' + esc(m.name || m.email) + '</option>'; }).join('');
+    C.dialog({
+      title: 'Edit this deal', submit: 'Save',
+      body: C.field('Deal name', '<input type="text" id="eName" maxlength="255" required value="' + esc(o.name) + '">', '', 'eName') +
+        '<div class="a-form-row">' + C.field('Type', '<select id="eType">' + C.options(C.OPP_TYPES, o.oppType) + '</select>', '', 'eType') + C.field('Value (dollars)', '<input type="text" id="eValue" inputmode="decimal" value="' + esc(C.centsToDollars(o.amountCents)) + '">', 'The deal’s value, one number. Quote versions are never added together.', 'eValue') + '</div>' +
+        '<div class="a-form-row">' + C.field('Expected close', '<input type="date" id="eClose" value="' + esc(o.expectedCloseDate || '') + '">', '', 'eClose') + C.field('Start of use', '<input type="date" id="eImpl" value="' + esc(o.targetImplementationDate || '') + '">', '', 'eImpl') + '</div>' +
+        '<div class="a-form-row">' + C.field('Owner', '<select id="eOwner">' + ownerSel + '</select>', C.role === 'admin' ? '' : 'You can take a deal for yourself. A CRM Admin hands it to someone else.', 'eOwner') + C.field('Main contact', '<select id="ePrimary">' + people + '</select>', 'Pick from the buying committee.', 'ePrimary') + '</div>' +
+        '<div class="a-form-row">' + C.field('Product', '<input type="text" id="eProduct" maxlength="255" value="' + esc(o.productFocus || '') + '">', '', 'eProduct') + C.field('Source', '<input type="text" id="eSource" maxlength="128" value="' + esc(o.source || '') + '">', '', 'eSource') + '</div>' +
+        C.field('Competitor', '<input type="text" id="eComp" maxlength="128" value="' + esc(o.competitor || '') + '">', '', 'eComp') +
+        (C.can('override_probability') ? C.field('Chance of closing (percent)', '<input type="number" id="eProb" min="0" max="100" step="1" value="' + (o.probabilityIsOverride ? esc(o.probability) : '') + '">', 'Leave blank to use the stage’s chance (' + o.probability + '% now).', 'eProb') : ''),
+      onSubmit: function (f) {
+        var body = { name: f.querySelector('#eName').value, oppType: f.querySelector('#eType').value, productFocus: f.querySelector('#eProduct').value, source: f.querySelector('#eSource').value, competitor: f.querySelector('#eComp').value,
+          expectedCloseDate: f.querySelector('#eClose').value || null, targetImplementationDate: f.querySelector('#eImpl').value || null,
+          ownerAdminId: f.querySelector('#eOwner').value ? Number(f.querySelector('#eOwner').value) : null, primaryContactId: f.querySelector('#ePrimary').value ? Number(f.querySelector('#ePrimary').value) : null };
+        var v = f.querySelector('#eValue').value.trim();
+        if (v) { body.amountCents = C.dollarsToCents(v); if (body.amountCents === null) return 'Type the value as a plain amount, like 12500 or 12500.50.'; } else body.amountCents = null;
+        var pe = f.querySelector('#eProb');
+        if (pe) { var pv = pe.value.trim(); if (pv === '') body.probabilityOverride = null; else if (/^\d+$/.test(pv) && Number(pv) <= 100) body.probabilityOverride = Number(pv); else return 'The chance must be a whole number from 0 to 100.'; }
+        return C.api('PUT', '/api/crm/opportunities/' + id, body).then(function (r) { return save(r); });
+      }
+    });
+  }
+
+  function closeWon() {
+    C.dialog({
+      title: 'Close this deal as Won', submit: 'Close as Won',
+      body: '<p>This records that they said yes. It does <strong>not</strong> create a purchase, an invoice or a license, and it does not mark anything paid. Those still come from the quote, the order or the invoice.</p>' + C.field('Note (optional)', '<input type="text" id="cNote" maxlength="200">', 'Saved in the stage history.', 'cNote'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/opportunities/' + id + '/close', { outcome: 'won', reason: f.querySelector('#cNote').value }).then(function (r) { return save(r, 'Closed as Won'); }); }
+    });
+  }
+  function closeLost() {
+    C.dialog({
+      title: 'Close this deal as Lost', submit: 'Close as Lost',
+      body: C.field('Why was it lost?', '<select id="cWhy" required><option value="">Pick a reason…</option>' + reasons.map(function (x) { return '<option value="' + esc(x.key) + '">' + esc(x.label) + '</option>'; }).join('') + '</select>', '', 'cWhy') +
+        C.field('Who won it? (optional)', '<input type="text" id="cComp" maxlength="128">', '', 'cComp') + C.field('Check back on (optional)', '<input type="date" id="cBack">', 'A date to try again.', 'cBack') + C.field('Note (optional)', '<input type="text" id="cNote" maxlength="200">', '', 'cNote'),
+      onSubmit: function (f) {
+        var why = f.querySelector('#cWhy').value; if (!why) return 'Pick why the deal was lost.';
+        var body = { outcome: 'lost', lossReason: why, reason: f.querySelector('#cNote').value };
+        if (f.querySelector('#cComp').value.trim()) body.competitor = f.querySelector('#cComp').value;
+        if (f.querySelector('#cBack').value) body.reengageOn = f.querySelector('#cBack').value;
+        return C.api('POST', '/api/crm/opportunities/' + id + '/close', body).then(function (r) { return save(r, 'Closed as Lost'); });
+      }
+    });
+  }
+  function closeIdle() {
+    C.dialog({
+      title: 'Mark this deal inactive', submit: 'Mark inactive',
+      body: '<p>Use this when the deal is paused and you are not calling it won or lost. A CRM Admin can reopen it.</p>' + C.field('Note (optional)', '<input type="text" id="cNote" maxlength="200">', '', 'cNote'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/opportunities/' + id + '/close', { outcome: 'inactive', reason: f.querySelector('#cNote').value }).then(function (r) { return save(r, 'Marked inactive'); }); }
+    });
+  }
+  function reopen() {
+    var stageMap = {}; stages.filter(function (s) { return s.key !== 'won'; }).forEach(function (s) { stageMap[s.key] = s.label; });
+    C.dialog({
+      title: 'Reopen this deal', submit: 'Reopen',
+      body: C.field('Back into stage', '<select id="rStage">' + C.options(stageMap, data.opportunity.stage === 'won' ? 'verbal_commitment' : data.opportunity.stage) + '</select>', '', 'rStage') + C.field('Why?', '<input type="text" id="rWhy" maxlength="200" required>', 'Required. Saved in the history.', 'rWhy'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/opportunities/' + id + '/reopen', { stageKey: f.querySelector('#rStage').value, reason: f.querySelector('#rWhy').value }).then(function (r) { return save(r, 'Reopened'); }); }
+    });
+  }
+
+  function memberFields(m) {
+    m = m || {};
+    return C.field('Role in this deal', '<select id="mRole">' + C.options(C.COMMITTEE_ROLES, m.role || 'other') + '</select>', '', 'mRole') +
+      '<div class="a-form-row">' + C.field('Influence', '<select id="mInf">' + C.options(C.INFLUENCE, m.influence || '', 'Not set') + '</select>', '', 'mInf') + C.field('Stance', '<select id="mStance">' + C.options(C.STANCE, m.stance || '', 'Not set') + '</select>', '', 'mStance') + '</div>' +
+      C.field('Notes', '<input type="text" id="mNotes" maxlength="500" value="' + esc(m.notes || '') + '">', '', 'mNotes');
+  }
+  function memberRead(f) { return { role: f.querySelector('#mRole').value, influence: f.querySelector('#mInf').value || null, stance: f.querySelector('#mStance').value || null, notes: f.querySelector('#mNotes').value }; }
+
+  function addMember() {
+    var dlg = C.dialog({
+      title: 'Add to the buying committee', submit: 'Add',
+      body: C.pickerFields('contacts', 'a person') + memberFields(),
+      onSubmit: function (f) {
+        var cid = Number(f.querySelector('[data-pick=contacts]').value); if (!cid) return 'Pick a person.';
+        var body = memberRead(f); body.contactId = cid;
+        return C.api('POST', '/api/crm/opportunities/' + id + '/contacts', body).then(function (r) { return save(r, 'Added'); });
+      }
+    });
+    C.picker(dlg.form, 'contacts');
+  }
+  function editMember(cid) {
+    var m = data.committee.filter(function (x) { return x.contactId === cid; })[0]; if (!m) return;
+    C.dialog({ title: 'Edit ' + (m.name || m.email), submit: 'Save', body: memberFields(m), onSubmit: function (f) { return C.api('PUT', '/api/crm/opportunities/' + id + '/contacts/' + cid, memberRead(f)).then(function (r) { return save(r); }); } });
+  }
+  function removeMember(cid, name) {
+    C.dialog({ title: 'Take ' + name + ' off this deal?', submit: 'Remove', danger: true, body: '<p>They stay in the CRM. Only their seat on this deal goes away.</p>', onSubmit: function () { return C.api('DELETE', '/api/crm/opportunities/' + id + '/contacts/' + cid).then(function (r) { return save(r, 'Removed'); }); } });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=6"></script>
+</body>
+</html>

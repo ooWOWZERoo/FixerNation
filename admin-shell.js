@@ -6,6 +6,14 @@
   var page = location.pathname.split('/').pop();
   var pages = {
     'dashboard': ['Your mission, in motion', 'Mission Control', 'Real tools. Brighter futures. Track progress, support schools, and make your next move count.', 'Overview'],
+    'crm-overview': ['Everything in one place', '', 'See how many Suspects, Prospects and Customers you have, what is in the pipeline, and which quotes and deals need you today.', 'Customer Hub'],
+    'crm-accounts': ['The schools and districts you are working with', '', 'Find an organization, see its people and deals, and keep one clean record for each.', 'Customer Hub'],
+    'crm-account': ['One organization, the whole picture', '', 'The people and deals tied to this school or district.', 'Customer Hub'],
+    'crm-contacts': ['The people behind every deal', '', 'Search every contact by what they are to us: Suspect, Prospect or Customer.', 'Customer Hub'],
+    'crm-contact': ['One person, the whole story', '', 'Where this person stands, why, and everything connected to them.', 'Customer Hub'],
+    'crm-opportunities': ['Every deal, one next step', '', 'Work the pipeline as a list or a board, and move deals forward with a clear next step.', 'Customer Hub'],
+    'crm-opportunity': ['One deal, start to finish', '', 'Who is buying, what happens next, the quotes and payments, and every stage change.', 'Customer Hub'],
+    'crm-settings': ['Set the rules of the pipeline', '', 'Name the stages, set each stage’s chance of closing, list why deals are lost, and choose who can do what here.', 'Customer Hub'],
     'support': ['Help people get unstuck', '', 'Answer requests from teachers, administrators and parents, with their role and school already in front of you.', 'Support'],
     'account-lookup': ['People behind the progress', '', 'Find an account and connect the dots across invitations, access, and licenses.', 'Support'],
     'support-classrooms': ['Find the right classroom', '', 'Look up a classroom or a parent, reset a student PIN, clear a lockout. Student names hide after a few quiet minutes.', 'Support'],
@@ -72,13 +80,17 @@
   var results = document.createElement('div'); results.id = 'mc-page-results'; results.className = 'mc-page-results'; results.hidden = true;
   var status = document.createElement('span'); status.className = 'mc-sr-only'; status.setAttribute('aria-live', 'polite');
   searchWrap.append(search, results, status); tools.after(searchWrap);
-  var links = Array.from(sidebar.querySelectorAll('a[href$=".html"]')).filter(function(a){return a.getAttribute('href').indexOf('admin-') === 0;}).map(function(a){return {href:a.getAttribute('href'),label:a.querySelector('.label').textContent};});
-  links.push({href:'admin-morning-boost-calendar.html',label:'Morning Boost Calendar'});
+  // Read when someone types, not once at load: the Customer Hub group is revealed a moment after the page loads (only when the CRM is on for their role).
+  function pageLinks(){
+    var list = Array.from(sidebar.querySelectorAll('a[href$=".html"]')).filter(function(a){return a.getAttribute('href').indexOf('admin-') === 0 && !a.closest('[hidden]') && a.style.display !== 'none';}).map(function(a){return {href:a.getAttribute('href'),label:a.querySelector('.label').textContent};});
+    list.push({href:'admin-morning-boost-calendar.html',label:'Morning Boost Calendar'});
+    return list;
+  }
   function closeSearch(){results.hidden = true;}
   search.addEventListener('input', function(){
     var term = search.value.trim().toLowerCase(); results.replaceChildren();
     if (!term) { closeSearch(); return; }
-    var matches = links.filter(function(a){return a.label.toLowerCase().includes(term);});
+    var matches = pageLinks().filter(function(a){return a.label.toLowerCase().includes(term);});
     matches.forEach(function(a){var el=document.createElement('a');el.href=a.href;el.textContent=a.label;results.appendChild(el);});
     if (!matches.length) {var empty=document.createElement('p');empty.textContent='No matching pages';results.appendChild(empty);}
     status.textContent=matches.length+' matching pages'; results.hidden=false;

@@ -173,7 +173,7 @@ test('VOCABULARY: no hot / warm / cold anywhere in the Sales CRM files, and only
   assert.deepEqual(cls.CLASSIFICATIONS, ['suspect', 'prospect', 'customer']);
   const files = [
     'lib/crm-classification.js', 'lib/crm-permissions.js', 'lib/crm-common.js', 'lib/crm-hooks.js', 'lib/crm-audit.js', 'lib/crm-ownership.js',
-    'routes/crm-settings.js', 'routes/crm-accounts.js', 'routes/crm-contacts.js', 'routes/crm-opportunities.js',
+    'routes/crm-settings.js', 'routes/crm-accounts.js', 'routes/crm-contacts.js', 'routes/crm-opportunities.js', 'routes/crm-quotes.js', 'routes/crm-overview.js', 'lib/crm-quotes.js',
     'scripts/alter-create-crm-core.js', 'scripts/backfill-crm-core.js', 'scripts/reconcile-crm-classification.js',
   ];
   for (const f of files) {
