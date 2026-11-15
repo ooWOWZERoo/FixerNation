@@ -31,7 +31,7 @@
     // ---- Getting started
     { id: 'D1', group: 'getting-started', topic: 'Before you sign in', title: 'Accept your quote',
       summary: 'Choose how to pay (PO or card) and say who will run the school\'s account.',
-      pages: ['accept-quote.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391653/fne/help/D1.mp4', captions: '/help-assets/D1.vtt', poster: '/help-assets/D1.jpg' },
+      pages: ['accept-quote.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1794717368/fne/help/D1.mp4', captions: '/help-assets/D1.vtt', poster: '/help-assets/D1.jpg' },
     { id: 'A1', group: 'getting-started', topic: 'Signing in', title: 'Your welcome email and first sign-in',
       summary: 'Open your welcome email and choose a password. You\'ll land in your portal.',
       pages: ['reset-password.html'], url: 'https://res.cloudinary.com/x9ll3a3t/video/upload/v1793391613/fne/help/A1.mp4', captions: '/help-assets/A1.vtt', poster: '/help-assets/A1.jpg' },
