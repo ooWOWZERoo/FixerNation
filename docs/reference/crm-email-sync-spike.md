@@ -1,6 +1,6 @@
 # Sales CRM phase 5a: email feasibility spike
 
-Written 2026-11-15. This is the spike the plan calls for before any email code (`docs/reference/sales-crm-update-requirements.md`, decision D7 and phase 5a). **No schema, no table, no setting and no change to the running site.** It answers one question: can the CRM safely read one mailbox from this host? The honest answer today is **"yes on the software side, not yet proven on the host"**: the last two checks need a five-minute run by the owner in the cPanel Terminal (section 3).
+Written 2026-11-15. This is the spike the plan calls for before any email code (`docs/reference/sales-crm-update-requirements.md`, decision D7 and phase 5a). **No schema, no table, no setting and no change to the running site.** It answers one question: can the CRM safely read one mailbox from this host? The answer is **GO**: the software side was proven locally, and the owner's run on the real host on 2026-11-15 passed every check (section 6).
 
 ## 1. What was found out
 
@@ -85,3 +85,34 @@ One mailbox, **read-only**, first. Decisions this spike points to (confirm befor
 6. **Libraries added in 5b only:** `imapflow` and `mailparser` in `server/package.json`, with `npm install` on cPanel (pure JavaScript, so no script-approval step expected).
 
 Phase 5c (reply and send through `lib/mailer.js`) and 5d (AI) stay as the plan has them. The plan still says 5d waits until sync has run stably for a month.
+
+## 6. Result of the run on the real host (2026-11-15) — GO
+
+Run by the owner in the cPanel Terminal against the `sales@` mailbox, `mail.fixernationeducation.com` port 993 (TLS), Node 24.22. Counts and timings only.
+
+| Check | Result | Verdict |
+|---|---|---|
+| Connect and log in | ok in 416 ms; the certificate matches the host name | go |
+| Capabilities | IDLE, UIDPLUS, CONDSTORE, QRESYNC, ENABLE, MOVE, SPECIAL-USE, ESEARCH, LIST-STATUS all present (STARTTLS absent only because port 993 is TLS from the first byte) | go, and better than needed |
+| Hold a session | **90 seconds, 18 keep-alive pings answered, never dropped** | go |
+| Second login | ok in 202 ms | go |
+| Memory and time | 70 MB at start, 83 MB at the end, 92 seconds in all (90 of them the deliberate hold) | go |
+| Volume | 8 folders, 68 messages in all; INBOX 41, Trash 11, "Registered Teachers" 16, the rest empty; **7 messages in the last 30 days**, busiest day 4, average 0.2 a day, about 2 KB each | go: tiny. A whole first sync is milliseconds |
+
+What it tells us for 5b:
+
+- **Polling is plenty.** At under one message a day, a cron run every 10 minutes is more than frequent enough; IDLE and long-lived sessions are not needed. Each run opens a session, asks for anything after the saved UID, and leaves.
+- **Folder names are `INBOX.<name>`** (this server nests everything under INBOX), so folders must be chosen by their saved path and by the SPECIAL-USE flag, never by assuming `Sent` or `Junk`.
+- **`INBOX.Registered Teachers` (16 messages) looks like a filing rule for automated sign-up notices.** Those carry teachers' names and addresses and are not sales conversations. 5b should read only the folders the owner ticks, and this one is better left unticked.
+- **CONDSTORE and QRESYNC exist**, so a later version could ask the server for just what changed; the plain UID approach is already enough at this volume.
+- **UIDVALIDITY values are timestamps** (about 1786105149), as expected, and the sync rule in `lib/crm-mail-sync-state.js` handles a change.
+- **A byproduct:** the INBOX also receives delivery-failure notices. The plan's deferred "deeper bounce detection" (CHANGELOG, Unreleased) could reuse this same reader later. It is not part of 5b.
+
+The scratch folder `/home/fixernat/spike-imap` can now be deleted (Step C).
+
+## 7. Owner's decisions after the spike (2026-11-15)
+
+- **Folders:** INBOX only. Trash, Junk and `Registered Teachers` are never read.
+- **Who reads mail in the CRM:** CRM Admin only to start; Sales gets access later by a per-person grant.
+- **Timing:** **pause here.** Phase 5b is not started. Use the pipeline, tasks and quotes on real deals first (the plan's checkpoint), then start 5b in a fresh session. The spike result stays valid; if the mailbox login changes or the host is moved, run the spike again.
+- Still to settle when 5b starts: the student-data rule from section 5 (item 5) and where the encryption key for the mailbox password lives.
