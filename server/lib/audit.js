@@ -44,6 +44,6 @@ async function audit(conn, { actorType, actorId, actorEmail, action, entityType,
 const AFFILIATE_ENTITY_TYPES = ['affiliate', 'affiliate_application', 'affiliate_commission', 'affiliate_territory'];
 
 // entity_type values the Sales CRM writes (lib/crm-audit.js). CRM events never set purchase_id or school_domain.
-const CRM_ENTITY_TYPES = ['crm_account', 'crm_contact', 'crm_opportunity', 'crm_staff', 'crm_task', 'crm_note', 'crm_file', 'crm_meeting', 'crm_checklist', 'crm_attention'];
+const CRM_ENTITY_TYPES = ['crm_account', 'crm_contact', 'crm_opportunity', 'crm_staff', 'crm_task', 'crm_note', 'crm_file', 'crm_meeting', 'crm_checklist', 'crm_attention', 'crm_report'];
 
 module.exports = { audit, AFFILIATE_ENTITY_TYPES, CRM_ENTITY_TYPES };

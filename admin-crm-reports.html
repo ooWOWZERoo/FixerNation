@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Reports</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=3">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=35"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Reports</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var PRESETS = { '30': 'Last 30 days', '90': 'Last 90 days', '365': 'Last 365 days', year: 'This year', all: 'All time' };
+  var state = { preset: '90', from: '', to: '', data: null };
+  var canExport = false;
+
+  C.boot(root).then(function (me) { if (!me) return; canExport = !!(C.perms && C.perms.export); load(); });
+
+  function iso(d) { return d.toISOString().slice(0, 10); }
+  function windowFor(preset) {
+    var now = new Date(), to = iso(now);
+    if (preset === 'all') return { range: 'all' };
+    if (preset === 'year') return { from: now.getUTCFullYear() + '-01-01', to: to };
+    return { from: iso(new Date(now.getTime() - (Number(preset) - 1) * 86400000)), to: to };
+  }
+  function query() {
+    if (state.preset === 'custom') { var q = []; if (state.from) q.push('from=' + encodeURIComponent(state.from)); if (state.to) q.push('to=' + encodeURIComponent(state.to)); return q.join('&'); }
+    var w = windowFor(state.preset);
+    return w.range ? 'range=all' : 'from=' + w.from + '&to=' + w.to;
+  }
+
+  function load() {
+    C.loading(root);
+    C.api('GET', '/api/crm/reports?' + query()).then(function (r) {
+      if (!r.ok) { C.errorBox(root, C.problem(r)); return; }
+      state.data = r.data;
+      draw();
+    });
+  }
+
+  function cell(v) { return v === null || v === undefined ? '—' : esc(v); }
+
+  function tableOf(report) {
+    var t = report.table;
+    return '<div class="mc-table-scroll"><table class="a-table" aria-label="' + esc(report.title) + '"><thead><tr>' + t.header.map(function (h) { return '<th scope="col">' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      t.rows.map(function (r) { return '<tr>' + r.map(function (v, i) { return i === 0 ? '<th scope="row">' + esc(v) + '</th>' : '<td>' + cell(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  }
+
+  function card(report, inner) {
+    var dl = canExport ? '<a class="a-btn a-btn-outline a-btn-sm" href="/api/crm/reports/' + esc(report.key) + '/export?' + esc(query()) + '" download>Download CSV</a>' : '';
+    return '<section class="a-card" id="rep-' + esc(report.key) + '"><div class="a-card-head"><h2>' + esc(report.title) + '</h2>' + dl + '</div>' +
+      '<p class="crm-small"><strong>Dates:</strong> ' + esc(report.windowLabel) + '</p>' +
+      '<p class="crm-small crm-muted"><strong>How this is counted:</strong> ' + esc(report.definition) + '</p>' + inner + '</section>';
+  }
+
+  var LINK = { accepted_no_purchase: ['admin-quotes.html?quote=', 'Quote'], won_no_accepted_quote: ['admin-crm-opportunity.html?id=', 'Deal'], accepted_deal_open: ['admin-crm-opportunity.html?id=', 'Deal'], customer_without_purchase: ['admin-crm-contact.html?id=', 'Contact'], paid_not_customer: ['admin-crm-contact.html?id=', 'Contact'] };
+  function reconciliation(report) {
+    var h = '<p><span class="a-pill ' + (report.allClear ? 'a-pill-success' : 'a-pill-warning') + '">' + (report.allClear ? 'All clear' : 'Some checks have exceptions') + '</span></p><ul class="crm-list">';
+    h += report.checks.map(function (c) {
+      var ids = '';
+      if (c.ids && c.ids.length) {
+        var l = LINK[c.key];
+        ids = '<div class="crm-small">' + (l ? esc(l[1]) + 's: ' : 'Purchase ids: ') + c.ids.map(function (id) { return l ? '<a class="crm-link" href="' + esc(l[0] + Number(id)) + '">#' + esc(id) + '</a>' : '#' + esc(id); }).join(', ') + (c.count > c.ids.length ? ' and ' + esc(c.count - c.ids.length) + ' more' : '') + '</div>';
+      }
+      return '<li><div><strong>' + esc(c.label) + '</strong><div class="crm-small crm-muted">' + esc(c.why) + '</div>' + ids + '</div><span class="a-pill ' + (c.ok ? 'a-pill-success' : 'a-pill-warning') + '">' + (c.ok ? 'None' : esc(c.count) + ' to look at') + '</span></li>';
+    }).join('') + '</ul>';
+    return h;
+  }
+
+  function filterBar() {
+    var h = '<div class="a-card"><div class="a-card-head"><h2>Dates</h2></div><form id="winForm" class="crm-toolbar" novalidate><label class="crm-small">Show <select id="winPreset">' +
+      Object.keys(PRESETS).map(function (k) { return '<option value="' + esc(k) + '"' + (state.preset === k ? ' selected' : '') + '>' + esc(PRESETS[k]) + '</option>'; }).join('') + '<option value="custom"' + (state.preset === 'custom' ? ' selected' : '') + '>Pick dates</option></select></label> ' +
+      '<label class="crm-small">From <input type="date" id="winFrom" value="' + esc(state.from) + '"></label> <label class="crm-small">To <input type="date" id="winTo" value="' + esc(state.to) + '"></label> <button type="submit" class="a-btn a-btn-primary a-btn-sm">Show</button></form>' +
+      '<p class="crm-small crm-muted">Weighted pipeline and Reconciliation always show today and ignore these dates. Test addresses (example.com) are left out of every figure. These are counts, never scores.</p></div>';
+    return h;
+  }
+
+  function draw() {
+    var d = state.data, by = {};
+    d.reports.forEach(function (r) { by[r.key] = r; });
+    var h = filterBar();
+    h += card(by.funnel, tableOf(by.funnel));
+    h += card(by.pipeline, tableOf(by.pipeline) + (by.pipeline.totals.withoutValue ? '<p class="crm-small crm-muted">' + esc(by.pipeline.totals.withoutValue) + ' open deal(s) have no value yet, so they add nothing to the totals.</p>' : ''));
+    h += card(by.winloss, tableOf(by.winloss));
+    h += card(by.timeinstage, tableOf(by.timeinstage));
+    h += card(by.sourcetopaid, tableOf(by.sourcetopaid));
+    h += card(by.reconciliation, reconciliation(by.reconciliation));
+    root.innerHTML = h;
+    var preset = document.getElementById('winPreset'), from = document.getElementById('winFrom'), to = document.getElementById('winTo');
+    function sync() { var custom = preset.value === 'custom'; from.disabled = !custom; to.disabled = !custom; }
+    sync();
+    preset.addEventListener('change', function () { if (preset.value === 'custom' && !from.value && !to.value) { var w = windowFor('90'); from.value = w.from; to.value = w.to; } sync(); });
+    document.getElementById('winForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      state.preset = preset.value; state.from = from.value; state.to = to.value;
+      load();
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=8"></script>
+</body>
+</html>

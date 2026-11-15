@@ -8,18 +8,18 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-const PAGES = ['overview', 'attention', 'tasks', 'accounts', 'account', 'contacts', 'contact', 'opportunities', 'opportunity', 'settings'].map(k => `admin-crm-${k}.html`);
+const PAGES = ['overview', 'attention', 'tasks', 'accounts', 'account', 'contacts', 'contact', 'opportunities', 'opportunity', 'reports', 'settings'].map(k => `admin-crm-${k}.html`);
 // Pages that draw the phase 3 panels (tasks, notes, files, meetings, checklist, timeline) load crm-panels.js after crm-common.js.
 const PANEL_PAGES = ['opportunity', 'account', 'contact'].map(k => `admin-crm-${k}.html`);
 
-test('PAGES: all ten Customer Hub pages exist and load the shared admin assets at the current versions', () => {
+test('PAGES: all eleven Customer Hub pages exist and load the shared admin assets at the current versions', () => {
   for (const f of PAGES) {
     assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} exists`);
     const html = read(f);
-    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=34"><\/script>/, f);
+    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=35"><\/script>/, f);
     assert.match(html, /admin-common\.css\?v=22/, f);
     assert.match(html, /admin-common\.js\?v=17/, f);
-    assert.match(html, /admin-shell\.js\?v=7/, f);
+    assert.match(html, /admin-shell\.js\?v=8/, f);
     assert.match(html, /crm-common\.css\?v=3/, f);
     assert.match(html, /crm-common\.js\?v=2/, f);
     assert.match(html, /<meta name="robots" content="noindex">/, `${f} is not for search engines`);
@@ -32,8 +32,8 @@ test('VERSIONS: every admin page that loads the nav or the shell loads the curre
   assert.ok(pages.length > 25);
   for (const f of pages) {
     const html = read(f);
-    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=34/, f);
-    if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=7/, f);
+    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=35/, f);
+    if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=8/, f);
   }
 });
 
@@ -41,18 +41,18 @@ test('NAV: one Customer Hub group, hidden until /api/crm/me answers, with Settin
   const nav = read('admin-nav.js');
   const group = nav.slice(nav.indexOf("{ key: 'customer-hub'"), nav.indexOf("{ key: 'support'"));
   const hrefs = [...group.matchAll(/link\('([^']+)'/g)].map(m => m[1]);
-  assert.deepEqual(hrefs, ['admin-crm-overview.html', 'admin-crm-attention.html', 'admin-crm-tasks.html', 'admin-crm-accounts.html', 'admin-crm-contacts.html', 'admin-crm-opportunities.html', 'admin-crm-settings.html']);
+  assert.deepEqual(hrefs, ['admin-crm-overview.html', 'admin-crm-attention.html', 'admin-crm-tasks.html', 'admin-crm-accounts.html', 'admin-crm-contacts.html', 'admin-crm-opportunities.html', 'admin-crm-reports.html', 'admin-crm-settings.html']);
   assert.match(group, /admin-crm-settings\.html'[^)]*data-crm-perm="edit_settings"/);
   assert.match(nav, /fetch\('\/api\/crm\/me'/);
   assert.match(nav, /hiddenAttr = s\.crm \? ' hidden data-crm-nav="1"'/, 'the group starts hidden');
   assert.match(nav, /showCrmNav\(null\)/, 'any failure leaves it hidden');
-  for (const k of ['crm-overview', 'crm-attention', 'crm-tasks', 'crm-accounts', 'crm-contacts', 'crm-opportunities', 'crm-settings']) assert.ok(nav.includes(`"${k}": "<`), `icon for ${k}`);
+  for (const k of ['crm-overview', 'crm-attention', 'crm-tasks', 'crm-accounts', 'crm-contacts', 'crm-opportunities', 'crm-reports', 'crm-settings']) assert.ok(nav.includes(`"${k}": "<`), `icon for ${k}`);
   assert.match(nav, /'admin-crm-opportunity\.html':'admin-crm-opportunities\.html'/, 'a deal page lights up its list in the menu');
 });
 
 test('SHELL: every page has an introduction, and the page finder reads the menu when someone types, so a hidden group is never offered', () => {
   const shell = read('admin-shell.js');
-  for (const k of ['crm-overview', 'crm-attention', 'crm-tasks', 'crm-accounts', 'crm-account', 'crm-contacts', 'crm-contact', 'crm-opportunities', 'crm-opportunity', 'crm-settings']) assert.ok(shell.includes(`'${k}': [`), k);
+  for (const k of ['crm-overview', 'crm-attention', 'crm-tasks', 'crm-accounts', 'crm-account', 'crm-contacts', 'crm-contact', 'crm-opportunities', 'crm-opportunity', 'crm-reports', 'crm-settings']) assert.ok(shell.includes(`'${k}': [`), k);
   assert.match(shell, /function pageLinks\(\)/);
   assert.match(shell, /!a\.closest\('\[hidden\]'\)/);
 });

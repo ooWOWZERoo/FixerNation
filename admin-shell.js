@@ -15,6 +15,7 @@
     'crm-contact': ['One person, the whole story', '', 'Where this person stands, why, and everything connected to them.', 'Customer Hub'],
     'crm-opportunities': ['Every deal, one next step', '', 'Work the pipeline as a list or a board, and move deals forward with a clear next step.', 'Customer Hub'],
     'crm-opportunity': ['One deal, start to finish', '', 'Who is buying, what happens next, the quotes and payments, and every stage change.', 'Customer Hub'],
+    'crm-reports': ['See how sales are going', '', 'Funnel, pipeline, wins and losses, time in each stage, and where paying customers came from. Each number says how it was counted and over which dates.', 'Customer Hub'],
     'crm-settings': ['Set the rules of the pipeline', '', 'Name the stages, set each stage’s chance of closing, list why deals are lost, and choose who can do what here.', 'Customer Hub'],
     'support': ['Help people get unstuck', '', 'Answer requests from teachers, administrators and parents, with their role and school already in front of you.', 'Support'],
     'account-lookup': ['People behind the progress', '', 'Find an account and connect the dots across invitations, access, and licenses.', 'Support'],
