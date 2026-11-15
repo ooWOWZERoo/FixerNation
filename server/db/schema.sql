@@ -740,10 +740,24 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   -- opportunity_id's foreign key to crm_opportunities is added by the alter script (that table is created later in this file, after schools).
   contact_id INT UNSIGNED NULL,
   opportunity_id INT UNSIGNED NULL,
+  -- Sales CRM phase 4b (scripts/alter-create-crm-quotes.js): revisions and the acceptance evidence (docs/reference/sales-crm-update-requirements.md, "4b to 4d spec").
+  revision_number INT UNSIGNED NOT NULL DEFAULT 1,
+  supersedes_quote_id INT UNSIGNED NULL, -- the quote this one replaces; the old one becomes 'superseded' when this one is SENT
+  version_status VARCHAR(16) NOT NULL DEFAULT 'current', -- 'current' | 'superseded' (a superseded quote's link shows a "replaced" page)
+  created_by_admin_id INT UNSIGNED NULL,
+  acceptance_name VARCHAR(255) NULL, -- who the buyer typed, recorded when they pressed accept (card: before Stripe)
+  acceptance_title VARCHAR(255) NULL,
+  acceptance_terms_version VARCHAR(32) NULL,
+  acceptance_document_hash CHAR(64) NULL, -- SHA-256 of exactly what the buyer was shown
+  acceptance_recorded_at DATETIME NULL,
+  acceptance_recorded_by VARCHAR(16) NULL, -- 'buyer' | 'staff' (staff accepted for the customer)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_quote_requests_contact (contact_id),
+  KEY idx_quote_requests_supersedes (supersedes_quote_id),
   KEY idx_quote_requests_opportunity (opportunity_id),
-  CONSTRAINT fk_quote_requests_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL
+  CONSTRAINT fk_quote_requests_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL,
+  CONSTRAINT fk_quote_requests_supersedes FOREIGN KEY (supersedes_quote_id) REFERENCES quote_requests (id) ON DELETE SET NULL,
+  CONSTRAINT fk_quote_requests_created_by FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
@@ -2068,3 +2082,18 @@ CREATE TABLE IF NOT EXISTS crm_attention_events (
     CONSTRAINT fk_crm_attention_event_owner FOREIGN KEY (owner_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Sales CRM phase 4b (scripts/alter-create-crm-quotes.js): what happened to a quote (created, sent, superseded, accepted, page_opened). 'page_opened' is approximate
+-- and carries no IP, agent or token. The foreign key purchases.quote_id -> quote_requests(id) ON DELETE SET NULL is added by that script (only when nothing is orphaned).
+CREATE TABLE IF NOT EXISTS crm_quote_events (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quote_id INT UNSIGNED NOT NULL,
+    opportunity_id INT UNSIGNED NULL,
+    event_type VARCHAR(16) NOT NULL,
+    detail VARCHAR(255) NULL,
+    actor_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_crm_quote_events_quote (quote_id, created_at),
+    KEY idx_crm_quote_events_deal (opportunity_id, created_at),
+    CONSTRAINT fk_crm_quote_events_quote FOREIGN KEY (quote_id) REFERENCES quote_requests (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_quote_events_admin FOREIGN KEY (actor_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

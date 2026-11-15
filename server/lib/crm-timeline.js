@@ -5,7 +5,7 @@
 //  - Never student-level data. A support request shows only its reference, category and status (never the subject, the message or who wrote it); no student, class or
 //    roster table is read at all.
 //  - A demo shows as "Demo" with dates, never the group's name (decision D14: the name is staff-only and stays out of every visitor-facing and counting surface).
-//  - A quote is never said to be "viewed": no server-side view event exists yet (phase 4).
+//  - A quote's page is said to have been "opened" only from a server-side event (crm_quote_events, phase 4b), always labeled approximate, and a quote is never said to be seen or read.
 //  - Paged by 50. Each source is asked for just the newest (offset + page size) rows, the sources are merged by time, and the page is cut from the merge, so the cost
 //    of page N is bounded by N x 50 rows per source and the indexes on (contact_id|account_id|opportunity_id, created_at) and (..., state) cover the lookups.
 // `conn` is the pool in the route and could be any query-capable handle. SQL stays portable.
@@ -108,6 +108,11 @@ function buildSources(sc) {
   const quoteCols = 'q.id, q.quote_number, q.quoted_product_name, q.opportunity_id, so.name AS deal_name';
   add('quote_sent', { from: quoteFrom, where: `${qWhere.sql} AND q.quote_sent_at IS NOT NULL`, params: qWhere.params, at: 'q.quote_sent_at', idCol: 'q.id', select: `${quoteCols}, q.quote_sent_at AS at`, map: quoteMap('Quote sent') });
   add('quote_accepted', { from: quoteFrom, where: `${qWhere.sql} AND q.accepted_at IS NOT NULL`, params: qWhere.params, at: 'q.accepted_at', idCol: 'q.id', select: `${quoteCols}, q.accepted_at AS at`, map: quoteMap('Quote accepted') });
+  // Phase 4b: what the quote's own event log adds. 'Page opened' is approximate (a mail scanner that runs scripts could cause it) and says so; a quote is never called "viewed" otherwise.
+  add('quote_event', { from: `crm_quote_events e JOIN quote_requests q ON q.id = e.quote_id LEFT JOIN crm_opportunities so ON so.id = q.opportunity_id`, where: `${qWhere.sql} AND e.event_type IN ('page_opened', 'superseded')`, params: qWhere.params, at: 'e.created_at', idCol: 'e.id',
+    select: 'e.id, e.event_type, e.detail, e.created_at AS at, q.quote_number, q.quoted_product_name, q.opportunity_id, so.name AS deal_name',
+    map: r => ({ type: 'quote', title: r.event_type === 'page_opened' ? 'Quote page opened (approximate)' : 'Quote replaced by a newer version',
+      detail: trunc([r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, r.quoted_product_name].filter(Boolean).join(' · '), 200), link: dealLink(r), ...dealBits(r) }) });
   add('quote_created', { from: quoteFrom, where: qWhere.sql, params: qWhere.params, at: 'q.created_at', idCol: 'q.id', select: `${quoteCols}, q.created_at AS at`, map: quoteMap('Quote started') });
 
   // Purchases and invoices

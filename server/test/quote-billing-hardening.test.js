@@ -22,7 +22,10 @@ CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEX
 CREATE TABLE quote_requests (id INTEGER PRIMARY KEY, email TEXT, first_name TEXT, last_name TEXT, school TEXT, quote_number TEXT, accept_token TEXT,
   quote_valid_until TEXT, accepted_at TEXT, accepted_payment_method TEXT, status TEXT, quoted_product_id INTEGER, quoted_product_name TEXT,
   quoted_seat_count INTEGER, quoted_amount_cents INTEGER, quoted_school_domain TEXT, quoted_term_years INTEGER,
-  bill_to_street TEXT, bill_to_city TEXT, bill_to_state TEXT, bill_to_zip TEXT, ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT);
+  bill_to_street TEXT, bill_to_city TEXT, bill_to_state TEXT, bill_to_zip TEXT, ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT,
+  content_profile_id INTEGER, opportunity_id INTEGER, revision_number INTEGER NOT NULL DEFAULT 1, version_status TEXT NOT NULL DEFAULT 'current',
+  acceptance_name TEXT, acceptance_title TEXT, acceptance_terms_version TEXT, acceptance_document_hash TEXT, acceptance_recorded_at TEXT, acceptance_recorded_by TEXT);
+CREATE TABLE quote_content_profiles (id INTEGER PRIMARY KEY, section_annual_includes TEXT, section_lesson_package TEXT, section_video_access TEXT, section_license_terms TEXT);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, product_type TEXT, book_id INTEGER, license_product_id INTEGER, seat_count INTEGER,
   purchased_at TEXT DEFAULT CURRENT_TIMESTAMP, source TEXT, notes TEXT, stripe_session_id TEXT, stripe_invoice_id TEXT, school_domain TEXT, school_id INTEGER,
   payment_method TEXT, payment_status TEXT, po_number TEXT, invoice_id INTEGER, amount_cents INTEGER, trial_expiration_date TEXT, trial_lesson_limit INTEGER,
@@ -65,6 +68,7 @@ const conn = {
 const fakePool = { query: run, getConnection: async () => conn };
 
 const alerts = [];
+const hookCalls = [];
 const automations = [];
 const invoiceNumber = { failNext: false };
 let sessionCounter = 0;
@@ -75,7 +79,7 @@ const stubs = {
   [path.join(SERVER, 'lib/automations.js')]: { fireAutomation: async (name, a) => { automations.push({ name, ...a }); } },
   [path.join(SERVER, 'lib/affiliate-attribution.js')]: { attributePurchase: async () => {}, refCodeFromRequest: () => null, codeForAffiliateId: async () => null },
   [path.join(SERVER, 'lib/rate-limit.js')]: { limiter: () => (req, res, next) => next(), clientIp: () => '127.0.0.1' },
-  [path.join(SERVER, 'lib/crm-hooks.js')]: { contactChanged: async () => {}, purchaseChanged: async () => {}, invoiceChanged: async () => {}, contactChangedByEmail: async () => {} },
+  [path.join(SERVER, 'lib/crm-hooks.js')]: { contactChanged: async () => {}, purchaseChanged: async () => {}, invoiceChanged: async () => {}, contactChangedByEmail: async () => {}, quoteEvent: async (...a) => { hookCalls.push(['event', ...a]); }, quoteAccepted: async (...a) => { hookCalls.push(['accepted', ...a]); } },
   [path.join(SERVER, 'lib/own-seat-claim.js')]: { claimForAccountByEmail: async () => {}, claimOwnPurchaseSeats: async () => {}, findClaimableSeats: async () => [] },
   [path.join(SERVER, 'lib/invoice-numbering.js')]: {
     generateInvoiceNumber: async (c, id) => {
@@ -83,7 +87,7 @@ const stubs = {
       await c.query('UPDATE invoices SET invoice_number = ? WHERE id = ?', [`INV-${id}`, id]);
     },
   },
-  [path.join(SERVER, 'lib/settings.js')]: { getSetting: async () => 'sales@example.test' },
+  [path.join(SERVER, 'lib/settings.js')]: { getSetting: async (k) => (k === 'contact_email_sales_alerts' ? 'sales@example.test' : null) },
   [path.join(SERVER, 'lib/account-closing.js')]: { describeConsequences: () => {}, consequencesText: () => '', hasRoles: () => false, closeAccount: async () => {} },
   [path.join(SERVER, 'lib/crm-ownership.js')]: { dealCountForContact: async () => 0, workItemCountForContact: async () => 0 },
   [path.join(SERVER, 'lib/seat-counts.js')]: { notAdminSeatClause: () => '1=1' },
@@ -119,10 +123,16 @@ test.after(() => server.close());
 
 function post(p, body) {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
+    // The accept page now always sends who is accepting (phase 4b); these older tests are about billing, so they send a name unless a test says otherwise.
+    const data = JSON.stringify(body.token && !('signerName' in body) ? { signerName: 'Bea Buyer', ...body } : body);
     const req = http.request({ port, method: 'POST', path: p, headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } },
       (res) => { let b = ''; res.on('data', (d) => b += d); res.on('end', () => resolve({ status: res.statusCode, json: JSON.parse(b) })); });
     req.on('error', reject); req.write(data); req.end();
+  });
+}
+function getJson(p) {
+  return new Promise((resolve, reject) => {
+    http.get({ port, path: p }, (res) => { let b = ''; res.on('data', (d) => b += d); res.on('end', () => resolve({ status: res.statusCode, json: JSON.parse(b) })); }).on('error', reject);
   });
 }
 async function deliver(session, type = 'checkout.session.completed') {
@@ -141,7 +151,7 @@ function makeQuote({ cents = 50000, seats = 5, email } = {}) {
 }
 const count = (table, where = '1=1', ...p) => db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${where}`).get(...p).n;
 const quoteRow = (id) => db.prepare('SELECT * FROM quote_requests WHERE id = ?').get(id);
-const resetNoise = () => { alerts.length = 0; automations.length = 0; };
+const resetNoise = () => { alerts.length = 0; automations.length = 0; hookCalls.length = 0; };
 
 // ---- 1. PO acceptance is all or nothing ----
 test('PO accept: a failure part-way undoes everything, the link still works, and the retry makes exactly one purchase and one invoice', async () => {
@@ -347,4 +357,111 @@ test('a legacy quote with no contact link accepts by card and by PO (nothing her
   const a = makeQuote(), b = makeQuote();
   assert.equal((await post('/api/quote/accept', { token: a.token, paymentMethod: 'card' })).status, 200);
   assert.equal((await post('/api/quote/accept', { token: b.token, paymentMethod: 'po', poNumber: 'PO-L' })).status, 200);
+});
+
+// ---- Phase 4b: who accepted, what they were shown, replaced quotes, events ----
+const evidenceOf = (id) => db.prepare('SELECT acceptance_name AS name, acceptance_title AS title, acceptance_terms_version AS terms, acceptance_document_hash AS hash, acceptance_recorded_at AS at, acceptance_recorded_by AS by, accepted_at FROM quote_requests WHERE id = ?').get(id);
+
+test('EVIDENCE: both accept paths refuse a missing or one-letter name, and nothing is claimed or created', async () => {
+  const q = makeQuote();
+  for (const paymentMethod of ['po', 'card']) {
+    for (const signerName of [undefined, '', ' ', 'D', 5]) {
+      const r = await post('/api/quote/accept', { token: q.token, paymentMethod, poNumber: 'PO-E', ...(signerName === undefined ? { signerName: undefined } : { signerName }) });
+      assert.equal(r.status, 400, `${paymentMethod} / ${JSON.stringify(signerName)}`);
+      assert.equal(r.json.code, 'signer_required');
+    }
+  }
+  assert.equal(quoteRow(q.id).accepted_at, null);
+  assert.equal(count('purchases', 'quote_id = ?', q.id), 0);
+  assert.equal(evidenceOf(q.id).name, null);
+});
+
+test('EVIDENCE: a PO acceptance saves the name, title, time, terms version and a hash in the same step that claims the quote', async () => {
+  const q = makeQuote();
+  const r = await post('/api/quote/accept', { token: q.token, paymentMethod: 'po', poNumber: 'PO-EV', signerName: '  Dana   Whitaker ', signerTitle: ' Business  Manager ' });
+  assert.equal(r.status, 200);
+  const e = evidenceOf(q.id);
+  assert.equal(e.name, 'Dana Whitaker'); assert.equal(e.title, 'Business Manager');
+  assert.equal(e.by, 'buyer'); assert.equal(e.terms, '1');
+  assert.match(e.hash, /^[0-9a-f]{64}$/); assert.ok(e.at && e.accepted_at);
+  assert.deepEqual(hookCalls.filter(c => c[0] === 'accepted').pop().slice(2), ['po', 'buyer'], 'the deal is told, once, that the customer accepted');
+});
+
+test('EVIDENCE: a failed PO acceptance leaves no evidence behind (it is part of the all-or-nothing step)', async () => {
+  const q = makeQuote();
+  invoiceNumber.failNext = true;
+  const r = await post('/api/quote/accept', { token: q.token, paymentMethod: 'po', poNumber: 'PO-F', signerName: 'Dana Whitaker' });
+  assert.equal(r.status, 500);
+  assert.equal(evidenceOf(q.id).name, null);
+  assert.equal(quoteRow(q.id).accepted_at, null);
+});
+
+test('EVIDENCE: the hash is of what was shown, so it changes when the price or the terms change and not otherwise', async () => {
+  const { evidenceColumns } = require(path.join(SERVER, 'lib/quote-evidence.js'));
+  const a = makeQuote({ cents: 50000 }), b = makeQuote({ cents: 50000 });
+  const A = quoteRow(a.id), B = quoteRow(b.id);
+  const sig = { name: 'Dana Whitaker', title: null };
+  const same = await evidenceColumns(fakePool, { ...A, quote_number: 'X', id: 1 }, sig, 'buyer');
+  const again = await evidenceColumns(fakePool, { ...A, quote_number: 'X', id: 2 }, sig, 'buyer');
+  assert.equal(same.acceptance_document_hash, again.acceptance_document_hash, 'same quote, same hash');
+  const pricier = await evidenceColumns(fakePool, { ...A, quote_number: 'X', quoted_amount_cents: 60000 }, sig, 'buyer');
+  assert.notEqual(same.acceptance_document_hash, pricier.acceptance_document_hash);
+  db.prepare("INSERT INTO quote_content_profiles (id, section_license_terms) VALUES (7, 'Terms v1')").run();
+  const withTerms = await evidenceColumns(fakePool, { ...A, quote_number: 'X', content_profile_id: 7 }, sig, 'buyer');
+  assert.notEqual(same.acceptance_document_hash, withTerms.acceptance_document_hash, 'the content profile text is part of what they saw');
+  assert.ok(B);
+});
+
+test('EVIDENCE: staff accepting for a customer is recorded as staff', async () => {
+  const q = makeQuote();
+  await quoteAccept.acceptQuoteViaPO(q.id, 'PO-S', undefined, { signer: { name: 'Dana Whitaker', title: null }, recordedBy: 'staff' });
+  assert.equal(evidenceOf(q.id).by, 'staff');
+  assert.deepEqual(hookCalls.filter(c => c[0] === 'accepted').pop().slice(2), ['po', 'staff']);
+});
+
+test('EVIDENCE: a card click records who pressed the button before Stripe, but the quote is accepted only when the payment arrives', async () => {
+  const q = makeQuote();
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card', signerName: 'Dana Whitaker', signerTitle: 'Principal' });
+  const e = evidenceOf(q.id);
+  assert.equal(e.name, 'Dana Whitaker'); assert.equal(e.title, 'Principal'); assert.match(e.hash, /^[0-9a-f]{64}$/);
+  assert.equal(e.accepted_at, null);
+  const pid = db.prepare('SELECT id FROM purchases WHERE quote_id = ?').get(q.id).id;
+  resetNoise();
+  await deliver(sessionFor(q, pid, 'cs_ev'));
+  assert.ok(quoteRow(q.id).accepted_at);
+  assert.equal(hookCalls.filter(c => c[0] === 'accepted').length, 1);
+  await deliver(sessionFor(q, pid, 'cs_ev')); // a replay tells the CRM nothing more
+  assert.equal(hookCalls.filter(c => c[0] === 'accepted').length, 1);
+});
+
+test('REPLACED: a replaced quote\'s link answers "superseded" on the page and refuses both accept paths, and opening a live one is logged as page_opened', async () => {
+  resetNoise();
+  const live = makeQuote();
+  assert.equal((await getJson(`/api/quote/accept?token=${live.token}`)).status, 200);
+  assert.deepEqual(hookCalls.filter(c => c[0] === 'event').pop().slice(1, 3), [live.id, 'page_opened']);
+
+  const old = makeQuote();
+  db.prepare("UPDATE quote_requests SET version_status = 'superseded' WHERE id = ?").run(old.id);
+  hookCalls.length = 0;
+  const page = await getJson(`/api/quote/accept?token=${old.token}`);
+  assert.equal(page.status, 400); assert.equal(page.json.error, 'superseded');
+  assert.equal(hookCalls.length, 0, 'a replaced quote\'s page is not logged as opened');
+  for (const paymentMethod of ['po', 'card']) {
+    const r = await post('/api/quote/accept', { token: old.token, paymentMethod, poNumber: 'PO-R' });
+    assert.equal(r.status, 400); assert.equal(r.json.error, 'superseded');
+  }
+  assert.equal(count('purchases', 'quote_id = ?', old.id), 0);
+});
+
+test('REPLACED: money paid on a quote that a newer one replaced is accepted (the money is real) and staff are told', async () => {
+  resetNoise();
+  const q = makeQuote();
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card' });
+  const pid = db.prepare('SELECT id FROM purchases WHERE quote_id = ?').get(q.id).id;
+  db.prepare("UPDATE quote_requests SET version_status = 'superseded' WHERE id = ?").run(q.id); // the revision was sent while the buyer was on Stripe
+  await deliver(sessionFor(q, pid, 'cs_old'));
+  assert.ok(quoteRow(q.id).accepted_at);
+  assert.equal(db.prepare('SELECT payment_status FROM purchases WHERE id = ?').get(pid).payment_status, 'paid');
+  assert.ok(db.prepare("SELECT id FROM school_audit_log WHERE action = 'superseded_quote_paid' AND entity_id = ?").get(q.id));
+  assert.ok(alerts.some(a => /replaced quote/.test(a.subject)));
 });

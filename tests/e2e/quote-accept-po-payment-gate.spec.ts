@@ -31,7 +31,7 @@ test.describe("Quote-accept PO flow — payment gate matches cart PO flow", () =
 
     const r = await request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
-      data: { token, paymentMethod: "po" },
+      data: { token, signerName: "Test Buyer", paymentMethod: "po" },
     });
     expect(r.status()).toBe(400);
     const body = await r.json();
@@ -52,7 +52,7 @@ test.describe("Quote-accept PO flow — payment gate matches cart PO flow", () =
 
     const acceptRes = await request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
-      data: { token, paymentMethod: "po", poNumber },
+      data: { token, signerName: "Test Buyer", paymentMethod: "po", poNumber },
     });
     expect(acceptRes.status()).toBe(200);
     const acceptBody = await acceptRes.json();
@@ -68,7 +68,7 @@ test.describe("Quote-accept PO flow — payment gate matches cart PO flow", () =
     // NULL guard, so this exact sequence used to succeed twice.
     const secondAcceptRes = await request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
-      data: { token, paymentMethod: "po", poNumber: `${poNumber}-DUPLICATE` },
+      data: { token, signerName: "Test Buyer", paymentMethod: "po", poNumber: `${poNumber}-DUPLICATE` },
     });
     expect(secondAcceptRes.status()).toBe(400);
     const secondAcceptBody = await secondAcceptRes.json();

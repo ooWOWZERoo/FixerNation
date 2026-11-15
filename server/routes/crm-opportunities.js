@@ -8,6 +8,11 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm, can, canEditDeal } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { sqlNow } = require('../lib/crm-classification');
+const { closeDealWon } = require('../lib/crm-won');
+const { procurementForDeal } = require('../lib/crm-procurement');
+const { purchaseIdForQuote } = require('../lib/quote-purchase');
+const { cleanSigner } = require('../lib/quote-evidence');
+const { acceptQuoteViaPO } = require('./quote-accept');
 const {
   OPP_STATES, OPP_TYPES, COMMITTEE_ROLES, INFLUENCE, STANCE,
   text, posInt, cents, dateOnly, utcDateTime, oneOf, paging, likeTerm, daysSince,
@@ -138,17 +143,31 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
      LEFT JOIN admin_users u ON u.id = h.actor_admin_id WHERE h.opportunity_id = ? ORDER BY h.id`, [o.id]);
   // The quote's accept token is deliberately not selected: it is a credential for the public accept page.
   const [quotes] = await pool.query(
-    `SELECT id, quote_number, status, quoted_amount_cents, quote_sent_at, quote_valid_until, accepted_at FROM quote_requests WHERE opportunity_id = ? ORDER BY id`, [o.id]);
+    `SELECT id, quote_number, status, quoted_amount_cents, quote_sent_at, quote_valid_until, accepted_at, revision_number, version_status, supersedes_quote_id,
+            acceptance_name, acceptance_title, acceptance_recorded_at, acceptance_recorded_by, acceptance_terms_version, acceptance_document_hash
+     FROM quote_requests WHERE opportunity_id = ? ORDER BY id`, [o.id]);
   const [purchases] = await pool.query(
     `SELECT p.id, p.payment_status, p.payment_method, p.amount_cents, p.license_status, p.quote_id
      FROM purchases p JOIN quote_requests q ON q.id = p.quote_id WHERE q.opportunity_id = ? ORDER BY p.id`, [o.id]);
+  const [events] = await pool.query(
+    `SELECT e.id, e.quote_id, e.event_type, e.detail, e.created_at, q.quote_number FROM crm_quote_events e JOIN quote_requests q ON q.id = e.quote_id
+     WHERE q.opportunity_id = ? ORDER BY e.id DESC LIMIT 50`, [o.id]);
   res.json({
     opportunity: oppRow(o),
     committee: committee.map(c => ({ contactId: c.contact_id, name: c.name, email: c.email, classification: c.crm_classification, role: c.role, influence: c.influence, stance: c.stance, notes: c.notes })),
     history: hist.map(h => ({ id: h.id, from: h.from_label || null, to: h.to_label, fromState: h.from_state, toState: h.to_state, reason: h.reason, at: h.created_at, actor: h.actor || null })),
-    quotes: quotes.map(q => ({ id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at, validUntil: q.quote_valid_until, acceptedAt: q.accepted_at })),
+    quotes: quotes.map(q => ({
+      id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at, validUntil: q.quote_valid_until, acceptedAt: q.accepted_at,
+      revisionNumber: Number(q.revision_number || 1), versionStatus: q.version_status || 'current', supersedesQuoteId: q.supersedes_quote_id || null,
+      // Who accepted and what they were shown (staff only). The hash is shortened: it proves the record, it is not a secret, but nobody reads 64 characters.
+      acceptance: q.acceptance_recorded_at ? { name: q.acceptance_name, title: q.acceptance_title, at: q.acceptance_recorded_at, by: q.acceptance_recorded_by, termsVersion: q.acceptance_terms_version, documentHash: q.acceptance_document_hash ? String(q.acceptance_document_hash).slice(0, 12) : null } : null,
+    })),
     // Payment is shown next to the deal state, never inferred from it.
     purchases: purchases.map(p => ({ id: p.id, quoteId: p.quote_id, paymentStatus: p.payment_status, paymentMethod: p.payment_method, amountCents: p.amount_cents === null ? null : Number(p.amount_cents), licenseStatus: p.license_status })),
+    procurement: await procurementForDeal(pool, o.id),
+    // 'viewed' is approximate (a mail scanner that runs scripts could cause it); the page labels it so.
+    quoteEvents: events.map(e => ({ id: e.id, quoteId: e.quote_id, quoteNumber: e.quote_number || null, type: e.event_type, detail: e.detail, at: e.created_at })),
+    permissions: { acceptForCustomer: can(req.crm.role, 'accept_for_customer') },
   });
 });
 
@@ -291,6 +310,57 @@ router.post('/:id/close', requireAuth, requireCrm('edit_deal'), async (req, res)
   await history(o.id, o.stage_id, toStageId, 'open', outcome, req.crm.adminId, text(b.reason, 200));
   await crmAudit(req, { action: 'crm_opportunity_closed', entityType: 'crm_opportunity', entityId: o.id, prev: { state: 'open' }, next: { state: outcome }, reason: text(b.reason, 200) });
   res.json({ ok: true, state: outcome });
+});
+
+// ---- Won handoff (phase 4c) -------------------------------------------------------------------------------------------------------
+// CRM Admin only. Closes the deal Won and, if the named quote is not accepted yet, accepts it by purchase order FOR the customer through the existing code
+// (acceptQuoteViaPO: the same purchase, seats, invoice and emails as the customer's own PO acceptance). This route never inserts a purchase or invoice itself.
+// Repeating the request returns the first result: the quote can be claimed once, so a second call creates nothing and reports the same purchase and invoice.
+const FRIENDLY = {
+  expired: 'That quote has expired. Extend its valid-until date on the Quotes page, then try again.',
+  superseded: 'A newer revision of that quote was sent, so this one cannot be accepted. Use the newer quote.',
+  not_found: 'That quote could not be found.',
+};
+
+router.post('/:id/won-handoff', requireAuth, requireCrm('accept_for_customer'), async (req, res) => {
+  const o = await loadOpp(posInt(req.params.id));
+  if (!o) return res.status(404).json({ error: 'Deal not found' });
+  if (o.state === 'lost' || o.state === 'inactive') return res.status(409).json({ code: 'not_open', error: 'This deal is closed as ' + o.state + '. Reopen it first.' });
+  const b = req.body || {};
+  const quoteId = posInt(b.quoteId);
+  const [[q]] = quoteId ? await pool.query('SELECT id, quote_number, accepted_at, accepted_payment_method, version_status FROM quote_requests WHERE id = ? AND opportunity_id = ?', [quoteId, o.id]) : [[null]];
+  if (!q) return res.status(400).json({ error: 'Pick a quote that is on this deal.' });
+
+  const alreadyAccepted = !!q.accepted_at;
+  let accepted = null;
+  if (!alreadyAccepted) {
+    if (q.version_status === 'superseded') return res.status(409).json({ code: 'superseded', error: FRIENDLY.superseded });
+    const signer = cleanSigner({ signerName: b.signerName, signerTitle: b.signerTitle });
+    if (signer.error) return res.status(400).json({ code: signer.code, error: signer.error.replace(/ If the page was already open.*$/, '') });
+    const poNumber = text(b.poNumber, 128) || '';
+    try {
+      accepted = await acceptQuoteViaPO(q.id, poNumber, undefined, { signer, recordedBy: 'staff', skipDealClose: true });
+    } catch (err) {
+      // Two requests at once: the other one claimed the quote. Carry on and report what it made.
+      if (!(err.status && err.message === 'already_accepted')) {
+        if (err.status) return res.status(err.status).json({ code: 'accept_failed', error: FRIENDLY[err.message] || err.message });
+        throw err;
+      }
+    }
+    if (accepted) await crmAudit(req, { action: 'crm_won_handoff', entityType: 'crm_opportunity', entityId: o.id, next: { quoteId: q.id, purchaseId: accepted.purchaseId, invoiceId: accepted.invoiceId, poNumber: poNumber || null } });
+  }
+
+  const purchaseId = accepted ? accepted.purchaseId : await purchaseIdForQuote(pool, q.id);
+  const [[purchase]] = purchaseId ? await pool.query('SELECT id, invoice_id, payment_status, license_status FROM purchases WHERE id = ?', [purchaseId]) : [[null]];
+  const closed = o.state === 'open'
+    ? await closeDealWon(pool, o.id, { actorAdminId: req.crm.adminId, reason: accepted ? `Won: quote ${q.quote_number || q.id} accepted by PO for the customer` : `Won: quote ${q.quote_number || q.id} was already accepted` })
+    : false;
+  // "repeated" = nothing new happened: the quote was accepted before this call and the deal was already won.
+  res.json({
+    ok: true, repeated: !accepted && !closed, accepted: !!accepted, dealClosed: closed, state: 'won',
+    purchaseId: purchase ? purchase.id : null, invoiceId: purchase ? purchase.invoice_id || null : null,
+    paymentStatus: purchase ? purchase.payment_status : null, licenseStatus: purchase ? purchase.license_status : null,
+  });
 });
 
 // CRM Admin only, with a reason.

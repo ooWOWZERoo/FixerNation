@@ -77,7 +77,7 @@ test.describe("Quote lifecycle: build -> send -> accept by PO", () => {
 
     const acceptRes = await page.request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
-      data: { token: acceptToken, paymentMethod: "po", poNumber },
+      data: { token: acceptToken, signerName: "Test Buyer", paymentMethod: "po", poNumber },
     });
     expect(acceptRes.status()).toBe(200);
     const acceptBody = await acceptRes.json();

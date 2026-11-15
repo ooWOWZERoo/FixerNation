@@ -6,6 +6,8 @@
 const pool = require('../db/pool');
 const { isCrmEnabled } = require('./crm-permissions');
 const cls = require('./crm-classification');
+const { recordQuoteEvent } = require('./crm-quote-events');
+const { closeDealWon } = require('./crm-won');
 
 // A database that has not had the CRM alter script run yet is expected, not an error worth shouting about.
 function quiet(err) {
@@ -49,4 +51,21 @@ function invoiceChanged(invoiceId) {
   });
 }
 
-module.exports = { contactChanged, contactChangedByEmail, purchaseChanged, invoiceChanged };
+// Phase 4b: one line in a quote's event log (created, sent, superseded, viewed). `opts` = { detail, actorAdminId }.
+function quoteEvent(quoteId, type, opts) {
+  return safely(async () => { await recordQuoteEvent(pool, quoteId, type, opts); });
+}
+
+// Phase 4c: a quote was accepted (by the customer, or by staff for them). Writes the event and closes the quote's deal Won if it is still open, once. The deal
+// changes only; no purchase, invoice or contact label is touched here. `how` is 'po' or 'card'; `by` is 'buyer' or 'staff'.
+function quoteAccepted(quoteId, how, by = 'buyer') {
+  return safely(async () => {
+    await recordQuoteEvent(pool, quoteId, 'accepted', { detail: `${how}${by === 'staff' ? ' (for the customer)' : ''}` });
+    const [[q]] = await pool.query('SELECT quote_number, opportunity_id FROM quote_requests WHERE id = ?', [quoteId]);
+    if (q && q.opportunity_id) {
+      await closeDealWon(pool, q.opportunity_id, { reason: `Quote ${q.quote_number || quoteId} accepted ${by === 'staff' ? 'by staff for the customer' : 'by the customer'} (${how})` });
+    }
+  });
+}
+
+module.exports = { contactChanged, contactChangedByEmail, purchaseChanged, invoiceChanged, quoteEvent, quoteAccepted };

@@ -93,7 +93,7 @@ async function evaluate(conn, { today }) {
   [rows] = await conn.query(
     `SELECT q.id, q.quote_number, q.quote_valid_until, q.opportunity_id, o.name AS deal_name, o.owner_admin_id, ow.username AS owner_name
      FROM quote_requests q LEFT JOIN crm_opportunities o ON o.id = q.opportunity_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id
-     WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND q.status IN ('new', 'contacted') AND q.quote_valid_until IS NOT NULL
+     WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND q.version_status <> 'superseded' AND q.status IN ('new', 'contacted') AND q.quote_valid_until IS NOT NULL
        AND q.quote_valid_until >= ? AND q.quote_valid_until <= ? AND NOT (${TEST_EMAIL}) ORDER BY q.quote_valid_until, q.id LIMIT ${PER_RULE_LIMIT}`, [today, addDays(today, QUOTE_WINDOW_DAYS)]);
   for (const r of rows) items.push(item('quote_expiring', r.id, { title: r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, context: r.deal_name || 'No deal yet',
     link: r.opportunity_id ? pageFor.opportunity + r.opportunity_id : 'admin-quotes.html', ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null, dealId: r.opportunity_id ? Number(r.opportunity_id) : null,

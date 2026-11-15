@@ -10,6 +10,8 @@ const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { refCodeFromRequest } = require('../lib/affiliate-attribution');
 const { purchaseIdForQuote, openCardPurchaseIdForQuote } = require('../lib/quote-purchase');
+const { cleanSigner, evidenceColumns } = require('../lib/quote-evidence');
+const crmHooks = require('../lib/crm-hooks'); // Sales CRM: quote events and the deal moving to Won (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
 
@@ -20,6 +22,8 @@ function getStripe() {
 function quoteStatus(quote) {
   if (!quote) return 'not_found';
   if (quote.accepted_at) return 'already_accepted';
+  // Phase 4b: a newer revision was SENT, so this link no longer accepts. (A quote row from before the column existed has no version_status: it is current.)
+  if (quote.version_status === 'superseded') return 'superseded';
   if (quote.quote_valid_until) {
     const expiry = new Date(quote.quote_valid_until);
     expiry.setHours(23, 59, 59, 999);
@@ -35,6 +39,9 @@ router.get('/accept', async (req, res) => {
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
   const status = quoteStatus(quote);
   if (status !== 'valid') return res.status(400).json({ error: status });
+
+  // "Page opened" for the Customer Hub timeline: approximate, at most once an hour per quote, no address or token kept.
+  await crmHooks.quoteEvent(quote.id, 'page_opened');
 
   res.json({
     quoteNumber: quote.quote_number || null,
@@ -176,7 +183,10 @@ async function createPurchaseFromQuote(quote, paymentMethod, req, paymentStatus 
 // a PO number doesn't apply, and there's no real payment to wait on, so the
 // license activates immediately instead of sitting 'pending' with no PO
 // ever going to arrive to mark "received."
-async function acceptQuoteViaPO(quoteId, poNumber, req) {
+//
+// `opts.signer` ({ name, title }, from lib/quote-evidence.js cleanSigner) is the acceptance evidence, saved in the same statement that claims the quote;
+// `opts.recordedBy` is 'buyer' (the public page) or 'staff' (an admin accepting for the customer). Without a signer nothing is recorded (older callers).
+async function acceptQuoteViaPO(quoteId, poNumber, req, opts = {}) {
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quoteId]);
   const status = quoteStatus(quote);
   if (status !== 'valid') throw Object.assign(new Error(status), { status: 400 });
@@ -194,9 +204,11 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   let contactId, purchaseId, invoiceId;
   try {
     await connection.beginTransaction();
+    const evidence = opts.signer ? await evidenceColumns(connection, quote, opts.signer, opts.recordedBy) : {};
+    const evidenceKeys = Object.keys(evidence);
     const [claimResult] = await connection.query(
-      "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
-      [quote.id]
+      `UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted'${evidenceKeys.map(k => `, ${k} = ?`).join('')} WHERE id = ? AND accepted_at IS NULL`,
+      [...evidenceKeys.map(k => evidence[k]), quote.id]
     );
     if (claimResult.affectedRows === 0) throw Object.assign(new Error('already_accepted'), { status: 400 });
 
@@ -237,6 +249,9 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   for (const fn of afterCommit) {
     try { await fn(); } catch (e) { console.error('quote accept after-commit step failed:', e.message); }
   }
+  // The event, and the quote's open deal moves to Won (never throws). The Won handoff on a deal closes the deal itself, under the admin's name, so it asks to skip that.
+  if (opts.skipDealClose) await crmHooks.quoteEvent(quote.id, 'accepted', { detail: 'po (for the customer)' });
+  else await crmHooks.quoteAccepted(quote.id, 'po', opts.recordedBy === 'staff' ? 'staff' : 'buyer');
 
   let setupUrl = '';
   try { setupUrl = await createSetPasswordUrl(quote.email, quote.first_name, quote.last_name, '/school-admin-roster.html'); } catch (e) { console.error('createSetPasswordUrl failed:', e.message); }
@@ -288,12 +303,16 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
 
 // The open card purchase for a quote: the one an earlier click already made and nobody has paid yet, or a new one. Done under a lock on the
 // quote row so two clicks at the same moment end up with one purchase.
-async function openCardPurchase(quote, req) {
+async function openCardPurchase(quote, req, signer) {
   const connection = await pool.getConnection();
   const afterCommit = [];
   try {
     await connection.beginTransaction();
     await connection.query('SELECT id FROM quote_requests WHERE id = ? FOR UPDATE', [quote.id]);
+    // The signer is recorded when the button is pressed (before Stripe). The quote counts as accepted only when the payment arrives (accepted_at).
+    const evidence = await evidenceColumns(connection, quote, signer, 'buyer');
+    const keys = Object.keys(evidence);
+    await connection.query(`UPDATE quote_requests SET ${keys.map(k => `${k} = ?`).join(', ')} WHERE id = ? AND accepted_at IS NULL`, [...keys.map(k => evidence[k]), quote.id]);
     let purchaseId = await openCardPurchaseIdForQuote(connection, quote.id);
     if (!purchaseId) {
       ({ purchaseId } = await createPurchaseFromQuote(quote, 'card', req, 'pending', { connection, afterCommit }));
@@ -321,9 +340,13 @@ router.post('/accept', async (req, res) => {
   const status = quoteStatus(quote);
   if (status !== 'valid') return res.status(400).json({ error: status });
 
+  // Phase 4b (D12): who is accepting. Name required, title optional; saved with the time, the terms version and a hash of what they were shown.
+  const signer = cleanSigner(req.body);
+  if (signer.error) return res.status(400).json({ error: signer.error, code: signer.code });
+
   if (paymentMethod === 'po') {
     try {
-      const result = await acceptQuoteViaPO(quote.id, poNumber, req);
+      const result = await acceptQuoteViaPO(quote.id, poNumber, req, { signer, recordedBy: 'buyer' });
       return res.json({ ok: true, ...result });
     } catch (err) {
       if (err.status) return res.status(err.status).json({ error: err.message });
@@ -336,7 +359,7 @@ router.post('/accept', async (req, res) => {
   // duplicate request here can never produce a duplicate real purchase.
   // Phase 4a: a buyer who clicks the button again gets a fresh Stripe session for the SAME open purchase, not another purchase with
   // another set of seats. The quote row is locked while we look, so two simultaneous clicks cannot both make one.
-  const purchaseId = await openCardPurchase(quote, req);
+  const purchaseId = await openCardPurchase(quote, req, signer);
   const siteUrl = process.env.SITE_URL || '';
   const amountCents = quote.quoted_amount_cents || 0;
   const session = await getStripe().checkout.sessions.create({

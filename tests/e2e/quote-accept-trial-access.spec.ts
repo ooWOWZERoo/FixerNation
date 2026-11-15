@@ -33,7 +33,7 @@ test.describe("Quote-accepted trial gets real, claimable access", () => {
 
     const acceptRes = await request.post("/api/quotes/accept", {
       headers: { "Content-Type": "application/json" },
-      data: { token, paymentMethod: "po", poNumber },
+      data: { token, signerName: "Test Buyer", paymentMethod: "po", poNumber },
     });
     expect(acceptRes.status()).toBe(200);
     const { purchaseId } = await acceptRes.json();

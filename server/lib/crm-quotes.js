@@ -3,6 +3,8 @@
 // The accept token is a credential for the public accept page and is never selected here.
 const { likeTerm } = require('./crm-common');
 const { TEST_ADDRESS_SQL } = require('./crm-classification');
+const pool = require('../db/pool');
+const { isCrmEnabled, loadCrmRole, canEditDeal } = require('./crm-permissions');
 
 // Same evidence the phase 1 backfill uses, so a deal made by hand starts where a backfilled one would.
 function stageForQuote(q) {
@@ -62,4 +64,35 @@ async function listQuoteGaps(conn, { gap = 'any', q = null, includeTest = false,
   };
 }
 
-module.exports = { stageForQuote, dealName, matchingContacts, listQuoteGaps };
+// Phase 4b: the links a new quote gets. Never throws and never blocks the request: a database that has not had scripts/alter-create-crm-quotes.js (or the
+// phase 1 script) run yet simply leaves the quote unlinked, and "Quotes without a deal" still finds it. Returns the contact id it linked, or null.
+const quiet = (err) => err && (err.code === 'ER_BAD_FIELD_ERROR' || /no such column|has no column named/i.test(String(err.message)));
+
+async function setQuoteLinks(db, quoteId, { contactEmail = null, opportunityId = null, adminId = null } = {}) {
+  let linked = null;
+  try {
+    if (contactEmail) {
+      const ids = await matchingContacts(db, contactEmail);
+      if (ids.length === 1) { await db.query('UPDATE quote_requests SET contact_id = ? WHERE id = ?', [ids[0], quoteId]); linked = ids[0]; }
+    }
+    if (opportunityId) await db.query('UPDATE quote_requests SET opportunity_id = ? WHERE id = ?', [opportunityId, quoteId]);
+    if (adminId) await db.query('UPDATE quote_requests SET created_by_admin_id = ? WHERE id = ?', [adminId, quoteId]);
+  } catch (err) {
+    if (!quiet(err)) console.error('linking a new quote failed:', err.message);
+  }
+  return linked;
+}
+
+// May this signed-in admin put a quote on this deal? Needs the Hub on and a CRM role that can edit THAT deal (Sales: their own or unowned; Read-only: never).
+// Returns { deal } or { error, status }.
+async function dealForQuote(req, opportunityId) {
+  if (!(await isCrmEnabled())) return { status: 400, error: 'The Customer Hub is off, so a quote cannot be put on a deal.' };
+  const role = await loadCrmRole(req.user.userId);
+  if (!role) return { status: 403, error: 'You do not have a Sales CRM role.' };
+  const [[deal]] = await pool.query('SELECT id, owner_admin_id, state FROM crm_opportunities WHERE id = ?', [opportunityId]);
+  if (!deal) return { status: 400, error: 'That deal does not exist.' };
+  if (!canEditDeal(role, req.user.userId, deal)) return { status: 403, error: 'This deal belongs to someone else. Ask the owner or a CRM Admin.' };
+  return { deal };
+}
+
+module.exports = { stageForQuote, dealName, matchingContacts, listQuoteGaps, setQuoteLinks, dealForQuote };

@@ -19,13 +19,20 @@ CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEX
 CREATE TABLE license_products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, is_trial INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, product_type TEXT DEFAULT 'group_license', license_product_id INTEGER,
   payment_status TEXT NOT NULL DEFAULT 'paid', payment_method TEXT DEFAULT 'manual', amount_cents INTEGER, trial_lesson_limit INTEGER, trial_expiration_date TEXT,
-  purchased_at TEXT DEFAULT '2026-01-01 00:00:00', license_status TEXT DEFAULT 'active', quote_id INTEGER, invoice_id INTEGER, school_id INTEGER);
+  purchased_at TEXT DEFAULT '2026-01-01 00:00:00', license_status TEXT DEFAULT 'active', quote_id INTEGER, invoice_id INTEGER, school_id INTEGER, po_number TEXT);
 CREATE TABLE quote_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_number TEXT, email TEXT NOT NULL, status TEXT DEFAULT 'new', accept_token TEXT,
   quoted_amount_cents INTEGER, quote_sent_at TEXT, quote_valid_until TEXT, accepted_at TEXT, contact_id INTEGER, opportunity_id INTEGER,
-  first_name TEXT, last_name TEXT, school TEXT, quoted_product_name TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00', demo_invitation_id INTEGER NOT NULL DEFAULT 0);
+  first_name TEXT, last_name TEXT, school TEXT, quoted_product_name TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00', demo_invitation_id INTEGER NOT NULL DEFAULT 0,
+  revision_number INTEGER NOT NULL DEFAULT 1, supersedes_quote_id INTEGER, version_status TEXT NOT NULL DEFAULT 'current', created_by_admin_id INTEGER, accepted_payment_method TEXT,
+  acceptance_name TEXT, acceptance_title TEXT, acceptance_terms_version TEXT, acceptance_document_hash TEXT, acceptance_recorded_at TEXT, acceptance_recorded_by TEXT,
+  phone TEXT, message TEXT, origin TEXT, quoted_product_id INTEGER, quoted_tier_name TEXT, quoted_seat_count INTEGER, quoted_addon_seats INTEGER, quoted_term_years INTEGER, quoted_school_domain TEXT,
+  quoted_at TEXT, quote_sent_via TEXT, content_profile_id INTEGER, notes TEXT, bill_to_street TEXT, bill_to_city TEXT, bill_to_state TEXT, bill_to_zip TEXT,
+  ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT);
+CREATE TABLE quote_content_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, is_default INTEGER DEFAULT 0, section_annual_includes TEXT, section_lesson_package TEXT, section_video_access TEXT, section_license_terms TEXT);
+CREATE TABLE crm_quote_events (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_id INTEGER NOT NULL, opportunity_id INTEGER, event_type TEXT NOT NULL, detail TEXT, actor_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, closed_at TEXT);
 CREATE TABLE contact_group_members (contact_id INTEGER NOT NULL, group_id INTEGER NOT NULL, PRIMARY KEY (contact_id, group_id));
-CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_number TEXT, contact_id INTEGER NOT NULL, status TEXT DEFAULT 'unpaid', created_at TEXT DEFAULT '2026-01-01 00:00:00');
+CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_number TEXT, contact_id INTEGER NOT NULL, status TEXT DEFAULT 'unpaid', created_at TEXT DEFAULT '2026-01-01 00:00:00', po_received_date TEXT);
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER, display_name TEXT);
 CREATE TABLE districts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
 CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_id INTEGER, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER,
@@ -90,7 +97,7 @@ function makeDb({ withCrmTables = true } = {}) {
   const run = async (sql, rawParams = []) => {
     let i = 0;
     const params = [];
-    const s = sql.trim().replace(/\?/g, () => {
+    const s = sql.trim().replace(/\bNOW\(\)/g, 'CURRENT_TIMESTAMP').replace(/\bINSERT IGNORE\b/gi, 'INSERT OR IGNORE').replace(/\s+FOR UPDATE\s*$/i, '').replace(/\?/g, () => {
       const p = rawParams[i++];
       if (Array.isArray(p)) { params.push(...p); return p.map(() => '?').join(','); }
       params.push(p === undefined ? null : p);

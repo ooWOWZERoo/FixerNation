@@ -129,6 +129,7 @@ router.get('/financial-summary', requireAuth, async (req, res) => {
      WHERE quote_valid_until BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
        AND accepted_at IS NULL
        AND status != 'closed'
+       AND version_status <> 'superseded'
        AND quote_sent_at IS NOT NULL`
   );
 

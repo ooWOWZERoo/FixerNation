@@ -59,6 +59,10 @@
     <h1>Quote unavailable</h1>
     <p class="sub">This quote has expired or isn't available anymore. Contact us at <a href="mailto:admin@fixernationeducation.com">admin@fixernationeducation.com</a> if you need help.</p>
   </div>
+  <div id="stateSuperseded" style="display:none;">
+    <h1>This quote has a newer version</h1>
+    <p class="sub">We sent you a newer version of this quote, so this link no longer works. Please use the link in that email, or write to <a href="mailto:admin@fixernationeducation.com">admin@fixernationeducation.com</a> if you can't find it.</p>
+  </div>
   <div id="stateAccepted" style="display:none;">
     <div class="success-icon">&#10003;</div>
     <h1 style="text-align:center;">Your quote is confirmed.</h1>
@@ -72,6 +76,13 @@
 
     <p style="font-size:13px;color:var(--ink-soft);margin:0 0 16px;">Accepting this quote means you agree to its terms and to our <a href="terms.html" style="color:var(--coral-dark);font-weight:700;">Terms of Use</a>. Our <a href="refund-policy.html" style="color:var(--coral-dark);font-weight:700;">Refunds and cancellations</a> page and <a href="privacy-policy.html" style="color:var(--coral-dark);font-weight:700;">Privacy Policy</a> explain the rest.</p>
 
+    <div id="signerBlock">
+      <label class="field-label" for="signerName">Your full name</label>
+      <input type="text" id="signerName" class="text-input" maxlength="255" autocomplete="name" style="margin-bottom:12px;">
+      <label class="field-label" for="signerTitle">Your title (optional)</label>
+      <input type="text" id="signerTitle" class="text-input" maxlength="255" autocomplete="organization-title" style="margin-bottom:8px;">
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;">Pressing the button below records your name as the person accepting this quote.</p>
+    </div>
     <div class="tab-row">
       <button class="tab-btn active" id="tabPO" onclick="switchTab('po')">Submit a purchase order</button>
       <button class="tab-btn" id="tabCard" onclick="switchTab('card')">Pay by credit card</button>
@@ -135,7 +146,7 @@ function fmtCurrency(n) {
 }
 
 function show(id) {
-  ['stateLoading','stateError','stateAccepted','stateActive','stateSetup'].forEach(s => {
+  ['stateLoading','stateError','stateSuperseded','stateAccepted','stateActive','stateSetup'].forEach(s => {
     document.getElementById(s).style.display = s === id ? '' : 'none';
   });
 }
@@ -153,6 +164,7 @@ async function init() {
 
   if (!r.ok) {
     if (data.error === 'already_accepted') { show('stateAccepted'); return; }
+    if (data.error === 'superseded') { show('stateSuperseded'); return; }
     show('stateError'); return;
   }
 
@@ -185,17 +197,22 @@ function switchTab(tab) {
   document.getElementById('panelCard').classList.toggle('active', tab === 'card');
 }
 
+function signer() {
+  return { signerName: document.getElementById('signerName').value.trim(), signerTitle: document.getElementById('signerTitle').value.trim() };
+}
+const NAME_PROMPT = 'Please type your full name so we know who is accepting this quote.';
 async function payByCard() {
   const btn = document.getElementById('cardPayBtn');
   const err = document.getElementById('cardError');
   err.style.display = 'none';
+  if (signer().signerName.length < 2) { err.textContent = NAME_PROMPT; err.style.display = ''; document.getElementById('signerName').focus(); return; }
   btn.disabled = true;
   btn.textContent = 'Redirecting...';
 
   const r = await fetch('/api/quotes/accept', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: TOKEN, paymentMethod: 'card' }),
+    body: JSON.stringify({ token: TOKEN, paymentMethod: 'card', ...signer() }),
   });
   const data = await r.json();
   if (!r.ok) {
@@ -213,6 +230,7 @@ async function submitPO() {
   const err = document.getElementById('poError');
   const poNumber = document.getElementById('poNumber').value.trim();
   err.style.display = 'none';
+  if (signer().signerName.length < 2) { err.textContent = NAME_PROMPT; err.style.display = ''; document.getElementById('signerName').focus(); return; }
   if (!poNumber) { err.textContent = 'Please enter a PO number.'; err.style.display = ''; return; }
 
   btn.disabled = true;
@@ -221,7 +239,7 @@ async function submitPO() {
   const r = await fetch('/api/quotes/accept', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: TOKEN, paymentMethod: 'po', poNumber }),
+    body: JSON.stringify({ token: TOKEN, paymentMethod: 'po', poNumber, ...signer() }),
   });
   const data = await r.json();
   if (!r.ok) {

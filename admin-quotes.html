@@ -200,6 +200,7 @@
     <div class="a-modal-foot" id="modalFoot">
       <button class="a-btn a-btn-outline" onclick="closeModal()">Close</button>
       <button class="a-btn a-btn-outline" id="copyQuoteBtn" onclick="copyQuote()">Copy Quote</button>
+      <button class="a-btn a-btn-outline" id="reviseQuoteBtn" style="display:none;" onclick="reviseQuote()" title="Start a new version of this quote. The customer's link keeps working until you send the new one.">Revise Quote</button>
       <button class="a-btn a-btn-outline" onclick="saveModal()">Save</button>
       <button class="a-btn a-btn-primary" id="sendQuoteBtn" onclick="sendQuote()">Send Quote</button>
     </div>
@@ -399,7 +400,11 @@ async function init() {
   updateStats();
   renderTable(allQuotes);
   window.scrollTo(0, 0);
+  // The Customer Hub links here with ?quote=<id> after making a quote for a deal.
+  const wanted = Number(new URLSearchParams(location.search).get('quote'));
+  if (wanted && !openedFromLink) { openedFromLink = true; if (allQuotes.some(x => x.id === wanted)) openModal(wanted); }
 }
+let openedFromLink = false;
 
 document.getElementById('quoteSettingsForm').addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -483,7 +488,9 @@ function renderTable(quotes) {
 
   quotes.forEach(q => {
     const fullName = [q.first_name, q.last_name].filter(Boolean).join(' ') || '—';
-    const pill     = `<span class="a-pill ${fnEscape(STATUS_CLASSES[q.status] || 'a-pill-neutral')}">${STATUS_LABELS[q.status] || q.status}</span>`;
+    const pill     = `<span class="a-pill ${fnEscape(STATUS_CLASSES[q.status] || 'a-pill-neutral')}">${STATUS_LABELS[q.status] || q.status}</span>`
+      + (q.version_status === 'superseded' ? ' <span class="a-pill a-pill-neutral" title="A newer revision was sent. This link no longer accepts.">Replaced</span>' : '')
+      + (Number(q.revision_number) > 1 && q.version_status !== 'superseded' ? ` <span class="a-pill a-pill-info" title="This quote is a revision of an earlier one.">Revision ${Number(q.revision_number)}</span>` : '');
     // quoted_amount_cents can legitimately be 0 (a free trial) — check
     // presence, not truthiness, so a $0.00 quote still renders its amount.
     const sentLabel = q.quote_sent_via === 'phone' ? 'By phone' : (q.quote_sent_at ? 'Sent' : '');
@@ -518,6 +525,8 @@ function openModal(id) {
   editingId = creatingQuote ? null : id;
 
   document.getElementById('copyQuoteBtn').style.display = creatingQuote ? 'none' : '';
+  // Only a quote that was sent, is not accepted, and has not been replaced can be revised.
+  document.getElementById('reviseQuoteBtn').style.display = (!creatingQuote && q.quote_sent_at && !q.accepted_at && q.version_status !== 'superseded') ? '' : 'none';
 
   if (creatingQuote) {
     document.getElementById('modalTitle').textContent = 'New Quote';
@@ -1307,6 +1316,24 @@ function filterBySchool(school) {
   searchInput.value = school;
   applyFilters();
   searchInput.focus();
+}
+
+async function reviseQuote() {
+  if (!editingId) return;
+  const src = allQuotes.find(x => x.id === editingId);
+  if (!src) return;
+  if (!confirm('Start a new version of this quote? The customer\'s current link keeps working until you send the new version, and then it stops.')) return;
+  const res = await fetch(`/api/contact/quotes/${editingId}/revise`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (data.existingQuoteId) { closeModal(); openModal(data.existingQuoteId); }
+    fnToast(data.error || 'Could not start a revision');
+    return;
+  }
+  closeModal();
+  await init();
+  openModal(data.quote.id);
+  fnToast('Revision started. Change the price or terms, then send it.');
 }
 
 function copyQuote() {

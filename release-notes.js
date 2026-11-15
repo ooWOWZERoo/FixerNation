@@ -35,6 +35,21 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('quote-signer', false, '2026-11-14', '', 'Accepting a quote now records who accepted it', ['school', 'district'],
+      'The accept page asks for your full name, and an older quote link tells you when a newer version has replaced it.',
+      'Before you accept a quote, you type your full name and, if you like, your title. We keep that with the date and a record of exactly what the quote said, so it is clear later who agreed to what. If we send you a revised quote, the older link stops working and points you to the new one.',
+      {
+        new: [
+          item('Your name on the quote', ['school', 'district'], 'The page asks for your full name (needed) and your title (optional), whether you pay by purchase order or by card. We save them with the time and the quote details you were shown. We do not store your IP address.'),
+          item('Older quote links say so', ['school', 'district'], 'When we send a revised quote, the earlier link shows "This quote has a newer version" and points you to the new email. Nothing is charged or set up from the older link.')
+        ],
+        know: [
+          'If the accept page was already open in your browser before this change, reload it once before you submit.',
+          'Typing your name records who accepted. We have not had a lawyer review the wording around it yet, so this note does not say anything about its legal effect.'
+        ]
+      },
+      'The Accept your quote page, from the link in your quote email.',
+      ['D1']),
     N('game-voice', false, '2026-11-08', 'Release 167', 'A new, warmer voice for every game', ['teachers', 'families'],
       'Every Tune Your Brain game that speaks now uses one new voice, and more games speak, including the games for older students.',
       'We replaced the voices in the games with one warmer voice that is easier to follow. Games that used to sound robotic on some devices now play a recorded voice on every device.',

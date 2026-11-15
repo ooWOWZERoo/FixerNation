@@ -145,7 +145,11 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
 router.post('/quotes/:quoteId/accept', requireAuth, async (req, res) => {
   const poNumber = ((req.body || {}).poNumber || '').trim();
   try {
-    const result = await acceptQuoteViaPO(req.params.quoteId, poNumber);
+    // Staff accepting for the customer: the evidence names who the quote is for and says staff recorded it (lib/quote-evidence.js).
+    const [[who]] = await pool.query('SELECT first_name, last_name, email FROM quote_requests WHERE id = ?', [req.params.quoteId]);
+    const typed = String((req.body || {}).signerName || '').trim();
+    const signer = { name: typed || [who && who.first_name, who && who.last_name].filter(Boolean).join(' ').trim() || (who && who.email) || 'Customer', title: String((req.body || {}).signerTitle || '').trim() || null };
+    const result = await acceptQuoteViaPO(req.params.quoteId, poNumber, undefined, { signer, recordedBy: 'staff' });
 
     await audit(pool, {
       actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username,

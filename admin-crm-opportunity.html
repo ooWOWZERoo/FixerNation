@@ -109,10 +109,13 @@
     h += '<div class="crm-two"><div id="pTasks"></div><div id="pChecklist"></div></div><div class="crm-two"><div id="pMeetings"></div><div id="pFiles"></div></div><div id="pNotes"></div>';
 
     // Quotes and payment: the deal's state and the money are two different facts.
-    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Quotes (' + data.quotes.length + ')</h2></div>' +
-      (data.quotes.length ? '<ul class="crm-list">' + data.quotes.map(function (q) { return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div></div><span class="a-pill a-pill-neutral">' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</span></li>'; }).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-quotes.html">Open Quotes</a></p>' : C.empty('No quote is linked to this deal.', '💬')) + '</div>' +
+    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Quotes (' + data.quotes.length + ')</h2>' + (edit && data.opportunity.state === 'open' ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="newQuoteBtn">New quote for this deal</button>' : '') + '</div>' +
+      (data.quotes.length ? '<ul class="crm-list">' + data.quotes.map(quoteItem).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-quotes.html">Open Quotes</a></p>' : C.empty('No quote is linked to this deal.', '💬')) + '</div>' +
       '<div class="a-card"><div class="a-card-head"><h2>Purchases and payment (' + data.purchases.length + ')</h2></div><p class="crm-small crm-muted" style="margin:0 0 10px;">A deal marked Won means they said yes. Payment comes only from the purchase.</p>' +
       (data.purchases.length ? '<ul class="crm-list">' + data.purchases.map(function (p) { return '<li><div><strong>Purchase #' + esc(p.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(p.amountCents, 'No amount recorded')) + ' · ' + esc(p.paymentMethod || '') + (p.licenseStatus ? ' · license ' + esc(p.licenseStatus) : '') + '</div></div><span class="a-pill ' + (p.paymentStatus === 'paid' ? 'a-pill-success' : 'a-pill-warning') + '">' + esc(C.label(C.PAYMENT, p.paymentStatus)) + '</span></li>'; }).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-orders.html">Open Orders</a> · <a class="crm-link" href="admin-invoices.html">Open Invoices</a></p>' : C.empty(o.state === 'won' ? 'This deal is Won, but no purchase exists yet. Nothing has been paid.' : 'No purchase yet.', '🧾')) + '</div></div>';
+
+    // Phase 4d: what is still open between "they said yes" and "the license works". Display only; it changes nothing.
+    h += procurementCard();
 
     // History
     h += '<div class="a-card"><div class="a-card-head"><h2>Stage history</h2></div>' + (data.history.length ? '<ul class="crm-timeline">' + data.history.slice().reverse().map(function (e) {
@@ -132,7 +135,7 @@
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
-    on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember);
+    on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember); on('#newQuoteBtn', newQuote);
     var sel = document.getElementById('stageSel');
     if (sel) sel.addEventListener('change', function () { var to = sel.value; if (to) moveStage(to); });
     root.querySelectorAll('[data-act=editm]').forEach(function (b) { b.addEventListener('click', function () { editMember(Number(b.getAttribute('data-cid'))); }); });
@@ -203,11 +206,74 @@
     });
   }
 
+  var QUOTE_EVENT = { created: 'Quote started', sent: 'Quote sent', superseded: 'Replaced by a newer quote', accepted: 'Quote accepted', page_opened: 'Quote page opened (approximate)' };
+
+  function quoteItem(q) {
+    var rev = q.revisionNumber > 1 ? ' · revision ' + esc(q.revisionNumber) : '';
+    var pill = q.versionStatus === 'superseded' ? '<span class="a-pill a-pill-neutral" title="A newer revision was sent. This link no longer accepts.">Replaced</span>' : '<span class="a-pill a-pill-neutral">' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</span>';
+    var ev = q.acceptance ? '<div class="crm-small crm-muted">Accepted by ' + esc(q.acceptance.name) + (q.acceptance.title ? ', ' + esc(q.acceptance.title) : '') + ' on ' + esc(C.dateTime(q.acceptance.at)) + (q.acceptance.by === 'staff' ? ' (recorded by staff for the customer)' : '') + (q.acceptance.documentHash ? ' · record ' + esc(q.acceptance.documentHash) : '') + '</div>' : '';
+    return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + rev + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div>' + ev + '</div>' + pill + '</li>';
+  }
+
+  function procurementCard() {
+    var rows = data.procurement || [];
+    var h = '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Procurement</h2></div><p class="crm-small crm-muted" style="margin:0 0 10px;">What is still open between a yes and a working license. This only shows facts; it changes nothing.</p>';
+    h += rows.length ? '<ul class="crm-list">' + rows.map(function (p) {
+      var flags = p.flags.length ? p.flags.map(function (f) { return '<span class="a-pill a-pill-warning">' + esc(f.label) + '</span>'; }).join(' ') : '<span class="a-pill a-pill-success">Nothing open</span>';
+      return '<li><div><strong>Purchase #' + esc(p.purchaseId) + '</strong>' + (p.quoteNumber ? ' <span class="crm-small crm-muted">from quote ' + esc(p.quoteNumber) + '</span>' : '') +
+        '<div class="crm-small crm-muted">' + (p.poNumber ? 'PO ' + esc(p.poNumber) + (p.poReceivedDate ? ' received ' + esc(C.date(p.poReceivedDate)) : ' not received yet') + ' · ' : '') + (p.invoiceNumber ? 'Invoice ' + esc(p.invoiceNumber) + ' ' + esc(p.invoiceStatus || '') + ' · ' : '') + 'license ' + esc(p.licenseStatus) + '</div></div><div>' + flags + '</div></li>';
+    }).join('') + '</ul>' : C.empty('No purchase yet. A purchase appears when a quote on this deal is accepted.', '📦');
+    h += '</div><div class="a-card"><div class="a-card-head"><h2>Quote activity</h2></div>' + ((data.quoteEvents || []).length ? '<ul class="crm-timeline">' + data.quoteEvents.map(function (e) {
+      return '<li><strong>' + esc(QUOTE_EVENT[e.type] || e.type) + '</strong><div class="crm-muted">' + esc(e.quoteNumber ? 'Quote ' + e.quoteNumber : 'Quote #' + e.quoteId) + (e.detail ? ' · ' + esc(e.detail) : '') + '</div><div class="when">' + esc(C.dateTime(e.at)) + '</div></li>';
+    }).join('') + '</ul><p class="crm-small crm-muted">"Page opened" is approximate: a mail program that previews links can cause it, so it does not prove anyone read the quote.</p>' : C.empty('Nothing has happened to these quotes yet.', '🕒')) + '</div></div>';
+    return h;
+  }
+
+  function newQuote() {
+    var o = data.opportunity;
+    C.dialog({
+      title: 'New quote for this deal', submit: 'Start the quote',
+      body: '<p>This starts a draft quote linked to this deal, then opens it on the Quotes page to price and send. Nothing is sent to the customer yet.</p>' +
+        C.field('Their email', '<input type="email" id="nqEmail" maxlength="255" required value="' + esc((data.committee[0] && data.committee[0].email) || '') + '">', 'The person the quote goes to.', 'nqEmail') +
+        C.field('First name', '<input type="text" id="nqFirst" maxlength="100">', '', 'nqFirst') + C.field('Last name', '<input type="text" id="nqLast" maxlength="100">', '', 'nqLast') +
+        C.field('Organization', '<input type="text" id="nqSchool" maxlength="255" value="' + esc(o.accountName || '') + '">', '', 'nqSchool'),
+      onSubmit: function (f) {
+        var email = f.querySelector('#nqEmail').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Type a real email address.';
+        return C.api('POST', '/api/contact/quotes', { email: email, firstName: f.querySelector('#nqFirst').value, lastName: f.querySelector('#nqLast').value, school: f.querySelector('#nqSchool').value, opportunityId: id }).then(function (r) {
+          if (!r.ok) return C.problem(r);
+          location.href = 'admin-quotes.html?quote=' + encodeURIComponent(r.data.quote.id);
+        });
+      }
+    });
+  }
+
   function closeWon() {
+    // A CRM Admin may also accept a sent quote that is still waiting, by purchase order, FOR the customer (the same step as their own PO acceptance).
+    var waiting = (data.quotes || []).filter(function (q) { return !q.acceptedAt && q.sentAt && q.versionStatus !== 'superseded'; });
+    var canAccept = data.permissions && data.permissions.acceptForCustomer && waiting.length;
+    var handoff = canAccept ? '<div class="crm-small" style="margin:12px 0;padding:12px;border:1px solid var(--a-border,#ddd);border-radius:10px;"><label style="display:flex;gap:8px;align-items:flex-start;"><input type="checkbox" id="cAccept"><span><strong>Also accept a quote for the customer, by purchase order.</strong><br>Use this when they agreed and gave you a PO. It creates their purchase, seats and invoice, and sends them the set-up email, exactly as if they had accepted it themselves. The license stays pending until you mark the PO received.</span></label>' +
+      '<div id="cAcceptFields" style="display:none;margin-top:10px;">' +
+      C.field('Which quote', '<select id="cQuote">' + waiting.map(function (q) { return '<option value="' + esc(q.id) + '">' + esc((q.quoteNumber || '#' + q.id) + ' · ' + C.money(q.amountCents, 'Not priced')) + '</option>'; }).join('') + '</select>', '', 'cQuote') +
+      C.field('Purchase order number', '<input type="text" id="cPo" maxlength="128">', 'Required unless the quote is $0.', 'cPo') +
+      C.field('Who accepted (full name)', '<input type="text" id="cSigner" maxlength="255">', 'Saved as the person who accepted, marked as recorded by staff.', 'cSigner') +
+      C.field('Their title (optional)', '<input type="text" id="cSignerTitle" maxlength="255">', '', 'cSignerTitle') + '</div></div>' : '';
     C.dialog({
       title: 'Close this deal as Won', submit: 'Close as Won',
-      body: '<p>This records that they said yes. It does <strong>not</strong> create a purchase, an invoice or a license, and it does not mark anything paid. Those still come from the quote, the order or the invoice.</p>' + C.field('Note (optional)', '<input type="text" id="cNote" maxlength="200">', 'Saved in the stage history.', 'cNote'),
-      onSubmit: function (f) { return C.api('POST', '/api/crm/opportunities/' + id + '/close', { outcome: 'won', reason: f.querySelector('#cNote').value }).then(function (r) { return save(r, 'Closed as Won'); }); }
+      body: '<p>This records that they said yes. On its own it does <strong>not</strong> create a purchase, an invoice or a license, and it does not mark anything paid. Those come from the quote, the order or the invoice.</p>' + handoff + C.field('Note (optional)', '<input type="text" id="cNote" maxlength="200">', 'Saved in the stage history.', 'cNote'),
+      onOpen: function (f) {
+        var box = f.querySelector('#cAccept');
+        if (box) box.addEventListener('change', function () { f.querySelector('#cAcceptFields').style.display = box.checked ? '' : 'none'; });
+      },
+      onSubmit: function (f) {
+        var box = f.querySelector('#cAccept');
+        if (box && box.checked) {
+          var signer = f.querySelector('#cSigner').value.trim();
+          if (signer.length < 2) return 'Type the full name of the person who accepted.';
+          return C.api('POST', '/api/crm/opportunities/' + id + '/won-handoff', { quoteId: Number(f.querySelector('#cQuote').value), poNumber: f.querySelector('#cPo').value, signerName: signer, signerTitle: f.querySelector('#cSignerTitle').value }).then(function (r) { return save(r, 'Quote accepted and the deal is Won'); });
+        }
+        return C.api('POST', '/api/crm/opportunities/' + id + '/close', { outcome: 'won', reason: f.querySelector('#cNote').value }).then(function (r) { return save(r, 'Closed as Won'); });
+      }
     });
   }
   function closeLost() {

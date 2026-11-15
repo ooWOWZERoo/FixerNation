@@ -601,6 +601,24 @@ async function webhookHandler(req, res) {
       }
 
       if (won) {
+        await crmHooks.quoteAccepted(qt.id, 'card'); // quote event, and its open deal moves to Won (never throws)
+        // A newer revision was sent after this checkout was opened. The payment is real and the quote is accepted; staff are told so they can reconcile.
+        if (qt.version_status === 'superseded') {
+          await audit(pool, {
+            actorType: 'system', action: 'superseded_quote_paid', entityType: 'quote_payment', entityId: qt.id,
+            newValue: { stripeSessionId: session.id, amountTotal: session.amount_total ?? null },
+            reason: 'A card payment arrived for a quote that a newer revision had replaced. The quote was accepted because the money was taken.',
+          });
+          try {
+            await sendSalesAlertEmail({
+              to: await getSetting('contact_email_sales_alerts'),
+              subject: `Card payment on a replaced quote — ${qt.quote_number || qt.school || qt.email}`,
+              fields: { Quote: qt.quote_number || null, School: qt.school || null, Buyer: qt.email, 'Stripe session': session.id,
+                Note: 'A newer revision of this quote had been sent. The buyer paid the older one, so it was accepted. Check the revision and refund by hand in Stripe if needed.' },
+              linkUrl: `${process.env.SITE_URL || ''}/admin-quotes.html`, linkLabel: 'View Quote',
+            });
+          } catch (e) { console.error('sales alert (replaced quote paid) failed:', e.message); }
+        }
         if (!purchaseId) console.error(`Quote ${qt.quote_number || qt.id} was paid by card (session ${session.id}) but no purchase of that quote was found to mark paid`);
         if (purchaseId) await crmHooks.purchaseChanged(purchaseId);
         // A different amount than the quote is reported, never blocked: the money is real and the quote is accepted.

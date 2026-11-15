@@ -20,6 +20,7 @@
 //   audit_view           yes     -                              -
 //   export               yes     -                              -
 //   files                yes     yes (then the subject check)   -     (see, upload, download or delete a file; Read-only never opens one)
+//   accept_for_customer  yes     -                              -     (phase 4c: accept a quote by PO for the customer when closing a deal Won; it creates a purchase, invoice and license)
 //
 // Phase 3 (tasks, notes, files, meetings, checklists, Needs Attention) adds one more gate on top of this table: whether the person may write THE SUBJECT
 // the item belongs to (canWriteSubject below). The full role x action matrix for phase 3 is in docs/reference/sales-crm-update-requirements.md, section 6.
@@ -43,6 +44,7 @@ const ALLOWED = {
   audit_view: ['admin'],
   export: ['admin'],
   files: ['admin', 'sales'],
+  accept_for_customer: ['admin'],
 };
 
 function can(role, action) {

@@ -66,8 +66,10 @@ const board: Storyboard = {
       run: (p) => glideTo(p, "#cardPayBtn"),
     },
     {
-      say: "This time we'll use a purchase order. Go back to the first tab, and enter your P-O number.",
+      say: "This time we'll use a purchase order. First, type your full name, and your title if you like. This records who accepted the quote. Then go back to the first tab, and enter your P-O number.",
       run: async (p) => {
+        await fillSlowly(p, "#signerName", "Dana Whitaker");
+        await fillSlowly(p, "#signerTitle", "Business Manager");
         await glideClick(p, "#tabPO");
         await fillSlowly(p, "#poNumber", "PO-48213");
       },
