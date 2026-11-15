@@ -20,7 +20,7 @@ test('PAGES: all ten Customer Hub pages exist and load the shared admin assets a
     assert.match(html, /admin-common\.css\?v=22/, f);
     assert.match(html, /admin-common\.js\?v=17/, f);
     assert.match(html, /admin-shell\.js\?v=7/, f);
-    assert.match(html, /crm-common\.css\?v=2/, f);
+    assert.match(html, /crm-common\.css\?v=3/, f);
     assert.match(html, /crm-common\.js\?v=2/, f);
     assert.match(html, /<meta name="robots" content="noindex">/, `${f} is not for search engines`);
     assert.doesNotMatch(html, /fonts\.googleapis|cdn\.|unpkg|jsdelivr|cdnjs/i, `${f} loads nothing from a CDN`);

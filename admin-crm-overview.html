@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="fonts.css?v=1">
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=22">
-<link rel="stylesheet" href="crm-common.css?v=2">
+<link rel="stylesheet" href="crm-common.css?v=3">
 </head>
 <body class="fn-mission-admin">
 
@@ -34,6 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
+<script src="crm-status.js?v=1"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -79,21 +80,23 @@
       '<p class="crm-small crm-muted" style="margin:-8px 0 22px;">Test addresses ending in @example.com are left out of the counts.</p>';
 
     // Phase 3: what is on my plate today, and what the rules say needs a look.
-    html += '<div class="crm-two"><div id="ovTasks"></div><div id="ovAttn"></div></div>';
+    html += '<div class="crm-two"><div id="ovTasks"></div><div id="ovAttn"></div></div><p class="crm-status-legend">' + esc(FnCrmStatus.LEGEND) + '</p>';
 
     // Needs a decision
     var dec = d.decisions;
     var tabDefs = [['nodeal', 'Quotes with no deal', dec.quotesWithoutDeal.total], ['nocontact', 'Quotes with no contact', dec.quotesWithoutContact.total], ['purchases', 'Purchases to confirm', dec.purchases.total]];
-    html += '<div class="a-card" id="decisionCard"><div class="a-card-head"><h2>Needs a decision</h2></div>' +
+    var decisionStatus = FnCrmStatus.waiting(Number(dec.quotesWithoutDeal.total) + Number(dec.quotesWithoutContact.total) + Number(dec.purchases.total));
+    html += '<div class="a-card ' + FnCrmStatus.boxClass(decisionStatus) + '" id="decisionCard"><div class="a-card-head"><h2>Needs a decision</h2>' + FnCrmStatus.chip(decisionStatus) + '</div>' +
       '<div class="crm-tabs" role="tablist" aria-label="Things that need a decision">' +
       tabDefs.map(function (t) { return '<button type="button" role="tab" id="tab-' + t[0] + '" aria-selected="' + (state.tab === t[0]) + '" data-tab="' + t[0] + '">' + esc(t[1]) + ' (' + C.num(t[2]) + ')</button>'; }).join('') +
       '</div><div id="decisionBody" role="tabpanel" aria-live="polite"></div><div id="decisionPager"></div></div>';
 
     // Next steps
+    var lateStatus = FnCrmStatus.overdueDeals(d.nextSteps.overdue.total), gapStatus = FnCrmStatus.waiting(d.nextSteps.missing.total);
     html += '<div class="crm-two">' +
-      '<div class="a-card"><div class="a-card-head"><h2>Overdue next steps (' + C.num(d.nextSteps.overdue.total) + ')</h2>' + (d.nextSteps.overdue.total ? '<a class="crm-link" href="admin-crm-opportunities.html?overdue=true">See all</a>' : '') + '</div>' +
+      '<div class="a-card ' + FnCrmStatus.boxClass(lateStatus) + '"><div class="a-card-head"><h2>Overdue next steps (' + C.num(d.nextSteps.overdue.total) + ')</h2>' + FnCrmStatus.chip(lateStatus) + (d.nextSteps.overdue.total ? '<a class="crm-link" href="admin-crm-opportunities.html?overdue=true">See all</a>' : '') + '</div>' +
         (d.nextSteps.overdue.items.length ? dealRows(d.nextSteps.overdue.items, 'late') : C.empty('No deal has a next step past its date.', '✅')) + '</div>' +
-      '<div class="a-card"><div class="a-card-head"><h2>Deals with no next step (' + C.num(d.nextSteps.missing.total) + ')</h2>' + (d.nextSteps.missing.total ? '<a class="crm-link" href="admin-crm-opportunities.html?noNextStep=true">See all</a>' : '') + '</div>' +
+      '<div class="a-card ' + FnCrmStatus.boxClass(gapStatus) + '"><div class="a-card-head"><h2>Deals with no next step (' + C.num(d.nextSteps.missing.total) + ')</h2>' + FnCrmStatus.chip(gapStatus) + (d.nextSteps.missing.total ? '<a class="crm-link" href="admin-crm-opportunities.html?noNextStep=true">See all</a>' : '') + '</div>' +
         (d.nextSteps.missing.items.length ? dealRows(d.nextSteps.missing.items, 'none') : C.empty('Every open deal has a next step.', '✅')) + '</div>' +
       '</div>';
 
@@ -118,7 +121,8 @@
     C.api('GET', '/api/crm/tasks' + C.qstr({ assignee: 'me', due: 'upto', days: 0, today: C.todayLocal(), pageSize: 6 })).then(function (r) {
       if (!r.ok) { C.errorBox(t, C.problem(r)); return; }
       var s = r.data.summary;
-      t.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>My tasks today (' + C.num(r.data.total) + ')</h2><a class="crm-link" href="admin-crm-tasks.html">All my tasks</a></div>' +
+      var ts = FnCrmStatus.tasks(s);
+      t.innerHTML = '<div class="a-card ' + FnCrmStatus.boxClass(ts) + '"><div class="a-card-head"><h2>My tasks today (' + C.num(r.data.total) + ')</h2>' + FnCrmStatus.chip(ts) + '<a class="crm-link" href="admin-crm-tasks.html">All my tasks</a></div>' +
         (r.data.tasks.length ? '<ul class="crm-list">' + r.data.tasks.map(function (x) {
           var sub = x.subject, name = sub.dealName || sub.contactName || sub.accountName || '', href = sub.opportunityId ? 'admin-crm-opportunity.html?id=' + sub.opportunityId : sub.contactId ? 'admin-crm-contact.html?id=' + sub.contactId : 'admin-crm-account.html?id=' + sub.accountId;
           return '<li><div class="crm-item-main"><strong>' + esc(x.title) + '</strong><div class="crm-small ' + (x.overdue ? 'crm-flag' : 'crm-muted') + '">' + (x.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(x.dueOn)) + '</div></div><a class="crm-link" href="' + esc(href) + '">' + esc(name) + '</a></li>';
@@ -126,7 +130,8 @@
     });
     C.api('GET', '/api/crm/attention' + C.qstr({ owner: 'me', today: C.todayLocal(), pageSize: 6 })).then(function (r) {
       if (!r.ok) { C.errorBox(a, C.problem(r)); return; }
-      a.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Needs attention (' + C.num(r.data.activeTotal) + ')</h2><a class="crm-link" href="admin-crm-attention.html">See all and why</a></div>' +
+      var as = FnCrmStatus.attention(r.data.counts);
+      a.innerHTML = '<div class="a-card ' + FnCrmStatus.boxClass(as) + '"><div class="a-card-head"><h2>Needs attention (' + C.num(r.data.activeTotal) + ')</h2>' + FnCrmStatus.chip(as) + '<a class="crm-link" href="admin-crm-attention.html">See all and why</a></div>' +
         (r.data.items.length ? '<ul class="crm-list">' + r.data.items.map(function (it) {
           return '<li><div class="crm-item-main"><a class="crm-link" href="' + esc(it.link) + '">' + esc(it.title) + '</a><div class="crm-small crm-muted">' + esc(it.ruleLabel) + '</div></div></li>';
         }).join('') + '</ul>' : C.empty('Nothing needs your attention right now.', '✅')) + '</div>';

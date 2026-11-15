@@ -106,3 +106,17 @@ progress{accent-color:var(--a-accent);}
   .crm-timeline-rich{padding-left:6px;}
   .crm-item-main{flex-basis:100%;}
 }
+
+/* Status outlines on the Overview boxes that report work status (crm-status.js). Existing admin colours only. Colour is never the only signal:
+   every box also carries a chip with its own shape and word. "Yellow" is the theme's gold: the theme's orange-brown warning colour looks too much like the red at a glance, and a pure yellow fails the 3:1 contrast a border needs on a white card (gold is 3.6:1). */
+.crm-status-box{border-width:2px; border-style:solid;}
+.crm-status-box.crm-status-red{border-color:var(--a-danger);}
+.crm-status-box.crm-status-amber{border-color:var(--a-gold);}
+.crm-status-box.crm-status-green{border-color:var(--a-success);}
+.crm-status-box.crm-status-neutral{border-color:var(--a-border);}
+.crm-status-chip{display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:800; line-height:1.4; white-space:nowrap;}
+.crm-status-chip.crm-status-red{background:var(--a-danger-soft); color:var(--a-danger);}
+.crm-status-chip.crm-status-amber{background:var(--a-gold-soft); color:var(--a-gold-on-soft);}
+.crm-status-chip.crm-status-green{background:var(--a-success-soft); color:var(--a-success);}
+.crm-status-chip.crm-status-neutral{background:var(--a-neutral-soft); color:var(--a-text-soft);}
+.crm-status-legend{font-size:12px; color:var(--a-text-soft); margin:-8px 0 20px;}
