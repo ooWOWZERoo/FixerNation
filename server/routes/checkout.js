@@ -12,6 +12,7 @@ const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail } = require('../lib/mailer');
 const { refCodeFromRequest, codeForAffiliateId } = require('../lib/affiliate-attribution');
+const { audit } = require('../lib/audit');
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Customer once a card quote is paid (never throws; off unless crm_v2_enabled)
 const { limiter } = require('../lib/rate-limit');
 
@@ -538,14 +539,77 @@ async function webhookHandler(req, res) {
 
     if (metadata.type === 'quote_acceptance') {
       const [[qt]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [metadata.quoteToken]);
-      if (qt && !qt.accepted_at) {
-        await pool.query(
-          "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'card', status = 'converted' WHERE id = ?",
+      if (!qt) return res.json({ received: true });
+
+      // Phase 4a: claim the quote and mark its purchase paid in ONE transaction, and only the delivery that wins the claim goes on to send the
+      // emails. Stripe retries, and two deliveries can arrive together: the second waits for the first, finds the quote already accepted and does
+      // nothing. The purchase is found by the Stripe session saved on it, else by metadata.purchaseId (sessions opened before this release), and
+      // must belong to this quote.
+      let won = false, duplicate = false, purchaseId = null;
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        const [byMeta] = await connection.query('SELECT id FROM purchases WHERE quote_id = ? AND (stripe_session_id = ? OR id = ?) ORDER BY (stripe_session_id = ?) DESC LIMIT 1',
+          [qt.id, session.id, Number(metadata.purchaseId) || 0, session.id]);
+        purchaseId = byMeta[0] ? byMeta[0].id : null;
+        const [claim] = await connection.query(
+          "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'card', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
           [qt.id]
         );
-        if (metadata.purchaseId) {
-          await pool.query("UPDATE purchases SET payment_status = 'paid' WHERE id = ?", [Number(metadata.purchaseId)]);
-          await crmHooks.purchaseChanged(Number(metadata.purchaseId));
+        won = claim.affectedRows === 1;
+        if (won) {
+          if (purchaseId) {
+            await connection.query("UPDATE purchases SET payment_status = 'paid', stripe_session_id = ? WHERE id = ?", [session.id, purchaseId]);
+          }
+        } else {
+          // Already accepted. A repeat of the SAME payment (this session already marks the purchase paid) is a harmless replay. Anything else is
+          // money for a quote that is accepted already (a PO chosen elsewhere, or a second card session paid): tell staff.
+          const [paid] = purchaseId
+            ? await connection.query("SELECT id FROM purchases WHERE id = ? AND payment_status = 'paid' AND stripe_session_id = ?", [purchaseId, session.id])
+            : [[]];
+          duplicate = !paid.length;
+        }
+        await connection.commit();
+      } catch (err) {
+        try { await connection.rollback(); } catch (e) { console.error('quote webhook rollback failed:', e.message); }
+        throw err; // a 500 makes Stripe deliver it again; nothing was changed
+      } finally {
+        connection.release();
+      }
+
+      if (duplicate) {
+        const dollars = session.amount_total != null ? `$${(session.amount_total / 100).toFixed(2)}` : 'an amount not reported';
+        await audit(pool, {
+          actorType: 'system', action: 'payment_on_accepted_quote', entityType: 'quote_payment', entityId: qt.id,
+          newValue: { quoteNumber: qt.quote_number || null, stripeSessionId: session.id, amountTotal: session.amount_total ?? null, acceptedPaymentMethod: qt.accepted_payment_method || null },
+          reason: 'A card payment arrived for a quote that was already accepted. Nothing was changed; staff decide whether to refund in Stripe.',
+        });
+        try {
+          await sendSalesAlertEmail({
+            to: await getSetting('contact_email_sales_alerts'),
+            subject: `Card payment on an already-accepted quote — ${qt.quote_number || qt.school || qt.email}`,
+            fields: {
+              Quote: qt.quote_number || null, School: qt.school || null, Buyer: qt.email, Amount: dollars,
+              'Accepted by': qt.accepted_payment_method || null, 'Stripe session': session.id,
+              Note: 'This payment did not change the quote. If it is a duplicate, refund it by hand in the Stripe Dashboard.',
+            },
+            linkUrl: `${process.env.SITE_URL || ''}/admin-quotes.html`,
+            linkLabel: 'View Quote',
+          });
+        } catch (e) { console.error('sales alert (card payment on accepted quote) failed:', e.message); }
+        return res.json({ received: true });
+      }
+
+      if (won) {
+        if (!purchaseId) console.error(`Quote ${qt.quote_number || qt.id} was paid by card (session ${session.id}) but no purchase of that quote was found to mark paid`);
+        if (purchaseId) await crmHooks.purchaseChanged(purchaseId);
+        // A different amount than the quote is reported, never blocked: the money is real and the quote is accepted.
+        if (session.amount_total != null && qt.quoted_amount_cents != null && Number(session.amount_total) !== Number(qt.quoted_amount_cents)) {
+          await audit(pool, {
+            actorType: 'system', action: 'quote_payment_amount_differs', entityType: 'quote_payment', entityId: qt.id,
+            newValue: { stripeSessionId: session.id, paid: session.amount_total, quoted: qt.quoted_amount_cents },
+            reason: 'The card payment is not the amount on the quote.',
+          });
         }
         const siteUrl = process.env.SITE_URL || '';
         let setupUrl = '';
@@ -554,11 +618,11 @@ async function webhookHandler(req, res) {
         // Register buyer as school license admin
         try {
           const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [qt.email.toLowerCase()]);
-          if (siteUser && metadata.purchaseId) {
+          if (siteUser && purchaseId) {
             await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
             await pool.query(
               "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
-              [siteUser.id, Number(metadata.purchaseId)]
+              [siteUser.id, purchaseId]
             );
           }
         } catch (e) { console.error('school_license_admins webhook insert failed:', e.message); }

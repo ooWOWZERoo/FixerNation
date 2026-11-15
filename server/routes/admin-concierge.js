@@ -27,6 +27,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { audit } = require('../lib/audit');
+const { purchaseIdForQuote } = require('../lib/quote-purchase');
 const { acceptQuoteViaPO } = require('./quote-accept');
 const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
 const {
@@ -63,8 +64,8 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
             i.invoice_number, i.status AS invoice_status
      FROM purchases p
      LEFT JOIN invoices i ON i.id = p.invoice_id
-     WHERE p.quote_id = ? ORDER BY p.id DESC LIMIT 1`,
-    [quote.id]
+     WHERE p.id = ?`,
+    [await purchaseIdForQuote(pool, quote.id)]
   );
 
   let schoolAdmins = [];

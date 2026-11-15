@@ -9,6 +9,7 @@ const { sendAutomationEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { refCodeFromRequest } = require('../lib/affiliate-attribution');
+const { purchaseIdForQuote, openCardPurchaseIdForQuote } = require('../lib/quote-purchase');
 
 const router = express.Router();
 
@@ -61,13 +62,17 @@ router.get('/accept', async (req, res) => {
 // that invoice already paid and nothing else would ever flip this purchase
 // row to match -- leaving it stuck at 'pending' forever despite a genuinely
 // paid invoice, which silently blocks inviteTeacherToSeat()'s payment gate.
-async function createPurchaseFromQuote(quote, paymentMethod, req, paymentStatus = 'pending') {
-  const [existingContact] = await pool.query('SELECT id FROM newsletter_contacts WHERE email = ?', [quote.email]);
+//
+// `tx` ({ connection, afterCommit }) makes the contact and the purchase part of the caller's open transaction (see createPurchase in
+// routes/newsletter.js); without it each step commits on its own, as before.
+async function createPurchaseFromQuote(quote, paymentMethod, req, paymentStatus = 'pending', tx = {}) {
+  const db = tx.connection || pool;
+  const [existingContact] = await db.query('SELECT id FROM newsletter_contacts WHERE email = ?', [quote.email]);
   let contactId;
   if (existingContact[0]) {
     contactId = existingContact[0].id;
   } else {
-    const [r] = await pool.query(
+    const [r] = await db.query(
       "INSERT INTO newsletter_contacts (name, email, company, source, status) VALUES (?, ?, ?, 'Quote Request', 'Subscribed')",
       [`${quote.first_name || ''} ${quote.last_name || ''}`.trim() || quote.email, quote.email, quote.school || null]
     );
@@ -150,6 +155,8 @@ async function createPurchaseFromQuote(quote, paymentMethod, req, paymentStatus 
     // when an admin accepts on the customer's behalf (see acceptQuoteViaPO
     // below) — req is undefined there, and refCodeFromRequest handles that.
     affiliateRefCode: req ? refCodeFromRequest(req) : null,
+    connection: tx.connection,
+    afterCommit: tx.afterCommit,
     ...trialFields,
   });
 
@@ -178,23 +185,23 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   const requiresPO = amountCents > 0;
   if (requiresPO && !poNumber) throw Object.assign(new Error('A Purchase Order number is required'), { status: 400 });
 
-  // Claim the quote atomically BEFORE creating anything — the read-then-
-  // write above has no lock between them, so two near-simultaneous requests
-  // (a double-click, a client retry after a slow response) could both pass
-  // the check above and each go on to create their own purchase, invoice,
-  // and quote_accepted email.
-  const [claimResult] = await pool.query(
-    "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
-    [quote.id]
-  );
-  if (claimResult.affectedRows === 0) throw Object.assign(new Error('already_accepted'), { status: 400 });
-
-  const { contactId, purchaseId } = await createPurchaseFromQuote(quote, 'po', req, requiresPO ? 'pending' : 'paid');
-
+  // All or nothing (phase 4a). The claim, the purchase and its seats, the invoice and the link between them are ONE transaction: if anything
+  // fails the quote is NOT left half-accepted with a dead link, the whole step is undone and the buyer can try again with the same link.
+  // The claim comes first inside the transaction, so two near-simultaneous requests (a double-click, a client retry after a slow response)
+  // cannot both pass: the second waits for the first's commit, finds accepted_at set and gets 'already_accepted'.
   const connection = await pool.getConnection();
-  let invoiceId;
+  const afterCommit = [];
+  let contactId, purchaseId, invoiceId;
   try {
     await connection.beginTransaction();
+    const [claimResult] = await connection.query(
+      "UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted' WHERE id = ? AND accepted_at IS NULL",
+      [quote.id]
+    );
+    if (claimResult.affectedRows === 0) throw Object.assign(new Error('already_accepted'), { status: 400 });
+
+    ({ contactId, purchaseId } = await createPurchaseFromQuote(quote, 'po', req, requiresPO ? 'pending' : 'paid', { connection, afterCommit }));
+
     // The invoice saves its own Bill To and Ship To, copied from the quote (lib/invoice-parties.js).
     const result = await insertInvoice(connection, {
       contact_id: contactId, po_number: poNumber || null, total_cents: amountCents,
@@ -202,29 +209,33 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
     }, quote);
     invoiceId = result.insertId;
     await generateInvoiceNumber(connection, invoiceId);
+
+    // Quote-accepted PO purchases go through the same gate as the cart PO
+    // flow: license stays pending until an admin marks the PO received
+    // (POST /api/invoices/:id/po-received). A $0 quote skips that gate
+    // entirely — createPurchaseFromQuote already left license_status at its
+    // default 'active', so there's nothing to flip here.
+    if (requiresPO) {
+      await connection.query(
+        "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
+        [invoiceId, poNumber, purchaseId]
+      );
+    } else {
+      await connection.query(
+        'UPDATE purchases SET invoice_id = ?, po_number = ? WHERE id = ?',
+        [invoiceId, poNumber || null, purchaseId]
+      );
+    }
     await connection.commit();
   } catch (err) {
-    await connection.rollback();
+    try { await connection.rollback(); } catch (e) { console.error('quote accept rollback failed:', e.message); }
     throw err;
   } finally {
     connection.release();
   }
-
-  // Quote-accepted PO purchases go through the same gate as the cart PO
-  // flow: license stays pending until an admin marks the PO received
-  // (POST /api/invoices/:id/po-received). A $0 quote skips that gate
-  // entirely — createPurchaseFromQuote already left license_status at its
-  // default 'active', so there's nothing to flip here.
-  if (requiresPO) {
-    await pool.query(
-      "UPDATE purchases SET invoice_id = ?, po_number = ?, license_status = 'pending' WHERE id = ?",
-      [invoiceId, poNumber, purchaseId]
-    );
-  } else {
-    await pool.query(
-      'UPDATE purchases SET invoice_id = ?, po_number = ? WHERE id = ?',
-      [invoiceId, poNumber || null, purchaseId]
-    );
+  // Only now that it is all saved: claim the buyer's seat, tell the CRM, group the contact (each best-effort, none can undo the acceptance).
+  for (const fn of afterCommit) {
+    try { await fn(); } catch (e) { console.error('quote accept after-commit step failed:', e.message); }
   }
 
   let setupUrl = '';
@@ -275,6 +286,31 @@ async function acceptQuoteViaPO(quoteId, poNumber, req) {
   return { purchaseId, invoiceId, setupUrl };
 }
 
+// The open card purchase for a quote: the one an earlier click already made and nobody has paid yet, or a new one. Done under a lock on the
+// quote row so two clicks at the same moment end up with one purchase.
+async function openCardPurchase(quote, req) {
+  const connection = await pool.getConnection();
+  const afterCommit = [];
+  try {
+    await connection.beginTransaction();
+    await connection.query('SELECT id FROM quote_requests WHERE id = ? FOR UPDATE', [quote.id]);
+    let purchaseId = await openCardPurchaseIdForQuote(connection, quote.id);
+    if (!purchaseId) {
+      ({ purchaseId } = await createPurchaseFromQuote(quote, 'card', req, 'pending', { connection, afterCommit }));
+    }
+    await connection.commit();
+    for (const fn of afterCommit) {
+      try { await fn(); } catch (e) { console.error('card purchase after-commit step failed:', e.message); }
+    }
+    return purchaseId;
+  } catch (err) {
+    try { await connection.rollback(); } catch (e) { console.error('card purchase rollback failed:', e.message); }
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
 router.post('/accept', async (req, res) => {
   const { token, paymentMethod } = req.body || {};
   const poNumber = (req.body?.poNumber || '').trim();
@@ -296,10 +332,11 @@ router.post('/accept', async (req, res) => {
   }
 
   // Card: create Stripe Checkout session. The webhook that actually grants
-  // access (server/routes/checkout.js) re-checks `!qt.accepted_at` before
-  // doing anything, so a duplicate request here just creates an extra
-  // abandoned session, not a duplicate real purchase — no claim needed.
-  const { purchaseId } = await createPurchaseFromQuote(quote, 'card', req);
+  // access (server/routes/checkout.js) claims the quote atomically, so a
+  // duplicate request here can never produce a duplicate real purchase.
+  // Phase 4a: a buyer who clicks the button again gets a fresh Stripe session for the SAME open purchase, not another purchase with
+  // another set of seats. The quote row is locked while we look, so two simultaneous clicks cannot both make one.
+  const purchaseId = await openCardPurchase(quote, req);
   const siteUrl = process.env.SITE_URL || '';
   const amountCents = quote.quoted_amount_cents || 0;
   const session = await getStripe().checkout.sessions.create({
@@ -322,6 +359,12 @@ router.post('/accept', async (req, res) => {
     success_url: `${siteUrl}/accept-quote.html?token=${token}&checkout=success`,
     cancel_url: `${siteUrl}/accept-quote.html?token=${token}`,
   });
+
+  // Remember which session this purchase is waiting on. The webhook looks the purchase up by it (and falls back to metadata.purchaseId, which is
+  // all a session opened before this release has). If it cannot be saved the payment path still works through the metadata.
+  try {
+    await pool.query('UPDATE purchases SET stripe_session_id = ? WHERE id = ? AND payment_status = ?', [session.id, purchaseId, 'pending']);
+  } catch (e) { console.error('saving the Stripe session on the purchase failed:', e.message); }
 
   res.json({ ok: true, stripeUrl: session.url });
 });
@@ -353,14 +396,15 @@ router.post('/accept/invite', async (req, res) => {
 
   // Register the invitee as a school license admin for this purchase
   try {
-    const [[latestPurchase]] = await pool.query('SELECT id FROM purchases WHERE quote_id = ? ORDER BY id DESC LIMIT 1', [quote.id]);
-    if (latestPurchase) {
+    // The purchase that was actually paid or invoiced, never just the newest row (lib/quote-purchase.js).
+    const quotePurchaseId = await purchaseIdForQuote(pool, quote.id);
+    if (quotePurchaseId) {
       const [[siteUser]] = await pool.query('SELECT id FROM site_users WHERE email = ?', [inviteEmail.toLowerCase()]);
       if (siteUser) {
         await pool.query("UPDATE site_users SET role = 'school_license_admin' WHERE id = ? AND role NOT IN ('admin','school_license_admin')", [siteUser.id]);
         await pool.query(
           "INSERT IGNORE INTO school_license_admins (site_user_id, purchase_id, permission_level, is_active) VALUES (?, ?, 'primary', 1)",
-          [siteUser.id, latestPurchase.id]
+          [siteUser.id, quotePurchaseId]
         );
       }
     }

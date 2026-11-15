@@ -624,15 +624,20 @@ async function attachPurchaseDetails(purchases, { excludeAdminSeats } = {}) {
 // Shared by the admin's manual "add a purchase" endpoint below and the real
 // Stripe/PO checkout flows (server/routes/checkout.js) — all need the exact
 // same purchase + seat-creation behavior, just from different sources.
-async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation, affiliateRefCode, autoClaimEmail }) {
+async function createPurchase(contactId, { productType, bookId, licenseProductId, seatCount, source, notes, stripeSessionId, stripeInvoiceId, schoolDomain, paymentMethod, paymentStatus, poNumber, invoiceId, amountCents, trialExpirationDate, trialLessonLimit, trialLibraryLimit, conversionCreditCents, quoteId, licenseDurationDaysOverride, skipThankYouAutomation, affiliateRefCode, autoClaimEmail, connection: outerConnection, afterCommit }) {
   const finalSeatCount = productType === 'single_license' ? 1 : productType === 'group_license' ? Number(seatCount) : null;
 
   const normalizedDomain = productType === 'group_license' ? normalizeDomain(schoolDomain) || null : null;
   const finalLicenseProductId = (productType === 'group_license' || productType === 'single_license') ? licenseProductId || null : null;
 
-  const connection = await pool.getConnection();
+  // A caller that needs the purchase to be part of a bigger all-or-nothing step (quote acceptance by PO, routes/quote-accept.js) passes its own open
+  // transaction as `connection`, and an `afterCommit` array. Then this function neither begins, commits, rolls back nor releases (the caller does),
+  // and the work that must only happen once the purchase is really saved (claiming the buyer's seat, the CRM hook, the group assignment) is pushed
+  // onto `afterCommit` for the caller to run after its own commit. Without them nothing changes: it owns its transaction, as before.
+  const ownsTransaction = !outerConnection;
+  const connection = outerConnection || await pool.getConnection();
   try {
-    await connection.beginTransaction();
+    if (ownsTransaction) await connection.beginTransaction();
     const schoolId = await findOrCreateSchoolId(normalizedDomain, connection);
 
     // Snapshot the intended license length at purchase time (never affected
@@ -719,45 +724,51 @@ async function createPurchase(contactId, { productType, bookId, licenseProductId
         );
       }
     }
-    await connection.commit();
+    if (ownsTransaction) await connection.commit();
 
-    // A buyer who already has an account (signed up earlier, or signed in before paying) never goes through the sign-up that
-    // claims a pending seat, so claim it here (lib/own-seat-claim.js). A new account claims it when it is created.
-    if (ownSeatEmail) await claimForAccountByEmail(pool, ownSeatEmail);
-    await crmHooks.contactChanged(contactId);
+    // Everything below runs only once the purchase is really saved: now when this function owns the transaction, or after the caller's commit.
+    const afterSave = async () => {
+      // A buyer who already has an account (signed up earlier, or signed in before paying) never goes through the sign-up that
+      // claims a pending seat, so claim it here (lib/own-seat-claim.js). A new account claims it when it is created.
+      if (ownSeatEmail) await claimForAccountByEmail(pool, ownSeatEmail);
+      await crmHooks.contactChanged(contactId);
 
-    // Automated thank-you email — best-effort (fireAutomation swallows its
-    // own errors), so a template/lookup issue here never fails the purchase
-    // itself. Only book purchases get one; license purchases are covered by
-    // the invoice-paid and seat-invite automations instead, since a single
-    // PO order can create several license purchase rows and would otherwise
-    // flood the buyer with one thank-you per line item.
-    if (!skipThankYouAutomation && productType === 'book') {
-      try {
-        const [[contact]] = await pool.query('SELECT email, name FROM newsletter_contacts WHERE id = ?', [contactId]);
-        const firstName = (contact.name || '').split(' ')[0] || 'there';
-        const [[book]] = await pool.query('SELECT title FROM books WHERE id = ?', [bookId]);
-        await fireAutomation('book_purchase_thank_you', {
-          to: contact.email,
-          mergeFields: { firstName, bookTitle: book ? book.title : 'your book' },
-        });
-      } catch (err) {
-        console.error('Thank-you automation lookup failed:', err.message);
+      // Automated thank-you email — best-effort (fireAutomation swallows its
+      // own errors), so a template/lookup issue here never fails the purchase
+      // itself. Only book purchases get one; license purchases are covered by
+      // the invoice-paid and seat-invite automations instead, since a
+      // single PO order can create several license purchase rows and would otherwise
+      // flood the buyer with one thank-you per line item.
+      if (!skipThankYouAutomation && productType === 'book') {
+        try {
+          const [[contact]] = await pool.query('SELECT email, name FROM newsletter_contacts WHERE id = ?', [contactId]);
+          const firstName = (contact.name || '').split(' ')[0] || 'there';
+          const [[book]] = await pool.query('SELECT title FROM books WHERE id = ?', [bookId]);
+          await fireAutomation('book_purchase_thank_you', {
+            to: contact.email,
+            mergeFields: { firstName, bookTitle: book ? book.title : 'your book' },
+          });
+        } catch (err) {
+          console.error('Thank-you automation lookup failed:', err.message);
+        }
       }
-    }
 
-    // Auto-assign contact to system user groups based on what they bought.
-    // Best-effort — a missing system_key row never blocks the purchase.
-    try {
-      await assignContactToGroups(contactId, { productType, licenseProductId: licenseProductId || null });
-    } catch (e) { console.error('assignContactToGroups failed:', e.message); }
+      // Auto-assign contact to system user groups based on what they bought.
+      // Best-effort — a missing system_key row never blocks the purchase.
+      try {
+        await assignContactToGroups(contactId, { productType, licenseProductId: licenseProductId || null });
+      } catch (e) { console.error('assignContactToGroups failed:', e.message); }
+    };
+    if (ownsTransaction) await afterSave();
+    else if (Array.isArray(afterCommit)) afterCommit.push(afterSave);
+    else throw new Error('createPurchase: a caller-supplied connection needs an afterCommit array');
 
     return purchaseId;
   } catch (err) {
-    await connection.rollback();
+    if (ownsTransaction) await connection.rollback();
     throw err;
   } finally {
-    connection.release();
+    if (ownsTransaction) connection.release();
   }
 }
 
