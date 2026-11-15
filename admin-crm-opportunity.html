@@ -11,13 +11,13 @@
 <link rel="stylesheet" href="fonts.css?v=1">
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=22">
-<link rel="stylesheet" href="crm-common.css?v=1">
+<link rel="stylesheet" href="crm-common.css?v=2">
 </head>
 <body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=33"></script>
+<script src="admin-nav.js?v=34"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -33,7 +33,8 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=1"></script>
+<script src="crm-common.js?v=2"></script>
+<script src="crm-panels.js?v=1"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -104,6 +105,9 @@
       }).join('') + '</tbody></table>' : C.empty('Nobody is on the buying committee yet. Add the people who decide, influence, approve and pay.', '👥');
     h += '</div>';
 
+    // Phase 3: what to do, who is on the hook, the paperwork, and the notes. Each panel draws itself below once this page is in place.
+    h += '<div class="crm-two"><div id="pTasks"></div><div id="pChecklist"></div></div><div class="crm-two"><div id="pMeetings"></div><div id="pFiles"></div></div><div id="pNotes"></div>';
+
     // Quotes and payment: the deal's state and the money are two different facts.
     h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Quotes (' + data.quotes.length + ')</h2></div>' +
       (data.quotes.length ? '<ul class="crm-list">' + data.quotes.map(function (q) { return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div></div><span class="a-pill a-pill-neutral">' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</span></li>'; }).join('') + '</ul><p class="crm-small"><a class="crm-link" href="admin-quotes.html">Open Quotes</a></p>' : C.empty('No quote is linked to this deal.', '💬')) + '</div>' +
@@ -116,7 +120,16 @@
       if (e.fromState && e.toState && e.fromState !== e.toState) change += ' · ' + esc(C.stateLabel(e.fromState)) + ' → ' + esc(C.stateLabel(e.toState));
       return '<li><strong>' + change + '</strong>' + (e.reason ? '<div class="crm-muted">' + esc(e.reason) + '</div>' : '') + '<div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + '</div></li>';
     }).join('') + '</ul>' : C.empty('No history yet.', '🕒')) + '</div>';
+    h += '<div id="pTimeline"></div>';
     root.innerHTML = h;
+
+    var subject = { kind: 'opportunity', id: id, canWrite: edit, contacts: data.committee.map(function (m) { return { id: m.contactId, name: m.name, email: m.email }; }) };
+    FnCrmPanels.tasks(document.getElementById('pTasks'), subject);
+    FnCrmPanels.checklist(document.getElementById('pChecklist'), subject);
+    FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
+    FnCrmPanels.files(document.getElementById('pFiles'), subject);
+    FnCrmPanels.notes(document.getElementById('pNotes'), subject);
+    FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
     on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember);
@@ -256,6 +269,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=6"></script>
+<script src="admin-shell.js?v=7"></script>
 </body>
 </html>

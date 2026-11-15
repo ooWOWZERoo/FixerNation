@@ -127,7 +127,7 @@ test.describe("Customer Hub: CRM Admin", () => {
     await expect(page.getByRole("row", { name: new RegExp(PERSON_NAME) }).getByText("Champion")).toBeVisible();
 
     await page.locator("#stageSel").selectOption({ label: "Qualified" });
-    await expect(page.getByText("Moved")).toBeVisible();
+    await expect(page.getByText("Moved", { exact: true })).toBeVisible(); // exact: the deal timeline now also says "Deal moved"
     await expect(page.locator(".a-card-head h2").first()).toContainText("Qualified");
     await page.locator("#stageSel").selectOption({ label: "Discovery" });
     await expect(page.locator(".a-card-head h2").first()).toContainText("Discovery");
@@ -231,7 +231,7 @@ test.describe("Customer Hub: Read-only", () => {
   });
 
   test("read-only can look at everything and change nothing", async ({ page }) => {
-    await page.goto("/admin-crm-accounts.html");
+    await page.goto(`/admin-crm-accounts.html?q=${encodeURIComponent(ACCOUNT)}`); // searched for: a local stack that has had many runs lists more than one page
     await expect(page.getByRole("link", { name: ACCOUNT })).toBeVisible();
     await expect(page.getByRole("button", { name: "+ Add account" })).toHaveCount(0);
     await page.goto(accountUrl);

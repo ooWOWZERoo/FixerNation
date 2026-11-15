@@ -55,4 +55,19 @@ async function dealCountForContact(conn, contactId) {
   }
 }
 
-module.exports = { ownedRecordCounts, reassignOwned, dealCountForContact };
+// Phase 3: how many notes, tasks, files and meetings are written on a contact. Deleting the contact would delete them (the foreign keys cascade), so the
+// contact-delete route refuses until they are dealt with, or the person is merged into another contact (the merge moves them).
+async function workItemCountForContact(conn, contactId) {
+  let n = 0;
+  for (const table of ['crm_tasks', 'crm_notes', 'crm_attachments', 'crm_appointments']) {
+    try {
+      const [[row]] = await conn.query(`SELECT COUNT(*) AS n FROM ${table} WHERE contact_id = ?`, [contactId]);
+      n += Number(row.n);
+    } catch (err) {
+      if (!missing(err)) throw err;
+    }
+  }
+  return n;
+}
+
+module.exports = { ownedRecordCounts, reassignOwned, dealCountForContact, workItemCountForContact };

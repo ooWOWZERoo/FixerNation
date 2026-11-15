@@ -294,6 +294,8 @@ router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => 
       else await conn.query('UPDATE crm_opportunity_contacts SET contact_id = ? WHERE id = ?', [intoId, m.id]);
     }
     await conn.query('UPDATE crm_opportunities SET primary_contact_id = ? WHERE primary_contact_id = ?', [intoId, fromId]);
+    // Phase 3: the duplicate's notes, tasks, files and meetings follow the person you keep (they would otherwise be deleted with the duplicate).
+    for (const table of ['crm_tasks', 'crm_notes', 'crm_attachments', 'crm_appointments']) await conn.query(`UPDATE ${table} SET contact_id = ? WHERE contact_id = ?`, [intoId, fromId]);
     await conn.query('UPDATE quote_requests SET contact_id = ? WHERE contact_id = ?', [intoId, fromId]);
     await conn.query('UPDATE quote_requests SET contact_id = ? WHERE contact_id IS NULL AND LOWER(TRIM(email)) = LOWER(TRIM(?))', [intoId, from.email]);
     // Email lists: the kept contact joins every list the duplicate was on (their own status is not touched).

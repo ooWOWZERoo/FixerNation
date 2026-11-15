@@ -11,13 +11,13 @@
 <link rel="stylesheet" href="fonts.css?v=1">
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=22">
-<link rel="stylesheet" href="crm-common.css?v=1">
+<link rel="stylesheet" href="crm-common.css?v=2">
 </head>
 <body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=33"></script>
+<script src="admin-nav.js?v=34"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -33,7 +33,7 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=1"></script>
+<script src="crm-common.js?v=2"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -47,13 +47,13 @@
   });
 
   function load() {
-    Promise.all([C.api('GET', '/api/crm/stages'), C.api('GET', '/api/crm/loss-reasons'), C.api('GET', '/api/crm/staff')]).then(function (res) {
+    Promise.all([C.api('GET', '/api/crm/stages'), C.api('GET', '/api/crm/loss-reasons'), C.api('GET', '/api/crm/staff'), C.api('GET', '/api/crm/checklists/templates')]).then(function (res) {
       for (var i = 0; i < res.length; i++) if (!res[i].ok) { C.errorBox(root, C.problem(res[i])); return; }
-      draw(res[0].data.stages, res[1].data.lossReasons, res[2].data.staff);
+      draw(res[0].data.stages, res[1].data.lossReasons, res[2].data.staff, res[3].data.templates);
     });
   }
 
-  function draw(stages, reasons, staff) {
+  function draw(stages, reasons, staff, templates) {
     var h = '<div class="a-card"><div class="a-card-head"><h2>Pipeline stages</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">The chance of closing is what the pipeline total uses for every deal in that stage. A deal can have its own chance on its page. “New Inquiry” and “Won” cannot be turned off.</p>' +
       '<table class="a-table" aria-label="Pipeline stages"><thead><tr><th scope="col">Order</th><th scope="col">Name</th><th scope="col">Chance of closing</th><th scope="col">On</th><th scope="col"><span class="crm-sr">Save</span></th></tr></thead><tbody>' +
       stages.map(function (s, i) {
@@ -69,6 +69,13 @@
       '<ul class="crm-list">' + reasons.map(function (r) {
         return '<li><div>' + esc(r.label) + (r.isActive ? '' : ' <span class="a-pill a-pill-neutral">Off</span>') + '</div><div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-rename="' + esc(r.id) + '" data-label="' + esc(r.label) + '">Rename</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-toggle="' + esc(r.id) + '" data-on="' + (r.isActive ? '1' : '0') + '" data-label="' + esc(r.label) + '">' + (r.isActive ? 'Turn off' : 'Turn on') + '</button></div></li>';
       }).join('') + '</ul></div>';
+
+    h += '<div class="a-card"><div class="a-card-head"><h2>Procurement checklists</h2><button type="button" class="a-btn a-btn-outline a-btn-sm" id="addTpl">+ Add a checklist</button></div>' +
+      '<p class="crm-small crm-muted" style="margin:0 0 12px;">The steps between “yes” and “paid”. On a deal, someone picks a checklist and its steps are copied onto that deal. Changing a checklist here does not change deals that already have it.</p>' +
+      (templates.length ? '<ul class="crm-list">' + templates.map(function (t) {
+        return '<li><div class="crm-item-main"><strong>' + esc(t.name) + '</strong>' + (t.isActive ? '' : ' <span class="a-pill a-pill-neutral">Off</span>') + '<div class="crm-small crm-muted">' + t.steps.length + ' steps: ' + esc(t.steps.slice(0, 3).join(', ')) + (t.steps.length > 3 ? '…' : '') + '</div></div>' +
+          '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-tpl-edit="' + esc(t.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-tpl-toggle="' + esc(t.id) + '" data-on="' + (t.isActive ? '1' : '0') + '">' + (t.isActive ? 'Turn off' : 'Turn on') + '</button></div></li>';
+      }).join('') + '</ul>' : C.empty('No checklists yet.', '📋')) + '</div>';
 
     h += '<div class="a-card"><div class="a-card-head"><h2>Who can do what</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">' + Object.keys(ROLE).map(function (k) { return '<strong>' + ROLE[k] + ':</strong> ' + ROLE_HELP[k]; }).join(' ') + ' At least one CRM Admin must always remain.</p>' +
       '<table class="a-table" aria-label="Staff roles"><thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col"><span class="crm-sr">Save</span></th></tr></thead><tbody>' +
@@ -90,6 +97,25 @@
         var pid = b.getAttribute('data-save-role');
         C.api('PUT', '/api/crm/staff/' + pid + '/role', { role: root.querySelector('[data-role-for="' + pid + '"]').value }).then(function (r) { if (r.ok) { C.toast('Role saved'); load(); } else { C.toast(C.problem(r)); load(); } });
       });
+    });
+    var tplById = {}; templates.forEach(function (t) { tplById[t.id] = t; });
+    function tplForm(t) {
+      C.dialog({
+        title: t ? 'Edit this checklist' : 'Add a checklist', submit: 'Save',
+        body: C.field('Name', '<input type="text" id="tpName" maxlength="120" required value="' + esc(t ? t.name : '') + '">', '', 'tpName') +
+          C.field('What is it for? (optional)', '<input type="text" id="tpDesc" maxlength="500" value="' + esc(t ? t.description || '' : '') + '">', '', 'tpDesc') +
+          C.field('Steps, one per line', '<textarea id="tpSteps" rows="10" required>' + esc(t ? t.steps.join('\n') : '') + '</textarea>', 'In the order they usually happen. Up to 30 steps.', 'tpSteps'),
+        onSubmit: function (f) {
+          var body = { name: f.querySelector('#tpName').value, description: f.querySelector('#tpDesc').value, steps: f.querySelector('#tpSteps').value.split(/\r?\n/) };
+          var req = t ? C.api('PUT', '/api/crm/checklists/templates/' + t.id, body) : C.api('POST', '/api/crm/checklists/templates', body);
+          return req.then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return C.problem(r); });
+        }
+      });
+    }
+    var addTpl = document.getElementById('addTpl'); if (addTpl) addTpl.addEventListener('click', function () { tplForm(null); });
+    root.querySelectorAll('[data-tpl-edit]').forEach(function (b) { b.addEventListener('click', function () { tplForm(tplById[b.getAttribute('data-tpl-edit')]); }); });
+    root.querySelectorAll('[data-tpl-toggle]').forEach(function (b) {
+      b.addEventListener('click', function () { C.api('PUT', '/api/crm/checklists/templates/' + b.getAttribute('data-tpl-toggle'), { isActive: b.getAttribute('data-on') !== '1' }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); } else C.toast(C.problem(r)); }); });
     });
     var add = document.getElementById('addReason');
     if (add) add.addEventListener('click', function () {
@@ -119,6 +145,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=6"></script>
+<script src="admin-shell.js?v=7"></script>
 </body>
 </html>

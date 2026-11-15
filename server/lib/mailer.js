@@ -232,6 +232,20 @@ async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel, de
   });
 }
 
+// Sales CRM meetings (phase 3): one email carrying a calendar invitation (.ics). `ics` is built by lib/crm-ics.js; `method` is REQUEST (invite or update) or
+// CANCEL. Sent from the system address with Reply-To set to the organizer, so a reply reaches the staff member who set the meeting up.
+async function sendMeetingInviteEmail({ to, replyTo, subject, text, html, ics, method }) {
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    replyTo,
+    subject,
+    text,
+    html,
+    icalEvent: { method, content: ics },
+  });
+}
+
 // Support requests (Release 115). One shape for both directions: the "we got your request" copy to the person, and a staff reply.
 // `body` is plain text from a person or staff; it goes through esc() and keeps its line breaks. Reply-To is the support mailbox so a
 // person's answer reaches staff (it is not threaded back into the inbox in this release).
@@ -577,4 +591,4 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
   });
 }
 
-module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendSupportEmail };
+module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendSupportEmail, sendMeetingInviteEmail };

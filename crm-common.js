@@ -18,6 +18,13 @@
       return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data || {} }; });
     }).catch(function () { return { ok: false, status: 0, data: { error: 'The server did not answer. Check your connection and try again.' } }; });
   };
+  // A file upload (Customer Hub files). multipart/form-data: the browser sets the Content-Type and its boundary itself, so none is set here. Resolves like C.api.
+  C.upload = function (url, formData) {
+    return fetch(url, { method: 'POST', credentials: 'include', body: formData }).then(function (r) {
+      if (r.status === 401) { window.location.href = 'admin-login.html'; return { ok: false, status: 401, data: {} }; }
+      return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data || {} }; });
+    }).catch(function () { return { ok: false, status: 0, data: { error: 'The server did not answer. Check your connection and try again.' } }; });
+  };
   C.qstr = function (obj) {
     var p = new URLSearchParams();
     Object.keys(obj).forEach(function (k) { if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') p.set(k, obj[k]); });
@@ -80,6 +87,13 @@
   C.date = function (s) { var d = C.parseUtc(s); return d ? d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : ''; };
   C.dateTime = function (s) { var d = C.parseUtc(s); return d ? d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; };
   C.isoDay = function (s) { var d = C.parseUtc(s); return d ? d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) : ''; };
+  // The viewer's own calendar day ('YYYY-MM-DD'), sent as ?today= so "due today" and "overdue" mean today where the person is.
+  C.todayLocal = function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); };
+  // A date and a time typed in the viewer's own zone -> the ISO moment (UTC, with its zone) the server stores; and back for editing.
+  C.localToIso = function (day, time) { var d = new Date(day + 'T' + time); return isNaN(d.getTime()) ? null : d.toISOString(); };
+  C.localTime = function (s) { var d = C.parseUtc(s); return d ? ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) : ''; };
+  C.timeOnly = function (s) { var d = C.parseUtc(s); return d ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''; };
+  C.bytes = function (n) { n = Number(n || 0); return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' bytes'; };
   C.isOverdue = function (s) { var d = C.parseUtc(s); return !!d && d.getTime() < Date.now(); };
   C.days = function (n) { return n === null || n === undefined ? '' : (n === 1 ? '1 day' : n + ' days'); };
   C.num = function (n) { return Number(n || 0).toLocaleString(); };

@@ -12,7 +12,7 @@ const { notAdminSeatClause } = require('../lib/seat-counts');
 const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal');
 const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 const { describeConsequences, consequencesText, hasRoles, closeAccount } = require('../lib/account-closing');
-const { dealCountForContact } = require('../lib/crm-ownership');
+const { dealCountForContact, workItemCountForContact } = require('../lib/crm-ownership');
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
@@ -272,6 +272,14 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
     return res.status(409).json({
       code: 'contact_on_deals', deals: nDeals,
       error: `This contact is on ${nDeals} sales deal${nDeals === 1 ? '' : 's'}. Take them off the deal${nDeals === 1 ? '' : 's'} first.`,
+    });
+  }
+  // Sales CRM phase 3: notes, tasks, files and meetings written on this contact would be deleted with it. Merge the person into another contact (which moves them) or clear them first.
+  const nWork = await workItemCountForContact(pool, req.params.id);
+  if (nWork) {
+    return res.status(409).json({
+      code: 'contact_has_crm_items', items: nWork,
+      error: `This contact has CRM notes, tasks, files or meetings on record (${nWork} in all). Deleting the contact would erase them. Merge the contact into another one in the Customer Hub, or remove those first.`,
     });
   }
   // The CRM is the record of who is on the platform: deleting a contact that has a sign-in account closes the account

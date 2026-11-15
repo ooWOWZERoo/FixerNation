@@ -1,0 +1,335 @@
+/* Customer Hub (Sales CRM) panels, phase 3: tasks, notes, files, meetings, the procurement checklist and the timeline.
+   Each one draws itself into an element on a deal, account or contact page: FnCrmPanels.tasks(el, subject) and so on.
+   subject = { kind: 'opportunity' | 'account' | 'contact', id, canWrite, contacts }
+     canWrite  true when this person may change things on this subject (the page decides; the server decides again and is the real gate)
+     contacts  [{ id, name, email }] the people a meeting may invite
+   Rules this file keeps (same as crm-common.js): everything from the database or a person goes through esc() before it is put in HTML; data for a click handler
+   travels in data- attributes, never inside an inline handler; every write goes through FnCrm.api (JSON body) or FnCrm.upload (a file). Loaded after crm-common.js. */
+(function () {
+  'use strict';
+  var C = window.FnCrm, esc = C.esc;
+  var P = window.FnCrmPanels = {};
+  var KEY = { opportunity: 'opportunityId', account: 'accountId', contact: 'contactId' };
+
+  // Every change a panel makes goes through these two, which tell the other panels on the page (the timeline reloads itself) once a write has succeeded.
+  function notify() { document.dispatchEvent(new CustomEvent('crm-panel-changed')); }
+  function api(method, url, body) { return C.api(method, url, body).then(function (r) { if (method !== 'GET' && r.ok) notify(); return r; }); }
+  function upl(url, formData) { return C.upload(url, formData).then(function (r) { if (r.ok) notify(); return r; }); }
+
+  function query(s) { var q = {}; q[KEY[s.kind]] = s.id; return q; }
+  function withSubject(s, extra) { var b = query(s); Object.keys(extra || {}).forEach(function (k) { b[k] = extra[k]; }); return b; }
+  function problem(r) { return C.problem(r); }
+  // Only ever link to a Customer Hub page by its own name and a numeric id; anything else the server sends is shown as plain text.
+  function safeLink(href) { return /^admin-crm-[a-z]+\.html\?id=\d+$/.test(String(href || '')) ? href : ''; }
+  function card(title, actions, body, id) {
+    return '<div class="a-card"' + (id ? ' id="' + id + '"' : '') + '><div class="a-card-head"><h2>' + title + '</h2><div class="crm-row-actions">' + (actions || '') + '</div></div>' + body + '</div>';
+  }
+  function on(el, sel, fn) { var b = el.querySelector(sel); if (b) b.addEventListener('click', fn); }
+  function each(el, sel, fn) { el.querySelectorAll(sel).forEach(function (b) { b.addEventListener('click', function () { fn(b); }); }); }
+  function where(item, s) {
+    var sub = item.subject || {};
+    if (sub.opportunityId && s.kind !== 'opportunity') return ' · on <a class="crm-link" href="admin-crm-opportunity.html?id=' + esc(sub.opportunityId) + '">' + esc(sub.dealName || 'a deal') + '</a>';
+    return '';
+  }
+
+  /* ---- Tasks --------------------------------------------------------------------------------------------------------------------- */
+  P.tasks = function (el, s) {
+    var staff = [];
+    function load() {
+      C.loading(el);
+      Promise.all([C.staff(), api('GET', '/api/crm/tasks' + C.qstr(withSubject(s, { state: 'all', pageSize: 100, today: C.todayLocal() })))]).then(function (res) {
+        staff = res[0];
+        if (!res[1].ok) { C.errorBox(el, problem(res[1])); return; }
+        draw(res[1].data.tasks);
+      });
+    }
+    function row(t) {
+      var done = t.state === 'done';
+      var due = t.dueOn ? '<span class="' + (t.overdue ? 'crm-flag' : '') + '">' + (t.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(t.dueOn)) + '</span>' : 'No due date';
+      return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="tk' + esc(t.id) + '" data-id="' + esc(t.id) + '" data-act="toggle"' + (done ? ' checked' : '') + (t.canComplete ? '' : ' disabled') + '>' +
+        '<label for="tk' + esc(t.id) + '"' + (done ? ' class="crm-done"' : '') + '>' + esc(t.title) + '</label></div>' +
+        (t.details ? '<div class="crm-small crm-muted crm-wrap">' + esc(t.details) + '</div>' : '') +
+        '<div class="crm-small crm-muted">' + (done ? 'Done ' + esc(C.date(t.completedAt)) : due) + ' · ' + (t.assigneeName ? 'for ' + esc(t.assigneeName) : 'for nobody') + where(t, s) + '</div></div>' +
+        (t.canEdit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(t.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(t.id) + '">Delete</button></div>' : '') + '</li>';
+    }
+    function draw(tasks) {
+      var open = tasks.filter(function (t) { return t.state === 'open'; }), done = tasks.filter(function (t) { return t.state === 'done'; });
+      var late = open.filter(function (t) { return t.overdue; }).length;
+      var h = card('Tasks (' + open.length + ' open' + (late ? ', ' + late + ' overdue' : '') + ')', s.canWrite ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="addTask">Add a task</button>' : '',
+        (open.length ? '<ul class="crm-list" aria-label="Open tasks">' + open.map(row).join('') + '</ul>' : C.empty('No open tasks. ' + (s.canWrite ? 'Add the next thing that needs doing.' : ''), '✅')) +
+        (done.length ? '<details class="crm-more"><summary>Finished (' + done.length + ')</summary><ul class="crm-list" aria-label="Finished tasks">' + done.map(row).join('') + '</ul></details>' : ''), 'panelTasks');
+      el.innerHTML = h;
+      var byId = {}; tasks.forEach(function (t) { byId[t.id] = t; });
+      on(el, '#addTask', function () { form(null); });
+      each(el, '[data-act=edit]', function (b) { form(byId[b.getAttribute('data-id')]); });
+      each(el, '[data-act=del]', function (b) { remove(byId[b.getAttribute('data-id')]); });
+      el.querySelectorAll('[data-act=toggle]').forEach(function (b) {
+        b.addEventListener('change', function () {
+          b.disabled = true;
+          api('POST', '/api/crm/tasks/' + b.getAttribute('data-id') + (b.checked ? '/complete' : '/reopen'), {}).then(function (r) { if (!r.ok) C.toast(problem(r)); load(); });
+        });
+      });
+    }
+    function form(t) {
+      C.dialog({
+        title: t ? 'Edit the task' : 'Add a task', submit: 'Save',
+        body: C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="255" required value="' + esc(t ? t.title : '') + '">', '', 'tTitle') +
+          C.field('Details (optional)', '<textarea id="tDetails" maxlength="1000">' + esc(t ? t.details || '' : '') + '</textarea>', '', 'tDetails') +
+          '<div class="a-form-row">' + C.field('Due', '<input type="date" id="tDue" value="' + esc(t && t.dueOn ? String(t.dueOn).slice(0, 10) : '') + '">', '', 'tDue') +
+          C.field('For', '<select id="tWho">' + C.ownerOptions(staff, t ? t.assignedAdminId : C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>',
+        onSubmit: function (f) {
+          var body = { title: f.querySelector('#tTitle').value, details: f.querySelector('#tDetails').value, dueOn: f.querySelector('#tDue').value || null, assignedAdminId: Number(f.querySelector('#tWho').value) };
+          if (!body.assignedAdminId) return 'Pick who will do it.';
+          var req = t ? api('PUT', '/api/crm/tasks/' + t.id, body) : api('POST', '/api/crm/tasks', withSubject(s, body));
+          return req.then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return problem(r); });
+        }
+      });
+    }
+    function remove(t) {
+      C.dialog({ title: 'Delete this task?', submit: 'Delete', danger: true, body: '<p>“' + esc(t.title) + '” will be removed. Tasks you finished stay in the list, so use that if you only want to tick it off.</p>',
+        onSubmit: function () { return api('DELETE', '/api/crm/tasks/' + t.id).then(function (r) { if (r.ok) { C.toast('Deleted'); load(); return; } return problem(r); }); } });
+    }
+    load();
+  };
+
+  /* ---- Notes --------------------------------------------------------------------------------------------------------------------- */
+  P.notes = function (el, s) {
+    var KINDS = { note: 'Note', call: 'Call', email: 'Email', meeting: 'Meeting' };
+    var page = 1, notes = [], total = 0;
+    function load(more) {
+      if (!more) { page = 1; notes = []; C.loading(el); }
+      api('GET', '/api/crm/notes' + C.qstr(withSubject(s, { page: page, pageSize: 10 }))).then(function (r) {
+        if (!r.ok) { C.errorBox(el, problem(r)); return; }
+        notes = notes.concat(r.data.notes); total = r.data.total; draw();
+      });
+    }
+    function draw() {
+      var h = '';
+      if (s.canWrite) {
+        h += '<form id="noteForm" novalidate><div class="a-field"><label for="noteBody">Add a note</label><textarea id="noteBody" maxlength="5000" placeholder="What happened, or what did you learn?"></textarea></div>' +
+          '<div class="crm-row-actions"><label class="crm-sr" for="noteKind">Kind of note</label><select id="noteKind" class="a-filter-select">' + C.options(KINDS, 'note') + '</select><button type="submit" class="a-btn a-btn-primary a-btn-sm">Save the note</button></div><p class="crm-inline-error" role="alert" id="noteErr" hidden></p></form>';
+      }
+      h += notes.length ? '<ul class="crm-list" aria-label="Notes">' + notes.map(function (n) {
+        return '<li><div class="crm-item-main"><div><span class="a-pill a-pill-neutral">' + esc(KINDS[n.kind] || 'Note') + '</span> <span class="crm-small crm-muted">' + esc(C.dateTime(n.createdAt)) + (n.authorName ? ' · ' + esc(n.authorName) : '') + where(n, s) + '</span></div>' +
+          '<div class="crm-wrap">' + esc(n.body) + '</div></div>' +
+          (n.canEdit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(n.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(n.id) + '">Delete</button></div>' : '') + '</li>';
+      }).join('') + '</ul>' + (notes.length < total ? '<p><button type="button" class="a-btn a-btn-outline a-btn-sm" id="moreNotes">Show older notes (' + (total - notes.length) + ' more)</button></p>' : '') : C.empty('No notes yet.', '📝');
+      el.innerHTML = card('Notes (' + C.num(total) + ')', '', h, 'panelNotes');
+      var byId = {}; notes.forEach(function (n) { byId[n.id] = n; });
+      var form = el.querySelector('#noteForm');
+      if (form) form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var body = form.querySelector('#noteBody').value, err = form.querySelector('#noteErr');
+        if (!body.trim()) { err.textContent = 'Write the note first.'; err.hidden = false; return; }
+        api('POST', '/api/crm/notes', withSubject(s, { body: body, kind: form.querySelector('#noteKind').value })).then(function (r) { if (r.ok) { C.toast('Note saved'); load(); return; } err.textContent = problem(r); err.hidden = false; });
+      });
+      on(el, '#moreNotes', function () { page++; load(true); });
+      each(el, '[data-act=edit]', function (b) {
+        var n = byId[b.getAttribute('data-id')];
+        C.dialog({ title: 'Edit the note', submit: 'Save', body: C.field('Note', '<textarea id="enBody" maxlength="5000" required>' + esc(n.body) + '</textarea>', '', 'enBody') + C.field('Kind', '<select id="enKind">' + C.options(KINDS, n.kind) + '</select>', '', 'enKind'),
+          onSubmit: function (f) { return api('PUT', '/api/crm/notes/' + n.id, { body: f.querySelector('#enBody').value, kind: f.querySelector('#enKind').value }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return problem(r); }); } });
+      });
+      each(el, '[data-act=del]', function (b) {
+        var n = byId[b.getAttribute('data-id')];
+        C.dialog({ title: 'Delete this note?', submit: 'Delete', danger: true, body: '<p>This cannot be undone.</p>',
+          onSubmit: function () { return api('DELETE', '/api/crm/notes/' + n.id).then(function (r) { if (r.ok) { C.toast('Deleted'); load(); return; } return problem(r); }); } });
+      });
+    }
+    load();
+  };
+
+  /* ---- Files --------------------------------------------------------------------------------------------------------------------- */
+  P.files = function (el, s) {
+    if (!C.can('files')) {
+      el.innerHTML = card('Files', '', '<p class="crm-small crm-muted">Your role cannot open files. They can hold purchase orders and contracts.</p>', 'panelFiles');
+      return;
+    }
+    function load() {
+      C.loading(el);
+      api('GET', '/api/crm/files' + C.qstr(withSubject(s, { pageSize: 50 }))).then(function (r) {
+        if (!r.ok) { C.errorBox(el, problem(r)); return; }
+        draw(r.data);
+      });
+    }
+    function draw(d) {
+      var h = '';
+      if (s.canWrite) {
+        h += '<form id="fileForm" novalidate><div class="a-field"><label for="fileInput">Attach a file</label><input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx"><div class="crm-field-hint">PDF, image or Word document, up to ' + esc(C.bytes(d.maxBytes)) + '. Only people with a Customer Hub role can open it.</div></div>' +
+          '<button type="submit" class="a-btn a-btn-primary a-btn-sm">Upload</button> <span class="crm-small crm-muted" id="fileStatus" role="status"></span><p class="crm-inline-error" role="alert" id="fileErr" hidden></p></form>';
+      }
+      h += d.files.length ? '<ul class="crm-list" aria-label="Files">' + d.files.map(function (f) {
+        return '<li><div class="crm-item-main"><a class="crm-link" href="/api/crm/files/' + esc(f.id) + '/download" download>' + esc(f.name) + '</a><div class="crm-small crm-muted">' + esc(C.bytes(f.sizeBytes)) + ' · ' + esc(C.date(f.uploadedAt)) + (f.uploadedBy ? ' · ' + esc(f.uploadedBy) : '') + where(f, s) + '</div></div>' +
+          (f.canDelete ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(f.id) + '" data-name="' + esc(f.name) + '">Delete</button></div>' : '') + '</li>';
+      }).join('') + '</ul>' : C.empty('No files yet.', '📎');
+      el.innerHTML = card('Files (' + d.total + ')', '', h, 'panelFiles');
+      var form = el.querySelector('#fileForm');
+      if (form) form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var input = form.querySelector('#fileInput'), err = form.querySelector('#fileErr'), status = form.querySelector('#fileStatus');
+        err.hidden = true;
+        if (!input.files || !input.files[0]) { err.textContent = 'Choose a file first.'; err.hidden = false; return; }
+        if (input.files[0].size > d.maxBytes) { err.textContent = 'That file is bigger than ' + C.bytes(d.maxBytes) + '.'; err.hidden = false; return; }
+        var fd = new FormData();
+        fd.append(KEY[s.kind], s.id); // the subject first, so the server has it before the file arrives
+        fd.append('file', input.files[0]);
+        status.textContent = 'Uploading…';
+        upl('/api/crm/files', fd).then(function (r) { status.textContent = ''; if (r.ok) { C.toast('File attached'); load(); return; } err.textContent = problem(r); err.hidden = false; });
+      });
+      each(el, '[data-act=del]', function (b) {
+        var id = b.getAttribute('data-id');
+        C.dialog({ title: 'Delete this file?', submit: 'Delete', danger: true, body: '<p>“' + esc(b.getAttribute('data-name')) + '” will be deleted from the server. This cannot be undone.</p>',
+          onSubmit: function () { return api('DELETE', '/api/crm/files/' + id).then(function (r) { if (r.ok) { C.toast('Deleted'); load(); return; } return problem(r); }); } });
+      });
+    }
+    load();
+  };
+
+  /* ---- Meetings ------------------------------------------------------------------------------------------------------------------ */
+  P.meetings = function (el, s) {
+    var staff = [];
+    function load() {
+      C.loading(el);
+      Promise.all([C.staff(), api('GET', '/api/crm/meetings' + C.qstr(withSubject(s, { pageSize: 50 })))]).then(function (res) {
+        staff = res[0];
+        if (!res[1].ok) { C.errorBox(el, problem(res[1])); return; }
+        draw(res[1].data.meetings);
+      });
+    }
+    function row(m) {
+      var scheduled = m.status === 'scheduled';
+      var invite = !scheduled ? '' : !m.inviteSentAt ? 'Invitation not sent yet' : m.inviteOutOfDate ? '<span class="crm-flag">Changed since the invitation went out</span>' : 'Invitation sent ' + esc(C.date(m.inviteSentAt));
+      return '<li><div class="crm-item-main"><div><strong>' + esc(m.title) + '</strong> ' + (scheduled ? '' : '<span class="a-pill a-pill-neutral">Cancelled</span>') + '</div>' +
+        '<div class="crm-small crm-muted">' + esc(C.dateTime(m.startsAt)) + ' to ' + esc(C.timeOnly(m.endsAt)) + (m.location ? ' · ' + esc(m.location) : '') + where(m, s) + '</div>' +
+        '<div class="crm-small crm-muted">' + (m.attendees.length ? 'Invited: ' + m.attendees.map(function (a) { return esc(a.name); }).join(', ') : 'Nobody invited yet') + '</div>' +
+        (invite ? '<div class="crm-small crm-muted">' + invite + '</div>' : '') + '</div>' +
+        (m.canEdit && scheduled ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-primary a-btn-sm" data-act="send" data-id="' + esc(m.id) + '">' + (m.inviteSentAt ? 'Send the update' : 'Send the invitation') + '</button>' +
+          '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(m.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="cancel" data-id="' + esc(m.id) + '">Cancel</button></div>' : '') + '</li>';
+    }
+    function draw(meetings) {
+      var live = meetings.filter(function (m) { return m.status === 'scheduled'; }), past = meetings.filter(function (m) { return m.status !== 'scheduled'; });
+      el.innerHTML = card('Meetings (' + live.length + ')', s.canWrite ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="addMeeting">Set up a meeting</button>' : '',
+        (live.length ? '<ul class="crm-list" aria-label="Meetings">' + live.map(row).join('') + '</ul>' : C.empty('No meetings set up.', '📅')) +
+        (past.length ? '<details class="crm-more"><summary>Cancelled (' + past.length + ')</summary><ul class="crm-list">' + past.map(row).join('') + '</ul></details>' : ''), 'panelMeetings');
+      var byId = {}; meetings.forEach(function (m) { byId[m.id] = m; });
+      on(el, '#addMeeting', function () { form(null); });
+      each(el, '[data-act=edit]', function (b) { form(byId[b.getAttribute('data-id')]); });
+      each(el, '[data-act=send]', function (b) {
+        b.disabled = true;
+        api('POST', '/api/crm/meetings/' + b.getAttribute('data-id') + '/send', {}).then(function (r) { C.toast(r.ok ? 'Sent to ' + r.data.recipients + ' people' : problem(r)); load(); });
+      });
+      each(el, '[data-act=cancel]', function (b) {
+        var m = byId[b.getAttribute('data-id')];
+        C.dialog({ title: 'Cancel this meeting?', submit: 'Cancel the meeting', danger: true,
+          body: '<p>“' + esc(m.title) + '” will be marked cancelled.' + (m.inviteSentAt ? ' Everyone who got the invitation is sent a cancellation, so it comes off their calendar.' : ' No invitation went out, so nobody is emailed.') + '</p>',
+          onSubmit: function () { return api('POST', '/api/crm/meetings/' + m.id + '/cancel', {}).then(function (r) { if (r.ok) { C.toast(r.data.warning || 'Meeting cancelled'); load(); return; } return problem(r); }); } });
+      });
+    }
+    function form(m) {
+      var have = {}; (m ? m.attendees : []).forEach(function (a) { have[a.type + a.id] = true; });
+      var dur = m ? Math.round((C.parseUtc(m.endsAt) - C.parseUtc(m.startsAt)) / 60000) : 30;
+      var durations = { 15: '15 minutes', 30: '30 minutes', 45: '45 minutes', 60: '1 hour', 90: '1.5 hours', 120: '2 hours' };
+      if (!durations[dur]) durations[dur] = dur + ' minutes';
+      var people = (s.contacts || []).map(function (c) { return '<div class="crm-check"><input type="checkbox" id="ic' + esc(c.id) + '" data-type="contact" data-id="' + esc(c.id) + '"' + (have['contact' + c.id] ? ' checked' : '') + '><label for="ic' + esc(c.id) + '">' + esc(c.name || c.email) + ' <span class="crm-muted">' + esc(c.email) + '</span></label></div>'; }).join('');
+      var team = staff.map(function (a) { return '<div class="crm-check"><input type="checkbox" id="is' + esc(a.id) + '" data-type="staff" data-id="' + esc(a.id) + '"' + (have['staff' + a.id] ? ' checked' : '') + (a.hasEmail ? '' : ' disabled') + '><label for="is' + esc(a.id) + '">' + esc(a.username) + (a.hasEmail ? '' : ' <span class="crm-muted">(no email on their account)</span>') + '</label></div>'; }).join('');
+      C.dialog({
+        title: m ? 'Edit the meeting' : 'Set up a meeting', submit: 'Save',
+        body: C.field('Title', '<input type="text" id="mTitle" maxlength="255" required value="' + esc(m ? m.title : '') + '">', '', 'mTitle') +
+          '<div class="a-form-row">' + C.field('Day', '<input type="date" id="mDay" required value="' + esc(m ? C.isoDay(m.startsAt) : '') + '">', '', 'mDay') + C.field('Start time', '<input type="time" id="mTime" required value="' + esc(m ? C.localTime(m.startsAt) : '09:00') + '">', 'Your own time zone. Invitees see theirs.', 'mTime') + C.field('Length', '<select id="mLen">' + C.options(durations, String(dur)) + '</select>', '', 'mLen') + '</div>' +
+          C.field('Where', '<input type="text" id="mWhere" maxlength="255" placeholder="A video link or a room" value="' + esc(m ? m.location || '' : '') + '">', '', 'mWhere') +
+          C.field('Notes for the invitation (optional)', '<textarea id="mDetails" maxlength="2000">' + esc(m ? m.details || '' : '') + '</textarea>', 'Everyone invited sees this.', 'mDetails') +
+          '<fieldset class="crm-fieldset"><legend>Invite</legend>' + (people || '<p class="crm-small crm-muted">Nobody outside the team can be invited yet. Add them to the deal’s buying committee or the account first.</p>') + team + '</fieldset>',
+        onSubmit: function (f) {
+          var day = f.querySelector('#mDay').value, time = f.querySelector('#mTime').value;
+          if (!day || !time) return 'Pick a day and a start time.';
+          var start = C.localToIso(day, time); if (!start) return 'That day and time are not valid.';
+          var end = new Date(new Date(start).getTime() + Number(f.querySelector('#mLen').value) * 60000).toISOString();
+          var staffIds = [], contactIds = [];
+          f.querySelectorAll('input[data-type]:checked').forEach(function (b) { (b.getAttribute('data-type') === 'staff' ? staffIds : contactIds).push(Number(b.getAttribute('data-id'))); });
+          var body = { title: f.querySelector('#mTitle').value, startsAt: start, endsAt: end, location: f.querySelector('#mWhere').value, details: f.querySelector('#mDetails').value, staffIds: staffIds, contactIds: contactIds };
+          var req = m ? api('PUT', '/api/crm/meetings/' + m.id, body) : api('POST', '/api/crm/meetings', withSubject(s, body));
+          return req.then(function (r) { if (r.ok) { C.toast(m ? 'Saved' : 'Meeting set up. Send the invitation when you are ready.'); load(); return; } return problem(r); });
+        }
+      });
+    }
+    load();
+  };
+
+  /* ---- Procurement checklist (deals only) ------------------------------------------------------------------------------------------ */
+  P.checklist = function (el, s) {
+    var templates = [];
+    function load() {
+      C.loading(el);
+      api('GET', '/api/crm/checklists' + C.qstr({ opportunityId: s.id })).then(function (r) {
+        if (!r.ok) { C.errorBox(el, problem(r)); return; }
+        if (!r.data.canEdit) { draw(r.data); return; }
+        api('GET', '/api/crm/checklists/templates').then(function (t) { templates = (t.data.templates || []).filter(function (x) { return x.isActive; }); draw(r.data); });
+      });
+    }
+    function draw(d) {
+      var pr = d.progress, edit = d.canEdit;
+      var h = '';
+      if (d.items.length) h += '<p class="crm-small" style="margin:0 0 10px;">' + pr.done + ' of ' + pr.needed + ' steps done <progress max="' + esc(pr.needed || 1) + '" value="' + esc(pr.done) + '" aria-label="Steps done" style="vertical-align:middle;margin-left:6px;"></progress></p>';
+      h += d.items.length ? '<ul class="crm-list" aria-label="Procurement steps">' + d.items.map(function (i) {
+        var done = i.status === 'done', skip = i.status === 'not_needed';
+        var late = i.status === 'open' && i.dueOn && String(i.dueOn).slice(0, 10) < C.todayLocal();
+        return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="ck' + esc(i.id) + '" data-act="toggle" data-id="' + esc(i.id) + '"' + (done ? ' checked' : '') + (edit && !skip ? '' : ' disabled') + '><label for="ck' + esc(i.id) + '"' + (done || skip ? ' class="crm-done"' : '') + '>' + esc(i.label) + '</label></div>' +
+          '<div class="crm-small crm-muted">' + (skip ? 'Not needed' : done ? 'Done ' + esc(C.date(i.completedAt)) + (i.completedBy ? ' by ' + esc(i.completedBy) : '') : i.dueOn ? '<span class="' + (late ? 'crm-flag' : '') + '">' + (late ? 'Overdue, was due ' : 'Due ') + esc(C.date(i.dueOn)) + '</span>' : 'No due date') + (i.note ? ' · ' + esc(i.note) : '') + '</div></div>' +
+          (edit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(i.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="skip" data-id="' + esc(i.id) + '" data-skip="' + (skip ? '0' : '1') + '">' + (skip ? 'Needed after all' : 'Not needed') + '</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(i.id) + '">Remove</button></div>' : '') + '</li>';
+      }).join('') + '</ul>' : C.empty('No procurement steps yet.' + (edit ? ' Add a checklist to track what stands between “yes” and “paid”.' : ''), '📋');
+      var actions = '';
+      if (edit) {
+        if (templates.length) actions += '<label class="crm-sr" for="tplSel">Checklist to add</label><select id="tplSel" class="a-filter-select">' + templates.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.name) + '</option>'; }).join('') + '</select><button type="button" class="a-btn a-btn-outline a-btn-sm" id="applyTpl">Add these steps</button>';
+        actions += '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="addStep">Add a step</button>';
+      }
+      el.innerHTML = card('Procurement checklist', actions, h, 'panelChecklist');
+      var byId = {}; d.items.forEach(function (i) { byId[i.id] = i; });
+      function put(id, body, done) { return api('PUT', '/api/crm/checklists/' + id, body).then(function (r) { if (r.ok) { if (done) C.toast(done); } else C.toast(problem(r)); load(); }); }
+      on(el, '#applyTpl', function () {
+        api('POST', '/api/crm/checklists/apply', { opportunityId: s.id, templateId: Number(el.querySelector('#tplSel').value) }).then(function (r) { C.toast(r.ok ? (r.data.added ? r.data.added + ' steps added' : 'Those steps are already on this deal') : problem(r)); load(); });
+      });
+      on(el, '#addStep', function () {
+        C.dialog({ title: 'Add a step', submit: 'Add', body: C.field('Step', '<input type="text" id="sLabel" maxlength="255" required>', '', 'sLabel') + C.field('Due (optional)', '<input type="date" id="sDue">', '', 'sDue'),
+          onSubmit: function (f) { return api('POST', '/api/crm/checklists', { opportunityId: s.id, label: f.querySelector('#sLabel').value, dueOn: f.querySelector('#sDue').value || null }).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
+      });
+      el.querySelectorAll('[data-act=toggle]').forEach(function (b) { b.addEventListener('change', function () { b.disabled = true; put(b.getAttribute('data-id'), { status: b.checked ? 'done' : 'open' }); }); });
+      each(el, '[data-act=skip]', function (b) { put(b.getAttribute('data-id'), { status: b.getAttribute('data-skip') === '1' ? 'not_needed' : 'open' }); });
+      each(el, '[data-act=edit]', function (b) {
+        var i = byId[b.getAttribute('data-id')];
+        C.dialog({ title: 'Edit the step', submit: 'Save', body: C.field('Step', '<input type="text" id="sLabel" maxlength="255" required value="' + esc(i.label) + '">', '', 'sLabel') + C.field('Due', '<input type="date" id="sDue" value="' + esc(i.dueOn ? String(i.dueOn).slice(0, 10) : '') + '">', '', 'sDue') + C.field('Note', '<input type="text" id="sNote" maxlength="255" value="' + esc(i.note || '') + '">', '', 'sNote'),
+          onSubmit: function (f) { return api('PUT', '/api/crm/checklists/' + i.id, { label: f.querySelector('#sLabel').value, dueOn: f.querySelector('#sDue').value || null, note: f.querySelector('#sNote').value }).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
+      });
+      each(el, '[data-act=del]', function (b) {
+        var i = byId[b.getAttribute('data-id')];
+        C.dialog({ title: 'Remove this step?', submit: 'Remove', danger: true, body: '<p>“' + esc(i.label) + '” comes off this deal’s checklist.</p>', onSubmit: function () { return api('DELETE', '/api/crm/checklists/' + i.id).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
+      });
+    }
+    load();
+  };
+
+  /* ---- Timeline ------------------------------------------------------------------------------------------------------------------ */
+  var ICON = { note: '📝', task: '✅', meeting: '📅', file: '📎', stage: '🔀', checklist: '☑️', quote: '💬', purchase: '🧾', invoice: '🧾', support: '🛟', campaign: '✉️', label: '🏷️', demo: '🎬' };
+  P.timeline = function (el, s) {
+    var page = 1, events = [], total = 0;
+    function load(more) {
+      if (!more) { page = 1; if (!el.firstChild) C.loading(el); }
+      api('GET', '/api/crm/timeline' + C.qstr(withSubject(s, { page: page }))).then(function (r) {
+        if (!r.ok) { C.errorBox(el, problem(r)); return; }
+        events = more ? events.concat(r.data.events) : r.data.events; total = r.data.total; draw();
+      });
+    }
+    // Reload quietly when another panel on the page saves something; stop listening once this panel has been replaced.
+    var onChange = function () { if (!document.body.contains(el)) { document.removeEventListener('crm-panel-changed', onChange); return; } load(false); };
+    document.addEventListener('crm-panel-changed', onChange);
+    function draw() {
+      var h = events.length ? '<ul class="crm-timeline crm-timeline-rich" aria-label="Timeline">' + events.map(function (e) {
+        var href = s.kind === 'opportunity' ? '' : safeLink(e.link); // on a deal's own page a link back to the same deal is only noise
+        return '<li><span class="crm-tl-icon" aria-hidden="true">' + (ICON[e.type] || '•') + '</span><div><strong>' + esc(e.title) + '</strong>' + (e.upcoming ? ' <span class="a-pill a-pill-warning">Coming up</span>' : '') +
+          (e.detail ? '<div class="crm-wrap">' + (href ? '<a class="crm-link" href="' + esc(href) + '">' + esc(e.detail) + '</a>' : esc(e.detail)) + '</div>' : '') +
+          '<div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + (e.dealName && s.kind !== 'opportunity' ? ' · ' + esc(e.dealName) : '') + '</div></div></li>';
+      }).join('') + '</ul>' + (events.length < total ? '<p><button type="button" class="a-btn a-btn-outline a-btn-sm" id="moreEvents">Show older (' + C.num(total - events.length) + ' more)</button></p>' : '') : C.empty('Nothing has happened here yet.', '🕒');
+      el.innerHTML = card('Timeline', '', '<p class="crm-small crm-muted" style="margin:0 0 12px;">Quotes, payments, requests, demos, emails, notes, tasks and meetings in one list, newest first. It shows no student information.</p>' + h, 'panelTimeline');
+      on(el, '#moreEvents', function () { page++; load(true); });
+    }
+    load();
+  };
+})();

@@ -19,6 +19,10 @@
 //   assign_roles         yes     -                              -
 //   audit_view           yes     -                              -
 //   export               yes     -                              -
+//   files                yes     yes (then the subject check)   -     (see, upload, download or delete a file; Read-only never opens one)
+//
+// Phase 3 (tasks, notes, files, meetings, checklists, Needs Attention) adds one more gate on top of this table: whether the person may write THE SUBJECT
+// the item belongs to (canWriteSubject below). The full role x action matrix for phase 3 is in docs/reference/sales-crm-update-requirements.md, section 6.
 
 const pool = require('../db/pool');
 const { getSetting } = require('./settings');
@@ -38,6 +42,7 @@ const ALLOWED = {
   assign_roles: ['admin'],
   audit_view: ['admin'],
   export: ['admin'],
+  files: ['admin', 'sales'],
 };
 
 function can(role, action) {
@@ -49,6 +54,15 @@ function canEditDeal(role, adminId, opportunity) {
   if (role === 'admin') return true;
   if (role !== 'sales') return false;
   return opportunity.owner_admin_id === null || opportunity.owner_admin_id === undefined || Number(opportunity.owner_admin_id) === Number(adminId);
+}
+
+// Phase 3: may this role change an item that belongs to a deal, an account or a contact? CRM Admin: always. Sales: a deal they own or nobody owns yet (canEditDeal),
+// and any account or contact. Read-only: never. `subject` is { kind: 'opportunity' | 'account' | 'contact', dealOwnerAdminId } (dealOwnerAdminId only matters for a deal).
+function canWriteSubject(role, adminId, subject) {
+  if (role === 'admin') return true;
+  if (role !== 'sales') return false;
+  if (subject.kind === 'opportunity') return canEditDeal(role, adminId, { owner_admin_id: subject.dealOwnerAdminId === undefined ? null : subject.dealOwnerAdminId });
+  return true;
 }
 
 // D10: one setting, read on every request. Absent or anything but 'true' means off, and every CRM route answers 404.
@@ -82,4 +96,4 @@ function requireCrm(action) {
   };
 }
 
-module.exports = { ROLES, ALLOWED, can, canEditDeal, isCrmEnabled, loadCrmRole, requireCrm };
+module.exports = { ROLES, ALLOWED, can, canEditDeal, canWriteSubject, isCrmEnabled, loadCrmRole, requireCrm };

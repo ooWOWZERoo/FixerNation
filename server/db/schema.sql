@@ -1896,3 +1896,175 @@ CREATE TABLE IF NOT EXISTS crm_classification_events (
   CONSTRAINT fk_crm_ce_actor FOREIGN KEY (actor_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+-- Sales CRM phase 3, sales execution (scripts/alter-create-crm-execution.js): tasks, notes, files, meetings, procurement checklists, Needs Attention memory.
+-- A task, note, file or meeting belongs to one subject: a deal (opportunity_id, plus its account_id), an account (account_id) or a contact (contact_id).
+
+CREATE TABLE IF NOT EXISTS crm_tasks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    opportunity_id INT UNSIGNED NULL,
+    account_id INT UNSIGNED NULL,
+    contact_id INT UNSIGNED NULL,
+    title VARCHAR(255) NOT NULL,
+    details VARCHAR(1000) NULL,
+    due_on DATE NULL,
+    state VARCHAR(8) NOT NULL DEFAULT 'open',
+    assigned_admin_id INT UNSIGNED NULL,
+    created_by_admin_id INT UNSIGNED NULL,
+    completed_at DATETIME NULL,
+    completed_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_crm_tasks_assignee (assigned_admin_id, state, due_on),
+    KEY idx_crm_tasks_due (state, due_on),
+    KEY idx_crm_tasks_opp (opportunity_id, state),
+    KEY idx_crm_tasks_account (account_id, state),
+    KEY idx_crm_tasks_contact (contact_id, state),
+    CONSTRAINT fk_crm_tasks_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_tasks_account FOREIGN KEY (account_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_tasks_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_tasks_assignee FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_crm_tasks_creator FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_crm_tasks_completer FOREIGN KEY (completed_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_notes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    opportunity_id INT UNSIGNED NULL,
+    account_id INT UNSIGNED NULL,
+    contact_id INT UNSIGNED NULL,
+    kind VARCHAR(8) NOT NULL DEFAULT 'note',
+    body TEXT NOT NULL,
+    created_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_crm_notes_opp (opportunity_id, created_at),
+    KEY idx_crm_notes_account (account_id, created_at),
+    KEY idx_crm_notes_contact (contact_id, created_at),
+    CONSTRAINT fk_crm_notes_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_notes_account FOREIGN KEY (account_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_notes_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_notes_author FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_attachments (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    opportunity_id INT UNSIGNED NULL,
+    account_id INT UNSIGNED NULL,
+    contact_id INT UNSIGNED NULL,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(64) NOT NULL,
+    kind VARCHAR(8) NOT NULL,
+    mime VARCHAR(100) NOT NULL,
+    size_bytes INT UNSIGNED NOT NULL,
+    uploaded_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_attachments_stored (stored_name),
+    KEY idx_crm_attachments_opp (opportunity_id, created_at),
+    KEY idx_crm_attachments_account (account_id, created_at),
+    KEY idx_crm_attachments_contact (contact_id, created_at),
+    CONSTRAINT fk_crm_attachments_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_attachments_account FOREIGN KEY (account_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_attachments_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_attachments_uploader FOREIGN KEY (uploaded_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_appointments (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    opportunity_id INT UNSIGNED NULL,
+    account_id INT UNSIGNED NULL,
+    contact_id INT UNSIGNED NULL,
+    title VARCHAR(255) NOT NULL,
+    starts_at DATETIME NOT NULL,
+    ends_at DATETIME NOT NULL,
+    location VARCHAR(255) NULL,
+    details VARCHAR(2000) NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'scheduled',
+    uid VARCHAR(64) NOT NULL,
+    sequence_no INT UNSIGNED NOT NULL DEFAULT 0,
+    attendees_json TEXT NULL,
+    organizer_admin_id INT UNSIGNED NULL,
+    invite_sent_at DATETIME NULL,
+    invite_sequence INT UNSIGNED NULL,
+    created_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_appointments_uid (uid),
+    KEY idx_crm_appointments_when (status, starts_at),
+    KEY idx_crm_appointments_organizer (organizer_admin_id, starts_at),
+    KEY idx_crm_appointments_opp (opportunity_id, starts_at),
+    KEY idx_crm_appointments_account (account_id, starts_at),
+    KEY idx_crm_appointments_contact (contact_id, starts_at),
+    CONSTRAINT fk_crm_appointments_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_appointments_account FOREIGN KEY (account_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_appointments_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_appointments_organizer FOREIGN KEY (organizer_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_crm_appointments_creator FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_procurement_templates (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    description VARCHAR(500) NULL,
+    items_json TEXT NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_procurement_template_name (name),
+    CONSTRAINT fk_crm_pt_creator FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_opportunity_checklist_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    opportunity_id INT UNSIGNED NOT NULL,
+    template_id INT UNSIGNED NULL,
+    label VARCHAR(255) NOT NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'open',
+    due_on DATE NULL,
+    note VARCHAR(255) NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    completed_at DATETIME NULL,
+    completed_by_admin_id INT UNSIGNED NULL,
+    created_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_crm_checklist_opp (opportunity_id, status, sort_order),
+    KEY idx_crm_checklist_due (status, due_on),
+    CONSTRAINT fk_crm_checklist_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_checklist_template FOREIGN KEY (template_id) REFERENCES crm_procurement_templates (id) ON DELETE SET NULL,
+    CONSTRAINT fk_crm_checklist_completer FOREIGN KEY (completed_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_crm_checklist_creator FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_attention_states (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    rule_key VARCHAR(32) NOT NULL,
+    subject_type VARCHAR(16) NOT NULL,
+    subject_id INT UNSIGNED NOT NULL,
+    state VARCHAR(10) NOT NULL,
+    snooze_until DATETIME NULL,
+    fingerprint VARCHAR(40) NOT NULL DEFAULT '',
+    reason VARCHAR(255) NULL,
+    admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_attention_state (rule_key, subject_type, subject_id),
+    KEY idx_crm_attention_state_until (state, snooze_until),
+    CONSTRAINT fk_crm_attention_state_admin FOREIGN KEY (admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS crm_attention_events (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    rule_key VARCHAR(32) NOT NULL,
+    subject_type VARCHAR(16) NOT NULL,
+    subject_id INT UNSIGNED NOT NULL,
+    fingerprint VARCHAR(40) NOT NULL DEFAULT '',
+    owner_admin_id INT UNSIGNED NULL,
+    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    emailed_at DATETIME NULL,
+    UNIQUE KEY uq_crm_attention_event (rule_key, subject_type, subject_id, fingerprint),
+    KEY idx_crm_attention_event_owner (owner_admin_id, first_seen_at),
+    CONSTRAINT fk_crm_attention_event_owner FOREIGN KEY (owner_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

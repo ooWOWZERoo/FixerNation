@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Needs Attention</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=2">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=34"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Needs Attention</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var q = C.readQuery();
+  var STATUS = { active: 'To do', snoozed: 'Snoozed', dismissed: 'Dismissed' };
+  var state = { owner: ['me', 'all', 'none'].indexOf(q.owner) >= 0 ? q.owner : 'me', rule: q.rule || '', status: STATUS[q.status] ? q.status : 'active', page: Number(q.page) || 1 };
+  var rules = [], data = null;
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    C.api('GET', '/api/crm/attention/rules').then(function (r) { rules = (r.data && r.data.rules) || []; shell(); load(); });
+  });
+
+  function save() { C.writeQuery({ owner: state.owner === 'me' ? '' : state.owner, rule: state.rule, status: state.status === 'active' ? '' : state.status }); }
+
+  function shell() {
+    root.innerHTML = '<details class="crm-more" style="margin:0 0 16px;"><summary>How these rules work</summary><dl class="crm-kv" style="margin-top:10px;">' +
+      rules.map(function (r) { return '<dt>' + esc(r.label) + '</dt><dd>' + esc(r.help) + '</dd>'; }).join('') +
+      '</dl><p class="crm-small crm-muted">Snooze hides an item until the day you pick. Dismiss hides it until what it is about changes, such as a new due date that is missed too. Nothing here changes a deal, a quote or a payment.</p></details>' +
+      '<div class="crm-toolbar"><label class="crm-sr" for="fOwner">Whose items</label><select id="fOwner" class="a-filter-select"><option value="me">Mine</option><option value="all">Everyone’s</option><option value="none">Nobody’s</option></select>' +
+      '<label class="crm-sr" for="fRule">Kind of item</label><select id="fRule" class="a-filter-select"><option value="">All kinds</option></select></div>' +
+      '<ul class="crm-views" aria-label="Show">' + Object.keys(STATUS).map(function (k) { return '<li><a href="?status=' + k + '" data-status="' + k + '">' + esc(STATUS[k]) + ' <span data-count="' + k + '"></span></a></li>'; }).join('') + '</ul>' +
+      '<div id="list" aria-live="polite"></div><div id="pager"></div>';
+    var o = document.getElementById('fOwner'); o.value = state.owner;
+    o.addEventListener('change', function () { state.owner = o.value; state.page = 1; save(); load(); });
+    var r = document.getElementById('fRule'); r.addEventListener('change', function () { state.rule = r.value; state.page = 1; save(); load(); });
+    root.querySelectorAll('[data-status]').forEach(function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); state.status = a.getAttribute('data-status'); state.page = 1; save(); load(); });
+    });
+  }
+
+  function load() {
+    var list = document.getElementById('list');
+    C.loading(list);
+    C.api('GET', '/api/crm/attention' + C.qstr({ owner: state.owner === 'all' ? '' : state.owner, rule: state.rule, status: state.status, today: C.todayLocal(), page: state.page, pageSize: 25 })).then(function (r) {
+      if (!r.ok) { C.errorBox(list, C.problem(r)); return; }
+      data = r.data;
+      var sel = document.getElementById('fRule');
+      sel.innerHTML = '<option value="">All kinds (' + C.num(data.activeTotal) + ')</option>' + rules.map(function (x) { return '<option value="' + esc(x.key) + '"' + (x.key === state.rule ? ' selected' : '') + '>' + esc(x.label) + ' (' + C.num(data.counts[x.key] || 0) + ')</option>'; }).join('');
+      root.querySelectorAll('[data-status]').forEach(function (a) { var k = a.getAttribute('data-status'); if (k === state.status) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+      root.querySelector('[data-count=active]').textContent = '(' + C.num(data.activeTotal) + ')';
+      root.querySelector('[data-count=snoozed]').textContent = '(' + C.num(data.snoozedTotal) + ')';
+      root.querySelector('[data-count=dismissed]').textContent = '(' + C.num(data.dismissedTotal) + ')';
+      draw(list);
+    });
+  }
+
+  function draw(list) {
+    if (!data.items.length) {
+      list.innerHTML = '<div class="a-card">' + C.empty(state.status === 'active' ? 'Nothing needs attention right now.' : state.status === 'snoozed' ? 'Nothing is snoozed.' : 'Nothing is dismissed.', '✅') + '</div>';
+      document.getElementById('pager').innerHTML = '';
+      return;
+    }
+    list.innerHTML = data.items.map(function (it, i) {
+      var held = it.status !== 'active';
+      return '<div class="crm-attn' + (held ? ' held' : '') + '"><div class="head"><div><span class="a-pill a-pill-warning">' + esc(it.ruleLabel) + '</span> <span class="title">' + esc(it.title) + '</span>' + (it.context ? '<div class="crm-small crm-muted">' + esc(it.context) + '</div>' : '') + '</div>' +
+        '<div class="crm-small crm-muted">' + (it.ownerName ? 'Owner: ' + esc(it.ownerName) : 'Nobody owns this') + '</div></div>' +
+        '<p class="why">' + esc(it.why) + '</p>' +
+        (it.status === 'snoozed' ? '<p class="crm-small crm-muted">Snoozed until ' + esc(C.date(it.snoozeUntil)) + (it.stateBy ? ' by ' + esc(it.stateBy) : '') + (it.stateReason ? ': “' + esc(it.stateReason) + '”' : '') + '.</p>' : '') +
+        (it.status === 'dismissed' ? '<p class="crm-small crm-muted">Dismissed' + (it.stateBy ? ' by ' + esc(it.stateBy) : '') + (it.stateReason ? ': “' + esc(it.stateReason) + '”' : '') + '. It comes back if the date or situation changes.</p>' : '') +
+        '<div class="crm-row-actions"><a class="a-btn a-btn-primary a-btn-sm" href="' + esc(it.link) + '">Open it</a>' +
+        (C.can('write') ? (held ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="restore" data-i="' + i + '">Bring it back</button>'
+          : '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="snooze" data-i="' + i + '">Snooze</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="dismiss" data-i="' + i + '">Dismiss</button>') : '') + '</div></div>';
+    }).join('');
+    list.querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var it = data.items[Number(b.getAttribute('data-i'))], act = b.getAttribute('data-act');
+        if (act === 'snooze') snooze(it); else if (act === 'dismiss') dismiss(it); else restore(it);
+      });
+    });
+    C.pager(document.getElementById('pager'), data, function (n) { state.page = n; load(); });
+  }
+
+  function ident(it) { return { ruleKey: it.ruleKey, subjectType: it.subjectType, subjectId: it.subjectId, today: C.todayLocal() }; }
+  function addDays(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function done(r, msg) { if (r.ok) { C.toast(msg); load(); return; } return C.problem(r); }
+
+  function snooze(it) {
+    var dlg = C.dialog({
+      title: 'Snooze “' + it.title + '”', submit: 'Snooze',
+      body: '<p class="crm-small crm-muted">It leaves the list and comes back on the day you pick, if it still needs attention.</p>' +
+        '<div class="crm-row-actions" style="margin-bottom:12px;"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-q="1">Tomorrow</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-q="7">In a week</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-q="30">In a month</button></div>' +
+        C.field('Come back on', '<input type="date" id="sUntil" required min="' + esc(addDays(1)) + '" value="' + esc(addDays(7)) + '">', '', 'sUntil') + C.field('Why (optional)', '<input type="text" id="sWhy" maxlength="255" placeholder="e.g. Waiting on their board meeting">', '', 'sWhy'),
+      onSubmit: function (f) {
+        var until = f.querySelector('#sUntil').value; if (!until) return 'Pick a day.';
+        var body = ident(it); body.until = until; body.reason = f.querySelector('#sWhy').value;
+        return C.api('POST', '/api/crm/attention/snooze', body).then(function (r) { return done(r, 'Snoozed'); });
+      }
+    });
+    dlg.form.querySelectorAll('[data-q]').forEach(function (b) { b.addEventListener('click', function () { dlg.form.querySelector('#sUntil').value = addDays(Number(b.getAttribute('data-q'))); }); });
+  }
+  function dismiss(it) {
+    C.dialog({
+      title: 'Dismiss “' + it.title + '”?', submit: 'Dismiss',
+      body: '<p class="crm-small crm-muted">It stays off the list until the thing it is about changes, for example a new due date that is missed too. You can bring it back from the Dismissed tab.</p>' + C.field('Why (optional)', '<input type="text" id="dWhy" maxlength="255">', '', 'dWhy'),
+      onSubmit: function (f) { var body = ident(it); body.reason = f.querySelector('#dWhy').value; return C.api('POST', '/api/crm/attention/dismiss', body).then(function (r) { return done(r, 'Dismissed'); }); }
+    });
+  }
+  function restore(it) { C.api('POST', '/api/crm/attention/restore', ident(it)).then(function (r) { var e = done(r, 'Back on the list'); if (e) C.toast(e); }); }
+})();
+</script>
+<script src="admin-shell.js?v=7"></script>
+</body>
+</html>

@@ -67,6 +67,13 @@ const crmContactsRoutes = require('./routes/crm-contacts');
 const crmOpportunitiesRoutes = require('./routes/crm-opportunities');
 const crmQuotesRoutes = require('./routes/crm-quotes');
 const crmOverviewRoutes = require('./routes/crm-overview');
+const crmTasksRoutes = require('./routes/crm-tasks');
+const crmNotesRoutes = require('./routes/crm-notes');
+const crmFilesRoutes = require('./routes/crm-files');
+const crmMeetingsRoutes = require('./routes/crm-meetings');
+const crmChecklistsRoutes = require('./routes/crm-checklists');
+const crmAttentionRoutes = require('./routes/crm-attention');
+const crmTimelineRoutes = require('./routes/crm-timeline');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -178,6 +185,13 @@ app.use('/api/crm/contacts', crmContactsRoutes);
 app.use('/api/crm/opportunities', crmOpportunitiesRoutes);
 app.use('/api/crm/quotes', crmQuotesRoutes);
 app.use('/api/crm/overview', crmOverviewRoutes);
+app.use('/api/crm/tasks', crmTasksRoutes);
+app.use('/api/crm/notes', crmNotesRoutes);
+app.use('/api/crm/files', crmFilesRoutes);
+app.use('/api/crm/meetings', crmMeetingsRoutes);
+app.use('/api/crm/checklists', crmChecklistsRoutes);
+app.use('/api/crm/attention', crmAttentionRoutes);
+app.use('/api/crm/timeline', crmTimelineRoutes);
 app.use('/api/crm', crmSettingsRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
@@ -185,6 +199,9 @@ app.use('/api/crm', crmSettingsRoutes);
 // there (because UPLOADS_DIR still points to server/uploads/) it falls through
 // to Node, which handles it here.
 const uploadsPath = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+// Sales CRM files live in uploads/crm-private and are NEVER a public URL: they are read only through GET /api/crm/files/:id/download (lib/crm-files.js).
+// This answers first, so express.static below can never serve them; .htaccess refuses the same path for the web server's own static handling.
+app.use('/uploads/crm-private', (req, res) => res.status(404).type('text/plain').send('Not found'));
 app.use('/uploads', express.static(uploadsPath));
 
 // In development, also serve the static site from the repo root so the whole

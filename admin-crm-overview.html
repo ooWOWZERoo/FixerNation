@@ -11,13 +11,13 @@
 <link rel="stylesheet" href="fonts.css?v=1">
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=22">
-<link rel="stylesheet" href="crm-common.css?v=1">
+<link rel="stylesheet" href="crm-common.css?v=2">
 </head>
 <body class="fn-mission-admin">
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=33"></script>
+<script src="admin-nav.js?v=34"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -33,7 +33,7 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=1"></script>
+<script src="crm-common.js?v=2"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -78,6 +78,9 @@
       '</div>' +
       '<p class="crm-small crm-muted" style="margin:-8px 0 22px;">Test addresses ending in @example.com are left out of the counts.</p>';
 
+    // Phase 3: what is on my plate today, and what the rules say needs a look.
+    html += '<div class="crm-two"><div id="ovTasks"></div><div id="ovAttn"></div></div>';
+
     // Needs a decision
     var dec = d.decisions;
     var tabDefs = [['nodeal', 'Quotes with no deal', dec.quotesWithoutDeal.total], ['nocontact', 'Quotes with no contact', dec.quotesWithoutContact.total], ['purchases', 'Purchases to confirm', dec.purchases.total]];
@@ -101,10 +104,33 @@
       : C.empty('No open deals yet. Start one from an account, or from a quote above.', '🎯')) + '</div>';
 
     root.innerHTML = html;
+    mine();
     root.querySelectorAll('[data-tab]').forEach(function (b) {
       b.addEventListener('click', function () { state.tab = b.getAttribute('data-tab'); state.page = 1; root.querySelectorAll('[data-tab]').forEach(function (x) { x.setAttribute('aria-selected', String(x === b)); }); loadTab(); });
     });
     loadTab();
+  }
+
+  // "My tasks" and "Needs attention" come from their own endpoints, so a slow or failing one never blanks the rest of the Overview.
+  function mine() {
+    var t = document.getElementById('ovTasks'), a = document.getElementById('ovAttn');
+    C.loading(t); C.loading(a);
+    C.api('GET', '/api/crm/tasks' + C.qstr({ assignee: 'me', due: 'upto', days: 0, today: C.todayLocal(), pageSize: 6 })).then(function (r) {
+      if (!r.ok) { C.errorBox(t, C.problem(r)); return; }
+      var s = r.data.summary;
+      t.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>My tasks today (' + C.num(r.data.total) + ')</h2><a class="crm-link" href="admin-crm-tasks.html">All my tasks</a></div>' +
+        (r.data.tasks.length ? '<ul class="crm-list">' + r.data.tasks.map(function (x) {
+          var sub = x.subject, name = sub.dealName || sub.contactName || sub.accountName || '', href = sub.opportunityId ? 'admin-crm-opportunity.html?id=' + sub.opportunityId : sub.contactId ? 'admin-crm-contact.html?id=' + sub.contactId : 'admin-crm-account.html?id=' + sub.accountId;
+          return '<li><div class="crm-item-main"><strong>' + esc(x.title) + '</strong><div class="crm-small ' + (x.overdue ? 'crm-flag' : 'crm-muted') + '">' + (x.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(x.dueOn)) + '</div></div><a class="crm-link" href="' + esc(href) + '">' + esc(name) + '</a></li>';
+        }).join('') + '</ul>' : C.empty(s.open ? 'Nothing is due today and nothing is overdue.' : 'You have no open tasks.', '✅')) + '</div>';
+    });
+    C.api('GET', '/api/crm/attention' + C.qstr({ owner: 'me', today: C.todayLocal(), pageSize: 6 })).then(function (r) {
+      if (!r.ok) { C.errorBox(a, C.problem(r)); return; }
+      a.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Needs attention (' + C.num(r.data.activeTotal) + ')</h2><a class="crm-link" href="admin-crm-attention.html">See all and why</a></div>' +
+        (r.data.items.length ? '<ul class="crm-list">' + r.data.items.map(function (it) {
+          return '<li><div class="crm-item-main"><a class="crm-link" href="' + esc(it.link) + '">' + esc(it.title) + '</a><div class="crm-small crm-muted">' + esc(it.ruleLabel) + '</div></div></li>';
+        }).join('') + '</ul>' : C.empty('Nothing needs your attention right now.', '✅')) + '</div>';
+    });
   }
 
   function loadTab() {
@@ -212,6 +238,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=6"></script>
+<script src="admin-shell.js?v=7"></script>
 </body>
 </html>

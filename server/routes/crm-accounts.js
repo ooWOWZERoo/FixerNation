@@ -238,6 +238,8 @@ router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => 
       else { await conn.query('UPDATE crm_account_contacts SET account_id = ? WHERE id = ?', [intoId, m.id]); moved.people++; }
     }
     const [d] = await conn.query('UPDATE crm_opportunities SET account_id = ? WHERE account_id = ?', [intoId, fromId]);
+    // Phase 3: tasks, notes, files and meetings on the account (and on its deals, which carry the account id too) move with it.
+    for (const table of ['crm_tasks', 'crm_notes', 'crm_attachments', 'crm_appointments']) await conn.query(`UPDATE ${table} SET account_id = ? WHERE account_id = ?`, [intoId, fromId]);
     moved.deals = d.affectedRows;
     const [k] = await conn.query('UPDATE crm_accounts SET parent_account_id = ? WHERE parent_account_id = ?', [intoId, fromId]);
     moved.subAccounts = k.affectedRows;

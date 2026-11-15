@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Tasks</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=2">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=34"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Tasks</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var VIEWS = [['today', 'Today and overdue'], ['week', 'This week'], ['mine', 'All my open tasks'], ['everyone', 'Everyone’s open tasks'], ['done', 'Finished']];
+  var q = C.readQuery();
+  var state = { view: VIEWS.some(function (v) { return v[0] === q.view; }) ? q.view : 'today', page: Number(q.page) || 1 };
+  var staff = [];
+
+  C.boot(root).then(function (me) { if (!me) return; C.staff().then(function (list) { staff = list; shell(); load(); }); });
+
+  function params() {
+    var p = { today: C.todayLocal(), page: state.page, pageSize: 50 };
+    if (state.view === 'today') { p.assignee = 'me'; p.due = 'upto'; p.days = 0; }
+    else if (state.view === 'week') { p.assignee = 'me'; p.due = 'upto'; p.days = 7; }
+    else if (state.view === 'mine') { p.assignee = 'me'; }
+    else if (state.view === 'done') { p.assignee = 'me'; p.state = 'done'; }
+    return p;
+  }
+
+  function shell() {
+    root.innerHTML = '<div id="tiles"></div>' +
+      '<div class="crm-toolbar"><ul class="crm-views" aria-label="Task views">' + VIEWS.map(function (v) { return '<li><a href="?view=' + esc(v[0]) + '" data-view="' + esc(v[0]) + '"' + (v[0] === state.view ? ' aria-current="true"' : '') + '>' + esc(v[1]) + '</a></li>'; }).join('') + '</ul>' +
+      (C.can('write') ? '<span class="grow"></span><button type="button" class="a-btn a-btn-primary" id="addTask">Add a task</button>' : '') + '</div>' +
+      '<div id="list" aria-live="polite"></div><div id="pager"></div>';
+    root.querySelectorAll('[data-view]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault(); state.view = a.getAttribute('data-view'); state.page = 1; C.writeQuery({ view: state.view });
+        root.querySelectorAll('[data-view]').forEach(function (x) { x.removeAttribute('aria-current'); }); a.setAttribute('aria-current', 'true'); load();
+      });
+    });
+    var add = document.getElementById('addTask'); if (add) add.addEventListener('click', addTask);
+  }
+
+  function tile(label, value, note) { return '<div class="a-stat-card"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div>' + (note ? '<div class="crm-stat-note">' + esc(note) + '</div>' : '') + '</div>'; }
+
+  function load() {
+    var list = document.getElementById('list');
+    C.loading(list);
+    C.api('GET', '/api/crm/tasks' + C.qstr(params())).then(function (r) {
+      if (!r.ok) { C.errorBox(list, C.problem(r)); return; }
+      var d = r.data;
+      document.getElementById('tiles').innerHTML = '<div class="crm-stats" role="list" aria-label="Your tasks">' +
+        '<div role="listitem">' + tile('Overdue', '<span class="' + (d.summary.overdue ? 'crm-flag' : '') + '">' + C.num(d.summary.overdue) + '</span>', 'Open and past their due day.') + '</div>' +
+        '<div role="listitem">' + tile('Due today', C.num(d.summary.dueToday), 'Your calendar day.') + '</div>' +
+        '<div role="listitem">' + tile('Open in all', C.num(d.summary.open), 'Assigned to you.') + '</div></div>';
+      draw(list, d);
+    });
+  }
+
+  function subjectLink(t) {
+    var s = t.subject;
+    if (s.opportunityId) return '<a class="crm-link" href="admin-crm-opportunity.html?id=' + esc(s.opportunityId) + '">' + esc(s.dealName || 'A deal') + '</a>';
+    if (s.contactId) return '<a class="crm-link" href="admin-crm-contact.html?id=' + esc(s.contactId) + '">' + esc(s.contactName || 'A contact') + '</a>';
+    return '<a class="crm-link" href="admin-crm-account.html?id=' + esc(s.accountId) + '">' + esc(s.accountName || 'An account') + '</a>';
+  }
+
+  function row(t) {
+    var done = t.state === 'done';
+    return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="tk' + esc(t.id) + '" data-id="' + esc(t.id) + '"' + (done ? ' checked' : '') + (t.canComplete ? '' : ' disabled') + '><label for="tk' + esc(t.id) + '"' + (done ? ' class="crm-done"' : '') + '>' + esc(t.title) + '</label></div>' +
+      (t.details ? '<div class="crm-small crm-muted crm-wrap">' + esc(t.details) + '</div>' : '') +
+      '<div class="crm-small crm-muted">' + (done ? 'Done ' + esc(C.date(t.completedAt)) : t.dueOn ? '<span class="' + (t.overdue ? 'crm-flag' : '') + '">' + (t.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(t.dueOn)) + '</span>' : 'No due date') + ' · ' + subjectLink(t) + (state.view === 'everyone' ? ' · for ' + esc(t.assigneeName || 'nobody') : '') + '</div></div></li>';
+  }
+
+  function draw(list, d) {
+    if (!d.tasks.length) {
+      list.innerHTML = '<div class="a-card">' + C.empty(state.view === 'done' ? 'Nothing finished yet.' : state.view === 'today' ? 'Nothing is due today and nothing is overdue.' : 'No tasks here.', '✅') + '</div>';
+      document.getElementById('pager').innerHTML = '';
+      return;
+    }
+    var today = d.today, groups = [['Overdue', 'late', []], ['Today', '', []], ['Later', '', []], ['No due date', '', []]];
+    d.tasks.forEach(function (t) {
+      var i = t.state === 'done' ? 2 : !t.dueOn ? 3 : t.overdue ? 0 : String(t.dueOn).slice(0, 10) === today ? 1 : 2;
+      groups[i][2].push(t);
+    });
+    var h = '';
+    groups.forEach(function (g) {
+      if (!g[2].length) return;
+      if (state.view === 'done') { h += '<ul class="crm-list">' + g[2].map(row).join('') + '</ul>'; return; }
+      h += '<h2 class="crm-group-title ' + g[1] + '">' + esc(g[0]) + ' (' + g[2].length + ')</h2><div class="a-card"><ul class="crm-list">' + g[2].map(row).join('') + '</ul></div>';
+    });
+    list.innerHTML = state.view === 'done' ? '<div class="a-card">' + h + '</div>' : h;
+    list.querySelectorAll('input[type=checkbox]').forEach(function (b) {
+      b.addEventListener('change', function () {
+        b.disabled = true;
+        C.api('POST', '/api/crm/tasks/' + b.getAttribute('data-id') + (b.checked ? '/complete' : '/reopen'), {}).then(function (r) { if (!r.ok) C.toast(C.problem(r)); load(); });
+      });
+    });
+    C.pager(document.getElementById('pager'), d, function (n) { state.page = n; load(); });
+  }
+
+  function addTask() {
+    var KINDS = { opportunities: 'A deal', accounts: 'An account', contacts: 'A contact' };
+    var dlg = C.dialog({
+      title: 'Add a task', submit: 'Add the task',
+      body: C.field('What is it about?', '<select id="tKind">' + C.options(KINDS, 'opportunities') + '</select>', '', 'tKind') + '<div id="pickArea"></div>' +
+        C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="255" required>', '', 'tTitle') +
+        C.field('Details (optional)', '<textarea id="tDetails" maxlength="1000"></textarea>', '', 'tDetails') +
+        '<div class="a-form-row">' + C.field('Due', '<input type="date" id="tDue">', '', 'tDue') + C.field('For', '<select id="tWho">' + C.ownerOptions(staff, C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>',
+      onSubmit: function (f) {
+        var kind = f.querySelector('#tKind').value, sel = f.querySelector('[data-pick]');
+        var id = Number(sel && sel.value); if (!id) return 'Pick what the task is about.';
+        var body = { title: f.querySelector('#tTitle').value, details: f.querySelector('#tDetails').value, dueOn: f.querySelector('#tDue').value || null, assignedAdminId: Number(f.querySelector('#tWho').value) };
+        if (!body.assignedAdminId) return 'Pick who will do it.';
+        body[kind === 'opportunities' ? 'opportunityId' : kind === 'accounts' ? 'accountId' : 'contactId'] = id;
+        return C.api('POST', '/api/crm/tasks', body).then(function (r) { if (r.ok) { C.toast('Task added'); load(); return; } return C.problem(r); });
+      }
+    });
+    function pick() {
+      var kind = dlg.form.querySelector('#tKind').value;
+      dlg.form.querySelector('#pickArea').innerHTML = C.pickerFields(kind, KINDS[kind].toLowerCase().replace(/^a[n]? /, ''));
+      C.picker(dlg.form, kind);
+    }
+    dlg.form.querySelector('#tKind').addEventListener('change', pick);
+    pick();
+  }
+})();
+</script>
+<script src="admin-shell.js?v=7"></script>
+</body>
+</html>

@@ -8,6 +8,8 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # PROJECT.md / CHANGELOG.md copies were all being served). Uses rewrite rules on purpose -- they're already proven to work
 # on this host, unlike newer directive types.
 RewriteRule ^(server|tests|docs|\.interface-design|\.git)(/|$) - [F,L]
+# Sales CRM files (attachments on deals, accounts and contacts) are private: they are read only through the authenticated /api/crm/files route.
+RewriteRule ^uploads/crm-private(/|$) - [F,L]
 RewriteRule ^(deploy\.sh|ads\.db|db\.sqlite3|package(-lock)?\.json|mission-control-static-files\.txt)$ - [F,L]
 RewriteRule \.(md|sql|sqlite3?|db|bak|log|env)$ - [NC,F,L]
 

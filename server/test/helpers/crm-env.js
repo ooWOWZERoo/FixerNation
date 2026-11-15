@@ -22,10 +22,10 @@ CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER
   purchased_at TEXT DEFAULT '2026-01-01 00:00:00', license_status TEXT DEFAULT 'active', quote_id INTEGER, invoice_id INTEGER, school_id INTEGER);
 CREATE TABLE quote_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_number TEXT, email TEXT NOT NULL, status TEXT DEFAULT 'new', accept_token TEXT,
   quoted_amount_cents INTEGER, quote_sent_at TEXT, quote_valid_until TEXT, accepted_at TEXT, contact_id INTEGER, opportunity_id INTEGER,
-  first_name TEXT, last_name TEXT, school TEXT, quoted_product_name TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00');
+  first_name TEXT, last_name TEXT, school TEXT, quoted_product_name TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00', demo_invitation_id INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, closed_at TEXT);
 CREATE TABLE contact_group_members (contact_id INTEGER NOT NULL, group_id INTEGER NOT NULL, PRIMARY KEY (contact_id, group_id));
-CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, status TEXT DEFAULT 'unpaid');
+CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_number TEXT, contact_id INTEGER NOT NULL, status TEXT DEFAULT 'unpaid', created_at TEXT DEFAULT '2026-01-01 00:00:00');
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER, display_name TEXT);
 CREATE TABLE districts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
 CREATE TABLE school_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_type TEXT, actor_id INTEGER, actor_email TEXT, action TEXT, entity_type TEXT, entity_id INTEGER,
@@ -49,6 +49,29 @@ CREATE TABLE crm_opportunity_stage_history (id INTEGER PRIMARY KEY AUTOINCREMENT
   from_state TEXT, to_state TEXT NOT NULL, actor_admin_id INTEGER, reason TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_classification_events (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, from_classification TEXT, to_classification TEXT NOT NULL,
   event_type TEXT NOT NULL, source_ref TEXT, actor_admin_id INTEGER, reason TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+
+CREATE TABLE support_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT, status TEXT DEFAULT 'new', category TEXT DEFAULT 'other', subject TEXT, requester_name TEXT, requester_email TEXT,
+  school_domain TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00', demo_invitation_id INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT);
+CREATE TABLE campaign_sends (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER NOT NULL, contact_id INTEGER, email TEXT, status TEXT DEFAULT 'sent', sent_at TEXT DEFAULT '2026-01-01 00:00:00', opened_at TEXT, clicked_at TEXT);
+CREATE TABLE public_demo_invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, workspace_id INTEGER, status TEXT DEFAULT 'ended', starts_at TEXT, ends_at TEXT, ended_at TEXT);
+CREATE TABLE crm_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, title TEXT NOT NULL, details TEXT, due_on TEXT, state TEXT NOT NULL DEFAULT 'open',
+  assigned_admin_id INTEGER, created_by_admin_id INTEGER, completed_at TEXT, completed_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, kind TEXT NOT NULL DEFAULT 'note', body TEXT NOT NULL,
+  created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, original_name TEXT NOT NULL, stored_name TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL, mime TEXT NOT NULL, size_bytes INTEGER NOT NULL, uploaded_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_appointments (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, title TEXT NOT NULL, starts_at TEXT NOT NULL, ends_at TEXT NOT NULL,
+  location TEXT, details TEXT, status TEXT NOT NULL DEFAULT 'scheduled', uid TEXT NOT NULL UNIQUE, sequence_no INTEGER NOT NULL DEFAULT 0, attendees_json TEXT, organizer_admin_id INTEGER,
+  invite_sent_at TEXT, invite_sequence INTEGER, created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_procurement_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, description TEXT, items_json TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,
+  created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_opportunity_checklist_items (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER NOT NULL, template_id INTEGER, label TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open',
+  due_on TEXT, note TEXT, sort_order INTEGER NOT NULL DEFAULT 0, completed_at TEXT, completed_by_admin_id INTEGER, created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_attention_states (id INTEGER PRIMARY KEY AUTOINCREMENT, rule_key TEXT NOT NULL, subject_type TEXT NOT NULL, subject_id INTEGER NOT NULL, state TEXT NOT NULL, snooze_until TEXT,
+  fingerprint TEXT NOT NULL DEFAULT '', reason TEXT, admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (rule_key, subject_type, subject_id));
+CREATE TABLE crm_attention_events (id INTEGER PRIMARY KEY AUTOINCREMENT, rule_key TEXT NOT NULL, subject_type TEXT NOT NULL, subject_id INTEGER NOT NULL, fingerprint TEXT NOT NULL DEFAULT '',
+  owner_admin_id INTEGER, first_seen_at TEXT DEFAULT CURRENT_TIMESTAMP, emailed_at TEXT, UNIQUE (rule_key, subject_type, subject_id, fingerprint));
 `;
 
 const STAGES = [['new_inquiry', 'New Inquiry', 10, 5], ['qualified', 'Qualified', 20, 15], ['discovery', 'Discovery', 30, 25], ['demo_evaluation', 'Demo / Evaluation', 40, 40],
