@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { ACCOUNT_TYPES, text, posInt, oneOf, paging, likeTerm } = require('../lib/crm-common');
+const { engagementFor } = require('../lib/crm-engagement');
 
 const router = express.Router();
 
@@ -59,6 +60,13 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
     [...params, size, offset]
   );
   res.json({ accounts: rows.map(a => ({ ...accountRow(a), contactCount: Number(a.contact_count), openDeals: Number(a.open_deals) })), total: Number(total), page, pageSize: size });
+});
+
+// Phase 6: the "Trial and demo engagement" card. Read only; counts only; an unknown is never shown as a zero (lib/crm-engagement.js).
+router.get('/:id/engagement', requireAuth, requireCrm('view'), async (req, res) => {
+  const out = await engagementFor(pool, 'account', posInt(req.params.id));
+  if (!out) return res.status(404).json({ error: 'Account not found' });
+  res.json(out);
 });
 
 router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {

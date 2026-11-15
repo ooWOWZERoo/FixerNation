@@ -26,6 +26,7 @@ const gateway = require('../lib/safety/gateway');
 const { resolveSchoolDomainForTeacher } = require('../lib/safety/school-context');
 const { getSiteUser: resolveSiteUser } = require('../lib/site-user');
 const msOAuth = require('../lib/microsoft-oauth');
+const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch, advisory only
 const { isDemoOpenFor, isSharedDemoUser, refuseSharedDemo, DEMO_SESSION_LENGTH, DEMO_SESSION_MS } = require('../lib/public-demo');
 const { recordDemoEvent, demoRoleKeyForEmail } = require('../lib/public-demo-admin');
 const { getOpenInvitationForWorkspace } = require('../lib/public-demo-invitations');
@@ -172,6 +173,8 @@ router.post('/signup', signupLimit, async (req, res) => {
   );
 
   await claimPendingSeatsAndSubscribe(result.insertId, email, firstName, lastName, 'Homepage');
+  // Phase 6: where this visit came from (first and latest touch), read off the fn_attr cookie on this request. Never blocks sign-up.
+  await recordAttributionForEmail(req, email);
 
   const verifyToken = await createToken(result.insertId, 'verify', 24 * 60 * 60 * 1000);
   const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;

@@ -198,7 +198,20 @@ CREATE TABLE IF NOT EXISTS newsletter_contacts (
   assigned_admin_id INT UNSIGNED NULL,
   last_contacted_at DATETIME NULL,
   crm_source VARCHAR(64) NULL,
+  -- Sales CRM phase 6 (scripts/alter-create-crm-growth.js): how the person first, and most recently, found the site. Written by lib/attribution.js from the fn_attr
+  -- cookie when a public form is submitted. First touch is written once and never changed; nothing here is an IP address, and it is advisory only (a cookie can be forged).
+  first_touch_source VARCHAR(100) NULL,
+  first_touch_medium VARCHAR(100) NULL,
+  first_touch_campaign VARCHAR(100) NULL,
+  first_touch_landing VARCHAR(255) NULL,
+  first_touch_at DATETIME NULL,
+  latest_touch_source VARCHAR(100) NULL,
+  latest_touch_medium VARCHAR(100) NULL,
+  latest_touch_campaign VARCHAR(100) NULL,
+  latest_touch_landing VARCHAR(255) NULL,
+  latest_touch_at DATETIME NULL,
   KEY idx_contacts_crm_classification (crm_classification),
+  KEY idx_contacts_first_touch_source (first_touch_source),
   KEY idx_contacts_assigned_admin (assigned_admin_id),
   CONSTRAINT fk_contacts_assigned_admin FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1848,9 +1861,11 @@ CREATE TABLE IF NOT EXISTS crm_opportunities (
   reengage_on DATE NULL,
   closed_at DATETIME NULL,
   renewal_of_purchase_id INT UNSIGNED NULL,
+  generated_key VARCHAR(64) NULL, -- phase 6: set only on a deal scripts/crm-renewals.js made ('crm.purchase.renewal_due:<purchaseId>' or '...expansion_due:<purchaseId>'); unique, so a source purchase can never get two
   created_by_admin_id INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_crm_opp_generated_key (generated_key),
   KEY idx_crm_opp_owner_state (owner_admin_id, state, stage_id, expected_close_date),
   KEY idx_crm_opp_stage_updated (stage_id, updated_at),
   KEY idx_crm_opp_next_step (next_step_due_at, state),

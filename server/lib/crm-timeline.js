@@ -145,7 +145,7 @@ function buildSources(sc) {
 
 // Demos (D14): every demo invitation that a quote or a support request in this timeline came from, shown once as "Demo" with its dates. The group's name (label) is
 // never selected; only the id (to find the dates), the times and whether it is still open.
-async function demoEvents(conn, sc) {
+async function demoInvitationIds(conn, sc) {
   const quote = (() => {
     if (sc.kind === 'opportunity') return { sql: 'q.opportunity_id = ?', params: [sc.id] };
     if (sc.kind === 'contact') return { sql: '(q.contact_id = ? OR (q.contact_id IS NULL AND ' + inList('LOWER(TRIM(q.email))', sc.emails).sql + '))', params: [sc.id, ...sc.emails] };
@@ -159,6 +159,11 @@ async function demoEvents(conn, sc) {
     const [ts] = await conn.query(`SELECT DISTINCT r.demo_invitation_id AS d FROM support_requests r WHERE ${inList('LOWER(TRIM(r.requester_email))', sc.emails).sql} AND r.demo_invitation_id > 0`, sc.emails);
     ts.forEach(r => ids.add(Number(r.d)));
   }
+  return [...ids];
+}
+
+async function demoEvents(conn, sc) {
+  const ids = new Set(await demoInvitationIds(conn, sc));
   if (!ids.size) return [];
   const [rows] = await conn.query(`SELECT id, starts_at, ends_at, ended_at, status FROM public_demo_invitations WHERE id IN (${marks([...ids])})`, [...ids]);
   const day = (s) => String(s).slice(0, 10);
@@ -198,4 +203,4 @@ async function buildTimeline(conn, kind, id, { page = 1, size = 50 } = {}) {
   };
 }
 
-module.exports = { buildTimeline, loadScope };
+module.exports = { buildTimeline, loadScope, demoInvitationIds };

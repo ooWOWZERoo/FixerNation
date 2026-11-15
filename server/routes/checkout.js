@@ -13,6 +13,7 @@ const { getSetting } = require('../lib/settings');
 const { sendSalesAlertEmail } = require('../lib/mailer');
 const { refCodeFromRequest, codeForAffiliateId } = require('../lib/affiliate-attribution');
 const { audit } = require('../lib/audit');
+const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch, advisory only
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Customer once a card quote is paid (never throws; off unless crm_v2_enabled)
 const { limiter } = require('../lib/rate-limit');
 
@@ -283,6 +284,8 @@ router.post('/create-po-order', limiter({ name: 'checkout-po', windowMs: 3600000
   }
 
   const contactId = await findOrCreateContact(email, 'Purchase Order');
+  // Phase 6: where this visit came from, read off the fn_attr cookie on this request. Card checkout makes its contact in the Stripe webhook (no cookie there), so it is not covered.
+  await recordAttributionForEmail(req, email);
   const totalCents = resolved.reduce((sum, item) => sum + (item.amountCents || 0), 0);
 
   const connection = await pool.getConnection();

@@ -34,7 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
-<script src="crm-panels.js?v=1"></script>
+<script src="crm-panels.js?v=2"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -94,7 +94,7 @@
       }).join('') + '</tbody></table>' : C.empty('No deals yet.', '🎯');
     h += '</div></div>';
     if (data.children.length) h += '<div class="a-card"><div class="a-card-head"><h2>Sub-accounts</h2></div><ul class="crm-list">' + data.children.map(function (c) { return '<li><a href="admin-crm-account.html?id=' + esc(c.id) + '">' + esc(c.name) + '</a><span class="crm-muted">' + esc(C.label(C.ACCOUNT_TYPES, c.account_type)) + '</span></li>'; }).join('') + '</ul></div>';
-    h += '<div class="crm-two"><div id="pTasks"></div><div id="pMeetings"></div></div><div class="crm-two"><div id="pNotes"></div><div id="pFiles"></div></div><div id="pTimeline"></div>';
+    h += '<div class="crm-two"><div id="pTasks"></div><div id="pMeetings"></div></div><div class="crm-two"><div id="pNotes"></div><div id="pFiles"></div></div><div id="pEngagement"></div><div id="pTimeline"></div>';
     root.innerHTML = h;
 
     // Everything on an account's page (and on its deals) shows here; whether this person can change it is decided per item by the server.
@@ -103,6 +103,7 @@
     FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
     FnCrmPanels.notes(document.getElementById('pNotes'), subject);
     FnCrmPanels.files(document.getElementById('pFiles'), subject);
+    FnCrmPanels.engagement(document.getElementById('pEngagement'), subject);
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }

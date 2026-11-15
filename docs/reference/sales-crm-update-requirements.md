@@ -25,6 +25,9 @@ The first draft of this plan used the snapshot's `AUTO_INCREMENT` values, which 
 
 - **Overview status outlines (built 2026-11-15, owner's idea, not a numbered phase):** red, yellow or green outline plus a chip with its own shape and words on five Overview boxes (My tasks today, Needs attention, Overdue next steps, Needs a decision, Deals with no next step). Rules live in `crm-status.js` and are tested against the server's Needs Attention rule list so the two cannot drift. Hard rules: never on a contact, a label or a pipeline total (it would read as hot, warm and cold); colour is never the only signal; "yellow" is the theme's gold token (the orange-brown warning token is too close to red); an empty task list is grey, not green; thresholds are fixed and explained by one legend line, not settings.
 
+- **Phase 6 spec: confirmed 2026-11-15** (section 6, "Phase 6 spec"). The owner took all four recommendations: renewal deals appear **120 days** before a paid group license ends; an **Expansion** deal is made as well when **90% or more of the seats are registered**; first-touch source travels in a **first-party cookie like the affiliate link** (one privacy-policy bullet to approve); the panel shows student counts with **"fewer than 10"** below 10. Value on a renewal deal starts as last term's amount (stated in the spec; the owner may veto at review). Deferred list unchanged.
+- **Phase 6: built 2026-11-15, staged, not committed or deployed** (the engagement card on deals and accounts, `scripts/crm-renewals.js` and `lib/crm-growth.js`, "How they found us" on contacts via the `fn_attr` cookie set by `referral.js`; one alter script, `alter-create-crm-growth.js`). **Verified:** 43 new tests (suite 1,211 pass, 0 fail); the alter script's first run and second run on a real MariaDB (13 changes, then 0); the generator on a real MariaDB (report, apply, apply again: two deals, then none; off until `crm_renewal_generator` is true); a real cookie set by `referral.js` in the browser, read by the real newsletter route, shown on the contact page (first touch kept, latest replaced); the card on a deal and an account in the browser; all three CRM roles and a signed-out request by curl. **Not verified:** the Stripe-side and site-auth/checkout form paths over HTTP (tests only check those routes call the recorder; the newsletter and quote-request routes were run), phone width, a real production dry run (production has 0 qualifying purchases, so it will report zero deals), and the privacy-policy bullet needs the owner's and lawyer's approval. **Not covered by design:** card checkout attribution (Stripe webhook has no cookie).
+
 ### Preflight output (run on production, 2026-11-14)
 
 ```text
@@ -333,6 +336,92 @@ Each phase ships as its own release, dark behind `crm_v2_enabled` until the owne
 - Trial and demo panel on the opportunity from `program_use_snapshots`, `purchases`, `license_seats` and `public_demo_*`, with source and window labeled and missing data shown as unknown, never zero. Renewal and expansion generator from expiring paid licenses with a unique key per source purchase so it cannot duplicate (`crm.purchase.renewal_due`). Attribution fields on contacts (first and latest source, UTM, landing page) filled by the existing public forms, with no joins on IP. Everything in the deferred list stays out until asked for.
 - **Tests:** renewal generator run twice makes one opportunity; unknown versus zero; no student-level field in any payload.
 - **Acceptance:** a customer can hold a renewal and an expansion at once and stays Customer.
+
+**Phase 6 spec, written 2026-11-15 for the owner's confirmation. No code until confirmed.** Three features, nothing else. Not built, by design (D9): custom fields, tags, reviews and testimonials, line-item quotes, a scored qualification model, a customer-health score. Where this spec says "proposed", the owner's answer is in the status line at the top.
+
+*Read this first: what production has today.* The 2026-11-14 preflight found **0 qualifying paid purchases** (15 are paid with no amount, entered by hand). So the renewal generator will find nothing on day one; its dry run will list how many expiring licenses it left out because the amount is unknown, which is the owner's cue to confirm those purchases on the existing review list. That is correct behavior, not a bug.
+
+**Feature 1. Engagement panel ("Trial and demo engagement")**
+
+*What it is.* One read-only card on the deal page and the account page, three labeled sections. Each section names its **source** and its **date window** on screen. A value the system does not have is `null` in the payload and **"Unknown" on screen, with the reason**; a real zero is a real zero. Nothing is added up across sources, and nothing is scored.
+
+| Section | Source (tables) | Window shown | Unknown when |
+|---|---|---|---|
+| Licenses | `purchases`, `license_seats` (counts by status only) | as of today; start and end dates of each license | no purchase in scope; a purchase with seats bought but no seat rows; a trial with no end date |
+| Program use | `program_use_snapshots` (written on the 1st of each month by `snapshot-program-use.js`) | the latest three saved months, each labeled with its month and the date it was saved | the school has no snapshot row; the account has no school or district link; the table is missing |
+| Demo | `public_demo_invitations` (dates, status only), `public_demo_events` (counts), plus the quotes and support tickets tagged with the invitation | the invitation's own start and end dates | no invitation is tied to this deal or account (the section says so and shows nothing); events cannot be read |
+
+*Scope (which rows are "this deal / this account").* Deal: purchases on the deal's quotes, plus purchases whose `school_id` is the account's school; the account's school (or, for a district account, its schools) for program use; demo invitations on the deal's quotes. Account: purchases of the account's school or district schools, and of its members; program use for those schools; demo invitations from quotes and tickets that belong to its deals and members (the same rule the timeline already uses, one shared helper). An account with no school and no district link shows program use as **Unknown: "no school is linked to this account"**, with a link to the account page to fix it.
+
+*What is deliberately not on it.* Student and teacher names, ids or emails (seat counts only; `invited_email` is never selected); a student count under 10 (shown as "fewer than 10", proposed; the same small-group idea the district Program Use Report uses; a teacher count is shown because staff already see who bought); the group's name on a demo (staff-only label never selected); a login history, a time spent, a score or a quiz result (none is read). Demo events are **counts the site recorded**, so the wording is "None recorded", never "no visits".
+
+*Payload:* `GET /api/crm/opportunities/:id/engagement` and `GET /api/crm/accounts/:id/engagement`, `requireAuth` plus `requireCrm('view')`, 404 while `crm_v2_enabled` is off. Every metric is `{ value, unknownReason }` with exactly one of the two set. A test lists the allowed keys so a student-level field cannot slip in.
+
+**Feature 2. Renewal and expansion generator**
+
+*What it does.* A daily cron script finds paid licenses that are about to end and makes one deal for each, so a renewal is never missed and never made twice.
+
+*Which purchases count (the source rows):* `lib/crm-classification.js` `QUALIFYING_SQL` (paid, amount above zero, not a trial: the one Customer rule, reused, never re-written), `product_type = 'group_license'` (a single teacher's license has no school account to hang a deal on), `license_status` not `cancelled` or `suspended`, and `expiration_date` from **30 days ago** up to **today plus the lead time** (proposed 120 days; the 30-day look-back is so a missed cron run or a late renewal is still caught). A purchase paid with a NULL or zero amount is **never** a source; the dry run counts them as "left out: amount unknown" and lists nothing else about them. A purchase is **skipped, with the reason counted**, when: it already has its deal (the unique key); a **later** qualifying group license exists for the same school (same `school_id`, or the same `school_domain` when there is no id) with a later expiration, meaning it was already renewed; the school has **no live CRM account** (`crm_accounts.school_id`, not archived; the generator never makes an account, the backfill does); or the account already has an **open renewal deal, or one won within the last 90 days**, made by staff (so the generator never works against a person).
+
+*What it writes (and only this).* One `crm_opportunities` row, its stage-history row, the buyer as the deal's primary contact and committee member, and one audit row (actor `system`, entity `crm_opportunity`). It **never** writes a purchase, invoice, license, seat, quote, contact label or any email. Deal fields:
+
+| Field | Renewal deal | Expansion deal |
+|---|---|---|
+| Name | `Renewal: <account name>` | `Expansion: <account name>` |
+| Type, stage, state | `renewal`, Qualified, open | `expansion`, Qualified, open |
+| Owner | the account's owner, or nobody (it then shows in Needs Attention) | same |
+| Value | the source purchase's amount, labeled as last term's amount in the deal's source field; staff replace it when they quote (proposed) | **blank** (a guess is worse than a blank) |
+| Expected close | the license's expiration date | same |
+| Next step | "Check in about renewing (license ends YYYY-MM-DD)", due in 7 days | "Talk about more seats (N of M in use)", due in 7 days |
+| `renewal_of_purchase_id` | the source purchase | the source purchase |
+| `generated_key` | `crm.purchase.renewal_due:<purchaseId>` | `crm.purchase.expansion_due:<purchaseId>` |
+
+*Expansion trigger (proposed):* the same source purchase, in the same window, and **90% or more of its seats are registered** (`license_seats.status = 'registered'`, counts only). A customer can hold a renewal and an expansion at once; both leave the contact's label alone (the generator never reads or writes `crm_classification`).
+
+*Never twice.* `crm_opportunities.generated_key` is a **unique** column (NULL for deals people make). The insert is guarded by the key, and a duplicate-key error from a second concurrent run is caught and counted as "already made". Closing or losing the deal keeps the key; only deleting the deal frees it.
+
+*How it runs:* `scripts/crm-renewals.js`, **report only by default**; `--apply` writes; `--only-if-enabled` (what cron runs) does nothing unless `crm_v2_enabled = true` **and** the setting `crm_renewal_generator = true` (off until the owner has read a dry run on production, the same way `crm_attention_email` is off by default). The thresholds (120 days, 30-day look-back, 90% seats, 90-day won guard) are constants in `lib/crm-growth.js`, with no settings page. Output is counts only, no names or addresses. Cron: daily at 07:10, added to `setup-cron-jobs.sh`.
+
+**Feature 3. Attribution on contacts**
+
+*What is stored.* On `newsletter_contacts`, two touches, each five columns: `first_touch_source`, `_medium`, `_campaign`, `_landing`, `_at` and `latest_touch_source`, `_medium`, `_campaign`, `_landing`, `_at`. `source` is `utm_source`, else the **host** of an outside referring site, else `direct`; `medium` is `utm_medium`, else `referral` when there is an outside referrer, else `none`; `campaign` is `utm_campaign`; `landing` is the **path** of the first page of the visit (no query string, no fragment). **First touch is written once and never changed** (compare-and-set on `first_touch_at IS NULL`); latest touch is replaced by each newer form submission **that carries a touch**, and a submission with no touch changes nothing (a "direct" visit never erases a campaign). The existing `source` ("Homepage", "Quote Request") and `crm_source` columns are **not touched**: they say which form, these say which visit.
+
+*How it travels (proposed).* The same pattern as the affiliate cookie: `referral.js` (already loaded on 117 public pages, none for students) also sets a first-party cookie `fn_attr` (30 days, `SameSite=Lax`, `Secure` on https, JSON with a `f` and an `l` touch) **only** on a page load that carries a `utm_*` parameter or an outside referrer. The server reads it off the form's own request; **no form changes, and the browser sends nothing extra in any form body**. A new `lib/attribution.js` parses it strictly (length caps; `utm` text limited to letters, digits and `_ . - + : /` and space; landing path limited to path characters; the referrer is already a host) and `recordAttribution()` writes the columns, never throwing and never blocking the form (a missing column is quiet, like the CRM hooks). **No IP address, user agent or device id is read or stored, and nothing is joined on either.**
+
+*Which forms.* The ones where a visitor becomes a contact: the homepage newsletter signup (`routes/newsletter.js`), the public quote request (`routes/contact.js`; the second insert in that file is staff-made and is not attributed), site sign-up (`routes/site-auth.js`) and the purchase-order checkout (`routes/checkout.js`). **Card checkout is not covered:** its contact is made by the Stripe webhook, which has no cookie, and carrying the cookie through Stripe metadata means touching the payment path; a possible follow-up. An existing contact who submits again gets a new **latest** touch (and a first touch only if they never had one). Admin, import, affiliate, district-assignment and system inserts are never attributed. Contacts that exist today show "Not recorded": the system never guesses a first touch from `source`.
+
+*Where it shows.* A read-only "How they found us" card on the contact page (first and latest touch, each with its date), through `esc()`. Contact merge keeps the **earlier** first touch of the two (a contact with none takes the other's) and the **newer** latest touch. No export, no filter, no report yet (phase 7 reads "source to paid"). Nobody can edit attribution by hand.
+
+*Limits, said plainly.* The cookie is set by the visitor's browser, so anyone can forge it: attribution is **advisory**. It never decides access, a price, a classification, a commission or an affiliate credit (the affiliate system is separate and untouched). It misses visitors who block cookies, switch browsers, or sign up on a device other than the one they first visited on. Visitors whose browser still holds the old cached `referral.js` begin to be recorded once their copy refreshes. **The privacy policy needs one more bullet** under "Cookies and browser storage" (kept for 30 days, says where a visit came from, is used for FNE's own sales follow-up and is never shared); that is legal wording and goes in as a draft for the owner and lawyer to approve.
+
+**Access matrix**
+
+| Action | CRM Admin | CRM Sales | CRM Read-only |
+|---|:-:|:-:|:-:|
+| See the engagement panel (deal or account) | yes | yes | yes (counts only, no file or person detail) |
+| See "How they found us" on a contact | yes | yes | yes |
+| Edit attribution by hand | no | no | no |
+| Work, edit, win or lose a generated deal | as any deal (phase 2 rules) | own or unowned deals | no |
+| Run the renewal script, switch `crm_renewal_generator` | server operator only (cPanel Terminal), not a web action | | |
+| A visitor's form submission records a touch | anyone on a public form (server-validated cookie, never a form field) | | |
+
+**Schema (one idempotent script, `scripts/alter-create-crm-growth.js`, run BEFORE the restart; also in `db/schema.sql` and `SCHEMA.md`):** `crm_opportunities.generated_key VARCHAR(64) NULL` plus unique index `uq_crm_opp_generated_key`; ten attribution columns on `newsletter_contacts` plus `idx_contacts_first_touch_source`; no new table. Each step checks `information_schema` first, so a second run changes nothing. Rollback: switch the generator setting off, revert the code; the columns can stay.
+
+**Risks and how each is handled**
+
+1. *A generator that makes noise.* Off until the owner reads a dry run; unique key; skips staff-made renewals; never makes accounts; counts only in output.
+2. *Student data in a payload.* Seat counts by status only, snapshot counts only, floor of 10 on students, a key-whitelist test on every payload.
+3. *Zero shown for unknown.* Every metric carries `unknownReason`; the screen prints "Unknown" and the reason; tested for each source being absent.
+4. *Privacy.* Cookie wording needs approval; no IP or user agent; nothing sent in a body; the cookie is advisory and untrusted.
+5. *Stored script injection through UTM text.* Whitelist characters at write, `esc()` at read, a test with `<script>` in a UTM value.
+6. *Counting twice.* The generator counts a renewal and an expansion as two deals on purpose; the forecast sums deals, never purchases, and neither touches the Customer rule.
+7. *Deploying code before the columns.* The contact page and the form hooks tolerate a missing column; the generator refuses to run without its key column.
+
+**Test list.** Real routes and real SQL (`node:sqlite`) from `test/helpers/crm-env.js`: engagement unknown versus zero for each of the three sources absent and present; student floor; payload key whitelist (no email, no label, no student field); the role matrix (Read-only can read, a 404 while the hub is off); demo section never carries the group's name; generator selects only qualifying group licenses (trial, NULL amount, $0, pending and single-teacher rows are left out, the amount-unknown ones counted), window edges, already-renewed skip, no-account skip, open staff renewal skip; run twice makes one deal (and two concurrent runs make one); renewal plus expansion both open and the contact still Customer; dry run writes nothing; `--only-if-enabled` honors both switches; attribution parse (hostile input, oversize, wrong shape, `<script>`), first touch written once, latest replaced only by a real touch, no touch changes nothing, each public form records it, a missing column never fails the form, nothing in `source` or `crm_source` changes, merge rule; a grep test that no attribution code reads an IP header; the old suite stays green. Then a Playwright check on the local stack (CRM Admin, Sales, Read-only) of both pages and the contact card.
+
+**Acceptance.** A customer can hold a renewal and an expansion at once and stays Customer; running the generator twice changes nothing the second time; every number on the panel says where it came from and from when, and an unknown is never a zero; a contact's first touch survives a later campaign.
+
+**Deploy shape.** Alter script (twice, second is a no-op) before the restart; restart; rsync the three admin pages, `crm-panels.js` and `referral.js` (plus the privacy page once the wording is approved); re-run `setup-cron-jobs.sh` for the new cron line; then, **after the owner has read a dry run on production**, set `crm_renewal_generator` to `true`.
 
 ### Phase 7. Reporting and hardening
 - Funnel, stage conversion, weighted pipeline, win and loss, source to paid, time in stage, reconciliation to `purchases` and `invoices`; each metric shows its definition and date window. Access review of every new route, rollback drill (flag off, data intact), performance pass on the timeline and list queries, operations runbook for the cron jobs.

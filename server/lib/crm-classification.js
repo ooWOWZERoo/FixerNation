@@ -214,7 +214,7 @@ async function classificationCounts(conn) {
 
 module.exports = {
   CLASSIFICATIONS, RANK,
-  PURCHASES_FROM, QUALIFYING_SQL, NEEDS_REVIEW_SQL, TEST_ADDRESS_SQL,
+  PURCHASES_FROM, QUALIFYING_SQL, NEEDS_REVIEW_SQL, TRIAL_LIKE_SQL, TEST_ADDRESS_SQL,
   isQualifyingPurchase, isTrialLike, isTestAddress, derive,
   reconcileContact, reconcileAll, listPurchasesNeedingReview,
   promoteToProspect, setCustomerOverride, releaseOverride, classificationCounts,

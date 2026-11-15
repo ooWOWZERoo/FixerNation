@@ -9,6 +9,7 @@ const { crmAudit } = require('../lib/crm-audit');
 const cls = require('../lib/crm-classification');
 const { text, posInt, oneOf, paging, likeTerm } = require('../lib/crm-common');
 const { matchingContacts } = require('../lib/crm-quotes');
+const { attributionView, mergeTouches } = require('../lib/attribution');
 
 const router = express.Router();
 
@@ -188,6 +189,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
 
   res.json({
     contact: contactRow(c),
+    // Phase 6: first and latest touch, or null for each when none was recorded (never guessed from the signup form's name). Advisory: a visitor's browser can forge it.
+    attribution: attributionView(c),
     quotes: quotes.map(q => ({ id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at || null, acceptedAt: q.accepted_at || null, opportunityId: q.opportunity_id || null })),
     events: events.map(e => ({ id: e.id, from: e.from_classification, to: e.to_classification, type: e.event_type, sourceRef: e.source_ref, reason: e.reason, at: e.created_at, actor: e.actor || null })),
     accounts: accounts.map(a => ({ accountId: a.account_id, name: a.name, accountType: a.account_type, title: a.title, isPrimary: !!a.is_primary, isChampion: !!a.is_champion, isDecisionMaker: !!a.is_decision_maker, isProcurement: !!a.is_procurement, isFinance: !!a.is_finance })),
@@ -311,6 +314,9 @@ router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => 
     }
     if (!into.assigned_admin_id && from.assigned_admin_id) { fill.push('assigned_admin_id = ?'); vals.push(from.assigned_admin_id); }
     if (from.last_contacted_at && (!into.last_contacted_at || String(from.last_contacted_at) > String(into.last_contacted_at))) { fill.push('last_contacted_at = ?'); vals.push(from.last_contacted_at); }
+    // Phase 6: how they found us. The earlier first touch and the newer latest touch survive (nothing is guessed, and a column that is not there yet changes nothing).
+    const touches = mergeTouches(into, from);
+    if (touches) { fill.push(...touches.set); vals.push(...touches.params); }
     if (fill.length) await conn.query(`UPDATE newsletter_contacts SET ${fill.join(', ')} WHERE id = ?`, [...vals, intoId]);
     const [gone] = await conn.query('DELETE FROM newsletter_contacts WHERE id = ?', [fromId]);
     if (!gone.affectedRows) throw new Error('The duplicate could not be removed.');

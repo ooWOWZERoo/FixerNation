@@ -5,6 +5,7 @@ const { sendContactFormEmail, sendQuoteEmail } = require('../lib/mailer');
 const { getSetting } = require('../lib/settings');
 const { requireAuth } = require('../middleware/auth');
 const { limiter } = require('../lib/rate-limit');
+const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch, advisory only
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: a quote request makes the person a Prospect (never throws; off unless crm_v2_enabled)
 const { demoOrigin } = require('../lib/public-demo');
 const { invitationLabels } = require('../lib/public-demo-admin');
@@ -111,6 +112,8 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
     [`${firstName || ''} ${lastName || ''}`.trim() || email, email, school || null]
   );
   await crmHooks.contactChangedByEmail(email);
+  // Phase 6: where this visit came from, read off the fn_attr cookie on this request (never blocks the form, never a form field).
+  await recordAttributionForEmail(req, email);
   // Phase 4b: link the quote to its contact (only when exactly one contact has that email). Never a deal or an account: a public form writes only what it has,
   // and staff make the deal from "Quotes without a deal" in the Customer Hub.
   await setQuoteLinks(pool, quoteId, { contactEmail: email });

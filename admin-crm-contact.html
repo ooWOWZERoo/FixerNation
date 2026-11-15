@@ -34,7 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
-<script src="crm-panels.js?v=1"></script>
+<script src="crm-panels.js?v=2"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -110,7 +110,7 @@
       (data.events.length ? '<ul class="crm-timeline">' + data.events.map(function (e) {
         return '<li><strong>' + (e.from && e.from !== e.to ? esc(C.CLASS_LABEL[e.from] || e.from) + ' → ' : '') + esc(C.CLASS_LABEL[e.to] || e.to) + '</strong><div>' + esc(EVENT[e.type] || e.type) + (e.reason ? ' <span class="crm-muted">“' + esc(e.reason) + '”</span>' : '') + '</div><div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + '</div></li>';
       }).join('') + '</ul>' : C.empty('No changes recorded. They have been a Suspect since they arrived.', '🕒')) + '</div></div>';
-    h += '<div class="crm-two"><div id="pTasks"></div><div id="pMeetings"></div></div><div class="crm-two"><div id="pNotes"></div><div id="pFiles"></div></div><div id="pTimeline"></div>';
+    h += '<div class="crm-two"><div id="pTasks"></div><div id="pMeetings"></div></div><div class="crm-two"><div id="pNotes"></div><div id="pFiles"></div></div><div id="pAttribution"></div><div id="pTimeline"></div>';
     root.innerHTML = h;
 
     var subject = { kind: 'contact', id: id, canWrite: C.can('write'), contacts: [{ id: c.id, name: c.name, email: c.email }] };
@@ -118,6 +118,7 @@
     FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
     FnCrmPanels.notes(document.getElementById('pNotes'), subject);
     FnCrmPanels.files(document.getElementById('pFiles'), subject);
+    FnCrmPanels.attribution(document.getElementById('pAttribution'), data.attribution);
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }

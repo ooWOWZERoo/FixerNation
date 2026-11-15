@@ -23,6 +23,7 @@ ENTRIES=(
   "*/10 * * * * $NODE $SCRIPTS/demo-invitations.js sweep >> $LOGS/cron-demo-invitations.log 2>&1"
   "40 3 * * * $NODE $SCRIPTS/reconcile-crm-classification.js --apply --only-if-enabled >> $LOGS/cron-crm-reconcile.log 2>&1"
   "50 6 * * * $NODE $SCRIPTS/crm-daily-attention.js --apply --only-if-enabled >> $LOGS/cron-crm-attention.log 2>&1"
+  "10 7 * * * $NODE $SCRIPTS/crm-renewals.js --apply --only-if-enabled >> $LOGS/cron-crm-renewals.log 2>&1"
 )
 
 CURRENT=$(crontab -l 2>/dev/null || true)

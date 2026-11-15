@@ -10,6 +10,7 @@ const { crmAudit } = require('../lib/crm-audit');
 const { sqlNow } = require('../lib/crm-classification');
 const { closeDealWon } = require('../lib/crm-won');
 const { procurementForDeal } = require('../lib/crm-procurement');
+const { engagementFor } = require('../lib/crm-engagement');
 const { purchaseIdForQuote } = require('../lib/quote-purchase');
 const { cleanSigner } = require('../lib/quote-evidence');
 const { acceptQuoteViaPO } = require('./quote-accept');
@@ -129,6 +130,13 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
 });
 
 // ---- One deal ---------------------------------------------------------------------------------------------------------------------
+
+// Phase 6: the "Trial and demo engagement" card. Read only; counts only; an unknown is never shown as a zero (lib/crm-engagement.js).
+router.get('/:id/engagement', requireAuth, requireCrm('view'), async (req, res) => {
+  const out = await engagementFor(pool, 'opportunity', posInt(req.params.id));
+  if (!out) return res.status(404).json({ error: 'Deal not found' });
+  res.json(out);
+});
 
 router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
   const o = await loadOpp(posInt(req.params.id));

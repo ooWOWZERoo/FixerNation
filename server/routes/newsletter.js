@@ -13,6 +13,7 @@ const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal')
 const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 const { describeConsequences, consequencesText, hasRoles, closeAccount } = require('../lib/account-closing');
 const { dealCountForContact, workItemCountForContact } = require('../lib/crm-ownership');
+const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch from the fn_attr cookie, advisory only
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
@@ -117,6 +118,8 @@ router.post('/contacts', newsletterSignupLimit, async (req, res) => {
     } catch (err) {
       if (err.code !== 'ER_DUP_ENTRY') throw err;
     }
+    // Phase 6: where this visit came from (first and latest touch), read from the fn_attr cookie on this request. Never blocks or changes the response.
+    await recordAttributionForEmail(req, email);
     return res.status(201).json({ ok: true });
   }
 

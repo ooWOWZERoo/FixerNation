@@ -306,6 +306,96 @@
     load();
   };
 
+  /* ---- Trial and demo engagement (phase 6) ---------------------------------------------------------------------------------------- */
+  // Read only. Every part names where it comes from and the dates it covers. A number the site does not have prints as "Unknown" with the reason; a real zero prints as 0.
+  // A metric from the server is { value, unknownReason, kind }: value is null exactly when there is a reason. Nothing here names a person or a student.
+  P.engagement = function (el, s) {
+    var base = s.kind === 'opportunity' ? '/api/crm/opportunities/' : '/api/crm/accounts/';
+    function load() {
+      C.loading(el);
+      C.api('GET', base + encodeURIComponent(s.id) + '/engagement').then(function (r) {
+        if (!r.ok) { C.errorBox(el, problem(r)); return; }
+        draw(r.data);
+      });
+    }
+    // Reasons are collected per part and printed once underneath, so a table of twenty unknowns does not say the same sentence twenty times.
+    function metricCell(m, notes) {
+      if (!m) return '';
+      if (m.value !== null && m.value !== undefined) return esc(C.num(m.value));
+      if (m.kind === 'small') { if (notes.indexOf(m.unknownReason) < 0) notes.push(m.unknownReason); return '<span class="crm-muted" title="' + esc(m.unknownReason) + '">Fewer than 10</span>'; }
+      if (notes.indexOf(m.unknownReason) < 0) notes.push(m.unknownReason);
+      return '<strong class="crm-muted" title="' + esc(m.unknownReason) + '">Unknown</strong>';
+    }
+    function notesHtml(notes) {
+      return notes.length ? '<ul class="crm-small crm-muted" style="margin:8px 0 0;padding-left:18px;">' + notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>' : '';
+    }
+    function part(title, src, win, body) {
+      return '<section class="crm-fieldset" style="margin:14px 0 0;padding:12px 14px;"><h3 style="margin:0 0 4px;font-size:1rem;">' + esc(title) + '</h3>' +
+        '<p class="crm-small crm-muted" style="margin:0 0 10px;"><strong>Source:</strong> ' + esc(src) + '<br><strong>Dates:</strong> ' + esc(win) + '</p>' + body + '</section>';
+    }
+    function unknownBox(reason) { return '<p style="margin:0;"><strong class="crm-muted">Unknown.</strong> ' + esc(reason || 'The site has no record.') + '</p>'; }
+    function licenses(sec) {
+      if (!sec.items.length) return unknownBox(sec.unknownReason);
+      var notes = [];
+      var rows = sec.items.map(function (i) {
+        var ends = i.endsOn ? esc(C.date(i.endsOn)) + (i.daysLeft === null ? '' : i.daysLeft < 0 ? ' <span class="crm-flag">(ended ' + esc(-i.daysLeft) + ' days ago)</span>' : ' <span class="crm-muted">(' + esc(i.daysLeft) + ' days left)</span>') : '<strong class="crm-muted" title="' + esc(i.endsOnUnknownReason) + '">Unknown</strong>';
+        if (!i.endsOn && notes.indexOf(i.endsOnUnknownReason) < 0) notes.push(i.endsOnUnknownReason);
+        return '<tr><td>#' + esc(i.purchaseId) + ' ' + esc(i.product) + '</td><td><span class="a-pill ' + (i.kind === 'trial' ? 'a-pill-warning' : 'a-pill-success') + '">' + (i.kind === 'trial' ? 'Trial' : 'Paid') + '</span> <span class="crm-small crm-muted">' + (i.paymentStatus === 'paid' ? '' : 'payment ' + esc(i.paymentStatus) + ' · ') + 'license ' + esc(i.licenseStatus) + '</span></td><td>' + ends + '</td>' +
+          '<td>' + metricCell(i.seatsBought, notes) + '</td><td>' + metricCell(i.seatsRegistered, notes) + '</td><td>' + metricCell(i.seatsPending, notes) + '</td><td>' + metricCell(i.seatsAvailable, notes) + '</td></tr>';
+      }).join('');
+      return '<div style="overflow-x:auto;"><table class="a-table" aria-label="Licenses and trials"><thead><tr><th scope="col">Purchase</th><th scope="col">Type</th><th scope="col">Ends</th><th scope="col">Seats bought</th><th scope="col">Signed up</th><th scope="col">Invited</th><th scope="col">Open</th></tr></thead><tbody>' + rows + '</tbody></table></div>' + notesHtml(notes);
+    }
+    function use(sec) {
+      if (!sec.months.length) return unknownBox(sec.unknownReason);
+      var notes = [];
+      var rows = sec.months.map(function (m) {
+        return '<tr><td><strong>' + esc(m.label) + '</strong><div class="crm-small crm-muted">Saved ' + esc(m.savedOn ? C.date(m.savedOn) : '') + (m.schoolsInScope > 1 ? ' · ' + esc(m.schoolsReporting) + ' of ' + esc(m.schoolsInScope) + ' schools' : '') + '</div></td>' +
+          '<td>' + metricCell(m.teachersLicensed, notes) + '</td><td>' + metricCell(m.teachersActivated, notes) + '</td><td>' + metricCell(m.teachersTeaching, notes) + '</td>' +
+          '<td>' + metricCell(m.classroomsActive, notes) + ' <span class="crm-muted">of</span> ' + metricCell(m.classrooms, notes) + '</td>' +
+          '<td>' + (m.studentsActive.value === null && m.studentsEnrolled.value === null && m.studentsActive.kind === m.studentsEnrolled.kind ? metricCell(m.studentsActive, notes) : metricCell(m.studentsActive, notes) + ' <span class="crm-muted">of</span> ' + metricCell(m.studentsEnrolled, notes)) + '</td><td>' + metricCell(m.activities, notes) + '</td></tr>';
+      }).join('');
+      return '<div style="overflow-x:auto;"><table class="a-table" aria-label="Program use by month"><thead><tr><th scope="col">Month</th><th scope="col">Teachers licensed</th><th scope="col">Signed up</th><th scope="col">Teaching</th><th scope="col">Classrooms in use</th><th scope="col">Students active</th><th scope="col">Activities</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<p class="crm-small crm-muted" style="margin:8px 0 0;">Active means a lesson or game was finished that month. These are counts only, with no teacher or student named.</p>' + notesHtml(notes);
+    }
+    function demo(sec) {
+      if (sec.unknownReason) return unknownBox(sec.unknownReason);
+      if (!sec.linked) return '<p class="crm-muted" style="margin:0;">' + esc(sec.note) + '</p>';
+      var notes = [];
+      var rows = sec.invitations.map(function (d) {
+        var roles = ['district', 'school', 'teacher', 'parent', 'student'].map(function (k) { return k + ' ' + metricCell(d.signIns[k], notes); }).join(' · ');
+        return '<tr><td>' + esc(C.date(d.startsOn)) + ' to ' + esc(C.date(d.endsOn)) + '<div class="crm-small crm-muted">' + (d.open ? 'Open now' : 'Ended') + '</div></td><td>' + metricCell(d.gateEntries, notes) + '</td><td>' + metricCell(d.signInsTotal, notes) + '</td><td class="crm-small">' + roles + '</td></tr>';
+      }).join('');
+      return '<div style="overflow-x:auto;"><table class="a-table" aria-label="Prospect demos"><thead><tr><th scope="col">Demo dates</th><th scope="col">Access code entered</th><th scope="col">Sign-ins</th><th scope="col">Sign-ins by role</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<p class="crm-small crm-muted" style="margin:8px 0 0;">' + esc(sec.note) + '</p>' + notesHtml(notes);
+    }
+    function draw(d) {
+      var h = '<p class="crm-small crm-muted" style="margin:0;">What the site has recorded about how ' + esc(d.accountName) + ' is using Fixer Nation, and where each number comes from. <strong>Unknown</strong> means the site has no record. It does not mean zero.</p>';
+      if (d.linkNote) h += '<p class="crm-small crm-notice" style="margin:10px 0 0;">' + esc(d.linkNote) + (s.kind === 'opportunity' ? ' <a class="crm-link" href="admin-crm-account.html?id=' + esc(d.accountId) + '">Open the account</a>' : '') + '</p>';
+      h += part('Licenses and trials', d.licenses.source, d.licenses.window, licenses(d.licenses));
+      h += part('Program use', d.programUse.source, d.programUse.window, use(d.programUse));
+      h += part('Prospect demo', d.demo.source, d.demo.window, demo(d.demo));
+      el.innerHTML = card('Trial and demo engagement', '', h, 'panelEngagement');
+    }
+    load();
+  };
+
+  /* ---- How they found us (phase 6) ------------------------------------------------------------------------------------------------ */
+  // Read only. a = { first, latest } from the contact payload; each is null when nothing was recorded (never guessed from the signup form).
+  P.attribution = function (el, a) {
+    function touch(t) {
+      if (!t) return '<dd class="crm-muted"><strong>Not recorded.</strong> This person signed up before the site started noting where visits come from, or their browser did not send it.</dd>';
+      var bits = [];
+      bits.push('<strong>' + esc(t.source || 'Unknown') + '</strong>' + (t.medium ? ' <span class="crm-muted">(' + esc(t.medium) + ')</span>' : ''));
+      if (t.campaign) bits.push('Campaign: ' + esc(t.campaign));
+      if (t.landing) bits.push('Landed on <span class="crm-wrap">' + esc(t.landing) + '</span>');
+      bits.push('<span class="crm-muted">' + esc(C.dateTime(t.at)) + '</span>');
+      return '<dd>' + bits.join('<br>') + '</dd>';
+    }
+    var h = '<p class="crm-small crm-muted" style="margin:0 0 10px;">Where a visit came from, noted when this person filled in a form. It comes from the visitor’s browser, so treat it as a clue rather than proof. It never changes a label or a payment.</p>' +
+      '<dl class="crm-kv"><dt>First visit we noted</dt>' + touch(a && a.first) + '<dt>Most recent</dt>' + touch(a && a.latest) + '</dl>';
+    el.innerHTML = card('How they found us', '', h, 'panelAttribution');
+  };
+
   /* ---- Timeline ------------------------------------------------------------------------------------------------------------------ */
   var ICON = { note: '📝', task: '✅', meeting: '📅', file: '📎', stage: '🔀', checklist: '☑️', quote: '💬', purchase: '🧾', invoice: '🧾', support: '🛟', campaign: '✉️', label: '🏷️', demo: '🎬' };
   P.timeline = function (el, s) {

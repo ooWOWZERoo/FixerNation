@@ -34,7 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
-<script src="crm-panels.js?v=1"></script>
+<script src="crm-panels.js?v=2"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -123,7 +123,7 @@
       if (e.fromState && e.toState && e.fromState !== e.toState) change += ' · ' + esc(C.stateLabel(e.fromState)) + ' → ' + esc(C.stateLabel(e.toState));
       return '<li><strong>' + change + '</strong>' + (e.reason ? '<div class="crm-muted">' + esc(e.reason) + '</div>' : '') + '<div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + '</div></li>';
     }).join('') + '</ul>' : C.empty('No history yet.', '🕒')) + '</div>';
-    h += '<div id="pTimeline"></div>';
+    h += '<div id="pEngagement"></div><div id="pTimeline"></div>';
     root.innerHTML = h;
 
     var subject = { kind: 'opportunity', id: id, canWrite: edit, contacts: data.committee.map(function (m) { return { id: m.contactId, name: m.name, email: m.email }; }) };
@@ -132,6 +132,7 @@
     FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
     FnCrmPanels.files(document.getElementById('pFiles'), subject);
     FnCrmPanels.notes(document.getElementById('pNotes'), subject);
+    FnCrmPanels.engagement(document.getElementById('pEngagement'), subject);
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
