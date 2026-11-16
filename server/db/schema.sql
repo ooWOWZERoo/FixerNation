@@ -348,6 +348,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   license_duration_days INT UNSIGNED NULL, -- snapshot of the intended license length in days, taken from license_products.duration_days at purchase time (scaled by a quote's term-years, if quoted) — never affected by a later catalog change
   affiliate_id INT UNSIGNED NULL, -- set only when a valid ?ref= code was in play at checkout (90-day last-touch); added by scripts/alter-add-affiliate-program.js
   affiliate_commission_cents INT UNSIGNED NULL, -- snapshot of amount_cents * commission_rate at attribution time, same principle as amount_cents itself — a later rate change never rewrites a past commission
+  is_trial_flag TINYINT(1) NULL, -- Sales CRM: whether the product was a trial when the CRM first looked at this purchase (NULL = not yet); the Customer rule reads this, so a later product edit cannot change an old purchase. Added by scripts/alter-crm-trial-flag-and-quote-index.js
   FOREIGN KEY (contact_id) REFERENCES newsletter_contacts(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
   FOREIGN KEY (license_product_id) REFERENCES license_products(id) ON DELETE SET NULL,
@@ -768,6 +769,7 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   KEY idx_quote_requests_contact (contact_id),
   KEY idx_quote_requests_supersedes (supersedes_quote_id),
   KEY idx_quote_requests_opportunity (opportunity_id),
+  KEY idx_quote_requests_opp_revision (opportunity_id, revision_number),
   CONSTRAINT fk_quote_requests_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL,
   CONSTRAINT fk_quote_requests_supersedes FOREIGN KEY (supersedes_quote_id) REFERENCES quote_requests (id) ON DELETE SET NULL,
   CONSTRAINT fk_quote_requests_created_by FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL

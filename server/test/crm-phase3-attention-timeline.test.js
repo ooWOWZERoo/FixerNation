@@ -35,6 +35,7 @@ const quiet = deal({ name: 'Quiet deal', entered: at(-40) });
 const notQuiet = deal({ name: 'Noted deal', entered: at(-40) });
 db.prepare("INSERT INTO crm_notes (opportunity_id, account_id, body, created_at) VALUES (?, ?, 'Spoke recently', ?)").run(notQuiet, account, at(-2));
 const wonNoPurchase = deal({ name: 'Won no purchase', state: 'won', stage: 8, closed: at(-10) });
+env.addQuote(db, 'wonnopurchase@school-a.test', { opportunityId: wonNoPurchase }); // punch list B12: the rule needs a quote to have nothing to link
 const wonPaid = deal({ name: 'Won with purchase', state: 'won', stage: 8, closed: at(-10) });
 const paidQuote = env.addQuote(db, 'buyer@school-a.test', { opportunityId: wonPaid, status: 'converted' });
 env.addPurchase(db, env.addContact(db, 'buyer@school-a.test'), { quoteId: paidQuote });

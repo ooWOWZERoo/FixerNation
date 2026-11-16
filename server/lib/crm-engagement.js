@@ -60,11 +60,16 @@ async function licensesSection(conn, S, kind, id, today) {
   const params = [];
   if (kind === 'opportunity') { where.push(`p.quote_id IN (${S.quoteSql})`); params.push(id); }
   if (S.schoolIds.length) { where.push(`p.school_id IN (${marks(S.schoolIds)})`); params.push(...S.schoolIds); }
-  if (kind === 'account' && S.sc.contactIds.length) { where.push(`p.contact_id IN (${marks(S.sc.contactIds)})`); params.push(...S.sc.contactIds); }
+  if (kind === 'account' && S.sc.contactIds.length) {
+    // Punch list B13: a person in two accounts must not bring the other account's purchases here, so a purchase found through a contact counts only when it is not pinned
+    // to a school outside this account (a purchase with no school, or one for a school in scope).
+    const inScope = S.schoolIds.length ? ` OR p.school_id IN (${marks(S.schoolIds)})` : '';
+    where.push(`(p.contact_id IN (${marks(S.sc.contactIds)}) AND (p.school_id IS NULL${inScope}))`); params.push(...S.sc.contactIds, ...S.schoolIds);
+  }
   if (!where.length) { section.unknownReason = 'Nothing has been bought through this account yet, and no school is linked to look one up.'; return section; }
   const [rows] = await conn.query(
     `SELECT p.id, p.product_type, p.payment_status, p.license_status, p.effective_date, p.expiration_date, p.seat_count, p.trial_expiration_date, p.trial_lesson_limit,
-            lp.is_trial, lp.name AS product_name
+            p.is_trial_flag, lp.is_trial, lp.name AS product_name
      ${cls.PURCHASES_FROM} WHERE (${where.join(' OR ')}) ORDER BY p.id DESC LIMIT ${MAX_PURCHASES}`, params);
   if (!rows.length) { section.unknownReason = 'No purchase or trial is linked to this deal or account yet.'; return section; }
   const ids = rows.map(r => r.id);
@@ -128,15 +133,17 @@ async function programUseSection(conn, S) {
   for (const month of [...byMonth.keys()].sort().reverse().slice(0, MONTHS_SHOWN)) {
     const list = byMonth.get(month);
     const sum = Object.fromEntries(SUM_COLS.map(c => [c, list.reduce((t, r) => t + Number(r[c] || 0), 0)]));
-    const hide = sum.students_enrolled < STUDENT_FLOOR;
-    const why = `Fewer than ${STUDENT_FLOOR} students are enrolled, so student numbers are not shown.`;
+    // Punch list B13: the floor applies to each student number. "Active" is a subset of "enrolled", so 10 enrolled with 1 active must not show the 1.
+    const hideEnrolled = sum.students_enrolled < STUDENT_FLOOR;
+    const hideActive = hideEnrolled || (sum.students_active > 0 && sum.students_active < STUDENT_FLOOR); // a real zero names nobody, so it stays
+    const why = hideEnrolled ? `Fewer than ${STUDENT_FLOOR} students are enrolled, so student numbers are not shown.` : `Fewer than ${STUDENT_FLOOR} students were active, so that number is not shown.`;
     const savedOn = list.map(r => dayOf(r.created_at)).filter(Boolean).sort().pop() || null;
     section.months.push({
       month, label: monthLabel(month), schoolYear: schoolYearLabel(list[0].school_year_start), savedOn,
       schoolsReporting: list.length, schoolsInScope: S.schoolIds.length,
       teachersLicensed: known(sum.teachers_licensed), teachersActivated: known(sum.teachers_activated), teachersTeaching: known(sum.teachers_teaching),
       classrooms: known(sum.classrooms), classroomsActive: known(sum.classrooms_active), activities: known(sum.activities),
-      studentsEnrolled: hide ? small(why) : known(sum.students_enrolled), studentsActive: hide ? small(why) : known(sum.students_active),
+      studentsEnrolled: hideEnrolled ? small(why) : known(sum.students_enrolled), studentsActive: hideActive ? small(why) : known(sum.students_active),
     });
   }
   return section;

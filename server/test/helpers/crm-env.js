@@ -19,7 +19,7 @@ CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEX
 CREATE TABLE license_products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, is_trial INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, product_type TEXT DEFAULT 'group_license', license_product_id INTEGER,
   payment_status TEXT NOT NULL DEFAULT 'paid', payment_method TEXT DEFAULT 'manual', amount_cents INTEGER, trial_lesson_limit INTEGER, trial_expiration_date TEXT,
-  purchased_at TEXT DEFAULT '2026-01-01 00:00:00', license_status TEXT DEFAULT 'active', quote_id INTEGER, invoice_id INTEGER, school_id INTEGER, po_number TEXT);
+  purchased_at TEXT DEFAULT '2026-01-01 00:00:00', license_status TEXT DEFAULT 'active', quote_id INTEGER, invoice_id INTEGER, school_id INTEGER, po_number TEXT, is_trial_flag INTEGER);
 CREATE TABLE quote_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_number TEXT, email TEXT NOT NULL, status TEXT DEFAULT 'new', accept_token TEXT,
   quoted_amount_cents INTEGER, quote_sent_at TEXT, quote_valid_until TEXT, accepted_at TEXT, contact_id INTEGER, opportunity_id INTEGER,
   first_name TEXT, last_name TEXT, school TEXT, quoted_product_name TEXT, created_at TEXT DEFAULT '2026-01-01 00:00:00', demo_invitation_id INTEGER NOT NULL DEFAULT 0,

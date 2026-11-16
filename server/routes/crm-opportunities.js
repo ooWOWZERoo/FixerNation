@@ -254,15 +254,31 @@ router.post('/', requireAuth, requireCrm('edit_deal'), async (req, res) => {
   res.status(201).json({ ok: true, id: r.insertId });
 });
 
+// Punch list B16: an edit is applied only to the deal as it was read. The write is conditional on the stage and state still being what this request read (so it cannot
+// land half way through someone's stage move or close), and, when the page sends `expectedUpdatedAt` (the `updatedAt` it was showing), on nobody else having saved in the
+// meantime; otherwise 409 `changed` and nothing is written. A deal past Qualified cannot have its next step blanked unless `overrideReason` says why (the same rule as a stage move).
 router.put('/:id', requireAuth, requireCrm('edit_deal'), async (req, res) => {
   const o = await guardedDeal(req, res);
   if (!o) return;
-  const c = await cleanDeal(req, req.body || {}, { existing: o });
+  const b = req.body || {};
+  const CHANGED = { code: 'changed', error: 'Someone else just changed this deal. The page has been refreshed; look it over and save again.' };
+  if (b.expectedUpdatedAt !== undefined && String(b.expectedUpdatedAt) !== String(o.updated_at)) return res.status(409).json(CHANGED);
+  const c = await cleanDeal(req, b, { existing: o });
   if (c.error) return res.status(c.status || 400).json({ error: c.error });
   const cols = Object.keys(c.fields);
   if (!cols.length) return res.status(400).json({ error: 'Nothing to change.' });
-  await pool.query(`UPDATE crm_opportunities SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => c.fields[k]), o.id]);
-  await crmAudit(req, { action: 'crm_opportunity_updated', entityType: 'crm_opportunity', entityId: o.id, prev: Object.fromEntries(cols.map(k => [k, o[k]])), next: c.fields });
+  let override = null;
+  if (o.state === 'open' && c.fields.next_step !== undefined && !c.fields.next_step) {
+    const rule = await nextStepRule({ ...o, next_step: c.fields.next_step }, { sort_order: o.stage_sort }, b.overrideReason);
+    if (!rule.ok) return res.status(409).json({ code: 'next_step_required', error: 'This deal is past Qualified, so it needs a next step. Write what happens next instead of clearing it.' });
+    override = rule.override || null;
+  }
+  const where = ['id = ?', 'stage_id = ?', 'state = ?'];
+  const wparams = [o.id, o.stage_id, o.state];
+  if (b.expectedUpdatedAt !== undefined) { where.push('updated_at = ?'); wparams.push(String(b.expectedUpdatedAt)); }
+  const [r] = await pool.query(`UPDATE crm_opportunities SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE ${where.join(' AND ')}`, [...cols.map(k => c.fields[k]), ...wparams]);
+  if (!r.affectedRows) return res.status(409).json(CHANGED);
+  await crmAudit(req, { action: 'crm_opportunity_updated', entityType: 'crm_opportunity', entityId: o.id, prev: Object.fromEntries(cols.map(k => [k, o[k]])), next: c.fields, reason: override });
   res.json({ ok: true });
 });
 

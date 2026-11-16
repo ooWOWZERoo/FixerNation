@@ -259,7 +259,7 @@ router.post('/quotes', requireAuth, requireCrmRole('write'), async (req, res) =>
        company = IF(company = '' OR company IS NULL, VALUES(company), company)`,
     [`${firstName || ''} ${lastName || ''}`.trim() || trimmedEmail, trimmedEmail, school || null]
   );
-  await crmHooks.contactChangedByEmail(trimmedEmail);
+  await crmHooks.contactChangedByEmail(trimmedEmail, { actorAdminId: req.user.userId, reason: 'A staff member made a quote for this contact' });
   await setQuoteLinks(pool, newId, { contactEmail: trimmedEmail, opportunityId: dealId, adminId: req.user.userId });
   await crmHooks.quoteEvent(newId, 'created', { detail: 'made by staff', actorAdminId: req.user.userId });
 
@@ -478,6 +478,7 @@ router.put('/quotes/:id', requireAuth, requireCrmRole('write'), async (req, res)
       await setQuoteLinks(pool, Number(req.params.id), { contactEmail: String(email).trim() });
     } catch (err) { if (!/no such column|ER_BAD_FIELD_ERROR/i.test(String(err.code || err.message))) console.error('relinking a quote after an email change failed:', err.message); }
   }
+  if (quotedAmountCents !== undefined) await crmHooks.quotePriceChanged(Number(req.params.id), existing[0].quoted_amount_cents, { actorAdminId: req.user.userId });
   await auditPriceChange(req, existing[0], changes);
   const [[row]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   res.json({ ok: true, quote: publicQuote(row) });
@@ -521,7 +522,7 @@ router.post('/quotes/:id/send', requireAuth, requireCrmRole('write'), async (req
   // Phase 4b: a revision replaces an earlier quote only when it is SENT. If the earlier one was accepted meanwhile there is nothing left to replace.
   let replaced = null;
   if (quote.supersedes_quote_id) {
-    const [[old]] = await pool.query('SELECT id, quote_number, accepted_at, version_status FROM quote_requests WHERE id = ?', [quote.supersedes_quote_id]);
+    const [[old]] = await pool.query('SELECT id, quote_number, accepted_at, version_status, quoted_amount_cents FROM quote_requests WHERE id = ?', [quote.supersedes_quote_id]);
     if (old && old.accepted_at) return res.status(409).json({ code: 'earlier_version_accepted', error: `Quote ${old.quote_number || old.id} was already accepted, so this revision cannot be sent.` });
     replaced = old || null;
   }
@@ -605,6 +606,7 @@ router.post('/quotes/:id/send', requireAuth, requireCrmRole('write'), async (req
   if (replaced && replaced.version_status !== 'superseded') {
     const [sup] = await pool.query("UPDATE quote_requests SET version_status = 'superseded' WHERE id = ? AND accepted_at IS NULL", [replaced.id]);
     if (sup.affectedRows) await crmHooks.quoteEvent(replaced.id, 'superseded', { detail: `replaced by ${quote.quote_number || quote.id}`, actorAdminId: req.user.userId });
+    if (sup.affectedRows) await crmHooks.quotePriceChanged(quote.id, replaced.quoted_amount_cents, { actorAdminId: req.user.userId });
   }
   await crmHooks.quoteEvent(quote.id, 'sent', { detail: noEmail ? 'by phone' : 'by email', actorAdminId: req.user.userId });
 

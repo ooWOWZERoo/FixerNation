@@ -19,7 +19,7 @@ const RULES = {
   task_overdue: { label: 'Task is overdue', help: 'An open task whose due date has passed.', subjectType: 'task' },
   checklist_overdue: { label: 'Checklist step is overdue', help: 'A procurement step on an open deal whose due date has passed.', subjectType: 'checklist_item' },
   quote_expiring: { label: 'Quote runs out soon', help: `A quote that was sent, has not been accepted and is good for ${QUOTE_WINDOW_DAYS} more days or fewer.`, subjectType: 'quote' },
-  won_no_purchase: { label: 'Won, but no purchase yet', help: `A deal closed as Won more than ${WON_GRACE_DAYS} days ago with no purchase linked to its quotes. The CRM never creates a purchase; it starts from the quote or the order.`, subjectType: 'opportunity' },
+  won_no_purchase: { label: 'Won, but no purchase yet', help: `A deal with a quote that was closed as Won more than ${WON_GRACE_DAYS} days ago, and none of its quotes has a purchase. Deals with no quote at all (a phone deal, a renewal the system opened) are not listed, because there is nothing to link a purchase to. The CRM never creates a purchase; it starts from the quote or the order.`, subjectType: 'opportunity' },
 };
 
 const SUBJECT_TYPES = ['opportunity', 'task', 'checklist_item', 'quote'];
@@ -45,36 +45,46 @@ function item(ruleKey, subjectId, o) {
 
 // ---- The rules ---------------------------------------------------------------------------------------------------------------------
 
-async function evaluate(conn, { today }) {
+// Punch list B12: each rule reads at most PER_RULE_LIMIT rows. When a rule has more than that, the true number is written into `caps[ruleKey]` (if the caller gave one)
+// so the page can say "showing the first 200 of N" instead of presenting a cut-off list as the whole list. Handling the oldest items brings the rest into view.
+async function evaluate(conn, { today, caps = {} }) {
   const items = [];
+  async function capped(ruleKey, sql, params = []) {
+    const [got] = await conn.query(`${sql} LIMIT ${PER_RULE_LIMIT}`, params);
+    if (got.length >= PER_RULE_LIMIT) {
+      const [[c]] = await conn.query(`SELECT COUNT(*) AS n FROM (${sql}) capped_rows`, params);
+      if (Number(c.n) > got.length) caps[ruleKey] = Number(c.n);
+    }
+    return got;
+  }
   const dealFrom = `FROM crm_opportunities o JOIN crm_accounts a ON a.id = o.account_id JOIN crm_pipeline_stages s ON s.id = o.stage_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id`;
   const dealCols = 'o.id, o.name, o.next_step, o.next_step_due_at, o.stage_entered_at, o.stage_id, o.closed_at, o.owner_admin_id, a.name AS account_name, s.label AS stage_label, ow.username AS owner_name';
   const deal = (r) => ({ title: r.name, link: pageFor.opportunity + r.id, ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null, dealId: Number(r.id), context: r.account_name });
 
   let rows;
-  [rows] = await conn.query(`SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND o.next_step_due_at IS NOT NULL AND o.next_step_due_at < ? ORDER BY o.next_step_due_at, o.id LIMIT ${PER_RULE_LIMIT}`, [start(today)]);
+  rows = await capped('next_step_overdue', `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND o.next_step_due_at IS NOT NULL AND o.next_step_due_at < ? ORDER BY o.next_step_due_at, o.id`, [start(today)]);
   for (const r of rows) items.push(item('next_step_overdue', r.id, { ...deal(r), fingerprint: day10(r.next_step_due_at), why: `${r.next_step ? `The next step, ${quoted(r.next_step)}, was` : 'The next step was'} due ${day10(r.next_step_due_at)}. Do it, or move the date.` }));
 
-  [rows] = await conn.query(`SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND (o.next_step IS NULL OR o.next_step = '') ORDER BY o.stage_entered_at, o.id LIMIT ${PER_RULE_LIMIT}`);
+  rows = await capped('no_next_step', `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND (o.next_step IS NULL OR o.next_step = '') ORDER BY o.stage_entered_at, o.id`);
   for (const r of rows) items.push(item('no_next_step', r.id, { ...deal(r), fingerprint: String(r.stage_id), why: `This deal is in ${r.stage_label} and does not say what happens next. Add a next step.` }));
 
-  [rows] = await conn.query(
+  rows = await capped('stale_deal', 
     `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND o.stage_entered_at < ?
        AND NOT EXISTS (SELECT 1 FROM crm_notes n WHERE n.opportunity_id = o.id AND n.created_at >= ?)
        AND NOT EXISTS (SELECT 1 FROM crm_tasks t WHERE t.opportunity_id = o.id AND t.completed_at >= ?)
-     ORDER BY o.stage_entered_at, o.id LIMIT ${PER_RULE_LIMIT}`,
+     ORDER BY o.stage_entered_at, o.id`,
     [start(addDays(today, -STALE_STAGE_DAYS)), start(addDays(today, -QUIET_DAYS)), start(addDays(today, -QUIET_DAYS))]);
   for (const r of rows) items.push(item('stale_deal', r.id, { ...deal(r), fingerprint: day10(r.stage_entered_at), why: `In ${r.stage_label} for ${daysBetween(r.stage_entered_at, today)} days, and nobody has logged a note or finished a task in the last ${QUIET_DAYS} days. Write down where it stands.` }));
 
-  [rows] = await conn.query(`SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND o.owner_admin_id IS NULL ORDER BY o.id LIMIT ${PER_RULE_LIMIT}`);
+  rows = await capped('no_owner', `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND o.owner_admin_id IS NULL ORDER BY o.id`);
   for (const r of rows) items.push(item('no_owner', r.id, { ...deal(r), fingerprint: '', why: 'Nobody owns this deal, so nobody is following it up. Pick an owner.' }));
 
-  [rows] = await conn.query(
+  rows = await capped('task_overdue', 
     `SELECT t.id, t.title, t.due_on, t.assigned_admin_id, t.opportunity_id, t.account_id, t.contact_id, au.username AS assignee_name,
             so.name AS deal_name, sa.name AS account_name, sc.name AS contact_name, sc.email AS contact_email
      FROM crm_tasks t LEFT JOIN admin_users au ON au.id = t.assigned_admin_id
        LEFT JOIN crm_opportunities so ON so.id = t.opportunity_id LEFT JOIN crm_accounts sa ON sa.id = t.account_id LEFT JOIN newsletter_contacts sc ON sc.id = t.contact_id
-     WHERE t.state = 'open' AND t.due_on IS NOT NULL AND t.due_on < ? ORDER BY t.due_on, t.id LIMIT ${PER_RULE_LIMIT}`, [today]);
+     WHERE t.state = 'open' AND t.due_on IS NOT NULL AND t.due_on < ? ORDER BY t.due_on, t.id`, [today]);
   for (const r of rows) {
     const where = r.opportunity_id ? { link: pageFor.opportunity + r.opportunity_id, context: r.deal_name, dealId: Number(r.opportunity_id) }
       : r.contact_id ? { link: pageFor.contact + r.contact_id, context: r.contact_name || r.contact_email }
@@ -83,26 +93,27 @@ async function evaluate(conn, { today }) {
       why: `This task was due ${day10(r.due_on)} and is still open${r.assignee_name ? ` (assigned to ${r.assignee_name})` : ' (assigned to nobody)'}.` }));
   }
 
-  [rows] = await conn.query(
+  rows = await capped('checklist_overdue', 
     `SELECT i.id, i.label, i.due_on, o.id AS deal_id, o.name AS deal_name, o.owner_admin_id, a.name AS account_name, ow.username AS owner_name
      FROM crm_opportunity_checklist_items i JOIN crm_opportunities o ON o.id = i.opportunity_id JOIN crm_accounts a ON a.id = o.account_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id
-     WHERE i.status = 'open' AND i.due_on IS NOT NULL AND i.due_on < ? AND o.state = 'open' ORDER BY i.due_on, i.id LIMIT ${PER_RULE_LIMIT}`, [today]);
+     WHERE i.status = 'open' AND i.due_on IS NOT NULL AND i.due_on < ? AND o.state = 'open' ORDER BY i.due_on, i.id`, [today]);
   for (const r of rows) items.push(item('checklist_overdue', r.id, { title: r.label, context: `${r.deal_name} · ${r.account_name}`, link: pageFor.opportunity + r.deal_id, ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null,
     dealId: Number(r.deal_id), fingerprint: day10(r.due_on), why: `This procurement step was due ${day10(r.due_on)} and is not done.` }));
 
-  [rows] = await conn.query(
+  rows = await capped('quote_expiring', 
     `SELECT q.id, q.quote_number, q.quote_valid_until, q.opportunity_id, o.name AS deal_name, o.owner_admin_id, ow.username AS owner_name
      FROM quote_requests q LEFT JOIN crm_opportunities o ON o.id = q.opportunity_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id
      WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND q.version_status <> 'superseded' AND q.status IN ('new', 'contacted') AND q.quote_valid_until IS NOT NULL
-       AND q.quote_valid_until >= ? AND q.quote_valid_until <= ? AND NOT (${TEST_EMAIL}) ORDER BY q.quote_valid_until, q.id LIMIT ${PER_RULE_LIMIT}`, [today, addDays(today, QUOTE_WINDOW_DAYS)]);
+       AND q.quote_valid_until >= ? AND q.quote_valid_until <= ? AND NOT (${TEST_EMAIL}) ORDER BY q.quote_valid_until, q.id`, [today, addDays(today, QUOTE_WINDOW_DAYS)]);
   for (const r of rows) items.push(item('quote_expiring', r.id, { title: r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, context: r.deal_name || 'No deal yet',
     link: r.opportunity_id ? pageFor.opportunity + r.opportunity_id : 'admin-quotes.html', ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null, dealId: r.opportunity_id ? Number(r.opportunity_id) : null,
     fingerprint: day10(r.quote_valid_until), why: `This quote was sent and has not been accepted. It is good until ${day10(r.quote_valid_until)}. Follow up before it runs out.` }));
 
-  [rows] = await conn.query(
+  rows = await capped('won_no_purchase', 
     `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'won' AND o.closed_at IS NOT NULL AND o.closed_at < ?
+       AND EXISTS (SELECT 1 FROM quote_requests wq WHERE wq.opportunity_id = o.id)
        AND NOT EXISTS (SELECT 1 FROM purchases p JOIN quote_requests q ON q.id = p.quote_id WHERE q.opportunity_id = o.id)
-     ORDER BY o.closed_at, o.id LIMIT ${PER_RULE_LIMIT}`, [start(addDays(today, -WON_GRACE_DAYS))]);
+     ORDER BY o.closed_at, o.id`, [start(addDays(today, -WON_GRACE_DAYS))]);
   for (const r of rows) items.push(item('won_no_purchase', r.id, { ...deal(r), fingerprint: day10(r.closed_at), why: `Closed as Won on ${day10(r.closed_at)}, but no purchase is linked to this deal’s quotes. Check the quote and the order.` }));
 
   return items;
@@ -200,6 +211,6 @@ async function runDaily(conn, { apply, now, sendDigest }) {
 
 module.exports = {
   runDaily,
-  RULES, SUBJECT_TYPES, STALE_STAGE_DAYS, QUIET_DAYS, QUOTE_WINDOW_DAYS, WON_GRACE_DAYS,
+  RULES, PER_RULE_LIMIT, SUBJECT_TYPES, STALE_STAGE_DAYS, QUIET_DAYS, QUOTE_WINDOW_DAYS, WON_GRACE_DAYS,
   evaluate, withStates, setState, clearState, recordFirstSeen, countsByRule, addDays,
 };

@@ -78,6 +78,12 @@
       root.querySelector('[data-count=snoozed]').textContent = '(' + C.num(data.snoozedTotal) + ')';
       root.querySelector('[data-count=dismissed]').textContent = '(' + C.num(data.dismissedTotal) + ')';
       draw(list);
+      var more = Object.keys(data.cappedRules || {});
+      if (more.length) {
+        var note = document.createElement('p'); note.className = 'crm-small crm-muted'; note.setAttribute('role', 'status');
+        note.textContent = 'Some kinds have more items than this list holds, so the oldest ' + C.num(data.cap) + ' of each are shown: ' + more.map(function (k) { var x = rules.filter(function (y) { return y.key === k; })[0]; return (x ? x.label : k) + ' (' + C.num(data.cappedRules[k]) + ' in all)'; }).join('; ') + '. Deal with those and the rest come into view.';
+        list.insertBefore(note, list.firstChild);
+      }
     });
   }
 

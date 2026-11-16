@@ -63,12 +63,20 @@ const QUOTE_REAL_SQL = "LOWER(TRIM(q.email)) NOT LIKE '%@example.com'";
 async function funnel(conn, win) {
   const w = windowSql('o.created_at', win);
   const [stages] = await conn.query('SELECT stage_key, label, sort_order FROM crm_pipeline_stages ORDER BY sort_order, id');
+  // Punch list B8: Won counts only a deal that is Won now. A deal that was Won and then reopened used to keep "reached Won" from its history; it keeps every
+  // earlier stage it passed through, but Won is read from the deal's state, so the Won row always equals "Now won".
+  const wonStage = stages.find(s => s.stage_key === 'won');
+  const wonSort = wonStage ? num(wonStage.sort_order) : null;
   const [deals] = await conn.query(
-    `SELECT o.id, o.state, COALESCE((SELECT MAX(s.sort_order) FROM crm_opportunity_stage_history h JOIN crm_pipeline_stages s ON s.id = h.to_stage_id WHERE h.opportunity_id = o.id), cs.sort_order) AS max_sort
+    `SELECT o.id, o.state, COALESCE((SELECT MAX(s.sort_order) FROM crm_opportunity_stage_history h JOIN crm_pipeline_stages s ON s.id = h.to_stage_id WHERE h.opportunity_id = o.id AND s.stage_key <> 'won'),
+       CASE WHEN cs.stage_key = 'won' THEN NULL ELSE cs.sort_order END) AS max_sort
      FROM crm_opportunities o JOIN crm_pipeline_stages cs ON cs.id = o.stage_id WHERE ${DEAL_REAL_SQL}${typeSql(win)}${w.sql}`, w.params);
+  for (const d of deals) {
+    if (d.state === 'won' && wonSort !== null) d.max_sort = Math.max(num(d.max_sort), wonSort);
+  }
   const total = deals.length;
   const rows = stages.map((s, i) => {
-    const reached = deals.filter(d => num(d.max_sort) >= num(s.sort_order)).length;
+    const reached = deals.filter(d => d.max_sort !== null && d.max_sort !== undefined && num(d.max_sort) >= num(s.sort_order)).length;
     return { key: s.stage_key, label: s.label, reached, shareOfAll: pct(reached, total), conversionFromPrevious: null };
   });
   for (let i = 1; i < rows.length; i++) rows[i].conversionFromPrevious = pct(rows[i].reached, rows[i - 1].reached);
@@ -79,7 +87,7 @@ async function funnel(conn, win) {
   const byType = Object.keys(DEAL_TYPES).map(k => ({ key: k, label: DEAL_TYPES[k], deals: num((mix.find(m => m.t === k) || {}).n) }));
   return {
     key: 'funnel', title: 'Funnel and stage conversion', window: win, windowLabel: windowLabel(win) + typeLabel(win),
-    definition: 'Counts the deals created in the window. For each stage it shows how many of those deals reached that stage or a later one (a deal that skipped a stage still counts), and the share that went on from the stage before. Lost and inactive deals count for the stages they reached.',
+    definition: 'Counts the deals created in the window. For each stage it shows how many of those deals reached that stage or a later one (a deal that skipped a stage still counts), and the share that went on from the stage before. Lost and inactive deals count for the stages they reached. Won counts only deals that are Won now (a reopened deal keeps the earlier stages it passed through). Stages are ranked by the order they have today.',
     total, stages: rows, outcomes, byType,
     table: { header: ['Stage', 'Deals that reached it', 'Share of all deals (%)', 'Went on from previous stage (%)'], rows: rows.map(r => [r.label, r.reached, r.shareOfAll, r.conversionFromPrevious]).concat([['Deals created in the window', total, '', ''], ['Now open', outcomes.open, '', ''], ['Now won', outcomes.won, '', ''], ['Now lost', outcomes.lost, '', ''], ['Now inactive', outcomes.inactive, '', '']].concat(byType.map(t => ['Created in the window: ' + t.label, t.deals, '', '']))) },
   };

@@ -102,11 +102,18 @@ const nameKey = n => {
   const k = String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
   return k.split(' ').length >= 2 && k.length >= 5 ? k : null;
 };
-router.get('/review/duplicates', requireAuth, requireCrm('view'), async (req, res) => {
-  const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
-  const [rows] = await pool.query(`SELECT c.id, c.name, c.email, c.company, c.crm_classification FROM newsletter_contacts c WHERE NOT (${cls.TEST_ADDRESS_SQL.replace(/\bemail\b/, 'c.email')}) ORDER BY c.id`);
+// Punch list B14: the grouping reads every contact's id, name and email once and is kept for DUP_CACHE_MS, so paging through the
+// list no longer re-reads the whole table on every click. Only the contacts on the page being shown are read in full afterwards.
+// (A rename elsewhere shows up within DUP_CACHE_MS; adding or merging a contact shows up at once.)
+const DUP_CACHE_MS = 30000;
+let dupCache = null; // { fingerprint, at, found }; a new or removed contact changes the fingerprint, so the list is rebuilt at once, and it is rebuilt after 30 seconds either way
+async function duplicateGroups() {
+  const [[stamp]] = await pool.query('SELECT COUNT(*) AS n, MAX(id) AS top FROM newsletter_contacts');
+  const fingerprint = `${stamp.n}|${stamp.top}`;
+  if (dupCache && dupCache.fingerprint === fingerprint && Date.now() - dupCache.at < DUP_CACHE_MS) return dupCache.found;
+  const [rows] = await pool.query(`SELECT c.id, c.name, c.email FROM newsletter_contacts c WHERE NOT (${cls.TEST_ADDRESS_SQL.replace(/\bemail\b/, 'c.email')}) ORDER BY c.id`);
   const groups = new Map();
-  const add = (key, reason, row) => { const k = `${reason}|${key}`; if (!groups.has(k)) groups.set(k, { reason, rows: [] }); groups.get(k).rows.push(row); };
+  const add = (key, reason, row) => { const k = `${reason}|${key}`; if (!groups.has(k)) groups.set(k, { reason, ids: [] }); groups.get(k).ids.push(row.id); };
   for (const r of rows) {
     const mk = mailboxKey(r.email);
     if (mk) add(mk, 'same_mailbox', r);
@@ -116,16 +123,29 @@ router.get('/review/duplicates', requireAuth, requireCrm('view'), async (req, re
   // The same pair can match on both signals; show it once, under the mailbox reason (it was added first).
   const seen = new Set();
   const found = [...groups.values()].filter(g => {
-    if (g.rows.length < 2) return false;
-    const k = g.rows.map(r => r.id).join(',');
+    if (g.ids.length < 2) return false;
+    const k = g.ids.join(',');
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
   });
+  dupCache = { fingerprint, at: Date.now(), found };
+  return found;
+}
+router.get('/review/duplicates', requireAuth, requireCrm('view'), async (req, res) => {
+  const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
+  const found = await duplicateGroups();
+  const shown = found.slice(offset, offset + size);
+  const want = [...new Set(shown.flatMap(g => g.ids))];
+  const byId = new Map();
+  if (want.length) {
+    const [full] = await pool.query(`SELECT c.id, c.name, c.email, c.company, c.crm_classification FROM newsletter_contacts c WHERE c.id IN (${want.map(() => '?').join(',')})`, want);
+    for (const r of full) byId.set(r.id, r);
+  }
   res.json({
-    groups: found.slice(offset, offset + size).map(g => ({
+    groups: shown.map(g => ({
       reason: g.reason === 'same_mailbox' ? 'The same mailbox, once a + tag is removed' : 'The same full name',
-      contacts: g.rows.map(r => ({ id: r.id, name: r.name, email: r.email, company: r.company, classification: r.crm_classification || 'suspect' })),
+      contacts: g.ids.map(id => byId.get(id)).filter(Boolean).map(r => ({ id: r.id, name: r.name, email: r.email, company: r.company, classification: r.crm_classification || 'suspect' })),
     })),
     total: found.length, page, pageSize: size,
   });
@@ -179,7 +199,7 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
      FROM crm_opportunity_contacts oc JOIN crm_opportunities o ON o.id = oc.opportunity_id JOIN crm_pipeline_stages s ON s.id = o.stage_id
      WHERE oc.contact_id = ? ORDER BY o.id DESC`, [id]);
   const [purchases] = await pool.query(
-    `SELECT p.id, p.product_type, p.payment_status, p.payment_method, p.amount_cents, p.trial_lesson_limit, p.trial_expiration_date, lp.is_trial, p.purchased_at
+    `SELECT p.id, p.product_type, p.payment_status, p.payment_method, p.amount_cents, p.trial_lesson_limit, p.trial_expiration_date, p.is_trial_flag, lp.is_trial, p.purchased_at
      ${cls.PURCHASES_FROM} WHERE p.contact_id = ? ORDER BY p.id DESC`, [id]);
 
   // Quotes for this person: linked by id, or by the same email while the link is not set. The accept token is never selected.

@@ -24,14 +24,16 @@ const RANK = { suspect: 0, prospect: 1, customer: 2 };
 
 // D3, in SQL. Aliases: p = purchases, lp = license_products (left joined).
 const PURCHASES_FROM = 'FROM purchases p LEFT JOIN license_products lp ON lp.id = p.license_product_id';
-const TRIAL_LIKE_SQL = '(COALESCE(lp.is_trial, 0) = 1 OR p.trial_lesson_limit IS NOT NULL OR p.trial_expiration_date IS NOT NULL)';
+// Punch list B15: p.is_trial_flag is the product's trial flag frozen when the CRM first looked at the purchase; the live product flag is only the fallback for a purchase not yet frozen.
+const TRIAL_LIKE_SQL = '(COALESCE(p.is_trial_flag, lp.is_trial, 0) = 1 OR p.trial_lesson_limit IS NOT NULL OR p.trial_expiration_date IS NOT NULL)';
 const QUALIFYING_SQL = `p.payment_status = 'paid' AND p.amount_cents > 0 AND NOT ${TRIAL_LIKE_SQL}`;
 // Paid, not a trial, but the amount is unknown or zero: never a Customer on its own; shown for review.
 const NEEDS_REVIEW_SQL = `p.payment_status = 'paid' AND (p.amount_cents IS NULL OR p.amount_cents = 0) AND NOT ${TRIAL_LIKE_SQL}`;
 
 // D3, in JS (the same rule, for code that already holds the rows). A test runs both against the same fixtures.
 function isTrialLike(p) {
-  return Number(p.is_trial || 0) === 1 || (p.trial_lesson_limit !== null && p.trial_lesson_limit !== undefined)
+  const flag = p.is_trial_flag !== null && p.is_trial_flag !== undefined ? p.is_trial_flag : p.is_trial;
+  return Number(flag || 0) === 1 || (p.trial_lesson_limit !== null && p.trial_lesson_limit !== undefined)
     || (p.trial_expiration_date !== null && p.trial_expiration_date !== undefined);
 }
 function isQualifyingPurchase(p) {
@@ -89,11 +91,17 @@ async function firstQuoteId(conn, contact) {
 }
 
 // Re-derive one contact from the facts. Safe to run any number of times. { dryRun: true } reports without writing.
-async function reconcileContact(conn, contactId, { actorAdminId = null, dryRun = false } = {}) {
+// Freezes the trial flag on this contact's purchases that have none yet (punch list B15). Safe to repeat; a purchase already frozen is never touched.
+async function freezeTrialFlags(conn, contactId) {
+  await conn.query('UPDATE purchases SET is_trial_flag = COALESCE((SELECT is_trial FROM license_products WHERE license_products.id = purchases.license_product_id), 0) WHERE contact_id = ? AND is_trial_flag IS NULL', [contactId]);
+}
+
+async function reconcileContact(conn, contactId, { actorAdminId = null, dryRun = false, reason = null } = {}) {
   const [[contact]] = await conn.query('SELECT id, email, crm_classification, classification_locked FROM newsletter_contacts WHERE id = ?', [contactId]);
   if (!contact) return { found: false, changed: false };
   const current = contact.crm_classification || 'suspect';
   const locked = Number(contact.classification_locked) === 1;
+  if (!dryRun) await freezeTrialFlags(conn, contactId);
 
   const purchaseId = await firstQualifyingPurchaseId(conn, contactId);
   const quoteId = (purchaseId || current !== 'suspect') ? null : await firstQuoteId(conn, contact);
@@ -102,7 +110,7 @@ async function reconcileContact(conn, contactId, { actorAdminId = null, dryRun =
   if (move) {
     const sourceRef = move.to === 'customer' ? `purchase:${purchaseId}` : `quote:${quoteId}`;
     if (!dryRun) {
-      const ok = await moveClassification(conn, { contactId, from: current, to: move.to, eventType: move.eventType, sourceRef, actorAdminId });
+      const ok = await moveClassification(conn, { contactId, from: current, to: move.to, eventType: move.eventType, sourceRef, actorAdminId, reason });
       if (!ok) return { found: true, changed: false, raced: true };
     }
     return { found: true, changed: true, from: current, to: move.to, eventType: move.eventType, sourceRef };
@@ -120,14 +128,20 @@ async function reconcileContact(conn, contactId, { actorAdminId = null, dryRun =
 }
 
 // Every contact whose classification could change: anyone with a purchase, anyone with a quote, and every current Customer (to flag review).
+// Punch list B14: the quote match used to be a join on LOWER(TRIM(email)) with an OR, which a database cannot index (it compares every quote with every contact).
+// It is now three plain reads and a set lookup in memory: the work grows with the number of rows, not with their product.
 async function candidateContactIds(conn) {
   const ids = new Set();
   const [a] = await conn.query('SELECT DISTINCT contact_id AS id FROM purchases');
   for (const r of a) ids.add(r.id);
-  const [b] = await conn.query(
-    `SELECT DISTINCT c.id AS id FROM newsletter_contacts c JOIN quote_requests q ON q.contact_id = c.id OR LOWER(TRIM(q.email)) = LOWER(TRIM(c.email))`
-  );
-  for (const r of b) ids.add(r.id);
+  const [byLink] = await conn.query('SELECT DISTINCT contact_id AS id FROM quote_requests WHERE contact_id IS NOT NULL');
+  for (const r of byLink) ids.add(r.id);
+  const [quoteMail] = await conn.query("SELECT DISTINCT email FROM quote_requests WHERE email IS NOT NULL AND email <> ''");
+  const quoted = new Set(quoteMail.map(r => String(r.email).trim().toLowerCase()));
+  if (quoted.size) {
+    const [people] = await conn.query('SELECT id, email FROM newsletter_contacts');
+    for (const r of people) if (quoted.has(String(r.email || '').trim().toLowerCase())) ids.add(r.id);
+  }
   const [c] = await conn.query("SELECT id FROM newsletter_contacts WHERE crm_classification = 'customer'");
   for (const r of c) ids.add(r.id);
   return [...ids].sort((x, y) => x - y);
@@ -216,7 +230,7 @@ module.exports = {
   CLASSIFICATIONS, RANK,
   PURCHASES_FROM, QUALIFYING_SQL, NEEDS_REVIEW_SQL, TRIAL_LIKE_SQL, TEST_ADDRESS_SQL,
   isQualifyingPurchase, isTrialLike, isTestAddress, derive,
-  reconcileContact, reconcileAll, listPurchasesNeedingReview,
+  reconcileContact, reconcileAll, candidateContactIds, listPurchasesNeedingReview,
   promoteToProspect, setCustomerOverride, releaseOverride, classificationCounts, moveClassification,
   sqlNow,
 };

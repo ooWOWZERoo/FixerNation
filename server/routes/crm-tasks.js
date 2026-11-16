@@ -38,7 +38,7 @@ async function staffExists(id) {
 
 // ---- List -------------------------------------------------------------------------------------------------------------------------
 
-// ?assignee=me|none|<id>  ?state=open|done|all (default open)  ?due=overdue|today|week|none|upto (&days=N)  ?today=YYYY-MM-DD (the browser's own day)
+// ?assignee=me|none|me_or_none|<id>  ?state=open|done|all (default open)  ?due=overdue|today|week|none|upto (&days=N)  ?today=YYYY-MM-DD (the browser's own day)
 // plus ONE of opportunityId / accountId / contactId to list a subject's tasks (an account's list includes its deals' tasks).
 router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const today = S.todayFrom(req.query.today);
@@ -49,6 +49,7 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   if (state) { where.push('t.state = ?'); params.push(state); }
   if (req.query.assignee === 'me') { where.push('t.assigned_admin_id = ?'); params.push(req.crm.adminId); }
   else if (req.query.assignee === 'none') where.push('t.assigned_admin_id IS NULL');
+  else if (req.query.assignee === 'me_or_none') { where.push('(t.assigned_admin_id IS NULL OR t.assigned_admin_id = ?)'); params.push(req.crm.adminId); } // punch list B10: the Overview's box
   else if (posInt(req.query.assignee)) { where.push('t.assigned_admin_id = ?'); params.push(posInt(req.query.assignee)); }
   const due = oneOf(req.query.due, ['overdue', 'today', 'week', 'none', 'upto']);
   if (due === 'overdue') { where.push('t.due_on IS NOT NULL AND t.due_on < ?'); params.push(today); }

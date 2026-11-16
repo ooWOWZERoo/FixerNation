@@ -15,8 +15,8 @@ const router = express.Router();
 const ORDER = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'quote_expiring', 'won_no_purchase', 'stale_deal', 'no_next_step', 'no_owner'];
 const STATUSES = ['active', 'snoozed', 'dismissed'];
 
-async function currentItems(today) {
-  const items = await A.evaluate(pool, { today });
+async function currentItems(today, caps) {
+  const items = await A.evaluate(pool, { today, caps });
   items.sort((a, b) => ORDER.indexOf(a.ruleKey) - ORDER.indexOf(b.ruleKey));
   return A.withStates(pool, items, { now: sqlNow() });
 }
@@ -31,15 +31,17 @@ router.get('/rules', requireAuth, requireCrm('view'), (req, res) => {
   res.json({ rules: ORDER.map(k => ({ key: k, label: A.RULES[k].label, help: A.RULES[k].help })) });
 });
 
-// ?owner=me|none|<id>  ?rule=<key>  ?status=active|snoozed|dismissed|all (default active)  ?today=YYYY-MM-DD  ?page= &pageSize=
+// ?owner=me|none|me_or_none|<id>  ?rule=<key>  ?status=active|snoozed|dismissed|all (default active)  ?today=YYYY-MM-DD  ?page= &pageSize=
 router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const today = S.todayFrom(req.query.today);
   const { page, size, offset } = paging(req.query, { defaultSize: 25, maxSize: 100 });
-  let items = await currentItems(today);
+  const caps = {};
+  let items = await currentItems(today, caps);
   const forStatus = req.query.status === 'all' ? null : (oneOf(req.query.status, STATUSES) || 'active');
   // Counts per rule describe what is active for the chosen owner, whatever rule or status is picked.
   if (req.query.owner === 'me') items = items.filter(i => Number(i.ownerAdminId) === Number(req.crm.adminId));
   else if (req.query.owner === 'none') items = items.filter(i => !i.ownerAdminId);
+  else if (req.query.owner === 'me_or_none') items = items.filter(i => !i.ownerAdminId || Number(i.ownerAdminId) === Number(req.crm.adminId)); // punch list B10: the Overview's box
   else if (posInt(req.query.owner)) items = items.filter(i => Number(i.ownerAdminId) === posInt(req.query.owner));
   const counts = A.countsByRule(items.filter(i => i.status === 'active'));
   const snoozed = items.filter(i => i.status === 'snoozed').length;
@@ -48,6 +50,8 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   if (typeof req.query.rule === 'string' && A.RULES[req.query.rule]) items = items.filter(i => i.ruleKey === req.query.rule);
   res.json({
     items: items.slice(offset, offset + size).map(view), total: items.length, page, pageSize: size, today,
+    // A rule that has more items than the list holds: { ruleKey: how many exist }. The list shows the oldest first.
+    cappedRules: caps, cap: A.PER_RULE_LIMIT,
     counts, activeTotal: Object.values(counts).reduce((a, b) => a + b, 0), snoozedTotal: snoozed, dismissedTotal: dismissed,
   });
 });

@@ -81,6 +81,9 @@
       (edit && open ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="winBtn">Close as Won</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="loseBtn">Close as Lost</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="idleBtn">Mark inactive</button>' : '') +
       (!open && C.can('reopen_deal') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="reopenBtn">Reopen</button>' : '') +
       '</div></div>';
+    // Punch list B7: a deal can hold more than one quote chain and a customer may really buy both, so this is a prompt to check the value, not an error.
+    var sold = (data.quotes || []).filter(function (q) { return q.acceptedAt; });
+    if (sold.length > 1) h += '<p class="crm-notice">' + C.num(sold.length) + ' quotes on this deal were accepted' + (sold.every(function (q) { return q.amountCents !== null; }) ? ' (' + esc(C.money(sold.reduce(function (t, q) { return t + q.amountCents; }, 0), '$0')) + ' in all)' : '') + '. Check that the deal’s value covers what was sold.</p>';
     if (!edit && C.can('edit_deal')) h += '<p class="crm-notice">This deal belongs to ' + esc(o.ownerName || 'someone else') + '. Ask them or a CRM Admin to change it.</p>';
     h += '<dl class="crm-kv">' +
       '<dt>Value</dt><dd>' + esc(C.money(o.amountCents)) + '</dd>' +
@@ -143,7 +146,7 @@
     root.querySelectorAll('[data-act=rmm]').forEach(function (b) { b.addEventListener('click', function () { removeMember(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
   }
 
-  function save(r, done) { if (r.ok) { C.toast(done || 'Saved'); load(); return; } return C.problem(r); }
+  function save(r, done) { if (r.ok) { C.toast(done || 'Saved'); load(); return; } if (r.data && r.data.code === 'changed') load(); return C.problem(r); }
 
   function moveStage(to, reason) {
     C.api('POST', '/api/crm/opportunities/' + id + '/stage', { stageKey: to, overrideReason: reason }).then(function (r) {
@@ -176,7 +179,7 @@
       body: C.field('What happens next?', '<input type="text" id="nsText" maxlength="255" value="' + esc(o.nextStep || '') + '">', 'Owner: ' + (o.ownerName || 'nobody yet') + '. Change the owner under Edit details.', 'nsText') + C.field('Due', '<input type="date" id="nsDue" value="' + esc(C.isoDay(o.nextStepDueAt)) + '">', '', 'nsDue'),
       onSubmit: function (f) {
         var text = f.querySelector('#nsText').value.trim(), due = f.querySelector('#nsDue').value;
-        return C.api('PUT', '/api/crm/opportunities/' + id, { nextStep: text || null, nextStepDueAt: due || null }).then(function (r) { return save(r); });
+        return C.api('PUT', '/api/crm/opportunities/' + id, { nextStep: text || null, nextStepDueAt: due || null, expectedUpdatedAt: o.updatedAt }).then(function (r) { return save(r); });
       }
     });
   }
@@ -202,6 +205,7 @@
         if (v) { body.amountCents = C.dollarsToCents(v); if (body.amountCents === null) return 'Type the value as a plain amount, like 12500 or 12500.50.'; } else body.amountCents = null;
         var pe = f.querySelector('#eProb');
         if (pe) { var pv = pe.value.trim(); if (pv === '') body.probabilityOverride = null; else if (/^\d+$/.test(pv) && Number(pv) <= 100) body.probabilityOverride = Number(pv); else return 'The chance must be a whole number from 0 to 100.'; }
+        body.expectedUpdatedAt = o.updatedAt;
         return C.api('PUT', '/api/crm/opportunities/' + id, body).then(function (r) { return save(r); });
       }
     });

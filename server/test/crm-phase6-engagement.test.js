@@ -148,7 +148,13 @@ test('STUDENT FLOOR: under 10 enrolled, student numbers are not shown; at 10 the
   const sG = school('Fir Big'); const aG = account('Fir Big', { schoolId: sG });
   snapshot(sG, '2026-10', { enrolled: 10, active: 3 });
   m = (await get(`/api/crm/accounts/${aG}/engagement`)).json.programUse.months[0];
-  assert.deepEqual([m.studentsEnrolled.value, m.studentsActive.value], [10, 3]);
+  // Punch list B13: the floor applies to each student number, so 3 active out of 10 enrolled is not shown (a group of 3), while a real zero and a big group are.
+  assert.deepEqual([m.studentsEnrolled.value, m.studentsActive.value], [10, null]);
+  assert.equal(m.studentsActive.kind, 'small');
+  const sH = school('Fir Huge'); const aH = account('Fir Huge', { schoolId: sH });
+  snapshot(sH, '2026-10', { enrolled: 40, active: 25 });
+  m = (await get(`/api/crm/accounts/${aH}/engagement`)).json.programUse.months[0];
+  assert.deepEqual([m.studentsEnrolled.value, m.studentsActive.value], [40, 25]);
 });
 
 test('DISTRICT: its schools are added together month by month and the screen is told how many reported', async () => {

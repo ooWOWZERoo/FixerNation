@@ -118,23 +118,27 @@
   function mine() {
     var t = document.getElementById('ovTasks'), a = document.getElementById('ovAttn');
     C.loading(t); C.loading(a);
-    C.api('GET', '/api/crm/tasks' + C.qstr({ assignee: 'me', due: 'upto', days: 0, today: C.todayLocal(), pageSize: 6 })).then(function (r) {
+    // Punch list B10: a Read-only login owns nothing, so it sees everyone's; everyone else sees their own plus what nobody owns yet (the heading says so).
+    var team = C.role === 'readonly';
+    var tq = { due: 'upto', days: 0, today: C.todayLocal(), pageSize: 6 }; tq.assignee = team ? undefined : 'me_or_none';
+    var aq = { today: C.todayLocal(), pageSize: 6 }; aq.owner = team ? undefined : 'me_or_none';
+    C.api('GET', '/api/crm/tasks' + C.qstr(tq)).then(function (r) {
       if (!r.ok) { C.errorBox(t, C.problem(r)); return; }
       var s = r.data.summary;
-      var ts = FnCrmStatus.tasks(s);
-      t.innerHTML = '<div class="a-card ' + FnCrmStatus.boxClass(ts) + '"><div class="a-card-head"><h2>My tasks today (' + C.num(r.data.total) + ')</h2>' + FnCrmStatus.chip(ts) + '<a class="crm-link" href="admin-crm-tasks.html">All my tasks</a></div>' +
+      var ts = FnCrmStatus.tasks(s); // the colour and chip describe MY tasks, so a team view (Read-only) shows none
+      t.innerHTML = '<div class="a-card ' + (team ? '' : FnCrmStatus.boxClass(ts)) + '"><div class="a-card-head"><h2>' + (team ? 'Tasks due today, everyone’s' : 'My tasks today, and unassigned') + ' (' + C.num(r.data.total) + ')</h2>' + (team ? '' : FnCrmStatus.chip(ts)) + '<a class="crm-link" href="admin-crm-tasks.html">All my tasks</a></div>' +
         (r.data.tasks.length ? '<ul class="crm-list">' + r.data.tasks.map(function (x) {
           var sub = x.subject, name = sub.dealName || sub.contactName || sub.accountName || '', href = sub.opportunityId ? 'admin-crm-opportunity.html?id=' + sub.opportunityId : sub.contactId ? 'admin-crm-contact.html?id=' + sub.contactId : 'admin-crm-account.html?id=' + sub.accountId;
           return '<li><div class="crm-item-main"><strong>' + esc(x.title) + '</strong><div class="crm-small ' + (x.overdue ? 'crm-flag' : 'crm-muted') + '">' + (x.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(x.dueOn)) + '</div></div><a class="crm-link" href="' + esc(href) + '">' + esc(name) + '</a></li>';
-        }).join('') + '</ul>' : C.empty(s.open ? 'Nothing is due today and nothing is overdue.' : 'You have no open tasks.', '✅')) + '</div>';
+        }).join('') + '</ul>' : C.empty(team || s.open ? 'Nothing is due today and nothing is overdue.' : 'You have no open tasks.', '✅')) + '</div>';
     });
-    C.api('GET', '/api/crm/attention' + C.qstr({ owner: 'me', today: C.todayLocal(), pageSize: 6 })).then(function (r) {
+    C.api('GET', '/api/crm/attention' + C.qstr(aq)).then(function (r) {
       if (!r.ok) { C.errorBox(a, C.problem(r)); return; }
       var as = FnCrmStatus.attention(r.data.counts);
-      a.innerHTML = '<div class="a-card ' + FnCrmStatus.boxClass(as) + '"><div class="a-card-head"><h2>Needs attention (' + C.num(r.data.activeTotal) + ')</h2>' + FnCrmStatus.chip(as) + '<a class="crm-link" href="admin-crm-attention.html">See all and why</a></div>' +
+      a.innerHTML = '<div class="a-card ' + FnCrmStatus.boxClass(as) + '"><div class="a-card-head"><h2>' + (team ? 'Needs attention, everyone’s' : 'Needs attention, yours and unowned') + ' (' + C.num(r.data.activeTotal) + ')</h2>' + FnCrmStatus.chip(as) + '<a class="crm-link" href="admin-crm-attention.html">See all and why</a></div>' +
         (r.data.items.length ? '<ul class="crm-list">' + r.data.items.map(function (it) {
           return '<li><div class="crm-item-main"><a class="crm-link" href="' + esc(it.link) + '">' + esc(it.title) + '</a><div class="crm-small crm-muted">' + esc(it.ruleLabel) + '</div></div></li>';
-        }).join('') + '</ul>' : C.empty('Nothing needs your attention right now.', '✅')) + '</div>';
+        }).join('') + '</ul>' : C.empty(team ? 'Nothing needs attention right now.' : 'Nothing needs your attention right now.', '✅')) + '</div>';
     });
   }
 

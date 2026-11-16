@@ -22,6 +22,7 @@ const LOOKBACK_DAYS = 30;         // and is still made this long after, so a mis
 const EXPANSION_SEAT_PCT = 90;    // an expansion deal also appears when this share of the seats is registered
 const WON_GUARD_DAYS = 90;        // a renewal won this recently means the account is already being handled
 const NEXT_STEP_DAYS = 7;
+const RENEWED_MIN_EXTENSION_DAYS = 90; // a later license counts as the renewal only if it runs this much past the old one's end (a co-termed or short add-on does not)
 
 const RENEWAL_KEY = 'crm.purchase.renewal_due';
 const EXPANSION_KEY = 'crm.purchase.expansion_due';
@@ -56,17 +57,43 @@ async function unknownAmountCount(conn, today) {
   return Number(r.n);
 }
 
-// A later group license at the same school (paid, or a PO still pending) means this one is already being renewed or has been.
-async function alreadyRenewed(conn, p) {
-  let where, params;
-  if (p.school_id) { where = 'p.school_id = ?'; params = [p.school_id]; }
-  else if (p.school_domain) { where = 'LOWER(p.school_domain) = LOWER(?)'; params = [p.school_domain]; }
-  else return false;
+// Punch list B9: the school a purchase belongs to, by id or, when the purchase has only a domain, by the schools table; and the CRM account that stands for it: the
+// school's own account, else the account of the district the school belongs to (a district-level customer). Never makes an account.
+async function resolveSchool(conn, p) {
+  if (p.school_id) {
+    const [[s]] = await conn.query('SELECT id, domain, district_id FROM schools WHERE id = ?', [p.school_id]);
+    return s || { id: p.school_id, domain: p.school_domain || null, district_id: null };
+  }
+  if (p.school_domain) {
+    const [[s]] = await conn.query('SELECT id, domain, district_id FROM schools WHERE LOWER(domain) = LOWER(?) LIMIT 1', [String(p.school_domain).trim()]);
+    return s || null;
+  }
+  return null;
+}
+async function resolveAccount(conn, school) {
+  if (!school) return null;
+  const [own] = await conn.query('SELECT id, name, assigned_admin_id FROM crm_accounts WHERE school_id = ? AND archived_at IS NULL', [school.id]);
+  if (own[0]) return own[0];
+  if (!school.district_id) return null;
+  const [dist] = await conn.query('SELECT id, name, assigned_admin_id FROM crm_accounts WHERE district_id = ? AND archived_at IS NULL', [school.district_id]);
+  return dist[0] || null;
+}
+
+// A later group license at the same school (paid, or a PO still pending) that runs well past this one's end means this one is already being renewed or has been.
+// A license that ends only a little later (a seat add-on bought for the rest of the term) is not a renewal.
+async function alreadyRenewed(conn, p, school) {
+  const domain = (school && school.domain) || p.school_domain || null;
+  const sid = (school && school.id) || p.school_id || null;
+  const parts = [], params = [];
+  if (sid) { parts.push('p.school_id = ?'); params.push(sid); }
+  if (domain) { parts.push('LOWER(p.school_domain) = LOWER(?)'); params.push(domain); }
+  if (!parts.length) return false;
   const [rows] = await conn.query(
     `SELECT p.id ${cls.PURCHASES_FROM}
      WHERE p.id <> ? AND p.product_type = 'group_license' AND p.payment_status IN ('paid', 'pending') AND NOT ${cls.TRIAL_LIKE_SQL}
        AND COALESCE(p.license_status, 'active') NOT IN ('cancelled', 'suspended')
-       AND p.expiration_date IS NOT NULL AND p.expiration_date > ? AND ${where} LIMIT 1`, [p.id, p.expiration_date, ...params]);
+       AND p.expiration_date IS NOT NULL AND p.expiration_date > ? AND (${parts.join(' OR ')}) LIMIT 1`,
+    [p.id, addDays(String(p.expiration_date).slice(0, 10), RENEWED_MIN_EXTENSION_DAYS), ...params]);
   return rows.length > 0;
 }
 
@@ -138,9 +165,9 @@ async function runGrowth(conn, { apply = false, today = dayText(Date.now()), now
   // A report-only run does not create deals, so it remembers which accounts it would have made one for, to say the same thing a real run would.
   const planned = { renewal: new Set(), expansion: new Set() };
   for (const p of sources) {
-    if (await alreadyRenewed(conn, p)) { out.skipped.alreadyRenewed++; continue; }
-    const [accts] = p.school_id ? await conn.query('SELECT id, name, assigned_admin_id FROM crm_accounts WHERE school_id = ? AND archived_at IS NULL', [p.school_id]) : [[]];
-    const account = accts[0];
+    const school = await resolveSchool(conn, p);
+    if (await alreadyRenewed(conn, p, school)) { out.skipped.alreadyRenewed++; continue; }
+    const account = await resolveAccount(conn, school);
     if (!account) { out.skipped.noAccount++; continue; }
 
     // Renewal
@@ -170,4 +197,4 @@ async function runGrowth(conn, { apply = false, today = dayText(Date.now()), now
   return out;
 }
 
-module.exports = { runGrowth, sourcePurchases, keyFor, isMissing, LEAD_DAYS, LOOKBACK_DAYS, EXPANSION_SEAT_PCT, WON_GUARD_DAYS, NEXT_STEP_DAYS, RENEWAL_KEY, EXPANSION_KEY };
+module.exports = { runGrowth, RENEWED_MIN_EXTENSION_DAYS, sourcePurchases, keyFor, isMissing, LEAD_DAYS, LOOKBACK_DAYS, EXPANSION_SEAT_PCT, WON_GUARD_DAYS, NEXT_STEP_DAYS, RENEWAL_KEY, EXPANSION_KEY };
