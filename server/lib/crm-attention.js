@@ -16,6 +16,7 @@ const THRESHOLDS = {
   wonGraceDays:        { setting: 'crm_attn_won_grace_days', def: 3, min: 0, max: 60, unit: 'days', label: 'A Won deal needs a purchase within', help: 'Days after a deal is closed Won before "no purchase yet" is listed.' },
   poWaitDays:          { setting: 'crm_attn_po_wait_days', def: 14, min: 3, max: 180, unit: 'days', label: 'A purchase order is overdue after', help: 'Days since a quote was accepted by purchase order with no PO received date on its invoice.' },
   trialEndingDays:     { setting: 'crm_attn_trial_ending_days', def: 5, min: 1, max: 60, unit: 'days', label: 'A trial is ending when it ends within', help: 'Days before a trial\u2019s end date that it is listed.' },
+  trialStalledDays:    { setting: 'crm_attn_trial_stalled_days', def: 7, min: 1, max: 60, unit: 'days', label: 'A trial has stalled when no teacher has registered after', help: 'Days since a trial started with none of its seats registered. Seats are counted, never named. A trial with no seat records is left out, because nothing says whether anyone started.' },
   trialUsePercent:     { setting: 'crm_attn_trial_use_percent', def: 60, min: 10, max: 100, unit: 'percent', label: 'A trial is well used when this share of seats is registered', help: 'Percent of a multi-seat trial\u2019s seats that teachers have registered. Seats are counted, never named.' },
 };
 const THRESHOLD_DEFAULTS = Object.fromEntries(Object.entries(THRESHOLDS).map(([k, v]) => [k, v.def]));
@@ -50,6 +51,7 @@ const HELP = {
   close_date_passed: (t) => `An open deal whose expected close date is ${t.closeGraceDays ? `${t.closeGraceDays} or more days ` : ''}in the past. Move the date or move the deal.`,
   po_not_received: (t) => `A quote accepted by purchase order ${t.poWaitDays} or more days ago whose invoice still has no PO received date.`,
   trial_ending: (t) => `A trial that ends within ${t.trialEndingDays} days. A good time to ask how it went and offer a quote.`,
+  trial_stalled: (t) => `A live trial that started ${t.trialStalledDays} or more days ago and has seat records, but not one seat is registered yet. A trial with no seat records is not listed: the system cannot tell whether anyone started.`,
   trial_high_use: (t) => `A trial with two or more seats where ${t.trialUsePercent}% or more of the seats are registered. Only counts of seats are used, never names.`,
 };
 const helpFor = (key, t = THRESHOLD_DEFAULTS) => HELP[key](t);
@@ -67,6 +69,7 @@ const RULES = {
   close_date_passed: { label: 'Expected close date has passed', subjectType: 'opportunity' },
   po_not_received: { label: 'Purchase order not received', subjectType: 'purchase' },
   trial_ending: { label: 'Trial is ending', subjectType: 'purchase' },
+  trial_stalled: { label: 'Trial has not got going', subjectType: 'purchase' },
   trial_high_use: { label: 'Trial is being well used', subjectType: 'purchase' },
 };
 // Each rule's `help` (at the default thresholds, for anything that reads RULES directly); helpFor() gives the wording for the thresholds in force.
@@ -199,7 +202,8 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
   const purchaseFrom = `FROM purchases p JOIN newsletter_contacts c ON c.id = p.contact_id LEFT JOIN quote_requests pq ON pq.id = p.quote_id LEFT JOIN crm_opportunities o ON o.id = pq.opportunity_id
        LEFT JOIN admin_users ow ON ow.id = ${buyerOwner}`;
   const purchaseItem = (ruleKey, r, extra) => item(ruleKey, r.id, { context: r.school_domain || r.contact_name || 'A purchase', ownerAdminId: r[`owner_id`] || null, ownerName: r.owner_name || null,
-    dealId: r.deal_id ? Number(r.deal_id) : null, link: r.deal_id ? pageFor.opportunity + r.deal_id : pageFor.contact + r.contact_id, ...extra });
+    dealId: r.deal_id ? Number(r.deal_id) : null, contactId: r.contact_id ? Number(r.contact_id) : null,
+    link: r.deal_id ? pageFor.opportunity + r.deal_id : pageFor.contact + r.contact_id, ...extra });
   const NOT_TEST = "LOWER(TRIM(c.email)) NOT LIKE '%@example.com'";
 
   await optional(async () => {
@@ -219,6 +223,18 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
        ${purchaseFrom} WHERE ${trialWhere} AND p.trial_expiration_date <= ? ORDER BY p.trial_expiration_date, p.id`, [start(today), `${addDays(today, t.trialEndingDays)} 23:59:59`]);
     for (const r of rows) items.push(purchaseItem('trial_ending', r, { title: 'Trial ending', fingerprint: day10(r.trial_expiration_date),
       why: `This trial ends on ${day10(r.trial_expiration_date)} (${daysBetween(today, day10(r.trial_expiration_date))} days from now). Ask how it went and offer a quote while they are still using it.` }));
+  });
+
+  // G3: a live trial that started a while ago where, as far as the seat records show, nobody has registered. Needs seat records to say so: a trial with none is unknown, not stalled.
+  await optional(async () => {
+    rows = await capped('trial_stalled',
+      `SELECT p.id, p.school_domain, p.purchased_at, p.trial_expiration_date, p.contact_id, c.name AS contact_name, o.id AS deal_id, ${buyerOwner} AS owner_id, ow.username AS owner_name
+       ${purchaseFrom} WHERE ${trialWhere} AND p.purchased_at < ?
+         AND EXISTS (SELECT 1 FROM license_seats s WHERE s.purchase_id = p.id)
+         AND NOT EXISTS (SELECT 1 FROM license_seats s WHERE s.purchase_id = p.id AND s.status = 'registered') ORDER BY p.purchased_at, p.id`,
+      [start(today), start(addDays(today, 1 - t.trialStalledDays))]);
+    for (const r of rows) items.push(purchaseItem('trial_stalled', r, { title: 'Trial has not got going', fingerprint: day10(r.purchased_at),
+      why: `This trial started ${daysBetween(r.purchased_at, today)} days ago and no teacher has registered a seat yet. Check that the invitations arrived, and offer to help them get started.` }));
   });
 
   await optional(async () => {
@@ -304,11 +320,14 @@ function countsByRule(items) {
 
 // The daily job, as one function so the cron script and the tests run the very same code. apply=false changes nothing. sendDigest(adminEmail, items) is given by the
 // caller only when the owner digest is switched on (setting crm_attention_email); it is awaited once per owner, and an item is marked emailed only after it returns.
-async function runDaily(conn, { apply, now, sendDigest }) {
+// G3: `trialTasks` is true only when the owner has switched the trial review tasks on (setting crm_trial_review_tasks). Without it, or without --apply, the job only COUNTS
+// the tasks it would make (the dry run the owner reads first). Snoozed or dismissed items are left alone, so only active items can become a task.
+async function runDaily(conn, { apply, now, sendDigest, trialTasks = false }) {
   const today = now.slice(0, 10);
   const all = await withStates(conn, await evaluate(conn, { today }), { now });
   const active = all.filter(i => i.status === 'active');
   const fresh = await recordFirstSeen(conn, active, { now, dryRun: !apply });
+  const trial = await require('./crm-trial-tasks').createReviewTasks(conn, active, { apply: !!(apply && trialTasks), now, today });
   let digests = 0;
   if (apply && sendDigest && fresh.length) {
     const owners = new Map();
@@ -324,7 +343,7 @@ async function runDaily(conn, { apply, now, sendDigest }) {
       digests++;
     }
   }
-  return { total: all.length, active: active.length, held: all.length - active.length, fresh: fresh.length, byRule: countsByRule(active), digests };
+  return { total: all.length, active: active.length, held: all.length - active.length, fresh: fresh.length, byRule: countsByRule(active), digests, trialTasks: trial };
 }
 
 module.exports = {

@@ -2100,6 +2100,20 @@ CREATE TABLE IF NOT EXISTS crm_attention_events (
     CONSTRAINT fk_crm_attention_event_owner FOREIGN KEY (owner_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Sales CRM punch list G3 (scripts/alter-create-crm-trial-review-tasks.js): which review tasks the daily job has already made for a trial. One row per trial and reason
+-- ('ending', 'high_use', 'stalled'); the unique key is what stops a second task, even if the first was finished or deleted. task_id is cleared if the task is deleted.
+CREATE TABLE IF NOT EXISTS crm_trial_review_tasks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    purchase_id INT UNSIGNED NOT NULL,
+    reason VARCHAR(16) NOT NULL,
+    task_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_trial_review (purchase_id, reason),
+    KEY idx_crm_trial_review_task (task_id),
+    CONSTRAINT fk_crm_trial_review_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_trial_review_task FOREIGN KEY (task_id) REFERENCES crm_tasks (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Sales CRM phase 4b (scripts/alter-create-crm-quotes.js): what happened to a quote (created, sent, superseded, accepted, page_opened). 'page_opened' is approximate
 -- and carries no IP, agent or token. The foreign key purchases.quote_id -> quote_requests(id) ON DELETE SET NULL is added by that script (only when nothing is orphaned).
 CREATE TABLE IF NOT EXISTS crm_quote_events (

@@ -24,7 +24,7 @@ Use `--off` or `--on` in place of `--status`. **If something looks wrong in the 
 | When (server time) | Script | What it does | Log (`/home/fixernat/logs/`) |
 |---|---|---|---|
 | 03:40 | `reconcile-crm-classification.js --apply --only-if-enabled` | Re-derives Suspect / Prospect / Customer from paid purchases. A safety net for a payment hook that was missed. Never demotes a Customer: it writes a "needs review" event instead. | `cron-crm-reconcile.log` |
-| 06:50 | `crm-daily-attention.js --apply --only-if-enabled` | Works out the Needs Attention list and records each new item once. Emails the owner digest only if `crm_attention_email` is `true` (off by default). | `cron-crm-attention.log` |
+| 06:50 | `crm-daily-attention.js --apply --only-if-enabled` | Works out the Needs Attention list and records each new item once. Emails the owner digest only if `crm_attention_email` is `true` (off by default). Also makes one review task per live trial that is ending, well used or stalled (once per trial per reason, ever): OFF until `node scripts/crm-daily-attention.js --trial-tasks on` (setting `crm_trial_review_tasks`); until then it prints what it would make and writes nothing. Needs `alter-create-crm-trial-review-tasks.js`; without the table it says so and skips. | `cron-crm-attention.log` |
 | 07:10 | `crm-renewals.js --apply --only-if-enabled` | Makes renewal and expansion deals. Does nothing unless `crm_renewal_generator` is also `true`. Running it twice makes the deals once. | `cron-crm-renewals.log` |
 | 08:00 | `quote-expiring-reminder.js` | Emails a customer when a quote is about to expire. Skips a quote a newer revision has replaced. Not CRM-gated: it runs with the Hub off. | `cron-quote-reminder.log` |
 | 02:30 | `backup-nightly.js` | The nightly database and uploads backup. The CRM tables are in it. CRM files are under `uploads/crm-private/`, so they are in it too. | `cron-backup-nightly.log` |
@@ -51,6 +51,7 @@ Customer Hub > **Reports** has fourteen reports (the original six, plus eight ad
 5. `alter-crm-trial-flag-and-quote-index.js` (review fixes B7-B16: `purchases.is_trial_flag`, filled from each purchase's product, and a composite quote index; run it before the restart, the Customer rule reads the column)
 6. `alter-add-quote-acceptance-snapshot.js` (review fix S10: `quote_requests.acceptance_document_snapshot`; the app works without it and records the hash only)
 7. `scrub-crm-merge-audit.js` (review fix S12, optional: removes the removed person's name and email from old merge audit rows; counts only unless `--apply`)
+8. `alter-create-crm-trial-review-tasks.js` (gap G3: the `crm_trial_review_tasks` ledger that keeps the daily job from making a trial's review task twice; run it before the restart)
 
 Phase 7 added **no** database change. Fresh installs get everything from `server/db/schema.sql`.
 
@@ -61,6 +62,7 @@ Phase 7 added **no** database change. Fresh installs get everything from `server
 Rolling back never drops a table. Code goes back with `git revert` of that phase's commit, a pull, the rsync, and a Node restart; the extra columns and tables stay and are ignored. In order of safest first:
 
 - **Hub misbehaving:** `set-crm-enabled.js --off` (section 1). Nothing else needed.
+- **Trial review tasks (gap G3):** `node scripts/crm-daily-attention.js --trial-tasks off` stops new ones. Tasks already made stay; finish or delete them by hand (deleting one does not bring it back, because the ledger row stays).
 - **Phase 7 (Reports):** revert its commit. No data was added.
 - **Phase 6 (renewals, engagement, attribution):** set `crm_renewal_generator` to anything but `true` to stop new renewal deals. Deals it already made stay; close or delete them by hand.
 - **Phase 4b to 4d (revisions, evidence, Won handoff):** reverting the code makes the accept page stop asking for a name; the saved names and hashes stay. A quote already marked replaced would then accept again, so before reverting, list replaced quotes: `SELECT id, quote_number FROM quote_requests WHERE version_status = 'superseded'`.
