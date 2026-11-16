@@ -168,7 +168,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
       id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at, validUntil: q.quote_valid_until, acceptedAt: q.accepted_at,
       revisionNumber: Number(q.revision_number || 1), versionStatus: q.version_status || 'current', supersedesQuoteId: q.supersedes_quote_id || null,
       // Who accepted and what they were shown (staff only). The hash is shortened: it proves the record, it is not a secret, but nobody reads 64 characters.
-      acceptance: q.acceptance_recorded_at ? { name: q.acceptance_name, title: q.acceptance_title, at: q.acceptance_recorded_at, by: q.acceptance_recorded_by, termsVersion: q.acceptance_terms_version, documentHash: q.acceptance_document_hash ? String(q.acceptance_document_hash).slice(0, 12) : null } : null,
+      // Read-only gets no signer name or title (a named person at the customer); they still see that it was accepted, when and how (punch list S7).
+      acceptance: q.acceptance_recorded_at ? { name: can(req.crm.role, 'write') ? q.acceptance_name : null, title: can(req.crm.role, 'write') ? q.acceptance_title : null, at: q.acceptance_recorded_at, by: q.acceptance_recorded_by, termsVersion: q.acceptance_terms_version, documentHash: q.acceptance_document_hash ? String(q.acceptance_document_hash).slice(0, 12) : null } : null,
     })),
     // Payment is shown next to the deal state, never inferred from it.
     purchases: purchases.map(p => ({ id: p.id, quoteId: p.quote_id, paymentStatus: p.payment_status, paymentMethod: p.payment_method, amountCents: p.amount_cents === null ? null : Number(p.amount_cents), licenseStatus: p.license_status })),

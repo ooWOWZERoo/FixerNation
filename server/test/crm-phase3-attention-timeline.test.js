@@ -221,16 +221,16 @@ const tl = (q, as = viewer) => call('GET', `/api/crm/timeline?${q}`, undefined, 
 
 test('TIMELINE: every source shows, newest first, for a contact, an account and a deal', async () => {
   const types = (r) => new Set(r.json.events.map(e => e.type));
-  const c = await tl(`contactId=${tlContact}`);
+  const c = await tl(`contactId=${tlContact}`, admin);
   assert.equal(c.status, 200);
   for (const t of ['note', 'quote', 'purchase', 'invoice', 'support', 'campaign', 'label', 'demo']) assert.ok(types(c).has(t), `contact timeline has ${t}`);
   assert.ok(!c.json.events.some(e => e.detail === 'Talked pricing with Tina'), 'a deal\'s note is not on the contact timeline');
-  const a = await tl(`accountId=${tlAccount}`);
+  const a = await tl(`accountId=${tlAccount}`, admin);
   for (const t of ['note', 'task', 'meeting', 'file', 'stage', 'checklist', 'quote', 'purchase', 'invoice', 'support', 'campaign', 'label', 'demo']) assert.ok(types(a).has(t), `account timeline has ${t}`);
   assert.ok(a.json.events.some(e => e.detail === 'Talked pricing with Tina'));
   const at = a.json.events.map(e => e.at);
   assert.deepEqual(at, [...at].sort().reverse(), 'newest first');
-  const d = await tl(`opportunityId=${tlDeal}`);
+  const d = await tl(`opportunityId=${tlDeal}`, admin);
   for (const t of ['note', 'task', 'meeting', 'file', 'stage', 'checklist', 'quote', 'purchase', 'invoice', 'demo']) assert.ok(types(d).has(t), `deal timeline has ${t}`);
   assert.ok(!types(d).has('support') && !types(d).has('campaign') && !types(d).has('label'), 'a deal timeline carries no contact-level events');
   assert.ok(a.json.events.find(e => e.type === 'quote' && /Q-777/.test(e.detail)).link.includes(`id=${tlDeal}`), 'a quote links to its deal');
@@ -279,4 +279,24 @@ test('TIMELINE ACCESS: a subject is required and must exist; 404 while off; 401 
   env.enable(db, false);
   assert.equal((await tl(`contactId=${tlContact}`, admin)).status, 404);
   env.enable(db, true);
+});
+
+test('S7: file entries on the timeline follow the Files rule: Read-only sees none, Sales sees files on deals they own or nobody owns, CRM Admin sees all', async () => {
+  const names = (r) => r.json.events.filter(e => e.type === 'file').map(e => e.detail);
+  // tlDeal belongs to `sales`; add a file on a deal that belongs to `sales2` and one on an ownerless deal, same account.
+  const theirs = deal({ name: 'Rep2 deal', owner: sales2 });
+  const nobody = deal({ name: 'Nobody deal', owner: null });
+  const addFile = (d, n) => db.prepare("INSERT INTO crm_attachments (opportunity_id, account_id, original_name, stored_name, kind, mime, size_bytes, created_at) VALUES (?, ?, ?, ?, 'pdf', 'application/pdf', 10, '2026-03-08 09:00:00')").run(d, tlAccount, n, n.replace(/\W/g, '').padEnd(32, 'a').slice(0, 32) + '.bin');
+  addFile(theirs, 'rep2-w9.pdf'); addFile(nobody, 'nobody-contract.pdf');
+  const q = `accountId=${tlAccount}`;
+  const asAdmin = names(await tl(q, admin));
+  assert.ok(asAdmin.includes('purchase-order.pdf') && asAdmin.includes('rep2-w9.pdf') && asAdmin.includes('nobody-contract.pdf'), 'CRM Admin sees every file');
+  const asSales = names(await tl(q, sales));
+  assert.ok(asSales.includes('purchase-order.pdf') && asSales.includes('nobody-contract.pdf'), 'Sales sees their own deal and an ownerless one');
+  assert.ok(!asSales.includes('rep2-w9.pdf'), 'Sales does not see the other rep\'s file name');
+  const asViewer = await tl(q, viewer);
+  assert.equal(asViewer.status, 200);
+  assert.deepEqual(names(asViewer), [], 'Read-only sees no file entries');
+  assert.ok(!JSON.stringify(asViewer.json).includes('purchase-order') && !JSON.stringify(asViewer.json).includes('rep2-w9'));
+  assert.ok(asViewer.json.events.length > 0, 'the rest of the timeline still shows');
 });

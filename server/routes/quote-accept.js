@@ -11,9 +11,18 @@ const { getSetting } = require('../lib/settings');
 const { refCodeFromRequest } = require('../lib/affiliate-attribution');
 const { purchaseIdForQuote, openCardPurchaseIdForQuote, dropStaleOpenCardPurchase } = require('../lib/quote-purchase');
 const { cleanSigner, evidenceColumns } = require('../lib/quote-evidence');
+const { limiter } = require('../lib/rate-limit');
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: quote events and the deal moving to Won (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
+
+// Punch list S6: these routes are open to anyone holding a quote link, so each has a per-address limit (skipped when no client address can be
+// resolved, see lib/rate-limit.js) and checks that what it was sent is text (an array or object used to give a 500).
+const lookupLimit = limiter({ name: 'quote-lookup', windowMs: 10 * 60 * 1000, max: 60 });
+const acceptLimit = limiter({ name: 'quote-accept', windowMs: 10 * 60 * 1000, max: 20 });
+const inviteLimit = limiter({ name: 'quote-invite', windowMs: 60 * 60 * 1000, max: 5 });
+const PO_MAX = 100;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -32,8 +41,8 @@ function quoteStatus(quote) {
   return 'valid';
 }
 
-router.get('/accept', async (req, res) => {
-  const token = (req.query.token || '').trim();
+router.get('/accept', lookupLimit, async (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token.trim() : '';
   if (!token) return res.status(400).json({ error: 'Token is required' });
 
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
@@ -332,10 +341,13 @@ async function openCardPurchase(quote, req, signer) {
   }
 }
 
-router.post('/accept', async (req, res) => {
+router.post('/accept', acceptLimit, async (req, res) => {
   const { token, paymentMethod } = req.body || {};
-  const poNumber = (req.body?.poNumber || '').trim();
-  if (!token) return res.status(400).json({ error: 'Token is required' });
+  const rawPo = req.body?.poNumber;
+  if (rawPo !== undefined && rawPo !== null && typeof rawPo !== 'string') return res.status(400).json({ error: 'The purchase order number must be text.' });
+  const poNumber = (rawPo || '').trim();
+  if (poNumber.length > PO_MAX) return res.status(400).json({ error: `The purchase order number must be ${PO_MAX} characters or fewer.` });
+  if (typeof token !== 'string' || !token) return res.status(400).json({ error: 'Token is required' });
   if (!['card', 'po'].includes(paymentMethod)) return res.status(400).json({ error: 'paymentMethod must be card or po' });
 
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
@@ -402,10 +414,12 @@ router.post('/accept', async (req, res) => {
 // and a 7-day window matching the setup link's own stated expiry.
 const INVITE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-router.post('/accept/invite', async (req, res) => {
-  const { token, inviteEmail } = req.body || {};
-  if (!token) return res.status(400).json({ error: 'Token is required' });
+router.post('/accept/invite', inviteLimit, async (req, res) => {
+  const { token } = req.body || {};
+  const inviteEmail = typeof req.body?.inviteEmail === 'string' ? req.body.inviteEmail.trim() : '';
+  if (typeof token !== 'string' || !token) return res.status(400).json({ error: 'Token is required' });
   if (!inviteEmail) return res.status(400).json({ error: 'inviteEmail is required' });
+  if (inviteEmail.length > 254 || !EMAIL_RE.test(inviteEmail)) return res.status(400).json({ error: 'Enter a valid email address.' });
 
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token]);
   if (!quote || !quote.accepted_at) return res.status(400).json({ error: 'Quote not found or not yet accepted' });

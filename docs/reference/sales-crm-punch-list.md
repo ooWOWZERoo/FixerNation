@@ -12,8 +12,8 @@ Severity: H high, M medium, L low. "Where" is the file to start in.
 | S3 | M | `PUT /quotes/:id` and `/send` skip the role matrix and write no audit. Read-only blocked; price or product changes on a sent quote CRM Admin only; no price change once accepted; audit price changes. | `routes/contact.js` | DONE |
 | S4 | M | `GET /quotes` (and the PUT, send, revise and copy replies) return `accept_token`, which alone accepts by PO. Stripped from every admin reply. | `routes/contact.js` | DONE |
 | S5 | M | Re-clicking Card after a re-price reuses the old pending purchase with the old amount and seats, but Stripe charges the new price. Refresh the purchase from the quote. | `routes/quote-accept.js` | DONE |
-| S6 | M | No rate limit on the quote-token endpoints (`/accept`, `/accept/invite`, card); a non-string `poNumber` or `inviteEmail` gives a 500; a token holder can make the site email any address. | `routes/quote-accept.js` | OPEN |
-| S7 | L-M | Timeline file entries and the deal's signer name and title go to Read-only; the matrix denies Read-only any file list. | `lib/crm-timeline.js`, `routes/crm-opportunities.js` | OPEN |
+| S6 | M | No rate limit on the quote-token endpoints (`/accept`, `/accept/invite`, card); a non-string `poNumber` or `inviteEmail` gives a 500; a token holder can make the site email any address. Done: per-address limits (lookup 60 and accept 20 per 10 minutes, invite 5 an hour), text-only checks, email format check, PO number capped at 100 characters. Left as is: the invite is still single-use per quote and only within 7 days, so a token holder can send one email to one address. | `routes/quote-accept.js` | DONE |
+| S7 | L-M | Timeline file entries and the deal's signer name and title go to Read-only; the matrix denies Read-only any file list. Done: file entries on the timeline follow the Files rule (Read-only none, Sales only deals they own or nobody owns); Read-only gets no signer name or title on the deal page. | `lib/crm-timeline.js`, `routes/crm-opportunities.js` | DONE |
 | S8 | M | Staff-made and public quote requests insert the contact as Subscribed; the Hub's own rule says manual contacts start Unsubscribed. Also anyone can subscribe another person's email through the public form. | `routes/contact.js` | DECIDE |
 | S9 | L | `/uploads/%63rm-private/...` skips the `app.js` block (Apache blocks it in production). Move `CRM_FILES_DIR` outside the web root or match the decoded path. | `app.js` | OPEN |
 | S10 | M | Acceptance evidence is a hash only: no stored snapshot of the terms, so a later price edit cannot be disproved; viewing evidence is not audited. | `lib/quote-evidence.js` | OPEN |
@@ -91,7 +91,7 @@ Severity: H high, M medium, L low. "Where" is the file to start in.
 
 ## Suggested order
 
-1. S1-S5 (done in this change set), then S6 and S7.
-2. B2, B3, B5 (small, change what the owner sees or what a re-run does).
+1. S1-S7 (done), then:
+2. B2, B3, B5 (next; small, change what the owner sees or what a re-run does).
 3. G2, G1 and G7-G9 as one "reporting and attention" phase after the owner picks from the DECIDE items.
 4. Phase 5 when the owner answers the open email questions.

@@ -67,6 +67,8 @@ const conn = {
 };
 const fakePool = { query: run, getConnection: async () => conn };
 
+const realRateLimit = require(path.join(SERVER, 'lib/rate-limit.js'));
+const limits = { on: false };
 const alerts = [];
 const hookCalls = [];
 const automations = [];
@@ -78,7 +80,8 @@ const stubs = {
   [path.join(SERVER, 'lib/mailer.js')]: new Proxy({ sendSalesAlertEmail: async (a) => { alerts.push(a); }, sendAutomationEmail: async () => {} }, { get: (t, k) => (k in t ? t[k] : async () => {}) }),
   [path.join(SERVER, 'lib/automations.js')]: { fireAutomation: async (name, a) => { automations.push({ name, ...a }); } },
   [path.join(SERVER, 'lib/affiliate-attribution.js')]: { attributePurchase: async () => {}, refCodeFromRequest: () => null, codeForAffiliateId: async () => null },
-  [path.join(SERVER, 'lib/rate-limit.js')]: { limiter: () => (req, res, next) => next(), clientIp: () => '127.0.0.1' },
+  // The real limiter, switched on only by the S6 test (every other test sends many requests from one address).
+  [path.join(SERVER, 'lib/rate-limit.js')]: { limiter: (o) => { const real = realRateLimit.limiter(o); return (req, res, next) => (limits.on ? real(req, res, next) : next()); }, clientIp: () => '127.0.0.1' },
   [path.join(SERVER, 'lib/crm-hooks.js')]: { contactChanged: async () => {}, purchaseChanged: async () => {}, invoiceChanged: async () => {}, contactChangedByEmail: async () => {}, quoteEvent: async (...a) => { hookCalls.push(['event', ...a]); }, quoteAccepted: async (...a) => { hookCalls.push(['accepted', ...a]); } },
   [path.join(SERVER, 'lib/own-seat-claim.js')]: { claimForAccountByEmail: async () => {}, claimOwnPurchaseSeats: async () => {}, findClaimableSeats: async () => [] },
   [path.join(SERVER, 'lib/invoice-numbering.js')]: {
@@ -497,4 +500,37 @@ test('S5 card: a purchase that was already paid is never removed by a re-price',
   const removed = await dropStaleOpenCardPurchase({ query: async (sql, params) => run(sql, params) }, { quoted_amount_cents: 1, quoted_seat_count: 1, quoted_product_id: null }, p.id);
   assert.equal(removed, false);
   assert.equal(count('purchases', 'id = ?', p.id), 1);
+});
+
+test('S6: a token, PO number or invite email that is not text is a 400, never a 500', async () => {
+  db.exec("INSERT INTO quote_requests (id, email, first_name, school, accept_token, status, quoted_seat_count, quoted_amount_cents, quoted_product_name) VALUES (601, 'buyer601@example.com', 'Bea', 'S6 School', 'tok-s6', 'sent', 10, 50000, 'Annual')");
+  assert.equal((await getJson('/api/quote/accept?token=a&token=b')).status, 400);
+  assert.equal((await post('/api/quote/accept', { token: { a: 1 }, paymentMethod: 'po', poNumber: 'x' })).status, 400);
+  const badPo = await post('/api/quote/accept', { token: 'tok-s6', paymentMethod: 'po', poNumber: ['x'] });
+  assert.equal(badPo.status, 400);
+  assert.match(badPo.json.error, /must be text/);
+  assert.equal((await post('/api/quote/accept', { token: 'tok-s6', paymentMethod: 'po', poNumber: 'P'.repeat(101) })).status, 400);
+  assert.equal((await post('/api/quote/accept/invite', { token: 'tok-s6', inviteEmail: ['a@b.co'] })).status, 400);
+  assert.equal((await post('/api/quote/accept/invite', { token: 'tok-s6', inviteEmail: 'not an email' })).status, 400);
+  assert.equal((await post('/api/quote/accept/invite', { token: ['t'], inviteEmail: 'a@b.co' })).status, 400);
+  assert.equal(db.prepare("SELECT accepted_at FROM quote_requests WHERE id = 601").get().accepted_at, null, 'nothing was accepted');
+});
+
+test('S6: the quote-link routes are rate limited per address (invite 5 an hour, accept 20 per 10 minutes)', async () => {
+  const hit = (method, p, body) => new Promise((resolve, reject) => {
+    const data = JSON.stringify(body || {});
+    const req = http.request({ port, method, path: p, headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data), 'X-Forwarded-For': '203.0.113.77' } },
+      (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+    req.on('error', reject); req.write(data); req.end();
+  });
+  limits.on = true;
+  try {
+    const invite = [];
+    for (let i = 0; i < 7; i++) invite.push(await hit('POST', '/api/quote/accept/invite', { token: 'nope', inviteEmail: 'a@b.co' }));
+    assert.deepEqual(invite.slice(0, 5), [400, 400, 400, 400, 400]);
+    assert.deepEqual(invite.slice(5), [429, 429]);
+    const accept = [];
+    for (let i = 0; i < 22; i++) accept.push(await hit('POST', '/api/quote/accept', { token: 'nope', paymentMethod: 'po' }));
+    assert.equal(accept.filter(c => c === 429).length, 2);
+  } finally { limits.on = false; }
 });

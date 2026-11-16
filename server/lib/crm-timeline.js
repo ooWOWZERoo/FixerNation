@@ -45,7 +45,9 @@ async function loadScope(conn, kind, id) {
 // "col IN (...)" for a list of ids, or a clause that matches nothing when the list is empty.
 function inList(col, ids) { return ids.length ? { sql: `${col} IN (${marks(ids)})`, params: [...ids] } : { sql: '1 = 0', params: [] }; }
 
-function buildSources(sc) {
+// `viewer` is { role, adminId }. File entries follow the Files rule (punch list S7): CRM Admin sees all, Sales sees files on deals they own or nobody owns, Read-only
+// sees none (a file name can be "W-9" or a contract). With no viewer the file entries are left out.
+function buildSources(sc, viewer) {
   const own = { contact: 'contact_id', account: 'account_id', opportunity: 'opportunity_id' }[sc.kind];
   const subj = (alias) => ({ sql: `${alias}.${own} = ?`, params: [sc.id] });
   const members = (col) => inList(col, sc.contactIds);
@@ -75,9 +77,14 @@ function buildSources(sc) {
     select: 'm.id, m.title, m.status, m.starts_at AS at, m.opportunity_id, au.username AS actor, so.name AS deal_name',
     map: r => ({ type: 'meeting', title: r.status === 'cancelled' ? 'Meeting cancelled' : 'Meeting', detail: trunc(r.title, 200), actor: r.actor, link: dealLink(r), ...dealBits(r), upcoming: r.status === 'scheduled' && String(r.at) > new Date().toISOString().slice(0, 19).replace('T', ' ') }) });
   const sf = subj('f');
-  add('file', { from: `crm_attachments f LEFT JOIN admin_users au ON au.id = f.uploaded_by_admin_id ${withDeal.replace('{t}', 'f')}`, where: sf.sql, params: sf.params, at: 'f.created_at', idCol: 'f.id',
+  const role = viewer && viewer.role;
+  if (role === 'admin' || role === 'sales') {
+  const fileWhere = role === 'admin' ? sf.sql : `${sf.sql} AND (f.opportunity_id IS NULL OR so.owner_admin_id IS NULL OR so.owner_admin_id = ?)`;
+  const fileParams = role === 'admin' ? sf.params : [...sf.params, viewer.adminId];
+  add('file', { from: `crm_attachments f LEFT JOIN admin_users au ON au.id = f.uploaded_by_admin_id ${withDeal.replace('{t}', 'f')}`, where: fileWhere, params: fileParams, at: 'f.created_at', idCol: 'f.id',
     select: 'f.id, f.original_name, f.created_at AS at, f.opportunity_id, au.username AS actor, so.name AS deal_name',
     map: r => ({ type: 'file', title: 'File added', detail: trunc(r.original_name, 160), actor: r.actor, link: dealLink(r), ...dealBits(r) }) });
+  }
 
   if (sc.kind !== 'contact') {
     const dealsIn = sc.kind === 'opportunity' ? { sql: 'h.opportunity_id = ?', params: [sc.id] } : deals('h.opportunity_id');
@@ -174,12 +181,12 @@ async function demoEvents(conn, sc) {
   }));
 }
 
-async function buildTimeline(conn, kind, id, { page = 1, size = 50 } = {}) {
+async function buildTimeline(conn, kind, id, { page = 1, size = 50, viewer = null } = {}) {
   const sc = await loadScope(conn, kind, id);
   if (!sc.ok) return null;
   const offset = (page - 1) * size;
   const want = offset + size;
-  const sources = buildSources(sc);
+  const sources = buildSources(sc, viewer);
   let total = 0;
   const events = [];
   for (const [order, s] of sources.entries()) {

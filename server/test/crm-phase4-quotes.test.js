@@ -352,7 +352,10 @@ test('DEAL PAGE: shows revisions, who accepted, the procurement rows and the quo
   assert.equal(quotes.find(q => q.id === v1).versionStatus, 'superseded');
   const q2 = quotes.find(q => q.id === v2);
   assert.equal(q2.revisionNumber, 2); assert.equal(q2.supersedesQuoteId, v1);
-  assert.equal(q2.acceptance.name, 'Dana Whitaker'); assert.equal(q2.acceptance.documentHash.length, 12, 'the hash is shortened for display');
+  assert.equal(q2.acceptance.name, null, 'S7: Read-only does not get the signer name'); assert.equal(q2.acceptance.title, null);
+  assert.equal(q2.acceptance.by, 'buyer'); assert.equal(q2.acceptance.documentHash.length, 12, 'the hash is shortened for display');
+  const asAdmin = (await call('GET', `/api/crm/opportunities/${deal}`, undefined, admin)).json.quotes.find(q => q.id === v2);
+  assert.equal(asAdmin.acceptance.name, 'Dana Whitaker'); assert.equal(asAdmin.acceptance.title, 'Business Manager');
   assert.ok(!JSON.stringify(r.json).includes('tok-'), 'no accept token is ever returned');
   assert.deepEqual(r.json.procurement.map(p => p.flags.map(f => f.key)), [['po_not_received', 'invoice_unpaid', 'license_pending']]);
   assert.equal(r.json.procurement[0].poNumber, 'PO-9');
