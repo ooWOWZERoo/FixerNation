@@ -142,6 +142,7 @@
     on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember); on('#newQuoteBtn', newQuote);
     var sel = document.getElementById('stageSel');
     if (sel) sel.addEventListener('change', function () { var to = sel.value; if (to) moveStage(to); });
+    root.querySelectorAll('[data-evidence]').forEach(function (b) { b.addEventListener('click', function () { showEvidence(Number(b.getAttribute('data-evidence'))); }); });
     root.querySelectorAll('[data-act=editm]').forEach(function (b) { b.addEventListener('click', function () { editMember(Number(b.getAttribute('data-cid'))); }); });
     root.querySelectorAll('[data-act=rmm]').forEach(function (b) { b.addEventListener('click', function () { removeMember(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
   }
@@ -213,10 +214,26 @@
 
   var QUOTE_EVENT = { created: 'Quote started', sent: 'Quote sent', superseded: 'Replaced by a newer quote', accepted: 'Quote accepted', page_opened: 'Quote page opened (approximate)' };
 
+  // Punch list S10: what the buyer was shown when they accepted. Looking is written to the audit log.
+  function showEvidence(quoteId) {
+    C.api('GET', '/api/crm/opportunities/' + id + '/quotes/' + quoteId + '/evidence').then(function (r) {
+      if (!r.ok) { C.toast(C.problem(r)); return; }
+      var e = r.data, s = e.snapshot;
+      var rows = s ? [['Quote', s.quoteNumber + ' (revision ' + s.revision + ')'], ['Product', s.product], ['Seats', s.seats], ['Extra seats', s.addonSeats], ['Term (years)', s.termYears], ['Price', C.money(s.amountCents, 'Not priced')], ['Good until', s.validUntil], ['School domain', s.schoolDomain], ['School', s.school], ['Terms version', s.termsVersion]] : [];
+      C.dialog({
+        title: 'Acceptance record, quote ' + (e.quoteNumber || e.quoteId),
+        body: '<p class="crm-small crm-muted">Accepted ' + esc(C.dateTime(e.acceptedAt)) + ' by ' + esc(e.signerName || 'unknown') + (e.signerTitle ? ', ' + esc(e.signerTitle) : '') + (e.recordedBy === 'staff' ? ' (recorded by staff for the customer)' : '') + '. Looking at this record is written to the audit log.</p>' +
+          (s ? '<dl class="crm-kv">' + rows.map(function (x) { return '<dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1] === null || x[1] === undefined || x[1] === '' ? 'Not set' : x[1]) + '</dd>'; }).join('') + '</dl>' +
+              '<p class="crm-small ' + (e.hashMatches ? 'crm-muted' : 'crm-flag') + '">' + (e.hashMatches ? 'The stored text still matches the stored record code.' : 'The stored text does NOT match the stored record code. Keep this screen and tell the owner.') + '</p>'
+            : '<p class="crm-small">The text of this quote was not stored when it was accepted (it was accepted before records kept it), so only the record code ' + esc(String(e.documentHash || '').slice(0, 12)) + ' exists.</p>')
+      });
+    });
+  }
+
   function quoteItem(q) {
     var rev = q.revisionNumber > 1 ? ' · revision ' + esc(q.revisionNumber) : '';
     var pill = q.versionStatus === 'superseded' ? '<span class="a-pill a-pill-neutral" title="A newer revision was sent. This link no longer accepts.">Replaced</span>' : '<span class="a-pill a-pill-neutral">' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</span>';
-    var ev = q.acceptance ? '<div class="crm-small crm-muted">Accepted' + (q.acceptance.name ? ' by ' + esc(q.acceptance.name) : '') + (q.acceptance.name && q.acceptance.title ? ', ' + esc(q.acceptance.title) : '') + ' on ' + esc(C.dateTime(q.acceptance.at)) + (q.acceptance.by === 'staff' ? ' (recorded by staff for the customer)' : '') + (q.acceptance.documentHash ? ' · record ' + esc(q.acceptance.documentHash) : '') + '</div>' : '';
+    var ev = q.acceptance ? '<div class="crm-small crm-muted">Accepted' + (q.acceptance.name ? ' by ' + esc(q.acceptance.name) : '') + (q.acceptance.name && q.acceptance.title ? ', ' + esc(q.acceptance.title) : '') + ' on ' + esc(C.dateTime(q.acceptance.at)) + (q.acceptance.by === 'staff' ? ' (recorded by staff for the customer)' : '') + (q.acceptance.documentHash ? ' · record ' + esc(q.acceptance.documentHash) : '') + (C.can('audit_view') ? ' · <button type="button" class="crm-link" data-evidence="' + esc(q.id) + '">Show the full record</button>' : '') + '</div>' : '';
     return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + rev + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div>' + ev + '</div>' + pill + '</li>';
   }
 

@@ -332,6 +332,9 @@ router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => 
     for (const col of ['name', 'company', 'state', 'phone']) {
       if (!String(into[col] || '').trim() && String(from[col] || '').trim()) { fill.push(`${col} = ?`); vals.push(from[col]); }
     }
+    // Punch list S14: a person who unsubscribed (or whose address bounced) on the duplicate must not be mailed because the row we keep still says Subscribed. The more
+    // restrictive status wins; a kept Unsubscribed is never turned back on.
+    if (String(into.status || 'Subscribed') === 'Subscribed' && from.status && from.status !== 'Subscribed') { fill.push('status = ?'); vals.push(from.status); }
     if (!into.assigned_admin_id && from.assigned_admin_id) { fill.push('assigned_admin_id = ?'); vals.push(from.assigned_admin_id); }
     if (from.last_contacted_at && (!into.last_contacted_at || String(from.last_contacted_at) > String(into.last_contacted_at))) { fill.push('last_contacted_at = ?'); vals.push(from.last_contacted_at); }
     // Phase 6: how they found us. The earlier first touch and the newer latest touch survive (nothing is guessed, and a column that is not there yet changes nothing).
@@ -356,7 +359,8 @@ router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => 
   }
   await crmAudit(req, {
     action: 'crm_contact_merged', entityType: 'crm_contact', entityId: intoId,
-    prev: { removedId: fromId, name: from.name, email: from.email, classification: from.crm_classification, status: from.status },
+    // Punch list S12: ids and labels only. The removed person's name and email are not copied into the audit log, so erasing a person can finish the job.
+    prev: { removedId: fromId, classification: from.crm_classification, status: from.status },
     next: { keptId: intoId }, reason: text((req.body || {}).reason, 255),
   });
   await cls.reconcileContact(pool, intoId, { actorAdminId: req.crm.adminId });

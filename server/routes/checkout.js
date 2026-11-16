@@ -563,6 +563,12 @@ async function webhookHandler(req, res) {
         if (won) {
           if (purchaseId) {
             await connection.query("UPDATE purchases SET payment_status = 'paid', stripe_session_id = ? WHERE id = ?", [session.id, purchaseId]);
+            // Punch list S15: the term runs from the day the money arrived, not from the day the buyer first clicked Card (the purchase was made then, with dates from that day).
+            const [[pp]] = await connection.query('SELECT license_duration_days, effective_date FROM purchases WHERE id = ?', [purchaseId]);
+            if (pp && Number(pp.license_duration_days) > 0 && pp.effective_date) {
+              const start = new Date(); const end = new Date(); end.setDate(end.getDate() + Number(pp.license_duration_days));
+              await connection.query('UPDATE purchases SET effective_date = ?, expiration_date = ? WHERE id = ?', [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10), purchaseId]);
+            }
           }
         } else {
           // Already accepted. A repeat of the SAME payment (this session already marks the purchase paid) is a harmless replay. Anything else is
@@ -570,7 +576,11 @@ async function webhookHandler(req, res) {
           const [paid] = purchaseId
             ? await connection.query("SELECT id FROM purchases WHERE id = ? AND payment_status = 'paid' AND stripe_session_id = ?", [purchaseId, session.id])
             : [[]];
-          duplicate = !paid.length;
+          // Punch list S15: a retry of a payment this server already recorded or already alerted on is a replay too, even when no purchase could be found for it (the old test
+          // looked only at the purchase, so every Stripe retry of such a payment raised a new alert).
+          const [seen] = await connection.query("SELECT id FROM school_audit_log WHERE entity_type = 'quote_payment' AND entity_id = ? AND action IN ('quote_card_payment_recorded', 'payment_on_accepted_quote') AND new_value LIKE ?",
+            [qt.id, `%"stripeSessionId":"${String(session.id).replace(/[^A-Za-z0-9_]/g, '')}"%`]);
+          duplicate = !paid.length && !seen.length;
         }
         await connection.commit();
       } catch (err) {
@@ -604,6 +614,8 @@ async function webhookHandler(req, res) {
       }
 
       if (won) {
+        // The winning delivery leaves a record of the session it paid, so a later retry of the same payment is recognised as a replay (punch list S15).
+        await audit(pool, { actorType: 'system', action: 'quote_card_payment_recorded', entityType: 'quote_payment', entityId: qt.id, newValue: { stripeSessionId: session.id, purchaseId } });
         await crmHooks.quoteAccepted(qt.id, 'card'); // quote event, and its open deal moves to Won (never throws)
         // A newer revision was sent after this checkout was opened. The payment is real and the quote is accepted; staff are told so they can reconcile.
         if (qt.version_status === 'superseded') {

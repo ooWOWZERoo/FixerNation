@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Audit Log</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=3">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=35"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Audit Log</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+// Punch list S11: the Customer Hub's own audit rows, newest first. CRM Admin only; read only; no export. Values are shown as stored.
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var state = { action: '', entityType: '', actor: '', from: '', to: '', page: 1 };
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    if (!C.can('audit_view')) { root.innerHTML = '<div class="a-card"><div class="a-empty"><div class="big" aria-hidden="true">🔒</div><p>Only a CRM Admin can read the audit log.</p></div></div>'; return; }
+    C.api('GET', '/api/crm/audit/actions').then(function (r) { draw(r.ok ? r.data.actions : []); load(); });
+  });
+
+  function draw(actions) {
+    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Who changed what</h2></div>' +
+      '<p class="crm-small crm-muted" style="margin:0 0 12px;">Every change to roles, deals, quotes, files and labels that the Customer Hub records, newest first. You can look but not change or download anything here. Some rows hold names or email addresses exactly as they were at the time.</p>' +
+      '<div class="crm-filters">' +
+      C.field('What happened', '<select id="fAction" class="a-filter-select"><option value="">Anything</option>' + actions.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + '</option>'; }).join('') + '</select>', '', 'fAction') +
+      C.field('Who', '<input type="search" id="fActor" maxlength="100" placeholder="Name or email">', '', 'fActor') +
+      C.field('From', '<input type="date" id="fFrom">', '', 'fFrom') + C.field('To', '<input type="date" id="fTo">', '', 'fTo') + '</div></div>' +
+      '<div id="auditList"></div><div id="auditPager"></div>';
+    var go = C.debounce(function () { state.page = 1; load(); }, 300);
+    root.querySelector('#fAction').addEventListener('change', function (e) { state.action = e.target.value; go(); });
+    root.querySelector('#fActor').addEventListener('input', function (e) { state.actor = e.target.value; go(); });
+    root.querySelector('#fFrom').addEventListener('change', function (e) { state.from = e.target.value; go(); });
+    root.querySelector('#fTo').addEventListener('change', function (e) { state.to = e.target.value; go(); });
+  }
+
+  function pretty(v) { return v === null || v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v, null, 2); }
+
+  function load() {
+    var list = document.getElementById('auditList');
+    C.loading(list);
+    C.api('GET', '/api/crm/audit' + C.qstr({ action: state.action, actor: state.actor, from: state.from, to: state.to, page: state.page, pageSize: 50 })).then(function (r) {
+      if (!r.ok) { C.errorBox(list, C.problem(r)); return; }
+      var d = r.data;
+      if (!d.entries.length) { list.innerHTML = '<div class="a-card">' + C.empty('Nothing matches.', '📜') + '</div>'; document.getElementById('auditPager').innerHTML = ''; return; }
+      list.innerHTML = '<div class="a-card"><div class="mc-table-scroll"><table class="a-table" aria-label="Audit log"><thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">About</th><th scope="col">Details</th></tr></thead><tbody>' +
+        d.entries.map(function (e) {
+          var about = e.entityType ? esc(e.entityType.replace(/^crm_/, '')) + (e.entityId ? ' #' + esc(e.entityId) : '') : '';
+          var detail = (e.reason ? '<div>' + esc(e.reason) + '</div>' : '') +
+            (e.before !== null || e.after !== null ? '<details><summary class="crm-small">Before and after</summary>' + (e.before !== null ? '<div class="crm-small crm-muted">Before</div><pre class="crm-small">' + esc(pretty(e.before)) + '</pre>' : '') + (e.after !== null ? '<div class="crm-small crm-muted">After</div><pre class="crm-small">' + esc(pretty(e.after)) + '</pre>' : '') + '</details>' : '');
+          return '<tr><td>' + esc(C.dateTime(e.at)) + '</td><td>' + esc(e.actor || 'Unknown') + '</td><td>' + esc(e.action) + '</td><td>' + about + '</td><td>' + detail + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>';
+      C.pager(document.getElementById('auditPager'), d, function (p) { state.page = p; load(); });
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=8"></script>
+</body>
+</html>

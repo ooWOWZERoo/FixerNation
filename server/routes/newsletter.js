@@ -13,6 +13,8 @@ const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal')
 const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 const { describeConsequences, consequencesText, hasRoles, closeAccount } = require('../lib/account-closing');
 const { dealCountForContact, workItemCountForContact } = require('../lib/crm-ownership');
+const { loadCrmRole, can } = require('../lib/crm-permissions');
+const { audit } = require('../lib/audit');
 const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch from the fn_attr cookie, advisory only
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
@@ -277,13 +279,24 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
       error: `This contact is on ${nDeals} sales deal${nDeals === 1 ? '' : 's'}. Take them off the deal${nDeals === 1 ? '' : 's'} first.`,
     });
   }
-  // Sales CRM phase 3: notes, tasks, files and meetings written on this contact would be deleted with it. Merge the person into another contact (which moves them) or clear them first.
+  // Sales CRM phase 3: notes, tasks, files and meetings written on this contact would be deleted with it. By default that is refused (merge the person into another contact,
+  // which moves them, or clear them first). Punch list S12: a CRM Admin who really needs the person gone (an erasure request) confirms with `confirmEraseCrmItems: true`,
+  // and the items go with them: the database rows by the foreign keys, the stored files from disk here. Only items filed on THIS contact; anything on a deal or an
+  // account that merely mentions them stays.
   const nWork = await workItemCountForContact(pool, req.params.id);
+  let erasedFiles = [];
   if (nWork) {
-    return res.status(409).json({
-      code: 'contact_has_crm_items', items: nWork,
-      error: `This contact has CRM notes, tasks, files or meetings on record (${nWork} in all). Deleting the contact would erase them. Merge the contact into another one in the Customer Hub, or remove those first.`,
-    });
+    const wants = !!(req.body && req.body.confirmEraseCrmItems === true);
+    if (!wants) {
+      return res.status(409).json({
+        code: 'contact_has_crm_items', items: nWork,
+        error: `This contact has CRM notes, tasks, files or meetings on record (${nWork} in all). Deleting the contact would erase them. Merge the contact into another one in the Customer Hub, or remove those first. A CRM Admin can erase them together with the person.`,
+      });
+    }
+    const role = await loadCrmRole(req.user.userId);
+    if (!can(role, 'erase')) return res.status(403).json({ code: 'erase_needs_crm_admin', error: 'Only a CRM Admin can erase a person together with their CRM notes, tasks, files and meetings.' });
+    const [files] = await pool.query('SELECT stored_name FROM crm_attachments WHERE contact_id = ?', [req.params.id]);
+    erasedFiles = files.map(f => f.stored_name);
   }
   // The CRM is the record of who is on the platform: deleting a contact that has a sign-in account closes the account
   // (lib/account-closing.js, docs/reference/crm-record-of-truth-requirements.md rule B). Staff confirm first when the account holds a
@@ -307,6 +320,8 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
   try {
     await connection.beginTransaction();
     if (closing) await closeAccount(connection, account.id, { actorType: 'admin', actorId: req.user && req.user.userId, reason: 'crm_contact_deleted' });
+    // Erased on purpose (the foreign keys would remove them too; naming them here makes the erasure explicit and does not depend on the keys being in force).
+    if (nWork) for (const table of ['crm_notes', 'crm_tasks', 'crm_attachments', 'crm_appointments']) await connection.query(`DELETE FROM ${table} WHERE contact_id = ?`, [req.params.id]);
     await connection.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
     await connection.commit();
   } catch (err) {
@@ -315,7 +330,13 @@ router.delete('/contacts/:id', requireAuth, async (req, res) => {
   } finally {
     connection.release();
   }
-  res.json({ ok: true, accountClosed: closing });
+  if (nWork) {
+    const F = require('../lib/crm-files');
+    for (const name of erasedFiles) { const full = F.pathFor(name); if (full) { try { require('fs').unlinkSync(full); } catch { /* already gone */ } } }
+    // Counts only: no name and no email goes into the log.
+    await audit(pool, { actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username, action: 'crm_contact_erased_with_items', entityType: 'crm_contact', entityId: Number(req.params.id), newValue: { items: nWork, files: erasedFiles.length } });
+  }
+  res.json({ ok: true, accountClosed: closing, erasedItems: nWork });
 });
 
 // Ad-hoc admin-triggered resend of the site-account verification email,

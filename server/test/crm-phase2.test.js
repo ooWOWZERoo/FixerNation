@@ -192,7 +192,7 @@ test('CONTACT MERGE: CRM Admin only; moves links, quotes and lists, fills blanks
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(get('SELECT id FROM newsletter_contacts WHERE id = ?', dupe), undefined, 'the duplicate is gone');
   assert.equal(get('SELECT company, status FROM newsletter_contacts WHERE id = ?', keep).company, 'School J', 'a blank detail is filled from the duplicate');
-  assert.equal(get('SELECT status FROM newsletter_contacts WHERE id = ?', keep).status, 'Subscribed', 'the kept contact subscription is untouched');
+  assert.equal(get('SELECT status FROM newsletter_contacts WHERE id = ?', keep).status, 'Unsubscribed', 'punch list S14: the duplicate had unsubscribed, so the kept contact does too (the more restrictive status wins)');
   assert.deepEqual(all('SELECT account_id FROM crm_account_contacts WHERE contact_id = ? ORDER BY account_id', keep).map(x => x.account_id), [acct, acct2]);
   assert.equal(get('SELECT primary_contact_id FROM crm_opportunities WHERE id = ?', deal).primary_contact_id, keep);
   assert.equal(all('SELECT * FROM crm_opportunity_contacts WHERE opportunity_id = ? AND contact_id = ?', deal, keep).length, 1);
@@ -200,7 +200,8 @@ test('CONTACT MERGE: CRM Admin only; moves links, quotes and lists, fills blanks
   assert.deepEqual(all('SELECT group_id FROM contact_group_members WHERE contact_id = ? ORDER BY group_id', keep).map(x => x.group_id), [7, 8]);
   const a = audits('crm_contact_merged');
   assert.equal(a.length, 1);
-  assert.match(a[0].prev_value, /jo\.old@school-j\.org/);
+  assert.doesNotMatch(a[0].prev_value, /jo\.old@school-j\.org|Jo K/, 'punch list S12: the removed person\'s email and name are not copied into the audit log');
+  assert.equal(JSON.parse(a[0].prev_value).removedId, dupe, 'the id is, so the row still says which record went');
   assert.equal(env.classOf(db, keep), 'prospect', 'the merged quote makes the kept contact a Prospect');
 });
 

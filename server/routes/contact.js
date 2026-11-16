@@ -145,9 +145,11 @@ router.post('/quote', limiter({ name: 'contact-quote', windowMs: 3600000, max: 1
     }
   }
 
+  // Punch list S8: asking for a quote is not consent to the newsletter, and anyone can type another person's address into the form, so a NEW contact starts Unsubscribed;
+  // an existing contact's subscription is never changed here (the ON DUPLICATE KEY clause leaves status alone).
   await pool.query(
     `INSERT INTO newsletter_contacts (name, email, company, source, status)
-     VALUES (?, ?, ?, 'Quote Request', 'Subscribed')
+     VALUES (?, ?, ?, 'Quote Request', 'Unsubscribed')
      ON DUPLICATE KEY UPDATE
        name    = IF(name    = '' OR name    IS NULL, VALUES(name),    name),
        company = IF(company = '' OR company IS NULL, VALUES(company), company)`,
@@ -253,7 +255,7 @@ router.post('/quotes', requireAuth, requireCrmRole('write'), async (req, res) =>
 
   await pool.query(
     `INSERT INTO newsletter_contacts (name, email, company, source, status)
-     VALUES (?, ?, ?, 'Sales Outreach', 'Subscribed')
+     VALUES (?, ?, ?, 'Sales Outreach', 'Unsubscribed')
      ON DUPLICATE KEY UPDATE
        name    = IF(name    = '' OR name    IS NULL, VALUES(name),    name),
        company = IF(company = '' OR company IS NULL, VALUES(company), company)`,

@@ -75,6 +75,7 @@ const crmMeetingsRoutes = require('./routes/crm-meetings');
 const crmChecklistsRoutes = require('./routes/crm-checklists');
 const crmAttentionRoutes = require('./routes/crm-attention');
 const crmTimelineRoutes = require('./routes/crm-timeline');
+const crmAuditRoutes = require('./routes/crm-audit');
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not set — check that server/.env exists and is being loaded.');
@@ -194,6 +195,7 @@ app.use('/api/crm/meetings', crmMeetingsRoutes);
 app.use('/api/crm/checklists', crmChecklistsRoutes);
 app.use('/api/crm/attention', crmAttentionRoutes);
 app.use('/api/crm/timeline', crmTimelineRoutes);
+app.use('/api/crm/audit', crmAuditRoutes);
 app.use('/api/crm', crmSettingsRoutes);
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
@@ -204,6 +206,9 @@ const uploadsPath = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 // Sales CRM files live in uploads/crm-private and are NEVER a public URL: they are read only through GET /api/crm/files/:id/download (lib/crm-files.js).
 // This answers first, so express.static below can never serve them; .htaccess refuses the same path for the web server's own static handling.
 app.use('/uploads/crm-private', (req, res) => res.status(404).type('text/plain').send('Not found'));
+// Punch list S9: the line above only matches the path as typed, so an encoded spelling (/uploads/%63rm-private/...) or a different case would skip it. This one judges the
+// decoded, normalized path before express.static sees it.
+app.use('/uploads', (req, res, next) => (require('./lib/crm-files').isPrivatePath(req.path) ? res.status(404).type('text/plain').send('Not found') : next()));
 app.use('/uploads', express.static(uploadsPath));
 
 // In development, also serve the static site from the repo root so the whole

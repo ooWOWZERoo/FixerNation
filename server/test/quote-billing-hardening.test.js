@@ -19,7 +19,7 @@ const db = new DatabaseSync(':memory:');
 db.exec(`
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, company TEXT, street TEXT, city TEXT, state TEXT, zip TEXT,
   ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT, source TEXT, status TEXT);
-CREATE TABLE quote_requests (id INTEGER PRIMARY KEY, email TEXT, first_name TEXT, last_name TEXT, school TEXT, quote_number TEXT, accept_token TEXT,
+CREATE TABLE quote_requests (id INTEGER PRIMARY KEY, email TEXT, quote_sent_at TEXT DEFAULT '2026-01-01 00:00:00', first_name TEXT, last_name TEXT, school TEXT, quote_number TEXT, accept_token TEXT,
   quote_valid_until TEXT, accepted_at TEXT, accepted_payment_method TEXT, status TEXT, quoted_product_id INTEGER, quoted_product_name TEXT,
   quoted_seat_count INTEGER, quoted_amount_cents INTEGER, quoted_school_domain TEXT, quoted_term_years INTEGER,
   bill_to_street TEXT, bill_to_city TEXT, bill_to_state TEXT, bill_to_zip TEXT, ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT,
@@ -533,4 +533,90 @@ test('S6: the quote-link routes are rate limited per address (invite 5 an hour, 
     for (let i = 0; i < 22; i++) accept.push(await hit('POST', '/api/quote/accept', { token: 'nope', paymentMethod: 'po' }));
     assert.equal(accept.filter(c => c === 429).length, 2);
   } finally { limits.on = false; }
+});
+
+// ---- Punch list S10, S13, S15 ----
+test('S15: a quote that was never sent cannot be accepted, not even for the customer by staff', async () => {
+  const q = makeQuote();
+  db.prepare('UPDATE quote_requests SET quote_sent_at = NULL WHERE id = ?').run(q.id);
+  await assert.rejects(quoteAccept.acceptQuoteViaPO(q.id, 'PO-D', undefined, { signer: { name: 'Dana Whitaker', title: null }, recordedBy: 'staff' }), /never sent/);
+  assert.equal(quoteRow(q.id).accepted_at, null);
+  assert.equal(count('purchases', 'quote_id = ?', q.id), 0);
+});
+
+test('S15: a revision sent after the buyer\'s page loaded blocks the PO claim itself, and the buyer is told it was replaced', async () => {
+  const q = makeQuote();
+  // The claim statement carries the guard, so a revision that lands between the first read and the claim cannot be accepted.
+  const src = require('node:fs').readFileSync(path.join(SERVER, 'routes/quote-accept.js'), 'utf8');
+  assert.match(src, /WHERE id = \? AND accepted_at IS NULL AND version_status <> 'superseded'/);
+  // And the same end state by hand: superseded just before the claim -> refused with "superseded", nothing made.
+  db.prepare("UPDATE quote_requests SET version_status = 'superseded' WHERE id = ?").run(q.id);
+  const r = await post('/api/quote/accept', { token: q.token, paymentMethod: 'po', poNumber: 'PO-R' });
+  assert.equal(r.status, 400); assert.equal(r.json.error, 'superseded');
+  assert.equal(count('purchases', 'quote_id = ?', q.id), 0);
+});
+
+test('S15: a Stripe retry of a payment that found no purchase raises no new alert, while a different session still does', async () => {
+  resetNoise();
+  const q = makeQuote();
+  const noPurchase = { id: 'cs_orphan', amount_total: 50000, metadata: { type: 'quote_acceptance', quoteToken: q.token, purchaseId: '0' } };
+  const dupAlerts = () => alerts.filter(a => /already-accepted/.test(a.subject)).length;
+  await deliver(noPurchase);                       // wins the claim, no purchase to mark paid
+  assert.ok(quoteRow(q.id).accepted_at);
+  await deliver(noPurchase); await deliver(noPurchase); // Stripe retries
+  assert.equal(dupAlerts(), 0, 'the same payment, retried, is not a "duplicate payment"');
+  await deliver({ ...noPurchase, id: 'cs_second' });    // a genuinely different payment
+  assert.equal(dupAlerts(), 1);
+  await deliver({ ...noPurchase, id: 'cs_second' });    // and its retry
+  assert.equal(dupAlerts(), 1, 'still one alert for the second payment');
+});
+
+test('S15: the license term starts the day the card payment arrives, not the day Card was first clicked', async () => {
+  const q = makeQuote();
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card', signerName: 'Dana Whitaker' });
+  const pid = db.prepare('SELECT id FROM purchases WHERE quote_id = ?').get(q.id).id;
+  db.prepare("UPDATE purchases SET license_duration_days = 365, effective_date = '2025-01-01', expiration_date = '2026-01-01' WHERE id = ?").run(pid); // as made on a click long ago
+  await deliver(sessionFor(q, pid, 'cs_dates'));
+  const p = db.prepare('SELECT effective_date e, expiration_date x FROM purchases WHERE id = ?').get(pid);
+  const today = new Date().toISOString().slice(0, 10);
+  const end = new Date(); end.setDate(end.getDate() + 365);
+  assert.equal(p.e, today); assert.equal(p.x, end.toISOString().slice(0, 10));
+  // A purchase that has no term (no duration) is left alone.
+  const q2 = makeQuote();
+  await post('/api/quote/accept', { token: q2.token, paymentMethod: 'card', signerName: 'Dana Whitaker' });
+  const pid2 = db.prepare('SELECT id FROM purchases WHERE quote_id = ?').get(q2.id).id;
+  db.prepare("UPDATE purchases SET license_duration_days = NULL, effective_date = NULL, expiration_date = NULL WHERE id = ?").run(pid2);
+  await deliver(sessionFor(q2, pid2, 'cs_nodates'));
+  assert.deepEqual({ ...db.prepare('SELECT effective_date e, expiration_date x FROM purchases WHERE id = ?').get(pid2) }, { e: null, x: null });
+});
+
+test('S13: replacing the signer on an unpaid quote is audited with the old and new name; the same name again is not', async () => {
+  const q = makeQuote();
+  const n = () => db.prepare("SELECT * FROM school_audit_log WHERE action = 'quote_signer_changed_before_payment' AND entity_id = ?").all(q.id);
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card', signerName: 'Dana Whitaker' });
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card', signerName: 'Dana Whitaker' });
+  assert.equal(n().length, 0);
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card', signerName: 'Someone Else' });
+  const rows = n();
+  assert.equal(rows.length, 1);
+  assert.equal(JSON.parse(rows[0].prev_value).name, 'Dana Whitaker'); assert.equal(JSON.parse(rows[0].new_value).name, 'Someone Else');
+  assert.equal(evidenceOf(q.id).name, 'Someone Else', 'the change itself is allowed (a typo can be fixed)');
+});
+
+test('S10: the exact text the buyer was shown is stored beside the hash when the column exists, and the hash is of that text', async () => {
+  const { evidenceColumns, resetSnapshotProbe, sha256 } = require(path.join(SERVER, 'lib/quote-evidence.js'));
+  const A = quoteRow(makeQuote().id);
+  resetSnapshotProbe();
+  const before = await evidenceColumns(fakePool, { ...A, quote_number: 'X' }, { name: 'Dana Whitaker', title: null }, 'buyer');
+  assert.ok(!('acceptance_document_snapshot' in before), 'a server whose alter script has not run records the hash only, and keeps working');
+  db.exec('ALTER TABLE quote_requests ADD COLUMN acceptance_document_snapshot TEXT');
+  resetSnapshotProbe();
+  const after = await evidenceColumns(fakePool, { ...A, quote_number: 'X', quoted_amount_cents: 61234 }, { name: 'Dana Whitaker', title: null }, 'buyer');
+  assert.equal(sha256(after.acceptance_document_snapshot), after.acceptance_document_hash);
+  assert.equal(JSON.parse(after.acceptance_document_snapshot).amountCents, 61234, 'a later price edit can be disproved from this text');
+  // And a real acceptance stores it.
+  const q = makeQuote();
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'po', poNumber: 'PO-SNAP', signerName: 'Dana Whitaker' });
+  const row = quoteRow(q.id);
+  assert.equal(sha256(row.acceptance_document_snapshot), row.acceptance_document_hash);
 });

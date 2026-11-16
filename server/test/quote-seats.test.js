@@ -41,7 +41,7 @@ test('an Add-On Seats tab quote is recognised from its saved numbers; an Annual 
 const SERVER = path.join(__dirname, '..');
 const db = new DatabaseSync(':memory:');
 db.exec(`
-CREATE TABLE quote_requests (id INTEGER PRIMARY KEY, email TEXT, first_name TEXT, last_name TEXT, school TEXT, quote_number TEXT,
+CREATE TABLE quote_requests (id INTEGER PRIMARY KEY, email TEXT, quote_sent_at TEXT DEFAULT '2026-01-01 00:00:00', version_status TEXT NOT NULL DEFAULT 'current', first_name TEXT, last_name TEXT, school TEXT, quote_number TEXT,
   quote_valid_until TEXT, accepted_at TEXT, accepted_payment_method TEXT, status TEXT, quoted_product_id INTEGER, quoted_product_name TEXT,
   quoted_seat_count INTEGER, quoted_addon_seats INTEGER, quoted_amount_cents INTEGER, quoted_school_domain TEXT, quoted_term_years INTEGER);
 `);

@@ -84,7 +84,7 @@ const express = require('express');
 const mounts = {
   accounts: '/api/crm/accounts', contacts: '/api/crm/contacts', opportunities: '/api/crm/opportunities', quotes: '/api/crm/quotes', overview: '/api/crm/overview', reports: '/api/crm/reports',
   tasks: '/api/crm/tasks', notes: '/api/crm/notes', files: '/api/crm/files', meetings: '/api/crm/meetings', checklists: '/api/crm/checklists', attention: '/api/crm/attention',
-  timeline: '/api/crm/timeline', settings: '/api/crm',
+  timeline: '/api/crm/timeline', audit: '/api/crm/audit', settings: '/api/crm',
 };
 const { server, call } = env.listen([...routers.map(([f, r]) => [mounts[f.replace(/^crm-|\.js$/g, '')] || '/api/crm', r]), ['/api/contact', require(path.join(ROUTES_DIR, 'contact.js'))]]);
 test.after(() => server.close());

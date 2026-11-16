@@ -177,11 +177,22 @@ test('DAILY JOB DIGEST: only when switched on, one email per owner, each item me
   assert.ok(get('SELECT emailed_at FROM crm_attention_events WHERE subject_id = ? AND rule_key = ?', fresh2, 'next_step_overdue').emailed_at);
   const again = await A.runDaily(pool, { apply: true, now, sendDigest: async (to, items) => { mails.push({ to, n: items.length }); } });
   assert.equal(again.fresh, 0); assert.equal(mails.length, 1, 'a second run sends nothing');
-  // A failed send leaves the item un-emailed, but it was still only "seen" once.
+  // Punch list S14: a failed send takes the item back out of "first seen", so the next run finds it new and mails it (it used to be marked seen and never mailed).
   const fresh3 = deal({ name: 'Third', owner: sales, nextStep: 'x', due: at(-8) });
   const failed = await A.runDaily(pool, { apply: true, now, sendDigest: async () => { throw new Error('smtp down'); } });
   assert.equal(failed.fresh, 1); assert.equal(failed.digests, 0);
-  assert.equal(get('SELECT emailed_at FROM crm_attention_events WHERE subject_id = ? AND rule_key = ?', fresh3, 'next_step_overdue').emailed_at, null);
+  assert.equal(get('SELECT emailed_at FROM crm_attention_events WHERE subject_id = ? AND rule_key = ?', fresh3, 'next_step_overdue'), undefined, 'no "seen" row is left behind');
+  const retried = await A.runDaily(pool, { apply: true, now, sendDigest: async (to, items) => { mails.push({ to, n: items.length }); } });
+  assert.equal(retried.fresh, 1); assert.equal(retried.digests, 1);
+  assert.deepEqual(mails[1], { to: 'rep@example.com', n: 1 }, 'the item that failed is mailed on the next run');
+  assert.ok(get('SELECT emailed_at FROM crm_attention_events WHERE subject_id = ? AND rule_key = ?', fresh3, 'next_step_overdue').emailed_at);
+  // An owner with no email address yet: nothing is sent and the item is not used up either.
+  db.prepare("UPDATE admin_users SET email = NULL WHERE id = ?").run(sales);
+  const fresh4 = deal({ name: 'Fourth', owner: sales, nextStep: 'y', due: at(-9) });
+  const noAddr = await A.runDaily(pool, { apply: true, now, sendDigest: async () => { throw new Error('should not be called'); } });
+  assert.equal(noAddr.digests, 0);
+  assert.equal(get('SELECT emailed_at FROM crm_attention_events WHERE subject_id = ? AND rule_key = ?', fresh4, 'next_step_overdue'), undefined);
+  db.prepare("UPDATE admin_users SET email = 'rep@example.com' WHERE id = ?").run(sales);
 });
 
 test('CRON FILES: the job is scheduled once a day, does nothing while the Hub is off, and the setup script lists it', () => {

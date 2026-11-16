@@ -559,13 +559,13 @@ async function toggleStatus(id) {
 
 async function deleteContact(id) {
   if (!confirm('Remove this contact? If they have a sign-in account, it will be closed: they are signed out and cannot sign in again until staff reopen it.')) return;
-  let confirmClose = false;
+  let confirmClose = false, confirmErase = false;
   for (;;) {
     const r = await fetch(`/api/newsletter/contacts/${id}`, {
       method: 'DELETE',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(confirmClose ? { confirmClose: true } : {}),
+      body: JSON.stringify(Object.assign({}, confirmClose ? { confirmClose: true } : {}, confirmErase ? { confirmEraseCrmItems: true } : {})),
     });
     if (fnHandleUnauthorized(r)) return;
     if (r.ok) {
@@ -579,6 +579,12 @@ async function deleteContact(id) {
     if (err.code === 'confirm_close' && !confirmClose) {
       if (!confirm(err.error + '\n\nClose this account and remove the contact?')) return;
       confirmClose = true;
+      continue;
+    }
+    // Punch list S12: CRM notes, tasks, files or meetings are filed on this person. A CRM Admin may erase them with the person; anyone else is told why not.
+    if (err.code === 'contact_has_crm_items' && !confirmErase) {
+      if (!confirm(err.error + '\n\nErase this person AND those ' + err.items + ' CRM items? This cannot be undone. (CRM Admin only.)')) return;
+      confirmErase = true;
       continue;
     }
     alert(err.error || 'Could not remove this contact');

@@ -198,10 +198,13 @@ async function runDaily(conn, { apply, now, sendDigest }) {
   if (apply && sendDigest && fresh.length) {
     const owners = new Map();
     for (const it of fresh) if (it.ownerAdminId) { if (!owners.has(it.ownerAdminId)) owners.set(it.ownerAdminId, []); owners.get(it.ownerAdminId).push(it); }
+    // Punch list S14: an item whose digest could not go out (mail down, the owner has no address yet) is taken back out of "first seen", so the next daily run finds it new
+    // again and tries again. Before this, it was marked seen and never mailed. Items seen while the digest was OFF are not touched, so switching it on never floods anyone.
+    const unsee = (list) => Promise.all(list.map(it => conn.query('DELETE FROM crm_attention_events WHERE rule_key = ? AND subject_type = ? AND subject_id = ? AND fingerprint = ? AND emailed_at IS NULL', [it.ruleKey, it.subjectType, it.subjectId, it.fingerprint || ''])));
     for (const [adminId, list] of owners) {
       const [[admin]] = await conn.query('SELECT email FROM admin_users WHERE id = ?', [adminId]);
-      if (!admin || !admin.email) continue;
-      try { await sendDigest(admin.email, list); } catch (err) { console.error(`Digest not sent to one owner: ${err.message}`); continue; }
+      if (!admin || !admin.email) { await unsee(list); continue; }
+      try { await sendDigest(admin.email, list); } catch (err) { console.error(`Digest not sent to one owner: ${err.message}`); await unsee(list); continue; }
       for (const it of list) await conn.query('UPDATE crm_attention_events SET emailed_at = ? WHERE rule_key = ? AND subject_type = ? AND subject_id = ? AND fingerprint = ?', [now, it.ruleKey, it.subjectType, it.subjectId, it.fingerprint || '']);
       digests++;
     }

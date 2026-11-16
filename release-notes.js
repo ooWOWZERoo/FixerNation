@@ -35,6 +35,14 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('quote-request-newsletter', false, '2026-11-15', '', 'Asking for a quote no longer signs you up for our newsletter', ['teachers', 'school', 'district'],
+      'Asking for a quote doesn\'t add you to the newsletter, and a license paid by card now starts the day we get your payment.',
+      'When you ask for a quote, we use your details to answer you and nothing else. You only get our newsletter if you sign up for it yourself. If you pay for a quote by card, your license term now starts the day your payment arrives, not the day you first pressed the card button.',
+      { changed: [
+        item('Quote requests and the newsletter', ['teachers', 'school', 'district'], 'Asking for a quote no longer adds you to the newsletter list.'),
+        item('Card payments and license dates', ['school', 'district'], 'A license paid by card starts on the day we receive the payment.')
+      ], know: ['People who are already on the newsletter list stay on it.'] },
+      'On the quote request form, and on the accept-your-quote page.', ['D1']),
     N('quote-signer', false, '2026-11-14', '', 'Accepting a quote now records who accepted it', ['school', 'district'],
       'The accept page asks for your full name, and an older quote link tells you when a newer version has replaced it.',
       'Before you accept a quote, you type your full name and, if you like, your title. We keep that with the date and a record of exactly what the quote said, so it is clear later who agreed to what. If we send you a revised quote, the older link stops working and points you to the new one.',

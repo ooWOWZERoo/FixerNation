@@ -262,4 +262,15 @@ router.post('/:id/cancel', requireAuth, requireCrm('write'), async (req, res) =>
   res.json({ ok: true, noticeSent, warning });
 });
 
+// Punch list S12: a meeting can be deleted for good (CRM Admin only). One that was invited and is still on the calendar is cancelled first, so the attendees are told; a
+// cancelled one, or one no invitation was ever sent for, can go. The row is the only copy of the attendee list the CRM keeps.
+router.delete('/:id', requireAuth, requireCrm('erase'), async (req, res) => {
+  const [[m]] = await pool.query('SELECT id, status, invite_sent_at FROM crm_appointments WHERE id = ?', [posInt(req.params.id)]);
+  if (!m) return res.status(404).json({ error: 'Meeting not found' });
+  if (m.status === 'scheduled' && m.invite_sent_at) return res.status(409).json({ code: 'cancel_first', error: 'This meeting was sent to its attendees and is still on their calendars. Cancel it first so they are told, then delete it.' });
+  await pool.query('DELETE FROM crm_appointments WHERE id = ?', [m.id]);
+  await crmAudit(req, { action: 'crm_meeting_deleted', entityType: 'crm_meeting', entityId: m.id, prev: { status: m.status } });
+  res.json({ ok: true });
+});
+
 module.exports = router;

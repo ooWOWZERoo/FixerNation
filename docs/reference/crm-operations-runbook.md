@@ -48,7 +48,13 @@ Customer Hub > **Reports** has six reports, each with its dates and its definiti
 3. `alter-create-crm-quotes.js` (phase 4: quote revisions, acceptance evidence, quote events, the `purchases.quote_id` foreign key)
 4. `alter-create-crm-growth.js` (phase 6: engagement and attribution)
 
+5. `alter-crm-trial-flag-and-quote-index.js` (review fixes B7-B16: `purchases.is_trial_flag`, filled from each purchase's product, and a composite quote index; run it before the restart, the Customer rule reads the column)
+6. `alter-add-quote-acceptance-snapshot.js` (review fix S10: `quote_requests.acceptance_document_snapshot`; the app works without it and records the hash only)
+7. `scrub-crm-merge-audit.js` (review fix S12, optional: removes the removed person's name and email from old merge audit rows; counts only unless `--apply`)
+
 Phase 7 added **no** database change. Fresh installs get everything from `server/db/schema.sql`.
+
+**Audit log:** Customer Hub > Hub Settings > "Read the audit log" (CRM Admin only; the page is `admin-crm-audit.html`). **Erasing a person:** deleting a contact that has CRM notes, tasks, files or meetings asks a CRM Admin to confirm and then erases them together (files from disk too); the audit log keeps counts only. **`stderr.log`:** database error messages can include an email address; the file is not cleaned by the app, so clear it now and then (cPanel File Manager, or `: > /home/fixernat/repositories/fixernation/server/stderr.log` after a restart).
 
 ## 5. Rolling back one phase
 

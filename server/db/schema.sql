@@ -763,6 +763,7 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   acceptance_title VARCHAR(255) NULL,
   acceptance_terms_version VARCHAR(32) NULL,
   acceptance_document_hash CHAR(64) NULL, -- SHA-256 of exactly what the buyer was shown
+  acceptance_document_snapshot MEDIUMTEXT NULL, -- the exact text that hash is computed from (added by scripts/alter-add-quote-acceptance-snapshot.js; quotes accepted before it keep the hash only)
   acceptance_recorded_at DATETIME NULL,
   acceptance_recorded_by VARCHAR(16) NULL, -- 'buyer' | 'staff' (staff accepted for the customer)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

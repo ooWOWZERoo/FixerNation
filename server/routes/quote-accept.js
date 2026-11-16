@@ -12,6 +12,7 @@ const { refCodeFromRequest } = require('../lib/affiliate-attribution');
 const { purchaseIdForQuote, openCardPurchaseIdForQuote, dropStaleOpenCardPurchase } = require('../lib/quote-purchase');
 const { cleanSigner, evidenceColumns } = require('../lib/quote-evidence');
 const { limiter } = require('../lib/rate-limit');
+const { audit } = require('../lib/audit');
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: quote events and the deal moving to Won (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
@@ -199,6 +200,8 @@ async function acceptQuoteViaPO(quoteId, poNumber, req, opts = {}) {
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quoteId]);
   const status = quoteStatus(quote);
   if (status !== 'valid') throw Object.assign(new Error(status), { status: 400 });
+  // Punch list S15: a quote that was never sent (still a draft) is not something a customer was shown, so not even a CRM Admin can accept it for them. Send it first.
+  if (!quote.quote_sent_at) throw Object.assign(new Error('This quote was never sent, so it cannot be accepted. Send it to the customer first.'), { status: 400 });
 
   const amountCents = quote.quoted_amount_cents || 0;
   const requiresPO = amountCents > 0;
@@ -216,10 +219,15 @@ async function acceptQuoteViaPO(quoteId, poNumber, req, opts = {}) {
     const evidence = opts.signer ? await evidenceColumns(connection, quote, opts.signer, opts.recordedBy) : {};
     const evidenceKeys = Object.keys(evidence);
     const [claimResult] = await connection.query(
-      `UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted'${evidenceKeys.map(k => `, ${k} = ?`).join('')} WHERE id = ? AND accepted_at IS NULL`,
+      `UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted'${evidenceKeys.map(k => `, ${k} = ?`).join('')} WHERE id = ? AND accepted_at IS NULL AND version_status <> 'superseded'`,
       [...evidenceKeys.map(k => evidence[k]), quote.id]
     );
-    if (claimResult.affectedRows === 0) throw Object.assign(new Error('already_accepted'), { status: 400 });
+    if (claimResult.affectedRows === 0) {
+      // Punch list S15: say WHY the claim failed. A revision sent between the read above and this claim also ends here, and the buyer should be told that, not "already accepted".
+      const [[now]] = await connection.query('SELECT accepted_at, version_status FROM quote_requests WHERE id = ?', [quote.id]);
+      if (now && !now.accepted_at && now.version_status === 'superseded') throw Object.assign(new Error('superseded'), { status: 400 });
+      throw Object.assign(new Error('already_accepted'), { status: 400 });
+    }
 
     ({ contactId, purchaseId } = await createPurchaseFromQuote(quote, 'po', req, requiresPO ? 'pending' : 'paid', { connection, afterCommit }));
 
@@ -317,11 +325,18 @@ async function openCardPurchase(quote, req, signer) {
   const afterCommit = [];
   try {
     await connection.beginTransaction();
-    await connection.query('SELECT id FROM quote_requests WHERE id = ? FOR UPDATE', [quote.id]);
+    const [[locked]] = await connection.query('SELECT id, acceptance_name, acceptance_title FROM quote_requests WHERE id = ? FOR UPDATE', [quote.id]);
+    // Punch list S13: the signer is saved before payment, so anyone holding the link can replace it until the quote is paid. A change is not blocked (a buyer may fix a typo),
+    // but it is written to the audit log with the old and new name, so the record of who accepted is never silently rewritten.
+    const nameChanged = locked && locked.acceptance_name && String(locked.acceptance_name) !== String(signer.name);
     // The signer is recorded when the button is pressed (before Stripe). The quote counts as accepted only when the payment arrives (accepted_at).
     const evidence = await evidenceColumns(connection, quote, signer, 'buyer');
     const keys = Object.keys(evidence);
     await connection.query(`UPDATE quote_requests SET ${keys.map(k => `${k} = ?`).join(', ')} WHERE id = ? AND accepted_at IS NULL`, [...keys.map(k => evidence[k]), quote.id]);
+    if (nameChanged) {
+      await audit(pool, { actorType: 'system', action: 'quote_signer_changed_before_payment', entityType: 'quote_payment', entityId: quote.id,
+        prevValue: { name: locked.acceptance_name, title: locked.acceptance_title || null }, newValue: { name: signer.name, title: signer.title || null }, reason: 'The signer on an unpaid quote was replaced by a later click on Card.' });
+    }
     let purchaseId = await openCardPurchaseIdForQuote(connection, quote.id);
     // The quote may have been re-priced since the last click: an open purchase that no longer matches it is replaced, never reused (punch list S5).
     if (purchaseId && await dropStaleOpenCardPurchase(connection, quote, purchaseId)) purchaseId = null;

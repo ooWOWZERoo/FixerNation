@@ -48,6 +48,19 @@ function snapshot(quote, profile, version) {
 const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
 
 // Column values to write onto quote_requests. `db` is a pool or a transaction's connection; `recordedBy` is 'buyer' or 'staff'.
+// Punch list S10: the text itself is kept beside the hash (quote_requests.acceptance_document_snapshot). A server that has not had the alter script run yet keeps
+// working and records the hash only; the probe is repeated at most once a minute while the column is missing, and never again once it is there.
+let snapshotColumn = { has: false, checkedAt: 0 };
+async function hasSnapshotColumn(db) {
+  if (snapshotColumn.has) return true;
+  if (Date.now() - snapshotColumn.checkedAt < 60000 && snapshotColumn.checkedAt) return false;
+  snapshotColumn.checkedAt = Date.now();
+  try { await db.query('SELECT acceptance_document_snapshot FROM quote_requests LIMIT 1'); snapshotColumn.has = true; }
+  catch (err) { if (!(err.code === 'ER_BAD_FIELD_ERROR' || /no such column|has no column named|Unknown column/i.test(String(err.message)))) throw err; }
+  return snapshotColumn.has;
+}
+function resetSnapshotProbe() { snapshotColumn = { has: false, checkedAt: 0 }; }
+
 async function evidenceColumns(db, quote, signer, recordedBy, now = new Date()) {
   let profile = null;
   if (quote.content_profile_id) {
@@ -55,14 +68,17 @@ async function evidenceColumns(db, quote, signer, recordedBy, now = new Date()) 
     profile = row || null;
   }
   const version = await termsVersion();
-  return {
+  const text = snapshot(quote, profile, version);
+  const columns = {
     acceptance_name: signer.name,
     acceptance_title: signer.title || null,
     acceptance_terms_version: version,
-    acceptance_document_hash: sha256(snapshot(quote, profile, version)),
+    acceptance_document_hash: sha256(text),
     acceptance_recorded_at: now.toISOString().slice(0, 19).replace('T', ' '),
     acceptance_recorded_by: recordedBy === 'staff' ? 'staff' : 'buyer',
   };
+  if (await hasSnapshotColumn(db)) columns.acceptance_document_snapshot = text;
+  return columns;
 }
 
-module.exports = { cleanSigner, evidenceColumns, snapshot, sha256, termsVersion };
+module.exports = { cleanSigner, evidenceColumns, snapshot, sha256, termsVersion, resetSnapshotProbe };

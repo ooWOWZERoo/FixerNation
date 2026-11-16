@@ -20,6 +20,7 @@
 //   assign_roles         yes     -                              -
 //   audit_view           yes     -                              -
 //   export               yes     -                              -
+//   erase                yes     -                              -     (punch list S12: delete a meeting; erase a person's CRM notes, tasks, files and meetings along with the person)
 //   files                yes     yes (then the subject check)   -     (see, upload, download or delete a file; Read-only never opens one)
 //   accept_for_customer  yes     -                              -     (phase 4c: accept a quote by PO for the customer when closing a deal Won; it creates a purchase, invoice and license)
 //   edit_quote_price     yes     -                              -     (change the price, product or seats of a quote that was already sent)
@@ -48,6 +49,7 @@ const ALLOWED = {
   assign_roles: ['admin'],
   audit_view: ['admin'],
   export: ['admin'],
+  erase: ['admin'],
   files: ['admin', 'sales'],
   accept_for_customer: ['admin'],
   edit_quote_price: ['admin'],

@@ -12,7 +12,7 @@ const { closeDealWon } = require('../lib/crm-won');
 const { procurementForDeal } = require('../lib/crm-procurement');
 const { engagementFor } = require('../lib/crm-engagement');
 const { purchaseIdForQuote } = require('../lib/quote-purchase');
-const { cleanSigner } = require('../lib/quote-evidence');
+const { cleanSigner, sha256 } = require('../lib/quote-evidence');
 const { acceptQuoteViaPO } = require('./quote-accept');
 const {
   OPP_STATES, OPP_TYPES, COMMITTEE_ROLES, INFLUENCE, STANCE,
@@ -169,7 +169,7 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
       revisionNumber: Number(q.revision_number || 1), versionStatus: q.version_status || 'current', supersedesQuoteId: q.supersedes_quote_id || null,
       // Who accepted and what they were shown (staff only). The hash is shortened: it proves the record, it is not a secret, but nobody reads 64 characters.
       // Read-only gets no signer name or title (a named person at the customer); they still see that it was accepted, when and how (punch list S7).
-      acceptance: q.acceptance_recorded_at ? { name: can(req.crm.role, 'write') ? q.acceptance_name : null, title: can(req.crm.role, 'write') ? q.acceptance_title : null, at: q.acceptance_recorded_at, by: q.acceptance_recorded_by, termsVersion: q.acceptance_terms_version, documentHash: q.acceptance_document_hash ? String(q.acceptance_document_hash).slice(0, 12) : null } : null,
+      acceptance: q.acceptance_recorded_at && q.accepted_at ? { name: can(req.crm.role, 'write') ? q.acceptance_name : null, title: can(req.crm.role, 'write') ? q.acceptance_title : null, at: q.acceptance_recorded_at, by: q.acceptance_recorded_by, termsVersion: q.acceptance_terms_version, documentHash: q.acceptance_document_hash ? String(q.acceptance_document_hash).slice(0, 12) : null } : null,
     })),
     // Payment is shown next to the deal state, never inferred from it.
     purchases: purchases.map(p => ({ id: p.id, quoteId: p.quote_id, paymentStatus: p.payment_status, paymentMethod: p.payment_method, amountCents: p.amount_cents === null ? null : Number(p.amount_cents), licenseStatus: p.license_status })),
@@ -177,6 +177,26 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
     // 'viewed' is approximate (a mail scanner that runs scripts could cause it); the page labels it so.
     quoteEvents: events.map(e => ({ id: e.id, quoteId: e.quote_id, quoteNumber: e.quote_number || null, type: e.event_type, detail: e.detail, at: e.created_at })),
     permissions: { acceptForCustomer: can(req.crm.role, 'accept_for_customer') },
+  });
+});
+
+// Punch list S10: the acceptance record in full (what the buyer was shown, as stored at the moment of acceptance) for a dispute. CRM Admin only (the audit_view right), and
+// every look is written to the audit log, because the signer is a named person at the customer. A quote accepted before the snapshot was stored has the hash only.
+router.get('/:id/quotes/:quoteId/evidence', requireAuth, requireCrm('audit_view'), async (req, res) => {
+  const o = await loadOpp(posInt(req.params.id));
+  if (!o) return res.status(404).json({ error: 'Deal not found' });
+  const quoteId = posInt(req.params.quoteId);
+  const [[q]] = quoteId ? await pool.query('SELECT * FROM quote_requests WHERE id = ? AND opportunity_id = ?', [quoteId, o.id]) : [[null]];
+  if (!q || !q.acceptance_recorded_at || !q.accepted_at) return res.status(404).json({ error: 'There is no acceptance record for that quote.' });
+  await crmAudit(req, { action: 'crm_quote_evidence_viewed', entityType: 'crm_opportunity', entityId: o.id, next: { quoteId: q.id, quoteNumber: q.quote_number || null } });
+  const text = q.acceptance_document_snapshot || null;
+  res.json({
+    quoteId: q.id, quoteNumber: q.quote_number || null, revisionNumber: Number(q.revision_number || 1), acceptedAt: q.accepted_at,
+    signerName: q.acceptance_name || null, signerTitle: q.acceptance_title || null, recordedAt: q.acceptance_recorded_at, recordedBy: q.acceptance_recorded_by || null,
+    termsVersion: q.acceptance_terms_version || null, documentHash: q.acceptance_document_hash || null,
+    // The stored text and a fresh check that it still produces the stored hash. null (not false) when the text was never stored.
+    snapshot: text ? JSON.parse(text) : null,
+    hashMatches: text ? sha256(text) === q.acceptance_document_hash : null,
   });
 });
 

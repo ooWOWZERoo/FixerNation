@@ -22,6 +22,17 @@ function baseDir() {
 function incomingDir() { return path.join(baseDir(), '.incoming'); }
 function ensureDirs() { fs.mkdirSync(incomingDir(), { recursive: true }); }
 
+// Punch list S9: is this request path (relative to /uploads, as the browser sent it) inside the private CRM folder? It is judged AFTER decoding, ignoring case, doubled
+// or backslash separators and ".." steps, so "/%63rm-private/x", "/CRM-Private/x", "/crm-private%2fx" and "/a/../crm-private/x" are all caught. A path that will not decode
+// is treated as private (refused), not passed on.
+function isPrivatePath(rawPath) {
+  let p;
+  try { p = decodeURIComponent(String(rawPath || '')); } catch { return true; }
+  if (p.includes('\0')) return true;
+  p = path.posix.normalize(p.replace(/\\/g, '/').replace(/\/{2,}/g, '/')).toLowerCase();
+  return /^\/*crm-private(\/|$)/.test(p);
+}
+
 function newStoredName() { return `${crypto.randomBytes(16).toString('hex')}.bin`; }
 
 // The absolute path of a stored file, or null if the name is not exactly what this code makes. A name from the database is checked too, so a bad row can
@@ -58,4 +69,4 @@ function attachmentHeader(name) {
 // What the browser is told the bytes are. Word and Excel share the zip signature, so they go out as plain downloads rather than as a guessed document type.
 function servedType(kind, mime) { return kind === 'doc' || kind === 'docx' ? 'application/octet-stream' : mime; }
 
-module.exports = { MAX_BYTES, MAX_FILES_PER_SUBJECT, ALLOWED_KINDS, baseDir, incomingDir, ensureDirs, newStoredName, pathFor, safeOriginalName, attachmentHeader, servedType };
+module.exports = { isPrivatePath, MAX_BYTES, MAX_FILES_PER_SUBJECT, ALLOWED_KINDS, baseDir, incomingDir, ensureDirs, newStoredName, pathFor, safeOriginalName, attachmentHeader, servedType };
