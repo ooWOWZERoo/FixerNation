@@ -55,12 +55,12 @@ Severity: H high, M medium, L low. "Where" is the file to start in.
 
 | # | Sev | Item | Where | Status |
 |---|---|---|---|---|
-| B1 | M | Contact merge loses a manual Prospect label and deletes the removed contact's classification history (FK cascade) | `crm-contacts.js` | OPEN |
+| B1 | M | Contact merge loses a manual Prospect label and deletes the removed contact's classification history (FK cascade). Done: the history moves to the kept contact and a Prospect label is carried over (recorded as `merge_kept_label`) | `routes/crm-contacts.js` | DONE |
 | B2 | M | Overview counts include `@example.com` deals; Reports exclude them; the page says test addresses are left out. Done: the Overview uses the Reports' test-address rule for every deal figure and list | `routes/crm-overview.js` | DONE |
 | B3 | M | "Paid amount" covers only quote-linked purchases; direct card revenue shows as zero and Reconciliation says "None"; grouped by deal date, not payment date. Done: Source to paid keeps its by-deal groups and adds three lines for every qualifying paid purchase bought in the window (by purchase date), split into on a deal's quote and on no deal | `crm-reports.js` | DONE |
-| B4 | M | Renewal and expansion deals mix into every funnel, win rate and weighted figure; no report splits by deal type | `crm-reports.js` | OPEN |
+| B4 | M | Renewal and expansion deals mix into every funnel, win rate and weighted figure; no report splits by deal type. Done: the five deal reports take `?type=` (new_business, renewal, expansion, cross_sell; blank means all) with a Deal type picker on the page, the label and CSV say which type was counted, and the funnel always shows the mix of types created in the window | `crm-reports.js`, `routes/crm-reports.js` | DONE |
 | B5 | M | `alter-create-crm-core.js` adds the column, then the index and FK as a second step; if that fails the next run skips both. Done: each column, index and foreign key is checked and added on its own, so a re-run finishes a partial run | `scripts/alter-create-crm-core.js` | DONE |
-| B6 | M | Backfill matches accounts by name only (two "Lincoln Elementary" in different states merge); skips any district matching `/demo/i` | `scripts/backfill-crm-core.js` | OPEN |
+| B6 | M | Backfill matches accounts by name only (two "Lincoln Elementary" in different states merge); skips any district matching `/demo/i`. Done: a name match uses the quote's state to tell same-named schools apart and lists an ambiguous one for a person instead of guessing; only real demo districts are skipped | `scripts/backfill-crm-core.js` | DONE |
 | B7 | L-M | Two quote chains on one deal can both be accepted; a revised price leaves the deal's forecast amount stale | `lib/crm-won.js` | DECIDE |
 | B8 | L | Funnel counts a reopened Won deal as having reached Won; stage reach depends on the current `sort_order` | `crm-reports.js` | OPEN |
 | B9 | L | Renewal suppression too broad (any later license at the same school); generator ignores district-level accounts and purchases with only a school domain | `crm-growth.js` | OPEN |
@@ -91,7 +91,7 @@ Severity: H high, M medium, L low. "Where" is the file to start in.
 
 ## Suggested order
 
-1. S1-S7, B2, B3 and B5 (done), then:
-2. B1, B4, B6 (next).
+1. S1-S7 and B1-B6 (done), then:
+2. B7-B16 (the small bugs; B7 needs your decision first).
 3. G2, G1 and G7-G9 as one "reporting and attention" phase after the owner picks from the DECIDE items.
 4. Phase 5 when the owner answers the open email questions.

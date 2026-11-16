@@ -348,3 +348,27 @@ test('DEAL LIST FILTERS: overdue, days in stage, sort, owner=me; the contact 360
   assert.equal(c.json.quotes[0].id, quote);
   assert.ok(!JSON.stringify(c.json).includes('secret-token-value'));
 });
+
+test('B1: merging keeps the duplicate\'s Prospect label (a staff promotion has no quote to re-derive it) and its label history, and never demotes the kept contact', async () => {
+  const keep = env.addContact(db, 'keep.b1@school-b1.org', 'Keep');
+  const dupe = env.addContact(db, 'dupe.b1@school-b1.org', 'Dupe');
+  db.prepare("UPDATE newsletter_contacts SET crm_classification = 'prospect' WHERE id = ?").run(dupe);
+  db.prepare("INSERT INTO crm_classification_events (contact_id, from_classification, to_classification, event_type, reason, created_at) VALUES (?, 'suspect', 'prospect', 'manual_promotion', 'Met at a conference', '2026-11-01 09:00:00')").run(dupe);
+  const r = await call('POST', `/api/crm/contacts/${dupe}/merge`, { intoId: keep, reason: 'same person' }, admin);
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.equal(get('SELECT crm_classification AS c FROM newsletter_contacts WHERE id = ?', keep).c, 'prospect', 'the Prospect label is not lost');
+  const ev = all('SELECT event_type, reason FROM crm_classification_events WHERE contact_id = ? ORDER BY id', keep);
+  assert.ok(ev.some(e => e.event_type === 'manual_promotion' && e.reason === 'Met at a conference'), 'the removed contact\'s history moved to the kept one');
+  assert.ok(ev.some(e => e.event_type === 'merge_kept_label'), 'and the carry-over itself is recorded');
+  assert.equal(all('SELECT id FROM crm_classification_events WHERE contact_id = ?', dupe).length, 0);
+
+  // The other way round: the kept contact is already a Prospect and the duplicate a Suspect: nothing changes except the history moves.
+  const keep2 = env.addContact(db, 'keep2.b1@school-b1.org', 'Keep2');
+  const dupe2 = env.addContact(db, 'dupe2.b1@school-b1.org', 'Dupe2');
+  db.prepare("UPDATE newsletter_contacts SET crm_classification = 'prospect' WHERE id = ?").run(keep2);
+  db.prepare("INSERT INTO crm_classification_events (contact_id, from_classification, to_classification, event_type, created_at) VALUES (?, 'suspect', 'suspect', 'note_only', '2026-11-02 09:00:00')").run(dupe2);
+  assert.equal((await call('POST', `/api/crm/contacts/${dupe2}/merge`, { intoId: keep2 }, admin)).status, 200);
+  assert.equal(get('SELECT crm_classification AS c FROM newsletter_contacts WHERE id = ?', keep2).c, 'prospect');
+  assert.ok(!all('SELECT event_type FROM crm_classification_events WHERE contact_id = ?', keep2).some(e => e.event_type === 'merge_kept_label'), 'no carry-over event when nothing was carried');
+  assert.ok(all('SELECT event_type FROM crm_classification_events WHERE contact_id = ?', keep2).some(e => e.event_type === 'note_only'), 'its history still moved');
+});

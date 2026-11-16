@@ -27,6 +27,20 @@ const { reconcileAll, isTestAddress, sqlNow } = require('../lib/crm-classificati
 const APPLY = process.argv.includes('--apply');
 const norm = v => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+// Punch list B6. A demo district is one the demo code recognises, or one named "FNE Demo ..."; a real district that merely contains "demo" in its name
+// (for example "Demopolis City Schools") is NOT skipped any more.
+function isDemoDistrict(name) { return isDemoDistrictName(name) || /^fne demo\b/i.test(String(name || '').trim()); }
+
+// Which existing account does a quote's organization name point at? Two schools can share a name in different states, so a name alone is not enough.
+// `candidates` are the accounts with that exact name: [{ id, state }]. A candidate whose state is known and differs from the quote's state is ruled out.
+// Returns { id } for exactly one match, { several: true } when more than one remains (a person decides; nothing is guessed), or { none: true }.
+function matchAccountByName(candidates, quoteState) {
+  const want = norm(quoteState);
+  const left = (candidates || []).filter(c => !want || !norm(c.state) || norm(c.state) === want);
+  if (left.length === 1) return { id: left[0].id };
+  return left.length ? { several: true } : { none: true };
+}
+
 async function main() {
   const db = await mysql.createConnection({
     host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
@@ -71,7 +85,7 @@ async function main() {
     const acctBySchool = new Map(haveAccts.filter(a => a.school_id).map(a => [a.school_id, a.id]));
     let newDistrictAccts = 0, newSchoolAccts = 0, skippedDemo = 0;
     for (const d of districts) {
-      if (isDemoDistrictName(d.name) || /demo/i.test(d.name)) { skippedDemo++; continue; }
+      if (isDemoDistrict(d.name)) { skippedDemo++; continue; }
       if (acctByDistrict.has(d.id)) continue;
       if (APPLY) {
         const [r] = await db.query("INSERT INTO crm_accounts (name, account_type, district_id, source) VALUES (?, 'district', ?, 'Backfill from districts')", [d.name, d.id]);
@@ -98,8 +112,9 @@ async function main() {
     const stageId = Object.fromEntries(stages.map(s => [s.stage_key, s.id]));
     for (const k of ['new_inquiry', 'qualified', 'proposal_sent', 'won']) if (!stageId[k]) { console.error(`The stage "${k}" is missing. Run scripts/alter-create-crm-core.js.`); process.exit(1); }
     const schoolByDomain = new Map(schools.map(s => [norm(s.domain), s.id]));
-    const [liveAccts] = await db.query('SELECT id, name FROM crm_accounts WHERE archived_at IS NULL');
-    const acctByName = new Map(liveAccts.map(a => [norm(a.name), a.id]));
+    const [liveAccts] = await db.query('SELECT id, name, state FROM crm_accounts WHERE archived_at IS NULL');
+    const acctsByName = new Map(); // name -> every live account with that name (two schools can share one)
+    for (const a of liveAccts) acctsByName.set(norm(a.name), (acctsByName.get(norm(a.name)) || []).concat({ id: a.id, state: a.state }));
     let dealsMade = 0, acctsFromQuotes = 0, dealsExisting = 0;
     const quoteAccount = new Map(); // quote id -> account id (for step 4)
     for (const q of quotes) {
@@ -110,18 +125,22 @@ async function main() {
       let accountId = null;
       const schoolId = q.quoted_school_domain ? schoolByDomain.get(norm(q.quoted_school_domain)) : null;
       if (schoolId && acctBySchool.has(schoolId)) accountId = acctBySchool.get(schoolId);
-      if (!accountId && q.school && acctByName.has(norm(q.school))) accountId = acctByName.get(norm(q.school));
+      let ambiguous = false;
+      if (!accountId && q.school && acctsByName.has(norm(q.school))) {
+        const m = matchAccountByName(acctsByName.get(norm(q.school)), q.bill_to_state);
+        if (m.id) accountId = m.id; else if (m.several) ambiguous = true;
+      }
+      if (ambiguous) { exceptions.push(`quote #${q.id}: the organization name matches several accounts; pick the account and add the deal by hand`); continue; }
       if (!accountId) {
         const name = String(q.school || '').trim();
         if (!name) { exceptions.push(`quote #${q.id}: no organization on the quote; add the account and deal by hand`); continue; }
         if (APPLY) {
-          const [r] = await db.query("INSERT INTO crm_accounts (name, account_type, source) VALUES (?, 'school', 'Backfill from quotes')", [name.slice(0, 255)]);
+          const [r] = await db.query("INSERT INTO crm_accounts (name, account_type, state, source) VALUES (?, 'school', ?, 'Backfill from quotes')", [name.slice(0, 255), q.bill_to_state ? String(q.bill_to_state).trim().slice(0, 64) : null]);
           accountId = r.insertId;
-          acctByName.set(norm(name), accountId);
         } else {
           accountId = -1; // a dry run has no id, but a second quote from the same organization must not be counted as another new account
-          acctByName.set(norm(name), accountId);
         }
+        acctsByName.set(norm(name), (acctsByName.get(norm(name)) || []).concat({ id: accountId, state: q.bill_to_state ? String(q.bill_to_state).trim() : null }));
         acctsFromQuotes++;
       }
 
@@ -201,4 +220,6 @@ async function main() {
   }
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+module.exports = { isDemoDistrict, matchAccountByName };
+
+if (require.main === module) main().catch(err => { console.error(err); process.exit(1); });

@@ -29,19 +29,30 @@ function parseWindow(q) {
   return { win: { from, to } };
 }
 
+// ?type=new_business | renewal | expansion | cross_sell limits the deal reports to that deal type; blank or "all" counts every type (punch list B4). Anything else is a 400.
+function withType(w, q) {
+  const raw = q.type === undefined || q.type === '' ? 'all' : q.type;
+  if (typeof raw !== 'string' || (raw !== 'all' && !Object.prototype.hasOwnProperty.call(R.DEAL_TYPES, raw))) return { error: 'The deal type must be all, new_business, renewal, expansion or cross_sell.' };
+  return { win: raw === 'all' ? w.win : { ...w.win, type: raw } };
+}
+
 router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
-  const w = parseWindow(req.query);
+  const w0 = parseWindow(req.query);
+  if (w0.error) return res.status(400).json({ error: w0.error });
+  const w = withType(w0, req.query);
   if (w.error) return res.status(400).json({ error: w.error });
   res.json({ window: w.win, windowLabel: R.windowLabel(w.win), reports: await R.runAll(pool, w.win) });
 });
 
 router.get('/:key/export', requireAuth, requireCrm('export'), async (req, res) => {
   if (!R.KEYS.includes(req.params.key)) return res.status(404).json({ error: 'Not found' });
-  const w = parseWindow(req.query);
+  const w0 = parseWindow(req.query);
+  if (w0.error) return res.status(400).json({ error: w0.error });
+  const w = withType(w0, req.query);
   if (w.error) return res.status(400).json({ error: w.error });
   const report = await R.runReport(pool, req.params.key, w.win);
-  await crmAudit(req, { action: 'crm_report_exported', entityType: 'crm_report', next: { report: req.params.key, from: w.win.from, to: w.win.to } });
-  const stamp = w.win.from || w.win.to ? `${w.win.from || 'start'}_to_${w.win.to || 'today'}` : 'all-time';
+  await crmAudit(req, { action: 'crm_report_exported', entityType: 'crm_report', next: w.win.type ? { report: req.params.key, from: w.win.from, to: w.win.to, type: w.win.type } : { report: req.params.key, from: w.win.from, to: w.win.to } });
+  const stamp = (w.win.from || w.win.to ? `${w.win.from || 'start'}_to_${w.win.to || 'today'}` : 'all-time') + (w.win.type ? `_${w.win.type}` : '');
   res.set('Content-Type', 'text/csv; charset=utf-8');
   res.set('Content-Disposition', `attachment; filename="crm-${req.params.key}-${stamp}.csv"`);
   res.set('Cache-Control', 'no-store');
@@ -50,7 +61,9 @@ router.get('/:key/export', requireAuth, requireCrm('export'), async (req, res) =
 
 router.get('/:key', requireAuth, requireCrm('view'), async (req, res) => {
   if (!R.KEYS.includes(req.params.key)) return res.status(404).json({ error: 'Not found' });
-  const w = parseWindow(req.query);
+  const w0 = parseWindow(req.query);
+  if (w0.error) return res.status(400).json({ error: w0.error });
+  const w = withType(w0, req.query);
   if (w.error) return res.status(400).json({ error: w.error });
   res.json(await R.runReport(pool, req.params.key, w.win));
 });

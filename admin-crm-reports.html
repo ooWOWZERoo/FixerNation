@@ -38,7 +38,8 @@
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
   var PRESETS = { '30': 'Last 30 days', '90': 'Last 90 days', '365': 'Last 365 days', year: 'This year', all: 'All time' };
-  var state = { preset: '90', from: '', to: '', data: null };
+  var TYPES = { all: 'All deal types', new_business: 'New business', renewal: 'Renewals', expansion: 'Expansions', cross_sell: 'Cross-sell' };
+  var state = { preset: '90', from: '', to: '', type: 'all', data: null };
   var canExport = false;
 
   C.boot(root).then(function (me) { if (!me) return; canExport = !!(C.perms && C.perms.export); load(); });
@@ -51,9 +52,10 @@
     return { from: iso(new Date(now.getTime() - (Number(preset) - 1) * 86400000)), to: to };
   }
   function query() {
-    if (state.preset === 'custom') { var q = []; if (state.from) q.push('from=' + encodeURIComponent(state.from)); if (state.to) q.push('to=' + encodeURIComponent(state.to)); return q.join('&'); }
+    var type = state.type && state.type !== 'all' ? '&type=' + encodeURIComponent(state.type) : '';
+    if (state.preset === 'custom') { var q = []; if (state.from) q.push('from=' + encodeURIComponent(state.from)); if (state.to) q.push('to=' + encodeURIComponent(state.to)); return q.join('&') + type; }
     var w = windowFor(state.preset);
-    return w.range ? 'range=all' : 'from=' + w.from + '&to=' + w.to;
+    return (w.range ? 'range=all' : 'from=' + w.from + '&to=' + w.to) + type;
   }
 
   function load() {
@@ -97,8 +99,9 @@
   function filterBar() {
     var h = '<div class="a-card"><div class="a-card-head"><h2>Dates</h2></div><form id="winForm" class="crm-toolbar" novalidate><label class="crm-small">Show <select id="winPreset">' +
       Object.keys(PRESETS).map(function (k) { return '<option value="' + esc(k) + '"' + (state.preset === k ? ' selected' : '') + '>' + esc(PRESETS[k]) + '</option>'; }).join('') + '<option value="custom"' + (state.preset === 'custom' ? ' selected' : '') + '>Pick dates</option></select></label> ' +
+      '<label class="crm-small">Deal type <select id="winType">' + Object.keys(TYPES).map(function (k) { return '<option value="' + esc(k) + '"' + (state.type === k ? ' selected' : '') + '>' + esc(TYPES[k]) + '</option>'; }).join('') + '</select></label> ' +
       '<label class="crm-small">From <input type="date" id="winFrom" value="' + esc(state.from) + '"></label> <label class="crm-small">To <input type="date" id="winTo" value="' + esc(state.to) + '"></label> <button type="submit" class="a-btn a-btn-primary a-btn-sm">Show</button></form>' +
-      '<p class="crm-small crm-muted">Weighted pipeline and Reconciliation always show today and ignore these dates. Test addresses (example.com) are left out of every figure. These are counts, never scores.</p></div>';
+      '<p class="crm-small crm-muted">Deal type limits the deal reports (not Reconciliation); renewals and expansions are counted with new business unless you pick one. Weighted pipeline and Reconciliation always show today and ignore these dates. Test addresses (example.com) are left out of every figure. These are counts, never scores.</p></div>';
     return h;
   }
 
@@ -119,7 +122,7 @@
     preset.addEventListener('change', function () { if (preset.value === 'custom' && !from.value && !to.value) { var w = windowFor('90'); from.value = w.from; to.value = w.to; } sync(); });
     document.getElementById('winForm').addEventListener('submit', function (e) {
       e.preventDefault();
-      state.preset = preset.value; state.from = from.value; state.to = to.value;
+      state.preset = preset.value; state.from = from.value; state.to = to.value; state.type = document.getElementById('winType').value;
       load();
     });
   }

@@ -318,6 +318,13 @@ router.post('/:id/merge', requireAuth, requireCrm('merge'), async (req, res) => 
     const touches = mergeTouches(into, from);
     if (touches) { fill.push(...touches.set); vals.push(...touches.params); }
     if (fill.length) await conn.query(`UPDATE newsletter_contacts SET ${fill.join(', ')} WHERE id = ?`, [...vals, intoId]);
+    // Punch list B1: the label and its history belong to the person, not to the row that is removed. The duplicate's history (deleted with it by the foreign key
+    // otherwise) moves to the kept contact, and a Prospect the duplicate was (a staff promotion has no quote to re-derive it from) is not lost when the kept one was only a Suspect.
+    await conn.query('UPDATE crm_classification_events SET contact_id = ? WHERE contact_id = ?', [intoId, fromId]);
+    if ((from.crm_classification || 'suspect') === 'prospect' && (into.crm_classification || 'suspect') === 'suspect') {
+      await cls.moveClassification(conn, { contactId: intoId, from: 'suspect', to: 'prospect', eventType: 'merge_kept_label', sourceRef: `contact:${fromId}`, actorAdminId: req.crm.adminId,
+        reason: 'Label carried over from a merged duplicate', locked: Number(into.classification_locked) === 1 });
+    }
     const [gone] = await conn.query('DELETE FROM newsletter_contacts WHERE id = ?', [fromId]);
     if (!gone.affectedRows) throw new Error('The duplicate could not be removed.');
     await conn.commit();

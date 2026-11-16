@@ -325,3 +325,43 @@ test('B3: Source to paid also shows every qualifying paid purchase by purchase d
   assert.equal(feb.purchases.count, 0, 'outside the window it is zero');
   db.prepare('DELETE FROM purchases WHERE id = ?').run(direct);
 });
+
+test('B4: a report can be limited to one deal type; every type is counted otherwise, the mix is shown, and a bad type is refused', async () => {
+  const R9 = deal({ name: 'R9 renewal', stage: 'qualified', amount: 40000, source: 'Referral', owner: sales, created: '2026-10-18', history: [[null, 'new_inquiry', null, 'open', '2026-10-18 09:00:00'], ['new_inquiry', 'qualified', 'open', 'open', '2026-10-19 09:00:00']] });
+  db.prepare("UPDATE crm_opportunities SET opp_type = 'renewal' WHERE id = ?").run(R9);
+  try {
+    const all_ = await reports.runReport(pool, 'funnel', OCT);
+    const renewals = await reports.runReport(pool, 'funnel', { ...OCT, type: 'renewal' });
+    const newBiz = await reports.runReport(pool, 'funnel', { ...OCT, type: 'new_business' });
+    assert.equal(renewals.total, 1, 'only the renewal');
+    assert.equal(newBiz.total, all_.total - 1, 'new business is everything else (all were new business before)');
+    assert.equal(all_.byType.find(t => t.key === 'renewal').deals, 1);
+    assert.equal(all_.byType.find(t => t.key === 'new_business').deals, all_.total - 1);
+    assert.match(renewals.windowLabel, /Deal type: Renewals/); assert.doesNotMatch(all_.windowLabel, /Deal type/, 'with every type counted the label is unchanged');
+    assert.ok(all_.table.rows.some(r => r[0] === 'Created in the window: Renewals' && r[1] === 1));
+
+    const pAll = await reports.runReport(pool, 'pipeline'), pRen = await reports.runReport(pool, 'pipeline', { type: 'renewal' }), pNew = await reports.runReport(pool, 'pipeline', { type: 'new_business' });
+    assert.equal(pRen.totals.deals, 1); assert.equal(pRen.totals.grossCents, 40000);
+    assert.equal(pNew.totals.deals + pRen.totals.deals, pAll.totals.deals, 'the two together are every open deal');
+    assert.equal(pNew.totals.grossCents + pRen.totals.grossCents, pAll.totals.grossCents);
+
+    const wl = await reports.runReport(pool, 'winloss', { ...OCT, type: 'renewal' });
+    assert.equal(wl.totals.won + wl.totals.lost + wl.totals.inactive, 0, 'the renewal is still open, so no closed renewals');
+    const sp = await reports.runReport(pool, 'sourcetopaid', { ...OCT, type: 'renewal' });
+    assert.equal(sp.purchases, null, 'purchases have no deal type, so those lines are left out');
+    assert.ok(!sp.table.rows.some(r => /paid purchases bought/.test(r[0])));
+
+    const ok = await call('GET', '/api/crm/reports/funnel?range=all&type=renewal', undefined, viewer);
+    assert.equal(ok.status, 200); assert.equal(ok.json.total, 1);
+    assert.equal((await call('GET', '/api/crm/reports?range=all&type=bogus', undefined, viewer)).status, 400);
+    assert.equal((await call('GET', '/api/crm/reports?range=all&type=all', undefined, viewer)).status, 200);
+    const exported = await csv('funnel', admin, 'range=all&type=renewal');
+    assert.equal(exported.status, 200);
+    assert.match(String(exported.body), /Deal type: Renewals/, 'the CSV says which type was counted');
+    const audit = all("SELECT new_value FROM school_audit_log WHERE action = 'crm_report_exported' ORDER BY id DESC LIMIT 1")[0];
+    assert.match(audit.new_value, /renewal/, 'the audit row says which type was exported');
+  } finally {
+    db.prepare('DELETE FROM crm_opportunity_stage_history WHERE opportunity_id = ?').run(R9);
+    db.prepare('DELETE FROM crm_opportunities WHERE id = ?').run(R9);
+  }
+});
