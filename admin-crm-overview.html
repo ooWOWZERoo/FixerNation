@@ -44,7 +44,7 @@
 
   function load() {
     C.loading(root);
-    C.api('GET', '/api/crm/overview').then(function (r) {
+    C.api('GET', '/api/crm/overview' + C.qstr({ today: C.todayLocal() })).then(function (r) {
       if (!r.ok) { C.errorBox(root, C.problem(r)); return; }
       state.data = r.data;
       draw();
@@ -65,18 +65,39 @@
       }).join('') + '</tbody></table>';
   }
 
+  // G8: money and timing. Each card says what it counts; one the server could not work out says so (it is never shown as a zero).
+  function cardsRow(c) {
+    c = c || {};
+    var unknown = function (label) { return '<div role="listitem">' + tile(label, '—', 'Not available on this server yet.') + '</div>'; };
+    var h = '<div class="crm-stats" role="list" aria-label="Customers, money and timing">';
+    var o = c.customerOrganizations;
+    h += o ? '<div role="listitem">' + tile('Customer organizations', C.num(o.count), 'Schools and districts with a paid, non-trial purchase.' + (o.unresolvedPurchases ? ' ' + esc(o.unresolvedPurchases) + ' paid purchase' + (o.unresolvedPurchases === 1 ? '' : 's') + ' name no school and cannot be placed.' : '')) + '</div>' : unknown('Customer organizations');
+    var x = c.expectedClosings;
+    h += x ? '<div role="listitem">' + tile('Expected to close ' + esc(x.period), C.num(x.count) + ' · ' + esc(C.money(x.grossCents, '$0')), esc(x.withoutValue ? x.withoutValue + ' of these ' + (x.withoutValue === 1 ? 'has' : 'have') + ' no value yet.' : 'Open deals with an expected close date this quarter.'), 'admin-crm-opportunities.html?closeIn=quarter') + '</div>' : unknown('Expected closings');
+    var q = c.openQuotes;
+    h += q ? '<div role="listitem">' + tile('Open quotes', C.num(q.count) + ' · ' + esc(C.money(q.totalCents, '$0')), esc(q.unpriced ? q.unpriced + ' not priced yet. ' : '') + 'Sent, not accepted, not replaced.', 'admin-crm-opportunities.html?stage=proposal_sent') + '</div>' : unknown('Open quotes');
+    var i = c.unpaidInvoices;
+    h += i ? '<div role="listitem">' + tile('Unpaid invoices', C.num(i.count) + ' · ' + esc(C.money(i.totalCents, '$0')), 'Invoices not yet marked paid.', 'admin-invoices.html') + '</div>' : unknown('Unpaid invoices');
+    var r = c.renewalsDue;
+    h += r ? '<div role="listitem">' + tile('Renewals due', C.num(r.licensesEnding), esc('Paid licenses ending in the next ' + r.windowDays + ' days with no renewal yet. ' + r.openRenewalDeals + ' open renewal deal' + (r.openRenewalDeals === 1 ? '' : 's') + '.'), 'admin-crm-opportunities.html?oppType=renewal') + '</div>' : unknown('Renewals due');
+    var w = c.winRate;
+    h += w ? '<div role="listitem">' + tile('Win rate, last ' + esc(w.days) + ' days', w.percent === null ? '—' : esc(w.percent) + '%', w.percent === null ? 'No deals were closed Won or Lost in this time yet.' : esc(w.won + ' won of ' + (w.won + w.lost) + ' closed Won or Lost.'), 'admin-crm-reports.html') + '</div>' : unknown('Win rate');
+    return h + '</div>';
+  }
+
   function draw() {
     var d = state.data, p = d.pipeline, cnt = d.counts;
     var html = '<div class="crm-stats" role="list" aria-label="Contacts by label">' +
       '<div role="listitem">' + tile('Suspects', C.num(cnt.suspect), 'Signed up or imported. No sign of buying interest yet.', 'admin-crm-contacts.html?classification=suspect') + '</div>' +
       '<div role="listitem">' + tile('Prospects', C.num(cnt.prospect), 'Asked for a quote, or a teammate moved them up.', 'admin-crm-contacts.html?classification=prospect') + '</div>' +
-      '<div role="listitem">' + tile('Customers', C.num(cnt.customer), 'Own a paid, non-trial purchase.', 'admin-crm-contacts.html?classification=customer') + '</div>' +
+      '<div role="listitem">' + tile('Customer contacts', C.num(cnt.customer), 'People who own a paid, non-trial purchase. Organizations are counted below.', 'admin-crm-contacts.html?classification=customer') + '</div>' +
       '</div>' +
       '<div class="crm-stats" role="list" aria-label="Pipeline">' +
       '<div role="listitem">' + tile('Open deals', C.num(p.openCount), p.myOpen + ' yours' + (p.unowned ? ', ' + p.unowned + ' with no owner' : ''), 'admin-crm-opportunities.html') + '</div>' +
       '<div role="listitem">' + tile('Pipeline value', esc(C.money(p.grossCents, '$0')), p.openWithoutValue ? p.openWithoutValue + ' open deal' + (p.openWithoutValue === 1 ? ' has' : 's have') + ' no value yet and add nothing here.' : 'Every open deal has a value.') + '</div>' +
       '<div role="listitem">' + tile('Weighted pipeline', esc(C.money(p.weightedCents, '$0')), 'Each deal’s value times its stage’s chance of closing.') + '</div>' +
       '</div>' +
+      cardsRow(d.cards) +
       '<p class="crm-small crm-muted" style="margin:-8px 0 22px;">Test addresses ending in @example.com are left out of the counts.</p>';
 
     // Phase 3: what is on my plate today, and what the rules say needs a look.

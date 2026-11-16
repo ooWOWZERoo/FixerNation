@@ -17,7 +17,7 @@ const { acceptQuoteViaPO } = require('./quote-accept');
 const { isValidStateCode, stateName } = require('../lib/territories');
 const {
   OPP_STATES, OPP_TYPES, COMMITTEE_ROLES, INFLUENCE, STANCE,
-  text, posInt, cents, dateOnly, utcDateTime, oneOf, paging, likeTerm, daysSince,
+  text, posInt, cents, dateOnly, utcDateTime, oneOf, paging, likeTerm, daysSince, quarterBounds,
 } = require('../lib/crm-common');
 
 const router = express.Router();
@@ -118,9 +118,7 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   // "This quarter" is the calendar quarter of the day the page names (the person's own day), else the server's UTC day.
   if (req.query.closeIn === 'quarter') {
     const day = dateOnly(req.query.today) || new Date().toISOString().slice(0, 10);
-    const y = Number(day.slice(0, 4)), qStart = Math.floor((Number(day.slice(5, 7)) - 1) / 3) * 3;
-    const from = `${y}-${String(qStart + 1).padStart(2, '0')}-01`;
-    const to = new Date(Date.UTC(y, qStart + 3, 0)).toISOString().slice(0, 10);
+    const { from, to } = quarterBounds(day);
     where.push('o.expected_close_date IS NOT NULL AND o.expected_close_date >= ? AND o.expected_close_date <= ?'); params.push(from, to);
   }
   // Won, and no paid purchase on any of the deal's quotes: nothing was bought, or a purchase order is still waiting. (Pair it with state=won.)

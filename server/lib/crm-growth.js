@@ -197,4 +197,4 @@ async function runGrowth(conn, { apply = false, today = dayText(Date.now()), now
   return out;
 }
 
-module.exports = { runGrowth, RENEWED_MIN_EXTENSION_DAYS, sourcePurchases, keyFor, isMissing, LEAD_DAYS, LOOKBACK_DAYS, EXPANSION_SEAT_PCT, WON_GUARD_DAYS, NEXT_STEP_DAYS, RENEWAL_KEY, EXPANSION_KEY };
+module.exports = { resolveSchool, alreadyRenewed, runGrowth, RENEWED_MIN_EXTENSION_DAYS, sourcePurchases, keyFor, isMissing, LEAD_DAYS, LOOKBACK_DAYS, EXPANSION_SEAT_PCT, WON_GUARD_DAYS, NEXT_STEP_DAYS, RENEWAL_KEY, EXPANSION_KEY };

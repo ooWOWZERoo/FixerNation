@@ -62,7 +62,13 @@ function daysSince(sqlDateTime) {
   return Number.isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000));
 }
 
+// The calendar quarter a day falls in: { from, to } as YYYY-MM-DD, both ends inclusive, plus a label like "Q4 2026". Used by the "expected this quarter" view and card.
+function quarterBounds(day) {
+  const y = Number(day.slice(0, 4)), q = Math.floor((Number(day.slice(5, 7)) - 1) / 3);
+  return { from: `${y}-${String(q * 3 + 1).padStart(2, '0')}-01`, to: new Date(Date.UTC(y, q * 3 + 3, 0)).toISOString().slice(0, 10), label: `Q${q + 1} ${y}` };
+}
+
 module.exports = {
-  ACCOUNT_TYPES, OPP_STATES, OPP_TYPES, COMMITTEE_ROLES, INFLUENCE, STANCE,
+  quarterBounds, ACCOUNT_TYPES, OPP_STATES, OPP_TYPES, COMMITTEE_ROLES, INFLUENCE, STANCE,
   text, posInt, cents, dateOnly, utcDateTime, oneOf, paging, likeTerm, daysSince,
 };
