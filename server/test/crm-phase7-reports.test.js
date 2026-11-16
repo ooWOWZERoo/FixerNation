@@ -11,7 +11,7 @@ const { db, pool } = env.makeDb();
 env.install(pool);
 const R = (f) => require(path.join(env.SERVER, 'routes', f));
 const reports = require(path.join(env.SERVER, 'lib/crm-reports.js'));
-const { server, call } = env.listen([['/api/crm/reports', R('crm-reports.js')], ['/api/crm/opportunities', R('crm-opportunities.js')]]);
+const { server, call } = env.listen([['/api/crm/reports', R('crm-reports.js')], ['/api/crm/opportunities', R('crm-opportunities.js')], ['/api/crm/overview', R('crm-overview.js')]]);
 test.after(() => server.close());
 
 const admin = env.addAdmin(db, 'owner', 'admin');
@@ -291,4 +291,37 @@ test('SOURCE RULES: reports only read; money is only from qualifying purchases; 
   }
   assert.match(read('lib/crm-reports.js'), /QUALIFYING_SQL/);
   assert.doesNotMatch(read('lib/crm-reports.js'), /SUM\(\s*q\.|SUM\(\s*o\.amount_cents[^)]*\)\s+AS\s+paid/i, 'paid money never comes from a quote or a deal value');
+});
+
+test('B2: the Overview leaves test-address deals out of every deal figure, exactly as the Reports do', async () => {
+  db.prepare("UPDATE crm_opportunities SET next_step_due_at = '2026-01-01 00:00:00' WHERE id = ?").run(D6); // the test deal is overdue as well
+  const o = await call('GET', '/api/crm/overview', undefined, admin);
+  assert.equal(o.status, 200, JSON.stringify(o.json));
+  const p = await reports.runReport(pool, 'pipeline');
+  assert.equal(o.json.pipeline.openCount, p.totals.deals, 'the same open deals as the weighted pipeline report');
+  assert.equal(o.json.pipeline.grossCents, p.totals.grossCents, 'D6 (999999) is not in the gross');
+  assert.equal(o.json.pipeline.openWithoutValue, p.totals.withoutValue);
+  const ids = (list) => list.items.map(i => i.id);
+  assert.ok(!ids(o.json.nextSteps.missing).includes(D6) && !ids(o.json.nextSteps.overdue).includes(D6), 'the test deal is on neither list');
+  assert.equal(o.json.nextSteps.missing.total, ids(o.json.nextSteps.missing).length, 'the count matches the list (no hidden test rows)');
+  const plainMissing = get(`SELECT COUNT(*) n FROM crm_opportunities o WHERE o.state = 'open' AND (o.next_step IS NULL OR o.next_step = '') AND o.id <> ?`, D6).n;
+  assert.equal(o.json.nextSteps.missing.total, plainMissing);
+});
+
+test('B3: Source to paid also shows every qualifying paid purchase by purchase date, split into on a deal and on no deal, so a direct card sale is not zero', async () => {
+  // A card sale straight from the site: no quote at all. The default purchase date in the test schema is 2026-01-01.
+  const direct = env.addPurchase(db, other, { paymentStatus: 'paid', method: 'card', amountCents: 20000 });
+  const JAN = { from: '2026-01-01', to: '2026-01-01' };
+  const s = await reports.runReport(pool, 'sourcetopaid', JAN);
+  // In January: the PO purchase on D2's quote (50000), the card purchase on a quote with no deal (30000) and the direct one (20000). The trial, the pending one and the test address do not count.
+  assert.deepEqual(s.purchases, { count: 3, cents: 100000, onDealCount: 1, onDealCents: 50000, otherCount: 2, otherCents: 50000 });
+  const plain = get(`SELECT COUNT(*) n, SUM(p.amount_cents) c FROM purchases p JOIN newsletter_contacts c ON c.id = p.contact_id
+    WHERE p.payment_status = 'paid' AND p.amount_cents > 0 AND p.trial_lesson_limit IS NULL AND p.trial_expiration_date IS NULL AND LOWER(c.email) NOT LIKE '%@example.com'
+    AND p.purchased_at >= '2026-01-01 00:00:00' AND p.purchased_at <= '2026-01-01 23:59:59'`);
+  assert.equal(s.purchases.count, plain.n); assert.equal(s.purchases.cents, plain.c);
+  assert.ok(s.table.rows.some(r => /not on any deal/.test(r[0]) && r[6] === '500.00'), 'the table and the CSV carry the direct-sale line');
+  assert.match(s.definition, /by the day it was bought/);
+  const feb = await reports.runReport(pool, 'sourcetopaid', { from: '2026-02-01', to: '2026-02-28' });
+  assert.equal(feb.purchases.count, 0, 'outside the window it is zero');
+  db.prepare('DELETE FROM purchases WHERE id = ?').run(direct);
 });

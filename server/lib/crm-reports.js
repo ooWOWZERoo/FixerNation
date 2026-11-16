@@ -207,13 +207,30 @@ async function sourceToPaid(conn, win) {
     if (num(d.paid)) { g.paidDeals++; g.paidCents += cents.get(d.id) || 0; }
     groups.set(label, g);
   }
+  // Every qualifying paid purchase in the window, by the day it was bought, split into those on a deal's quote and the rest (a card sale straight from the site has
+  // no quote). The groups above only ever see the first kind, so without this line a direct sale looked like zero revenue (punch list B3).
+  const pw = windowSql('p.purchased_at', win);
+  const onDeal = 'EXISTS (SELECT 1 FROM quote_requests pq WHERE pq.id = p.quote_id AND pq.opportunity_id IS NOT NULL)';
+  const [[paidAll]] = await conn.query(
+    `SELECT COUNT(*) AS n, COALESCE(SUM(p.amount_cents), 0) AS cents, COALESCE(SUM(CASE WHEN ${onDeal} THEN 1 ELSE 0 END), 0) AS deal_n,
+            COALESCE(SUM(CASE WHEN ${onDeal} THEN p.amount_cents ELSE 0 END), 0) AS deal_cents
+     ${PURCHASES_FROM} JOIN newsletter_contacts pc ON pc.id = p.contact_id
+     WHERE ${QUALIFYING_SQL} AND NOT (${TEST_ADDRESS_SQL.replace('email', 'pc.email')})${pw.sql}`, pw.params);
+  const purchases = {
+    count: num(paidAll.n), cents: num(paidAll.cents),
+    onDealCount: num(paidAll.deal_n), onDealCents: num(paidAll.deal_cents),
+    otherCount: num(paidAll.n) - num(paidAll.deal_n), otherCents: num(paidAll.cents) - num(paidAll.deal_cents),
+  };
   const rows = [...groups.values()].map(g => ({ ...g, wonRate: pct(g.won, g.deals), paidRate: pct(g.paidDeals, g.deals) })).sort((a, b) => b.deals - a.deals || a.source.localeCompare(b.source));
   const totals = rows.reduce((t, g) => ({ deals: t.deals + g.deals, won: t.won + g.won, paidDeals: t.paidDeals + g.paidDeals, paidCents: t.paidCents + g.paidCents }), { deals: 0, won: 0, paidDeals: 0, paidCents: 0 });
   return {
     key: 'sourcetopaid', title: 'Source to paid', window: win, windowLabel: windowLabel(win) + ' (by the day the deal was created)',
-    definition: 'Groups the deals created in the window by their Source field, which is whatever staff typed (blank means "Not recorded"). "Paid" means a purchase on one of the deal\'s quotes that counts toward Customer: paid, more than $0, not a trial. Money is only from those purchases. This is not marketing attribution; that is the "How they found us" card on a contact.',
-    totals, sources: rows,
-    table: { header: ['Source', 'Deals', 'Won', 'Won (%)', 'Deals with a paid purchase', 'Paid (%)', 'Paid amount ($)'], rows: rows.map(g => [g.source, g.deals, g.won, g.wonRate, g.paidDeals, g.paidRate, dollars(g.paidCents)]).concat([['All sources', totals.deals, totals.won, pct(totals.won, totals.deals), totals.paidDeals, pct(totals.paidDeals, totals.deals), dollars(totals.paidCents)]]) },
+    definition: 'Groups the deals created in the window by their Source field, which is whatever staff typed (blank means "Not recorded"). "Paid" means a purchase on one of the deal\'s quotes that counts toward Customer: paid, more than $0, not a trial. Money is only from those purchases. The sources above only see money on a deal\'s quote and are grouped by the day the deal was created. The last three lines are different: every qualifying paid purchase bought in the window, by the day it was bought, split into those on a deal\'s quote and those on no deal (a card sale straight from the site has no quote). This is not marketing attribution; that is the "How they found us" card on a contact.',
+    totals, sources: rows, purchases,
+    table: { header: ['Source', 'Deals', 'Won', 'Won (%)', 'Deals with a paid purchase', 'Paid (%)', 'Paid amount ($)'], rows: rows.map(g => [g.source, g.deals, g.won, g.wonRate, g.paidDeals, g.paidRate, dollars(g.paidCents)]).concat([['All sources', totals.deals, totals.won, pct(totals.won, totals.deals), totals.paidDeals, pct(totals.paidDeals, totals.deals), dollars(totals.paidCents)],
+      ['All paid purchases bought in the window (by purchase date)', purchases.count, '', '', '', '', dollars(purchases.cents)],
+      ['  of which on a deal\'s quote', purchases.onDealCount, '', '', '', '', dollars(purchases.onDealCents)],
+      ['  of which not on any deal (for example a card sale from the site)', purchases.otherCount, '', '', '', '', dollars(purchases.otherCents)]]) },
   };
 }
 

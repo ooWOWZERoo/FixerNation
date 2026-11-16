@@ -1,6 +1,6 @@
 // Sales CRM Overview: one request for the numbers on the front page (mounted at /api/crm/overview).
 // Every figure comes from the same code the lists use: Suspect / Prospect / Customer from lib/crm-classification.js (test addresses left out), pipeline
-// from one row per open deal (each deal has one stage and one value, so nothing counts twice), and the "needs a decision" lists from the review queries.
+// from one row per open deal (each deal has one stage and one value, so nothing counts twice; a deal with a test address on a quote or as its main contact is left out, as in Reports), and the "needs a decision" lists from the review queries.
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
@@ -8,6 +8,7 @@ const { requireCrm } = require('../lib/crm-permissions');
 const cls = require('../lib/crm-classification');
 const { listQuoteGaps } = require('../lib/crm-quotes');
 const { daysSince } = require('../lib/crm-common');
+const { DEAL_REAL_SQL } = require('../lib/crm-reports'); // the same test-address rule the Reports use (punch list B2)
 
 const router = express.Router();
 const LIST = 8;
@@ -18,7 +19,7 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
 
   const [open] = await pool.query(
     `SELECT o.id, o.amount_cents, s.stage_key, s.label, s.sort_order, COALESCE(o.probability_override, s.default_probability) AS prob, o.owner_admin_id
-     FROM crm_opportunities o JOIN crm_pipeline_stages s ON s.id = o.stage_id WHERE o.state = 'open'`);
+     FROM crm_opportunities o JOIN crm_pipeline_stages s ON s.id = o.stage_id WHERE o.state = 'open' AND ${DEAL_REAL_SQL}`);
   let gross = 0, weighted = 0, unvalued = 0, mine = 0, unowned = 0;
   const byStage = new Map();
   for (const r of open) {
@@ -35,10 +36,10 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const dealFrom = `FROM crm_opportunities o JOIN crm_accounts a ON a.id = o.account_id JOIN crm_pipeline_stages s ON s.id = o.stage_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id`;
   const shape = r => ({ id: r.id, name: r.name, accountName: r.account_name, stage: r.stage_label, ownerName: r.owner_name || null, nextStep: r.next_step || null, nextStepDueAt: r.next_step_due_at || null, daysInStage: daysSince(r.stage_entered_at) });
 
-  const overdueWhere = "o.state = 'open' AND o.next_step_due_at IS NOT NULL AND o.next_step_due_at < ?";
+  const overdueWhere = `o.state = 'open' AND o.next_step_due_at IS NOT NULL AND o.next_step_due_at < ? AND ${DEAL_REAL_SQL}`;
   const [[{ n: overdueN }]] = await pool.query(`SELECT COUNT(*) AS n FROM crm_opportunities o WHERE ${overdueWhere}`, [now]);
   const [overdue] = await pool.query(`SELECT ${dealCols} ${dealFrom} WHERE ${overdueWhere} ORDER BY o.next_step_due_at ASC, o.id LIMIT ${LIST}`, [now]);
-  const missingWhere = "o.state = 'open' AND (o.next_step IS NULL OR o.next_step = '')";
+  const missingWhere = `o.state = 'open' AND (o.next_step IS NULL OR o.next_step = '') AND ${DEAL_REAL_SQL}`;
   const [[{ n: missingN }]] = await pool.query(`SELECT COUNT(*) AS n FROM crm_opportunities o WHERE ${missingWhere}`);
   const [missing] = await pool.query(`SELECT ${dealCols} ${dealFrom} WHERE ${missingWhere} ORDER BY o.stage_entered_at ASC, o.id LIMIT ${LIST}`);
 

@@ -184,18 +184,50 @@ const TABLES = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`],
 ];
 
-// [table, column, definition, optional extra statement run after the column exists (index / foreign key)]
+// [table, column, definition, extras]. Each extra is [kind, name, statement]: an index or a foreign key that goes with the column. The column and each extra are
+// checked and added on their own (punch list B5): if the index or foreign key failed on a first run, the column exists but they do not, and a re-run adds them.
 const COLUMNS = [
-  ['admin_users', 'crm_role', "VARCHAR(12) NOT NULL DEFAULT 'admin'", null],
-  ['newsletter_contacts', 'crm_classification', "VARCHAR(12) NOT NULL DEFAULT 'suspect'", 'ADD INDEX idx_contacts_crm_classification (crm_classification)'],
-  ['newsletter_contacts', 'classification_updated_at', 'DATETIME NULL', null],
-  ['newsletter_contacts', 'classification_locked', 'TINYINT(1) NOT NULL DEFAULT 0', null],
-  ['newsletter_contacts', 'assigned_admin_id', 'INT UNSIGNED NULL', 'ADD INDEX idx_contacts_assigned_admin (assigned_admin_id), ADD CONSTRAINT fk_contacts_assigned_admin FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL'],
-  ['newsletter_contacts', 'last_contacted_at', 'DATETIME NULL', null],
-  ['newsletter_contacts', 'crm_source', 'VARCHAR(64) NULL', null],
-  ['quote_requests', 'contact_id', 'INT UNSIGNED NULL', 'ADD INDEX idx_quote_requests_contact (contact_id), ADD CONSTRAINT fk_quote_requests_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL'],
-  ['quote_requests', 'opportunity_id', 'INT UNSIGNED NULL', 'ADD INDEX idx_quote_requests_opportunity (opportunity_id), ADD CONSTRAINT fk_quote_requests_opportunity FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE SET NULL'],
+  ['admin_users', 'crm_role', "VARCHAR(12) NOT NULL DEFAULT 'admin'", []],
+  ['newsletter_contacts', 'crm_classification', "VARCHAR(12) NOT NULL DEFAULT 'suspect'", [['index', 'idx_contacts_crm_classification', 'ADD INDEX idx_contacts_crm_classification (crm_classification)']]],
+  ['newsletter_contacts', 'classification_updated_at', 'DATETIME NULL', []],
+  ['newsletter_contacts', 'classification_locked', 'TINYINT(1) NOT NULL DEFAULT 0', []],
+  ['newsletter_contacts', 'assigned_admin_id', 'INT UNSIGNED NULL', [
+    ['index', 'idx_contacts_assigned_admin', 'ADD INDEX idx_contacts_assigned_admin (assigned_admin_id)'],
+    ['fk', 'fk_contacts_assigned_admin', 'ADD CONSTRAINT fk_contacts_assigned_admin FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL']]],
+  ['newsletter_contacts', 'last_contacted_at', 'DATETIME NULL', []],
+  ['newsletter_contacts', 'crm_source', 'VARCHAR(64) NULL', []],
+  ['quote_requests', 'contact_id', 'INT UNSIGNED NULL', [
+    ['index', 'idx_quote_requests_contact', 'ADD INDEX idx_quote_requests_contact (contact_id)'],
+    ['fk', 'fk_quote_requests_contact', 'ADD CONSTRAINT fk_quote_requests_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE SET NULL']]],
+  ['quote_requests', 'opportunity_id', 'INT UNSIGNED NULL', [
+    ['index', 'idx_quote_requests_opportunity', 'ADD INDEX idx_quote_requests_opportunity (opportunity_id)'],
+    ['fk', 'fk_quote_requests_opportunity', 'ADD CONSTRAINT fk_quote_requests_opportunity FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE SET NULL']]],
 ];
+
+const DUP_CODES = ['ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME', 'ER_FK_DUP_NAME'];
+
+// Adds every column and each column's index and foreign key that is missing, one statement at a time, each checked first. Safe to re-run after a partial failure.
+async function ensureColumns(db, schema, log = console.log) {
+  const exists = async (sql, params) => (await db.query(sql, params))[0].length > 0;
+  const hasColumn = (t, c) => exists('SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?', [schema, t, c]);
+  const hasIndex = (t, n) => exists('SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?', [schema, t, n]);
+  const hasForeignKey = (t, n) => exists("SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'", [schema, t, n]);
+  const run = async (sql, label) => {
+    try { await db.query(sql); log(`Added ${label}.`); } catch (err) {
+      if (!DUP_CODES.includes(err.code)) throw err;
+      log(`Skipped: ${label} already exists.`);
+    }
+  };
+  for (const [table, column, def, extras] of COLUMNS) {
+    if (await hasColumn(table, column)) log(`Skipped: ${table}.${column} already exists.`);
+    else await run(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`, `${table}.${column}`);
+    for (const [kind, name, statement] of extras) {
+      const there = kind === 'index' ? await hasIndex(table, name) : await hasForeignKey(table, name);
+      if (there) log(`Skipped: ${table} ${kind} ${name} already exists.`);
+      else await run(`ALTER TABLE ${table} ${statement}`, `${table} ${kind} ${name}`);
+    }
+  }
+}
 
 async function main() {
   const db = await mysql.createConnection({
@@ -207,7 +239,6 @@ async function main() {
   });
   const schema = process.env.DB_NAME;
   const hasTable = async t => (await db.query('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?', [schema, t]))[0].length > 0;
-  const hasColumn = async (t, c) => (await db.query('SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?', [schema, t, c]))[0].length > 0;
 
   // The tables this builds on must exist; stop early with a clear message rather than half-apply.
   for (const t of ['admin_users', 'newsletter_contacts', 'quote_requests', 'purchases', 'schools', 'districts']) {
@@ -220,17 +251,7 @@ async function main() {
     console.log(`Created ${name}.`);
   }
 
-  for (const [table, column, def, extra] of COLUMNS) {
-    if (await hasColumn(table, column)) { console.log(`Skipped: ${table}.${column} already exists.`); continue; }
-    try {
-      await db.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
-      console.log(`Added ${table}.${column}.`);
-      if (extra) await db.query(`ALTER TABLE ${table} ${extra}`);
-    } catch (err) {
-      if (err.code !== 'ER_DUP_FIELDNAME' && err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_FK_DUP_NAME') throw err;
-      console.log(`Skipped: ${table}.${column} already exists.`);
-    }
-  }
+  await ensureColumns(db, schema);
 
   // Seeds: only when the key is missing, so a stage or reason the owner edited later is never overwritten.
   let seeded = 0;
@@ -247,4 +268,6 @@ async function main() {
   await db.end();
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+module.exports = { COLUMNS, ensureColumns };
+
+if (require.main === module) main().catch(err => { console.error(err); process.exit(1); });
