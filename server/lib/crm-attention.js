@@ -5,26 +5,79 @@
 // All functions take a database handle `conn` (the pool in the routes, a plain connection in the cron script) so the same code runs in both. SQL stays portable.
 // `today` is a 'YYYY-MM-DD' day: the browser's own day when a person is looking, the server's UTC day in the cron job.
 
-const STALE_STAGE_DAYS = 30;     // a deal that has sat in one stage this long...
-const QUIET_DAYS = 14;           // ...and has had no note and no finished task for this long
-const QUOTE_WINDOW_DAYS = 7;     // a sent quote that runs out within this many days and has not been accepted
-const WON_GRACE_DAYS = 3;        // a Won deal with no purchase after this many days
+// G2: every threshold is a setting a CRM Admin can change (Hub Settings > Needs Attention), with these defaults, limits and wording. A stored value that is missing, not a whole
+// number or out of range falls back to the default, so a bad value can never switch a rule off or flood the list. `unit` is for the page.
+const THRESHOLDS = {
+  staleStageDays:      { setting: 'crm_attn_stale_stage_days', def: 30, min: 7, max: 365, unit: 'days', label: 'A deal has gone quiet after', help: 'Days a deal can sit in one stage before it counts as quiet (with no recent note or finished task).' },
+  quietDays:           { setting: 'crm_attn_quiet_days', def: 14, min: 3, max: 180, unit: 'days', label: '...and nobody has written a note or finished a task for', help: 'A note or a finished task within this many days keeps a deal off the "gone quiet" list.' },
+  quoteWindowDays:     { setting: 'crm_attn_quote_window_days', def: 7, min: 1, max: 60, unit: 'days', label: 'A quote runs out soon when it ends within', help: 'Days before a sent quote\u2019s "good until" date that it is listed.' },
+  quoteUnansweredDays: { setting: 'crm_attn_quote_unanswered_days', def: 14, min: 3, max: 120, unit: 'days', label: 'A quote is unanswered after', help: 'Days since a quote was sent with no acceptance. This says nothing about whether they opened it.' },
+  closeGraceDays:      { setting: 'crm_attn_close_grace_days', def: 0, min: 0, max: 60, unit: 'days', label: 'An expected close date has passed when it is over by', help: 'Days past the expected close date before the deal is listed. 0 lists it the next day.' },
+  wonGraceDays:        { setting: 'crm_attn_won_grace_days', def: 3, min: 0, max: 60, unit: 'days', label: 'A Won deal needs a purchase within', help: 'Days after a deal is closed Won before "no purchase yet" is listed.' },
+  poWaitDays:          { setting: 'crm_attn_po_wait_days', def: 14, min: 3, max: 180, unit: 'days', label: 'A purchase order is overdue after', help: 'Days since a quote was accepted by purchase order with no PO received date on its invoice.' },
+  trialEndingDays:     { setting: 'crm_attn_trial_ending_days', def: 5, min: 1, max: 60, unit: 'days', label: 'A trial is ending when it ends within', help: 'Days before a trial\u2019s end date that it is listed.' },
+  trialUsePercent:     { setting: 'crm_attn_trial_use_percent', def: 60, min: 10, max: 100, unit: 'percent', label: 'A trial is well used when this share of seats is registered', help: 'Percent of a multi-seat trial\u2019s seats that teachers have registered. Seats are counted, never named.' },
+};
+const THRESHOLD_DEFAULTS = Object.fromEntries(Object.entries(THRESHOLDS).map(([k, v]) => [k, v.def]));
 const PER_RULE_LIMIT = 200;
 
-const RULES = {
-  next_step_overdue: { label: 'Next step is overdue', help: 'An open deal has a next step whose due date has passed.', subjectType: 'opportunity' },
-  no_next_step: { label: 'No next step', help: 'An open deal that does not say what happens next.', subjectType: 'opportunity' },
-  stale_deal: { label: 'Deal has gone quiet', help: `An open deal that has sat in one stage for ${STALE_STAGE_DAYS} days or more with no note and no finished task in the last ${QUIET_DAYS} days.`, subjectType: 'opportunity' },
-  no_owner: { label: 'Nobody owns this deal', help: 'An open deal with no owner (for example, the owner’s account was removed).', subjectType: 'opportunity' },
-  task_overdue: { label: 'Task is overdue', help: 'An open task whose due date has passed.', subjectType: 'task' },
-  checklist_overdue: { label: 'Checklist step is overdue', help: 'A procurement step on an open deal whose due date has passed.', subjectType: 'checklist_item' },
-  quote_expiring: { label: 'Quote runs out soon', help: `A quote that was sent, has not been accepted and is good for ${QUOTE_WINDOW_DAYS} more days or fewer.`, subjectType: 'quote' },
-  won_no_purchase: { label: 'Won, but no purchase yet', help: `A deal with a quote that was closed as Won more than ${WON_GRACE_DAYS} days ago, and none of its quotes has a purchase. Deals with no quote at all (a phone deal, a renewal the system opened) are not listed, because there is nothing to link a purchase to. The CRM never creates a purchase; it starts from the quote or the order.`, subjectType: 'opportunity' },
-};
+// The thresholds in force now: stored settings, each checked, else its default.
+async function loadThresholds(conn) {
+  const out = { ...THRESHOLD_DEFAULTS };
+  let rows = [];
+  try { [rows] = await conn.query("SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'crm!_attn!_%' ESCAPE '!'"); } catch { return out; }
+  const byKey = new Map(rows.map(r => [r.setting_key, r.setting_value]));
+  for (const [k, d] of Object.entries(THRESHOLDS)) {
+    const raw = byKey.get(d.setting);
+    if (raw === undefined || raw === null || !/^\d{1,4}$/.test(String(raw).trim())) continue;
+    const n = Number(raw);
+    if (n >= d.min && n <= d.max) out[k] = n;
+  }
+  return out;
+}
 
-const SUBJECT_TYPES = ['opportunity', 'task', 'checklist_item', 'quote'];
+// What each rule means, in words that carry the thresholds in force.
+const HELP = {
+  next_step_overdue: () => 'An open deal has a next step whose due date has passed.',
+  no_next_step: () => 'An open deal that does not say what happens next.',
+  stale_deal: (t) => `An open deal that has sat in one stage for ${t.staleStageDays} days or more with no note and no finished task in the last ${t.quietDays} days.`,
+  no_owner: () => 'An open deal with no owner (for example, the owner\u2019s account was removed).',
+  task_overdue: () => 'An open task whose due date has passed.',
+  checklist_overdue: () => 'A procurement step on an open deal whose due date has passed.',
+  quote_expiring: (t) => `A quote that was sent, has not been accepted and is good for ${t.quoteWindowDays} more days or fewer.`,
+  won_no_purchase: (t) => `A deal with a quote that was closed as Won more than ${t.wonGraceDays} days ago, and none of its quotes has a purchase. Deals with no quote at all (a phone deal, a renewal the system opened) are not listed, because there is nothing to link a purchase to. The CRM never creates a purchase; it starts from the quote or the order.`,
+  quote_unanswered: (t) => `A quote that was sent ${t.quoteUnansweredDays} or more days ago and has not been accepted or replaced, on an open deal or on no deal. It does not say whether the buyer opened it.`,
+  close_date_passed: (t) => `An open deal whose expected close date is ${t.closeGraceDays ? `${t.closeGraceDays} or more days ` : ''}in the past. Move the date or move the deal.`,
+  po_not_received: (t) => `A quote accepted by purchase order ${t.poWaitDays} or more days ago whose invoice still has no PO received date.`,
+  trial_ending: (t) => `A trial that ends within ${t.trialEndingDays} days. A good time to ask how it went and offer a quote.`,
+  trial_high_use: (t) => `A trial with two or more seats where ${t.trialUsePercent}% or more of the seats are registered. Only counts of seats are used, never names.`,
+};
+const helpFor = (key, t = THRESHOLD_DEFAULTS) => HELP[key](t);
+
+const RULES = {
+  next_step_overdue: { label: 'Next step is overdue', subjectType: 'opportunity' },
+  no_next_step: { label: 'No next step', subjectType: 'opportunity' },
+  stale_deal: { label: 'Deal has gone quiet', subjectType: 'opportunity' },
+  no_owner: { label: 'Nobody owns this deal', subjectType: 'opportunity' },
+  task_overdue: { label: 'Task is overdue', subjectType: 'task' },
+  checklist_overdue: { label: 'Checklist step is overdue', subjectType: 'checklist_item' },
+  quote_expiring: { label: 'Quote runs out soon', subjectType: 'quote' },
+  won_no_purchase: { label: 'Won, but no purchase yet', subjectType: 'opportunity' },
+  quote_unanswered: { label: 'Quote has had no answer', subjectType: 'quote' },
+  close_date_passed: { label: 'Expected close date has passed', subjectType: 'opportunity' },
+  po_not_received: { label: 'Purchase order not received', subjectType: 'purchase' },
+  trial_ending: { label: 'Trial is ending', subjectType: 'purchase' },
+  trial_high_use: { label: 'Trial is being well used', subjectType: 'purchase' },
+};
+// Each rule's `help` (at the default thresholds, for anything that reads RULES directly); helpFor() gives the wording for the thresholds in force.
+for (const k of Object.keys(RULES)) RULES[k].help = HELP[k](THRESHOLD_DEFAULTS);
+
+const SUBJECT_TYPES = ['opportunity', 'task', 'checklist_item', 'quote', 'purchase'];
 const TEST_EMAIL = "LOWER(TRIM(q.email)) LIKE '%@example.com'";
 
+function isMissing(err) {
+  return err && (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE' || /no such (table|column)|has no column named/i.test(String(err.message)));
+}
 function addDays(day, n) { return new Date(new Date(`${day}T00:00:00Z`).getTime() + n * 86400000).toISOString().slice(0, 10); }
 function daysBetween(fromDate, today) {
   const a = new Date(`${String(fromDate).slice(0, 10)}T00:00:00Z`).getTime();
@@ -47,8 +100,9 @@ function item(ruleKey, subjectId, o) {
 
 // Punch list B12: each rule reads at most PER_RULE_LIMIT rows. When a rule has more than that, the true number is written into `caps[ruleKey]` (if the caller gave one)
 // so the page can say "showing the first 200 of N" instead of presenting a cut-off list as the whole list. Handling the oldest items brings the rest into view.
-async function evaluate(conn, { today, caps = {} }) {
+async function evaluate(conn, { today, caps = {}, thresholds = null }) {
   const items = [];
+  const t = thresholds || await loadThresholds(conn);
   async function capped(ruleKey, sql, params = []) {
     const [got] = await conn.query(`${sql} LIMIT ${PER_RULE_LIMIT}`, params);
     if (got.length >= PER_RULE_LIMIT) {
@@ -73,8 +127,8 @@ async function evaluate(conn, { today, caps = {} }) {
        AND NOT EXISTS (SELECT 1 FROM crm_notes n WHERE n.opportunity_id = o.id AND n.created_at >= ?)
        AND NOT EXISTS (SELECT 1 FROM crm_tasks t WHERE t.opportunity_id = o.id AND t.completed_at >= ?)
      ORDER BY o.stage_entered_at, o.id`,
-    [start(addDays(today, -STALE_STAGE_DAYS)), start(addDays(today, -QUIET_DAYS)), start(addDays(today, -QUIET_DAYS))]);
-  for (const r of rows) items.push(item('stale_deal', r.id, { ...deal(r), fingerprint: day10(r.stage_entered_at), why: `In ${r.stage_label} for ${daysBetween(r.stage_entered_at, today)} days, and nobody has logged a note or finished a task in the last ${QUIET_DAYS} days. Write down where it stands.` }));
+    [start(addDays(today, -t.staleStageDays)), start(addDays(today, -t.quietDays)), start(addDays(today, -t.quietDays))]);
+  for (const r of rows) items.push(item('stale_deal', r.id, { ...deal(r), fingerprint: day10(r.stage_entered_at), why: `In ${r.stage_label} for ${daysBetween(r.stage_entered_at, today)} days, and nobody has logged a note or finished a task in the last ${t.quietDays} days. Write down where it stands.` }));
 
   rows = await capped('no_owner', `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'open' AND o.owner_admin_id IS NULL ORDER BY o.id`);
   for (const r of rows) items.push(item('no_owner', r.id, { ...deal(r), fingerprint: '', why: 'Nobody owns this deal, so nobody is following it up. Pick an owner.' }));
@@ -104,7 +158,7 @@ async function evaluate(conn, { today, caps = {} }) {
     `SELECT q.id, q.quote_number, q.quote_valid_until, q.opportunity_id, o.name AS deal_name, o.owner_admin_id, ow.username AS owner_name
      FROM quote_requests q LEFT JOIN crm_opportunities o ON o.id = q.opportunity_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id
      WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND q.version_status <> 'superseded' AND q.status IN ('new', 'contacted') AND q.quote_valid_until IS NOT NULL
-       AND q.quote_valid_until >= ? AND q.quote_valid_until <= ? AND NOT (${TEST_EMAIL}) ORDER BY q.quote_valid_until, q.id`, [today, addDays(today, QUOTE_WINDOW_DAYS)]);
+       AND q.quote_valid_until >= ? AND q.quote_valid_until <= ? AND NOT (${TEST_EMAIL}) ORDER BY q.quote_valid_until, q.id`, [today, addDays(today, t.quoteWindowDays)]);
   for (const r of rows) items.push(item('quote_expiring', r.id, { title: r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, context: r.deal_name || 'No deal yet',
     link: r.opportunity_id ? pageFor.opportunity + r.opportunity_id : 'admin-quotes.html', ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null, dealId: r.opportunity_id ? Number(r.opportunity_id) : null,
     fingerprint: day10(r.quote_valid_until), why: `This quote was sent and has not been accepted. It is good until ${day10(r.quote_valid_until)}. Follow up before it runs out.` }));
@@ -113,8 +167,69 @@ async function evaluate(conn, { today, caps = {} }) {
     `SELECT ${dealCols} ${dealFrom} WHERE o.state = 'won' AND o.closed_at IS NOT NULL AND o.closed_at < ?
        AND EXISTS (SELECT 1 FROM quote_requests wq WHERE wq.opportunity_id = o.id)
        AND NOT EXISTS (SELECT 1 FROM purchases p JOIN quote_requests q ON q.id = p.quote_id WHERE q.opportunity_id = o.id)
-     ORDER BY o.closed_at, o.id`, [start(addDays(today, -WON_GRACE_DAYS))]);
+     ORDER BY o.closed_at, o.id`, [start(addDays(today, -t.wonGraceDays))]);
   for (const r of rows) items.push(item('won_no_purchase', r.id, { ...deal(r), fingerprint: day10(r.closed_at), why: `Closed as Won on ${day10(r.closed_at)}, but no purchase is linked to this deal’s quotes. Check the quote and the order.` }));
+
+  // ---- G2: the rules the spec lists that the first build lacked -------------------------------------------------------------------
+  // None of these writes anything, none says a quote was "viewed", and the trial rules count seats and never name a person. A database that lacks a table or column one of
+  // them reads (an older install, a test database) simply raises nothing for that rule.
+  const optional = async (fn) => { try { await fn(); } catch (err) { if (!isMissing(err)) throw err; } };
+
+  await optional(async () => {
+    rows = await capped('quote_unanswered',
+      `SELECT q.id, q.quote_number, q.quote_sent_at, q.opportunity_id, o.name AS deal_name, o.owner_admin_id, ow.username AS owner_name
+       FROM quote_requests q LEFT JOIN crm_opportunities o ON o.id = q.opportunity_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id
+       WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND q.version_status <> 'superseded' AND q.status IN ('new', 'contacted') AND q.quote_sent_at < ?
+         AND (o.id IS NULL OR o.state = 'open') AND NOT (${TEST_EMAIL}) ORDER BY q.quote_sent_at, q.id`, [start(addDays(today, -t.quoteUnansweredDays))]);
+    for (const r of rows) items.push(item('quote_unanswered', r.id, { title: r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, context: r.deal_name || 'No deal yet',
+      link: r.opportunity_id ? pageFor.opportunity + r.opportunity_id : 'admin-quotes.html', ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null, dealId: r.opportunity_id ? Number(r.opportunity_id) : null,
+      fingerprint: day10(r.quote_sent_at), why: `This quote was sent on ${day10(r.quote_sent_at)} (${daysBetween(r.quote_sent_at, today)} days ago) and has not been accepted. Follow up, or send a revised quote.` }));
+  });
+
+  await optional(async () => {
+    rows = await capped('close_date_passed',
+      `SELECT ${dealCols}, o.expected_close_date ${dealFrom} WHERE o.state = 'open' AND o.expected_close_date IS NOT NULL AND o.expected_close_date < ? ORDER BY o.expected_close_date, o.id`,
+      [addDays(today, -t.closeGraceDays)]);
+    for (const r of rows) items.push(item('close_date_passed', r.id, { ...deal(r), fingerprint: day10(r.expected_close_date),
+      why: `The expected close date was ${day10(r.expected_close_date)} (${daysBetween(r.expected_close_date, today)} days ago) and the deal is still open. Set a new date, or close the deal.` }));
+  });
+
+  // A purchase that belongs to a deal (through its quote) is the deal owner's; otherwise the buyer's contact owner. Staff test addresses are left out.
+  const buyerOwner = 'COALESCE(o.owner_admin_id, c.assigned_admin_id)';
+  const purchaseFrom = `FROM purchases p JOIN newsletter_contacts c ON c.id = p.contact_id LEFT JOIN quote_requests pq ON pq.id = p.quote_id LEFT JOIN crm_opportunities o ON o.id = pq.opportunity_id
+       LEFT JOIN admin_users ow ON ow.id = ${buyerOwner}`;
+  const purchaseItem = (ruleKey, r, extra) => item(ruleKey, r.id, { context: r.school_domain || r.contact_name || 'A purchase', ownerAdminId: r[`owner_id`] || null, ownerName: r.owner_name || null,
+    dealId: r.deal_id ? Number(r.deal_id) : null, link: r.deal_id ? pageFor.opportunity + r.deal_id : pageFor.contact + r.contact_id, ...extra });
+  const NOT_TEST = "LOWER(TRIM(c.email)) NOT LIKE '%@example.com'";
+
+  await optional(async () => {
+    rows = await capped('po_not_received',
+      `SELECT p.id, p.po_number, p.school_domain, p.purchased_at, p.contact_id, c.name AS contact_name, o.id AS deal_id, ${buyerOwner} AS owner_id, ow.username AS owner_name
+       ${purchaseFrom} JOIN invoices i ON i.id = p.invoice_id
+       WHERE p.payment_method = 'po' AND p.payment_status = 'pending' AND i.po_received_date IS NULL AND COALESCE(i.status, 'unpaid') <> 'paid'
+         AND p.purchased_at < ? AND ${NOT_TEST} ORDER BY p.purchased_at, p.id`, [start(addDays(today, -t.poWaitDays))]);
+    for (const r of rows) items.push(purchaseItem('po_not_received', r, { title: r.po_number ? `PO ${String(r.po_number).slice(0, 60)}` : 'Purchase order', fingerprint: day10(r.purchased_at),
+      why: `This quote was accepted by purchase order on ${day10(r.purchased_at)} (${daysBetween(r.purchased_at, today)} days ago) and the invoice has no PO received date yet. Ask for the PO, or mark it received when it arrives.` }));
+  });
+
+  const trialWhere = `p.trial_expiration_date IS NOT NULL AND p.trial_expiration_date >= ? AND COALESCE(p.license_status, 'active') NOT IN ('cancelled', 'suspended') AND ${NOT_TEST}`;
+  await optional(async () => {
+    rows = await capped('trial_ending',
+      `SELECT p.id, p.school_domain, p.trial_expiration_date, p.contact_id, c.name AS contact_name, o.id AS deal_id, ${buyerOwner} AS owner_id, ow.username AS owner_name
+       ${purchaseFrom} WHERE ${trialWhere} AND p.trial_expiration_date <= ? ORDER BY p.trial_expiration_date, p.id`, [start(today), `${addDays(today, t.trialEndingDays)} 23:59:59`]);
+    for (const r of rows) items.push(purchaseItem('trial_ending', r, { title: 'Trial ending', fingerprint: day10(r.trial_expiration_date),
+      why: `This trial ends on ${day10(r.trial_expiration_date)} (${daysBetween(today, day10(r.trial_expiration_date))} days from now). Ask how it went and offer a quote while they are still using it.` }));
+  });
+
+  await optional(async () => {
+    rows = await capped('trial_high_use',
+      `SELECT p.id, p.school_domain, p.trial_expiration_date, p.seat_count, p.contact_id, c.name AS contact_name, o.id AS deal_id, ${buyerOwner} AS owner_id, ow.username AS owner_name,
+         (SELECT COUNT(*) FROM license_seats s WHERE s.purchase_id = p.id AND s.status = 'registered') AS registered
+       ${purchaseFrom} WHERE ${trialWhere} AND p.seat_count >= 2
+         AND (SELECT COUNT(*) FROM license_seats s WHERE s.purchase_id = p.id AND s.status = 'registered') * 100 >= p.seat_count * ? ORDER BY p.trial_expiration_date, p.id`, [start(today), t.trialUsePercent]);
+    for (const r of rows) items.push(purchaseItem('trial_high_use', r, { title: 'Trial in good use', fingerprint: day10(r.trial_expiration_date),
+      why: `${Number(r.registered)} of this trial's ${Number(r.seat_count)} seats are registered (${t.trialUsePercent}% is the line). Teachers are using it: a good moment to talk about a quote.` }));
+  });
 
   return items;
 }
@@ -214,6 +329,6 @@ async function runDaily(conn, { apply, now, sendDigest }) {
 
 module.exports = {
   runDaily,
-  RULES, PER_RULE_LIMIT, SUBJECT_TYPES, STALE_STAGE_DAYS, QUIET_DAYS, QUOTE_WINDOW_DAYS, WON_GRACE_DAYS,
+  RULES, HELP, helpFor, THRESHOLDS, THRESHOLD_DEFAULTS, loadThresholds, PER_RULE_LIMIT, SUBJECT_TYPES,
   evaluate, withStates, setState, clearState, recordFirstSeen, countsByRule, addDays,
 };

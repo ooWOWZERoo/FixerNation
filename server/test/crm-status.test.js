@@ -37,8 +37,8 @@ test('NEEDS ATTENTION: every rule the server has is classed, and every red rule 
     assert.ok(level === 'red' || level === 'amber', `${k} must be red or yellow`);
     assert.equal(level, S.RED_RULES.includes(k) ? 'red' : 'amber');
   }
-  // The rules the owner sees as "late": a date has passed, or a deal is Won with no purchase.
-  assert.deepEqual([...S.RED_RULES].sort(), ['checklist_overdue', 'next_step_overdue', 'task_overdue', 'won_no_purchase']);
+  // The rules the owner sees as "late": a date has passed (a next step, a task, a checklist step or the expected close date), or a deal is Won with no purchase.
+  assert.deepEqual([...S.RED_RULES].sort(), ['checklist_overdue', 'close_date_passed', 'next_step_overdue', 'task_overdue', 'won_no_purchase']);
 });
 
 test('DEALS AND DECISIONS: overdue next steps are red or green; things waiting for a decision are yellow or green, never red', () => {
@@ -62,7 +62,7 @@ test('NOT COLOUR ALONE: each level has its own shape and its own word, the chip 
 
 test('WHERE IT IS USED: the four work-status boxes on the Overview, and never on a contact, a label or a pipeline total', () => {
   const html = read('admin-crm-overview.html');
-  assert.match(html, /<script src="crm-status\.js\?v=1"><\/script>/);
+  assert.match(html, /<script src="crm-status\.js\?v=2"><\/script>/);
   for (const [what, re] of [['My tasks', /FnCrmStatus\.tasks\(s\)/], ['Needs attention', /FnCrmStatus\.attention\(r\.data\.counts\)/], ['Overdue next steps', /FnCrmStatus\.overdueDeals\(/],
     ['Needs a decision', /FnCrmStatus\.waiting\(Number\(dec\.quotesWithoutDeal/], ['No next step', /FnCrmStatus\.waiting\(d\.nextSteps\.missing\.total\)/]]) assert.match(html, re, what);
   assert.match(html, /FnCrmStatus\.LEGEND/);

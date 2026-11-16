@@ -7,12 +7,13 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm, canEditDeal } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { sqlNow } = require('../lib/crm-classification');
+const { setSetting } = require('../lib/settings');
 const { text, posInt, dateOnly, oneOf, paging } = require('../lib/crm-common');
 const A = require('../lib/crm-attention');
 const S = require('../lib/crm-subjects');
 
 const router = express.Router();
-const ORDER = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'quote_expiring', 'won_no_purchase', 'stale_deal', 'no_next_step', 'no_owner'];
+const ORDER = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'close_date_passed', 'quote_expiring', 'po_not_received', 'won_no_purchase', 'quote_unanswered', 'trial_ending', 'trial_high_use', 'stale_deal', 'no_next_step', 'no_owner'];
 const STATUSES = ['active', 'snoozed', 'dismissed'];
 
 async function currentItems(today, caps) {
@@ -27,8 +28,33 @@ const view = (it) => ({
 });
 
 // What each rule means, so the page can explain itself.
-router.get('/rules', requireAuth, requireCrm('view'), (req, res) => {
-  res.json({ rules: ORDER.map(k => ({ key: k, label: A.RULES[k].label, help: A.RULES[k].help })) });
+router.get('/rules', requireAuth, requireCrm('view'), async (req, res) => {
+  const t = await A.loadThresholds(pool);
+  res.json({ rules: ORDER.map(k => ({ key: k, label: A.RULES[k].label, help: A.helpFor(k, t) })) });
+});
+
+// G2: the numbers the rules use. Anyone with a CRM role can read them (the rules' wording already says them); only a CRM Admin (edit_settings) changes them. A value outside its
+// limits or not a whole number is refused, never stored, and each change is written to the audit log with the old and new values.
+const thresholdView = (t) => Object.entries(A.THRESHOLDS).map(([key, d]) => ({ key, label: d.label, help: d.help, unit: d.unit, value: t[key], default: d.def, min: d.min, max: d.max }));
+router.get('/thresholds', requireAuth, requireCrm('view'), async (req, res) => {
+  res.json({ thresholds: thresholdView(await A.loadThresholds(pool)) });
+});
+router.put('/thresholds', requireAuth, requireCrm('edit_settings'), async (req, res) => {
+  const body = (req.body && typeof req.body === 'object' && req.body.values && typeof req.body.values === 'object') ? req.body.values : null;
+  if (!body) return res.status(400).json({ error: 'Send the values to change.' });
+  const next = {};
+  for (const [key, v] of Object.entries(body)) {
+    const d = A.THRESHOLDS[key];
+    if (!d) return res.status(400).json({ error: `"${key}" is not a setting.` });
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < d.min || v > d.max) return res.status(400).json({ error: `${d.label}: use a whole number from ${d.min} to ${d.max}.` });
+    next[key] = v;
+  }
+  if (!Object.keys(next).length) return res.status(400).json({ error: 'Nothing to change.' });
+  const before = await A.loadThresholds(pool);
+  const changed = Object.keys(next).filter(k => before[k] !== next[k]);
+  for (const k of changed) await setSetting(A.THRESHOLDS[k].setting, String(next[k]));
+  if (changed.length) await crmAudit(req, { action: 'crm_attention_thresholds_changed', entityType: 'crm_attention', entityId: null, prev: Object.fromEntries(changed.map(k => [k, before[k]])), next: Object.fromEntries(changed.map(k => [k, next[k]])) });
+  res.json({ ok: true, changed, thresholds: thresholdView(await A.loadThresholds(pool)) });
 });
 
 // ?owner=me|none|me_or_none|<id>  ?rule=<key>  ?status=active|snoozed|dismissed|all (default active)  ?today=YYYY-MM-DD  ?page= &pageSize=

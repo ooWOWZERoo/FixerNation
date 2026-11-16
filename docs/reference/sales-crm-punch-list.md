@@ -29,7 +29,7 @@ Severity: H high, M medium, L low. "Where" is the file to start in.
 | # | Item | PRD | Status |
 |---|---|---|---|
 | G1 | Account-level Customer and the "unresolved, needs review" state (D4 was confirmed, never built); account filter by Suspect, Prospect, Customer | §8 rule 4, ACC | DECIDE |
-| G2 | Needs Attention rules: quote unanswered after N days, expected close passed, trial ending, trial with high use, PO promised but not received; thresholds configurable | ACT-05 | OPEN |
+| G2 | Needs Attention rules: quote unanswered after N days, expected close passed, trial ending, trial with high use, PO promised but not received; thresholds configurable Done (owner picked: quote unanswered, expected close passed, PO not received, trial ending and trial well used; thresholds on a Hub Settings card): five new rules, every rule's number is now a setting a CRM Admin changes (defaults are the old fixed values), changes audited, limits enforced, a bad stored value falls back to the default. "Renewal approaching" is left to the renewal generator, and "procurement pending" is the existing checklist-overdue rule. | ACT-05 | DONE |
 | G3 | Review tasks for trial near expiry, high adoption and stalled activation | FR-TRIAL-03 | OPEN |
 | G4 | Onboarding checklist after Won and paid | FR-WON-03 | OPEN |
 | G5 | Repeat-order flow (tokenized) | FR-RENEW-02 | DECIDE |

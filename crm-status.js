@@ -14,7 +14,7 @@
   'use strict';
 
   // The Needs Attention rules that mean "past a date or stuck". Every other rule is "worth a look". A test keeps this list in step with lib/crm-attention.js.
-  var RED_RULES = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'won_no_purchase'];
+  var RED_RULES = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'close_date_passed', 'won_no_purchase'];
 
   var SHAPE = { red: '▲', amber: '●', green: '✓', neutral: '–' }; // triangle, circle, check, dash: different shapes, not just different colours
   var LEGEND = 'Outline colours: red means something is late. Yellow means it is due today or waiting for a decision. Green means nothing is waiting. Grey means there is nothing to report yet.';
