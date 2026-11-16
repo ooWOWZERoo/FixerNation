@@ -61,6 +61,12 @@
     return f.join(', ');
   }
 
+  var REL = { suspect: ['Suspect', 'a-pill-neutral'], prospect: ['Prospect', 'a-pill-warning'], customer: ['Customer', 'a-pill-success'] };
+  function relPills(a) {
+    var r = REL[a.relationship];
+    return (r ? '<span class="a-pill ' + r[1] + '">' + r[0] + '</span>' : '<span class="crm-muted">Unknown</span>') + (a.needsReview ? ' <span class="a-pill a-pill-danger">Needs review</span>' : '');
+  }
+
   function draw() {
     var a = data.account;
     document.getElementById('pageTitle').textContent = a.name;
@@ -72,6 +78,7 @@
       (C.can('edit_deal') && !a.archivedAt ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="newDeal">New deal</button>' : '') +
       (C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeAcct">Merge into another…</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="archAcct">' + (a.archivedAt ? 'Restore' : 'Archive') + '</button>' : '') +
       '</div></div><dl class="crm-kv">' +
+      '<dt>What it is to us</dt><dd>' + relPills(a) + (a.relationshipWhy ? '<div class="crm-small crm-muted">' + esc(a.relationshipWhy) + '</div>' : '') + '</dd>' +
       '<dt>Type</dt><dd>' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + '</dd>' +
       '<dt>State</dt><dd>' + (a.state ? esc(a.state) : '<span class="crm-muted">Not set</span>') + '</dd>' +
       '<dt>Website</dt><dd>' + (a.websiteDomain ? esc(a.websiteDomain) : '<span class="crm-muted">Not set</span>') + '</dd>' +

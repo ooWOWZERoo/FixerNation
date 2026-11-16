@@ -10,6 +10,7 @@ const { listQuoteGaps } = require('../lib/crm-quotes');
 const { daysSince, dateOnly, quarterBounds } = require('../lib/crm-common');
 const reports = require('../lib/crm-reports');
 const growth = require('../lib/crm-growth');
+const accountRel = require('../lib/crm-account-relationship');
 const { DEAL_REAL_SQL } = require('../lib/crm-reports'); // the same test-address rule the Reports use (punch list B2)
 
 const router = express.Router();
@@ -30,13 +31,8 @@ async function buildCards(today) {
   // A Customer organization (decision D4): a school or district account with a qualifying paid purchase for that school, or for a school in that district. Qualifying purchases that
   // name no school cannot be placed, so they are counted apart as "unresolved" and never guessed into an account.
   out.customerOrganizations = await card(async () => {
-    const [[a]] = await pool.query(
-      `SELECT COUNT(*) AS n FROM crm_accounts a WHERE a.archived_at IS NULL AND EXISTS (
-         SELECT 1 ${cls.PURCHASES_FROM} JOIN newsletter_contacts c ON c.id = p.contact_id
-         WHERE ${cls.QUALIFYING_SQL} AND ${NOT_TEST_BUYER}
-           AND (p.school_id = a.school_id OR p.school_id IN (SELECT sc.id FROM schools sc WHERE sc.district_id = a.district_id)))`);
     const [[u]] = await pool.query(`SELECT COUNT(*) AS n ${cls.PURCHASES_FROM} JOIN newsletter_contacts c ON c.id = p.contact_id WHERE ${cls.QUALIFYING_SQL} AND ${NOT_TEST_BUYER} AND p.school_id IS NULL`);
-    return { count: Number(a.n), unresolvedPurchases: Number(u.n) };
+    return { count: (await accountRel.customerAccountIds(pool)).size, unresolvedPurchases: Number(u.n) };
   });
 
   out.expectedClosings = await card(async () => {

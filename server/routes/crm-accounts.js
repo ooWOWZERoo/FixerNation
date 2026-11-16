@@ -8,6 +8,7 @@ const { requireCrm } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { ACCOUNT_TYPES, text, posInt, oneOf, paging, likeTerm } = require('../lib/crm-common');
 const { engagementFor } = require('../lib/crm-engagement');
+const rel = require('../lib/crm-account-relationship');
 
 const router = express.Router();
 
@@ -49,6 +50,13 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   else if (posInt(req.query.owner)) { where.push('a.assigned_admin_id = ?'); params.push(posInt(req.query.owner)); }
   const like = likeTerm(req.query.q);
   if (like) { where.push("(a.name LIKE ? ESCAPE '!' OR a.website_domain LIKE ? ESCAPE '!')"); params.push(like, like); }
+  // G1: what the account is to us (Customer, Prospect, Suspect) and whether it needs review, worked out from the data on every request (lib/crm-account-relationship.js).
+  const relMap = await rel.accountRelationships(pool, typeof req.query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.today) ? req.query.today : undefined);
+  const wantRel = oneOf(req.query.relationship, ['suspect', 'prospect', 'customer', 'review']);
+  if (wantRel) {
+    const ids = [...relMap.entries()].filter(([, v]) => (wantRel === 'review' ? v.needsReview : v.relationship === wantRel)).map(([id]) => id);
+    where.push(ids.length ? `a.id IN (${ids.map(() => '?').join(',')})` : '1 = 0'); params.push(...ids);
+  }
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM crm_accounts a ${w}`, params);
   // Counts are correlated subqueries, one value per account, so a contact in two accounts or a deal with many contacts can never multiply a row.
@@ -59,7 +67,16 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
      FROM crm_accounts a ${w} ORDER BY a.name, a.id LIMIT ? OFFSET ?`,
     [...params, size, offset]
   );
-  res.json({ accounts: rows.map(a => ({ ...accountRow(a), contactCount: Number(a.contact_count), openDeals: Number(a.open_deals) })), total: Number(total), page, pageSize: size });
+  const view = (a) => { const r = relMap.get(Number(a.id)); return r ? { relationship: r.relationship, needsReview: r.needsReview } : { relationship: null, needsReview: false }; };
+  res.json({ accounts: rows.map(a => ({ ...accountRow(a), ...view(a), contactCount: Number(a.contact_count), openDeals: Number(a.open_deals) })), total: Number(total), page, pageSize: size, relationshipCounts: rel.relationshipCounts(relMap) });
+});
+
+// G1 (decision D4): paid, non-trial purchases that name no school, so they cannot be placed on an account. Each shows the buyer and the accounts the buyer belongs to, so staff
+// know which school to set on the purchase in the old admin tool. The CRM never edits a purchase; once the school is set the purchase leaves this list by itself.
+router.get('/review/unplaced', requireAuth, requireCrm('view'), async (req, res) => {
+  const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
+  const all = await rel.unplacedPurchases(pool);
+  res.json({ purchases: all.slice(offset, offset + size), total: all.length, page, pageSize: size });
 });
 
 // Phase 6: the "Trial and demo engagement" card. Read only; counts only; an unknown is never shown as a zero (lib/crm-engagement.js).
@@ -80,8 +97,9 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
     `SELECT o.id, o.name, o.state, o.amount_cents, o.opp_type, s.label AS stage, o.owner_admin_id, o.next_step, o.next_step_due_at
      FROM crm_opportunities o JOIN crm_pipeline_stages s ON s.id = o.stage_id WHERE o.account_id = ? ORDER BY o.id DESC`, [id]);
   const [children] = await pool.query('SELECT id, name, account_type FROM crm_accounts WHERE parent_account_id = ? ORDER BY name', [id]);
+  const relation = (await rel.accountRelationships(pool)).get(Number(a.id)) || null;
   res.json({
-    account: accountRow(a),
+    account: { ...accountRow(a), relationship: relation ? relation.relationship : null, needsReview: relation ? relation.needsReview : false, relationshipWhy: relation ? relation.why : null },
     contacts: contacts.map(c => ({ contactId: c.contact_id, name: c.name, email: c.email, classification: c.crm_classification, title: c.title, isPrimary: !!c.is_primary, isChampion: !!c.is_champion, isDecisionMaker: !!c.is_decision_maker, isProcurement: !!c.is_procurement, isFinance: !!c.is_finance })),
     opportunities: opps.map(o => ({ id: o.id, name: o.name, state: o.state, stage: o.stage, oppType: o.opp_type, amountCents: o.amount_cents === null ? null : Number(o.amount_cents), ownerAdminId: o.owner_admin_id || null, nextStep: o.next_step, nextStepDueAt: o.next_step_due_at })),
     children,
