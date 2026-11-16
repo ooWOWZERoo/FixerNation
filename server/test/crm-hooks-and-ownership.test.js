@@ -120,7 +120,10 @@ test('DELETE ADMIN: choosing "unassigned" leaves the records with no owner; an a
 test('DELETE ADMIN: the last CRM Admin cannot be deleted, and the existing guards (not yourself, not the last admin) still hold', async () => {
   db.exec('DELETE FROM admin_users');
   const only = env.addAdmin(db, 'only-crm-admin', 'admin');
-  const other = env.addAdmin(db, 'not-crm-admin', 'sales');
+  // Managing admin accounts is a CRM Admin action (punch list S1), so the one deleting is a CRM Admin who has not activated their account yet (not counted as "another CRM Admin").
+  const other = env.addAdmin(db, 'pending-crm-admin', 'admin', { verified: 0 });
+  const sales = env.addAdmin(db, 'a-sales-rep', 'sales');
+  assert.equal((await call('DELETE', `/api/auth/admins/${only}`, undefined, sales)).status, 403, 'a Sales admin cannot delete anyone');
   const blocked = await call('DELETE', `/api/auth/admins/${only}`, undefined, other);
   assert.equal(blocked.status, 400); assert.match(blocked.json.error, /last Sales CRM admin/);
   assert.equal((await call('DELETE', `/api/auth/admins/${other}`, undefined, other)).status, 400, 'not your own account');

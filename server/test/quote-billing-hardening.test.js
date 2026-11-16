@@ -465,3 +465,36 @@ test('REPLACED: money paid on a quote that a newer one replaced is accepted (the
   assert.ok(db.prepare("SELECT id FROM school_audit_log WHERE action = 'superseded_quote_paid' AND entity_id = ?").get(q.id));
   assert.ok(alerts.some(a => /replaced quote/.test(a.subject)));
 });
+
+// ---- Punch list S5: a quote re-priced between two card clicks ----
+test('S5 card: re-pricing the quote between two clicks replaces the open purchase, so the paid purchase carries the NEW amount and seats', async () => {
+  const q = makeQuote({ cents: 1000000, seats: 5 });
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card' });
+  const first = db.prepare('SELECT * FROM purchases WHERE quote_id = ?').get(q.id);
+  assert.equal(first.amount_cents, 1000000);
+
+  db.prepare('UPDATE quote_requests SET quoted_amount_cents = 800000, quoted_seat_count = 4 WHERE id = ?').run(q.id);
+  const r = await post('/api/quote/accept', { token: q.token, paymentMethod: 'card' });
+  assert.equal(r.status, 200);
+  const rows = db.prepare('SELECT * FROM purchases WHERE quote_id = ?').all(q.id);
+  assert.equal(rows.length, 1, 'still exactly one open purchase');
+  assert.equal(rows[0].amount_cents, 800000, 'it now matches the quote');
+  assert.equal(rows[0].seat_count, 4);
+  assert.equal(count('license_seats', 'purchase_id = ?', rows[0].id), 4, 'seats were rebuilt to match, not left at five');
+  assert.equal(count('license_seats', 'purchase_id = ?', first.id), 0, 'the stale purchase left no orphan seats');
+
+  // Same terms again: reused, not replaced.
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card' });
+  assert.equal(db.prepare('SELECT id FROM purchases WHERE quote_id = ?').get(q.id).id, rows[0].id);
+});
+
+test('S5 card: a purchase that was already paid is never removed by a re-price', async () => {
+  const { dropStaleOpenCardPurchase } = require(path.join(SERVER, 'lib/quote-purchase.js'));
+  const q = makeQuote({ cents: 50000, seats: 2 });
+  await post('/api/quote/accept', { token: q.token, paymentMethod: 'card' });
+  db.prepare("UPDATE purchases SET payment_status = 'paid' WHERE quote_id = ?").run(q.id);
+  const p = db.prepare('SELECT id FROM purchases WHERE quote_id = ?').get(q.id);
+  const removed = await dropStaleOpenCardPurchase({ query: async (sql, params) => run(sql, params) }, { quoted_amount_cents: 1, quoted_seat_count: 1, quoted_product_id: null }, p.id);
+  assert.equal(removed, false);
+  assert.equal(count('purchases', 'id = ?', p.id), 1);
+});

@@ -9,7 +9,7 @@ const { sendAutomationEmail, sendSalesAlertEmail } = require('../lib/mailer');
 const { generateInvoiceNumber } = require('../lib/invoice-numbering');
 const { getSetting } = require('../lib/settings');
 const { refCodeFromRequest } = require('../lib/affiliate-attribution');
-const { purchaseIdForQuote, openCardPurchaseIdForQuote } = require('../lib/quote-purchase');
+const { purchaseIdForQuote, openCardPurchaseIdForQuote, dropStaleOpenCardPurchase } = require('../lib/quote-purchase');
 const { cleanSigner, evidenceColumns } = require('../lib/quote-evidence');
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: quote events and the deal moving to Won (never throws; off unless crm_v2_enabled)
 
@@ -314,6 +314,8 @@ async function openCardPurchase(quote, req, signer) {
     const keys = Object.keys(evidence);
     await connection.query(`UPDATE quote_requests SET ${keys.map(k => `${k} = ?`).join(', ')} WHERE id = ? AND accepted_at IS NULL`, [...keys.map(k => evidence[k]), quote.id]);
     let purchaseId = await openCardPurchaseIdForQuote(connection, quote.id);
+    // The quote may have been re-priced since the last click: an open purchase that no longer matches it is replaced, never reused (punch list S5).
+    if (purchaseId && await dropStaleOpenCardPurchase(connection, quote, purchaseId)) purchaseId = null;
     if (!purchaseId) {
       ({ purchaseId } = await createPurchaseFromQuote(quote, 'card', req, 'pending', { connection, afterCommit }));
     }

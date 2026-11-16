@@ -75,3 +75,5 @@ Today's real size (about 4,500 contacts) is a tenth of the test, so both are a f
 ## 7. Who can do what (short form; the full matrix is in the requirements doc)
 
 CRM Admin: everything, including settings, roles, merges, reopening a deal, accepting a quote for a customer, and exports. Sales: see everything, edit their own and unowned deals. Read-only: see everything except files, change nothing. A site user (teacher, parent, student) never reaches any of it. `is_fne_staff` grants nothing here.
+
+Since 2026-11-15 the same roles also apply to a few older admin pages, with the Hub on or off: **admin accounts** (invite, edit, reset, delete) are CRM Admin only and a new admin starts as Read-only (set their role in Hub Settings); **accepting a quote for the customer** is CRM Admin only; **editing or sending a quote** needs Sales or CRM Admin, **changing a sent quote's price** is CRM Admin only (and audited), and an accepted quote's price cannot change. Everything else on the older pages is still open to every admin (see the punch list).

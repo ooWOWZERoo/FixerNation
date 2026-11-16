@@ -22,4 +22,26 @@ async function openCardPurchaseIdForQuote(db, quoteId) {
   return row ? row.id : null;
 }
 
-module.exports = { purchaseIdForQuote, openCardPurchaseIdForQuote, ORDER_SQL };
+// Punch list S5. The open card purchase holds a snapshot of the quote's price, seats and product from the first click. If staff re-priced the quote since
+// (before the buyer paid), the Stripe session charges the NEW price but the old purchase would be marked paid with the OLD amount and seat count. So an open
+// purchase that no longer matches the quote is removed (it was never paid, has no invoice, and its seats are removed with it) and the caller makes a fresh one.
+// Returns true if it removed one. Only ever touches a pending card purchase with no invoice and no Stripe invoice.
+async function dropStaleOpenCardPurchase(db, quote, purchaseId) {
+  const [[p]] = await db.query('SELECT id, amount_cents, seat_count, license_product_id FROM purchases WHERE id = ?', [purchaseId]);
+  if (!p) return false;
+  const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
+  const same = num(p.amount_cents) === num(quote.quoted_amount_cents)
+    && num(p.seat_count) === (num(quote.quoted_seat_count) || 1)
+    && num(p.license_product_id) === num(quote.quoted_product_id);
+  if (same) return false;
+  const [[open]] = await db.query(
+    "SELECT id FROM purchases WHERE id = ? AND payment_method = 'card' AND payment_status = 'pending' AND invoice_id IS NULL AND stripe_invoice_id IS NULL",
+    [purchaseId]
+  );
+  if (!open) return false;
+  await db.query('DELETE FROM license_seats WHERE purchase_id = ?', [purchaseId]); // the foreign key would do this; stated so it never depends on it
+  const [r] = await db.query('DELETE FROM purchases WHERE id = ?', [purchaseId]);
+  return r.affectedRows > 0;
+}
+
+module.exports = { purchaseIdForQuote, openCardPurchaseIdForQuote, dropStaleOpenCardPurchase, ORDER_SQL };

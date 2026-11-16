@@ -142,7 +142,8 @@ test.describe("Admin-initiated quotes + Quote Content Profiles", () => {
     ]);
     expect(sendRes.status()).toBe(200);
     const { quote } = await sendRes.json();
-    expect(quote.accept_token).toBeTruthy();
+    expect(quote.accept_token).toBeUndefined(); // punch list S4: the link is emailed, never sent back to the browser
+    expect(quote.has_accept_link).toBe(true);
     expect(quote.quote_sent_at).toBeTruthy();
     expect(Number(quote.content_profile_id)).toBe(profileId);
 

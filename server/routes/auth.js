@@ -8,6 +8,14 @@ const { COOKIE_NAME, COOKIE_MAX_AGE_MS } = require('../lib/session');
 const { sendAdminInviteEmail, sendAdminPasswordResetEmail } = require('../lib/mailer');
 const { FailureTracker, rejectIfBlocked, clientIp } = require('../lib/rate-limit');
 const { ownedRecordCounts, reassignOwned } = require('../lib/crm-ownership');
+const { requireCrmRole, ROLES: CRM_ROLES } = require('../lib/crm-permissions');
+const { audit } = require('../lib/audit');
+
+// Punch list S1: managing admin accounts (invite, edit, reset, delete) is a CRM Admin action. A new admin starts as Read-only until a CRM Admin picks a role.
+const manageAdmins = requireCrmRole('assign_roles');
+async function auditAdmin(req, action, entityId, extra) {
+  await audit(pool, { actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username, action, entityType: 'admin_user', entityId: entityId || null, newValue: extra || null, ipAddress: req.ip });
+}
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -144,7 +152,7 @@ router.get('/admins', requireAuth, async (req, res) => {
   });
 });
 
-router.post('/admins', requireAuth, async (req, res) => {
+router.post('/admins', requireAuth, manageAdmins, async (req, res) => {
   const b = req.body || {};
   const username = (b.username || '').trim();
   const email = (b.email || '').trim();
@@ -161,10 +169,23 @@ router.post('/admins', requireAuth, async (req, res) => {
   // Unusable random password — the invited admin can't log in until they
   // follow the invite link below and set their own.
   const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
-  const [result] = await pool.query(
-    'INSERT INTO admin_users (username, password_hash, email, email_verified) VALUES (?, ?, ?, 0)',
-    [username, placeholderHash, email]
-  );
+  // Least privilege: a new admin is Read-only unless the CRM Admin inviting them names a role. (Before the CRM alter script has run there is no column to set.)
+  const crmRole = b.crmRole === undefined || b.crmRole === null || b.crmRole === '' ? 'readonly' : String(b.crmRole);
+  if (!CRM_ROLES.includes(crmRole)) return res.status(400).json({ error: 'Role must be admin, sales or readonly' });
+  let result;
+  try {
+    [result] = await pool.query(
+      'INSERT INTO admin_users (username, password_hash, email, email_verified, crm_role) VALUES (?, ?, ?, 0, ?)',
+      [username, placeholderHash, email, crmRole]
+    );
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+    [result] = await pool.query(
+      'INSERT INTO admin_users (username, password_hash, email, email_verified) VALUES (?, ?, ?, 0)',
+      [username, placeholderHash, email]
+    );
+  }
+  await auditAdmin(req, 'admin_invited', result.insertId, { username, email, crmRole });
 
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -181,7 +202,7 @@ router.post('/admins', requireAuth, async (req, res) => {
 
 // Resend the invite email to a still-pending admin, in case the original
 // link expired or was never received — replaces the old token with a fresh one.
-router.post('/admins/:id/resend-invite', requireAuth, async (req, res) => {
+router.post('/admins/:id/resend-invite', requireAuth, manageAdmins, async (req, res) => {
   const [rows] = await pool.query('SELECT id, username, email, email_verified FROM admin_users WHERE id = ?', [req.params.id]);
   const admin = rows[0];
   if (!admin) return res.status(404).json({ error: 'Admin not found' });
@@ -203,7 +224,7 @@ router.post('/admins/:id/resend-invite', requireAuth, async (req, res) => {
 // token/landing-page mechanism as the invite flow, distinct email copy,
 // triggered by another admin rather than self-service (there's no admin
 // "forgot password" flow on the login page).
-router.post('/admins/:id/send-password-reset', requireAuth, async (req, res) => {
+router.post('/admins/:id/send-password-reset', requireAuth, manageAdmins, async (req, res) => {
   const [rows] = await pool.query('SELECT id, username, email, email_verified FROM admin_users WHERE id = ?', [req.params.id]);
   const admin = rows[0];
   if (!admin) return res.status(404).json({ error: 'Admin not found' });
@@ -218,10 +239,11 @@ router.post('/admins/:id/send-password-reset', requireAuth, async (req, res) => 
 
   const resetUrl = `${process.env.SITE_URL || ''}/admin-accept-invite.html?token=${token}`;
   await sendAdminPasswordResetEmail({ to: admin.email, username: admin.username, resetUrl });
+  await auditAdmin(req, 'admin_password_reset_sent', admin.id, { username: admin.username });
   res.json({ ok: true });
 });
 
-router.put('/admins/:id', requireAuth, async (req, res) => {
+router.put('/admins/:id', requireAuth, manageAdmins, async (req, res) => {
   const b = req.body || {};
   const username = (b.username || '').trim();
   const email = (b.email || '').trim();
@@ -238,13 +260,14 @@ router.put('/admins/:id', requireAuth, async (req, res) => {
   if (existingEmail[0]) return res.status(409).json({ error: 'That email is already registered to another admin' });
 
   await pool.query('UPDATE admin_users SET username = ?, email = ? WHERE id = ?', [username, email, req.params.id]);
+  await auditAdmin(req, 'admin_edited', Number(req.params.id), { username, email });
   res.json({ ok: true });
 });
 
 // Guards: an admin can't delete their own account (avoids accidental
 // self-lockout), and the last remaining admin can never be deleted (the
 // site would otherwise have no way to log in and add another).
-router.delete('/admins/:id', requireAuth, async (req, res) => {
+router.delete('/admins/:id', requireAuth, manageAdmins, async (req, res) => {
   if (Number(req.params.id) === req.user.userId) {
     return res.status(400).json({ error: "You can't delete your own admin account." });
   }
@@ -288,6 +311,7 @@ router.delete('/admins/:id', requireAuth, async (req, res) => {
 
   const [result] = await pool.query('DELETE FROM admin_users WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Admin not found' });
+  await auditAdmin(req, 'admin_deleted', adminId, { reassigned: owned.total, reassignedTo });
   res.json({ ok: true, reassigned: owned.total, reassignedTo });
 });
 

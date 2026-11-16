@@ -114,7 +114,8 @@ test('REVISE: only a sent, unaccepted, current quote; one open revision at a tim
   assert.equal(rev.contact_id, c, 'same contact');
   assert.equal(rev.quoted_amount_cents, 97900, 'starts from the same price');
   assert.notEqual(rev.quote_number, get('SELECT quote_number AS n FROM quote_requests WHERE id = ?', q).n, 'a new quote number');
-  assert.equal(rev.accept_token, null, 'no link exists until it is sent');
+  assert.equal('accept_token' in rev, false, 'the link is never sent to the browser (punch list S4)');
+  assert.equal(rev.has_accept_link, false, 'and none exists until it is sent');
   assert.equal(get('SELECT version_status AS v FROM quote_requests WHERE id = ?', q).v, 'current', 'the old link still works until the revision is SENT');
 
   r = await call('POST', `/api/contact/quotes/${q}/revise`, {}, admin);

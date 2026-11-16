@@ -27,6 +27,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { audit } = require('../lib/audit');
+const { requireCrmRole } = require('../lib/crm-permissions'); // punch list S2: accepting for the customer is a CRM Admin action
 const { purchaseIdForQuote } = require('../lib/quote-purchase');
 const { acceptQuoteViaPO } = require('./quote-accept');
 const { inviteTeacherToSeat } = require('../lib/teacher-invitations');
@@ -142,7 +143,7 @@ router.get('/quotes/:quoteId', requireAuth, async (req, res) => {
 // customer clicking accept-quote.html themselves (same function, same
 // purchase/invoice/school-admin/email side effects) — this just adds one
 // audit entry naming the admin who did it.
-router.post('/quotes/:quoteId/accept', requireAuth, async (req, res) => {
+router.post('/quotes/:quoteId/accept', requireAuth, requireCrmRole('accept_for_customer'), async (req, res) => {
   const poNumber = ((req.body || {}).poNumber || '').trim();
   try {
     // Staff accepting for the customer: the evidence names who the quote is for and says staff recorded it (lib/quote-evidence.js).

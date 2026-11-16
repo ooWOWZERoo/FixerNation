@@ -29,7 +29,9 @@ test.describe.configure({ mode: "serial" });
 test.describe("Quote lifecycle: build -> send -> accept by PO", () => {
   const quoteId = process.env.TEST_QUOTE_BUILDER_ID;
   const poNumber = `PO-QUOTE-TEST-${Date.now()}`;
-  let acceptToken: string;
+  // Punch list S4: the accept link never comes back to the browser any more, so the send step proves a link exists (has_accept_link) and the accept step is
+  // done as staff through the concierge route, which runs the same acceptQuoteViaPO.
+  let linkExists = false;
   let invoiceId: number;
   let contactId: number;
 
@@ -59,12 +61,13 @@ test.describe("Quote lifecycle: build -> send -> accept by PO", () => {
     expect(sendRes.status()).toBe(200);
     const { quote } = await sendRes.json();
     expect(quote.quoted_product_name).toBe(QA_LICENSE_PRODUCT_NAME);
-    expect(quote.accept_token).toBeTruthy();
-    acceptToken = quote.accept_token;
+    expect(quote.accept_token).toBeUndefined();
+    expect(quote.has_accept_link).toBe(true);
+    linkExists = true;
   });
 
   test("accepting the sent quote by PO creates a real unpaid invoice with a pending license", async ({ page }) => {
-    test.skip(!acceptToken, "depends on the previous test's accept_token");
+    test.skip(!linkExists, "depends on the previous test sending the quote");
 
     // Documented one-run-per-seed limitation above, now actually enforced
     // as a clean skip instead of a hard failure: POST /api/quotes/accept
@@ -72,13 +75,12 @@ test.describe("Quote lifecycle: build -> send -> accept by PO", () => {
     // within the same seed correctly gets rejected rather than silently
     // creating another duplicate purchase/invoice the way the old,
     // unguarded code did.
-    const validateRes = await page.request.get(`/api/quotes/accept?token=${acceptToken}`);
-    test.skip(!validateRes.ok(), "Quote already accepted by a prior run — re-run seed-qa-test-accounts.js to reset it");
-
-    const acceptRes = await page.request.post("/api/quotes/accept", {
+    await signInAsAdmin(page);
+    const acceptRes = await page.request.post(`/api/admin/concierge/quotes/${quoteId}/accept`, {
       headers: { "Content-Type": "application/json" },
-      data: { token: acceptToken, signerName: "Test Buyer", paymentMethod: "po", poNumber },
+      data: { signerName: "Test Buyer", poNumber },
     });
+    test.skip(acceptRes.status() === 400, "Quote already accepted by a prior run — re-run seed-qa-test-accounts.js to reset it");
     expect(acceptRes.status()).toBe(200);
     const acceptBody = await acceptRes.json();
     expect(acceptBody.invoiceId).toBeTruthy();

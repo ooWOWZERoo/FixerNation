@@ -1,7 +1,8 @@
 // Sales CRM roles and the on/off switch (docs/reference/sales-crm-update-requirements.md, section 4 and decisions D1, D10).
 //
 // A CRM role lives on admin_users.crm_role ('admin' | 'sales' | 'readonly'). Every existing admin became 'admin' in the migration, so nothing changes for
-// anyone until the owner lowers a role. The role gates ONLY the /api/crm routes; the older admin routes (contacts, quotes, orders, invoices) are unchanged.
+// anyone until the owner lowers a role. requireCrm gates the /api/crm routes; requireCrmRole (below) applies the same matrix to the few older admin routes that move access or money
+// (admin accounts, quote edit and send, accept-for-customer; punch list S1-S4). The other older routes (contacts, orders, invoices) are still open to any admin.
 // is_fne_staff (a Community flag on site_users) grants nothing here, and a site user never reaches these routes: they all sit behind requireAuth (admin cookie).
 //
 // The matrix below is the single source of truth. A test walks it, and every route names the action it needs.
@@ -21,6 +22,10 @@
 //   export               yes     -                              -
 //   files                yes     yes (then the subject check)   -     (see, upload, download or delete a file; Read-only never opens one)
 //   accept_for_customer  yes     -                              -     (phase 4c: accept a quote by PO for the customer when closing a deal Won; it creates a purchase, invoice and license)
+//   edit_quote_price     yes     -                              -     (change the price, product or seats of a quote that was already sent)
+//
+// The older admin routes use requireCrmRole (below) with the same matrix: admin accounts need assign_roles, a quote edit or send needs write (and
+// edit_quote_price once the quote was sent), and accepting a quote for the customer needs accept_for_customer. Punch list S1-S4.
 //
 // Phase 3 (tasks, notes, files, meetings, checklists, Needs Attention) adds one more gate on top of this table: whether the person may write THE SUBJECT
 // the item belongs to (canWriteSubject below). The full role x action matrix for phase 3 is in docs/reference/sales-crm-update-requirements.md, section 6.
@@ -45,6 +50,7 @@ const ALLOWED = {
   export: ['admin'],
   files: ['admin', 'sales'],
   accept_for_customer: ['admin'],
+  edit_quote_price: ['admin'],
 };
 
 function can(role, action) {
@@ -98,4 +104,22 @@ function requireCrm(action) {
   };
 }
 
-module.exports = { ROLES, ALLOWED, can, canEditDeal, canWriteSubject, isCrmEnabled, loadCrmRole, requireCrm };
+// For the OLDER admin routes (admin accounts, quotes, concierge) that live outside /api/crm. Same role matrix, but it does NOT answer 404 while the Hub is off:
+// those pages must keep working with the Hub off, and a lowered role must not stop counting just because the switch was flipped. Before the alter script has
+// run (no crm_role column) it lets everyone through, as before. Sets req.crm = { role, adminId }.
+function requireCrmRole(action) {
+  if (!ALLOWED[action]) throw new Error(`requireCrmRole: unknown action "${action}"`);
+  return async function crmRoleGate(req, res, next) {
+    try {
+      const adminId = req.user && req.user.userId;
+      const role = await loadCrmRole(adminId);
+      if (role === null) { req.crm = { role: 'admin', adminId }; return next(); }
+      if (!role || !ROLES.includes(role)) return res.status(403).json({ error: 'You do not have a Sales CRM role.' });
+      if (!can(role, action)) return res.status(403).json({ error: 'Your Sales CRM role does not allow this. Ask a CRM Admin.' });
+      req.crm = { role, adminId };
+      next();
+    } catch (err) { next(err); }
+  };
+}
+
+module.exports = { ROLES, ALLOWED, can, canEditDeal, canWriteSubject, isCrmEnabled, loadCrmRole, requireCrm, requireCrmRole };

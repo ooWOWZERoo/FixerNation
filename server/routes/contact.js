@@ -11,7 +11,49 @@ const { demoOrigin } = require('../lib/public-demo');
 const { invitationLabels } = require('../lib/public-demo-admin');
 const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-parties');
 const { setQuoteLinks, dealForQuote } = require('../lib/crm-quotes');
-const { loadCrmRole, canEditDeal, isCrmEnabled } = require('../lib/crm-permissions');
+const { loadCrmRole, canEditDeal, isCrmEnabled, can, requireCrmRole } = require('../lib/crm-permissions');
+const { audit } = require('../lib/audit');
+
+// Punch list S3/S4. The accept link (accept_token) alone accepts a quote by PO, so it never goes back to the browser: staff send it through the Send button.
+function publicQuote(row) {
+  if (!row) return row;
+  const { accept_token, ...rest } = row;
+  return { ...rest, has_accept_link: !!accept_token };
+}
+
+// The pricing columns of a quote, by the request field that sets each. Changing one after the quote was sent is a CRM Admin action, and after it was accepted it is refused.
+const PRICE_FIELDS = {
+  quotedProductId: 'quoted_product_id', quotedProductName: 'quoted_product_name', quotedSeatCount: 'quoted_seat_count', quotedAmountCents: 'quoted_amount_cents',
+  quotedTierName: 'quoted_tier_name', quotedAddonSeats: 'quoted_addon_seats', quotedProrationFactor: 'quoted_proration_factor', quotedTermYears: 'quoted_term_years',
+};
+function priceChanges(quote, body) {
+  // Numbers compare as numbers ("1.00" from a DECIMAL column equals 1 from the form); everything else as text.
+  const norm = (v) => {
+    if (v === undefined || v === null || v === '') return '';
+    const n = Number(v);
+    return String(v).trim() !== '' && Number.isFinite(n) ? String(n) : String(v);
+  };
+  const out = [];
+  for (const [field, col] of Object.entries(PRICE_FIELDS)) {
+    if (body[field] === undefined) continue;
+    if (norm(body[field]) !== norm(quote[col])) out.push({ column: col, from: quote[col] === undefined ? null : quote[col], to: body[field] === undefined ? null : body[field] });
+  }
+  return out;
+}
+// null if the change is allowed; otherwise the response to send.
+function priceChangeRefusal(quote, changes, role) {
+  if (!changes.length) return null;
+  if (quote.accepted_at) return { status: 409, body: { code: 'already_accepted', error: 'This quote was already accepted, so its price cannot be changed. Revise it only if it has not been accepted.' } };
+  if (quote.quote_sent_at && !can(role, 'edit_quote_price')) return { status: 403, body: { code: 'price_locked', error: 'This quote was already sent. Only a CRM Admin can change its price; or use Revise Quote to send a new version.' } };
+  return null;
+}
+async function auditPriceChange(req, quote, changes) {
+  if (!changes.length || !quote.quote_sent_at) return;
+  await audit(pool, {
+    actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username, action: 'quote_price_changed', entityType: 'quote_request', entityId: Number(quote.id),
+    prevValue: Object.fromEntries(changes.map(c => [c.column, c.from])), newValue: Object.fromEntries(changes.map(c => [c.column, c.to])), ipAddress: req.ip,
+  });
+}
 
 const router = express.Router();
 
@@ -168,7 +210,7 @@ const VALID_STATUSES = ['new', 'contacted', 'converted', 'closed'];
 // form. Creates a bare quote_requests row from scratch (no pricing yet) so
 // it can drop straight into the exact same build/price/send flow as any
 // inbound quote.
-router.post('/quotes', requireAuth, async (req, res) => {
+router.post('/quotes', requireAuth, requireCrmRole('write'), async (req, res) => {
   const { firstName, lastName, email, school, phone, message, contentProfileId, opportunityId } = req.body || {};
   const trimmedEmail = (email || '').trim();
   if (!trimmedEmail) return res.status(400).json({ error: 'Email is required' });
@@ -222,7 +264,7 @@ router.post('/quotes', requireAuth, async (req, res) => {
   await crmHooks.quoteEvent(newId, 'created', { detail: 'made by staff', actorAdminId: req.user.userId });
 
   const [[created]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [newId]);
-  res.status(201).json({ ok: true, quote: created });
+  res.status(201).json({ ok: true, quote: publicQuote(created) });
 });
 
 // --- Quote content profiles -------------------------------------------------
@@ -356,12 +398,12 @@ router.get('/quotes', requireAuth, async (req, res) => {
   // The group behind each request that came from a group's demo (staff only), for the "Demo: <name>" tag.
   const labels = await invitationLabels(pool, rows.map(r => r.demo_invitation_id));
   res.json({
-    quotes: rows.map(r => ({ ...r, demo_label: r.demo_invitation_id > 0 ? (labels[Number(r.demo_invitation_id)] || null) : null })),
+    quotes: rows.map(r => ({ ...publicQuote(r), demo_label: r.demo_invitation_id > 0 ? (labels[Number(r.demo_invitation_id)] || null) : null })),
     demoFilter: demoId ? { id: demoId, label: (await invitationLabels(pool, [demoId]))[demoId] || null } : null,
   });
 });
 
-router.put('/quotes/:id', requireAuth, async (req, res) => {
+router.put('/quotes/:id', requireAuth, requireCrmRole('write'), async (req, res) => {
   const { status, notes, firstName, lastName, email, school, phone, quotedProductId, quotedProductName,
           quotedSeatCount, quotedAmountCents, quotedTierName, quotedAddonSeats, quotedProrationFactor,
           quotedTermYears, quotedValidUntil, quotedSchoolDomain, contentProfileId, billTo, shipTo } = req.body || {};
@@ -371,8 +413,11 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
   if (email !== undefined && !String(email).trim()) {
     return res.status(400).json({ error: 'Email cannot be blank' });
   }
-  const [existing] = await pool.query('SELECT id, email FROM quote_requests WHERE id = ?', [req.params.id]);
+  const [existing] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!existing.length) return res.status(404).json({ error: 'Not found' });
+  const changes = priceChanges(existing[0], req.body || {});
+  const refusal = priceChangeRefusal(existing[0], changes, req.crm.role);
+  if (refusal) return res.status(refusal.status).json(refusal.body);
 
   // Bill To address (the quote's own name, school and email are the rest of Bill To) and Ship To: lib/invoice-parties.js
   let partyColumns = [];
@@ -433,14 +478,19 @@ router.put('/quotes/:id', requireAuth, async (req, res) => {
       await setQuoteLinks(pool, Number(req.params.id), { contactEmail: String(email).trim() });
     } catch (err) { if (!/no such column|ER_BAD_FIELD_ERROR/i.test(String(err.code || err.message))) console.error('relinking a quote after an email change failed:', err.message); }
   }
+  await auditPriceChange(req, existing[0], changes);
   const [[row]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
-  res.json({ ok: true, quote: row });
+  res.json({ ok: true, quote: publicQuote(row) });
 });
 
-router.post('/quotes/:id/send', requireAuth, async (req, res) => {
+router.post('/quotes/:id/send', requireAuth, requireCrmRole('write'), async (req, res) => {
   const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!quote) return res.status(404).json({ error: 'Not found' });
   if (quote.version_status === 'superseded') return res.status(409).json({ code: 'superseded', error: 'A newer revision of this quote was sent, so this one cannot be sent again.' });
+  if (quote.accepted_at) return res.status(409).json({ code: 'already_accepted', error: 'This quote was already accepted, so it cannot be sent again.' });
+  const priceDiff = priceChanges(quote, req.body || {});
+  const priceRefusal = priceChangeRefusal(quote, priceDiff, req.crm.role);
+  if (priceRefusal) return res.status(priceRefusal.status).json(priceRefusal.body);
 
   const { quotedProductId, quotedProductName, quotedSeatCount, quotedAmountCents,
           quotedTierName, quotedAddonSeats, quotedTermYears, quotedDiscountPct, quotedValidUntil,
@@ -558,13 +608,14 @@ router.post('/quotes/:id/send', requireAuth, async (req, res) => {
   }
   await crmHooks.quoteEvent(quote.id, 'sent', { detail: noEmail ? 'by phone' : 'by email', actorAdminId: req.user.userId });
 
+  await auditPriceChange(req, quote, priceDiff);
   const [[updated]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quote.id]);
-  res.json({ ok: true, quote: updated });
+  res.json({ ok: true, quote: publicQuote(updated) });
 });
 
 // POST /api/contact/quotes/:id/copy — duplicate a quote as a fresh draft
 // Body may include { firstName, lastName, email, phone, school } to override the contact
-router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
+router.post('/quotes/:id/copy', requireAuth, requireCrmRole('write'), async (req, res) => {
   const [[src]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!src) return res.status(404).json({ error: 'Not found' });
 
@@ -623,12 +674,12 @@ router.post('/quotes/:id/copy', requireAuth, async (req, res) => {
   await crmHooks.quoteEvent(newId, 'created', { detail: `copy of ${src.quote_number || src.id}`, actorAdminId: req.user.userId });
 
   const [[created]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [newId]);
-  res.status(201).json({ ok: true, quote: created });
+  res.status(201).json({ ok: true, quote: publicQuote(created) });
 });
 
 // POST /api/contact/quotes/:id/revise — start a new version of a quote that was SENT and not yet accepted (Sales CRM phase 4b). The revision is a new quote (new number,
 // revision + 1, same deal and contact, same pricing to start from). The old one keeps working until the revision is SENT; sending it replaces the old one.
-router.post('/quotes/:id/revise', requireAuth, async (req, res) => {
+router.post('/quotes/:id/revise', requireAuth, requireCrmRole('write'), async (req, res) => {
   const [[src]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [req.params.id]);
   if (!src) return res.status(404).json({ error: 'Not found' });
   if (src.accepted_at) return res.status(409).json({ code: 'already_accepted', error: 'This quote was already accepted, so it cannot be revised.' });
@@ -680,7 +731,7 @@ router.post('/quotes/:id/revise', requireAuth, async (req, res) => {
   await crmHooks.quoteEvent(newId, 'created', { detail: `revision ${Number(src.revision_number || 1) + 1} of ${src.quote_number || src.id}`, actorAdminId: req.user.userId });
 
   const [[created]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [newId]);
-  res.status(201).json({ ok: true, quote: created });
+  res.status(201).json({ ok: true, quote: publicQuote(created) });
 });
 
 module.exports = router;
