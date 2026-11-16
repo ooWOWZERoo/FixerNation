@@ -1,4 +1,4 @@
-// Sales CRM reports (phase 7; spec: docs/reference/sales-crm-update-requirements.md, "Phase 7 spec"). Six read-only reports, each with its definition and date window.
+// Sales CRM reports (phase 7; spec: docs/reference/sales-crm-update-requirements.md, "Phase 7 spec"). Six read-only reports (the second set of eight, G9, is in lib/crm-reports-more.js), each with its definition and date window.
 //
 // Hard rules, all tested:
 //  - One row per distinct deal or per purchase. Quotes, revisions, committee members and accounts are never joined into a total (a deal with three quote revisions
@@ -9,7 +9,7 @@
 //  - No score, no hot / warm / cold wording. A report says what it counted and over which dates.
 const { QUALIFYING_SQL, PURCHASES_FROM, TEST_ADDRESS_SQL } = require('./crm-classification');
 
-const KEYS = ['funnel', 'pipeline', 'winloss', 'timeinstage', 'sourcetopaid', 'reconciliation'];
+const CORE_KEYS = ['funnel', 'pipeline', 'winloss', 'timeinstage', 'sourcetopaid', 'reconciliation'];
 const ID_LIMIT = 20;
 const UNOWNED = 'Unassigned';
 
@@ -302,7 +302,7 @@ async function runReport(conn, key, win, now) {
     case 'timeinstage': return timeInStage(conn, win, now);
     case 'sourcetopaid': return sourceToPaid(conn, win);
     case 'reconciliation': return reconciliation(conn);
-    default: return null;
+    default: return MORE.run[key] ? MORE.run[key](conn, win, now) : null;
   }
 }
 
@@ -324,5 +324,9 @@ function toCsv(report) {
   // The definition and the window travel with the numbers, so a pasted sheet is never a bare table.
   return [csvCell(report.title), csvCell(`Window: ${report.windowLabel}`), csvCell(`How this is counted: ${report.definition}`), '', ...lines].join('\r\n') + '\r\n';
 }
+
+// G9: the second set of reports lives in lib/crm-reports-more.js and is built from this file's own helpers, so the two cannot disagree about a definition.
+const MORE = require('./crm-reports-more')({ pct, dollars, num, days, round1, avg, median, windowSql, windowLabel, typeSql, typeLabel, DEAL_REAL_SQL, UNOWNED });
+const KEYS = [...CORE_KEYS, ...MORE.KEYS];
 
 module.exports = { KEYS, DEAL_TYPES, runReport, runAll, toCsv, csvCell, windowSql, windowLabel, DEAL_REAL_SQL };

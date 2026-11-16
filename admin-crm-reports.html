@@ -101,7 +101,7 @@
       Object.keys(PRESETS).map(function (k) { return '<option value="' + esc(k) + '"' + (state.preset === k ? ' selected' : '') + '>' + esc(PRESETS[k]) + '</option>'; }).join('') + '<option value="custom"' + (state.preset === 'custom' ? ' selected' : '') + '>Pick dates</option></select></label> ' +
       '<label class="crm-small">Deal type <select id="winType">' + Object.keys(TYPES).map(function (k) { return '<option value="' + esc(k) + '"' + (state.type === k ? ' selected' : '') + '>' + esc(TYPES[k]) + '</option>'; }).join('') + '</select></label> ' +
       '<label class="crm-small">From <input type="date" id="winFrom" value="' + esc(state.from) + '"></label> <label class="crm-small">To <input type="date" id="winTo" value="' + esc(state.to) + '"></label> <button type="submit" class="a-btn a-btn-primary a-btn-sm">Show</button></form>' +
-      '<p class="crm-small crm-muted">Deal type limits the deal reports (not Reconciliation); renewals and expansions are counted with new business unless you pick one. Weighted pipeline and Reconciliation always show today and ignore these dates. Test addresses (example.com) are left out of every figure. These are counts, never scores.</p></div>';
+      '<p class="crm-small crm-muted">Deal type limits the deal reports (not Reconciliation); renewals and expansions are counted with new business unless you pick one. Weighted pipeline, Pipeline by state and product, Forecast, Procurement blockers, Coverage and Reconciliation always show today and ignore these dates; Deal type does not apply to Renewals and expansions or Trial to paid. Test addresses (example.com) are left out of every figure. These are counts, never scores.</p></div>';
     return h;
   }
 
@@ -109,11 +109,10 @@
     var d = state.data, by = {};
     d.reports.forEach(function (r) { by[r.key] = r; });
     var h = filterBar();
-    h += card(by.funnel, tableOf(by.funnel));
+    // G9: fourteen reports, in the order a person reads them: the funnel and the pipeline, then forecast and pace, then wins, quotes and trials, then the work behind the deals.
+        h += card(by.funnel, tableOf(by.funnel));
     h += card(by.pipeline, tableOf(by.pipeline) + (by.pipeline.totals.withoutValue ? '<p class="crm-small crm-muted">' + esc(by.pipeline.totals.withoutValue) + ' open deal(s) have no value yet, so they add nothing to the totals.</p>' : ''));
-    h += card(by.winloss, tableOf(by.winloss));
-    h += card(by.timeinstage, tableOf(by.timeinstage));
-    h += card(by.sourcetopaid, tableOf(by.sourcetopaid));
+    ['pipelinemix', 'forecast', 'velocity', 'winloss', 'timeinstage', 'quoteconversion', 'trialtopaid', 'sourcetopaid', 'procurement', 'coverage', 'renewals'].forEach(function (k) { if (by[k]) h += card(by[k], tableOf(by[k])); });
     h += card(by.reconciliation, reconciliation(by.reconciliation));
     root.innerHTML = h;
     var preset = document.getElementById('winPreset'), from = document.getElementById('winFrom'), to = document.getElementById('winTo');

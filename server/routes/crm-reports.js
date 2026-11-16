@@ -1,4 +1,4 @@
-// Sales CRM reports (phase 7; mounted at /api/crm/reports). Read-only: the six reports in lib/crm-reports.js, each with its definition and window.
+// Sales CRM reports (phase 7; mounted at /api/crm/reports). Read-only: the reports in lib/crm-reports.js and lib/crm-reports-more.js, each with its definition and window.
 // Everyone with a CRM role sees the numbers (like the Overview). The CSV export is CRM Admin only, holds summary numbers only (no contact, account or deal
 // name, no email, no id), and every export writes one audit row naming the report and the window (never the figures).
 const express = require('express');

@@ -39,7 +39,7 @@ Use `--off` or `--on` in place of `--status`. **If something looks wrong in the 
 
 ## 3. Reports and exports
 
-Customer Hub > **Reports** has six reports, each with its dates and its definition on the page. Everyone with a CRM role sees the numbers. **Download CSV is CRM Admin only**, the file holds summary numbers (no contact, account or deal names), and each download writes an audit row (`crm_report_exported`). To see who exported what: the audit viewer, entity type `crm_report`.
+Customer Hub > **Reports** has fourteen reports (the original six, plus eight added in gap G9: pipeline by state and product, forecast by month, sale velocity, quote conversion, trial to paid, procurement blockers, coverage, renewals and expansions), each with its dates and its definition on the page. Everyone with a CRM role sees the numbers. **Download CSV is CRM Admin only**, the file holds summary numbers (no contact, account or deal names), and each download writes an audit row (`crm_report_exported`). To see who exported what: the audit viewer, entity type `crm_report`.
 
 ## 4. Database scripts, in the order they were added (each safe to re-run; alter scripts go BEFORE the Node restart)
 
@@ -69,7 +69,7 @@ Rolling back never drops a table. Code goes back with `git revert` of that phase
 
 ## 6. Known limits (measured on 2026-11-15 with about ten times today's data on a throwaway MariaDB: 45,000 contacts, 5,000 quotes, 3,000 deals, 12,000 stage changes, 200,000 campaign sends)
 
-Every list, the Overview, the deal page and the six reports answer in under 120 ms except two, which are fine today and have a known next step:
+Every list, the Overview, the deal page and the original six reports answer in under 120 ms (the eight added later have not been timed on the large test set) except two, which are fine today and have a known next step:
 
 | Screen | At 10x data | Why | Do this when |
 |---|---|---|---|
