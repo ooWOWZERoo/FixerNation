@@ -14,6 +14,7 @@ const { engagementFor } = require('../lib/crm-engagement');
 const { purchaseIdForQuote } = require('../lib/quote-purchase');
 const { cleanSigner, sha256 } = require('../lib/quote-evidence');
 const { acceptQuoteViaPO } = require('./quote-accept');
+const { isValidStateCode, stateName } = require('../lib/territories');
 const {
   OPP_STATES, OPP_TYPES, COMMITTEE_ROLES, INFLUENCE, STANCE,
   text, posInt, cents, dateOnly, utcDateTime, oneOf, paging, likeTerm, daysSince,
@@ -105,6 +106,34 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   if (req.query.overdue === 'true') { where.push('o.next_step_due_at IS NOT NULL AND o.next_step_due_at < ?'); params.push(sqlNow()); }
   const stale = posInt(req.query.staleDays);
   if (stale) { where.push('o.stage_entered_at < ?'); params.push(new Date(Date.now() - stale * 86400000).toISOString().slice(0, 19).replace('T', ' ')); }
+  // G7: the saved views the first build lacked. Each is just a filter in the page address, like the ones above.
+  const oppType = oneOf(req.query.oppType, OPP_TYPES);
+  if (oppType) { where.push('o.opp_type = ?'); params.push(oppType); }
+  const accountType = oneOf(req.query.accountType, ['school', 'district']);
+  if (accountType) { where.push('a.account_type = ?'); params.push(accountType); }
+  // The account's State is free text (a backfilled quote's bill-to state, or whatever staff typed), so a code matches the code or the full name, any case: PA or Pennsylvania.
+  const stateCode = typeof req.query.accountState === 'string' ? req.query.accountState.trim().toUpperCase() : '';
+  if (stateCode && isValidStateCode(stateCode)) { where.push('(LOWER(TRIM(a.state)) = ? OR LOWER(TRIM(a.state)) = ?)'); params.push(stateCode.toLowerCase(), stateName(stateCode).toLowerCase()); }
+  else if (stateCode) return res.status(400).json({ error: 'accountState must be a two-letter state code.' });
+  // "This quarter" is the calendar quarter of the day the page names (the person's own day), else the server's UTC day.
+  if (req.query.closeIn === 'quarter') {
+    const day = dateOnly(req.query.today) || new Date().toISOString().slice(0, 10);
+    const y = Number(day.slice(0, 4)), qStart = Math.floor((Number(day.slice(5, 7)) - 1) / 3) * 3;
+    const from = `${y}-${String(qStart + 1).padStart(2, '0')}-01`;
+    const to = new Date(Date.UTC(y, qStart + 3, 0)).toISOString().slice(0, 10);
+    where.push('o.expected_close_date IS NOT NULL AND o.expected_close_date >= ? AND o.expected_close_date <= ?'); params.push(from, to);
+  }
+  // Won, and no paid purchase on any of the deal's quotes: nothing was bought, or a purchase order is still waiting. (Pair it with state=won.)
+  if (req.query.unpaid === 'true') where.push("NOT EXISTS (SELECT 1 FROM purchases up JOIN quote_requests uq ON uq.id = up.quote_id WHERE uq.opportunity_id = o.id AND up.payment_status = 'paid')");
+  // A live trial that ends within N days, reached through the deal's own quotes or through the account's school.
+  const trialDays = posInt(req.query.trialEndsInDays);
+  if (trialDays) {
+    const now = sqlNow();
+    const until = `${new Date(Date.now() + Math.min(trialDays, 90) * 86400000).toISOString().slice(0, 10)} 23:59:59`;
+    where.push(`EXISTS (SELECT 1 FROM purchases tp LEFT JOIN quote_requests tq ON tq.id = tp.quote_id WHERE tp.trial_expiration_date IS NOT NULL AND tp.trial_expiration_date >= ? AND tp.trial_expiration_date <= ?
+      AND COALESCE(tp.license_status, 'active') NOT IN ('cancelled', 'suspended') AND (tq.opportunity_id = o.id OR (a.school_id IS NOT NULL AND tp.school_id = a.school_id)))`);
+    params.push(now, until);
+  }
   const like = likeTerm(req.query.q);
   if (like) { where.push("(o.name LIKE ? ESCAPE '!' OR a.name LIKE ? ESCAPE '!')"); params.push(like, like); }
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';

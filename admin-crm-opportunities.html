@@ -39,18 +39,31 @@
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
   var q = C.readQuery();
   var staff = [], stages = [];
-  var st = { view: q.view === 'board' ? 'board' : 'table', q: q.q || '', stage: q.stage || '', owner: q.owner || '', state: q.state || 'open', overdue: q.overdue === 'true', noNextStep: q.noNextStep === 'true', staleDays: q.staleDays || '', sort: q.sort || 'updated', dir: q.dir || 'desc', page: Math.max(1, Number(q.page) || 1) };
+  var st = { view: q.view === 'board' ? 'board' : 'table', q: q.q || '', stage: q.stage || '', owner: q.owner || '', state: q.state || 'open', overdue: q.overdue === 'true', noNextStep: q.noNextStep === 'true', staleDays: q.staleDays || '', oppType: q.oppType || '', accountType: q.accountType || '', accountState: q.accountState || '', closeIn: q.closeIn || '', unpaid: q.unpaid === 'true', trialEndsInDays: q.trialEndsInDays || '', sort: q.sort || 'updated', dir: q.dir || 'desc', page: Math.max(1, Number(q.page) || 1) };
   // A saved view is only a set of filters in the page address, so it can be bookmarked or sent to a colleague.
   var VIEWS = [
     ['All open deals', {}],
     ['My opportunities', { owner: 'me' }],
     ['Open procurement', { stage: 'procurement' }],
     ['Stale quotes', { stage: 'proposal_sent', staleDays: '14' }],
+    ['Pennsylvania districts', { accountType: 'district', accountState: 'PA' }],
+    ['Trials ending soon', { trialEndsInDays: '14' }],
+    ['Expected this quarter', { closeIn: 'quarter' }],
+    ['Renewals', { oppType: 'renewal' }],
     ['Needs a next step', { noNextStep: 'true' }],
     ['Overdue next step', { overdue: 'true' }],
     ['Won', { state: 'won' }],
+    ['Unpaid won deals', { state: 'won', unpaid: 'true' }],
     ['Lost', { state: 'lost' }]
   ];
+  // What the newer views mean, shown under the list of views while one of them is open.
+  var VIEW_HELP = {
+    'Pennsylvania districts': 'Open deals on district accounts whose State is Pennsylvania (PA). A district account with no State filled in is not listed: set it on the account page.',
+    'Trials ending soon': 'Open deals with a trial that ends in the next 14 days, found through the deal\u2019s quotes or the account\u2019s school.',
+    'Expected this quarter': 'Open deals whose expected close date falls in the current calendar quarter.',
+    'Renewals': 'Open deals of the Renewal type, including the ones the renewal generator opens.',
+    'Unpaid won deals': 'Won deals where none of the deal\u2019s quotes has a paid purchase yet (no purchase, or a purchase order still waiting).'
+  };
   var STATE_OPTS = { open: 'Open', won: 'Won', lost: 'Lost', inactive: 'Inactive', all: 'Every state' };
 
   C.boot(root).then(function (me) {
@@ -62,18 +75,23 @@
   });
 
   function filterParams() {
-    return { q: st.q, stage: st.stage, owner: st.owner, state: st.state === 'open' ? '' : st.state, overdue: st.overdue ? 'true' : '', noNextStep: st.noNextStep ? 'true' : '', staleDays: st.staleDays };
+    return { q: st.q, stage: st.stage, owner: st.owner, state: st.state === 'open' ? '' : st.state, overdue: st.overdue ? 'true' : '', noNextStep: st.noNextStep ? 'true' : '', staleDays: st.staleDays, oppType: st.oppType, accountType: st.accountType, accountState: st.accountState, closeIn: st.closeIn, unpaid: st.unpaid ? 'true' : '', trialEndsInDays: st.trialEndsInDays };
   }
   function viewActive(v) {
-    var p = filterParams(), want = v[1], keys = ['stage', 'owner', 'state', 'overdue', 'noNextStep', 'staleDays'];
+    var p = filterParams(), want = v[1], keys = ['stage', 'owner', 'state', 'overdue', 'noNextStep', 'staleDays', 'oppType', 'accountType', 'accountState', 'closeIn', 'unpaid', 'trialEndsInDays'];
     return !p.q && keys.every(function (k) { return (p[k] || '') === (want[k] || ''); });
+  }
+
+  function viewHelp() {
+    var on = VIEWS.filter(viewActive)[0];
+    return on && VIEW_HELP[on[0]] ? '<p class="crm-small crm-muted" style="margin:6px 0 10px;">' + esc(VIEW_HELP[on[0]]) + '</p>' : '';
   }
 
   function shell() {
     root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Opportunities</h2><div class="crm-row-actions">' +
       '<div class="crm-tabs" style="margin:0;border:0;padding:0;" role="group" aria-label="How to show deals"><button type="button" data-view="table" aria-pressed="' + (st.view === 'table') + '"' + (st.view === 'table' ? ' aria-selected="true"' : '') + '>List</button><button type="button" data-view="board" aria-pressed="' + (st.view === 'board') + '"' + (st.view === 'board' ? ' aria-selected="true"' : '') + '>Board</button></div>' +
       (C.can('edit_deal') ? '<button type="button" class="a-btn a-btn-primary" id="addDeal">+ New deal</button>' : '') + '</div></div>' +
-      '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="admin-crm-opportunities.html' + esc(C.qstr(Object.assign({}, v[1], st.view === 'board' ? { view: 'board' } : {}))) + '"' + (viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '</ul>' +
+      '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="admin-crm-opportunities.html' + esc(C.qstr(Object.assign({}, v[1], st.view === 'board' ? { view: 'board' } : {}))) + '"' + (viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '</ul>' + viewHelp() +
       '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search deals</label><input type="search" id="fQ" placeholder="Search by deal or organization" value="' + esc(st.q) + '"></div>' +
       '<label class="crm-sr" for="fStage">Stage</label><select id="fStage" class="a-filter-select"><option value="">Every stage</option>' + stages.map(function (s) { return '<option value="' + esc(s.key) + '"' + (s.key === st.stage ? ' selected' : '') + '>' + esc(s.label) + '</option>'; }).join('') + '</select>' +
       '<label class="crm-sr" for="fOwner">Owner</label><select id="fOwner" class="a-filter-select"><option value="">Every owner</option><option value="me"' + (st.owner === 'me' ? ' selected' : '') + '>Me</option><option value="none"' + (st.owner === 'none' ? ' selected' : '') + '>Nobody yet</option>' + staff.map(function (s) { return '<option value="' + esc(s.id) + '"' + (String(s.id) === st.owner ? ' selected' : '') + '>' + esc(s.username) + '</option>'; }).join('') + '</select>' +
@@ -94,6 +112,7 @@
     var body = document.getElementById('oBody');
     C.loading(body);
     var req = Object.assign(filterParams(), { sort: st.sort, dir: st.dir, page: st.page, pageSize: st.view === 'board' ? 200 : 25 });
+    if (st.closeIn) req.today = C.todayLocal(); // "this quarter" is the quarter of the day the person is looking at
     if (st.view === 'board') { req.state = 'open'; req.stage = ''; }
     C.api('GET', '/api/crm/opportunities' + C.qstr(req)).then(function (r) {
       if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
@@ -112,7 +131,7 @@
 
   function drawTable(data) {
     var body = document.getElementById('oBody'), pg = document.getElementById('oPager');
-    if (!data.total) { body.innerHTML = C.empty(st.q || st.stage || st.owner || st.overdue || st.noNextStep || st.staleDays ? 'No deal matches this view.' : 'No deals yet. Start one from an account, or from a quote on the Overview.', '🎯'); pg.innerHTML = ''; return; }
+    if (!data.total) { body.innerHTML = C.empty(st.q || st.stage || st.owner || st.overdue || st.noNextStep || st.staleDays || st.oppType || st.accountType || st.accountState || st.closeIn || st.unpaid || st.trialEndsInDays ? 'No deal matches this view.' : 'No deals yet. Start one from an account, or from a quote on the Overview.', '🎯'); pg.innerHTML = ''; return; }
     body.innerHTML = '<table class="a-table" aria-label="Deals"><thead><tr>' + th('Deal', 'name') + th('Stage', 'stage') + '<th scope="col">Owner</th>' + th('Value', 'amount') + '<th scope="col">Chance</th>' + th('Days in stage', 'daysinstage') + th('Next step', 'nextstep') + th('Expected close', 'close') + '</tr></thead><tbody>' +
       data.opportunities.map(function (o) {
         var late = o.state === 'open' && o.nextStepDueAt && C.isOverdue(o.nextStepDueAt);

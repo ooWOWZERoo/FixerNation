@@ -34,7 +34,7 @@ Severity: H high, M medium, L low. "Where" is the file to start in.
 | G4 | Onboarding checklist after Won and paid | FR-WON-03 | OPEN |
 | G5 | Repeat-order flow (tokenized) | FR-RENEW-02 | DECIDE |
 | G6 | Qualification criteria and the "what is missing" output (D9 defers only the score) | FR-QUAL-01, 03 | DECIDE |
-| G7 | Saved views: 5 of 8 missing (PA Districts, Trials Ending Soon, Expected This Quarter, Unpaid Won Deals, Renewals) | FR-VIEW-01 | OPEN |
+| G7 | Saved views: 5 of 8 missing (PA Districts, Trials Ending Soon, Expected This Quarter, Unpaid Won Deals, Renewals). Done: the five views are on Opportunities (Pennsylvania districts, Trials ending soon, Expected this quarter, Unpaid won deals, Renewals), each a filter in the page address (so bookmarkable), each with a one-line explanation when open. Pennsylvania districts needs the district account's State filled in (it matches PA or Pennsylvania, any case); the quarter is the quarter of the viewer's own day; trials are found through the deal's quotes or the account's school. | FR-VIEW-01 | DONE |
 | G8 | Overview cards: 6 of 12 missing (expected closings, open quotes, unpaid invoices, renewals due, win rate, unread); Customers tile says contacts only | FR-REP-01 | OPEN |
 | G9 | Report breadth: pipeline by state, source, product, account type; quote conversion; procurement blockers; trial-to-paid; renewal and expansion; activity coverage; expected close by period; sale velocity | FR-REP-02, OPP-07 | OPEN |
 | G10 | "Source to paid" is grouped by a staff-typed Source, not by contact attribution; the Phase 6 promise of attribution to revenue was dropped without a note | FR-ATTR-01 | DECIDE |
