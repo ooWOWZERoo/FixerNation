@@ -754,7 +754,45 @@ CREATE TABLE IF NOT EXISTS quote_requests (
   -- opportunity_id's foreign key to crm_opportunities is added by the alter script (that table is created later in this file, after schools).
   contact_id INT UNSIGNED NULL,
   opportunity_id INT UNSIGNED NULL,
-  -- Sales CRM phase 4b (scripts/alter-create-crm-quotes.js): revisions and the acceptance evidence (docs/reference/sales-crm-update-requirements.md, "4b to 4d spec").
+  -- Sales CRM punch list G4 (scripts/alter-create-crm-onboarding.js): which Won-and-paid deals have already been given their onboarding checklist. One row per deal; the unique key is
+-- what stops a second copy, even if staff deleted the steps. The steps themselves are ordinary rows in crm_opportunity_checklist_items, copied from the template named "Onboarding".
+CREATE TABLE IF NOT EXISTS crm_onboarding_started (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    opportunity_id INT UNSIGNED NOT NULL,
+    template_id INT UNSIGNED NULL,
+    steps_added INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_onboarding_opp (opportunity_id),
+    CONSTRAINT fk_crm_onboarding_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_onboarding_template FOREIGN KEY (template_id) REFERENCES crm_procurement_templates (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Sales CRM punch list G21 (scripts/alter-create-crm-refunds.js): a refund or dispute on a purchase, raised by a Stripe event or by hand, waiting for a CRM Admin to confirm or dismiss it.
+-- It never changes the purchase, the license or the contact's label. A CONFIRMED FULL refund (is_full = 1) stops the purchase counting as a paid purchase in the CRM (lib/crm-classification.js).
+-- stripe_event_id is unique so a retried webhook adds nothing. A refund Stripe reports for a payment we cannot match is not stored here (it is audited and the sales alert says so).
+CREATE TABLE IF NOT EXISTS crm_purchase_refunds (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    purchase_id INT UNSIGNED NOT NULL,
+    kind VARCHAR(12) NOT NULL,
+    source VARCHAR(8) NOT NULL,
+    stripe_event_id VARCHAR(255) NULL,
+    amount_cents INT UNSIGNED NULL,
+    is_full TINYINT(1) NULL,
+    state VARCHAR(12) NOT NULL DEFAULT 'needs_review',
+    note VARCHAR(500) NULL,
+    raised_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decided_by_admin_id INT UNSIGNED NULL,
+    decided_at DATETIME NULL,
+    UNIQUE KEY uq_crm_refund_event (stripe_event_id, purchase_id),
+    KEY idx_crm_refund_purchase (purchase_id, state),
+    KEY idx_crm_refund_state (state, created_at),
+    CONSTRAINT fk_crm_refund_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_refund_raiser FOREIGN KEY (raised_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_crm_refund_decider FOREIGN KEY (decided_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Sales CRM phase 4b (scripts/alter-create-crm-quotes.js): revisions and the acceptance evidence (docs/reference/sales-crm-update-requirements.md, "4b to 4d spec").
   revision_number INT UNSIGNED NOT NULL DEFAULT 1,
   supersedes_quote_id INT UNSIGNED NULL, -- the quote this one replaces; the old one becomes 'superseded' when this one is SENT
   version_status VARCHAR(16) NOT NULL DEFAULT 'current', -- 'current' | 'superseded' (a superseded quote's link shows a "replaced" page)

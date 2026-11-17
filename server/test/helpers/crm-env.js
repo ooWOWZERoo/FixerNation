@@ -71,6 +71,8 @@ CREATE TABLE crm_attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_
 CREATE TABLE crm_appointments (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, title TEXT NOT NULL, starts_at TEXT NOT NULL, ends_at TEXT NOT NULL,
   location TEXT, details TEXT, status TEXT NOT NULL DEFAULT 'scheduled', uid TEXT NOT NULL UNIQUE, sequence_no INTEGER NOT NULL DEFAULT 0, attendees_json TEXT, organizer_admin_id INTEGER,
   invite_sent_at TEXT, invite_sequence INTEGER, created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_purchase_refunds (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER NOT NULL, kind TEXT NOT NULL, source TEXT NOT NULL, stripe_event_id TEXT, amount_cents INTEGER, is_full INTEGER,
+  state TEXT NOT NULL DEFAULT 'needs_review', note TEXT, raised_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, decided_by_admin_id INTEGER, decided_at TEXT, UNIQUE (stripe_event_id, purchase_id));
 CREATE TABLE crm_procurement_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, description TEXT, items_json TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,
   created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_opportunity_checklist_items (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER NOT NULL, template_id INTEGER, label TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open',

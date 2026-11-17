@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Refunds</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=3">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=36"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Refunds</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+// Punch list G21: refunds and disputes waiting for a decision. Stripe raises a flag when it reports one, and Sales or a CRM Admin can raise one by hand.
+// Only a CRM Admin confirms or dismisses. A flag changes nothing by itself. Buyer, school and note text all come from outside the keyboard, so every value goes through esc().
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var state = { filter: 'needs_review', page: 1 };
+  var canRaise = false, canDecide = false;
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Refunds and disputes</h2><div id="refundActions"></div></div>' +
+      '<p class="crm-small crm-muted" style="margin:0 0 12px;">When Stripe reports a refund or a dispute, or someone here flags one, it waits on this page. A flag changes nothing by itself: the purchase, the school’s license and the buyer’s label stay as they are. ' +
+      'When a CRM Admin confirms a full refund, that purchase stops counting as a paid sale in the Customer Hub. To close a license or refund money, use Stripe and the Orders page.</p>' +
+      '<div class="crm-filters">' + C.field('Show', '<select id="fFilter" class="a-filter-select"><option value="needs_review">Waiting for a decision</option><option value="confirmed">Confirmed</option><option value="dismissed">Dismissed</option><option value="all">All</option></select>', '', 'fFilter') + '</div></div>' +
+      '<div id="refundList"></div><div id="refundPager"></div>';
+    root.querySelector('#fFilter').addEventListener('change', function (e) { state.filter = e.target.value; state.page = 1; load(); });
+    load();
+  });
+
+  function load() {
+    var list = document.getElementById('refundList');
+    C.loading(list);
+    C.api('GET', '/api/crm/refunds' + C.qstr({ state: state.filter, page: state.page, pageSize: 50 })).then(function (r) {
+      if (!r.ok) { C.errorBox(list, C.problem(r)); return; }
+      var d = r.data;
+      canRaise = d.canRaise; canDecide = d.canDecide;
+      document.getElementById('refundActions').innerHTML = canRaise ? '<button type="button" class="a-btn a-btn-primary" id="flagBtn">Flag a refund</button>' : '';
+      var fb = document.getElementById('flagBtn'); if (fb) fb.addEventListener('click', flagDialog);
+      if (!d.flags.length) { list.innerHTML = '<div class="a-card">' + C.empty(state.filter === 'needs_review' ? 'Nothing is waiting for a decision.' : 'Nothing here.', '💸') + '</div>'; document.getElementById('refundPager').innerHTML = ''; return; }
+      list.innerHTML = '<div class="a-card"><div class="mc-table-scroll"><table class="a-table" aria-label="Refunds and disputes"><thead><tr><th scope="col">Flagged</th><th scope="col">What</th><th scope="col">Purchase</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col"><span class="mc-sr-only">Actions</span></th></tr></thead><tbody>' +
+        d.flags.map(row).join('') + '</tbody></table></div></div>';
+      list.querySelectorAll('[data-confirm]').forEach(function (b) { b.addEventListener('click', function () { decideDialog(b.dataset.confirm, 'confirm', b.dataset.full); }); });
+      list.querySelectorAll('[data-dismiss]').forEach(function (b) { b.addEventListener('click', function () { decideDialog(b.dataset.dismiss, 'dismiss'); }); });
+      C.pager(document.getElementById('refundPager'), d, function (p) { state.page = p; load(); });
+    });
+  }
+
+  function row(f) {
+    var p = f.purchase;
+    var link = p.dealId ? 'admin-crm-opportunity.html?id=' + encodeURIComponent(p.dealId) : (p.contactId ? 'admin-crm-contact.html?id=' + encodeURIComponent(p.contactId) : '');
+    var who = esc(p.school || 'No school named') + '<div class="crm-small crm-muted">' + esc(p.buyerName || 'Unknown buyer') + ' · purchase #' + esc(p.id) + (link ? ' · <a href="' + link + '">Open</a>' : '') + '</div>';
+    var amount = f.amountCents === null ? '<span class="crm-muted">Not known</span>' : esc(C.money(f.amountCents)) + (f.isFull === true ? '<div class="crm-small crm-muted">Full</div>' : f.isFull === false ? '<div class="crm-small crm-muted">Part</div>' : '');
+    if (f.amountCents === null && f.isFull === true) amount = 'Full';
+    var status = f.state === 'needs_review' ? 'Waiting' : f.state === 'confirmed' ? 'Confirmed' : 'Dismissed';
+    var by = f.state === 'needs_review' ? (f.raisedByName ? 'Flagged by ' + esc(f.raisedByName) : 'Reported by Stripe') : (f.decidedByName ? esc(f.decidedByName) + ', ' + esc(C.date(f.decidedAt)) : '');
+    var what = (f.kind === 'dispute' ? 'Dispute' : 'Refund') + '<div class="crm-small crm-muted">' + (f.source === 'stripe' ? 'From Stripe' : 'By hand') + '</div>';
+    var note = f.note ? '<div class="crm-small">' + esc(f.note) + '</div>' : '';
+    var actions = f.canDecide ? '<button type="button" class="a-btn a-btn-outline" data-confirm="' + esc(f.id) + '" data-full="' + esc(f.isFull === null ? '' : String(f.isFull)) + '">Confirm</button> <button type="button" class="a-btn a-btn-outline" data-dismiss="' + esc(f.id) + '">Dismiss</button>' : '';
+    return '<tr><td>' + esc(C.dateTime(f.createdAt)) + '</td><td>' + what + '</td><td>' + who + note + '</td><td>' + amount + '</td><td>' + status + '<div class="crm-small crm-muted">' + by + '</div></td><td>' + actions + '</td></tr>';
+  }
+
+  function decideDialog(id, kind, knownFull) {
+    var confirming = kind === 'confirm';
+    var body = (confirming
+      ? '<p class="crm-small">Confirming tells the Customer Hub the money went back to the buyer. A full refund stops this purchase counting as a paid sale. A part refund changes no counts. Nothing else changes.</p>' +
+        C.field('Was it a full refund?', '<select id="dFull" required><option value="">Choose one</option><option value="true"' + (knownFull === 'true' ? ' selected' : '') + '>Full refund</option><option value="false"' + (knownFull === 'false' ? ' selected' : '') + '>Part refund</option></select>', '', 'dFull')
+      : '<p class="crm-small">Dismissing says this was not a real refund or the dispute was settled in our favor. Nothing changes in the counts.</p>') +
+      C.field('Note (optional)', '<textarea id="dNote" maxlength="500" rows="3"></textarea>', 'Say what you checked. Keep names and card details out.', 'dNote');
+    C.dialog({
+      title: confirming ? 'Confirm this refund' : 'Dismiss this flag', body: body, submit: confirming ? 'Confirm refund' : 'Dismiss flag',
+      onSubmit: function (form) {
+        var payload = { note: form.querySelector('#dNote').value };
+        if (confirming) {
+          var v = form.querySelector('#dFull').value;
+          if (!v) return 'Choose full or part refund.';
+          payload.isFull = v === 'true';
+        }
+        return C.api('POST', '/api/crm/refunds/' + encodeURIComponent(id) + '/' + kind, payload).then(function (r) {
+          if (!r.ok) return C.problem(r);
+          C.toast(confirming ? 'Refund confirmed.' : 'Flag dismissed.'); load();
+        });
+      },
+    });
+  }
+
+  function flagDialog() {
+    var chosen = null;
+    var body = '<p class="crm-small">Use this when you hear about a refund or a dispute that Stripe has not reported. It only raises a flag for a CRM Admin to review.</p>' +
+      C.field('Find the purchase', '<input type="search" id="fFind" maxlength="100" placeholder="Buyer name, email, school or PO number">', 'Type at least 3 letters.', 'fFind') +
+      '<div id="fResults" class="crm-small" role="status"></div>' +
+      C.field('What happened', '<select id="fKind"><option value="refund">Refund</option><option value="dispute">Dispute (chargeback)</option></select>', '', 'fKind') +
+      C.field('Amount in dollars (optional)', '<input type="text" id="fAmount" inputmode="decimal" placeholder="0.00">', '', 'fAmount') +
+      C.field('Full or part', '<select id="fFull"><option value="">Not sure yet</option><option value="true">Full refund</option><option value="false">Part refund</option></select>', '', 'fFull') +
+      C.field('Note (optional)', '<textarea id="fNote" maxlength="500" rows="3"></textarea>', 'Keep names and card details out.', 'fNote');
+    C.dialog({
+      title: 'Flag a refund or dispute', body: body, submit: 'Flag it',
+      onOpen: function (form) {
+        var out = form.querySelector('#fResults');
+        var search = C.debounce(function () {
+          var q = form.querySelector('#fFind').value.trim();
+          if (q.length < 3) { out.innerHTML = ''; return; }
+          C.api('GET', '/api/crm/refunds/purchases' + C.qstr({ q: q })).then(function (r) {
+            if (!r.ok) { out.textContent = C.problem(r); return; }
+            if (!r.data.purchases.length) { out.textContent = 'No purchase matches.'; return; }
+            out.innerHTML = r.data.purchases.map(function (p) {
+              return '<label style="display:block;margin:4px 0;"><input type="radio" name="fPick" value="' + esc(p.id) + '"> ' + esc(p.school || 'No school') + ' · ' + esc(p.buyerName || 'Unknown buyer') + ' · ' + esc(p.amountCents === null ? 'amount not recorded' : C.money(p.amountCents)) + ' · ' + esc(C.date(p.purchasedAt)) + ' · #' + esc(p.id) + '</label>';
+            }).join('');
+            out.querySelectorAll('input[name=fPick]').forEach(function (i) { i.addEventListener('change', function () { chosen = i.value; }); });
+          });
+        }, 300);
+        form.querySelector('#fFind').addEventListener('input', function () { chosen = null; search(); });
+      },
+      onSubmit: function (form) {
+        if (!chosen) return 'Find and pick the purchase first.';
+        var payload = { purchaseId: Number(chosen), kind: form.querySelector('#fKind').value, note: form.querySelector('#fNote').value };
+        var amt = form.querySelector('#fAmount').value.trim();
+        if (amt) { var c = C.dollarsToCents(amt); if (c === null) return 'Type the amount like 250 or 250.00.'; payload.amountCents = c; }
+        var full = form.querySelector('#fFull').value;
+        if (full) payload.isFull = full === 'true';
+        return C.api('POST', '/api/crm/refunds', payload).then(function (r) {
+          if (!r.ok) return C.problem(r);
+          C.toast('Flag raised. A CRM Admin will review it.'); load();
+        });
+      },
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=9"></script>
+</body>
+</html>

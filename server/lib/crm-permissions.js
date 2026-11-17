@@ -24,6 +24,8 @@
 //   files                yes     yes (then the subject check)   -     (see, upload, download or delete a file; Read-only never opens one)
 //   accept_for_customer  yes     -                              -     (phase 4c: accept a quote by PO for the customer when closing a deal Won; it creates a purchase, invoice and license)
 //   edit_quote_price     yes     -                              -     (change the price, product or seats of a quote that was already sent)
+//   raise_refund         yes     yes                            -     (punch list G21: flag a purchase as refunded or disputed by hand; it only raises a flag)
+//   decide_refund        yes     -                              -     (G21: confirm or dismiss a refund flag; a confirmed full refund stops the purchase counting as paid in the CRM)
 //
 // The older admin routes use requireCrmRole (below) with the same matrix: admin accounts need assign_roles, a quote edit or send needs write (and
 // edit_quote_price once the quote was sent), and accepting a quote for the customer needs accept_for_customer. Punch list S1-S4.
@@ -53,6 +55,8 @@ const ALLOWED = {
   files: ['admin', 'sales'],
   accept_for_customer: ['admin'],
   edit_quote_price: ['admin'],
+  raise_refund: ['admin', 'sales'],
+  decide_refund: ['admin'],
 };
 
 function can(role, action) {

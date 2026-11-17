@@ -8,6 +8,7 @@
     'dashboard': ['Your mission, in motion', 'Mission Control', 'Real tools. Brighter futures. Track progress, support schools, and make your next move count.', 'Overview'],
     'crm-overview': ['Everything in one place', '', 'See how many Suspects, Prospects and Customers you have, what is in the pipeline, and which quotes and deals need you today.', 'Customer Hub'],
     'crm-attention': ['What needs a look today', '', 'Overdue next steps, quiet deals, quotes about to run out and more. Each one says why it is here and where to fix it.', 'Customer Hub'],
+    'crm-refunds': ['Refunds waiting for a decision', '', 'Refunds and disputes that Stripe reported or staff flagged. A flag changes nothing until a CRM Admin confirms or dismisses it.', 'Customer Hub'],
     'crm-tasks': ['Your to-do list, in one place', '', 'See what is due today and what is overdue, and tick things off as you go.', 'Customer Hub'],
     'crm-accounts': ['The schools and districts you are working with', '', 'Find an organization, see its people and deals, and keep one clean record for each.', 'Customer Hub'],
     'crm-account': ['One organization, the whole picture', '', 'The people and deals tied to this school or district.', 'Customer Hub'],

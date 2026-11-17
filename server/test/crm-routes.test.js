@@ -50,7 +50,7 @@ test('SIGNED OUT: no admin cookie, no CRM, even with the switch on', async () =>
 test('ROLE MATRIX: every action is allowed for exactly the roles the matrix says', () => {
   const want = {
     view: ['admin', 'sales', 'readonly'], write: ['admin', 'sales'], edit_deal: ['admin', 'sales'], promote_prospect: ['admin', 'sales'],
-    reopen_deal: ['admin'], set_customer: ['admin'], override_probability: ['admin'], edit_settings: ['admin'], merge: ['admin'], assign_roles: ['admin'], audit_view: ['admin'], export: ['admin'], erase: ['admin'], files: ['admin', 'sales'], accept_for_customer: ['admin'], edit_quote_price: ['admin'],
+    reopen_deal: ['admin'], set_customer: ['admin'], override_probability: ['admin'], edit_settings: ['admin'], merge: ['admin'], assign_roles: ['admin'], audit_view: ['admin'], export: ['admin'], erase: ['admin'], files: ['admin', 'sales'], accept_for_customer: ['admin'], edit_quote_price: ['admin'], raise_refund: ['admin', 'sales'], decide_refund: ['admin'],
   };
   assert.deepEqual(Object.keys(perms.ALLOWED).sort(), Object.keys(want).sort(), 'no action is missing from the matrix, none extra');
   for (const [action, roles] of Object.entries(want)) {

@@ -51,6 +51,7 @@ const HELP = {
   close_date_passed: (t) => `An open deal whose expected close date is ${t.closeGraceDays ? `${t.closeGraceDays} or more days ` : ''}in the past. Move the date or move the deal.`,
   po_not_received: (t) => `A quote accepted by purchase order ${t.poWaitDays} or more days ago whose invoice still has no PO received date.`,
   trial_ending: (t) => `A trial that ends within ${t.trialEndingDays} days. A good time to ask how it went and offer a quote.`,
+  refund_review: () => 'A purchase with a refund or dispute flag that no CRM Admin has confirmed or dismissed yet. Stripe raises these when it reports a refund or a dispute, and staff can raise one by hand. Nothing has been changed by the flag itself.',
   trial_stalled: (t) => `A live trial that started ${t.trialStalledDays} or more days ago and has seat records, but not one seat is registered yet. A trial with no seat records is not listed: the system cannot tell whether anyone started.`,
   trial_high_use: (t) => `A trial with two or more seats where ${t.trialUsePercent}% or more of the seats are registered. Only counts of seats are used, never names.`,
 };
@@ -70,6 +71,7 @@ const RULES = {
   po_not_received: { label: 'Purchase order not received', subjectType: 'purchase' },
   trial_ending: { label: 'Trial is ending', subjectType: 'purchase' },
   trial_stalled: { label: 'Trial has not got going', subjectType: 'purchase' },
+  refund_review: { label: 'Refund or dispute to review', subjectType: 'purchase' },
   trial_high_use: { label: 'Trial is being well used', subjectType: 'purchase' },
 };
 // Each rule's `help` (at the default thresholds, for anything that reads RULES directly); helpFor() gives the wording for the thresholds in force.
@@ -235,6 +237,17 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
       [start(today), start(addDays(today, 1 - t.trialStalledDays))]);
     for (const r of rows) items.push(purchaseItem('trial_stalled', r, { title: 'Trial has not got going', fingerprint: day10(r.purchased_at),
       why: `This trial started ${daysBetween(r.purchased_at, today)} days ago and no teacher has registered a seat yet. Check that the invitations arrived, and offer to help them get started.` }));
+  });
+
+  // G21: a refund or dispute flag nobody has decided yet. One item per purchase; the newest open flag is the fingerprint, so a new flag after a decision shows up again.
+  await optional(async () => {
+    rows = await capped('refund_review',
+      `SELECT p.id, p.school_domain, p.purchased_at, p.contact_id, c.name AS contact_name, o.id AS deal_id, ${buyerOwner} AS owner_id, ow.username AS owner_name,
+         (SELECT MAX(f.id) FROM crm_purchase_refunds f WHERE f.purchase_id = p.id AND f.state = 'needs_review') AS flag_id,
+         (SELECT MIN(f.kind) FROM crm_purchase_refunds f WHERE f.purchase_id = p.id AND f.state = 'needs_review') AS flag_kind
+       ${purchaseFrom} WHERE EXISTS (SELECT 1 FROM crm_purchase_refunds f WHERE f.purchase_id = p.id AND f.state = 'needs_review') AND ${NOT_TEST} ORDER BY p.id`, []);
+    for (const r of rows) items.push(purchaseItem('refund_review', r, { title: r.flag_kind === 'dispute' ? 'Payment disputed' : 'Payment refunded', fingerprint: String(r.flag_id),
+      why: `A ${r.flag_kind === 'dispute' ? 'dispute' : 'refund'} was reported on this purchase and has not been reviewed. A CRM Admin confirms or dismisses it on the Refunds page. Until then nothing has changed, and the buyer's label stays as it is.` }));
   });
 
   await optional(async () => {

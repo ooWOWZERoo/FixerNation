@@ -26,9 +26,11 @@ const RANK = { suspect: 0, prospect: 1, customer: 2 };
 const PURCHASES_FROM = 'FROM purchases p LEFT JOIN license_products lp ON lp.id = p.license_product_id';
 // Punch list B15: p.is_trial_flag is the product's trial flag frozen when the CRM first looked at the purchase; the live product flag is only the fallback for a purchase not yet frozen.
 const TRIAL_LIKE_SQL = '(COALESCE(p.is_trial_flag, lp.is_trial, 0) = 1 OR p.trial_lesson_limit IS NOT NULL OR p.trial_expiration_date IS NOT NULL)';
-const QUALIFYING_SQL = `p.payment_status = 'paid' AND p.amount_cents > 0 AND NOT ${TRIAL_LIKE_SQL}`;
+// Punch list G21: a refund a CRM Admin CONFIRMED as a full refund means the money is gone: the purchase stops counting as a paid purchase here (never changes the purchase itself or its license).
+const NOT_REFUNDED_SQL = "NOT EXISTS (SELECT 1 FROM crm_purchase_refunds rf WHERE rf.purchase_id = p.id AND rf.state = 'confirmed' AND rf.is_full = 1)";
+const QUALIFYING_SQL = `p.payment_status = 'paid' AND p.amount_cents > 0 AND NOT ${TRIAL_LIKE_SQL} AND ${NOT_REFUNDED_SQL}`;
 // Paid, not a trial, but the amount is unknown or zero: never a Customer on its own; shown for review.
-const NEEDS_REVIEW_SQL = `p.payment_status = 'paid' AND (p.amount_cents IS NULL OR p.amount_cents = 0) AND NOT ${TRIAL_LIKE_SQL}`;
+const NEEDS_REVIEW_SQL = `p.payment_status = 'paid' AND (p.amount_cents IS NULL OR p.amount_cents = 0) AND NOT ${TRIAL_LIKE_SQL} AND ${NOT_REFUNDED_SQL}`;
 
 // D3, in JS (the same rule, for code that already holds the rows). A test runs both against the same fixtures.
 function isTrialLike(p) {
@@ -228,7 +230,7 @@ async function classificationCounts(conn) {
 
 module.exports = {
   CLASSIFICATIONS, RANK,
-  PURCHASES_FROM, QUALIFYING_SQL, NEEDS_REVIEW_SQL, TRIAL_LIKE_SQL, TEST_ADDRESS_SQL,
+  PURCHASES_FROM, QUALIFYING_SQL, NEEDS_REVIEW_SQL, NOT_REFUNDED_SQL, TRIAL_LIKE_SQL, TEST_ADDRESS_SQL,
   isQualifyingPurchase, isTrialLike, isTestAddress, derive,
   reconcileContact, reconcileAll, candidateContactIds, listPurchasesNeedingReview,
   promoteToProspect, setCustomerOverride, releaseOverride, classificationCounts, moveClassification,

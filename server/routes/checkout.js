@@ -14,6 +14,7 @@ const { sendSalesAlertEmail } = require('../lib/mailer');
 const { refCodeFromRequest, codeForAffiliateId } = require('../lib/affiliate-attribution');
 const { audit } = require('../lib/audit');
 const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch, advisory only
+const crmRefunds = require('../lib/crm-refunds'); // Sales CRM G21: Stripe refund and dispute events raise a review flag, nothing more
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Customer once a card quote is paid (never throws; off unless crm_v2_enabled)
 const { limiter } = require('../lib/rate-limit');
 
@@ -802,6 +803,32 @@ async function webhookHandler(req, res) {
           });
         } catch (e) { console.error('sales alert (new order) failed:', e.message); }
       }
+    }
+  }
+
+  // Punch list G21: a refund or a dispute on a card payment. This only raises a "needs review" flag for staff (lib/crm-refunds.js); it never changes the purchase, the license or any label,
+  // and it never refunds anything. Needs the events charge.refunded and charge.dispute.created switched on for this webhook in the Stripe dashboard.
+  if (crmRefunds.STRIPE_EVENTS.includes(event.type)) {
+    try {
+      const r = await crmRefunds.recordStripeEvent(pool, event, {
+        findPurchaseIds: crmRefunds.stripeFinder(pool, getStripe()), now: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+      if (r.available === false) console.error('refund event skipped: run scripts/alter-create-crm-refunds.js');
+      else if (r.created) {
+        try {
+          await sendSalesAlertEmail({
+            to: await getSetting('contact_email_sales_alerts'),
+            subject: `A ${r.kind} was reported on a payment`,
+            fields: { What: r.kind === 'dispute' ? 'A customer disputed a card payment.' : 'A card payment was refunded in Stripe.', Purchases: String(r.created), Note: 'Nothing was changed. A CRM Admin reviews it in the Customer Hub.' },
+            linkUrl: `${process.env.SITE_URL || ''}/admin-crm-refunds.html`, linkLabel: 'Review refunds',
+          });
+        } catch (e) { console.error('sales alert (refund) failed:', e.message); }
+      } else if (!r.matched) {
+        await audit(pool, { actorType: 'system', action: 'crm_refund_unmatched', entityType: 'crm_refund', entityId: 0, newValue: { eventType: event.type, kind: r.kind }, reason: 'Stripe reported a refund or dispute for a payment that matches no purchase here. Check it in the Stripe dashboard.' });
+      }
+    } catch (err) {
+      console.error('refund event failed:', err.message);
+      return res.status(500).json({ error: 'refund event failed' }); // Stripe retries; the unique key makes a retry safe
     }
   }
 
