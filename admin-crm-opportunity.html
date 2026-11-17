@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=36"></script>
+<script src="admin-nav.js?v=37"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -99,6 +99,17 @@
       (o.state === 'lost' ? '<dt>Why it was lost</dt><dd>' + esc(o.lossReason || 'No reason recorded') + (o.reengageOn ? ' · Check back ' + esc(C.date(o.reengageOn)) : '') + '</dd>' : '') +
       '</dl></div>';
 
+    // Qualification (G6): what we know about the need and what is still unknown. A list of gaps for the person working the deal. It never blocks a save, a stage move or a quote, and there is no score.
+    var qa = data.qualification;
+    if (qa) {
+      h += '<div class="a-card"><div class="a-card-head"><h2>What we know (' + C.num(qa.known) + ' of ' + C.num(qa.total) + ')</h2>' + (edit ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editQual">Fill in</button>' : '') + '</div>' +
+        '<dl class="crm-kv">' + qa.criteria.map(function (r) {
+          var val = r.known ? (typeof r.value === 'number' ? esc(C.num(r.value)) : (r.key === 'targetDate' ? esc(C.date(r.value)) : esc(r.value))) : '<span class="crm-muted">Not known yet</span>';
+          return '<dt>' + esc(r.label) + '</dt><dd>' + val + '</dd>';
+        }).join('') + '</dl>' +
+        (qa.missing.length ? '<p class="crm-small crm-muted" style="margin:10px 0 0;">Still to find out: ' + qa.missing.map(function (m) { return esc(m.label) + (m.where === 'committee' ? ' (add them under Buying committee)' : ''); }).join(', ') + '. Nothing is blocked by a gap here.</p>' : '<p class="crm-small crm-muted" style="margin:10px 0 0;">Everything on the list has an answer.</p>') + '</div>';
+    }
+
     // Buying committee
     h += '<div class="a-card"><div class="a-card-head"><h2>Buying committee (' + data.committee.length + ')</h2>' + (edit ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="addMember">Add a person</button>' : '') + '</div>';
     h += data.committee.length ? '<table class="a-table" aria-label="Buying committee"><thead><tr><th scope="col">Person</th><th scope="col">Role in this deal</th><th scope="col">Influence</th><th scope="col">Stance</th><th scope="col">Notes</th><th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
@@ -139,7 +150,7 @@
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
-    on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember); on('#newQuoteBtn', newQuote);
+    on('#nextBtn', nextStep); on('#editDeal', editDeal); on('#editQual', editDeal); on('#winBtn', closeWon); on('#loseBtn', closeLost); on('#idleBtn', closeIdle); on('#reopenBtn', reopen); on('#addMember', addMember); on('#newQuoteBtn', newQuote);
     var sel = document.getElementById('stageSel');
     if (sel) sel.addEventListener('change', function () { var to = sel.value; if (to) moveStage(to); });
     root.querySelectorAll('[data-evidence]').forEach(function (b) { b.addEventListener('click', function () { showEvidence(Number(b.getAttribute('data-evidence'))); }); });
@@ -187,6 +198,7 @@
 
   function editDeal() {
     var o = data.opportunity;
+    var q = o.qualification || {};
     var ownerSel = C.role === 'admin' ? C.ownerOptions(staff, o.ownerAdminId, 'Nobody yet') : '<option value="' + esc(C.adminId) + '" selected>Me</option>';
     var people = '<option value="">None</option>' + data.committee.map(function (m) { return '<option value="' + esc(m.contactId) + '"' + (Number(m.contactId) === Number(o.primaryContactId) ? ' selected' : '') + '>' + esc(m.name || m.email) + '</option>'; }).join('');
     C.dialog({
@@ -197,11 +209,20 @@
         '<div class="a-form-row">' + C.field('Owner', '<select id="eOwner">' + ownerSel + '</select>', C.role === 'admin' ? '' : 'You can take a deal for yourself. A CRM Admin hands it to someone else.', 'eOwner') + C.field('Main contact', '<select id="ePrimary">' + people + '</select>', 'Pick from the buying committee.', 'ePrimary') + '</div>' +
         '<div class="a-form-row">' + C.field('Product', '<input type="text" id="eProduct" maxlength="255" value="' + esc(o.productFocus || '') + '">', '', 'eProduct') + C.field('Source', '<input type="text" id="eSource" maxlength="128" value="' + esc(o.source || '') + '">', '', 'eSource') + '</div>' +
         C.field('Competitor', '<input type="text" id="eComp" maxlength="128" value="' + esc(o.competitor || '') + '">', '', 'eComp') +
+        '<h3 class="crm-small" style="margin:14px 0 4px;">What we know about the need (all optional)</h3>' +
+        '<div class="a-form-row">' + C.field('Schools', '<input type="text" id="qSchools" inputmode="numeric" maxlength="7" value="' + esc(q.schools === null ? '' : q.schools) + '">', '', 'qSchools') + C.field('Teachers', '<input type="text" id="qTeachers" inputmode="numeric" maxlength="7" value="' + esc(q.teachers === null ? '' : q.teachers) + '">', '', 'qTeachers') + C.field('Students', '<input type="text" id="qStudents" inputmode="numeric" maxlength="7" value="' + esc(q.students === null ? '' : q.students) + '">', 'A number only. Never names.', 'qStudents') + '</div>' +
+        '<div class="a-form-row">' + C.field('Grades served', '<input type="text" id="qGrades" maxlength="64" value="' + esc(q.grades || '') + '">', 'For example K-5 or 6-8.', 'qGrades') + C.field('Funding', '<input type="text" id="qFunding" maxlength="255" value="' + esc(q.funding || '') + '">', 'Where the money comes from.', 'qFunding') + '</div>' +
+        C.field('What they need', '<textarea id="qNeed" maxlength="1000" rows="3">' + esc(q.need || '') + '</textarea>', '', 'qNeed') +
+        C.field('How they buy (procurement path)', '<input type="text" id="qProc" maxlength="255" value="' + esc(q.procurementPath || '') + '">', 'For example board vote, purchase order, or a state contract.', 'qProc') +
+        C.field('Risks', '<textarea id="qRisks" maxlength="1000" rows="3">' + esc(q.risks || '') + '</textarea>', '', 'qRisks') +
         (C.can('override_probability') ? C.field('Chance of closing (percent)', '<input type="number" id="eProb" min="0" max="100" step="1" value="' + (o.probabilityIsOverride ? esc(o.probability) : '') + '">', 'Leave blank to use the stage’s chance (' + o.probability + '% now).', 'eProb') : ''),
       onSubmit: function (f) {
         var body = { name: f.querySelector('#eName').value, oppType: f.querySelector('#eType').value, productFocus: f.querySelector('#eProduct').value, source: f.querySelector('#eSource').value, competitor: f.querySelector('#eComp').value,
           expectedCloseDate: f.querySelector('#eClose').value || null, targetImplementationDate: f.querySelector('#eImpl').value || null,
           ownerAdminId: f.querySelector('#eOwner').value ? Number(f.querySelector('#eOwner').value) : null, primaryContactId: f.querySelector('#ePrimary').value ? Number(f.querySelector('#ePrimary').value) : null };
+        ['Schools', 'Teachers', 'Students'].forEach(function (k) { var t = f.querySelector('#q' + k).value.trim(); body[k.toLowerCase()] = t === '' ? null : t; });
+        body.grades = f.querySelector('#qGrades').value; body.funding = f.querySelector('#qFunding').value; body.need = f.querySelector('#qNeed').value;
+        body.procurementPath = f.querySelector('#qProc').value; body.risks = f.querySelector('#qRisks').value;
         var v = f.querySelector('#eValue').value.trim();
         if (v) { body.amountCents = C.dollarsToCents(v); if (body.amountCents === null) return 'Type the value as a plain amount, like 12500 or 12500.50.'; } else body.amountCents = null;
         var pe = f.querySelector('#eProb');
@@ -357,6 +378,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=9"></script>
+<script src="admin-shell.js?v=10"></script>
 </body>
 </html>

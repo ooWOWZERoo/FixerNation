@@ -20,6 +20,7 @@ const {
   text, posInt, cents, dateOnly, utcDateTime, oneOf, paging, likeTerm, daysSince, quarterBounds,
 } = require('../lib/crm-common');
 
+const QUAL = require('../lib/crm-qualification');
 const router = express.Router();
 
 const OPP_SELECT = `SELECT o.*, s.stage_key, s.label AS stage_label, s.sort_order AS stage_sort, s.default_probability,
@@ -44,6 +45,7 @@ function oppRow(o) {
     expectedCloseDate: o.expected_close_date || null, targetImplementationDate: o.target_implementation_date || null,
     nextStep: o.next_step, nextStepDueAt: o.next_step_due_at || null,
     lossReason: o.loss_reason_label || null, competitor: o.competitor, reengageOn: o.reengage_on || null,
+    qualification: QUAL.view(o),
     closedAt: o.closed_at || null, createdAt: o.created_at, updatedAt: o.updated_at,
   };
 }
@@ -203,6 +205,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
     procurement: await procurementForDeal(pool, o.id),
     // 'viewed' is approximate (a mail scanner that runs scripts could cause it); the page labels it so.
     quoteEvents: events.map(e => ({ id: e.id, quoteId: e.quote_id, quoteNumber: e.quote_number || null, type: e.event_type, detail: e.detail, at: e.created_at })),
+    // G6: what we know about the need and what is still unknown. A list of gaps, never a score, and nothing is blocked by it.
+    qualification: QUAL.assess(o, committee),
     permissions: { acceptForCustomer: can(req.crm.role, 'accept_for_customer') },
   });
 });
@@ -246,6 +250,10 @@ async function cleanDeal(req, b, { existing = null } = {}) {
     f[col] = b[key] === null ? null : dateOnly(b[key]);
     if (b[key] !== null && !f[col]) return { error: `${key} must be a real date (YYYY-MM-DD).` };
   }
+  // G6: the optional qualification answers. Nothing here is required and nothing blocks a save.
+  const qual = QUAL.clean(b);
+  if (qual.error) return { error: qual.error };
+  Object.assign(f, qual.fields);
   if (b.nextStep !== undefined) f.next_step = text(b.nextStep, 255);
   if (b.nextStepDueAt !== undefined) {
     f.next_step_due_at = b.nextStepDueAt === null ? null : utcDateTime(b.nextStepDueAt);

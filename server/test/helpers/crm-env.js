@@ -49,6 +49,7 @@ CREATE TABLE crm_opportunities (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id
   state TEXT NOT NULL DEFAULT 'open', stage_entered_at TEXT DEFAULT CURRENT_TIMESTAMP, primary_contact_id INTEGER, opp_type TEXT NOT NULL DEFAULT 'new_business',
   amount_cents INTEGER, source TEXT, product_focus TEXT, expected_close_date TEXT, target_implementation_date TEXT, probability_override INTEGER, next_step TEXT,
   next_step_due_at TEXT, loss_reason_id INTEGER, competitor TEXT, reengage_on TEXT, closed_at TEXT, renewal_of_purchase_id INTEGER, created_by_admin_id INTEGER,
+  qual_schools INTEGER, qual_teachers INTEGER, qual_students INTEGER, qual_grades TEXT, qual_need TEXT, qual_funding TEXT, qual_procurement_path TEXT, qual_risks TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_opportunity_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER NOT NULL, contact_id INTEGER NOT NULL, role TEXT NOT NULL DEFAULT 'other',
   influence TEXT, stance TEXT, notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (opportunity_id, contact_id));

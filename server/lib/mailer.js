@@ -433,6 +433,19 @@ async function sendDistrictAdminWelcomeEmail({ to, firstName, districtName, port
   });
 }
 
+// Sales CRM punch list G5: tells a district administrator that staff declined their reorder or seat-change request. The note is staff's own words (escaped); nothing else is included.
+async function sendRepeatRequestDeclinedEmail({ to, firstName, districtName, schoolName, note, portalUrl }) {
+  const who = firstName ? `Hi ${firstName},` : 'Hello,';
+  const where = [schoolName, districtName].filter(Boolean).join(', ');
+  await getTransporter().sendMail({
+    from: systemFromAddress(),
+    to,
+    subject: 'About your Fixer Nation Education reorder request',
+    text: `${who}\n\nWe are not able to go ahead with your request${where ? ` for ${where}` : ''} as sent.\n\n${note || ''}\n\nYou can send a new request, or reply to this email and we will help.${portalUrl ? `\n\n${portalUrl}` : ''}`,
+    html: `<p>${esc(who)}</p><p>We are not able to go ahead with your request${where ? ` for <strong>${esc(where)}</strong>` : ''} as sent.</p>${note ? `<p style="white-space:pre-wrap;">${esc(note)}</p>` : ''}<p>You can send a new request, or reply to this email and we will help.</p>${portalUrl ? `<p><a href="${safeUrl(portalUrl)}" style="display:inline-block;padding:10px 20px;background:#E06D2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Open the District Admin portal</a></p>` : ''}`,
+  });
+}
+
 // Utilization threshold alert to school license administrator
 async function sendLicenseUtilizationAlertEmail({ to, adminName, schoolDomain, totalSeats, assignedSeats, pctUsed, purchaseMoreUrl }) {
   await getTransporter().sendMail({
@@ -591,4 +604,4 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
   });
 }
 
-module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendSupportEmail, sendMeetingInviteEmail };
+module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };

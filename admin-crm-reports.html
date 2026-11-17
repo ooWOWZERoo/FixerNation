@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=36"></script>
+<script src="admin-nav.js?v=37"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -70,7 +70,13 @@
   function cell(v) { return v === null || v === undefined ? '—' : esc(v); }
 
   function tableOf(report) {
-    var t = report.table;
+    if (report.tables && report.tables.length) {
+      return report.tables.map(function (t) { return '<h3 class="crm-small" style="margin:14px 0 6px;">' + esc(t.title) + '</h3>' + oneTable(report, t); }).join('') + (report.touch && report.touch.available === false ? '<p class="crm-small crm-muted">Visit tracking is not installed on this site yet, so every deal is grouped by the Source staff typed.</p>' : '');
+    }
+    return oneTable(report, report.table);
+  }
+
+  function oneTable(report, t) {
     return '<div class="mc-table-scroll"><table class="a-table" aria-label="' + esc(report.title) + '"><thead><tr>' + t.header.map(function (h) { return '<th scope="col">' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       t.rows.map(function (r) { return '<tr>' + r.map(function (v, i) { return i === 0 ? '<th scope="row">' + esc(v) + '</th>' : '<td>' + cell(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   }
@@ -127,6 +133,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=9"></script>
+<script src="admin-shell.js?v=10"></script>
 </body>
 </html>

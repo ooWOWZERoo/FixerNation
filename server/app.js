@@ -61,6 +61,7 @@ const standardsRoutes = require('./routes/standards');
 const pogEvidenceRoutes = require('./routes/pog-evidence');
 const adminStandardsRoutes = require('./routes/admin-standards');
 const districtAdminStandardsRoutes = require('./routes/district-admin-standards');
+const districtAdminRepeatRoutes = require('./routes/district-admin-repeat');
 const crmSettingsRoutes = require('./routes/crm-settings');
 const crmAccountsRoutes = require('./routes/crm-accounts');
 const crmContactsRoutes = require('./routes/crm-contacts');
@@ -158,6 +159,8 @@ app.use('/api/parent-invite', parentInviteRoutes);
 app.use('/api/admin/school-admins', adminSchoolAdminsRoutes);
 // Mounted before the general district-admin router so /standards is never shadowed by it.
 app.use('/api/district-admin/standards', districtAdminStandardsRoutes);
+// G5: reorder and seat-change requests. Also before the general router, for the same reason.
+app.use('/api/district-admin/repeat', districtAdminRepeatRoutes);
 app.use('/api/district-admin', districtAdminRoutes);
 app.use('/api/admin/districts', adminDistrictsRoutes);
 app.use('/api/admin/concierge', adminConciergeRoutes);
@@ -195,6 +198,7 @@ app.use('/api/crm/files', crmFilesRoutes);
 app.use('/api/crm/meetings', crmMeetingsRoutes);
 app.use('/api/crm/checklists', crmChecklistsRoutes);
 app.use('/api/crm/refunds', crmRefundsRoutes);
+app.use('/api/crm/repeat-requests', require('./routes/crm-repeat-requests'));
 app.use('/api/crm/attention', crmAttentionRoutes);
 app.use('/api/crm/timeline', crmTimelineRoutes);
 app.use('/api/crm/audit', crmAuditRoutes);

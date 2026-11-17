@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Renew or Change Seats</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<link rel="stylesheet" href="school-admin-common.css?v=17">
+</head>
+<body>
+<div class="sa-shell">
+  <aside class="sa-sidebar"></aside>
+  <script src="district-admin-nav.js?v=15"></script>
+
+  <div class="sa-main">
+    <div class="sa-topbar">
+      <h1>Renew or change seats</h1>
+      <div class="sa-user">
+        <div class="avatar" id="saUserAvatar">?</div>
+        <span id="saUserName">Loading…</span>
+      </div>
+    </div>
+
+    <div class="sa-content">
+      <div id="pageLoading" class="sa-loading"><div class="sa-spinner"></div> Loading…</div>
+      <div id="pageContent" style="display:none;">
+        <div class="sa-card">
+          <div class="sa-card-head"><h2>Your licenses</h2></div>
+          <p class="sa-note" style="margin:0 0 12px;font-size:13px;color:var(--sa-text-soft);">
+            Tell us whether you want to renew a license as it is or change how many seats it has. Our team reviews every request,
+            sends you a quote with the price, and nothing is bought until you accept that quote.
+          </p>
+          <div id="licenseList"></div>
+        </div>
+        <div class="sa-card">
+          <div class="sa-card-head"><h2>Your requests</h2></div>
+          <div id="requestList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sa-modal-overlay" id="askModal" style="display:none;">
+  <div class="sa-modal">
+    <div class="sa-modal-head">
+      <h2>Renew or change seats</h2>
+      <button class="sa-modal-close" onclick="closeAsk()" aria-label="Close">✕</button>
+    </div>
+    <div id="askErr" class="sa-alert sa-alert-danger" style="display:none;" role="alert"></div>
+    <div class="sa-note" style="margin-bottom:12px;font-size:13px;color:var(--sa-text-soft);" id="askWhich"></div>
+    <div class="sa-form-group">
+      <label for="askKind">What would you like?</label>
+      <select id="askKind" onchange="syncAsk()">
+        <option value="renew">Renew as it is</option>
+        <option value="change_seats">Change the number of seats</option>
+      </select>
+    </div>
+    <div class="sa-form-group" id="askSeatsWrap" style="display:none;">
+      <label for="askSeats">How many seats do you want?</label>
+      <input type="text" id="askSeats" inputmode="numeric" maxlength="6" placeholder="For example 250">
+    </div>
+    <div class="sa-form-group">
+      <label for="askNote">A note for our team <span style="color:var(--sa-text-soft);font-weight:400;">(optional)</span></label>
+      <textarea id="askNote" maxlength="500" rows="3" placeholder="Anything we should know, like a budget date or a new school joining."></textarea>
+    </div>
+    <div class="sa-modal-foot">
+      <button class="sa-btn sa-btn-secondary" onclick="closeAsk()">Cancel</button>
+      <button class="sa-btn sa-btn-primary" id="askBtn" onclick="submitAsk()">Send request</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Punch list G5: a district administrator asks to renew a license or change its seats. It only asks. Our staff review it, price it and send a quote; nothing is bought here.
+// Everything that comes from the server (school names, notes) goes through esc() before it is put on the page.
+var data = null, asking = null;
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function fmtDate(d) { if (!d) return ''; var x = new Date(String(d).slice(0, 10) + 'T12:00:00'); return isNaN(x) ? esc(d) : x.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+function qs() { var id = sessionStorage.getItem('daActiveDistrictId'); return id ? '?districtId=' + encodeURIComponent(id) : ''; }
+
+document.addEventListener('daReady', load);
+document.addEventListener('daDistrictChanged', load);
+
+async function load() {
+  try {
+    data = await daFetch('/api/district-admin/repeat' + qs());
+    render();
+    document.getElementById('pageLoading').style.display = 'none';
+    document.getElementById('pageContent').style.display = 'block';
+  } catch (e) { daToast('Could not load your licenses: ' + e.message, 'error'); }
+}
+
+function render() {
+  var licenses = data.licenses || [], requests = data.requests || [];
+  document.getElementById('licenseList').innerHTML = licenses.length ? '<div class="sa-table-wrap"><table class="sa-table" aria-label="Your licenses"><thead><tr><th scope="col">School</th><th scope="col">License</th><th scope="col">Seats</th><th scope="col">Ends</th><th scope="col"><span style="position:absolute;left:-9999px;">Request</span></th></tr></thead><tbody>' +
+    licenses.map(function (l) {
+      return '<tr><td>' + esc(l.school) + '</td><td>' + esc(l.product || 'School license') + '</td><td>' + (l.seats === null ? '<span style="color:var(--sa-text-soft)">Not recorded</span>' : esc(l.seats)) + '</td><td>' + (l.endsOn ? fmtDate(l.endsOn) : '<span style="color:var(--sa-text-soft)">No end date</span>') + '</td><td>' +
+        (l.waitingRequestId ? '<span class="sa-badge sa-badge-orange">Request waiting</span>' : '<button type="button" class="sa-btn sa-btn-primary sa-btn-sm" data-ask="' + esc(l.id) + '">Renew or change seats</button>') + '</td></tr>';
+    }).join('') + '</tbody></table></div>'
+    : '<div style="font-size:13px;color:var(--sa-text-soft);padding:12px 0;">There are no paid school licenses in your district to renew yet. If you think that is wrong, reply to any email from us or use the Help center.</div>';
+  document.querySelectorAll('[data-ask]').forEach(function (b) { b.addEventListener('click', function () { openAsk(Number(b.dataset.ask)); }); });
+
+  var byId = {}; licenses.forEach(function (l) { byId[l.id] = l; });
+  document.getElementById('requestList').innerHTML = requests.length ? '<div class="sa-table-wrap"><table class="sa-table" aria-label="Your requests"><thead><tr><th scope="col">Sent</th><th scope="col">School</th><th scope="col">Request</th><th scope="col">Status</th><th scope="col"><span style="position:absolute;left:-9999px;">Actions</span></th></tr></thead><tbody>' +
+    requests.map(function (r) {
+      var l = byId[r.licenseId];
+      var what = r.kind === 'renew' ? 'Renew as it is' : 'Change to ' + esc(r.requestedSeats) + ' seats' + (r.currentSeats !== null ? ' (now ' + esc(r.currentSeats) + ')' : '');
+      var status = r.state === 'waiting' ? '<span class="sa-badge sa-badge-orange">Waiting for our team</span>'
+        : r.state === 'approved' ? '<span class="sa-badge sa-badge-green">Approved. A quote is on its way.</span>'
+        : r.state === 'declined' ? '<span class="sa-badge sa-badge-red">Declined</span>' + (r.declinedBecause ? '<div style="font-size:12.5px;margin-top:4px;">' + esc(r.declinedBecause) + '</div>' : '')
+        : '<span class="sa-badge">Cancelled</span>';
+      return '<tr><td>' + fmtDate(r.createdAt) + '</td><td>' + esc(l ? l.school : 'A school') + '</td><td>' + what + (r.note ? '<div style="font-size:12.5px;color:var(--sa-text-soft);">' + esc(r.note) + '</div>' : '') + '</td><td>' + status + '</td><td>' +
+        (r.state === 'waiting' ? '<button type="button" class="sa-btn sa-btn-secondary sa-btn-sm" data-cancel="' + esc(r.id) + '">Cancel request</button>' : '') + '</td></tr>';
+    }).join('') + '</tbody></table></div>'
+    : '<div style="font-size:13px;color:var(--sa-text-soft);padding:12px 0;">You have not sent a request yet.</div>';
+  document.querySelectorAll('[data-cancel]').forEach(function (b) { b.addEventListener('click', function () { cancelReq(Number(b.dataset.cancel)); }); });
+}
+
+function openAsk(id) {
+  asking = (data.licenses || []).filter(function (l) { return l.id === id; })[0];
+  if (!asking) return;
+  document.getElementById('askWhich').textContent = asking.school + (asking.seats !== null ? ' · ' + asking.seats + ' seats now' : '') + (asking.endsOn ? ' · ends ' + String(asking.endsOn) : '');
+  document.getElementById('askKind').value = 'renew'; document.getElementById('askSeats').value = ''; document.getElementById('askNote').value = '';
+  document.getElementById('askErr').style.display = 'none';
+  syncAsk();
+  document.getElementById('askModal').style.display = 'flex';
+  document.getElementById('askKind').focus();
+}
+function closeAsk() { document.getElementById('askModal').style.display = 'none'; asking = null; }
+function syncAsk() { document.getElementById('askSeatsWrap').style.display = document.getElementById('askKind').value === 'change_seats' ? '' : 'none'; }
+
+async function submitAsk() {
+  if (!asking) return;
+  var err = document.getElementById('askErr'), btn = document.getElementById('askBtn');
+  err.style.display = 'none';
+  var kind = document.getElementById('askKind').value;
+  var body = { purchaseId: asking.id, kind: kind, note: document.getElementById('askNote').value };
+  var did = sessionStorage.getItem('daActiveDistrictId'); if (did) body.districtId = Number(did);
+  if (kind === 'change_seats') {
+    var s = document.getElementById('askSeats').value.trim();
+    if (!/^\d{1,6}$/.test(s) || Number(s) < 1) { err.textContent = 'Type the number of seats you want as a whole number, like 250.'; err.style.display = 'block'; return; }
+    body.seats = Number(s);
+  }
+  btn.disabled = true;
+  try {
+    await daFetch('/api/district-admin/repeat', { method: 'POST', body: JSON.stringify(body) });
+    closeAsk();
+    daToast('Request sent. Our team will review it and send you a quote.', 'success');
+    await load();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  btn.disabled = false;
+}
+
+async function cancelReq(id) {
+  var ok = await daConfirm('Cancel this request? You can send a new one at any time.', { title: 'Cancel request', confirmText: 'Cancel request', cancelText: 'Keep it', danger: false });
+  if (!ok) return;
+  try {
+    await daFetch('/api/district-admin/repeat/' + encodeURIComponent(id) + '/cancel', { method: 'POST', body: '{}' });
+    daToast('Request cancelled.', 'success');
+    await load();
+  } catch (e) { daToast(e.message, 'error'); await load(); }
+}
+</script>
+</body>
+</html>

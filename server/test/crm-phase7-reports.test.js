@@ -271,8 +271,10 @@ test('EXPORT: a source that starts with = + - or @ cannot run as a spreadsheet f
   const evil = deal({ name: 'formula', stage: 'new_inquiry', source: '=HYPERLINK("http://x.test","click")', created: '2026-10-20', history: [[null, 'new_inquiry', null, 'open', '2026-10-20 09:00:00']] });
   const long = deal({ name: 'long', stage: 'new_inquiry', source: '+' + 'x'.repeat(100), created: '2026-10-21', history: [[null, 'new_inquiry', null, 'open', '2026-10-21 09:00:00']] });
   const r = await csv('sourcetopaid', admin);
-  const line = r.body.split('\r\n').find(l => l.includes('HYPERLINK'));
-  assert.ok(line.startsWith('"\'=HYPERLINK'), line);
+  // G10: the same source now shows in two tables (the "Typed by staff:" line in the first, the plain typed Source in the second); the plain one must be defused.
+  const lines = r.body.split('\r\n').filter(l => l.includes('HYPERLINK'));
+  assert.equal(lines.length, 2);
+  assert.ok(lines.some(l => l.startsWith('"\'=HYPERLINK')), lines.join(' | '));
   assert.ok(!r.body.split('\r\n').some(l => /^[=+@]/.test(l)), 'no line starts with a formula character');
   assert.equal(reports.csvCell('-5'), '-5', 'a plain negative number is left alone');
   assert.equal(reports.csvCell('@x'), "'@x");

@@ -5,7 +5,7 @@
    school admin portal) rather than standing up a parallel CSS system for a
    two-page portal.
    Every portal page has <aside class="sa-sidebar"></aside>
-   followed by <script src="district-admin-nav.js?v=1"></script>. */
+   followed by <script src="district-admin-nav.js?v=15"></script>. */
 (function () {
   // Error capture (Release 122): load the shared reporter once per page.
   if (!window.__fnErrorCapture && !document.querySelector('script[src^="error-capture.js"]')) {
@@ -85,6 +85,7 @@
       link('district-admin-standards.html', '🎓', 'Portrait of a Graduate') +
       link('district-admin-evidence.html',  '📈', 'Graduate Evidence') +
       link('district-admin-program-report.html', '📋', 'Program Use Report') +
+      link('district-admin-renew.html', '🔁', 'Renew or change seats') +
     '</nav>' +
     '<div id="daDistrictInfo" style="padding:12px 16px 8px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;"></div>' +
     '<div class="sa-sidebar-foot">' +

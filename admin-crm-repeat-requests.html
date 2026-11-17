@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Reorder Requests</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=3">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=37"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Reorder requests</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+// Punch list G5: district administrators ask to renew a license or change its seats. A CRM Admin, or the owner of the request's deal, approves or declines. Approving only makes a task to
+// draft the quote; nothing is priced, sent or bought here. The district's note and the school name come from outside the keyboard, so every value goes through esc().
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var state = { filter: 'waiting', page: 1 };
+  var me = null;
+
+  C.boot(root).then(function (who) {
+    if (!who) return;
+    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Reorder and seat-change requests</h2></div>' +
+      '<p class="crm-small crm-muted" style="margin:0 0 12px;">A district administrator sends these from their portal. Approving one makes a task for you to draft and send the quote with the usual quote tool, and sets the price yourself. Nothing is bought, priced or sent from this page, and the district sees only the status. Declining needs a short note, which the district receives by email.</p>' +
+      '<div class="crm-filters">' + C.field('Show', '<select id="fFilter" class="a-filter-select"><option value="waiting">Waiting for a decision</option><option value="approved">Approved</option><option value="declined">Declined</option><option value="cancelled">Cancelled by the district</option><option value="all">All</option></select>', '', 'fFilter') + '</div></div>' +
+      '<div id="reqList"></div><div id="reqPager"></div>';
+    root.querySelector('#fFilter').addEventListener('change', function (e) { state.filter = e.target.value; state.page = 1; load(); });
+    load();
+  });
+
+  function load() {
+    var list = document.getElementById('reqList');
+    C.loading(list);
+    C.api('GET', '/api/crm/repeat-requests' + C.qstr({ state: state.filter, page: state.page, pageSize: 50 })).then(function (r) {
+      if (!r.ok) { C.errorBox(list, C.problem(r)); return; }
+      var d = r.data; me = { role: d.role, adminId: d.adminId };
+      if (!d.requests.length) { list.innerHTML = '<div class="a-card">' + C.empty(state.filter === 'waiting' ? 'No requests are waiting.' : 'Nothing here.', '🔁') + '</div>'; document.getElementById('reqPager').innerHTML = ''; return; }
+      list.innerHTML = '<div class="a-card"><div class="mc-table-scroll"><table class="a-table" aria-label="Reorder requests"><thead><tr><th scope="col">Sent</th><th scope="col">District and school</th><th scope="col">Request</th><th scope="col">Deal</th><th scope="col">Status</th><th scope="col"><span class="mc-sr-only">Actions</span></th></tr></thead><tbody>' +
+        d.requests.map(row).join('') + '</tbody></table></div></div>';
+      list.querySelectorAll('[data-approve]').forEach(function (b) { b.addEventListener('click', function () { decideDialog(b.dataset.approve, 'approve'); }); });
+      list.querySelectorAll('[data-decline]').forEach(function (b) { b.addEventListener('click', function () { decideDialog(b.dataset.decline, 'decline'); }); });
+      C.pager(document.getElementById('reqPager'), d, function (p) { state.page = p; load(); });
+    });
+  }
+
+  function mayDecide(q) { return q.state === 'waiting' && me && (me.role === 'admin' || (me.role === 'sales' && q.dealOwnerId && Number(q.dealOwnerId) === Number(me.adminId))); }
+
+  function row(q) {
+    var what = q.kind === 'renew' ? 'Renew as it is' : 'Change to ' + esc(C.num(q.requestedSeats)) + ' seats' + (q.currentSeats === null ? '' : ' <span class="crm-muted">(now ' + esc(C.num(q.currentSeats)) + ')</span>');
+    var who = esc(q.schoolName || 'A school') + '<div class="crm-small crm-muted">' + esc(q.districtName || '') + (q.askedBy ? ' · ' + esc(q.askedBy) : '') + '</div>';
+    var deal = q.dealId ? '<a href="admin-crm-opportunity.html?id=' + encodeURIComponent(q.dealId) + '">' + esc(q.dealName || 'Open the deal') + '</a><div class="crm-small crm-muted">' + (q.dealOwnerName ? 'Owner: ' + esc(q.dealOwnerName) : 'Nobody owns it yet') + '</div>' : '<span class="crm-muted">No deal (the school has no account yet)</span>';
+    var status = q.state === 'waiting' ? 'Waiting' + (q.waitingDays !== null ? '<div class="crm-small ' + (q.waitingTooLong ? '' : 'crm-muted') + '">' + esc(q.waitingDays) + ' day' + (q.waitingDays === 1 ? '' : 's') + (q.waitingTooLong ? ' (waiting too long)' : '') + '</div>' : '')
+      : (q.state === 'approved' ? 'Approved' : q.state === 'declined' ? 'Declined' : 'Cancelled') + (q.decidedAt ? '<div class="crm-small crm-muted">' + esc(C.date(q.decidedAt)) + '</div>' : '') + (q.decisionNote ? '<div class="crm-small">' + esc(q.decisionNote) + '</div>' : '');
+    var note = q.note ? '<div class="crm-small">' + esc(q.note) + '</div>' : '';
+    var actions = mayDecide(q) ? '<button type="button" class="a-btn a-btn-outline" data-approve="' + esc(q.id) + '">Approve</button> <button type="button" class="a-btn a-btn-outline" data-decline="' + esc(q.id) + '">Decline</button>' : '';
+    return '<tr><td>' + esc(C.dateTime(q.createdAt)) + '</td><td>' + who + '</td><td>' + what + note + '</td><td>' + deal + '</td><td>' + status + '</td><td>' + actions + '</td></tr>';
+  }
+
+  function decideDialog(id, kind) {
+    var approving = kind === 'approve';
+    C.dialog({
+      title: approving ? 'Approve this request' : 'Decline this request', submit: approving ? 'Approve' : 'Decline and email the district',
+      body: approving
+        ? '<p class="crm-small">Approving makes a task for you to draft and send the quote, and you set the price. The district sees "Approved. A quote is on its way." Nothing is priced, sent or bought now.</p>' + C.field('Note for yourself (optional)', '<textarea id="dNote" maxlength="500" rows="3"></textarea>', 'Stays in the audit log. The district does not see it.', 'dNote')
+        : '<p class="crm-small">The district administrator gets this note by email and sees it in their portal. Keep names and card details out.</p>' + C.field('Why (required)', '<textarea id="dNote" maxlength="500" rows="3" required></textarea>', '', 'dNote'),
+      onSubmit: function (form) {
+        var note = form.querySelector('#dNote').value;
+        if (!approving && !note.trim()) return 'Write a short note that says why.';
+        return C.api('POST', '/api/crm/repeat-requests/' + encodeURIComponent(id) + '/' + kind, { note: note }).then(function (r) {
+          if (!r.ok) return C.problem(r);
+          C.toast(approving ? 'Approved. A task was added for you.' : 'Declined. The district was told.'); load();
+        });
+      },
+    });
+  }
+})();
+</script>
+<script src="admin-shell.js?v=10"></script>
+</body>
+</html>

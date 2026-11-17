@@ -35,6 +35,20 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('district-reorder-request', false, '2026-11-16', '', 'District administrators can ask to renew a license or change its seats', ['district'],
+      'A new page in the District Admin portal lets you ask us to renew a license or change how many seats it has, and shows where each request stands.',
+      'On the new Renew or change seats page, pick a school\'s license and tell us whether you want to renew it as it is or change the number of seats. Our team reviews every request, sends you a quote with the price, and nothing is bought until you accept that quote. You can see each request\'s status on the same page, and you can cancel one while it is still waiting.',
+      {
+        new: [
+          item('Ask to renew or change seats', ['district'], 'Choose a license, then choose renew as it is or type the number of seats you want. You can add a note. You do not see or set a price: we send a quote for that.'),
+          item('See where a request stands', ['district'], 'Each request shows as waiting, approved, declined or cancelled. If we decline one, you see our reason on the page and get it by email.')
+        ],
+        know: [
+          'Sending a request does not buy anything or change your license. Your license and seats stay as they are until you accept a quote.',
+          'One request can wait for each license at a time. Cancel the waiting one if you want to change it.'
+        ]
+      },
+      'In the District Admin portal, on Renew or change seats.', []),
     N('quote-request-newsletter', false, '2026-11-15', '', 'Asking for a quote no longer signs you up for our newsletter', ['teachers', 'school', 'district'],
       'Asking for a quote doesn\'t add you to the newsletter, and a license paid by card now starts the day we get your payment.',
       'When you ask for a quote, we use your details to answer you and nothing else. You only get our newsletter if you sign up for it yourself. If you pay for a quote by card, your license term now starts the day your payment arrives, not the day you first pressed the card button.',

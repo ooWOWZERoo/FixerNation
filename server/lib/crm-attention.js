@@ -12,6 +12,7 @@ const THRESHOLDS = {
   quietDays:           { setting: 'crm_attn_quiet_days', def: 14, min: 3, max: 180, unit: 'days', label: '...and nobody has written a note or finished a task for', help: 'A note or a finished task within this many days keeps a deal off the "gone quiet" list.' },
   quoteWindowDays:     { setting: 'crm_attn_quote_window_days', def: 7, min: 1, max: 60, unit: 'days', label: 'A quote runs out soon when it ends within', help: 'Days before a sent quote\u2019s "good until" date that it is listed.' },
   quoteUnansweredDays: { setting: 'crm_attn_quote_unanswered_days', def: 14, min: 3, max: 120, unit: 'days', label: 'A quote is unanswered after', help: 'Days since a quote was sent with no acceptance. This says nothing about whether they opened it.' },
+  quoteFollowupDays:   { setting: 'crm_attn_quote_followup_days', def: 5, min: 1, max: 60, unit: 'days', label: 'A follow-up task is made for a sent quote after', help: 'Days after a quote was sent with no acceptance before the daily check makes one follow-up task for it. Only used once the follow-up tasks are switched on.' },
   closeGraceDays:      { setting: 'crm_attn_close_grace_days', def: 0, min: 0, max: 60, unit: 'days', label: 'An expected close date has passed when it is over by', help: 'Days past the expected close date before the deal is listed. 0 lists it the next day.' },
   wonGraceDays:        { setting: 'crm_attn_won_grace_days', def: 3, min: 0, max: 60, unit: 'days', label: 'A Won deal needs a purchase within', help: 'Days after a deal is closed Won before "no purchase yet" is listed.' },
   poWaitDays:          { setting: 'crm_attn_po_wait_days', def: 14, min: 3, max: 180, unit: 'days', label: 'A purchase order is overdue after', help: 'Days since a quote was accepted by purchase order with no PO received date on its invoice.' },
@@ -51,6 +52,7 @@ const HELP = {
   close_date_passed: (t) => `An open deal whose expected close date is ${t.closeGraceDays ? `${t.closeGraceDays} or more days ` : ''}in the past. Move the date or move the deal.`,
   po_not_received: (t) => `A quote accepted by purchase order ${t.poWaitDays} or more days ago whose invoice still has no PO received date.`,
   trial_ending: (t) => `A trial that ends within ${t.trialEndingDays} days. A good time to ask how it went and offer a quote.`,
+  repeat_request: () => 'A district administrator asked to renew a license or change its seats and nobody has approved or declined it yet. Open the Reorder requests page to decide. Nothing has been bought, priced or sent, and a request that has waited 60 days or more is marked as waiting too long.',
   refund_review: () => 'A purchase with a refund or dispute flag that no CRM Admin has confirmed or dismissed yet. Stripe raises these when it reports a refund or a dispute, and staff can raise one by hand. Nothing has been changed by the flag itself.',
   trial_stalled: (t) => `A live trial that started ${t.trialStalledDays} or more days ago and has seat records, but not one seat is registered yet. A trial with no seat records is not listed: the system cannot tell whether anyone started.`,
   trial_high_use: (t) => `A trial with two or more seats where ${t.trialUsePercent}% or more of the seats are registered. Only counts of seats are used, never names.`,
@@ -72,6 +74,7 @@ const RULES = {
   trial_ending: { label: 'Trial is ending', subjectType: 'purchase' },
   trial_stalled: { label: 'Trial has not got going', subjectType: 'purchase' },
   refund_review: { label: 'Refund or dispute to review', subjectType: 'purchase' },
+  repeat_request: { label: 'Reorder request waiting', subjectType: 'purchase' },
   trial_high_use: { label: 'Trial is being well used', subjectType: 'purchase' },
 };
 // Each rule's `help` (at the default thresholds, for anything that reads RULES directly); helpFor() gives the wording for the thresholds in force.
@@ -237,6 +240,20 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
       [start(today), start(addDays(today, 1 - t.trialStalledDays))]);
     for (const r of rows) items.push(purchaseItem('trial_stalled', r, { title: 'Trial has not got going', fingerprint: day10(r.purchased_at),
       why: `This trial started ${daysBetween(r.purchased_at, today)} days ago and no teacher has registered a seat yet. Check that the invitations arrived, and offer to help them get started.` }));
+  });
+
+  // G5: a district's reorder or seat-change request nobody has decided. One item per license (only one request can wait per license); the request id is the fingerprint.
+  await optional(async () => {
+    rows = await capped('repeat_request',
+      `SELECT p.id, p.school_domain, p.contact_id, c.name AS contact_name, r.id AS req_id, r.kind, r.created_at, o.id AS deal_id, COALESCE(o.owner_admin_id, a.assigned_admin_id) AS owner_id, ow.username AS owner_name
+       FROM crm_repeat_requests r JOIN purchases p ON p.id = r.purchase_id JOIN newsletter_contacts c ON c.id = p.contact_id LEFT JOIN crm_opportunities o ON o.id = r.opportunity_id
+       LEFT JOIN crm_accounts a ON a.id = o.account_id LEFT JOIN admin_users ow ON ow.id = COALESCE(o.owner_admin_id, a.assigned_admin_id)
+       WHERE r.state = 'waiting' AND ${NOT_TEST} ORDER BY r.id`, []);
+    for (const r of rows) {
+      const waited = daysBetween(r.created_at, today);
+      items.push(purchaseItem('repeat_request', r, { title: r.kind === 'renew' ? 'Renewal request' : 'Seat change request', fingerprint: String(r.req_id), link: 'admin-crm-repeat-requests.html',
+        why: `A district administrator asked ${r.kind === 'renew' ? 'to renew a license as it is' : 'to change the seats on a license'} ${waited} day${waited === 1 ? '' : 's'} ago${waited >= 60 ? ' (waiting too long)' : ''}. Approve or decline it on the Reorder requests page. Nothing has been bought, priced or sent.` }));
+    }
   });
 
   // G21: a refund or dispute flag nobody has decided yet. One item per purchase; the newest open flag is the fingerprint, so a new flag after a decision shows up again.

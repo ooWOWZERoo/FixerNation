@@ -20,11 +20,16 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 // (crm_onboarding_started). Same switch pattern: with the switch off, or without --apply, the job only counts the deals it would start.
 //   node scripts/crm-daily-attention.js --onboarding on|off|status    switch it on or off (setting crm_onboarding_auto)
 //
+// Quote follow-up tasks (punch list G20): a quote that was sent and not accepted gets ONE follow-up task after a settable number of days (Hub Settings, default 5), once ever
+// (crm_quote_followup_tasks). Quotes sent more than 60 days ago are left to the Needs Attention page. Same switch pattern.
+//   node scripts/crm-daily-attention.js --quote-followups on|off|status    switch them on or off (setting crm_quote_followup_tasks)
+//
 // Output is counts only (no names, no email addresses).
 const mysql = require('mysql2/promise');
 const A = require('../lib/crm-attention');
 const TT = require('../lib/crm-trial-tasks');
 const OB = require('../lib/crm-onboarding');
+const QF = require('../lib/crm-quote-followups');
 
 async function setting(db, key) {
   const [[row]] = await db.query('SELECT setting_value FROM settings WHERE setting_key = ?', [key]).catch(() => [[undefined]]);
@@ -48,6 +53,17 @@ async function main() {
         await db.query('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', [TT.SWITCH, value, value]);
       }
       console.log(`Trial review tasks are ${(await setting(db, TT.SWITCH)) === 'true' ? 'ON' : 'OFF'} (${TT.SWITCH}).`);
+      return;
+    }
+    const qi = process.argv.indexOf('--quote-followups');
+    if (qi !== -1) {
+      const mode = process.argv[qi + 1];
+      if (!['on', 'off', 'status'].includes(mode)) { console.error('Use --quote-followups on, off or status.'); process.exitCode = 1; return; }
+      if (mode !== 'status') {
+        const value = mode === 'on' ? 'true' : 'false';
+        await db.query('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?', [QF.SWITCH, value, value]);
+      }
+      console.log(`Quote follow-up tasks are ${(await setting(db, QF.SWITCH)) === 'true' ? 'ON' : 'OFF'} (${QF.SWITCH}).`);
       return;
     }
     const oi = process.argv.indexOf('--onboarding');
@@ -100,6 +116,14 @@ async function main() {
       console.log(`Onboarding checklists (${onboardingOn ? 'switched ON' : 'switched OFF'}${apply ? '' : ', report only'}): ${o.eligible} Won and paid deal(s), ${o.alreadyDone} already started.`);
       if (!o.hasTemplate) console.log('  There is no active checklist template named "Onboarding" with steps, so nothing can be added. Add one under Hub Settings.');
       else console.log(live ? `  Deals started today: ${o.made} (${o.stepsAdded} steps added).` : `  Deals it would start: ${o.wouldMake}. Nothing was written.`);
+    }
+    const followOn = (await setting(db, QF.SWITCH)) === 'true';
+    const f = await QF.createFollowUps(db, { apply: apply && followOn, now, today: now.slice(0, 10) });
+    if (!f.available) console.log('Quote follow-up tasks: skipped, because the table is missing. Run scripts/alter-create-crm-quote-followups.js, then run this again.');
+    else {
+      const live = apply && followOn;
+      console.log(`Quote follow-up tasks (${followOn ? 'switched ON' : 'switched OFF'}${apply ? '' : ', report only'}): ${f.eligible} quote(s) sent ${f.days} or more days ago and not accepted (within the last ${QF.LOOKBACK_DAYS} days), ${f.alreadyMade} already have their task.`);
+      console.log(live ? `  Tasks made today: ${f.made}.${f.noPlace ? ` Nothing to hang a task on (no deal and no contact): ${f.noPlace}.` : ''}` : `  Tasks it would make: ${f.wouldMake}. Nothing was written.`);
     }
   } finally {
     await db.end();

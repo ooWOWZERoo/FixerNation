@@ -205,6 +205,58 @@ async function timeInStage(conn, win, now = new Date()) {
 
 // ---- 5. Source to paid -------------------------------------------------------------------------------------------------------------------
 
+// G10: the same deals grouped by how the deal's main contact found us. Never throws on a database that has not had alter-create-crm-growth.js run: then every deal
+// falls back to the Source staff typed, and the result says tracking is not available.
+const TOUCH_MISSING = (err) => err && (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE' || /no such (table|column)|has no column named/i.test(String(err.message)));
+function touchLabel(source, medium) {
+  const s = String(source).trim().toLowerCase();
+  const m = medium ? String(medium).trim().toLowerCase() : '';
+  return (m && m !== 'none' ? `${s} / ${m}` : s).slice(0, 64);
+}
+async function touchGroups(conn, deals, cents, w) {
+  const byDeal = new Map();
+  let available = true;
+  try {
+    const [rows] = await conn.query(
+      `SELECT o.id, c.first_touch_source AS fs, c.first_touch_medium AS fm, c.latest_touch_source AS ls, c.latest_touch_medium AS lm
+       FROM crm_opportunities o
+       LEFT JOIN newsletter_contacts c ON c.id = COALESCE(o.primary_contact_id,
+         (SELECT c2.id FROM quote_requests q2 JOIN newsletter_contacts c2 ON LOWER(TRIM(c2.email)) = LOWER(TRIM(q2.email)) WHERE q2.opportunity_id = o.id ORDER BY q2.id LIMIT 1))
+       WHERE ${DEAL_REAL_SQL}${w.sql}`, w.params);
+    for (const r of rows) byDeal.set(r.id, r);
+  } catch (err) { if (!TOUCH_MISSING(err)) throw err; available = false; }
+  const groups = new Map();
+  let tracked = 0, fallback = 0;
+  const add = (label, side, paid, amount) => {
+    const g = groups.get(label) || { label, first: { deals: 0, paidDeals: 0, paidCents: 0 }, latest: { deals: 0, paidDeals: 0, paidCents: 0 } };
+    g[side].deals++;
+    if (paid) { g[side].paidDeals++; g[side].paidCents += amount; }
+    groups.set(label, g);
+  };
+  for (const d of deals) {
+    const t = byDeal.get(d.id) || {};
+    const typed = 'Typed by staff: ' + String(d.src).slice(0, 48);
+    // A contact with only one half recorded is that visit twice (the same rule the cookie reader uses): the first visit we saw is also the latest we saw.
+    const first = t.fs ? touchLabel(t.fs, t.fm) : t.ls ? touchLabel(t.ls, t.lm) : typed;
+    const latest = t.ls ? touchLabel(t.ls, t.lm) : t.fs ? touchLabel(t.fs, t.fm) : typed;
+    if (t.fs || t.ls) tracked++; else fallback++;
+    const paid = !!num(d.paid), amount = cents.get(d.id) || 0;
+    add(first, 'first', paid, amount); add(latest, 'latest', paid, amount);
+  }
+  const rows = [...groups.values()].sort((a, b) => b.first.deals - a.first.deals || a.label.localeCompare(b.label));
+  const total = (side) => rows.reduce((t, g) => ({ deals: t.deals + g[side].deals, paidDeals: t.paidDeals + g[side].paidDeals, paidCents: t.paidCents + g[side].paidCents }), { deals: 0, paidDeals: 0, paidCents: 0 });
+  const tf = total('first'), tl = total('latest');
+  return {
+    summary: { available, trackedDeals: tracked, typedFallbackDeals: fallback },
+    rows,
+    table: {
+      header: ['How they found us', 'First visit: deals', 'First visit: deals with a paid purchase', 'First visit: paid amount ($)', 'Latest visit: deals', 'Latest visit: deals with a paid purchase', 'Latest visit: paid amount ($)'],
+      rows: rows.map(g => [g.label, g.first.deals, g.first.paidDeals, dollars(g.first.paidCents), g.latest.deals, g.latest.paidDeals, dollars(g.latest.paidCents)])
+        .concat([['All deals', tf.deals, tf.paidDeals, dollars(tf.paidCents), tl.deals, tl.paidDeals, dollars(tl.paidCents)]]),
+    },
+  };
+}
+
 async function sourceToPaid(conn, win) {
   const w = windowSql('o.created_at', win);
   const [deals] = await conn.query(
@@ -240,18 +292,26 @@ async function sourceToPaid(conn, win) {
     onDealCount: num(paidAll.deal_n), onDealCents: num(paidAll.deal_cents),
     otherCount: num(paidAll.n) - num(paidAll.deal_n), otherCents: num(paidAll.cents) - num(paidAll.deal_cents),
   };
+  const touch = await touchGroups(conn, deals, cents, w);
   const rows = [...groups.values()].map(g => ({ ...g, wonRate: pct(g.won, g.deals), paidRate: pct(g.paidDeals, g.deals) })).sort((a, b) => b.deals - a.deals || a.source.localeCompare(b.source));
   const totals = rows.reduce((t, g) => ({ deals: t.deals + g.deals, won: t.won + g.won, paidDeals: t.paidDeals + g.paidDeals, paidCents: t.paidCents + g.paidCents }), { deals: 0, won: 0, paidDeals: 0, paidCents: 0 });
-  return {
+  const out = {
     key: 'sourcetopaid', title: 'Source to paid', window: win, windowLabel: windowLabel(win) + ' (by the day the deal was created)' + typeLabel(win),
-    definition: 'Groups the deals created in the window by their Source field, which is whatever staff typed (blank means "Not recorded"). "Paid" means a purchase on one of the deal\'s quotes that counts toward Customer: paid, more than $0, not a trial. Money is only from those purchases. The sources above only see money on a deal\'s quote and are grouped by the day the deal was created. The last three lines are different: every qualifying paid purchase bought in the window, by the day it was bought, split into those on a deal\'s quote and those on no deal (a card sale straight from the site has no quote). This is not marketing attribution; that is the "How they found us" card on a contact.',
-    totals, sources: rows, purchases,
+    definition: 'Groups the deals created in the window by their Source field, which is whatever staff typed (blank means "Not recorded"). "Paid" means a purchase on one of the deal\'s quotes that counts toward Customer: paid, more than $0, not a trial. Money is only from those purchases. The sources above only see money on a deal\'s quote and are grouped by the day the deal was created. The last three lines are different: every qualifying paid purchase bought in the window, by the day it was bought, split into those on a deal\'s quote and those on no deal (a card sale straight from the site has no quote). The first table groups the same deals by how the deal\'s main contact found us (G10): their first tracked visit and their latest tracked visit, side by side. A deal with no tracked visit (the contact never arrived with a campaign tag or from an outside site, or the touch tracking is not installed yet) is grouped under "Typed by staff:" and the Source staff typed, on both sides. A tracked visit is advisory, because a visitor\'s browser can forge it, and it never changes a label, a price or a commission. The deal\'s main contact is the one marked as primary, else the person on its earliest quote.',
+    totals, sources: rows, purchases, touch: touch.summary, touchRows: touch.rows,
+    tables: [
+      { title: 'By how the main contact found us (first and latest tracked visit)', header: touch.table.header, rows: touch.table.rows },
+      { title: 'By the Source staff typed', header: null, rows: null },
+    ],
     table: { header: ['Source', 'Deals', 'Won', 'Won (%)', 'Deals with a paid purchase', 'Paid (%)', 'Paid amount ($)'], rows: rows.map(g => [g.source, g.deals, g.won, g.wonRate, g.paidDeals, g.paidRate, dollars(g.paidCents)]).concat([['All sources', totals.deals, totals.won, pct(totals.won, totals.deals), totals.paidDeals, pct(totals.paidDeals, totals.deals), dollars(totals.paidCents)]],
       purchases ? [
       ['All paid purchases bought in the window (by purchase date)', purchases.count, '', '', '', '', dollars(purchases.cents)],
       ['  of which on a deal\'s quote', purchases.onDealCount, '', '', '', '', dollars(purchases.onDealCents)],
       ['  of which not on any deal (for example a card sale from the site)', purchases.otherCount, '', '', '', '', dollars(purchases.otherCents)]] : []) },
   };
+  const typed = out.table;
+  out.tables[1] = { title: 'By the Source staff typed', header: typed.header, rows: typed.rows };
+  return out;
 }
 
 // ---- 6. Reconciliation ------------------------------------------------------------------------------------------------------------------
@@ -320,7 +380,11 @@ function csvCell(v) {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 function toCsv(report) {
-  const lines = [report.table.header, ...report.table.rows].map(r => r.map(csvCell).join(','));
+  const block = (t) => [t.header, ...t.rows].map(r => r.map(csvCell).join(','));
+  // A report with several tables (Source to paid) writes each under its own title, with a blank line between.
+  const lines = report.tables && report.tables.length
+    ? report.tables.flatMap((t, i) => [...(i ? [''] : []), csvCell(t.title), ...block(t)])
+    : block(report.table);
   // The definition and the window travel with the numbers, so a pasted sheet is never a bare table.
   return [csvCell(report.title), csvCell(`Window: ${report.windowLabel}`), csvCell(`How this is counted: ${report.definition}`), '', ...lines].join('\r\n') + '\r\n';
 }

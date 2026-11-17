@@ -792,6 +792,43 @@ CREATE TABLE IF NOT EXISTS crm_purchase_refunds (
     CONSTRAINT fk_crm_refund_decider FOREIGN KEY (decided_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Sales CRM punch list G5 (scripts/alter-create-crm-repeat-requests.js): a district administrator's request to reorder or change seats on a license; staff approve or decline it.
+-- open_flag is 1 while Waiting and NULL after, so (purchase_id, open_flag) allows one Waiting request per license. The request never changes the purchase.
+CREATE TABLE IF NOT EXISTS crm_repeat_requests (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    district_id INT UNSIGNED NOT NULL,
+    school_id INT UNSIGNED NULL,
+    purchase_id INT UNSIGNED NOT NULL,
+    kind VARCHAR(16) NOT NULL,
+    current_seats INT UNSIGNED NULL,
+    requested_seats INT UNSIGNED NULL,
+    note VARCHAR(500) NULL,
+    state VARCHAR(12) NOT NULL DEFAULT 'waiting',
+    open_flag TINYINT NULL,
+    opportunity_id INT UNSIGNED NULL,
+    requested_by_site_user_id INT UNSIGNED NOT NULL,
+    decided_by_admin_id INT UNSIGNED NULL,
+    decision_note VARCHAR(500) NULL,
+    decided_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_repeat_open (purchase_id, open_flag),
+    KEY idx_crm_repeat_district (district_id, state),
+    KEY idx_crm_repeat_state (state, created_at),
+    CONSTRAINT fk_crm_repeat_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Sales CRM punch list G20 (scripts/alter-create-crm-quote-followups.js): which quotes the daily job has already made a follow-up task for. One row per quote, ever.
+CREATE TABLE IF NOT EXISTS crm_quote_followup_tasks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quote_id INT UNSIGNED NOT NULL,
+    task_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_crm_quote_followup (quote_id),
+    KEY idx_crm_quote_followup_task (task_id),
+    CONSTRAINT fk_crm_quote_followup_quote FOREIGN KEY (quote_id) REFERENCES quote_requests (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_quote_followup_task FOREIGN KEY (task_id) REFERENCES crm_tasks (id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Sales CRM phase 4b (scripts/alter-create-crm-quotes.js): revisions and the acceptance evidence (docs/reference/sales-crm-update-requirements.md, "4b to 4d spec").
   revision_number INT UNSIGNED NOT NULL DEFAULT 1,
   supersedes_quote_id INT UNSIGNED NULL, -- the quote this one replaces; the old one becomes 'superseded' when this one is SENT
@@ -1903,6 +1940,14 @@ CREATE TABLE IF NOT EXISTS crm_opportunities (
   closed_at DATETIME NULL,
   renewal_of_purchase_id INT UNSIGNED NULL,
   generated_key VARCHAR(64) NULL, -- phase 6: set only on a deal scripts/crm-renewals.js made ('crm.purchase.renewal_due:<purchaseId>' or '...expansion_due:<purchaseId>'); unique, so a source purchase can never get two
+  qual_schools INT UNSIGNED NULL, -- G6 qualification answers (scripts/alter-add-crm-qualification.js); all optional, none blocks anything
+  qual_teachers INT UNSIGNED NULL,
+  qual_students INT UNSIGNED NULL,
+  qual_grades VARCHAR(64) NULL,
+  qual_need VARCHAR(1000) NULL,
+  qual_funding VARCHAR(255) NULL,
+  qual_procurement_path VARCHAR(255) NULL,
+  qual_risks VARCHAR(1000) NULL,
   created_by_admin_id INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
