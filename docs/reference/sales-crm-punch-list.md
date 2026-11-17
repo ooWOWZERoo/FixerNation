@@ -3,6 +3,12 @@
 Source: four read-only reviewers compared the build with `FNE_Customer_Hub_CRM_PRD_v4.md` and `sales-crm-update-requirements.md`; the security items were then confirmed in the code. Each item has one number. Status: **DONE** (fixed and tested), **OPEN** (not started), **DECIDE** (needs the owner), **DEFERRED** (already parked by D9 or phase 5, listed so nothing is lost).
 Severity: H high, M medium, L low. "Where" is the file to start in.
 
+## Immediate follow-ups (owner, outside the code)
+
+| Added | What | Why it matters | Done |
+|---|---|---|---|
+| 2026-11-16 | In Stripe (Developers, Webhooks, the existing endpoint) add the events `charge.refunded` and `charge.dispute.created`. | G21 (deployed or about to be): without these two events Stripe never tells the site about a refund or dispute, so nothing is flagged automatically. Staff can still flag one by hand on the Refunds page until this is done. | No (owner has no Stripe access right now) |
+
 ## A. Security and access (the old admin routes never check the CRM role)
 
 | # | Sev | Item | Where | Status |
