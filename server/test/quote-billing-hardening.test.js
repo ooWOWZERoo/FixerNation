@@ -548,7 +548,8 @@ test('S15: a revision sent after the buyer\'s page loaded blocks the PO claim it
   const q = makeQuote();
   // The claim statement carries the guard, so a revision that lands between the first read and the claim cannot be accepted.
   const src = require('node:fs').readFileSync(path.join(SERVER, 'routes/quote-accept.js'), 'utf8');
-  assert.match(src, /WHERE id = \? AND accepted_at IS NULL AND version_status <> 'superseded'/);
+  // G13 added a declined_at guard between the two conditions (written only when the quote row has that column).
+  assert.match(src, /WHERE id = \? AND accepted_at IS NULL(\$\{[^`]*?\})? AND version_status <> 'superseded'/);
   // And the same end state by hand: superseded just before the claim -> refused with "superseded", nothing made.
   db.prepare("UPDATE quote_requests SET version_status = 'superseded' WHERE id = ?").run(q.id);
   const r = await post('/api/quote/accept', { token: q.token, paymentMethod: 'po', poNumber: 'PO-R' });

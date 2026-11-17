@@ -841,6 +841,9 @@ CREATE TABLE IF NOT EXISTS crm_quote_followup_tasks (
   acceptance_document_snapshot MEDIUMTEXT NULL, -- the exact text that hash is computed from (added by scripts/alter-add-quote-acceptance-snapshot.js; quotes accepted before it keep the hash only)
   acceptance_recorded_at DATETIME NULL,
   acceptance_recorded_by VARCHAR(16) NULL, -- 'buyer' | 'staff' (staff accepted for the customer)
+  declined_at DATETIME NULL, -- G13 (scripts/alter-add-quote-decline.js): the customer, or staff for them, declined the quote; it cannot be accepted until staff undo it
+  declined_by VARCHAR(12) NULL, -- 'customer' | 'staff'
+  decline_reason VARCHAR(500) NULL, -- the customer's own plain text; always escaped where shown
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_quote_requests_contact (contact_id),
   KEY idx_quote_requests_supersedes (supersedes_quote_id),

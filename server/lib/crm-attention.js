@@ -53,6 +53,7 @@ const HELP = {
   po_not_received: (t) => `A quote accepted by purchase order ${t.poWaitDays} or more days ago whose invoice still has no PO received date.`,
   trial_ending: (t) => `A trial that ends within ${t.trialEndingDays} days. A good time to ask how it went and offer a quote.`,
   repeat_request: () => 'A district administrator asked to renew a license or change its seats and nobody has approved or declined it yet. Open the Reorder requests page to decide. Nothing has been bought, priced or sent, and a request that has waited 60 days or more is marked as waiting too long.',
+  quote_declined: () => 'A quote the customer declined (or staff recorded as declined) on a deal that is still open, with no newer version sent. Decide: send a revised quote, or close the deal as Lost. Nothing closes by itself.',
   refund_review: () => 'A purchase with a refund or dispute flag that no CRM Admin has confirmed or dismissed yet. Stripe raises these when it reports a refund or a dispute, and staff can raise one by hand. Nothing has been changed by the flag itself.',
   trial_stalled: (t) => `A live trial that started ${t.trialStalledDays} or more days ago and has seat records, but not one seat is registered yet. A trial with no seat records is not listed: the system cannot tell whether anyone started.`,
   trial_high_use: (t) => `A trial with two or more seats where ${t.trialUsePercent}% or more of the seats are registered. Only counts of seats are used, never names.`,
@@ -75,6 +76,7 @@ const RULES = {
   trial_stalled: { label: 'Trial has not got going', subjectType: 'purchase' },
   refund_review: { label: 'Refund or dispute to review', subjectType: 'purchase' },
   repeat_request: { label: 'Reorder request waiting', subjectType: 'purchase' },
+  quote_declined: { label: 'Quote was declined', subjectType: 'quote' },
   trial_high_use: { label: 'Trial is being well used', subjectType: 'purchase' },
 };
 // Each rule's `help` (at the default thresholds, for anything that reads RULES directly); helpFor() gives the wording for the thresholds in force.
@@ -275,6 +277,21 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
          AND (SELECT COUNT(*) FROM license_seats s WHERE s.purchase_id = p.id AND s.status = 'registered') * 100 >= p.seat_count * ? ORDER BY p.trial_expiration_date, p.id`, [start(today), t.trialUsePercent]);
     for (const r of rows) items.push(purchaseItem('trial_high_use', r, { title: 'Trial in good use', fingerprint: day10(r.trial_expiration_date),
       why: `${Number(r.registered)} of this trial's ${Number(r.seat_count)} seats are registered (${t.trialUsePercent}% is the line). Teachers are using it: a good moment to talk about a quote.` }));
+  });
+
+  // G13: a declined quote. It is an answer, so it comes off the "no answer" and "runs out soon" lists, and it gets its own item until staff revise the quote or close the deal.
+  // Written to read a column an older install may not have yet: then nothing is filtered and nothing is raised.
+  await optional(async () => {
+    const [declinedRows] = await conn.query('SELECT id FROM quote_requests WHERE declined_at IS NOT NULL');
+    const declined = new Set(declinedRows.map(r => Number(r.id)));
+    for (let i = items.length - 1; i >= 0; i--) if ((items[i].ruleKey === 'quote_unanswered' || items[i].ruleKey === 'quote_expiring') && declined.has(Number(items[i].subjectId))) items.splice(i, 1);
+    rows = await capped('quote_declined',
+      `SELECT q.id, q.quote_number, q.declined_at, q.declined_by, q.opportunity_id, o.name AS deal_name, o.owner_admin_id, ow.username AS owner_name
+       FROM quote_requests q LEFT JOIN crm_opportunities o ON o.id = q.opportunity_id LEFT JOIN admin_users ow ON ow.id = o.owner_admin_id
+       WHERE q.declined_at IS NOT NULL AND q.accepted_at IS NULL AND q.version_status <> 'superseded' AND (o.id IS NULL OR o.state = 'open') AND NOT (${TEST_EMAIL}) ORDER BY q.declined_at, q.id`, []);
+    for (const r of rows) items.push(item('quote_declined', r.id, { title: r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, context: r.deal_name || 'No deal yet',
+      link: r.opportunity_id ? pageFor.opportunity + r.opportunity_id : 'admin-quotes.html', ownerAdminId: r.owner_admin_id || null, ownerName: r.owner_name || null, dealId: r.opportunity_id ? Number(r.opportunity_id) : null,
+      fingerprint: day10(r.declined_at), why: `${r.declined_by === 'staff' ? 'Staff recorded' : 'The customer declined'} this quote on ${day10(r.declined_at)} (${daysBetween(r.declined_at, today)} days ago). Send a revised quote, or close the deal as Lost.` }));
   });
 
   return items;

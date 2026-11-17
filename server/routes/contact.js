@@ -13,6 +13,7 @@ const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-par
 const { setQuoteLinks, dealForQuote } = require('../lib/crm-quotes');
 const { loadCrmRole, canEditDeal, isCrmEnabled, can, requireCrmRole } = require('../lib/crm-permissions');
 const { audit } = require('../lib/audit');
+const quoteDecline = require('../lib/quote-decline'); // G13: decline a quote on the customer's behalf, or undo a decline
 
 // Punch list S3/S4. The accept link (accept_token) alone accepts a quote by PO, so it never goes back to the browser: staff send it through the Send button.
 function publicQuote(row) {
@@ -557,30 +558,36 @@ router.post('/quotes/:id/send', requireAuth, requireCrmRole('write'), async (req
     const [[quoteContact]] = await pool.query('SELECT * FROM newsletter_contacts WHERE email = ?', [quote.email]);
     const emailBillTo = billFromQuote(quote, quoteContact);
     const emailShipTo = shipFromQuote(quote, quoteContact);
-    await sendQuoteEmail({
-      to: quote.email,
-      firstName: quote.first_name,
-      lastName: quote.last_name,
-      school: quote.school,
-      quoteNumber: quote.quote_number || null,
-      billTo: emailBillTo, shipTo: emailShipTo,
-      productName: quotedProductName,
-      seatCount: quotedSeatCount || null,
-      amountDollars: quotedAmountCents / 100,
-      replyTo,
-      fromEmail: fromEmail || null,
-      addonSeats: quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
-      termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
-      discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
-      quoteValidUntil: validUntil,
-      acceptUrl,
-      contentSections: {
-        annualIncludes: (profile && profile.section_annual_includes) || '',
-        lessonPackage:  (profile && profile.section_lesson_package)  || '',
-        videoAccess:    (profile && profile.section_video_access)    || '',
-        licenseTerms:   (profile && profile.section_license_terms)   || '',
-      },
-    });
+    try {
+      await sendQuoteEmail({
+        to: quote.email,
+        firstName: quote.first_name,
+        lastName: quote.last_name,
+        school: quote.school,
+        quoteNumber: quote.quote_number || null,
+        billTo: emailBillTo, shipTo: emailShipTo,
+        productName: quotedProductName,
+        seatCount: quotedSeatCount || null,
+        amountDollars: quotedAmountCents / 100,
+        replyTo,
+        fromEmail: fromEmail || null,
+        addonSeats: quotedAddonSeats != null ? Number(quotedAddonSeats) : null,
+        termYears: quotedTermYears != null ? Number(quotedTermYears) : null,
+        discountPct: quotedDiscountPct != null ? Number(quotedDiscountPct) : null,
+        quoteValidUntil: validUntil,
+        acceptUrl,
+        contentSections: {
+          annualIncludes: (profile && profile.section_annual_includes) || '',
+          lessonPackage:  (profile && profile.section_lesson_package)  || '',
+          videoAccess:    (profile && profile.section_video_access)    || '',
+          licenseTerms:   (profile && profile.section_license_terms)   || '',
+        },
+      });
+    } catch (err) {
+      // G13: the mail server refused the quote email. Record that on the quote (the error code only: SMTP messages can contain the address), then fail as before.
+      await crmHooks.quoteEvent(quote.id, 'send_failed', { detail: `mail server code ${String(err && (err.responseCode || err.code) || 'error').replace(/[^A-Za-z0-9_ -]/g, '').slice(0, 30)}`, actorAdminId: req.user.userId });
+      throw err;
+    }
   }
 
   await pool.query(
@@ -615,6 +622,21 @@ router.post('/quotes/:id/send', requireAuth, requireCrmRole('write'), async (req
   await auditPriceChange(req, quote, priceDiff);
   const [[updated]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quote.id]);
   res.json({ ok: true, quote: publicQuote(updated) });
+});
+
+// G13: staff record that the customer declined (said so by phone or email), or undo a decline (a click by mistake). Same role as editing a quote (CRM Admin or Sales; Read-only never).
+// Declining changes only the quote's decline columns, one event and one audit row: the deal stays open and nothing is priced or closed (lib/quote-decline.js).
+router.post('/quotes/:id/decline', requireAuth, requireCrmRole('write'), async (req, res) => {
+  try {
+    const out = await quoteDecline.declineQuote(pool, Number(req.params.id) || 0, { by: 'staff', reason: (req.body || {}).reason, adminId: req.user.userId, now: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+    res.json({ ok: true, already: out.already });
+  } catch (err) { if (err instanceof quoteDecline.Refusal) return res.status(err.status).json({ code: err.code, error: err.message }); throw err; }
+});
+router.post('/quotes/:id/undo-decline', requireAuth, requireCrmRole('write'), async (req, res) => {
+  try {
+    await quoteDecline.undoDecline(pool, Number(req.params.id) || 0, { adminId: req.user.userId, reason: (req.body || {}).reason, now: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+    res.json({ ok: true });
+  } catch (err) { if (err instanceof quoteDecline.Refusal) return res.status(err.status).json({ code: err.code, error: err.message }); throw err; }
 });
 
 // POST /api/contact/quotes/:id/copy — duplicate a quote as a fresh draft

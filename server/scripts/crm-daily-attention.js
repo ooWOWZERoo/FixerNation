@@ -24,12 +24,16 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 // (crm_quote_followup_tasks). Quotes sent more than 60 days ago are left to the Needs Attention page. Same switch pattern.
 //   node scripts/crm-daily-attention.js --quote-followups on|off|status    switch them on or off (setting crm_quote_followup_tasks)
 //
+// Expired quotes (punch list G13): one 'expired' event on each quote that was sent, never answered, and is past its valid-until date, once ever. It only adds a line to the quote's
+// event log, so it has no switch; without --apply it only counts.
+//
 // Output is counts only (no names, no email addresses).
 const mysql = require('mysql2/promise');
 const A = require('../lib/crm-attention');
 const TT = require('../lib/crm-trial-tasks');
 const OB = require('../lib/crm-onboarding');
 const QF = require('../lib/crm-quote-followups');
+const QE = require('../lib/crm-quote-events');
 
 async function setting(db, key) {
   const [[row]] = await db.query('SELECT setting_value FROM settings WHERE setting_key = ?', [key]).catch(() => [[undefined]]);
@@ -117,6 +121,9 @@ async function main() {
       if (!o.hasTemplate) console.log('  There is no active checklist template named "Onboarding" with steps, so nothing can be added. Add one under Hub Settings.');
       else console.log(live ? `  Deals started today: ${o.made} (${o.stepsAdded} steps added).` : `  Deals it would start: ${o.wouldMake}. Nothing was written.`);
     }
+    const ex = await QE.recordExpired(db, { today: now.slice(0, 10), apply });
+    if (!ex.available) console.log('Expired quote events: skipped, because the quote event table is missing.');
+    else console.log(`Expired quote events${apply ? '' : ' (report only)'}: ${ex.eligible} quote(s) past their valid-until date with no event yet${apply ? `, ${ex.made} written` : ''}.`);
     const followOn = (await setting(db, QF.SWITCH)) === 'true';
     const f = await QF.createFollowUps(db, { apply: apply && followOn, now, today: now.slice(0, 10) });
     if (!f.available) console.log('Quote follow-up tasks: skipped, because the table is missing. Run scripts/alter-create-crm-quote-followups.js, then run this again.');

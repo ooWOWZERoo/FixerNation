@@ -35,6 +35,20 @@
   function item(title, who, body) { return { title: title, who: who, body: body }; }
 
   var NOTES = [
+    N('quote-decline', false, '2026-11-16', '', 'You can now decline a quote from the quote page', ['school', 'district'],
+      'The quote page has a quiet "Decline this quote" link, with an optional reason, so you can tell us no without writing an email.',
+      'If you are not going ahead with a quote, you can say so on the quote page: choose "Decline this quote", add a reason if you like, and we are told. The link then stops accepting that quote, and our team can help you with a different quote if you want one. If you declined by mistake, write to us and we can put the quote back.',
+      {
+        new: [
+          item('Decline a quote', ['school', 'district'], 'A "Decline this quote" link sits at the bottom of the quote page. It opens a small box for an optional reason. Nothing is charged and nothing is set up.'),
+          item('A clear page afterward', ['school', 'district'], 'Anyone who opens the link again sees that the quote was declined and who to write to if that was a mistake.')
+        ],
+        know: [
+          'A declined quote cannot be accepted from the link. Our team can put it back for you.',
+          'Your reason goes to our team only.'
+        ]
+      },
+      'On the Accept your quote page, from the link in your quote email.', ['D1']),
     N('district-reorder-request', false, '2026-11-16', '', 'District administrators can ask to renew a license or change its seats', ['district'],
       'A new page in the District Admin portal lets you ask us to renew a license or change how many seats it has, and shows where each request stands.',
       'On the new Renew or change seats page, pick a school\'s license and tell us whether you want to renew it as it is or change the number of seats. Our team reviews every request, sends you a quote with the price, and nothing is bought until you accept that quote. You can see each request\'s status on the same page, and you can cancel one while it is still waiting.',

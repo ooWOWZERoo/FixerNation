@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=37"></script>
+<script src="admin-nav.js?v=38"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -155,7 +155,25 @@
     if (sel) sel.addEventListener('change', function () { var to = sel.value; if (to) moveStage(to); });
     root.querySelectorAll('[data-evidence]').forEach(function (b) { b.addEventListener('click', function () { showEvidence(Number(b.getAttribute('data-evidence'))); }); });
     root.querySelectorAll('[data-act=editm]').forEach(function (b) { b.addEventListener('click', function () { editMember(Number(b.getAttribute('data-cid'))); }); });
+    root.querySelectorAll('[data-act=decline]').forEach(function (b) { b.addEventListener('click', function () { declineQuote(Number(b.getAttribute('data-qid'))); }); });
+    root.querySelectorAll('[data-act=undodecline]').forEach(function (b) { b.addEventListener('click', function () { undoDecline(Number(b.getAttribute('data-qid'))); }); });
     root.querySelectorAll('[data-act=rmm]').forEach(function (b) { b.addEventListener('click', function () { removeMember(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
+  }
+
+  // G13: record that the customer said no, or put a decline back. Neither closes the deal or changes a price: it only stops the link accepting and tells Needs Attention.
+  function declineQuote(qid) {
+    C.dialog({
+      title: 'Record a decline', submit: 'Record decline',
+      body: '<p class="crm-small">Use this when the customer tells you they will not go ahead. The quote link stops accepting, and the deal stays open so you can send a revised quote or close it Lost. Nothing is priced or closed for you.</p>' + C.field('What they said (optional)', '<textarea id="dcReason" maxlength="500" rows="3"></textarea>', 'Keep names and card details out.', 'dcReason'),
+      onSubmit: function (f) { return C.api('POST', '/api/contact/quotes/' + qid + '/decline', { reason: f.querySelector('#dcReason').value }).then(function (r) { return save(r, 'Decline recorded.'); }); }
+    });
+  }
+  function undoDecline(qid) {
+    C.dialog({
+      title: 'Undo this decline', submit: 'Undo decline',
+      body: '<p class="crm-small">The quote link will accept again. Use this if the decline was a mistake or the customer changed their mind.</p>' + C.field('Why (optional)', '<input type="text" id="udReason" maxlength="255">', '', 'udReason'),
+      onSubmit: function (f) { return C.api('POST', '/api/contact/quotes/' + qid + '/undo-decline', { reason: f.querySelector('#udReason').value }).then(function (r) { return save(r, 'Decline undone.'); }); }
+    });
   }
 
   function save(r, done) { if (r.ok) { C.toast(done || 'Saved'); load(); return; } if (r.data && r.data.code === 'changed') load(); return C.problem(r); }
@@ -233,7 +251,7 @@
     });
   }
 
-  var QUOTE_EVENT = { created: 'Quote started', sent: 'Quote sent', superseded: 'Replaced by a newer quote', accepted: 'Quote accepted', page_opened: 'Quote page opened (approximate)' };
+  var QUOTE_EVENT = { created: 'Quote started', sent: 'Quote sent', superseded: 'Replaced by a newer quote', accepted: 'Quote accepted', page_opened: 'Quote page opened (approximate)', declined: 'Quote declined', decline_undone: 'Quote decline undone', send_failed: 'Quote email could not be sent', expired: 'Quote expired with no answer' };
 
   // Punch list S10: what the buyer was shown when they accepted. Looking is written to the audit log.
   function showEvidence(quoteId) {
@@ -255,7 +273,11 @@
     var rev = q.revisionNumber > 1 ? ' · revision ' + esc(q.revisionNumber) : '';
     var pill = q.versionStatus === 'superseded' ? '<span class="a-pill a-pill-neutral" title="A newer revision was sent. This link no longer accepts.">Replaced</span>' : '<span class="a-pill a-pill-neutral">' + esc(C.label(C.QUOTE_STATUS, q.status)) + '</span>';
     var ev = q.acceptance ? '<div class="crm-small crm-muted">Accepted' + (q.acceptance.name ? ' by ' + esc(q.acceptance.name) : '') + (q.acceptance.name && q.acceptance.title ? ', ' + esc(q.acceptance.title) : '') + ' on ' + esc(C.dateTime(q.acceptance.at)) + (q.acceptance.by === 'staff' ? ' (recorded by staff for the customer)' : '') + (q.acceptance.documentHash ? ' · record ' + esc(q.acceptance.documentHash) : '') + (C.can('audit_view') ? ' · <button type="button" class="crm-link" data-evidence="' + esc(q.id) + '">Show the full record</button>' : '') + '</div>' : '';
-    return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + rev + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div>' + ev + '</div>' + pill + '</li>';
+    // G13: declined by the customer, or recorded by staff. The reason is the customer's own text: escaped, and only shown to a role that can write.
+    var dec = q.declined ? '<div class="crm-small">Declined ' + esc(C.date(q.declined.at)) + (q.declined.by === 'staff' ? ' (recorded by staff)' : ' by the customer') + (q.declined.reason ? ': ' + esc(q.declined.reason) : '') + '</div>' : '';
+    var decBtn = '';
+    if (edit && !q.acceptedAt && q.versionStatus !== 'superseded' && q.sentAt) decBtn = q.declined ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="undodecline" data-qid="' + esc(q.id) + '">Undo decline</button></div>' : '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="decline" data-qid="' + esc(q.id) + '">Record a decline</button></div>';
+    return '<li><div><strong>' + esc(q.quoteNumber || '#' + q.id) + '</strong><div class="crm-small crm-muted">' + esc(C.money(q.amountCents, 'Not priced')) + rev + (q.sentAt ? ' · sent ' + esc(C.date(q.sentAt)) : ' · not sent') + (q.validUntil ? ' · good until ' + esc(C.date(q.validUntil)) : '') + (q.acceptedAt ? ' · accepted ' + esc(C.date(q.acceptedAt)) : '') + '</div>' + ev + dec + decBtn + '</div>' + (q.declined && q.versionStatus !== 'superseded' ? '<span class="a-pill a-pill-warning">Declined</span>' : pill) + '</li>';
   }
 
   function procurementCard() {
@@ -378,6 +400,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=10"></script>
+<script src="admin-shell.js?v=11"></script>
 </body>
 </html>

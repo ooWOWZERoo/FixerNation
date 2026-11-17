@@ -63,6 +63,10 @@
     <h1>This quote has a newer version</h1>
     <p class="sub">We sent you a newer version of this quote, so this link no longer works. Please use the link in that email, or write to <a href="mailto:admin@fixernationeducation.com">admin@fixernationeducation.com</a> if you can't find it.</p>
   </div>
+  <div id="stateDeclined" style="display:none;">
+    <h1>You declined this quote</h1>
+    <p class="sub">We have let our team know. If that was a mistake, or you would like a different quote, write to <a href="mailto:admin@fixernationeducation.com">admin@fixernationeducation.com</a> and we will help.</p>
+  </div>
   <div id="stateAccepted" style="display:none;">
     <div class="success-icon">&#10003;</div>
     <h1 style="text-align:center;">Your quote is confirmed.</h1>
@@ -125,6 +129,15 @@
       <button class="btn-primary" id="inviteBtn" onclick="sendInvite()">Send invite</button>
     </div>
     <div id="inviteSent" style="display:none;font-size:14px;color:#16a34a;margin-top:12px;text-align:center;">Invite sent.</div>
+    <div style="margin-top:22px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:center;font-size:13px;color:var(--ink-soft);">
+      <button type="button" id="declineOpen" onclick="openDecline()" style="background:none;border:none;padding:0;color:var(--ink-soft);text-decoration:underline;cursor:pointer;font:inherit;">Not going ahead? Decline this quote</button>
+      <div id="declineForm" style="display:none;margin-top:12px;text-align:left;">
+        <label class="field-label" for="declineReason">Tell us why (optional)</label>
+        <textarea id="declineReason" class="text-input" maxlength="500" rows="3" placeholder="For example, the timing is not right or the budget changed."></textarea>
+        <div class="error-msg" id="declineError"></div>
+        <button class="btn-primary" id="declineBtn" onclick="sendDecline()" style="background:#6B5F55;">Decline this quote</button>
+      </div>
+    </div>
   </div>
 </div>
 </main>
@@ -146,7 +159,7 @@ function fmtCurrency(n) {
 }
 
 function show(id) {
-  ['stateLoading','stateError','stateSuperseded','stateAccepted','stateActive','stateSetup'].forEach(s => {
+  ['stateLoading','stateError','stateSuperseded','stateDeclined','stateAccepted','stateActive','stateSetup'].forEach(s => {
     document.getElementById(s).style.display = s === id ? '' : 'none';
   });
 }
@@ -165,6 +178,7 @@ async function init() {
   if (!r.ok) {
     if (data.error === 'already_accepted') { show('stateAccepted'); return; }
     if (data.error === 'superseded') { show('stateSuperseded'); return; }
+    if (data.error === 'declined') { show('stateDeclined'); return; }
     show('stateError'); return;
   }
 
@@ -188,6 +202,30 @@ async function init() {
   summary.innerHTML = rows;
 
   show('stateActive');
+}
+
+function openDecline() {
+  document.getElementById('declineOpen').style.display = 'none';
+  document.getElementById('declineForm').style.display = '';
+  document.getElementById('declineReason').focus();
+}
+async function sendDecline() {
+  const btn = document.getElementById('declineBtn'), err = document.getElementById('declineError');
+  err.style.display = 'none';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/quotes/decline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: TOKEN, reason: document.getElementById('declineReason').value }) });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) { show('stateDeclined'); return; }
+    if (data.error === 'already_accepted') { show('stateAccepted'); return; }
+    if (data.error === 'superseded') { show('stateSuperseded'); return; }
+    err.textContent = 'We could not record that just now. Please try again, or write to admin@fixernationeducation.com.';
+    err.style.display = '';
+  } catch (e) {
+    err.textContent = 'We could not record that just now. Please try again, or write to admin@fixernationeducation.com.';
+    err.style.display = '';
+  }
+  btn.disabled = false;
 }
 
 function switchTab(tab) {

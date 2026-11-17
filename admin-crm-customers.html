@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Customers and Renewals</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=3">
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=38"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Customers &amp; renewals</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+// Punch list G11: renewals coming up (with the plain reasons they may be in trouble), the expansion pipeline, and onboarding progress. Read only: nothing on this page changes anything.
+// School names, deal names and next steps come from outside the keyboard, so every value goes through esc(). "At risk" is a list of facts, never a score.
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    C.loading(root);
+    C.api('GET', '/api/crm/customers').then(function (r) {
+      if (!r.ok) { C.errorBox(root, C.problem(r)); return; }
+      draw(r.data);
+    });
+  });
+
+  function unavailable(title) { return '<div class="a-card"><div class="a-card-head"><h2>' + esc(title) + '</h2></div><p class="crm-small crm-muted">This part is not available yet on this site. The database update for it has not been run.</p></div>'; }
+  function who(name, sub) { return esc(name || 'Unknown') + (sub ? '<div class="crm-small crm-muted">' + sub + '</div>' : ''); }
+  function dealLink(d) { return d ? '<a href="admin-crm-opportunity.html?id=' + encodeURIComponent(d.id) + '">' + esc(d.name) + '</a>' : '<span class="crm-muted">No deal yet</span>'; }
+  function seats(a, b) { return b === null || b === undefined ? '<span class="crm-muted">Not known</span>' : esc(C.num(a)) + ' of ' + esc(C.num(b)); }
+  function table(label, head, rows) { return '<div class="mc-table-scroll"><table class="a-table" aria-label="' + esc(label) + '"><thead><tr>' + head.map(function (h) { return '<th scope="col">' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>'; }
+
+  function draw(d) {
+    var h = '';
+    // 1. Renewals
+    var rn = d.renewals;
+    if (!rn) h += unavailable('Renewals coming up');
+    else {
+      h += '<div class="a-card"><div class="a-card-head"><h2>Renewals coming up (' + esc(C.num(rn.total)) + ')</h2></div>' +
+        '<p class="crm-small crm-muted" style="margin:0 0 10px;">Paid school licenses that end within ' + esc(rn.windowDays) + ' days, or ended in the last ' + esc(rn.lookbackDays) + ', and have not been renewed by a later license. A license is marked "needs a look" when one of these is true: there is no open renewal deal; the deal has no next step or its next step is overdue; fewer than ' + esc(rn.lowUsePercent) + '% of the seats are registered; or a refund flag is waiting. Each row says which. This is a list of facts, not a score.' + (rn.alreadyRenewedLeftOut ? ' ' + esc(C.num(rn.alreadyRenewedLeftOut)) + ' already renewed license(s) are left out.' : '') + '</p>' +
+        '<p><span class="a-pill ' + (rn.atRisk ? 'a-pill-warning' : 'a-pill-success') + '">' + (rn.atRisk ? esc(C.num(rn.atRisk)) + ' need a look' : 'Nothing needs a look') + '</span></p>';
+      h += rn.rows.length ? table('Renewals coming up', ['School or account', 'Ends', 'Seats registered', 'Renewal deal', 'Last term', 'Needs a look because'], rn.rows.map(function (r) {
+        var ends = esc(C.date(r.endsOn)) + '<div class="crm-small crm-muted">' + (r.endedDaysAgo !== null ? 'ended ' + esc(r.endedDaysAgo) + ' day(s) ago' : esc(r.daysLeft) + ' day(s) left') + '</div>';
+        var deal = dealLink(r.deal) + (r.deal ? '<div class="crm-small crm-muted">' + esc(r.deal.stage) + (r.deal.ownerName ? ' · ' + esc(r.deal.ownerName) : ' · nobody owns it') + (r.deal.nextStep ? '<br>Next: ' + esc(r.deal.nextStep) : '') + '</div>' : '');
+        var acct = r.accountId ? '<a href="admin-crm-account.html?id=' + encodeURIComponent(r.accountId) + '">' + esc(r.accountName) + '</a>' : esc(r.school || 'Unknown school');
+        return '<tr><td>' + acct + (r.school && r.accountName ? '<div class="crm-small crm-muted">' + esc(r.school) + '</div>' : '') + '</td><td>' + ends + '</td><td>' + seats(r.seatsRegistered, r.seatsTotal) + '</td><td>' + deal + '</td><td>' + (r.lastTermCents === null ? '<span class="crm-muted">Not recorded</span>' : esc(C.money(r.lastTermCents))) + '</td><td>' + (r.reasons.length ? '<ul class="crm-list" style="margin:0;">' + r.reasons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<span class="crm-muted">Nothing</span>') + '</td></tr>';
+      })) : C.empty('No paid licenses are coming up for renewal.', '🔁');
+      if (rn.total > rn.shown) h += '<p class="crm-small crm-muted">Showing the first ' + esc(rn.shown) + ' of ' + esc(C.num(rn.total)) + '.</p>';
+      h += '</div>';
+    }
+    // 2. Expansion
+    var ex = d.expansion;
+    if (!ex) h += unavailable('Expansion pipeline');
+    else {
+      h += '<div class="a-card"><div class="a-card-head"><h2>Expansion pipeline</h2></div>' +
+        '<h3 class="crm-small" style="margin:0 0 6px;">Open expansion deals (' + esc(C.num(ex.dealCount)) + (ex.dealCount ? ', ' + esc(C.money(ex.valueCents)) + ' in all' : '') + ')</h3>' +
+        (ex.withoutValue ? '<p class="crm-small crm-muted">' + esc(C.num(ex.withoutValue)) + ' deal(s) have no value yet, so they add nothing to the total.</p>' : '');
+      h += ex.deals.length ? table('Open expansion deals', ['Deal', 'Account', 'Stage', 'Owner', 'Value', 'Expected close'], ex.deals.map(function (x) {
+        return '<tr><td><a href="admin-crm-opportunity.html?id=' + encodeURIComponent(x.id) + '">' + esc(x.name) + '</a></td><td>' + who(x.accountName) + '</td><td>' + esc(x.stage) + '</td><td>' + (x.ownerName ? esc(x.ownerName) : '<span class="crm-muted">Nobody</span>') + '</td><td>' + (x.amountCents === null ? '<span class="crm-muted">No value yet</span>' : esc(C.money(x.amountCents))) + '</td><td>' + (x.expectedCloseDate ? esc(C.date(x.expectedCloseDate)) : '<span class="crm-muted">Not set</span>') + '</td></tr>';
+      })) : '<p class="crm-small crm-muted">No expansion deals are open.</p>';
+      h += '<h3 class="crm-small" style="margin:16px 0 6px;">Well-used licenses with no expansion deal (' + esc(C.num(ex.wellUsedCount)) + ')</h3><p class="crm-small crm-muted">Paid licenses where ' + esc(ex.wellUsedPercent) + '% or more of the seats are registered and nobody has an open expansion deal on the account. A good moment to talk about more seats.</p>';
+      h += ex.wellUsed.length ? table('Well-used licenses', ['School or account', 'Seats registered', 'Ends'], ex.wellUsed.map(function (x) {
+        var acct = x.accountId ? '<a href="admin-crm-account.html?id=' + encodeURIComponent(x.accountId) + '">' + esc(x.accountName) + '</a>' : esc(x.school || 'Unknown school');
+        return '<tr><td>' + acct + '</td><td>' + seats(x.seatsRegistered, x.seatsTotal) + '</td><td>' + (x.endsOn ? esc(C.date(x.endsOn)) : '<span class="crm-muted">No end date</span>') + '</td></tr>';
+      })) : '<p class="crm-small crm-muted">None right now.</p>';
+      h += '</div>';
+    }
+    // 3. Onboarding
+    var ob = d.onboarding;
+    if (!ob) h += unavailable('Onboarding');
+    else {
+      h += '<div class="a-card"><div class="a-card-head"><h2>Onboarding (' + esc(C.num(ob.dealCount)) + ' deal' + (ob.dealCount === 1 ? '' : 's') + ')</h2></div>' +
+        '<p class="crm-small crm-muted" style="margin:0 0 10px;">Won deals that were given the "' + esc(ob.template) + '" checklist. ' + (ob.dealCount ? esc(C.num(ob.stepsDone)) + ' of ' + esc(C.num(ob.steps)) + ' steps are done, ' + esc(C.num(ob.stepsOverdue)) + ' overdue. ' : '') +
+        (ob.waitingForChecklist === null ? '' : esc(C.num(ob.waitingForChecklist)) + ' Won and paid deal(s) are waiting for a checklist' + (ob.switchOn ? ' (the daily check adds it).' : ' (the automatic start is switched off).')) + '</p>';
+      h += ob.deals.length ? table('Onboarding progress', ['Deal', 'Account', 'Owner', 'Steps done', 'Overdue'], ob.deals.map(function (x) {
+        return '<tr><td><a href="admin-crm-opportunity.html?id=' + encodeURIComponent(x.id) + '">' + esc(x.name) + '</a></td><td>' + who(x.accountName) + '</td><td>' + (x.ownerName ? esc(x.ownerName) : '<span class="crm-muted">Nobody</span>') + '</td><td>' + esc(C.num(x.done)) + ' of ' + esc(C.num(x.total)) + '</td><td>' + (x.overdue ? '<strong>' + esc(C.num(x.overdue)) + '</strong>' : '0') + '</td></tr>';
+      })) : C.empty('No deal has an onboarding checklist yet.', '🚀');
+      h += '</div>';
+    }
+    root.innerHTML = h;
+  }
+})();
+</script>
+<script src="admin-shell.js?v=11"></script>
+</body>
+</html>

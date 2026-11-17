@@ -16,10 +16,10 @@ test('PAGES: all eleven Customer Hub pages exist and load the shared admin asset
   for (const f of PAGES) {
     assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} exists`);
     const html = read(f);
-    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=37"><\/script>/, f);
+    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=38"><\/script>/, f);
     assert.match(html, /admin-common\.css\?v=22/, f);
     assert.match(html, /admin-common\.js\?v=17/, f);
-    assert.match(html, /admin-shell\.js\?v=10/, f);
+    assert.match(html, /admin-shell\.js\?v=11/, f);
     assert.match(html, /crm-common\.css\?v=3/, f);
     assert.match(html, /crm-common\.js\?v=2/, f);
     assert.match(html, /<meta name="robots" content="noindex">/, `${f} is not for search engines`);
@@ -32,8 +32,8 @@ test('VERSIONS: every admin page that loads the nav or the shell loads the curre
   assert.ok(pages.length > 25);
   for (const f of pages) {
     const html = read(f);
-    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=37/, f);
-    if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=10/, f);
+    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=38/, f);
+    if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=11/, f);
   }
 });
 
@@ -41,12 +41,12 @@ test('NAV: one Customer Hub group, hidden until /api/crm/me answers, with Settin
   const nav = read('admin-nav.js');
   const group = nav.slice(nav.indexOf("{ key: 'customer-hub'"), nav.indexOf("{ key: 'support'"));
   const hrefs = [...group.matchAll(/link\('([^']+)'/g)].map(m => m[1]);
-  assert.deepEqual(hrefs, ['admin-crm-overview.html', 'admin-crm-attention.html', 'admin-crm-tasks.html', 'admin-crm-accounts.html', 'admin-crm-contacts.html', 'admin-crm-opportunities.html', 'admin-crm-reports.html', 'admin-crm-refunds.html', 'admin-crm-repeat-requests.html', 'admin-crm-settings.html']);
+  assert.deepEqual(hrefs, ['admin-crm-overview.html', 'admin-crm-attention.html', 'admin-crm-tasks.html', 'admin-crm-accounts.html', 'admin-crm-contacts.html', 'admin-crm-opportunities.html', 'admin-crm-customers.html', 'admin-crm-reports.html', 'admin-crm-refunds.html', 'admin-crm-repeat-requests.html', 'admin-crm-settings.html']);
   assert.match(group, /admin-crm-settings\.html'[^)]*data-crm-perm="edit_settings"/);
   assert.match(nav, /fetch\('\/api\/crm\/me'/);
   assert.match(nav, /hiddenAttr = s\.crm \? ' hidden data-crm-nav="1"'/, 'the group starts hidden');
   assert.match(nav, /showCrmNav\(null\)/, 'any failure leaves it hidden');
-  for (const k of ['crm-overview', 'crm-attention', 'crm-tasks', 'crm-accounts', 'crm-contacts', 'crm-opportunities', 'crm-reports', 'crm-refunds', 'crm-repeat-requests', 'crm-settings']) assert.ok(nav.includes(`"${k}": "<`), `icon for ${k}`);
+  for (const k of ['crm-overview', 'crm-attention', 'crm-tasks', 'crm-accounts', 'crm-contacts', 'crm-opportunities', 'crm-customers', 'crm-reports', 'crm-refunds', 'crm-repeat-requests', 'crm-settings']) assert.ok(nav.includes(`"${k}": "<`), `icon for ${k}`);
   assert.match(nav, /'admin-crm-opportunity\.html':'admin-crm-opportunities\.html'/, 'a deal page lights up its list in the menu');
 });
 

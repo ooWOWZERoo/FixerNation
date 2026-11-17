@@ -154,7 +154,7 @@ test('THRESHOLDS: everyone with a CRM role can read them; only a CRM Admin can c
   const row = get("SELECT * FROM school_audit_log WHERE action = 'crm_attention_thresholds_changed'");
   assert.deepEqual(JSON.parse(row.prev_value), { staleStageDays: 30, quoteUnansweredDays: 14 }); assert.deepEqual(JSON.parse(row.new_value), { staleStageDays: 20, quoteUnansweredDays: 10 });
   const rules = (await call('GET', '/api/crm/attention/rules', undefined, viewer)).json.rules;
-  assert.equal(rules.length, 16);
+  assert.equal(rules.length, 17);
   assert.match(rules.find(x => x.key === 'stale_deal').help, /sat in one stage for 20 days/);
   assert.match(rules.find(x => x.key === 'quote_unanswered').help, /sent 10 or more days ago/);
   // And the rule itself uses the number: a deal quiet for 25 days is listed at 20, not at 30.

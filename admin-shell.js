@@ -8,6 +8,7 @@
     'dashboard': ['Your mission, in motion', 'Mission Control', 'Real tools. Brighter futures. Track progress, support schools, and make your next move count.', 'Overview'],
     'crm-overview': ['Everything in one place', '', 'See how many Suspects, Prospects and Customers you have, what is in the pipeline, and which quotes and deals need you today.', 'Customer Hub'],
     'crm-attention': ['What needs a look today', '', 'Overdue next steps, quiet deals, quotes about to run out and more. Each one says why it is here and where to fix it.', 'Customer Hub'],
+    'crm-customers': ['Customers & renewals', '', 'Renewals coming up and the plain reasons they may need a look, the expansion pipeline, and onboarding progress. Read only.', 'Customer Hub'],
     'crm-repeat-requests': ['Reorder requests', '', 'Requests from district administrators to renew a license or change its seats. A CRM Admin or the deal\'s owner approves or declines; nothing is priced, sent or bought from here.', 'Customer Hub'],
     'crm-refunds': ['Refunds waiting for a decision', '', 'Refunds and disputes that Stripe reported or staff flagged. A flag changes nothing until a CRM Admin confirms or dismisses it.', 'Customer Hub'],
     'crm-tasks': ['Your to-do list, in one place', '', 'See what is due today and what is overdue, and tick things off as you go.', 'Customer Hub'],

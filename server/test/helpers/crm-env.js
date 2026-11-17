@@ -27,7 +27,8 @@ CREATE TABLE quote_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_number 
   acceptance_name TEXT, acceptance_title TEXT, acceptance_terms_version TEXT, acceptance_document_hash TEXT, acceptance_recorded_at TEXT, acceptance_recorded_by TEXT,
   phone TEXT, message TEXT, origin TEXT, quoted_product_id INTEGER, quoted_tier_name TEXT, quoted_seat_count INTEGER, quoted_addon_seats INTEGER, quoted_term_years INTEGER, quoted_school_domain TEXT,
   quoted_at TEXT, quote_sent_via TEXT, content_profile_id INTEGER, notes TEXT, bill_to_street TEXT, bill_to_city TEXT, bill_to_state TEXT, bill_to_zip TEXT,
-  ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT);
+  ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT,
+  declined_at TEXT, declined_by TEXT, decline_reason TEXT);
 CREATE TABLE quote_content_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, is_default INTEGER DEFAULT 0, section_annual_includes TEXT, section_lesson_package TEXT, section_video_access TEXT, section_license_terms TEXT);
 CREATE TABLE crm_quote_events (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_id INTEGER NOT NULL, opportunity_id INTEGER, event_type TEXT NOT NULL, detail TEXT, actor_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, closed_at TEXT);

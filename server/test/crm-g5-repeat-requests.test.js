@@ -256,7 +256,7 @@ test('FILES AND RULES: the pages escape what comes from outside, the nav and ver
     assert.match(html, /name="robots" content="noindex"/); assert.doesNotMatch(html, /fonts\.googleapis|cdn\./i);
   }
   assert.match(read('district-admin-renew.html'), /esc\(r\.note\)/); assert.match(read('admin-crm-repeat-requests.html'), /esc\(q\.note\)/);
-  assert.match(read('admin-crm-repeat-requests.html'), /admin-nav\.js\?v=37/); assert.match(read('admin-crm-repeat-requests.html'), /admin-shell\.js\?v=10/);
+  assert.match(read('admin-crm-repeat-requests.html'), /admin-nav\.js\?v=38/); assert.match(read('admin-crm-repeat-requests.html'), /admin-shell\.js\?v=11/);
   assert.match(read('admin-nav.js'), /admin-crm-repeat-requests\.html/); assert.match(read('admin-nav.js'), /"crm-repeat-requests": "</);
   assert.match(read('admin-shell.js'), /'crm-repeat-requests':/);
   assert.match(read('district-admin-nav.js'), /district-admin-renew\.html/);

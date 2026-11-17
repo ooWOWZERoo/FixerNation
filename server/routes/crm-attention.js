@@ -13,7 +13,7 @@ const A = require('../lib/crm-attention');
 const S = require('../lib/crm-subjects');
 
 const router = express.Router();
-const ORDER = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'close_date_passed', 'quote_expiring', 'po_not_received', 'won_no_purchase', 'refund_review', 'repeat_request', 'quote_unanswered', 'trial_ending', 'trial_stalled', 'trial_high_use', 'stale_deal', 'no_next_step', 'no_owner'];
+const ORDER = ['next_step_overdue', 'task_overdue', 'checklist_overdue', 'close_date_passed', 'quote_expiring', 'po_not_received', 'won_no_purchase', 'refund_review', 'repeat_request', 'quote_declined', 'quote_unanswered', 'trial_ending', 'trial_stalled', 'trial_high_use', 'stale_deal', 'no_next_step', 'no_owner'];
 const STATUSES = ['active', 'snoozed', 'dismissed'];
 
 async function currentItems(today, caps) {

@@ -116,9 +116,9 @@ function buildSources(sc, viewer) {
   add('quote_sent', { from: quoteFrom, where: `${qWhere.sql} AND q.quote_sent_at IS NOT NULL`, params: qWhere.params, at: 'q.quote_sent_at', idCol: 'q.id', select: `${quoteCols}, q.quote_sent_at AS at`, map: quoteMap('Quote sent') });
   add('quote_accepted', { from: quoteFrom, where: `${qWhere.sql} AND q.accepted_at IS NOT NULL`, params: qWhere.params, at: 'q.accepted_at', idCol: 'q.id', select: `${quoteCols}, q.accepted_at AS at`, map: quoteMap('Quote accepted') });
   // Phase 4b: what the quote's own event log adds. 'Page opened' is approximate (a mail scanner that runs scripts could cause it) and says so; a quote is never called "viewed" otherwise.
-  add('quote_event', { from: `crm_quote_events e JOIN quote_requests q ON q.id = e.quote_id LEFT JOIN crm_opportunities so ON so.id = q.opportunity_id`, where: `${qWhere.sql} AND e.event_type IN ('page_opened', 'superseded')`, params: qWhere.params, at: 'e.created_at', idCol: 'e.id',
+  add('quote_event', { from: `crm_quote_events e JOIN quote_requests q ON q.id = e.quote_id LEFT JOIN crm_opportunities so ON so.id = q.opportunity_id`, where: `${qWhere.sql} AND e.event_type IN ('page_opened', 'superseded', 'declined', 'decline_undone', 'send_failed', 'expired')`, params: qWhere.params, at: 'e.created_at', idCol: 'e.id',
     select: 'e.id, e.event_type, e.detail, e.created_at AS at, q.quote_number, q.quoted_product_name, q.opportunity_id, so.name AS deal_name',
-    map: r => ({ type: 'quote', title: r.event_type === 'page_opened' ? 'Quote page opened (approximate)' : 'Quote replaced by a newer version',
+    map: r => ({ type: 'quote', title: ({ page_opened: 'Quote page opened (approximate)', declined: 'Quote declined', decline_undone: 'Quote decline undone', send_failed: 'Quote email could not be sent', expired: 'Quote expired with no answer' })[r.event_type] || 'Quote replaced by a newer version',
       detail: trunc([r.quote_number ? `Quote ${r.quote_number}` : `Quote #${r.id}`, r.quoted_product_name].filter(Boolean).join(' · '), 200), link: dealLink(r), ...dealBits(r) }) });
   add('quote_created', { from: quoteFrom, where: qWhere.sql, params: qWhere.params, at: 'q.created_at', idCol: 'q.id', select: `${quoteCols}, q.created_at AS at`, map: quoteMap('Quote started') });
 

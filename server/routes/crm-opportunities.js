@@ -183,6 +183,12 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
     `SELECT id, quote_number, status, quoted_amount_cents, quote_sent_at, quote_valid_until, accepted_at, revision_number, version_status, supersedes_quote_id,
             acceptance_name, acceptance_title, acceptance_recorded_at, acceptance_recorded_by, acceptance_terms_version, acceptance_document_hash
      FROM quote_requests WHERE opportunity_id = ? ORDER BY id`, [o.id]);
+  // G13: which quotes were declined. A separate read, so a database without the decline columns yet still shows the deal.
+  const declinedBy = new Map();
+  try {
+    const [dq] = await pool.query('SELECT id, declined_at, declined_by, decline_reason FROM quote_requests WHERE opportunity_id = ? AND declined_at IS NOT NULL', [o.id]);
+    for (const r of dq) declinedBy.set(Number(r.id), r);
+  } catch (err) { if (!/declined_at|no such column/i.test(String(err.message)) && err.code !== 'ER_BAD_FIELD_ERROR') throw err; }
   const [purchases] = await pool.query(
     `SELECT p.id, p.payment_status, p.payment_method, p.amount_cents, p.license_status, p.quote_id
      FROM purchases p JOIN quote_requests q ON q.id = p.quote_id WHERE q.opportunity_id = ? ORDER BY p.id`, [o.id]);
@@ -196,6 +202,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
     quotes: quotes.map(q => ({
       id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at, validUntil: q.quote_valid_until, acceptedAt: q.accepted_at,
       revisionNumber: Number(q.revision_number || 1), versionStatus: q.version_status || 'current', supersedesQuoteId: q.supersedes_quote_id || null,
+      // G13: declined by the customer or recorded by staff. The reason is the customer's own text, so Read-only does not get it (like the signer's name).
+      declined: declinedBy.has(Number(q.id)) ? { at: declinedBy.get(Number(q.id)).declined_at, by: declinedBy.get(Number(q.id)).declined_by || 'customer', reason: can(req.crm.role, 'write') ? (declinedBy.get(Number(q.id)).decline_reason || null) : null } : null,
       // Who accepted and what they were shown (staff only). The hash is shortened: it proves the record, it is not a secret, but nobody reads 64 characters.
       // Read-only gets no signer name or title (a named person at the customer); they still see that it was accepted, when and how (punch list S7).
       acceptance: q.acceptance_recorded_at && q.accepted_at ? { name: can(req.crm.role, 'write') ? q.acceptance_name : null, title: can(req.crm.role, 'write') ? q.acceptance_title : null, at: q.acceptance_recorded_at, by: q.acceptance_recorded_by, termsVersion: q.acceptance_terms_version, documentHash: q.acceptance_document_hash ? String(q.acceptance_document_hash).slice(0, 12) : null } : null,

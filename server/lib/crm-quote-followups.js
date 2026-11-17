@@ -16,6 +16,8 @@ const A = require('./crm-attention');
 
 const SWITCH = 'crm_quote_followup_tasks';
 const LOOKBACK_DAYS = 60;
+// G13: a declined quote has been answered, so it gets no follow-up task. An install without the decline column yet runs without this test (see the retry below).
+const DECLINED_TEST = 'q.declined_at IS NULL';
 
 function isMissing(err) {
   return err && (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE' || /no such (table|column)|has no column named/i.test(String(err.message)));
@@ -72,13 +74,14 @@ async function createFollowUps(conn, { apply = false, now, today, days } = {}) {
     if (!isMissing(err)) throw err;
     return { ...out, available: false }; // alter-create-crm-quote-followups.js has not been run: nothing can be made safely
   }
-  [quotes] = await conn.query(
+  const run = (declinedOk) => conn.query(
     `SELECT q.id, q.quote_number, q.quote_sent_at, q.opportunity_id, q.contact_id, q.email, o.owner_admin_id
      FROM quote_requests q LEFT JOIN crm_opportunities o ON o.id = q.opportunity_id
-     WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND q.version_status <> 'superseded' AND q.status IN ('new', 'contacted')
+     WHERE q.quote_sent_at IS NOT NULL AND q.accepted_at IS NULL AND ${declinedOk} AND q.version_status <> 'superseded' AND q.status IN ('new', 'contacted')
        AND q.quote_sent_at < ? AND q.quote_sent_at >= ? AND (o.id IS NULL OR o.state = 'open')
        AND LOWER(TRIM(q.email)) NOT LIKE '%@example.com' ORDER BY q.quote_sent_at, q.id`,
     [`${addDays(today, 1 - n)} 00:00:00`, `${addDays(today, -LOOKBACK_DAYS)} 00:00:00`]);
+  try { [quotes] = await run(DECLINED_TEST); } catch (err) { if (!isMissing(err)) throw err; [quotes] = await run('1 = 1'); }
   for (const q of quotes) {
     out.eligible++;
     if (ledger.has(Number(q.id))) { out.alreadyMade++; continue; }

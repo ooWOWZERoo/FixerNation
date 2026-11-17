@@ -13,6 +13,7 @@ const { purchaseIdForQuote, openCardPurchaseIdForQuote, dropStaleOpenCardPurchas
 const { cleanSigner, evidenceColumns } = require('../lib/quote-evidence');
 const { limiter } = require('../lib/rate-limit');
 const { audit } = require('../lib/audit');
+const quoteDecline = require('../lib/quote-decline');
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: quote events and the deal moving to Won (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
@@ -34,6 +35,8 @@ function quoteStatus(quote) {
   if (quote.accepted_at) return 'already_accepted';
   // Phase 4b: a newer revision was SENT, so this link no longer accepts. (A quote row from before the column existed has no version_status: it is current.)
   if (quote.version_status === 'superseded') return 'superseded';
+  // G13: the customer (or staff for them) declined it. A declined quote cannot be accepted until staff undo the decline.
+  if (quote.declined_at) return 'declined';
   if (quote.quote_valid_until) {
     const expiry = new Date(quote.quote_valid_until);
     expiry.setHours(23, 59, 59, 999);
@@ -219,13 +222,14 @@ async function acceptQuoteViaPO(quoteId, poNumber, req, opts = {}) {
     const evidence = opts.signer ? await evidenceColumns(connection, quote, opts.signer, opts.recordedBy) : {};
     const evidenceKeys = Object.keys(evidence);
     const [claimResult] = await connection.query(
-      `UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted'${evidenceKeys.map(k => `, ${k} = ?`).join('')} WHERE id = ? AND accepted_at IS NULL AND version_status <> 'superseded'`,
+      `UPDATE quote_requests SET accepted_at = NOW(), accepted_payment_method = 'po', status = 'converted'${evidenceKeys.map(k => `, ${k} = ?`).join('')} WHERE id = ? AND accepted_at IS NULL${'declined_at' in quote ? ' AND declined_at IS NULL' : ''} AND version_status <> 'superseded'`,
       [...evidenceKeys.map(k => evidence[k]), quote.id]
     );
     if (claimResult.affectedRows === 0) {
       // Punch list S15: say WHY the claim failed. A revision sent between the read above and this claim also ends here, and the buyer should be told that, not "already accepted".
-      const [[now]] = await connection.query('SELECT accepted_at, version_status FROM quote_requests WHERE id = ?', [quote.id]);
+      const [[now]] = await connection.query('SELECT * FROM quote_requests WHERE id = ?', [quote.id]);
       if (now && !now.accepted_at && now.version_status === 'superseded') throw Object.assign(new Error('superseded'), { status: 400 });
+      if (now && !now.accepted_at && now.declined_at) throw Object.assign(new Error('declined'), { status: 400 });
       throw Object.assign(new Error('already_accepted'), { status: 400 });
     }
 
@@ -477,6 +481,43 @@ router.post('/accept/invite', inviteLimit, async (req, res) => {
 
   await pool.query('UPDATE quote_requests SET admin_invited_at = NOW() WHERE id = ?', [quote.id]);
   res.json({ ok: true });
+});
+
+// G13: the customer declines. Anyone holding the quote link may; it is limited like the other link routes, checks that what it was sent is text, and changes only the quote's
+// decline columns (lib/quote-decline.js): the deal stays open and nothing is priced, bought or closed. Staff are emailed once, and a Needs Attention item asks them what to do.
+router.post('/decline', acceptLimit, async (req, res) => {
+  const { token, reason } = req.body || {};
+  if (typeof token !== 'string' || !token.trim()) return res.status(400).json({ error: 'Token is required' });
+  if (reason !== undefined && reason !== null && typeof reason !== 'string') return res.status(400).json({ error: 'The reason must be text.' });
+  if (typeof reason === 'string' && reason.trim().length > quoteDecline.REASON_MAX) return res.status(400).json({ error: `Please keep the reason to ${quoteDecline.REASON_MAX} characters or fewer.` });
+  const [[quote]] = await pool.query('SELECT * FROM quote_requests WHERE accept_token = ?', [token.trim()]);
+  const status = quoteStatus(quote);
+  if (status === 'declined') return res.json({ ok: true, already: true });
+  if (status !== 'valid') return res.status(400).json({ error: status });
+  let out;
+  try {
+    out = await quoteDecline.declineQuote(pool, quote.id, { by: 'customer', reason, now: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+  } catch (err) {
+    if (err instanceof quoteDecline.Refusal) return res.status(err.status === 503 ? 503 : 400).json({ error: err.code === 'not_found' ? 'not_found' : err.code });
+    throw err;
+  }
+  if (!out.already) {
+    // One email to the deal's owner, else the sales alert address. A failed email never undoes the decline; the Needs Attention item is the reliable signal.
+    try {
+      let to = null;
+      if (out.opportunityId) {
+        const [[o]] = await pool.query('SELECT a.email FROM crm_opportunities o JOIN admin_users a ON a.id = o.owner_admin_id WHERE o.id = ?', [out.opportunityId]).catch(() => [[null]]);
+        if (o && o.email) to = o.email;
+      }
+      const siteUrl = (process.env.SITE_URL || 'https://fixernationeducation.com').replace(/\/$/, '');
+      await sendSalesAlertEmail({
+        to: to || await getSetting('contact_email_sales_alerts'), subject: 'A customer declined a quote',
+        fields: { Quote: out.quoteNumber || `#${out.id}`, School: out.school, 'Their reason': out.reason },
+        linkUrl: out.opportunityId ? `${siteUrl}/admin-crm-opportunity.html?id=${out.opportunityId}` : `${siteUrl}/admin-quotes.html`, linkLabel: out.opportunityId ? 'Open the deal' : 'Open Quotes',
+      });
+    } catch (err) { console.error('quote decline: staff email failed:', err.message); }
+  }
+  res.json({ ok: true, already: out.already });
 });
 
 module.exports = { router, acceptQuoteViaPO };
