@@ -33,7 +33,7 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=2"></script>
+<script src="crm-common.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -57,7 +57,7 @@
   function shell() {
     // G17: a second tab lists accounts that share a website address, so duplicates can be found and merged.
     var tabs = '<ul class="crm-views" aria-label="Accounts views"><li><a href="admin-crm-accounts.html"' + (st.view === 'list' ? ' aria-current="true"' : '') + '>All accounts</a></li><li><a href="admin-crm-accounts.html?view=duplicates"' + (st.view === 'duplicates' ? ' aria-current="true"' : '') + '>Possible duplicates</a></li></ul>';
-    if (st.view === 'duplicates') { root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Possible duplicates</h2></div>' + tabs + '<p class="crm-small crm-muted" style="margin:0 0 12px;">Accounts of the same type with the same website address (capitals, www, https and a trailing slash are ignored; a shared email domain is never used). Open each one to compare, and a CRM Admin can merge them from the account page. Nothing is merged for you.</p><div id="dupBody" aria-live="polite"></div><div id="dupPager"></div></div>'; return; }
+    if (st.view === 'duplicates') { root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Possible duplicates</h2></div>' + tabs + '<p class="crm-small crm-muted" style="margin:0 0 12px;">Accounts of the same type with the same website address (capitals, www, https and a trailing slash are ignored; a shared email domain is never used), and accounts whose names look alike (same words in any order, or one spelling slip; "Maple Elementary" and "Maple High" are never matched, and neither are two schools in different states). Name matches are only suggestions. Open each one to compare, and a CRM Admin can merge them from the account page. Nothing is merged for you. If two really are different organizations, mark them as separate and they stop being listed; you can undo that at the bottom of this page.</p><div id="dupBody" aria-live="polite"></div><div id="dupPager"></div></div>'; return; }
     root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>Accounts</h2>' +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addAcct">+ Add account</button>' : '') + '</div>' +
       '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search accounts</label><input type="search" id="fQ" placeholder="Search by name or website" value="' + esc(st.q) + '"></div>' +
@@ -104,12 +104,52 @@
     C.loading(body);
     C.api('GET', '/api/crm/accounts/review/duplicates' + C.qstr({ page: st.page, pageSize: 20 })).then(function (r) {
       if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
-      if (!r.data.total) { body.innerHTML = C.empty('No two accounts share a website address.', '✅'); document.getElementById('dupPager').innerHTML = ''; return; }
+      var canMark = C.can('write') && r.data.memoryAvailable !== false;
+      if (!r.data.total) { body.innerHTML = C.empty(r.data.markedCount ? 'No two accounts are left that might be the same one.' : 'No two accounts share a website address.', '✅') + marked(); document.getElementById('dupPager').innerHTML = ''; loadMarked(); return; }
       body.innerHTML = r.data.groups.map(function (g) {
-        return '<div class="a-card" style="margin-bottom:12px;"><p class="crm-small"><strong>' + esc(g.domain) + '</strong> · ' + esc(g.accounts.length) + ' accounts</p><table class="a-table" aria-label="Accounts at ' + esc(g.domain) + '"><thead><tr><th scope="col">Name</th><th scope="col">What it is to us</th><th scope="col">People</th><th scope="col">Open deals</th></tr></thead><tbody>' +
-          g.accounts.map(function (a) { return '<tr><td><a class="crm-link" href="admin-crm-account.html?id=' + esc(a.id) + '">' + esc(a.name) + '</a><div class="crm-small crm-muted">' + esc(a.websiteDomain) + '</div></td><td>' + (REL[a.relationship] ? '<span class="a-pill ' + REL[a.relationship][1] + '">' + REL[a.relationship][0] + '</span>' : '') + '</td><td>' + C.num(a.people) + '</td><td>' + C.num(a.openDeals) + '</td></tr>'; }).join('') + '</tbody></table></div>';
-      }).join('');
+        var ids = g.accounts.map(function (a) { return a.id; });
+        var why = g.reason === 'similar_name' ? 'Similar names' : 'Same website: ' + g.domain;
+        var pairBtns = '';
+        if (canMark && g.accounts.length > 2) {
+          g.accounts.forEach(function (x, i) { g.accounts.slice(i + 1).forEach(function (y) { pairBtns += '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-sep="' + esc(x.id + ',' + y.id) + '">' + esc(x.name) + ' and ' + esc(y.name) + ' are separate</button> '; }); });
+        }
+        var bar = canMark ? '<p class="crm-row" style="gap:8px;flex-wrap:wrap;"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-sep="' + esc(ids.join(',')) + '">' + (g.accounts.length > 2 ? 'None of these are duplicates' : 'Not a duplicate') + '</button> ' + pairBtns + '</p>' : '';
+        return '<div class="a-card" style="margin-bottom:12px;"><p class="crm-small"><strong>' + esc(why) + '</strong> · ' + esc(g.accounts.length) + ' accounts</p><table class="a-table" aria-label="' + esc(why) + '"><thead><tr><th scope="col">Name</th><th scope="col">What it is to us</th><th scope="col">People</th><th scope="col">Open deals</th></tr></thead><tbody>' +
+          g.accounts.map(function (a) { return '<tr><td><a class="crm-link" href="admin-crm-account.html?id=' + esc(a.id) + '">' + esc(a.name) + '</a><div class="crm-small crm-muted">' + esc(a.websiteDomain) + '</div></td><td>' + (REL[a.relationship] ? '<span class="a-pill ' + REL[a.relationship][1] + '">' + REL[a.relationship][0] + '</span>' : '') + '</td><td>' + C.num(a.people) + '</td><td>' + C.num(a.openDeals) + '</td></tr>'; }).join('') + '</tbody></table>' + bar + '</div>';
+      }).join('') + marked();
+      body.querySelectorAll('[data-sep]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          b.disabled = true;
+          C.api('POST', '/api/crm/accounts/review/not-duplicates', { accountIds: b.getAttribute('data-sep').split(',').map(Number) }).then(function (x) {
+            if (!x.ok) { C.toast(C.problem(x)); b.disabled = false; return; }
+            C.toast('Marked as separate. You can undo it from the list at the bottom.'); fetchDupes();
+          });
+        });
+      });
       C.pager(document.getElementById('dupPager'), r.data, function (n) { st.page = n; fetchDupes(); window.scrollTo(0, 0); });
+      loadMarked();
+    });
+  }
+
+  // Pairs a person has said are separate organizations. Shown at the bottom of the tab so a mistake can be undone; undoing brings the pair back into the list above.
+  function marked() { return '<details id="markedBox" style="margin-top:16px;"><summary>Marked as not a duplicate</summary><div id="markedBody" aria-live="polite" style="margin-top:8px;"></div></details>'; }
+  function loadMarked() {
+    var el = document.getElementById('markedBody'); if (!el) return;
+    C.api('GET', '/api/crm/accounts/review/not-duplicates?pageSize=100').then(function (r) {
+      if (!r.ok) { el.innerHTML = '<p class="crm-small crm-muted">' + esc(C.problem(r)) + '</p>'; return; }
+      if (r.data.available === false) { el.innerHTML = '<p class="crm-small crm-muted">This is not available yet. Ask the person who runs the site to run the not-a-duplicate update.</p>'; return; }
+      if (!r.data.pairs.length) { el.innerHTML = '<p class="crm-small crm-muted">Nothing is marked yet.</p>'; return; }
+      el.innerHTML = '<ul class="crm-list">' + r.data.pairs.map(function (p) {
+        return '<li><div class="crm-item-main"><a class="crm-link" href="admin-crm-account.html?id=' + esc(p.a.id) + '">' + esc(p.a.name) + '</a> and <a class="crm-link" href="admin-crm-account.html?id=' + esc(p.b.id) + '">' + esc(p.b.name) + '</a>' +
+          '<div class="crm-small crm-muted">Marked ' + esc(C.date(p.decidedAt)) + (p.decidedBy ? ' by ' + esc(p.decidedBy) : '') + '</div></div>' +
+          (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-undo="' + esc(p.id) + '">Undo</button>' : '') + '</li>';
+      }).join('') + '</ul>' + (r.data.total > r.data.pairs.length ? '<p class="crm-small crm-muted">Showing the newest ' + C.num(r.data.pairs.length) + ' of ' + C.num(r.data.total) + '.</p>' : '');
+      el.querySelectorAll('[data-undo]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          b.disabled = true;
+          C.api('DELETE', '/api/crm/accounts/review/not-duplicates/' + encodeURIComponent(b.getAttribute('data-undo')), {}).then(function (x) { if (!x.ok) { C.toast(C.problem(x)); b.disabled = false; return; } C.toast('Back in the list.'); fetchDupes(); });
+        });
+      });
     });
   }
 

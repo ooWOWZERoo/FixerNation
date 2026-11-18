@@ -296,12 +296,21 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
        FROM crm_tasks t LEFT JOIN admin_users au ON au.id = t.assigned_admin_id
          LEFT JOIN crm_opportunities so ON so.id = t.opportunity_id LEFT JOIN crm_accounts sa ON sa.id = t.account_id LEFT JOIN newsletter_contacts sc ON sc.id = t.contact_id
        WHERE t.state = 'open' AND t.remind_on IS NOT NULL AND t.remind_on <= ? ORDER BY t.remind_on, t.id`, [today]);
+    // A reminder with a time of day has its own email at that time once the owner has switched those on (crm_task_reminder_emails), so it is left out of the daily digest (the page still
+    // lists it). Read apart so an install without the time columns, or with the switch off, behaves exactly as before.
+    const timed = new Set();
+    try {
+      const [[sw]] = await conn.query("SELECT setting_value FROM settings WHERE setting_key = 'crm_task_reminder_emails'").then(r => r, () => [[undefined]]);
+      if (sw && sw.setting_value === 'true') { const [tr] = await conn.query("SELECT id FROM crm_tasks WHERE state = 'open' AND remind_on IS NOT NULL AND remind_time IS NOT NULL AND remind_tz IS NOT NULL"); tr.forEach(x => timed.add(Number(x.id))); }
+    } catch (err) { if (!(err && (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE' || /no such (table|column)|has no column named/i.test(String(err.message))))) throw err; }
     for (const r of rows) {
       const where = r.opportunity_id ? { link: pageFor.opportunity + r.opportunity_id, context: r.deal_name, dealId: Number(r.opportunity_id) }
         : r.contact_id ? { link: pageFor.contact + r.contact_id, context: r.contact_name || r.contact_email }
         : { link: pageFor.account + r.account_id, context: r.account_name };
+      const idx = items.length;
       items.push(item('task_reminder', r.id, { ...where, title: r.title, ownerAdminId: r.assigned_admin_id || null, ownerName: r.assignee_name || null, fingerprint: day10(r.remind_on),
         why: `You asked to be reminded about this task on ${day10(r.remind_on)}${r.due_on ? ` (it is due ${day10(r.due_on)})` : ''}.` }));
+      if (timed.has(Number(r.id))) items[idx].noDigest = true;
     }
   });
 
@@ -404,7 +413,7 @@ async function runDaily(conn, { apply, now, sendDigest, trialTasks = false }) {
   let digests = 0;
   if (apply && sendDigest && fresh.length) {
     const owners = new Map();
-    for (const it of fresh) if (it.ownerAdminId) { if (!owners.has(it.ownerAdminId)) owners.set(it.ownerAdminId, []); owners.get(it.ownerAdminId).push(it); }
+    for (const it of fresh) if (it.ownerAdminId && !it.noDigest) { if (!owners.has(it.ownerAdminId)) owners.set(it.ownerAdminId, []); owners.get(it.ownerAdminId).push(it); }
     // Punch list S14: an item whose digest could not go out (mail down, the owner has no address yet) is taken back out of "first seen", so the next daily run finds it new
     // again and tries again. Before this, it was marked seen and never mailed. Items seen while the digest was OFF are not touched, so switching it on never floods anyone.
     const unsee = (list) => Promise.all(list.map(it => conn.query('DELETE FROM crm_attention_events WHERE rule_key = ? AND subject_type = ? AND subject_id = ? AND fingerprint = ? AND emailed_at IS NULL', [it.ruleKey, it.subjectType, it.subjectId, it.fingerprint || ''])));

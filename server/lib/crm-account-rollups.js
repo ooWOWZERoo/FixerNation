@@ -4,11 +4,13 @@
 //     trailing slash, a port, a query or a # fragment are ignored) are listed together so staff can merge them. Same host with a DIFFERENT path is not a match (a district's schools
 //     often sit under one site), a few shared sites (social networks) never match, and a shared EMAIL domain is never used (the CRM's rule since the accounts phase). Nothing is merged,
 //     archived or changed here: the existing CRM-Admin merge does that, on purpose and by hand.
+//     G17 follow-up: groups of accounts with LIKE NAMES are listed too (similarNameAccounts), as suggestions only.
 //  2. Rollups: the paid purchases placed on an account (the one Customer rule, lib/crm-classification.js QUALIFYING_SQL: paid, more than $0, not a trial; test addresses left out; a
 //     purchase is placed by its school, or for a district by any school in it, the same placement the Customer label uses) and its deals. A district's figures include its schools.
 //     An amount is only ever what the paid purchases say, never a deal value or a quote; "none" is a real zero because a purchase with no amount is never counted as paid.
 const cls = require('./crm-classification');
 const { DEAL_REAL_SQL } = require('./crm-reports');
+const NM = require('./crm-name-match'); // names that are alike (suggest only)
 
 const NOT_TEST_BUYER = "LOWER(TRIM(c.email)) NOT LIKE '%@example.com'";
 // Sites that many unrelated organizations list as their "website": never a reason to call two accounts the same.
@@ -46,6 +48,18 @@ async function duplicateAccounts(conn) {
     groups.get(k).accounts.push({ id: Number(r.id), name: r.name, accountType: r.account_type, websiteDomain: r.website_domain, people: Number(r.people), openDeals: Number(r.open_deals) });
   }
   return [...groups.values()].filter(g => g.accounts.length >= 2).sort((a, b) => a.domain.localeCompare(b.domain));
+}
+
+// Groups of live accounts whose NAMES are alike (lib/crm-name-match.js: same words or one spelling slip, same type, same state when both have one, never a different school level).
+// `skipPairs` are pairs already listed because they share a website. Each group carries `edges` (the pairs that really are alike). A suggestion for a person to look at, nothing more.
+async function similarNameAccounts(conn, skipPairs) {
+  const [rows] = await conn.query(
+    `SELECT a.id, a.name, a.account_type, a.state, a.website_domain,
+       (SELECT COUNT(*) FROM crm_account_contacts ac WHERE ac.account_id = a.id AND ac.ended_on IS NULL) AS people,
+       (SELECT COUNT(*) FROM crm_opportunities o WHERE o.account_id = a.id AND o.state = 'open') AS open_deals
+     FROM crm_accounts a WHERE a.archived_at IS NULL ORDER BY a.id`);
+  const { groups, truncated } = NM.similarNameGroups(rows.map(r => ({ id: Number(r.id), name: r.name, accountType: r.account_type, state: r.state, websiteDomain: r.website_domain || '', people: Number(r.people), openDeals: Number(r.open_deals) })), { skipPairs });
+  return { groups: groups.map(g => ({ domain: null, reason: 'similar_name', accounts: g.accounts.map(a => ({ id: a.id, name: a.name, accountType: a.accountType, websiteDomain: a.websiteDomain, state: a.state || null, people: a.people, openDeals: a.openDeals })), edges: g.edges })), truncated };
 }
 
 // The other live accounts that share this account's website address and type (for the account page). At most 5.
@@ -99,4 +113,4 @@ async function accountRollup(conn, account, today) {
   };
 }
 
-module.exports = { domainKey, duplicateAccounts, duplicatesOf, purchaseTotals, accountRollup, SHARED_HOSTS };
+module.exports = { domainKey, duplicateAccounts, similarNameAccounts, duplicatesOf, purchaseTotals, accountRollup, SHARED_HOSTS };

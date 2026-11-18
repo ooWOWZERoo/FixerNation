@@ -145,6 +145,13 @@ test('BEFORE THE ALTER SCRIPT: tasks still list, save and sort, and a note still
     const l = await call('GET', `/api/crm/tasks?assignee=me&today=${TODAY}`, undefined, sales);
     assert.equal(l.status, 200); assert.equal(l.json.tasks[0].priority, 'normal'); assert.equal(l.json.tasks[0].source, 'manual'); assert.equal(l.json.summary.reminders, null);
     assert.equal((await post({ dueOn: ymd(4) })).status, 201);
+    // The screens ALWAYS send priority and remindOn. Before the alter script that must still save the task (without them), not answer 500.
+    const ui = await post({ dueOn: ymd(4), priority: 'normal', remindOn: null });
+    assert.equal(ui.status, 201, 'a task from the screen saves before the alter script has run');
+    assert.equal(get('SELECT title FROM crm_tasks WHERE id = ?', ui.json.id).title, 'G14 task');
+    assert.equal((await call('PUT', `/api/crm/tasks/${t}`, { title: 'renamed', priority: 'high', remindOn: null }, sales)).status, 200, 'an edit from the screen saves the rest');
+    assert.equal(get('SELECT title FROM crm_tasks WHERE id = ?', t).title, 'renamed');
+    assert.equal((await call('PUT', `/api/crm/tasks/${t}`, { priority: 'high' }, sales)).status, 400, 'only a priority change, with nowhere to keep it, says so plainly');
     assert.equal((await call('PUT', `/api/crm/tasks/${t}`, { title: 'renamed' }, sales)).status, 200);
     assert.equal((await call('PUT', `/api/crm/notes/${n}`, { body: 'changed' }, sales)).status, 200);
     assert.equal((await call('GET', `/api/crm/notes?opportunityId=${myDeal}`, undefined, sales)).json.notes[0].body, 'changed');

@@ -11,6 +11,8 @@ const { engagementFor } = require('../lib/crm-engagement');
 const rel = require('../lib/crm-account-relationship');
 const FILT = require('../lib/crm-filters'); // G19: buying role and license status filters
 const roll = require('../lib/crm-account-rollups'); // G17: duplicate review by website address, and paid purchase and deal rollups
+const NM = require('../lib/crm-name-match'); // names that are alike: a warning, never an automatic link or merge
+const ND = require('../lib/crm-account-not-duplicates'); // "not a duplicate" memory for that review (a pair a person has said is separate)
 
 const router = express.Router();
 
@@ -81,13 +83,41 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
 // G17: live accounts of the same type that share a website address. Read only: nothing is merged, archived or changed; merging is the CRM Admin's own action on the account.
 router.get('/review/duplicates', requireAuth, requireCrm('view'), async (req, res) => {
   const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
-  const found = await roll.duplicateAccounts(pool);
+  // Pairs a person has said are separate organizations (ND) are taken out after the groups are found; a database without that table yet remembers nothing.
+  const memory = await ND.dismissedPairs(pool);
+  // Two reasons to list accounts together: they share a website address, or their names are alike (suggestions only; see lib/crm-name-match.js). A pair already listed for its website is not listed again for its name.
+  const web = await roll.duplicateAccounts(pool);
+  const webPairs = new Set();
+  for (const g of web) for (let i = 0; i < g.accounts.length; i++) for (let j = i + 1; j < g.accounts.length; j++) webPairs.add(ND.keyOf(g.accounts[i].id, g.accounts[j].id));
+  const names = await roll.similarNameAccounts(pool, webPairs);
+  const found = ND.applyMemory([...web.map(g => ({ ...g, reason: 'website' })), ...names.groups], memory.set);
   const shown = found.slice(offset, offset + size);
   const relMap = await rel.accountRelationships(pool);
   res.json({
-    groups: shown.map(g => ({ domain: g.domain, accounts: g.accounts.map(a => ({ ...a, relationship: (relMap.get(a.id) || {}).relationship || null })) })),
-    total: found.length, page, pageSize: size,
+    groups: shown.map(g => ({ domain: g.domain, reason: g.reason, accounts: g.accounts.map(a => ({ ...a, relationship: (relMap.get(a.id) || {}).relationship || null })) })),
+    total: found.length, page, pageSize: size, memoryAvailable: memory.available, markedCount: memory.set.size, namesTruncated: names.truncated,
   });
+});
+
+// The pairs a person has marked "not a duplicate", newest first, so one can be brought back. Read: every role. Mark and undo: CRM Admin and Sales (the write action). Neither changes an account.
+router.get('/review/not-duplicates', requireAuth, requireCrm('view'), async (req, res) => {
+  const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
+  const out = await ND.listMarked(pool, { limit: size, offset });
+  res.json({ pairs: out.pairs, total: out.total, page, pageSize: size, available: out.available });
+});
+
+router.post('/review/not-duplicates', requireAuth, requireCrm('write'), async (req, res) => {
+  const r = await ND.mark(pool, (req.body || {}).accountIds, req.crm.adminId);
+  if (r.error) return res.status(r.status).json({ error: r.error, ...(r.code ? { code: r.code } : {}) });
+  if (r.marked) await crmAudit(req, { action: 'crm_account_not_duplicate_marked', entityType: 'crm_account', entityId: r.pairs[0][0], next: { pairs: r.pairs } });
+  res.status(r.marked ? 201 : 200).json({ ok: true, marked: r.marked, alreadyMarked: r.already });
+});
+
+router.delete('/review/not-duplicates/:id', requireAuth, requireCrm('write'), async (req, res) => {
+  const r = await ND.unmark(pool, req.params.id);
+  if (r.error) return res.status(r.status).json({ error: r.error, ...(r.code ? { code: r.code } : {}) });
+  await crmAudit(req, { action: 'crm_account_not_duplicate_undone', entityType: 'crm_account', entityId: r.pair[0], prev: { pair: r.pair } });
+  res.json({ ok: true });
 });
 
 // G1 (decision D4): paid, non-trial purchases that name no school, so they cannot be placed on an account. Each shows the buyer and the accounts the buyer belongs to, so staff
@@ -119,7 +149,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
   const relation = (await rel.accountRelationships(pool)).get(Number(a.id)) || null;
   const todayDay = typeof req.query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.today) ? req.query.today : new Date().toISOString().slice(0, 10);
   const rollup = await roll.accountRollup(pool, a, todayDay);          // G17: paid purchases and deals
-  const possibleDuplicates = a.archived_at ? [] : await roll.duplicatesOf(pool, a); // G17: other live accounts with the same website address
+  // G17: other live accounts with the same website address, less any a person has said are separate.
+  const possibleDuplicates = a.archived_at ? [] : ND.keepSuspected(a.id, await roll.duplicatesOf(pool, a), (await ND.dismissedPairs(pool)).set);
   res.json({
     rollup, possibleDuplicates,
     account: { ...accountRow(a), relationship: relation ? relation.relationship : null, needsReview: relation ? relation.needsReview : false, relationshipWhy: relation ? relation.why : null },
@@ -168,7 +199,11 @@ router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
   if (b.allowDuplicate !== true) {
     const [same] = await pool.query('SELECT id, name FROM crm_accounts WHERE archived_at IS NULL');
     const hit = same.find(r => normName(r.name) === normName(c.fields.name));
-    if (hit) return res.status(409).json({ code: 'possible_duplicate', existingAccountId: hit.id, error: `An account named "${hit.name}" already exists. Open it, or send allowDuplicate to create another.` });
+    if (hit) return res.status(409).json({ code: 'possible_duplicate', kind: 'same_name', existingAccountId: hit.id, error: `An account named "${hit.name}" already exists. Open it, or send allowDuplicate to create another.` });
+    // Not the same name, but one that looks alike (same words, or one spelling slip; same type and state). A suggestion: say so once, and a second try with allowDuplicate goes ahead.
+    const [live] = await pool.query('SELECT id, name, account_type, state FROM crm_accounts WHERE archived_at IS NULL');
+    const similar = NM.suggestFor({ name: c.fields.name, accountType: c.fields.account_type, state: c.fields.state }, live.map(a => NM.prepare({ id: Number(a.id), name: a.name, accountType: a.account_type, state: a.state })), { limit: 3 });
+    if (similar.length) return res.status(409).json({ code: 'possible_duplicate', kind: 'similar_name', existingAccountId: similar[0].id, similarAccounts: similar.map(a => ({ id: a.id, name: a.name, state: a.state })), error: `A similar account already exists: "${similar[0].name}"${similar[0].state ? ` (${similar[0].state})` : ''}. Open it, or send allowDuplicate to create another.` });
   }
   const f = { ...c.fields, created_by_admin_id: req.crm.adminId };
   if (!('assigned_admin_id' in f)) f.assigned_admin_id = null;

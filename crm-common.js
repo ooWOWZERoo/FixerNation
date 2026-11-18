@@ -211,17 +211,27 @@
     opts = opts || {};
     var search = form.querySelector('[data-pick-q="' + kind + '"]');
     var select = form.querySelector('[data-pick="' + kind + '"]');
+    var seq = 0; // an answer that arrives after a newer search was started is dropped, so it cannot wipe what the person just chose
     function run() {
       var q = search.value.trim();
       var params = { q: q, pageSize: 20 };
       if (kind === 'opportunities') params.state = 'open';
       if (kind === 'contacts') params.includeTest = 'true'; // a picker finds anyone; only the default lists and counts hide test addresses
+      var mine = ++seq;
       C.api('GET', '/api/crm/' + kind + C.qstr(params)).then(function (r) {
+        if (mine !== seq) return;
         var rows = (r.ok && r.data[kind]) || [];
+        var keep = select.value; // a row the person already clicked stays chosen when it is still in the new results
         select.innerHTML = rows.length ? rows.map(function (x) {
           var text = kind === 'contacts' ? ((x.name || '(no name)') + ' — ' + x.email) : kind === 'accounts' ? x.name : (x.name + ' — ' + (x.accountName || ''));
           return '<option value="' + esc(x.id) + '">' + esc(text) + '</option>';
-        }).join('') : '<option value="">No matches</option>';
+        }).join('') : '<option value="" disabled>No matches</option>';
+        if (rows.length) {
+          var found = false;
+          if (keep) for (var i = 0; i < select.options.length; i++) if (select.options[i].value === keep) { select.selectedIndex = i; found = true; break; }
+          // Only a caller that asks (opts.preselect, the Add a task dialog) gets the first row chosen for it. Merge dialogs never do: merging into whichever row came first would be a destructive guess.
+          if (!found) { if (opts.preselect) select.selectedIndex = 0; else select.selectedIndex = -1; }
+        }
         if (opts.onResults) opts.onResults(rows);
       });
     }

@@ -104,7 +104,7 @@ test('PAGES AND RULES: the accounts page has the duplicates tab and the Paid col
   const read = (f) => fs.readFileSync(path.join(env.SERVER, f), 'utf8');
   const accounts = read('../admin-crm-accounts.html'), account1 = read('../admin-crm-account.html');
   for (const k of ['view=duplicates', 'fetchDupes', 'review/duplicates', 'Paid purchases', 'a.paid']) assert.ok(accounts.includes(k), k);
-  assert.match(accounts, /esc\(g\.domain\)/); assert.match(accounts, /esc\(a\.websiteDomain\)/);
+  assert.match(accounts, /esc\(why\)/); assert.match(accounts, /g\.domain/); assert.match(accounts, /esc\(a\.websiteDomain\)/);
   for (const k of ['Paid purchases and deals', 'data.rollup', 'possibleDuplicates', 'Includes purchases for the schools']) assert.ok(account1.includes(k), k);
   assert.match(account1, /esc\(d\.name\)/); assert.match(account1, /esc\(i\.product/);
   const lib = read('lib/crm-account-rollups.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');

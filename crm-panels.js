@@ -49,7 +49,7 @@
       var m = '';
       if (t.priority === 'high') m += ' · <span class="crm-flag">High priority</span>';
       if (t.priority === 'low') m += ' · low priority';
-      if (t.remindOn && t.state !== 'done') m += ' · remind ' + esc(C.date(t.remindOn));
+      if (t.remindOn && t.state !== 'done') m += ' · remind ' + esc(C.date(t.remindOn)) + (t.remindTime ? ' at ' + esc(t.remindTime) : '');
       if (t.quote) m += ' · <a class="crm-link" href="admin-quotes.html?quote=' + encodeURIComponent(t.quote.id) + '">Quote ' + esc(t.quote.number || '#' + t.quote.id) + '</a>';
       if (SOURCE[t.source]) m += ' · ' + esc(SOURCE[t.source]);
       return m;
@@ -90,9 +90,11 @@
           C.field('For', '<select id="tWho">' + C.ownerOptions(staff, t ? t.assignedAdminId : C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>' +
           '<div class="a-form-row">' + C.field('Priority', '<select id="tPrio">' + [['normal', 'Normal'], ['high', 'High'], ['low', 'Low']].map(function (o) { return '<option value="' + o[0] + '"' + ((t ? t.priority : 'normal') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>', '', 'tPrio') +
           C.field('Remind me on (optional)', '<input type="date" id="tRemind" value="' + esc(t && t.remindOn ? String(t.remindOn).slice(0, 10) : '') + '">', 'Not after the due day. It shows on Needs Attention that day.', 'tRemind') + '</div>' +
+          C.field('At what time? (optional)', '<input type="time" id="tRemindAt" value="' + esc(t && t.remindTime ? t.remindTime : '') + '">', 'Needs a reminder date. Once the owner has switched reminder emails on, you get one email at this time (' + esc(t && t.remindTz ? t.remindTz : browserZone() || 'your time zone').replace(/_/g, ' ') + ').', 'tRemindAt') +
           (s.quotes && s.quotes.length ? C.field('About a quote (optional)', '<select id="tQuote"><option value="">No quote</option>' + s.quotes.map(function (q) { return '<option value="' + esc(q.id) + '"' + (t && t.quote && Number(t.quote.id) === Number(q.id) ? ' selected' : '') + '>' + esc(q.number || '#' + q.id) + '</option>'; }).join('') + '</select>', 'One of this deal\u2019s own quotes.', 'tQuote') : ''),
         onSubmit: function (f) {
           var body = { title: f.querySelector('#tTitle').value, details: f.querySelector('#tDetails').value, dueOn: f.querySelector('#tDue').value || null, assignedAdminId: Number(f.querySelector('#tWho').value), priority: f.querySelector('#tPrio').value, remindOn: f.querySelector('#tRemind').value || null };
+          var at = f.querySelector('#tRemindAt').value; body.remindTime = at || null; if (at) body.remindTz = (t && t.remindTz) || browserZone(); // the time of day, in the zone the browser is in (or the one it was saved with)
           var qsel = f.querySelector('#tQuote'); if (qsel) body.quoteId = qsel.value ? Number(qsel.value) : null;
           if (!body.assignedAdminId) return 'Pick who will do it.';
           var req = t ? api('PUT', '/api/crm/tasks/' + t.id, body) : api('POST', '/api/crm/tasks', withSubject(s, body));

@@ -21,7 +21,7 @@ test('PAGES: all eleven Customer Hub pages exist and load the shared admin asset
     assert.match(html, /admin-common\.js\?v=17/, f);
     assert.match(html, /admin-shell\.js\?v=12/, f);
     assert.match(html, /crm-common\.css\?v=3/, f);
-    assert.match(html, /crm-common\.js\?v=2/, f);
+    assert.match(html, /crm-common\.js\?v=3/, f);
     assert.match(html, /<meta name="robots" content="noindex">/, `${f} is not for search engines`);
     assert.doesNotMatch(html, /fonts\.googleapis|cdn\.|unpkg|jsdelivr|cdnjs/i, `${f} loads nothing from a CDN`);
   }
@@ -113,7 +113,7 @@ test('SYNTAX: the shared admin scripts parse (one stray apostrophe in a page int
 test('PANELS (phase 3): the three record pages load crm-panels.js after crm-common.js, and each panel is drawn from there', () => {
   for (const f of PANEL_PAGES) {
     const html = read(f);
-    assert.match(html, /crm-common\.js\?v=2"><\/script>\s*<script src="crm-panels\.js\?v=3"><\/script>/, f);
+    assert.match(html, /crm-common\.js\?v=3"><\/script>\s*<script src="crm-panels\.js\?v=4"><\/script>/, f);
     for (const p of ['tasks', 'notes', 'files', 'meetings', 'timeline']) assert.match(html, new RegExp(`FnCrmPanels\\.${p}\\(`), `${f} draws the ${p} panel`);
   }
   assert.match(read('admin-crm-opportunity.html'), /FnCrmPanels\.checklist\(/, 'only a deal has a procurement checklist');

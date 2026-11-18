@@ -7,6 +7,8 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm, ALLOWED, ROLES, can } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { text, posInt, oneOf } = require('../lib/crm-common');
+const { setSetting } = require('../lib/settings');
+const EL = require('../lib/crm-engagement-limits'); // the numbers behind the engagement card's alerts
 
 const router = express.Router();
 
@@ -47,6 +49,30 @@ router.put('/staff/:id/role', requireAuth, requireCrm('assign_roles'), async (re
 router.get('/classification-rules', requireAuth, requireCrm('view'), async (req, res) => {
   const today = typeof req.query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.today) ? req.query.today : new Date().toISOString().slice(0, 10);
   res.json(await require('../lib/crm-classification-rules').overview(pool, today));
+});
+
+// Customer Hub follow-up to G18: the numbers behind the "Worth a look" alerts on the engagement card. Anyone with a CRM role can read them; only a CRM Admin (edit_settings) changes them.
+// Same all-or-nothing rule as the Needs Attention thresholds: an unknown key, a value that is not a whole number or one outside its limits refuses the whole change, and each change is
+// written to the audit log with the old and new values.
+router.get('/engagement-alerts', requireAuth, requireCrm('view'), async (req, res) => {
+  res.json({ limits: EL.limitView(await EL.loadLimits(pool)) });
+});
+router.put('/engagement-alerts', requireAuth, requireCrm('edit_settings'), async (req, res) => {
+  const body = (req.body && typeof req.body === 'object' && req.body.values && typeof req.body.values === 'object' && !Array.isArray(req.body.values)) ? req.body.values : null;
+  if (!body) return res.status(400).json({ error: 'Send the values to change.' });
+  const next = {};
+  for (const [key, v] of Object.entries(body)) {
+    const d = Object.prototype.hasOwnProperty.call(EL.LIMITS, key) ? EL.LIMITS[key] : null;
+    if (!d) return res.status(400).json({ error: `"${key}" is not a setting.` });
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < d.min || v > d.max) return res.status(400).json({ error: `${d.label}: use a whole number from ${d.min} to ${d.max}.` });
+    next[key] = v;
+  }
+  if (!Object.keys(next).length) return res.status(400).json({ error: 'Nothing to change.' });
+  const before = await EL.loadLimits(pool);
+  const changed = Object.keys(next).filter(k => before[k] !== next[k]);
+  for (const k of changed) await setSetting(EL.LIMITS[k].setting, String(next[k]));
+  if (changed.length) await crmAudit(req, { action: 'crm_engagement_alerts_changed', entityType: 'crm_attention', entityId: null, prev: Object.fromEntries(changed.map(k => [k, before[k]])), next: Object.fromEntries(changed.map(k => [k, next[k]])) });
+  res.json({ ok: true, changed, limits: EL.limitView(await EL.loadLimits(pool)) });
 });
 
 router.get('/stages', requireAuth, requireCrm('view'), async (req, res) => {

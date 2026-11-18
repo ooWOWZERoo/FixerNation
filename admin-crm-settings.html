@@ -33,7 +33,7 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=2"></script>
+<script src="crm-common.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -47,13 +47,13 @@
   });
 
   function load() {
-    Promise.all([C.api('GET', '/api/crm/stages'), C.api('GET', '/api/crm/loss-reasons'), C.api('GET', '/api/crm/staff'), C.api('GET', '/api/crm/checklists/templates'), C.api('GET', '/api/crm/attention/thresholds'), C.api('GET', '/api/crm/classification-rules?today=' + encodeURIComponent(C.todayLocal()))]).then(function (res) {
+    Promise.all([C.api('GET', '/api/crm/stages'), C.api('GET', '/api/crm/loss-reasons'), C.api('GET', '/api/crm/staff'), C.api('GET', '/api/crm/checklists/templates'), C.api('GET', '/api/crm/attention/thresholds'), C.api('GET', '/api/crm/engagement-alerts'), C.api('GET', '/api/crm/classification-rules?today=' + encodeURIComponent(C.todayLocal()))]).then(function (res) {
       for (var i = 0; i < res.length; i++) if (!res[i].ok) { C.errorBox(root, C.problem(res[i])); return; }
-      draw(res[0].data.stages, res[1].data.lossReasons, res[2].data.staff, res[3].data.templates, res[4].data.thresholds, res[5].data);
+      draw(res[0].data.stages, res[1].data.lossReasons, res[2].data.staff, res[3].data.templates, res[4].data.thresholds, res[6].data, res[5].data.limits);
     });
   }
 
-  function draw(stages, reasons, staff, templates, thresholds, labels) {
+  function draw(stages, reasons, staff, templates, thresholds, labels, alertLimits) {
     var h = '<div class="a-card"><div class="a-card-head"><h2>Pipeline stages</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">The chance of closing is what the pipeline total uses for every deal in that stage. A deal can have its own chance on its page. “New Inquiry” and “Won” cannot be turned off.</p>' +
       '<table class="a-table" aria-label="Pipeline stages"><thead><tr><th scope="col">Order</th><th scope="col">Name</th><th scope="col">Chance of closing</th><th scope="col">On</th><th scope="col"><span class="crm-sr">Save</span></th></tr></thead><tbody>' +
       stages.map(function (s, i) {
@@ -90,6 +90,14 @@
           '<td><input type="number" id="th' + esc(t.key) + '" data-th="' + esc(t.key) + '" min="' + esc(t.min) + '" max="' + esc(t.max) + '" step="1" value="' + esc(t.value) + '" class="a-filter-select" style="width:90px;"> ' + esc(t.unit) + '</td>' +
           '<td class="crm-small crm-muted">' + esc(t.min) + ' to ' + esc(t.max) + ' (usually ' + esc(t.default) + ')</td></tr>';
       }).join('') + '</tbody></table><div class="crm-row-actions" style="margin-top:10px;"><button type="button" class="a-btn a-btn-primary a-btn-sm" id="saveTh">Save thresholds</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="resetTh">Put back the usual numbers</button></div></div>';
+    // G18 follow-up: the numbers behind the "Worth a look" alerts on a deal's or account's engagement card. Same layout as the thresholds above; its own Save and Reset (each sends only its own keys).
+    h += '<div class="a-card"><div class="a-card-head"><h2>Engagement alerts</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">The lines that decide when the engagement card says something is worth a look. They only ever use numbers the card already shows, and an unknown number never raises one. Changing a number changes the card for everyone at once, and each change is written to the audit log.</p>' +
+      '<table class="a-table" aria-label="Engagement alert numbers"><thead><tr><th scope="col">Alert</th><th scope="col">Value</th><th scope="col">Allowed</th></tr></thead><tbody>' +
+      (alertLimits || []).map(function (t) {
+        return '<tr><td><label for="el' + esc(t.key) + '">' + esc(t.label) + '</label><div class="crm-small crm-muted">' + esc(t.help) + '</div></td>' +
+          '<td><input type="number" id="el' + esc(t.key) + '" data-el="' + esc(t.key) + '" min="' + esc(t.min) + '" max="' + esc(t.max) + '" step="1" value="' + esc(t.value) + '" class="a-filter-select" style="width:90px;"> ' + esc(t.unit) + '</td>' +
+          '<td class="crm-small crm-muted">' + esc(t.min) + ' to ' + esc(t.max) + ' (usually ' + esc(t.default) + ')</td></tr>';
+      }).join('') + '</tbody></table><div class="crm-row-actions" style="margin-top:10px;"><button type="button" class="a-btn a-btn-primary a-btn-sm" id="saveEl">Save alert numbers</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="resetEl">Put back the usual numbers</button></div></div>';
     // G19: how Suspect, Prospect and Customer are decided, in plain words, with today's counts. Read only: the rules live in the code, so nobody can change the one Customer rule here.
     if (labels) {
       var rl = labels.rules, ct = labels.counts, lk = labels.links;
@@ -111,6 +119,19 @@
       root.querySelectorAll('[data-th]').forEach(function (el) { if (!/^\d{1,4}$/.test(el.value.trim())) bad = bad || 'Use whole numbers only.'; values[el.getAttribute('data-th')] = Number(el.value); });
       if (bad) { C.toast(bad); return; }
       C.api('PUT', '/api/crm/attention/thresholds', { values: values }).then(function (r) { if (r.ok) { C.toast(r.data.changed.length ? 'Thresholds saved' : 'Nothing changed'); load(); } else { C.toast(C.problem(r)); } });
+    });
+    var elBtn = root.querySelector('#saveEl');
+    if (elBtn) elBtn.addEventListener('click', function () {
+      var values = {}, bad = null;
+      root.querySelectorAll('[data-el]').forEach(function (el) { if (!/^\d{1,4}$/.test(el.value.trim())) bad = bad || 'Use whole numbers only.'; values[el.getAttribute('data-el')] = Number(el.value); });
+      if (bad) { C.toast(bad); return; }
+      C.api('PUT', '/api/crm/engagement-alerts', { values: values }).then(function (r) { if (r.ok) { C.toast(r.data.changed.length ? 'Alert numbers saved' : 'Nothing changed'); load(); } else { C.toast(C.problem(r)); } });
+    });
+    var elReset = root.querySelector('#resetEl');
+    if (elReset) elReset.addEventListener('click', function () {
+      var values = {};
+      (alertLimits || []).forEach(function (t) { values[t.key] = t.default; });
+      C.api('PUT', '/api/crm/engagement-alerts', { values: values }).then(function (r) { if (r.ok) { C.toast('Back to the usual numbers'); load(); } else { C.toast(C.problem(r)); } });
     });
     var thReset = root.querySelector('#resetTh');
     if (thReset) thReset.addEventListener('click', function () {

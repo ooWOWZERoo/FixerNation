@@ -33,13 +33,13 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=2"></script>
+<script src="crm-common.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
   var q = C.readQuery();
   var staff = [];
-  var st = { view: q.view === 'duplicates' ? 'duplicates' : q.view === 'review' ? 'review' : 'list', q: q.q || '', classification: q.classification || '', assigned: q.assigned || '', role: q.role || '', license: q.license || '', organization: q.organization || '', accountId: q.accountId || '', locked: q.locked === 'true', sort: q.sort || 'changed', dir: q.dir || 'desc', test: q.includeTest === 'true', page: Math.max(1, Number(q.page) || 1) };
+  var st = { view: q.view === 'duplicates' ? 'duplicates' : q.view === 'review' ? 'review' : q.view === 'imports' ? 'imports' : 'list', q: q.q || '', classification: q.classification || '', assigned: q.assigned || '', role: q.role || '', license: q.license || '', organization: q.organization || '', accountId: q.accountId || '', locked: q.locked === 'true', sort: q.sort || 'changed', dir: q.dir || 'desc', test: q.includeTest === 'true', page: Math.max(1, Number(q.page) || 1) };
   var VIEWS = [['All people', {}], ['Suspects', { classification: 'suspect' }], ['Prospects', { classification: 'prospect' }], ['Customers', { classification: 'customer' }], ['Mine', { assigned: 'me' }], ['No owner', { assigned: 'none' }]];
   var ROLES = { champion: 'Champion', decision_maker: 'Decision maker', procurement: 'Procurement', finance: 'Finance' };
   var LICENSES = { paid: 'Has a live paid license', trial: 'Has a live trial', ended_trial: 'Only an ended trial', none: 'No license or trial' };
@@ -47,7 +47,7 @@
 
   C.boot(root).then(function (me) {
     if (!me) return;
-    C.staff().then(function (list) { staff = list; shell(); st.view === 'duplicates' ? fetchDupes() : st.view === 'review' ? fetchReview() : fetchList(); });
+    C.staff().then(function (list) { staff = list; shell(); st.view === 'duplicates' ? fetchDupes() : st.view === 'review' ? fetchReview() : st.view === 'imports' ? fetchImports() : fetchList(); });
   });
 
   function viewHref(v) { return 'admin-crm-contacts.html' + C.qstr(v[1]); }
@@ -56,10 +56,11 @@
   function shell() {
     var dupTab = '<a href="admin-crm-contacts.html?view=duplicates"' + (st.view === 'duplicates' ? ' aria-current="true"' : '') + '>Possible duplicates</a>';
     var reviewTab = '<a href="admin-crm-contacts.html?view=review"' + (st.view === 'review' ? ' aria-current="true"' : '') + '>Import review</a>'; // G22
-    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>' + (st.view === 'duplicates' ? 'Possible duplicates' : st.view === 'review' ? 'Import review' : 'Contacts') + '</h2>' +
+    var importsTab = '<a href="admin-crm-contacts.html?view=imports"' + (st.view === 'imports' ? ' aria-current="true"' : '') + '>Imports</a>'; // follow-up to G22: what each import did, and undo
+    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>' + (st.view === 'duplicates' ? 'Possible duplicates' : st.view === 'review' ? 'Import review' : st.view === 'imports' ? 'Imports' : 'Contacts') + '</h2>' +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="importPeople">Import people</button>' : '') +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addContact">+ Add a person</button>' : '') + '</div>' +
-      '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li><li>' + reviewTab + '</li></ul>' +
+      '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li><li>' + reviewTab + '</li><li>' + importsTab + '</li></ul>' +
       (st.view === 'list' ?
         '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search contacts</label><input type="search" id="fQ" placeholder="Search by name, email or company" value="' + esc(st.q) + '"></div>' +
         // G19: buying role, licence status and organization. Plain facts from the CRM (what a person holds on an account or deal, what they have bought, where they are), never a score.
@@ -155,6 +156,16 @@
       }
     });
   }
+  // Organizations that match no account by exact name but look like one that exists: the person chooses to put the row on it, or not. Nothing is chosen for them.
+  function suggestBlock(preview) {
+    var sug = preview.rows.filter(function (r) { return r.suggestedAccounts && r.suggestedAccounts.length && (r.decision === 'new' || r.decision === 'review'); });
+    if (!sug.length) return '';
+    return '<p class="crm-small" style="margin:12px 0 4px;"><strong>Organizations with no exact match</strong>: these look like an account that already exists. Pick one to put the person on it, or leave it as is.</p>' +
+      '<table class="a-table" aria-label="Organizations that look like an existing account"><thead><tr><th scope="col">Row</th><th scope="col">Organization typed</th><th scope="col">Put on</th></tr></thead><tbody>' + sug.map(function (r) {
+        return '<tr><td>' + esc(r.index + 1) + '</td><td>' + esc(r.organization) + '</td><td><label class="crm-sr" for="pk' + esc(r.index) + '">Account for row ' + esc(r.index + 1) + '</label><select id="pk' + esc(r.index) + '" data-pick-row="' + esc(r.index) + '"><option value="">Do not put on an account</option>' +
+          r.suggestedAccounts.map(function (a) { return '<option value="' + esc(a.id) + '">' + esc(a.name) + (a.state ? ' (' + esc(a.state) + ')' : '') + '</option>'; }).join('') + '</select></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
   function confirmImport(name, rows, preview) {
     var c = preview.counts;
     var issues = preview.rows.filter(function (r) { return r.decision !== 'new'; }).slice(0, 12);
@@ -164,8 +175,12 @@
         (issues.length ? '<table class="a-table" aria-label="Rows that need a look"><thead><tr><th scope="col">Row</th><th scope="col">Email</th><th scope="col">What happens</th></tr></thead><tbody>' + issues.map(function (r) {
           return '<tr><td>' + esc(r.index + 1) + '</td><td>' + esc(r.email || '') + '<div class="crm-small crm-muted">' + esc(r.name || '') + '</div></td><td>' + esc(DECISION[r.decision] || r.decision) + (r.problem ? '<div class="crm-small crm-muted">' + esc(r.problem) + '</div>' : '') + (r.candidates && r.candidates.length ? '<div class="crm-small crm-muted">May be ' + esc(r.candidates.map(function (x) { return (x.name || x.email); }).join(', ')) + '</div>' : '') + '</td></tr>';
         }).join('') + '</tbody></table>' + (c.total > preview.rows.length ? '<p class="crm-small crm-muted">Showing the first rows that need a look.</p>' : '') : '') +
+        suggestBlock(preview) +
         '<p class="crm-small crm-muted">Import name: ' + esc(name) + '. Nothing has been changed yet.</p>',
-      onSubmit: function () { return C.api('POST', '/api/crm/import/run', { batchName: name, rows: rows }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.counts.added + ' added, ' + r.data.counts.already_there + ' already there, ' + r.data.counts.queued + ' to review'); st.view === 'list' ? fetchList() : fetchReview(); }); }
+      onSubmit: function (f) {
+        // A person's pick of a look-alike account goes with its row; the server only honours a pick that is one of the suggestions it works out itself.
+        f.querySelectorAll('[data-pick-row]').forEach(function (sel) { var n = Number(sel.value), i = Number(sel.getAttribute('data-pick-row')); if (n && rows[i]) rows[i].pickedAccountId = n; });
+        return C.api('POST', '/api/crm/import/run', { batchName: name, rows: rows }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.counts.added + ' added, ' + r.data.counts.already_there + ' already there, ' + r.data.counts.queued + ' to review'); st.view === 'list' ? fetchList() : fetchReview(); }); }
     });
   }
 
@@ -178,7 +193,7 @@
       if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
       if (!r.data.total) { body.innerHTML = C.empty('Nothing is waiting. Rows from an import that look like someone already here will appear on this tab.', '✅'); document.getElementById('cPager').innerHTML = ''; return; }
       body.innerHTML = '<p class="crm-small crm-muted">These rows came from an import and look like someone already in the CRM, so they were not added. Decide each one. "Same person" only fills in what the existing person was missing.</p>' + r.data.items.map(function (it) {
-        return '<div class="a-card" style="margin-bottom:12px;"><p class="crm-small crm-muted" style="margin:0 0 6px;">From import: ' + esc(it.batchName) + ' · ' + esc(it.reason === 'same_mailbox' ? 'the same mailbox once a + tag is removed' : 'the same full name') + '</p>' +
+        return '<div class="a-card" style="margin-bottom:12px;"><p class="crm-small crm-muted" style="margin:0 0 6px;">From import: ' + esc(it.batchName) + ' · ' + esc(it.reason === 'same_mailbox' ? 'the same mailbox once a + tag is removed' : it.reason === 'similar_name' ? 'a very similar full name (one letter different)' : 'the same full name') + '</p>' +
           '<p style="margin:0;"><strong>' + esc(it.row.name || it.row.email) + '</strong> <span class="crm-muted">' + esc(it.row.email) + (it.row.company ? ' · ' + esc(it.row.company) : '') + (it.row.title ? ' · ' + esc(it.row.title) : '') + '</span></p>' +
           '<p class="crm-small" style="margin:8px 0 4px;">Could be:</p><ul class="crm-list" aria-label="People it could be">' + it.candidates.map(function (c) {
             return '<li><div><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.id) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + esc(c.email) + '</div></div>' + (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-same="' + esc(it.id) + '" data-contact="' + esc(c.id) + '">Same person</button>' : '') + '</li>';
@@ -189,6 +204,39 @@
       body.querySelectorAll('[data-diff]').forEach(function (b) { b.addEventListener('click', function () { decide(b.getAttribute('data-diff'), { action: 'different_person' }); }); });
       body.querySelectorAll('[data-skip]').forEach(function (b) { b.addEventListener('click', function () { decide(b.getAttribute('data-skip'), { action: 'skip' }); }); });
       C.pager(document.getElementById('cPager'), r.data, function (n) { st.page = n; fetchReview(); window.scrollTo(0, 0); });
+    });
+  }
+
+  // What each recent import did (counts only), and for a CRM Admin the Undo button: it removes the people THAT import created and nobody has touched since; everyone else is kept.
+  function fetchImports() {
+    C.writeQuery({ view: 'imports' });
+    var body = document.getElementById('cBody');
+    C.loading(body);
+    C.api('GET', '/api/crm/import/batches').then(function (r) {
+      if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
+      if (!r.data.batches.length) { body.innerHTML = C.empty('No import has been run yet.', '📥'); return; }
+      var canUndo = C.can('erase');
+      body.innerHTML = '<p class="crm-small crm-muted">The last 20 imports and what each did. ' + (canUndo ? 'Undo removes only the people that import created and nobody has touched since (no note, task, deal, quote, purchase, email, edit or label change); anyone else stays. People who were already here, and the blanks an import filled in for them, are never removed. An import can be undone once.' : 'Only a CRM Admin can undo an import.') + '</p>' +
+        '<table class="a-table" aria-label="Recent imports"><thead><tr><th scope="col">Import</th><th scope="col">When</th><th scope="col">Added</th><th scope="col">Already there</th><th scope="col">In review</th><th scope="col">Left out</th><th scope="col"><span class="crm-sr">Undo</span></th></tr></thead><tbody>' + r.data.batches.map(function (b) {
+          var last = b.undoneAt ? '<span class="crm-muted">Undone ' + esc(C.date(b.undoneAt)) + ': ' + esc(C.num(b.undoRemoved)) + ' removed, ' + esc(C.num(b.undoKept)) + ' kept</span>' : b.undoable ? (canUndo ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-undo="' + esc(b.id) + '" data-name="' + esc(b.name) + '">Undo this import</button>' : '') : '<span class="crm-small crm-muted" title="' + (r.data.undoAvailable ? 'This import was made before undo existed, or it added nobody.' : 'Not available yet.') + '">' + (r.data.undoAvailable ? 'Cannot be undone' : '') + '</span>';
+          return '<tr><td>' + esc(b.name) + (b.by ? '<div class="crm-small crm-muted">' + esc(b.by) + '</div>' : '') + '</td><td>' + esc(C.date(b.at)) + '</td><td>' + esc(C.num(b.added)) + '</td><td>' + esc(C.num(b.alreadyThere)) + '</td><td>' + esc(C.num(b.queued)) + '</td><td>' + esc(C.num(b.leftOut)) + '</td><td>' + last + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      body.querySelectorAll('[data-undo]').forEach(function (b) { b.addEventListener('click', function () { undoImport(b.getAttribute('data-undo'), b.getAttribute('data-name')); }); });
+    });
+  }
+  function undoImport(id, name) {
+    C.api('POST', '/api/crm/import/batches/' + encodeURIComponent(id) + '/undo-preview', {}).then(function (p) {
+      if (!p.ok) { C.toast(C.problem(p)); return; }
+      var d = p.data;
+      C.dialog({
+        title: 'Undo "' + name + '"?', submit: d.removable ? 'Remove ' + d.removable + (d.removable === 1 ? ' person' : ' people') : null,
+        body: '<p><strong>' + esc(C.num(d.removable)) + '</strong> of the ' + esc(C.num(d.people)) + ' people this import added are untouched and will be <strong>removed from the CRM</strong>. This cannot be undone.</p>' +
+          (d.kept ? '<p><strong>' + esc(C.num(d.kept)) + '</strong> will stay, because something has happened to them since:</p><ul class="crm-list">' + d.keptByReason.map(function (k) { return '<li>' + esc(C.num(k.count)) + ': ' + esc(k.label) + '</li>'; }).join('') + '</ul>' : '') +
+          (d.gone ? '<p class="crm-small crm-muted">' + esc(C.num(d.gone)) + ' are already gone (deleted or merged).</p>' : '') +
+          (d.stillWaiting ? '<p class="crm-small crm-muted">' + esc(C.num(d.stillWaiting)) + ' rows from this import are still waiting in Import review; they stay there.</p>' : '') +
+          '<p class="crm-small crm-muted">People who were already in the CRM, and the blanks this import filled in for them, are not changed.</p>',
+        onSubmit: function () { return C.api('POST', '/api/crm/import/batches/' + encodeURIComponent(id) + '/undo', { confirm: true }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.removed + ' removed, ' + r.data.kept + ' kept'); fetchImports(); }); }
+      });
     });
   }
 

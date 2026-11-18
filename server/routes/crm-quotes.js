@@ -9,6 +9,7 @@ const { crmAudit } = require('../lib/crm-audit');
 const cls = require('../lib/crm-classification');
 const { text, posInt, paging, oneOf } = require('../lib/crm-common');
 const { stageForQuote, dealName, matchingContacts, listQuoteGaps } = require('../lib/crm-quotes');
+const NM = require('../lib/crm-name-match'); // a look-alike account name is a warning, never an automatic link
 
 const router = express.Router();
 const normName = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -61,9 +62,14 @@ router.post('/:id/create-deal', requireAuth, requireCrm('edit_deal'), async (req
   } else if (b.createAccount === true) {
     const name = text(b.accountName, 255) || text(q.school, 255);
     if (!name) return res.status(400).json({ error: 'This quote has no organization. Pick an account or type a name for a new one.' });
-    const [live] = await pool.query('SELECT id, name FROM crm_accounts WHERE archived_at IS NULL');
+    const [live] = await pool.query('SELECT id, name, account_type, state FROM crm_accounts WHERE archived_at IS NULL');
     const hit = live.find(a => normName(a.name) === normName(name));
-    if (hit) return res.status(409).json({ code: 'possible_duplicate', existingAccountId: hit.id, error: `An account named "${hit.name}" already exists. Pick it instead.` });
+    if (hit) return res.status(409).json({ code: 'possible_duplicate', kind: 'same_name', existingAccountId: hit.id, error: `An account named "${hit.name}" already exists. Pick it instead.` });
+    // A look-alike name is a warning, not a block: send allowDuplicate to make the new account anyway. (A school made from a quote is a school; the quote's own state is not known here.)
+    if (b.allowDuplicate !== true) {
+      const similar = NM.suggestFor({ name, accountType: 'school' }, live.map(a => NM.prepare({ id: Number(a.id), name: a.name, accountType: a.account_type, state: a.state })), { limit: 3 });
+      if (similar.length) return res.status(409).json({ code: 'possible_duplicate', kind: 'similar_name', existingAccountId: similar[0].id, similarAccounts: similar.map(a => ({ id: a.id, name: a.name, state: a.state })), error: `A similar account already exists: "${similar[0].name}"${similar[0].state ? ` (${similar[0].state})` : ''}. Pick it instead, or choose Make the deal again to make a new account anyway.` });
+    }
   } else {
     return res.status(400).json({ error: 'Pick an account for this deal, or ask for a new one.' });
   }

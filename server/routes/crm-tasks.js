@@ -14,6 +14,15 @@ const TF = require('../lib/crm-task-fields'); // G14: priority, source, reminder
 
 const router = express.Router();
 
+// The field sets to try, most complete first: all of them, then without the time-of-day columns, then none. (An install that has not run an alter script yet lacks those columns.)
+function fallbacks(fields) {
+  const noTime = Object.fromEntries(Object.entries(fields).filter(([k]) => !TF.TIME_COLUMNS.includes(k)));
+  const out = [fields];
+  if (Object.keys(noTime).length !== Object.keys(fields).length) out.push(noTime);
+  if (Object.keys(noTime).length) out.push({});
+  return out;
+}
+
 const TASK_SELECT = `SELECT t.*, ${S.SUBJECT_COLS}, au.username AS assignee_name, cu.username AS creator_name
   FROM crm_tasks t ${S.SUBJECT_JOIN('t')}
   LEFT JOIN admin_users au ON au.id = t.assigned_admin_id
@@ -25,7 +34,7 @@ function taskView(t, req, today, quoteNumbers) {
   return {
     id: t.id, title: t.title, details: t.details || null, dueOn: t.due_on || null, state: t.state,
     // G14: priority and where the task came from (never typed), the day to be reminded, and the quote it is about. Defaults when the columns are not there yet.
-    priority: t.priority || 'normal', source: t.source || 'manual', remindOn: t.remind_on || null,
+    priority: t.priority || 'normal', source: t.source || 'manual', remindOn: t.remind_on || null, remindTime: t.remind_time ? String(t.remind_time).slice(0, 5) : null, remindTz: t.remind_tz || null,
     quote: t.quote_id ? { id: Number(t.quote_id), number: (quoteNumbers && quoteNumbers.get(Number(t.quote_id))) || null } : null,
     overdue: t.state === 'open' && !!t.due_on && String(t.due_on).slice(0, 10) < today,
     assignedAdminId: t.assigned_admin_id || null, assigneeName: t.assignee_name || null, createdByName: t.creator_name || null,
@@ -134,12 +143,22 @@ router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
   const extra = await TF.clean(pool, b, { dueOn, dealId: r.subject.kind === 'opportunity' ? r.subject.id : null });
   if (extra.error) return res.status(400).json({ error: extra.error });
   const c = r.subject.cols;
-  const xcols = Object.keys(extra.fields); // only what was sent, so a database without these columns yet still takes a plain task
-  const [ins] = await pool.query(
-    `INSERT INTO crm_tasks (opportunity_id, account_id, contact_id, title, details, due_on, state, assigned_admin_id, created_by_admin_id, created_at${xcols.map(k => `, ${k}`).join('')})
-     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?${xcols.map(() => ', ?').join('')})`,
-    [c.opportunity_id, c.account_id, c.contact_id, title, text(b.details, 1000), dueOn, assignee, req.crm.adminId, sqlNow(), ...xcols.map(k => extra.fields[k])]);
-  await crmAudit(req, { action: 'crm_task_created', entityType: 'crm_task', entityId: ins.insertId, next: { subject: r.subject.kind, subjectId: r.subject.id, assignedAdminId: assignee, dueOn, ...extra.fields } });
+  const insertTask = (fields) => {
+    const xcols = Object.keys(fields);
+    return pool.query(
+      `INSERT INTO crm_tasks (opportunity_id, account_id, contact_id, title, details, due_on, state, assigned_admin_id, created_by_admin_id, created_at${xcols.map(k => `, ${k}`).join('')})
+       VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?${xcols.map(() => ', ?').join('')})`,
+      [c.opportunity_id, c.account_id, c.contact_id, title, text(b.details, 1000), dueOn, assignee, req.crm.adminId, sqlNow(), ...xcols.map(k => fields[k])]);
+  };
+  // The screens always send priority and a reminder. Before the alter scripts have run those columns are not there, and the task must still save: first without the time of day (the newest
+  // columns), then without any of the extras.
+  const attempts = fallbacks(extra.fields);
+  let ins, saved = extra.fields;
+  for (let i = 0; i < attempts.length; i++) {
+    try { [ins] = await insertTask(attempts[i]); saved = attempts[i]; break; }
+    catch (err) { if (!TF.isMissing(err) || i === attempts.length - 1) throw err; }
+  }
+  await crmAudit(req, { action: 'crm_task_created', entityType: 'crm_task', entityId: ins.insertId, next: { subject: r.subject.kind, subjectId: r.subject.id, assignedAdminId: assignee, dueOn, ...saved } });
   res.status(201).json({ ok: true, id: ins.insertId });
 });
 
@@ -148,7 +167,7 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
   if (!t) return res.status(404).json({ error: 'Task not found' });
   if (!S.canWriteRow(req, t)) return res.status(403).json({ code: 'not_your_deal', error: 'This task is on a deal that belongs to someone else.' });
   const b = req.body || {};
-  const f = {};
+  let f = {};
   if (b.title !== undefined) { f.title = text(b.title, 255); if (!f.title) return res.status(400).json({ error: 'Say what needs doing.' }); }
   if (b.details !== undefined) f.details = text(b.details, 1000);
   if (b.dueOn !== undefined) {
@@ -161,13 +180,25 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
   }
   // G14: priority, reminder and quote. The reminder is checked against the due date this change leaves the task with; moving the due date earlier than a reminder pulls the reminder in with it.
   const newDue = f.due_on !== undefined ? f.due_on : (t.due_on ? String(t.due_on).slice(0, 10) : null);
-  const extra = await TF.clean(pool, b, { dueOn: newDue, dealId: t.opportunity_id || null });
+  const extra = await TF.clean(pool, b, { dueOn: newDue, dealId: t.opportunity_id || null, existing: t });
   if (extra.error) return res.status(400).json({ error: extra.error });
   Object.assign(f, extra.fields);
   if (f.due_on && f.remind_on === undefined && t.remind_on && String(t.remind_on).slice(0, 10) > f.due_on) f.remind_on = f.due_on;
-  const cols = Object.keys(f);
+  const updateTask = (fields) => { const cs = Object.keys(fields); return pool.query(`UPDATE crm_tasks SET ${cs.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cs.map(k => fields[k]), t.id]); };
+  let cols = Object.keys(f);
   if (!cols.length) return res.status(400).json({ error: 'Nothing to change.' });
-  await pool.query(`UPDATE crm_tasks SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => f[k]), t.id]);
+  // Same as adding: the edit dialog always sends priority and the reminder. Without the newer columns, save the rest: first without the time of day, then without any extras.
+  const extraKeys = Object.keys(extra.fields);
+  const ladder = [extraKeys, extraKeys.filter(k => !TF.TIME_COLUMNS.includes(k)), []].filter((ks, i, a) => i === 0 || ks.length !== a[i - 1].length);
+  let saved = false;
+  for (let i = 0; i < ladder.length && !saved; i++) {
+    const attempt = { ...f };
+    for (const k of extraKeys) if (!ladder[i].includes(k)) delete attempt[k];
+    if (!Object.keys(attempt).length) return res.status(400).json({ error: 'Priority and reminders are not available yet. Ask the person who runs the site to run the task update.' });
+    try { await updateTask(attempt); f = attempt; saved = true; }
+    catch (err) { if (!TF.isMissing(err) || i === ladder.length - 1) throw err; }
+  }
+  cols = Object.keys(f);
   await crmAudit(req, { action: 'crm_task_updated', entityType: 'crm_task', entityId: t.id, prev: Object.fromEntries(cols.map(k => [k, t[k]])), next: f });
   res.json({ ok: true });
 });

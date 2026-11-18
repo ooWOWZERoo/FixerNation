@@ -33,7 +33,7 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=2"></script>
+<script src="crm-common.js?v=3"></script>
 <script src="crm-status.js?v=2"></script>
 <script>
 (function () {
@@ -208,6 +208,7 @@
   }
 
   function makeDeal(q) {
+    var makeAnyway = false; // set once a look-alike account was pointed out, so a second try makes the new account
     var dlg = C.dialog({
       title: 'Make a deal from this quote',
       submit: 'Make the deal',
@@ -220,9 +221,17 @@
         var mode = form.querySelector('input[name=mode]:checked').value;
         var body = {};
         if (mode === 'existing') { body.accountId = Number(form.querySelector('[data-pick=accounts]').value); if (!body.accountId) return 'Pick an account, or choose to make a new one.'; }
-        else { body.createAccount = true; body.accountName = form.querySelector('#newAcctName').value; }
+        else { body.createAccount = true; body.accountName = form.querySelector('#newAcctName').value; if (makeAnyway) body.allowDuplicate = true; }
         return C.api('POST', '/api/crm/quotes/' + q.id + '/create-deal', body).then(function (r) {
           if (r.ok) { C.toast('Deal made'); window.location.href = 'admin-crm-opportunity.html?id=' + r.data.opportunityId; return 'Opening the deal…'; }
+          if (r.data.code === 'possible_duplicate' && r.data.kind === 'similar_name') {
+            // A look-alike, not the same name: say so once. Choosing "Make a new account" and pressing the button again makes it anyway.
+            makeAnyway = true;
+            form.querySelector('#modeExisting').checked = true;
+            form.querySelector('[data-pick-q=accounts]').value = form.querySelector('#newAcctName').value;
+            form.querySelector('[data-pick-q=accounts]').dispatchEvent(new Event('input'));
+            return r.data.error;
+          }
           if (r.data.code === 'possible_duplicate') {
             form.querySelector('#modeExisting').checked = true;
             form.querySelector('[data-pick-q=accounts]').value = form.querySelector('#newAcctName').value;

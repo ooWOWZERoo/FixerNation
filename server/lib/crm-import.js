@@ -7,13 +7,19 @@
 //    every other field are never touched, and an existing person is never added to an account by an import.
 //  - A row is AMBIGUOUS (queued, not added) when no email matches but it has the same mailbox once a + tag is removed, or the same full name (two or more words), as someone already
 //    in the CRM. A shared email DOMAIN is never a signal (two people at one school share one). Staff pick: same person (fill blanks), different person (add), or skip.
+//  - Similar names only SUGGEST: an organization with no exact account match is shown with up to three look-alike accounts, and is linked to one only when a person picked it (the pick
+//    must be one of the suggestions the server itself works out, so an id typed into a request links nothing). A person whose full name is one letter off someone already in the CRM
+//    (same last word) is queued for review like an exact name, never added or merged. An import never creates an account.
 //  - The label is always Suspect (reconcileContact may only ever move it forward from a real quote or purchase); the subscription is always Unsubscribed (no consent is on record);
 //    the source says it was an import. Test addresses (@example.com) are refused, so a test file never fills the CRM.
 //  - The server plans every run itself: a preview is only a plan, and the commit re-plans from the rows it is given. At most MAX_ROWS rows; each field is cut to its length.
-//  - An import writes one audit row per run with counts only (no names, no emails).
+//  - An import writes one audit row per run with counts only (no names, no emails). Each person it CREATES is also listed in crm_import_people (lib/crm-import-undo.js), so a CRM Admin can
+//    undo the import: only those people, and only while nobody has touched them.
 // `conn` is the pool in the route and any query-capable handle in tests. SQL stays portable.
 const cls = require('./crm-classification');
 const { audit } = require('./audit');
+const U = require('./crm-import-undo'); // the list of who an import created, so it can be undone
+const NM = require('./crm-name-match'); // names that are alike: SUGGESTIONS for a person only, never a link made by itself
 
 const MAX_ROWS = 400;
 const EMAIL_SHAPE = /^[^\s@<>",;:\\()[\]]+@[^\s@<>",;:\\()[\]]+\.[^\s@<>",;:\\()[\]]+$/;
@@ -37,7 +43,8 @@ function cleanRow(raw) {
   const email = cut(raw.email, 254).toLowerCase();
   if (!email || !EMAIL_SHAPE.test(email)) return { problem: 'No usable email address.' };
   if (email.endsWith('@example.com')) return { problem: 'A test address (example.com) is never imported.' };
-  return { email, name: cut(raw.name, 255), company: cut(raw.company, 255), organization: cut(raw.organization, 255), state: cut(raw.state, 64), phone: cut(raw.phone, 32), title: cut(raw.title, 128) };
+  const picked = Number(raw.pickedAccountId);
+  return { email, name: cut(raw.name, 255), company: cut(raw.company, 255), organization: cut(raw.organization, 255), state: cut(raw.state, 64), phone: cut(raw.phone, 32), title: cut(raw.title, 128), pickedAccountId: Number.isInteger(picked) && picked > 0 ? picked : null };
 }
 
 // Decides what would happen to each row. Reads only.
@@ -45,16 +52,18 @@ async function plan(conn, rawRows) {
   if (!Array.isArray(rawRows) || !rawRows.length) throw new Refusal(400, 'There are no rows to import.');
   if (rawRows.length > MAX_ROWS) throw new Refusal(400, `Import at most ${MAX_ROWS} people at a time. Split the file and import it in parts.`);
   const [people] = await conn.query('SELECT id, name, email FROM newsletter_contacts');
-  const byEmail = new Map(), byMailbox = new Map(), byName = new Map();
+  const byEmail = new Map(), byMailbox = new Map(), byName = new Map(), byLast = new Map();
   for (const p of people) {
     if (norm(p.email).endsWith('@example.com')) continue;
     byEmail.set(norm(p.email), p);
     const mk = mailboxKey(p.email); if (mk) (byMailbox.get(mk) || byMailbox.set(mk, []).get(mk)).push(p);
     const nk = nameKey(p.name); if (nk) (byName.get(nk) || byName.set(nk, []).get(nk)).push(p);
+    const lw = NM.lastWord(p.name); if (lw) (byLast.get(lw) || byLast.set(lw, []).get(lw)).push(p);
   }
-  const [accts] = await conn.query('SELECT id, name FROM crm_accounts WHERE archived_at IS NULL');
+  const [accts] = await conn.query('SELECT id, name, account_type, state FROM crm_accounts WHERE archived_at IS NULL');
   const byAcct = new Map();
   for (const a of accts) { const k = norm(a.name); if (k) (byAcct.get(k) || byAcct.set(k, []).get(k)).push(Number(a.id)); }
+  const prepared = accts.map(a => NM.prepare({ id: Number(a.id), name: a.name, accountType: a.account_type, state: a.state }));
   const seen = new Set();
   const rows = rawRows.map((raw, index) => {
     const row = cleanRow(raw);
@@ -67,13 +76,23 @@ async function plan(conn, rawRows) {
     for (const p of byMailbox.get(mailboxKey(row.email)) || []) cand.set(Number(p.id), { id: Number(p.id), name: p.name || '', email: p.email, reason: 'same_mailbox' });
     const nk = nameKey(row.name);
     for (const p of (nk && byName.get(nk)) || []) if (!cand.has(Number(p.id))) cand.set(Number(p.id), { id: Number(p.id), name: p.name || '', email: p.email, reason: 'same_name' });
-    let accountId = null, accountNote = null;
+    const lw = NM.lastWord(row.name);
+    for (const p of (lw && byLast.get(lw)) || []) if (!cand.has(Number(p.id)) && NM.similarPersonName(row.name, p.name)) cand.set(Number(p.id), { id: Number(p.id), name: p.name || '', email: p.email, reason: 'similar_name' });
+    let accountId = null, accountNote = null, suggestedAccounts = [];
     if (row.organization) {
       const ids = byAcct.get(norm(row.organization)) || [];
-      if (ids.length === 1) accountId = ids[0]; else accountNote = ids.length ? 'More than one account has that name, so the person was not added to one.' : 'No account has that exact name, so the person was not added to one.';
+      if (ids.length === 1) accountId = ids[0];
+      else if (ids.length) accountNote = 'More than one account has that name, so the person was not added to one.';
+      else {
+        // No exact match: look-alikes are offered to a person; the person's pick counts only if it is one of these.
+        suggestedAccounts = NM.suggestFor({ name: row.organization, state: row.state }, prepared, { limit: 3 });
+        const pick = suggestedAccounts.find(a => a.id === row.pickedAccountId);
+        if (pick) accountId = pick.id;
+        else accountNote = suggestedAccounts.length ? 'No account has that exact name. Pick one of the similar accounts to put the person on it.' : 'No account has that exact name, so the person was not added to one.';
+      }
     }
-    if (cand.size) { const list = [...cand.values()]; return { index, decision: 'review', reason: list.some(c => c.reason === 'same_mailbox') ? 'same_mailbox' : 'same_name', candidates: list, accountId, accountNote, input: row }; }
-    return { index, decision: 'new', accountId, accountNote, input: row };
+    if (cand.size) { const list = [...cand.values()]; return { index, decision: 'review', reason: ['same_mailbox', 'same_name', 'similar_name'].find(k => list.some(c => c.reason === k)), candidates: list, accountId, accountNote, suggestedAccounts, input: row }; }
+    return { index, decision: 'new', accountId, accountNote, suggestedAccounts, input: row };
   });
   const counts = { total: rows.length, new: 0, exists: 0, review: 0, left_out: 0 };
   for (const r of rows) { if (r.decision === 'new') counts.new++; else if (r.decision === 'exists') counts.exists++; else if (r.decision === 'review') counts.review++; else counts.left_out++; }
@@ -122,7 +141,7 @@ async function run(conn, rawRows, { batchName, adminId, now }) {
     if (r.decision === 'exists') { await fillBlanks(conn, r.contactId, r.input); out.already_there++; }
     else if (r.decision === 'new') {
       const id = await addPerson(conn, r.input, r.accountId, adminId, today);
-      if (id) out.added++; else { const [[h]] = await conn.query('SELECT id FROM newsletter_contacts WHERE LOWER(TRIM(email)) = ?', [r.input.email]); if (h) await fillBlanks(conn, h.id, r.input); out.already_there++; }
+      if (id) { out.added++; await U.recordCreated(conn, { batchId, contactId: id, accountId: r.accountId, row: r.input, title: r.input.title || null, today }); } else { const [[h]] = await conn.query('SELECT id FROM newsletter_contacts WHERE LOWER(TRIM(email)) = ?', [r.input.email]); if (h) await fillBlanks(conn, h.id, r.input); out.already_there++; }
     } else if (r.decision === 'review') {
       await conn.query('INSERT INTO crm_import_review (batch_id, name, email, company, state_text, phone, title, account_id, reason, candidates_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [batchId, r.input.name, r.input.email, r.input.company || r.input.organization, r.input.state, r.input.phone, r.input.title, r.accountId, r.reason, JSON.stringify(r.candidates.map(c => c.id)), now]);
@@ -172,7 +191,10 @@ async function resolveReview(conn, id, { action, contactId, adminId, now }) {
   if (action === 'same_person') { await fillBlanks(conn, resolved, row); result = { contactId: resolved }; }
   else if (action === 'different_person') {
     const newId = await addPerson(conn, row, r.account_id ? Number(r.account_id) : null, adminId, String(now).slice(0, 10));
-    if (newId) { await conn.query('UPDATE crm_import_review SET resolved_contact_id = ? WHERE id = ?', [newId, r.id]); result = { contactId: newId }; }
+    if (newId) {
+      await conn.query('UPDATE crm_import_review SET resolved_contact_id = ? WHERE id = ?', [newId, r.id]); result = { contactId: newId };
+      await U.recordCreated(conn, { batchId: Number(r.batch_id), contactId: newId, accountId: r.account_id ? Number(r.account_id) : null, viaReviewId: Number(r.id), row, title: row.title || null, today: String(now).slice(0, 10) });
+    }
     else result = { contactId: null, note: 'That email was added in the meantime, so nobody new was made.' };
   }
   await audit(conn, { actorType: 'admin', actorId: adminId, action: 'crm_import_review_decided', entityType: 'crm_import', entityId: r.id, newValue: { decision: action, contactId: result ? result.contactId : null } });

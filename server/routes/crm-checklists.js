@@ -7,8 +7,9 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm, canEditDeal, can } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { sqlNow } = require('../lib/crm-classification');
-const { text, posInt, dateOnly, oneOf } = require('../lib/crm-common');
+const { text, posInt, dateOnly, oneOf, paging } = require('../lib/crm-common');
 const S = require('../lib/crm-subjects');
+const OWN = require('../lib/crm-checklist-owners'); // "who is responsible for a step" and one person's list of them
 const STD = require('../lib/crm-checklist-standard'); // G15: the standard steps a saved checklist may be missing
 const isMissing = (err) => err && (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE' || /no such (table|column)|has no column named/i.test(String(err.message)));
 
@@ -129,6 +130,22 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
     } catch (err) { if (!isMissing(err)) throw err; }
   }
   res.json({ items: rows.map(r => itemView(r, owners)), progress: { done, needed, total: rows.length }, canEdit, files, staffOwners: canEdit });
+});
+
+// "My checklist steps": every open step I am responsible for, across all deals (a step that names me, else a step on a deal I own). Own steps only, for every role (a Read-only login
+// owns nothing, so its list is empty, not an error). Ticking one goes through PUT /:id below, which applies the same rule that decides canComplete here.
+// ?view=overdue | today | week narrows it; ?page and ?pageSize page it. Declared before the routes that take an id.
+router.get('/mine', requireAuth, requireCrm('view'), async (req, res) => {
+  const today = S.todayFrom(req.query.today);
+  const { steps, truncated } = await OWN.stepsFor(pool, { adminId: req.crm.adminId, role: req.crm.role, today });
+  const view = oneOf(req.query.view, ['overdue', 'today', 'week']);
+  const keep = (s) => !view || (view === 'overdue' ? s.overdue : view === 'today' ? !!s.dueOn && s.dueOn <= today : !!s.dueOn && s.dueOn <= OWN.dueByDay(today, 7));
+  const shown = steps.filter(keep);
+  const { page, size, offset } = paging(req.query);
+  res.json({
+    steps: shown.slice(offset, offset + size), total: shown.length, page, pageSize: size, today, truncated,
+    summary: { open: steps.length, overdue: steps.filter(s => s.overdue).length, dueToday: steps.filter(s => s.dueOn === today).length },
+  });
 });
 
 // Everything below changes a deal, so it needs the edit_deal action AND the right to edit this particular deal.

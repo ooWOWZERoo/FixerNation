@@ -12,9 +12,11 @@
 //  - G18 (FR-TRIAL-01): a TREND (the latest saved month against the one before it) and four plain-fact USAGE ALERTS. Both are only ever computed from numbers the card already shows,
 //    each alert says what it saw in words and numbers, and an unknown never raises an alert (no snapshot, no seat records, a hidden small number: nothing is said). The trend refuses to
 //    compare two months when a different number of schools reported in them. No score, no ranking and nothing is written, mailed or put on Needs Attention (the owner's choice).
+//    The alert numbers (half, 60 days, 7 days, 4 teachers, 2 months) are settings: see lib/crm-engagement-limits.js.
 // `conn` is the pool in the route and any query-capable handle in tests. SQL stays portable (no NOW(), no array parameters).
 const cls = require('./crm-classification');
 const { loadScope, demoInvitationIds } = require('./crm-timeline');
+const L = require('./crm-engagement-limits'); // the numbers behind the alerts (a CRM Admin can change them; the defaults are the old fixed values)
 
 const STUDENT_FLOOR = 10;
 const MONTHS_SHOWN = 3;
@@ -157,7 +159,6 @@ async function programUseSection(conn, S) {
 
 const TREND_METRICS = [['teachersTeaching', 'teachers teaching'], ['classroomsActive', 'classrooms in use'], ['activities', 'activities finished'], ['studentsActive', 'students active']];
 const monthIndex = (key) => { const m = /^(\d{4})-(\d{2})$/.exec(String(key)); return m ? Number(m[1]) * 12 + Number(m[2]) - 1 : null; };
-const STALE_MONTHS = 2; // a latest saved month older than this is too old to judge "now" from
 
 // The latest saved month against the one before it. { comparedWith, note, metrics } where each metric is { change, direction, unknownReason }.
 function trendOf(months) {
@@ -174,23 +175,24 @@ function trendOf(months) {
   return { comparedWith: String(b.label), note: gap > 1 ? `The earlier saved month is ${gap} months before ${a.label}, not the month directly before.` : null, metrics };
 }
 
-// The four alerts the owner chose. Each is { key, text }. Only real, known numbers are used.
-function alertsFor(licenses, programUse, today) {
+// The four alerts the owner chose. Each is { key, text }. Only real, known numbers are used. `limits` are the numbers a CRM Admin can change (lib/crm-engagement-limits.js); the defaults
+// are what the alerts have always used, so with nothing changed the words and the results are exactly the same.
+function alertsFor(licenses, programUse, today, limits = L.DEFAULTS) {
   const out = [];
   const months = programUse.months || [];
   const latest = months[0];
-  const fresh = latest && monthIndex(latest.month) !== null && monthIndex(today.slice(0, 7)) - monthIndex(latest.month) <= STALE_MONTHS;
+  const fresh = latest && monthIndex(latest.month) !== null && monthIndex(today.slice(0, 7)) - monthIndex(latest.month) <= limits.staleMonths;
   const prev = months[1];
   const comparable = latest && prev && latest.schoolsReporting === prev.schoolsReporting;
   const noActivity = fresh && latest.activities.value === 0;
   if (noActivity && latest.teachersLicensed.value > 0) out.push({ key: 'no_activity', text: `No activities were finished in ${latest.label}, although ${latest.teachersLicensed.value} teacher${latest.teachersLicensed.value === 1 ? ' is' : 's are'} licensed.` });
-  if (fresh && comparable && prev.teachersTeaching.value !== null && latest.teachersTeaching.value !== null && prev.teachersTeaching.value >= 4 && latest.teachersTeaching.value * 2 <= prev.teachersTeaching.value)
-    out.push({ key: 'teaching_fell', text: `Teachers teaching fell from ${prev.teachersTeaching.value} in ${prev.label} to ${latest.teachersTeaching.value} in ${latest.label}, a drop of half or more.` });
+  if (fresh && comparable && prev.teachersTeaching.value !== null && latest.teachersTeaching.value !== null && prev.teachersTeaching.value >= limits.teachingDropMin && latest.teachersTeaching.value * 100 <= prev.teachersTeaching.value * (100 - limits.teachingDropPercent))
+    out.push({ key: 'teaching_fell', text: `Teachers teaching fell from ${prev.teachersTeaching.value} in ${prev.label} to ${latest.teachersTeaching.value} in ${latest.label}, a drop of ${limits.teachingDropPercent === 50 ? 'half' : `${limits.teachingDropPercent}%`} or more.` });
   for (const i of licenses.items || []) {
     if (i.daysLeft === null || i.daysLeft < 0 || i.licenseStatus === 'cancelled' || i.licenseStatus === 'suspended') continue;
-    if (i.kind === 'paid' && i.daysLeft <= 60 && i.seatsBought.value > 0 && i.seatsRegistered.value !== null && i.seatsRegistered.value * 2 < i.seatsBought.value)
+    if (i.kind === 'paid' && i.daysLeft <= limits.licenseDays && i.seatsBought.value > 0 && i.seatsRegistered.value !== null && i.seatsRegistered.value * 100 < i.seatsBought.value * limits.licenseSeatPercent)
       out.push({ key: 'license_ending_low_use', text: `Purchase #${i.purchaseId} ends in ${i.daysLeft} day${i.daysLeft === 1 ? '' : 's'} and only ${i.seatsRegistered.value} of its ${i.seatsBought.value} seats are signed up.` });
-    if (i.kind === 'trial' && i.daysLeft <= 7 && noActivity)
+    if (i.kind === 'trial' && i.daysLeft <= limits.trialDays && noActivity)
       out.push({ key: 'trial_ending_quiet', text: `Trial #${i.purchaseId} has ${i.daysLeft} day${i.daysLeft === 1 ? '' : 's'} left and no activities were finished in ${latest.label}.` });
   }
   return out;
@@ -250,7 +252,7 @@ async function engagementFor(conn, kind, id, { today = new Date().toISOString().
   const programUse = await safe(() => programUseSection(conn, S), { source: 'Program use snapshots', window: '', months: [] });
   return {
     kind, id: Number(id), accountId: Number(S.account.id), accountName: S.account.name, schoolsInScope: S.schoolIds.length, linkNote: S.linkNote,
-    alerts: alertsFor(licenses, programUse, today), licenses, programUse,
+    alerts: alertsFor(licenses, programUse, today, await L.loadLimits(conn)), licenses, programUse,
     demo: await safe(() => demoSection(conn, S), { source: 'Prospect demo invitations', window: '', linked: false, invitations: [] }),
   };
 }

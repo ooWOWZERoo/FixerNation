@@ -232,6 +232,17 @@ async function sendSalesAlertEmail({ to, subject, fields, linkUrl, linkLabel, de
   });
 }
 
+// Customer Hub follow-up to G14: the reminder email for a task, at the time of day its owner asked for (lib/crm-task-reminders.js). STAFF ONLY: `to` must be the assigned staff member's own
+// address, and an empty one is refused rather than falling back to the sales inbox (sendSalesAlertEmail would). The text is the task's own title, its due date and what it is about.
+async function sendTaskReminderEmail({ to, title, dueOn, about, linkUrl }) {
+  if (typeof to !== 'string' || !/^[^\s@]+@[^\s@]+$/.test(to.trim())) throw new Error('A task reminder needs the staff member\u2019s own email address.');
+  return sendSalesAlertEmail({
+    to: to.trim(), subject: `Reminder: ${String(title || 'a task').slice(0, 120)}`,
+    fields: { Task: title, 'Due': dueOn || '', 'About': about ? `${about.kind}: ${about.name}` : '' },
+    linkUrl, linkLabel: 'Open your reminders',
+  });
+}
+
 // Sales CRM meetings (phase 3): one email carrying a calendar invitation (.ics). `ics` is built by lib/crm-ics.js; `method` is REQUEST (invite or update) or
 // CANCEL. Sent from the system address with Reply-To set to the organizer, so a reply reaches the staff member who set the meeting up.
 async function sendMeetingInviteEmail({ to, replyTo, subject, text, html, ics, method }) {
@@ -604,4 +615,4 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
   });
 }
 
-module.exports = { addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };
+module.exports = { sendTaskReminderEmail, addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };

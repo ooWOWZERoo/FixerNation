@@ -803,6 +803,10 @@ CREATE TABLE IF NOT EXISTS crm_import_batches (
     left_out INT UNSIGNED NOT NULL DEFAULT 0,
     created_by_admin_id INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    undone_at DATETIME NULL,
+    undone_by_admin_id INT UNSIGNED NULL,
+    undo_removed INT UNSIGNED NULL,
+    undo_kept INT UNSIGNED NULL,
     KEY idx_crm_import_batches_created (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS crm_import_review (
@@ -825,7 +829,22 @@ CREATE TABLE IF NOT EXISTS crm_import_review (
     KEY idx_crm_import_review_state (state, id),
     KEY idx_crm_import_review_batch (batch_id),
     CONSTRAINT fk_crm_import_review_batch FOREIGN KEY (batch_id) REFERENCES crm_import_batches (id) ON DELETE CASCADE
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+
+-- Follow-up to G22: who each import CREATED (so a CRM Admin can undo it). contact_id has no foreign key on purpose: the row must survive the person being removed or merged.
+CREATE TABLE IF NOT EXISTS crm_import_people (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    batch_id INT UNSIGNED NOT NULL,
+    contact_id INT UNSIGNED NOT NULL,
+    email_norm VARCHAR(254) NOT NULL,
+    account_id INT UNSIGNED NULL,
+    via_review_id INT UNSIGNED NULL,
+    snapshot_json TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_crm_import_people_batch (batch_id),
+    KEY idx_crm_import_people_contact (contact_id),
+    CONSTRAINT fk_crm_import_people_batch FOREIGN KEY (batch_id) REFERENCES crm_import_batches (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Sales CRM punch list G14 (scripts/alter-add-crm-task-note-fields.js): the text a note had before each edit. A CRM Admin can read it; deleting the note deletes its versions.
 CREATE TABLE IF NOT EXISTS crm_note_versions (
@@ -1966,6 +1985,21 @@ CREATE TABLE IF NOT EXISTS crm_account_contacts (
   CONSTRAINT fk_crm_ac_contact FOREIGN KEY (contact_id) REFERENCES newsletter_contacts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Follow-up to G17: two accounts a person has said are NOT duplicates of each other (the pair stops being listed on Accounts > Possible duplicates). One row per pair, lower id first.
+-- Undo deletes the row; the audit log keeps who marked and who undid it. Nothing here changes either account.
+CREATE TABLE IF NOT EXISTS crm_account_not_duplicates (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  account_a_id INT UNSIGNED NOT NULL,
+  account_b_id INT UNSIGNED NOT NULL,
+  decided_by_admin_id INT UNSIGNED NULL,
+  decided_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_crm_not_dup_pair (account_a_id, account_b_id),
+  KEY idx_crm_not_dup_b (account_b_id),
+  CONSTRAINT fk_crm_not_dup_a FOREIGN KEY (account_a_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+  CONSTRAINT fk_crm_not_dup_b FOREIGN KEY (account_b_id) REFERENCES crm_accounts (id) ON DELETE CASCADE,
+  CONSTRAINT fk_crm_not_dup_admin FOREIGN KEY (decided_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS crm_opportunities (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   account_id INT UNSIGNED NOT NULL,
@@ -2081,6 +2115,8 @@ CREATE TABLE IF NOT EXISTS crm_tasks (
     priority VARCHAR(6) NOT NULL DEFAULT 'normal', -- G14 (scripts/alter-add-crm-task-note-fields.js): low | normal | high
     source VARCHAR(16) NOT NULL DEFAULT 'manual', -- manual | daily_check | request: set by the system, never typed
     remind_on DATE NULL, -- the day to be reminded (never after due_on)
+    remind_time TIME NULL, -- the time of day for the separate reminder email (needs remind_on and remind_tz)
+    remind_tz VARCHAR(64) NULL, -- the time zone that time is in, saved from the browser
     quote_id INT UNSIGNED NULL, -- one of the task's deal's quotes
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -2095,7 +2131,24 @@ CREATE TABLE IF NOT EXISTS crm_tasks (
     CONSTRAINT fk_crm_tasks_assignee FOREIGN KEY (assigned_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
     CONSTRAINT fk_crm_tasks_creator FOREIGN KEY (created_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL,
     CONSTRAINT fk_crm_tasks_completer FOREIGN KEY (completed_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+
+-- Follow-up to G14: one row per reminder email claimed for a task at an exact moment (UTC). The claim is written BEFORE the email is sent, so two runs make one email; moving the reminder
+-- to another time is a new moment and may email again. Staff-only: the email goes to the task's assigned staff member and nobody else.
+CREATE TABLE IF NOT EXISTS crm_task_reminder_sends (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    task_id INT UNSIGNED NOT NULL,
+    fire_at DATETIME NOT NULL,
+    owner_admin_id INT UNSIGNED NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'claimed',
+    attempts TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    claimed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at DATETIME NULL,
+    UNIQUE KEY uq_crm_task_reminder (task_id, fire_at),
+    KEY idx_crm_task_reminder_status (status, claimed_at),
+    CONSTRAINT fk_crm_task_reminder_task FOREIGN KEY (task_id) REFERENCES crm_tasks (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crm_task_reminder_admin FOREIGN KEY (owner_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS crm_notes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

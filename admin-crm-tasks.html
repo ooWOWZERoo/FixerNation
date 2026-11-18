@@ -33,11 +33,11 @@
 </div>
 
 <script src="admin-common.js?v=17"></script>
-<script src="crm-common.js?v=2"></script>
+<script src="crm-common.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
-  var VIEWS = [['today', 'Today and overdue'], ['week', 'This week'], ['mine', 'All my open tasks'], ['reminders', 'Reminders'], ['everyone', 'Everyone’s open tasks'], ['done', 'Finished']];
+  var VIEWS = [['today', 'Today and overdue'], ['week', 'This week'], ['mine', 'All my open tasks'], ['reminders', 'Reminders'], ['steps', 'My checklist steps'], ['everyone', 'Everyone’s open tasks'], ['done', 'Finished']];
   var q = C.readQuery();
   var state = { view: VIEWS.some(function (v) { return v[0] === q.view; }) ? q.view : 'today', page: Number(q.page) || 1 };
   var staff = [];
@@ -70,7 +70,39 @@
 
   function tile(label, value, note) { return '<div class="a-stat-card"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div>' + (note ? '<div class="crm-stat-note">' + esc(note) + '</div>' : '') + '</div>'; }
 
+  // The procurement steps I am responsible for, across every deal: a step that names me, or a step on a deal I own. Ticking one uses the deal's own checklist route.
+  function loadSteps() {
+    var list = document.getElementById('list');
+    C.loading(list);
+    C.api('GET', '/api/crm/checklists/mine' + C.qstr({ today: C.todayLocal(), page: state.page, pageSize: 50 })).then(function (r) {
+      if (!r.ok) { C.errorBox(list, C.problem(r)); return; }
+      var d = r.data, s = d.summary;
+      document.getElementById('tiles').innerHTML = '<div class="crm-stats" role="list" aria-label="Your checklist steps">' +
+        '<div role="listitem">' + tile('Overdue steps', '<span class="' + (s.overdue ? 'crm-flag' : '') + '">' + C.num(s.overdue) + '</span>', 'Open and past their due day.') + '</div>' +
+        '<div role="listitem">' + tile('Due today', C.num(s.dueToday), 'Your calendar day.') + '</div>' +
+        '<div role="listitem">' + tile('Open in all', C.num(s.open), 'Steps on open deals that are yours.') + '</div></div>';
+      if (!d.steps.length) { list.innerHTML = '<div class="a-card">' + C.empty('No procurement steps are waiting on you.', '✅') + '</div>'; document.getElementById('pager').innerHTML = ''; return; }
+      list.innerHTML = '<div class="a-card"><ul class="crm-list">' + d.steps.map(stepRow).join('') + '</ul></div>' +
+        (d.truncated ? '<p class="crm-small crm-muted">Showing the first ' + C.num(d.steps.length) + ' only.</p>' : '');
+      list.querySelectorAll('input[type=checkbox]').forEach(function (b) {
+        b.addEventListener('change', function () {
+          b.disabled = true;
+          C.api('PUT', '/api/crm/checklists/' + b.getAttribute('data-id'), { status: 'done' }).then(function (x) { if (!x.ok) C.toast(C.problem(x)); loadSteps(); });
+        });
+      });
+      C.pager(document.getElementById('pager'), d, function (n) { state.page = n; loadSteps(); });
+    });
+  }
+
+  function stepRow(st) {
+    return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="st' + esc(st.id) + '" data-id="' + esc(st.id) + '"' + (st.canComplete ? '' : ' disabled') + '><label for="st' + esc(st.id) + '">' + esc(st.label) + '</label></div>' +
+      (st.note ? '<div class="crm-small crm-muted crm-wrap">' + esc(st.note) + '</div>' : '') +
+      '<div class="crm-small crm-muted">' + (st.dueOn ? '<span class="' + (st.overdue ? 'crm-flag' : '') + '">' + (st.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(st.dueOn)) + '</span>' : 'No due date') +
+      ' · <a class="crm-link" href="admin-crm-opportunity.html?id=' + esc(st.dealId) + '">' + esc(st.dealName) + '</a> · ' + esc(st.accountName) + (st.namedOwner ? ' · named for you' : ' · on your deal') + '</div></div></li>';
+  }
+
   function load() {
+    if (state.view === 'steps') { loadSteps(); return; }
     var list = document.getElementById('list');
     C.loading(list);
     C.api('GET', '/api/crm/tasks' + C.qstr(params())).then(function (r) {
@@ -98,7 +130,7 @@
     var m = '';
     if (t.priority === 'high') m += ' · <span class="crm-flag">High priority</span>';
     if (t.priority === 'low') m += ' · low priority';
-    if (t.remindOn && t.state !== 'done') m += ' · remind ' + esc(C.date(t.remindOn));
+    if (t.remindOn && t.state !== 'done') m += ' · remind ' + esc(C.date(t.remindOn)) + (t.remindTime ? ' at ' + esc(t.remindTime) : '');
     if (t.quote) m += ' · <a class="crm-link" href="admin-quotes.html?quote=' + encodeURIComponent(t.quote.id) + '">Quote ' + esc(t.quote.number || '#' + t.quote.id) + '</a>';
     if (SOURCE[t.source]) m += ' · ' + esc(SOURCE[t.source]);
     return m;
@@ -138,6 +170,7 @@
     C.pager(document.getElementById('pager'), d, function (n) { state.page = n; load(); });
   }
 
+  function browserZone() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } }
   function addTask() {
     var KINDS = { opportunities: 'A deal', accounts: 'An account', contacts: 'A contact' };
     var dlg = C.dialog({
@@ -146,11 +179,13 @@
         C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="255" required>', '', 'tTitle') +
         C.field('Details (optional)', '<textarea id="tDetails" maxlength="1000"></textarea>', '', 'tDetails') +
         '<div class="a-form-row">' + C.field('Due', '<input type="date" id="tDue">', '', 'tDue') + C.field('For', '<select id="tWho">' + C.ownerOptions(staff, C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>' +
-        '<div class="a-form-row">' + C.field('Priority', '<select id="tPrio"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select>', '', 'tPrio') + C.field('Remind me on (optional)', '<input type="date" id="tRemind">', 'Not after the due day.', 'tRemind') + '</div>',
+        '<div class="a-form-row">' + C.field('Priority', '<select id="tPrio"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select>', '', 'tPrio') + C.field('Remind me on (optional)', '<input type="date" id="tRemind">', 'Not after the due day.', 'tRemind') + '</div>' +
+        C.field('At what time? (optional)', '<input type="time" id="tRemindAt">', 'Needs a reminder date. Once the owner has switched reminder emails on, you get one email at this time (' + esc(browserZone() || 'your time zone').replace(/_/g, ' ') + ').', 'tRemindAt'),
       onSubmit: function (f) {
         var kind = f.querySelector('#tKind').value, sel = f.querySelector('[data-pick]');
-        var id = Number(sel && sel.value); if (!id) return 'Pick what the task is about.';
+        var id = Number(sel && sel.value); if (!id) return 'Click the deal, account or contact in the list first.';
         var body = { title: f.querySelector('#tTitle').value, details: f.querySelector('#tDetails').value, dueOn: f.querySelector('#tDue').value || null, assignedAdminId: Number(f.querySelector('#tWho').value), priority: f.querySelector('#tPrio').value, remindOn: f.querySelector('#tRemind').value || null };
+        var at = f.querySelector('#tRemindAt').value; body.remindTime = at || null; if (at) body.remindTz = browserZone();
         if (!body.assignedAdminId) return 'Pick who will do it.';
         body[kind === 'opportunities' ? 'opportunityId' : kind === 'accounts' ? 'accountId' : 'contactId'] = id;
         return C.api('POST', '/api/crm/tasks', body).then(function (r) { if (r.ok) { C.toast('Task added'); load(); return; } return C.problem(r); });
@@ -159,7 +194,7 @@
     function pick() {
       var kind = dlg.form.querySelector('#tKind').value;
       dlg.form.querySelector('#pickArea').innerHTML = C.pickerFields(kind, KINDS[kind].toLowerCase().replace(/^a[n]? /, ''));
-      C.picker(dlg.form, kind);
+      C.picker(dlg.form, kind, { preselect: true }); // the first match is chosen for you (and stays chosen while you keep typing), so typing a name and pressing Add works
     }
     dlg.form.querySelector('#tKind').addEventListener('change', pick);
     pick();
