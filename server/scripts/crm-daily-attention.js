@@ -27,6 +27,9 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 // Expired quotes (punch list G13): one 'expired' event on each quote that was sent, never answered, and is past its valid-until date, once ever. It only adds a line to the quote's
 // event log, so it has no switch; without --apply it only counts.
 //
+// Last contacted (punch list G16): a meeting that has started (and was not cancelled) marks the contacts invited to it as contacted at the meeting's start time. Moves the date
+// forward only; only adds to a person's "last contacted" date, so it has no switch; without --apply it only counts.
+//
 // Output is counts only (no names, no email addresses).
 const mysql = require('mysql2/promise');
 const A = require('../lib/crm-attention');
@@ -34,6 +37,7 @@ const TT = require('../lib/crm-trial-tasks');
 const OB = require('../lib/crm-onboarding');
 const QF = require('../lib/crm-quote-followups');
 const QE = require('../lib/crm-quote-events');
+const CH = require('../lib/crm-contact-history');
 
 async function setting(db, key) {
   const [[row]] = await db.query('SELECT setting_value FROM settings WHERE setting_key = ?', [key]).catch(() => [[undefined]]);
@@ -124,6 +128,8 @@ async function main() {
     const ex = await QE.recordExpired(db, { today: now.slice(0, 10), apply });
     if (!ex.available) console.log('Expired quote events: skipped, because the quote event table is missing.');
     else console.log(`Expired quote events${apply ? '' : ' (report only)'}: ${ex.eligible} quote(s) past their valid-until date with no event yet${apply ? `, ${ex.made} written` : ''}.`);
+    const mt = await CH.touchFromMeetings(db, { now, apply });
+    console.log(`Last contacted from meetings${apply ? '' : ' (report only)'}: ${mt.meetings} started meeting(s) in the last 30 days, ${mt.contacts} invited contact(s), ${mt.touched} ${apply ? 'updated' : 'would be updated'}.`);
     const followOn = (await setting(db, QF.SWITCH)) === 'true';
     const f = await QF.createFollowUps(db, { apply: apply && followOn, now, today: now.slice(0, 10) });
     if (!f.available) console.log('Quote follow-up tasks: skipped, because the table is missing. Run scripts/alter-create-crm-quote-followups.js, then run this again.');

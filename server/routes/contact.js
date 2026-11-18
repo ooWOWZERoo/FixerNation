@@ -13,7 +13,8 @@ const { cleanParty, billFromQuote, shipFromQuote } = require('../lib/invoice-par
 const { setQuoteLinks, dealForQuote } = require('../lib/crm-quotes');
 const { loadCrmRole, canEditDeal, isCrmEnabled, can, requireCrmRole } = require('../lib/crm-permissions');
 const { audit } = require('../lib/audit');
-const quoteDecline = require('../lib/quote-decline'); // G13: decline a quote on the customer's behalf, or undo a decline
+const quoteDecline = require('../lib/quote-decline');
+const CH = require('../lib/crm-contact-history'); // G16: a quote emailed to someone marks them as contacted // G13: decline a quote on the customer's behalf, or undo a decline
 
 // Punch list S3/S4. The accept link (accept_token) alone accepts a quote by PO, so it never goes back to the browser: staff send it through the Send button.
 function publicQuote(row) {
@@ -618,6 +619,7 @@ router.post('/quotes/:id/send', requireAuth, requireCrmRole('write'), async (req
     if (sup.affectedRows) await crmHooks.quotePriceChanged(quote.id, replaced.quoted_amount_cents, { actorAdminId: req.user.userId });
   }
   await crmHooks.quoteEvent(quote.id, 'sent', { detail: noEmail ? 'by phone' : 'by email', actorAdminId: req.user.userId });
+  if (!noEmail) await CH.touchByEmail(pool, quote.email, new Date()); // an emailed quote is staff contact; a phone quote is recorded by the note that was logged about the call
 
   await auditPriceChange(req, quote, priceDiff);
   const [[updated]] = await pool.query('SELECT * FROM quote_requests WHERE id = ?', [quote.id]);

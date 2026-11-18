@@ -14,6 +14,7 @@
 //    escaped wherever it is shown. No student, teacher name or address is stored.
 // `conn` is the pool in the app and any query-capable handle in tests. SQL stays portable (no NOW(), no ON DUPLICATE KEY, no array parameters except IN (?)).
 const { audit } = require('./audit');
+const { tagTask } = require('./crm-task-fields');
 const cls = require('./crm-classification');
 const growth = require('./crm-growth');
 const { isDemoDistrictName } = require('./sales-demo');
@@ -227,6 +228,7 @@ async function decide(conn, requestId, action, { adminId, role, note, now, today
           `The district asked to ${label} (now ${r.current_seats === null ? 'unknown' : r.current_seats} seats). Open a draft quote with the usual tool, set the price yourself and send it. Nothing has been priced or sent yet.`,
           today, adminId, adminId, now]);
       taskId = Number(t.insertId);
+      await tagTask(conn, taskId, { source: 'request' });
     }
     await audit(conn, {
       actorType: 'admin', actorId: adminId, action: action === 'approve' ? 'crm_repeat_approved' : 'crm_repeat_declined', entityType: 'crm_repeat_request', entityId: r.id,

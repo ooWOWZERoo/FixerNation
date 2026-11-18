@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=38"></script>
+<script src="admin-nav.js?v=39"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -34,7 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
-<script src="crm-panels.js?v=2"></script>
+<script src="crm-panels.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -140,7 +140,7 @@
     h += '<div id="pEngagement"></div><div id="pTimeline"></div>';
     root.innerHTML = h;
 
-    var subject = { kind: 'opportunity', id: id, canWrite: edit, contacts: data.committee.map(function (m) { return { id: m.contactId, name: m.name, email: m.email }; }) };
+    var subject = { kind: 'opportunity', id: id, canWrite: edit, contacts: data.committee.map(function (m) { return { id: m.contactId, name: m.name, email: m.email }; }), quotes: (data.quotes || []).map(function (q) { return { id: q.id, number: q.quoteNumber }; }) };
     FnCrmPanels.tasks(document.getElementById('pTasks'), subject);
     FnCrmPanels.checklist(document.getElementById('pChecklist'), subject);
     FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
@@ -400,6 +400,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=11"></script>
+<script src="admin-shell.js?v=12"></script>
 </body>
 </html>

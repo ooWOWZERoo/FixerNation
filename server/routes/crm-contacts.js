@@ -7,9 +7,11 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const cls = require('../lib/crm-classification');
-const { text, posInt, oneOf, paging, likeTerm } = require('../lib/crm-common');
+const { text, posInt, dateOnly, oneOf, paging, likeTerm } = require('../lib/crm-common');
 const { matchingContacts } = require('../lib/crm-quotes');
 const { attributionView, mergeTouches } = require('../lib/attribution');
+
+const FILT = require('../lib/crm-filters'); // G19: buying role, license status and organization filters
 
 const router = express.Router();
 
@@ -49,6 +51,15 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const like = likeTerm(req.query.q);
   if (like) { where.push("(c.name LIKE ? ESCAPE '!' OR c.email LIKE ? ESCAPE '!' OR c.company LIKE ? ESCAPE '!')"); params.push(like, like, like); }
   if (req.query.includeTest !== 'true') where.push(`NOT (LOWER(TRIM(c.email)) LIKE '%@example.com')`);
+  // G19: more filters. Each is a plain fact (lib/crm-filters.js): who holds a buying role, what licence they have, which organization they are at, and whether their label was set by hand.
+  const today = dateOnly(req.query.today) || new Date().toISOString().slice(0, 10);
+  const extra = [
+    FILT.roleForContact(typeof req.query.role === 'string' ? req.query.role : ''),
+    FILT.licenseForContact(typeof req.query.license === 'string' && FILT.LICENSES.includes(req.query.license) ? req.query.license : '', today),
+    FILT.organizationForContact({ accountId: posInt(req.query.accountId), like: likeTerm(req.query.organization) }),
+  ].filter(Boolean);
+  for (const f of extra) { where.push(f.sql); params.push(...f.params); }
+  if (req.query.locked === 'true') where.push('c.classification_locked = 1');
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const sortKey = SORTS[req.query.sort] ? req.query.sort : 'changed';
   const dir = req.query.dir === 'asc' ? 'ASC' : 'DESC';
@@ -192,7 +203,7 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
      FROM crm_classification_events e LEFT JOIN admin_users a ON a.id = e.actor_admin_id
      WHERE e.contact_id = ? ORDER BY e.id DESC LIMIT 50`, [id]);
   const [accounts] = await pool.query(
-    `SELECT ac.account_id, a.name, a.account_type, ac.title, ac.is_primary, ac.is_champion, ac.is_decision_maker, ac.is_procurement, ac.is_finance
+    `SELECT ac.account_id, a.name, a.account_type, ac.title, ac.started_on, ac.ended_on, ac.is_primary, ac.is_champion, ac.is_decision_maker, ac.is_procurement, ac.is_finance
      FROM crm_account_contacts ac JOIN crm_accounts a ON a.id = ac.account_id WHERE ac.contact_id = ? ORDER BY a.name`, [id]);
   const [opps] = await pool.query(
     `SELECT o.id, o.name, o.state, s.label AS stage, oc.role
@@ -213,7 +224,7 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
     attribution: attributionView(c),
     quotes: quotes.map(q => ({ id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at || null, acceptedAt: q.accepted_at || null, opportunityId: q.opportunity_id || null })),
     events: events.map(e => ({ id: e.id, from: e.from_classification, to: e.to_classification, type: e.event_type, sourceRef: e.source_ref, reason: e.reason, at: e.created_at, actor: e.actor || null })),
-    accounts: accounts.map(a => ({ accountId: a.account_id, name: a.name, accountType: a.account_type, title: a.title, isPrimary: !!a.is_primary, isChampion: !!a.is_champion, isDecisionMaker: !!a.is_decision_maker, isProcurement: !!a.is_procurement, isFinance: !!a.is_finance })),
+    accounts: accounts.map(a => ({ accountId: a.account_id, name: a.name, accountType: a.account_type, title: a.title, startedOn: a.started_on || null, endedOn: a.ended_on || null, isPrimary: !!a.is_primary, isChampion: !!a.is_champion, isDecisionMaker: !!a.is_decision_maker, isProcurement: !!a.is_procurement, isFinance: !!a.is_finance })),
     opportunities: opps.map(o => ({ id: o.id, name: o.name, state: o.state, stage: o.stage, role: o.role })),
     // "qualifies" is the Customer rule applied to each row, so staff can see exactly why a purchase does or does not make someone a Customer.
     purchases: purchases.map(p => ({

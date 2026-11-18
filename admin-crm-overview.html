@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=38"></script>
+<script src="admin-nav.js?v=39"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -80,6 +80,8 @@
     h += i ? '<div role="listitem">' + tile('Unpaid invoices', C.num(i.count) + ' · ' + esc(C.money(i.totalCents, '$0')), 'Invoices not yet marked paid.', 'admin-invoices.html') + '</div>' : unknown('Unpaid invoices');
     var r = c.renewalsDue;
     h += r ? '<div role="listitem">' + tile('Renewals due', C.num(r.licensesEnding), esc('Paid licenses ending in the next ' + r.windowDays + ' days with no renewal yet. ' + r.openRenewalDeals + ' open renewal deal' + (r.openRenewalDeals === 1 ? '' : 's') + '.'), 'admin-crm-opportunities.html?oppType=renewal') + '</div>' : unknown('Renewals due');
+    var rm = c.remindersToday;
+    h += rm ? '<div role="listitem">' + tile('Reminders for you', C.num(rm.count), 'Open tasks whose remind-me date has come, yours or assigned to nobody.', 'admin-crm-tasks.html?view=reminders') + '</div>' : unknown('Reminders for you');
     var w = c.winRate;
     h += w ? '<div role="listitem">' + tile('Win rate, last ' + esc(w.days) + ' days', w.percent === null ? '—' : esc(w.percent) + '%', w.percent === null ? 'No deals were closed Won or Lost in this time yet.' : esc(w.won + ' won of ' + (w.won + w.lost) + ' closed Won or Lost.'), 'admin-crm-reports.html') + '</div>' : unknown('Win rate');
     return h + '</div>';
@@ -268,6 +270,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=11"></script>
+<script src="admin-shell.js?v=12"></script>
 </body>
 </html>

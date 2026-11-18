@@ -200,6 +200,7 @@ app.use('/api/crm/checklists', crmChecklistsRoutes);
 app.use('/api/crm/refunds', crmRefundsRoutes);
 app.use('/api/crm/repeat-requests', require('./routes/crm-repeat-requests'));
 app.use('/api/crm/customers', require('./routes/crm-customers'));
+app.use('/api/crm/import', require('./routes/crm-import'));
 app.use('/api/crm/attention', crmAttentionRoutes);
 app.use('/api/crm/timeline', crmTimelineRoutes);
 app.use('/api/crm/audit', crmAuditRoutes);

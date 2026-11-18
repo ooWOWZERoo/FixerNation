@@ -6,9 +6,11 @@ const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { requireCrm } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
-const { ACCOUNT_TYPES, text, posInt, oneOf, paging, likeTerm } = require('../lib/crm-common');
+const { ACCOUNT_TYPES, text, posInt, dateOnly, oneOf, paging, likeTerm } = require('../lib/crm-common');
 const { engagementFor } = require('../lib/crm-engagement');
 const rel = require('../lib/crm-account-relationship');
+const FILT = require('../lib/crm-filters'); // G19: buying role and license status filters
+const roll = require('../lib/crm-account-rollups'); // G17: duplicate review by website address, and paid purchase and deal rollups
 
 const router = express.Router();
 
@@ -57,6 +59,10 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
     const ids = [...relMap.entries()].filter(([, v]) => (wantRel === 'review' ? v.needsReview : v.relationship === wantRel)).map(([id]) => id);
     where.push(ids.length ? `a.id IN (${ids.map(() => '?').join(',')})` : '1 = 0'); params.push(...ids);
   }
+  // G19: accounts that have a person in a buying role, that have a live paid licence, a live trial, only an ended trial or nothing, or that sit under one district (parent).
+  const today = dateOnly(req.query.today) || new Date().toISOString().slice(0, 10);
+  for (const f of [FILT.roleForAccount(typeof req.query.role === 'string' ? req.query.role : ''), FILT.licenseForAccount(typeof req.query.license === 'string' && FILT.LICENSES.includes(req.query.license) ? req.query.license : '', today)].filter(Boolean)) { where.push(f.sql); params.push(...f.params); }
+  if (posInt(req.query.parent)) { where.push('a.parent_account_id = ?'); params.push(posInt(req.query.parent)); }
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM crm_accounts a ${w}`, params);
   // Counts are correlated subqueries, one value per account, so a contact in two accounts or a deal with many contacts can never multiply a row.
@@ -67,8 +73,21 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
      FROM crm_accounts a ${w} ORDER BY a.name, a.id LIMIT ? OFFSET ?`,
     [...params, size, offset]
   );
+  const paidBy = await roll.purchaseTotals(pool, rows.map(a => a.id)); // G17: paid, non-trial purchases placed on each account (a district includes its schools)
   const view = (a) => { const r = relMap.get(Number(a.id)); return r ? { relationship: r.relationship, needsReview: r.needsReview } : { relationship: null, needsReview: false }; };
-  res.json({ accounts: rows.map(a => ({ ...accountRow(a), ...view(a), contactCount: Number(a.contact_count), openDeals: Number(a.open_deals) })), total: Number(total), page, pageSize: size, relationshipCounts: rel.relationshipCounts(relMap) });
+  res.json({ accounts: rows.map(a => ({ ...accountRow(a), ...view(a), contactCount: Number(a.contact_count), openDeals: Number(a.open_deals), paid: paidBy.get(Number(a.id)) || { count: 0, totalCents: 0, firstAt: null, lastAt: null } })), total: Number(total), page, pageSize: size, relationshipCounts: rel.relationshipCounts(relMap) });
+});
+
+// G17: live accounts of the same type that share a website address. Read only: nothing is merged, archived or changed; merging is the CRM Admin's own action on the account.
+router.get('/review/duplicates', requireAuth, requireCrm('view'), async (req, res) => {
+  const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
+  const found = await roll.duplicateAccounts(pool);
+  const shown = found.slice(offset, offset + size);
+  const relMap = await rel.accountRelationships(pool);
+  res.json({
+    groups: shown.map(g => ({ domain: g.domain, accounts: g.accounts.map(a => ({ ...a, relationship: (relMap.get(a.id) || {}).relationship || null })) })),
+    total: found.length, page, pageSize: size,
+  });
 });
 
 // G1 (decision D4): paid, non-trial purchases that name no school, so they cannot be placed on an account. Each shows the buyer and the accounts the buyer belongs to, so staff
@@ -91,16 +110,20 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
   const [[a]] = id ? await pool.query('SELECT * FROM crm_accounts WHERE id = ?', [id]) : [[null]];
   if (!a) return res.status(404).json({ error: 'Account not found' });
   const [contacts] = await pool.query(
-    `SELECT ac.contact_id, c.name, c.email, c.crm_classification, ac.title, ac.is_primary, ac.is_champion, ac.is_decision_maker, ac.is_procurement, ac.is_finance
+    `SELECT ac.contact_id, c.name, c.email, c.crm_classification, ac.title, ac.started_on, ac.ended_on, ac.is_primary, ac.is_champion, ac.is_decision_maker, ac.is_procurement, ac.is_finance
      FROM crm_account_contacts ac JOIN newsletter_contacts c ON c.id = ac.contact_id WHERE ac.account_id = ? ORDER BY ac.is_primary DESC, c.name`, [id]);
   const [opps] = await pool.query(
     `SELECT o.id, o.name, o.state, o.amount_cents, o.opp_type, s.label AS stage, o.owner_admin_id, o.next_step, o.next_step_due_at
      FROM crm_opportunities o JOIN crm_pipeline_stages s ON s.id = o.stage_id WHERE o.account_id = ? ORDER BY o.id DESC`, [id]);
   const [children] = await pool.query('SELECT id, name, account_type FROM crm_accounts WHERE parent_account_id = ? ORDER BY name', [id]);
   const relation = (await rel.accountRelationships(pool)).get(Number(a.id)) || null;
+  const todayDay = typeof req.query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.today) ? req.query.today : new Date().toISOString().slice(0, 10);
+  const rollup = await roll.accountRollup(pool, a, todayDay);          // G17: paid purchases and deals
+  const possibleDuplicates = a.archived_at ? [] : await roll.duplicatesOf(pool, a); // G17: other live accounts with the same website address
   res.json({
+    rollup, possibleDuplicates,
     account: { ...accountRow(a), relationship: relation ? relation.relationship : null, needsReview: relation ? relation.needsReview : false, relationshipWhy: relation ? relation.why : null },
-    contacts: contacts.map(c => ({ contactId: c.contact_id, name: c.name, email: c.email, classification: c.crm_classification, title: c.title, isPrimary: !!c.is_primary, isChampion: !!c.is_champion, isDecisionMaker: !!c.is_decision_maker, isProcurement: !!c.is_procurement, isFinance: !!c.is_finance })),
+    contacts: contacts.map(c => ({ contactId: c.contact_id, name: c.name, email: c.email, classification: c.crm_classification, title: c.title, startedOn: c.started_on || null, endedOn: c.ended_on || null, isPrimary: !!c.is_primary, isChampion: !!c.is_champion, isDecisionMaker: !!c.is_decision_maker, isProcurement: !!c.is_procurement, isFinance: !!c.is_finance })),
     opportunities: opps.map(o => ({ id: o.id, name: o.name, state: o.state, stage: o.stage, oppType: o.opp_type, amountCents: o.amount_cents === null ? null : Number(o.amount_cents), ownerAdminId: o.owner_admin_id || null, nextStep: o.next_step, nextStepDueAt: o.next_step_due_at })),
     children,
   });
@@ -201,10 +224,12 @@ router.post('/:id/contacts', requireAuth, requireCrm('write'), async (req, res) 
   const [dup] = await pool.query('SELECT id FROM crm_account_contacts WHERE account_id = ? AND contact_id = ?', [id, contactId]);
   if (dup[0]) return res.status(409).json({ code: 'already_member', error: 'This person is already on the account.' });
   const flag = k => (b[k] === true ? 1 : 0);
+  // G16: the day they joined is recorded, and making someone the primary contact takes the badge off whoever had it, in the same step.
   await pool.query(
-    `INSERT INTO crm_account_contacts (account_id, contact_id, title, is_primary, is_champion, is_decision_maker, is_procurement, is_finance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, contactId, text(b.title, 128), flag('isPrimary'), flag('isChampion'), flag('isDecisionMaker'), flag('isProcurement'), flag('isFinance')]
+    `INSERT INTO crm_account_contacts (account_id, contact_id, title, is_primary, is_champion, is_decision_maker, is_procurement, is_finance, started_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, contactId, text(b.title, 128), flag('isPrimary'), flag('isChampion'), flag('isDecisionMaker'), flag('isProcurement'), flag('isFinance'), new Date().toISOString().slice(0, 10)]
   );
+  if (flag('isPrimary')) await pool.query('UPDATE crm_account_contacts SET is_primary = 0 WHERE account_id = ? AND contact_id <> ? AND is_primary = 1', [id, contactId]);
   await crmAudit(req, { action: 'crm_account_contact_added', entityType: 'crm_account', entityId: id, next: { contactId } });
   res.status(201).json({ ok: true });
 });
@@ -212,9 +237,10 @@ router.post('/:id/contacts', requireAuth, requireCrm('write'), async (req, res) 
 router.put('/:id/contacts/:contactId', requireAuth, requireCrm('write'), async (req, res) => {
   const id = posInt(req.params.id);
   const contactId = posInt(req.params.contactId);
-  const [[m]] = id && contactId ? await pool.query('SELECT id FROM crm_account_contacts WHERE account_id = ? AND contact_id = ?', [id, contactId]) : [[null]];
+  const [[m]] = id && contactId ? await pool.query('SELECT id, ended_on FROM crm_account_contacts WHERE account_id = ? AND contact_id = ?', [id, contactId]) : [[null]];
   if (!m) return res.status(404).json({ error: 'That person is not on this account.' });
   const b = req.body || {};
+  if (b.isPrimary === true && m.ended_on) return res.status(409).json({ code: 'left', error: 'This person has left the organization, so they cannot be its primary contact. Mark them as back first.' });
   const sets = [];
   const vals = [];
   if (b.title !== undefined) { sets.push('title = ?'); vals.push(text(b.title, 128)); }
@@ -223,7 +249,32 @@ router.put('/:id/contacts/:contactId', requireAuth, requireCrm('write'), async (
   }
   if (!sets.length) return res.status(400).json({ error: 'Nothing to change.' });
   await pool.query(`UPDATE crm_account_contacts SET ${sets.join(', ')} WHERE id = ?`, [...vals, m.id]);
+  if (b.isPrimary === true) await pool.query('UPDATE crm_account_contacts SET is_primary = 0 WHERE account_id = ? AND id <> ? AND is_primary = 1', [id, m.id]); // only one primary contact per account
   await crmAudit(req, { action: 'crm_account_contact_updated', entityType: 'crm_account', entityId: id, next: { contactId } });
+  res.json({ ok: true });
+});
+
+// G16: a person who has left the organization keeps their place in its history. The date they left is recorded, they are no longer its primary contact and no longer count as
+// someone to invite or reach there, and "Back" undoes it. "Remove" (below) is for an entry made by mistake.
+router.post('/:id/contacts/:contactId/left', requireAuth, requireCrm('write'), async (req, res) => {
+  const id = posInt(req.params.id), contactId = posInt(req.params.contactId);
+  const [[m]] = id && contactId ? await pool.query('SELECT id, ended_on FROM crm_account_contacts WHERE account_id = ? AND contact_id = ?', [id, contactId]) : [[null]];
+  if (!m) return res.status(404).json({ error: 'That person is not on this account.' });
+  if (m.ended_on) return res.json({ ok: true, unchanged: true });
+  const day = dateOnly((req.body || {}).on) || new Date().toISOString().slice(0, 10);
+  if (day > new Date().toISOString().slice(0, 10)) return res.status(400).json({ error: 'The day they left cannot be in the future.' });
+  const [u] = await pool.query('UPDATE crm_account_contacts SET ended_on = ?, is_primary = 0 WHERE id = ? AND ended_on IS NULL', [day, m.id]);
+  if (!u.affectedRows) return res.json({ ok: true, unchanged: true });
+  await crmAudit(req, { action: 'crm_account_contact_left', entityType: 'crm_account', entityId: id, next: { contactId, on: day } });
+  res.json({ ok: true });
+});
+router.post('/:id/contacts/:contactId/back', requireAuth, requireCrm('write'), async (req, res) => {
+  const id = posInt(req.params.id), contactId = posInt(req.params.contactId);
+  const [[m]] = id && contactId ? await pool.query('SELECT id, ended_on FROM crm_account_contacts WHERE account_id = ? AND contact_id = ?', [id, contactId]) : [[null]];
+  if (!m) return res.status(404).json({ error: 'That person is not on this account.' });
+  if (!m.ended_on) return res.json({ ok: true, unchanged: true });
+  await pool.query('UPDATE crm_account_contacts SET ended_on = NULL WHERE id = ?', [m.id]);
+  await crmAudit(req, { action: 'crm_account_contact_back', entityType: 'crm_account', entityId: id, next: { contactId } });
   res.json({ ok: true });
 });
 

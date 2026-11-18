@@ -11,6 +11,7 @@
 //  - The task text holds seat counts and dates only, never a teacher or student name. Unknown stays unknown: a trial with no seat records is never called stalled.
 // `conn` is the pool in the app and any query-capable handle in tests. SQL stays portable (no NOW(), no ON DUPLICATE KEY, no array parameters).
 const { audit } = require('./audit');
+const { tagTask } = require('./crm-task-fields');
 
 const SWITCH = 'crm_trial_review_tasks';
 // Needs Attention rule -> the reason stored in the ledger.
@@ -92,6 +93,7 @@ async function createReviewTasks(conn, items, { apply = false, now, today } = {}
          VALUES (?, ?, ?, ?, ?, ?, 'open', ?, NULL, ?)`,
         [place.cols.opportunity_id, place.cols.account_id, place.cols.contact_id, t.title.slice(0, 255), t.details.slice(0, 1000), t.dueOn, place.owner, now]);
       await conn.query('UPDATE crm_trial_review_tasks SET task_id = ? WHERE id = ?', [ins.insertId, claim.insertId]);
+      await tagTask(conn, ins.insertId, { source: 'daily_check' });
       ledger.add(key);
       out.made++; out.byReason[reason].made++;
       await audit(conn, {

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" sizes="32x32" href="/api/settings/favicon?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="/api/settings/favicon?size=16">
+<link rel="apple-touch-icon" href="/api/settings/favicon?size=180">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Fixer Nation Education - Customer Hub Calendar</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="stylesheet" href="admin-common.css?v=22">
+<link rel="stylesheet" href="crm-common.css?v=3">
+<style>
+  /* Calendar only. Uses the shared admin variables; nothing here is used by another page. */
+  .cal-bar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+  .cal-bar h2{margin:0 8px; font-size:17px; min-width:170px;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-top:1px solid var(--a-border); border-left:1px solid var(--a-border);}
+  .cal-dow{padding:6px 8px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--a-text-soft); border-right:1px solid var(--a-border); border-bottom:1px solid var(--a-border); background:var(--a-card);}
+  .cal-day{min-height:104px; padding:5px; border-right:1px solid var(--a-border); border-bottom:1px solid var(--a-border); background:var(--a-card); min-width:0;}
+  .cal-week .cal-day{min-height:300px;}
+  .cal-day.other{opacity:.55;}
+  .cal-day.today .cal-num{background:var(--a-accent-fill); color:#fff;}
+  .cal-day.over{outline:2px dashed var(--a-accent); outline-offset:-3px;}
+  .cal-num{display:inline-block; min-width:22px; padding:1px 6px; border-radius:99px; font-size:12px; font-weight:700; color:var(--a-text-soft);}
+  .cal-item{display:block; width:100%; margin:3px 0 0; padding:3px 6px; border:1px solid var(--a-border); border-radius:6px; background:var(--a-bg, var(--a-card)); color:var(--a-text); font:inherit; font-size:12px; text-align:left; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cal-item:hover, .cal-item:focus-visible{border-color:var(--a-accent);}
+  .cal-item.meeting{border-left:4px solid var(--a-accent);}
+  .cal-item.task{border-left:4px solid var(--a-text-soft);}
+  .cal-item.late{border-color:#dc2626; color:#b91c1c;}
+  .cal-item[draggable=true]{cursor:grab;}
+  .cal-more{margin:3px 0 0; padding:0; border:0; background:none; color:var(--a-accent); font:inherit; font-size:12px; font-weight:700; cursor:pointer;}
+</style>
+</head>
+<body class="fn-mission-admin">
+
+<div class="a-shell">
+  <aside class="a-sidebar"></aside>
+<script src="admin-nav.js?v=39"></script>
+
+  <div class="a-main">
+    <div class="a-topbar">
+      <h1 id="pageTitle">Calendar</h1>
+      <div class="a-theme-toggle" onclick="fnToggleTheme()" title="Toggle light/dark theme"><span class="ic-sun">☀️</span><span class="ic-moon">🌙</span></div>
+      <div class="a-user"><div class="avatar">A</div> admin</div>
+    </div>
+
+    <div class="a-content">
+      <div id="crmRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-common.js?v=17"></script>
+<script src="crm-common.js?v=2"></script>
+<script>
+// Punch list G12: tasks (on the day they are due) and meetings (at their time) on one calendar, by month or by week. Mine or everyone's. Drag an item to another day, or open it and pick a
+// day, to reschedule it: a task changes its due date; a meeting keeps its time of day and its length. Moving a meeting does NOT email anyone; afterwards you are asked whether to send the
+// update. Titles, deal names and links come from outside the keyboard, so every value goes through esc(); a join link is only ever used when it starts with https://.
+(function () {
+  var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
+  var state = { view: 'month', anchor: today(), kinds: 'both', scope: 'mine', tasks: [], meetings: [], truncated: false };
+  var canWrite = false;
+
+  function pad(n) { return ('0' + n).slice(-2); }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parseDay(s) { var p = s.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12, 0, 0); }
+  function today() { return ymd(new Date()); }
+  function addDays(s, n) { var d = parseDay(s); d.setDate(d.getDate() + n); return ymd(d); }
+  function startOfWeek(s) { var d = parseDay(s); d.setDate(d.getDate() - d.getDay()); return ymd(d); }
+
+  // The first and last day shown, and the moments (the viewer's own midnights) the meetings window uses.
+  function windowOf() {
+    var first, days;
+    if (state.view === 'week') { first = startOfWeek(state.anchor); days = 7; }
+    else { var d = parseDay(state.anchor); d.setDate(1); first = startOfWeek(ymd(d)); days = 42; }
+    var last = addDays(first, days - 1);
+    var from = new Date(parseDay(first).getFullYear(), parseDay(first).getMonth(), parseDay(first).getDate(), 0, 0, 0);
+    var to = new Date(parseDay(last).getFullYear(), parseDay(last).getMonth(), parseDay(last).getDate() + 1, 0, 0, 0);
+    return { first: first, last: last, days: days, fromAt: from.toISOString(), toAt: to.toISOString() };
+  }
+
+  C.boot(root).then(function (me) {
+    if (!me) return;
+    canWrite = C.can('write');
+    root.innerHTML = '<div class="a-card"><div class="cal-bar" id="calBar"></div><p class="crm-small crm-muted" style="margin:0 0 10px;" id="calHelp"></p><div id="calBody"></div></div>';
+    draw(); load();
+  });
+
+  function bar() {
+    var w = windowOf(), title;
+    if (state.view === 'week') title = C.date(w.first + 'T12:00:00') + ' to ' + C.date(w.last + 'T12:00:00');
+    else title = parseDay(state.anchor).toLocaleDateString([], { month: 'long', year: 'numeric' });
+    document.getElementById('calBar').innerHTML =
+      '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-nav="-1" aria-label="Earlier">‹</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-nav="0">Today</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-nav="1" aria-label="Later">›</button>' +
+      '<h2 aria-live="polite">' + esc(title) + '</h2>' +
+      '<select id="calView" aria-label="View"><option value="month"' + (state.view === 'month' ? ' selected' : '') + '>Month</option><option value="week"' + (state.view === 'week' ? ' selected' : '') + '>Week</option></select>' +
+      '<select id="calKinds" aria-label="Show"><option value="both"' + (state.kinds === 'both' ? ' selected' : '') + '>Tasks and meetings</option><option value="tasks"' + (state.kinds === 'tasks' ? ' selected' : '') + '>Tasks only</option><option value="meetings"' + (state.kinds === 'meetings' ? ' selected' : '') + '>Meetings only</option></select>' +
+      '<select id="calScope" aria-label="Whose"><option value="mine"' + (state.scope === 'mine' ? ' selected' : '') + '>Mine</option><option value="all"' + (state.scope === 'all' ? ' selected' : '') + '>Everyone’s</option></select>';
+    document.querySelectorAll('[data-nav]').forEach(function (b) { b.addEventListener('click', function () {
+      var n = Number(b.dataset.nav);
+      if (n === 0) state.anchor = today();
+      else if (state.view === 'week') state.anchor = addDays(state.anchor, 7 * n);
+      else { var d = parseDay(state.anchor); d.setDate(1); d.setMonth(d.getMonth() + n); state.anchor = ymd(d); }
+      load();
+    }); });
+    document.getElementById('calView').addEventListener('change', function (e) { state.view = e.target.value; load(); });
+    document.getElementById('calKinds').addEventListener('change', function (e) { state.kinds = e.target.value; draw(); });
+    document.getElementById('calScope').addEventListener('change', function (e) { state.scope = e.target.value; load(); });
+  }
+
+  function load() {
+    var w = windowOf(), mine = state.scope === 'mine' ? '&mine=true' : '';
+    bar();
+    var body = document.getElementById('calBody'); C.loading(body);
+    Promise.all([
+      C.api('GET', '/api/crm/tasks/calendar?from=' + w.first + '&to=' + w.last + '&today=' + today() + mine),
+      C.api('GET', '/api/crm/meetings/calendar?fromAt=' + encodeURIComponent(w.fromAt) + '&toAt=' + encodeURIComponent(w.toAt) + mine)
+    ]).then(function (res) {
+      if (!res[0].ok) { C.errorBox(body, C.problem(res[0])); return; }
+      if (!res[1].ok) { C.errorBox(body, C.problem(res[1])); return; }
+      state.tasks = res[0].data.tasks; state.meetings = res[1].data.meetings; state.truncated = res[0].data.truncated || res[1].data.truncated;
+      draw();
+    });
+  }
+
+  function itemsByDay() {
+    var map = {};
+    function put(day, it) { (map[day] = map[day] || []).push(it); }
+    if (state.kinds !== 'tasks') state.meetings.forEach(function (m) { put(C.isoDay(m.startsAt), { kind: 'meeting', at: C.parseUtc(m.startsAt).getTime(), m: m }); });
+    if (state.kinds !== 'meetings') state.tasks.forEach(function (t) { put(String(t.dueOn).slice(0, 10), { kind: 'task', at: Infinity, t: t }); });
+    Object.keys(map).forEach(function (k) { map[k].sort(function (a, b) { return a.at - b.at; }); });
+    return map;
+  }
+
+  function chip(it) {
+    if (it.kind === 'meeting') { var m = it.m; return '<button type="button" class="cal-item meeting" data-open="m' + esc(m.id) + '"' + (m.canEdit && canWrite ? ' draggable="true" data-drag="m' + esc(m.id) + '"' : '') + ' title="' + esc(m.title) + '">' + esc(C.timeOnly(m.startsAt)) + ' ' + esc(m.title) + '</button>'; }
+    var t = it.t; return '<button type="button" class="cal-item task' + (t.overdue ? ' late' : '') + '" data-open="t' + esc(t.id) + '"' + (t.canEdit && canWrite ? ' draggable="true" data-drag="t' + esc(t.id) + '"' : '') + ' title="' + esc(t.title) + '">✓ ' + esc(t.title) + '</button>';
+  }
+
+  function draw() {
+    var w = windowOf(), map = itemsByDay(), cells = '', names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], cur = parseDay(state.anchor).getMonth(), t0 = today();
+    names.forEach(function (n) { cells += '<div class="cal-dow">' + n + '</div>'; });
+    for (var i = 0; i < w.days; i++) {
+      var day = addDays(w.first, i), d = parseDay(day), items = map[day] || [], cap = state.view === 'week' ? 99 : 4;
+      cells += '<div class="cal-day' + (state.view === 'month' && d.getMonth() !== cur ? ' other' : '') + (day === t0 ? ' today' : '') + '" data-day="' + day + '"><span class="cal-num">' + d.getDate() + '</span>' +
+        items.slice(0, cap).map(chip).join('') + (items.length > cap ? '<button type="button" class="cal-more" data-week="' + day + '">+' + (items.length - cap) + ' more</button>' : '') + '</div>';
+    }
+    document.getElementById('calHelp').innerHTML = (canWrite ? 'Drag a task or meeting to another day, or open it and pick a day. A moved meeting keeps its time and length, and nobody is emailed until you choose to send the update.' : 'Open an item to see its details.') + (state.truncated ? ' <strong>Showing the first 300 of each. Narrow the dates or choose Mine.</strong>' : '');
+    var body = document.getElementById('calBody');
+    body.innerHTML = '<div class="cal-grid ' + (state.view === 'week' ? 'cal-week' : '') + '" role="grid" aria-label="Calendar">' + cells + '</div>' +
+      ((state.tasks.length + state.meetings.length) ? '' : '<p class="crm-small crm-muted" style="margin-top:12px;">Nothing scheduled in these dates.</p>');
+    body.querySelectorAll('[data-open]').forEach(function (b) { b.addEventListener('click', function () { openItem(b.dataset.open); }); });
+    body.querySelectorAll('[data-week]').forEach(function (b) { b.addEventListener('click', function () { state.view = 'week'; state.anchor = b.dataset.week; load(); }); });
+    body.querySelectorAll('[data-drag]').forEach(function (b) { b.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', b.dataset.drag); e.dataTransfer.effectAllowed = 'move'; }); });
+    body.querySelectorAll('.cal-day').forEach(function (c) {
+      c.addEventListener('dragover', function (e) { if (canWrite) { e.preventDefault(); c.classList.add('over'); } });
+      c.addEventListener('dragleave', function () { c.classList.remove('over'); });
+      c.addEventListener('drop', function (e) { e.preventDefault(); c.classList.remove('over'); var id = e.dataTransfer.getData('text/plain'); if (id) moveTo(id, c.dataset.day); });
+    });
+  }
+
+  function find(key) {
+    var id = Number(key.slice(1));
+    return key[0] === 'm' ? { kind: 'meeting', m: state.meetings.filter(function (m) { return m.id === id; })[0] } : { kind: 'task', t: state.tasks.filter(function (t) { return t.id === id; })[0] };
+  }
+  function subjectLink(sub) {
+    if (!sub) return '';
+    if (sub.opportunityId) return '<a class="crm-link" href="admin-crm-opportunity.html?id=' + encodeURIComponent(sub.opportunityId) + '">' + esc(sub.dealName || 'The deal') + '</a>';
+    if (sub.accountId) return '<a class="crm-link" href="admin-crm-account.html?id=' + encodeURIComponent(sub.accountId) + '">' + esc(sub.accountName || 'The account') + '</a>';
+    if (sub.contactId) return '<a class="crm-link" href="admin-crm-contact.html?id=' + encodeURIComponent(sub.contactId) + '">' + esc(sub.contactName || 'The contact') + '</a>';
+    return '';
+  }
+
+  // Opening an item shows what it is and lets you pick another day (the keyboard way to reschedule).
+  function openItem(key) {
+    var f = find(key), isM = f.kind === 'meeting', it = isM ? f.m : f.t;
+    if (!it) return;
+    var day = isM ? C.isoDay(it.startsAt) : String(it.dueOn).slice(0, 10);
+    var info = isM
+      ? '<p><strong>' + esc(it.title) + '</strong></p><p class="crm-small">' + esc(C.dateTime(it.startsAt)) + ' to ' + esc(C.timeOnly(it.endsAt)) + (it.timeZone ? ' · set up in ' + esc(it.timeZone.replace(/_/g, ' ')) : '') + (it.location ? '<br>' + esc(it.location) : '') +
+        (it.joinUrl && /^https:\/\//.test(it.joinUrl) ? '<br><a class="crm-link" href="' + esc(it.joinUrl) + '" target="_blank" rel="noopener noreferrer">Join link</a>' : '') + '</p>' +
+        '<p class="crm-small crm-muted">' + (it.attendees.length ? 'Invited: ' + it.attendees.map(function (a) { return esc(a.name); }).join(', ') : 'Nobody invited yet') + (it.organizerName ? '<br>Set up by ' + esc(it.organizerName) : '') + '</p>'
+      : '<p><strong>' + esc(it.title) + '</strong></p><p class="crm-small">Due ' + esc(C.date(it.dueOn + 'T12:00:00')) + (it.assigneeName ? ' · ' + esc(it.assigneeName) : ' · nobody yet') + (it.overdue ? ' · <strong>overdue</strong>' : '') + '</p>' + (it.details ? '<p class="crm-small">' + esc(it.details) + '</p>' : '');
+    var movable = canWrite && it.canEdit;
+    C.dialog({
+      title: isM ? 'Meeting' : 'Task', submit: movable ? 'Move it' : null,
+      body: info + '<p class="crm-small">' + subjectLink(it.subject) + '</p>' + (movable ? C.field('Move to another day', '<input type="date" id="calDay" value="' + esc(day) + '">', isM ? 'The time of day and the length stay the same.' : '', 'calDay') : ''),
+      onSubmit: function (form) { var v = form.querySelector('#calDay').value; if (!v) return 'Pick a day.'; if (v === day) return 'That is the day it is already on.'; return doMove(key, v); }
+    });
+  }
+
+  function moveTo(key, day) {
+    var f = find(key), isM = f.kind === 'meeting', it = isM ? f.m : f.t;
+    if (!it || !it.canEdit) return;
+    var cur = isM ? C.isoDay(it.startsAt) : String(it.dueOn).slice(0, 10);
+    if (cur === day) return;
+    doMove(key, day);
+  }
+
+  // A task: the due date. A meeting: the same time of day (the viewer's own) on the new day, the same length.
+  function doMove(key, day) {
+    var f = find(key), isM = f.kind === 'meeting', it = isM ? f.m : f.t, req;
+    if (isM) {
+      var start = C.parseUtc(it.startsAt), end = C.parseUtc(it.endsAt), len = end.getTime() - start.getTime();
+      var ns = C.localToIso(day, pad(start.getHours()) + ':' + pad(start.getMinutes()));
+      if (!ns) return Promise.resolve('That day is not valid.');
+      req = C.api('PUT', '/api/crm/meetings/' + it.id, { startsAt: ns, endsAt: new Date(new Date(ns).getTime() + len).toISOString() });
+    } else req = C.api('PUT', '/api/crm/tasks/' + it.id, { dueOn: day });
+    return req.then(function (r) {
+      if (!r.ok) { C.toast(C.problem(r)); load(); return C.problem(r); }
+      C.toast(isM ? 'Meeting moved.' : 'Task moved.');
+      load();
+      if (isM && r.data.inviteOutOfDate) sendUpdate(it);
+    });
+  }
+
+  // The invitation already went out, so everyone's calendar still shows the old day. Ask; never send on our own.
+  function sendUpdate(m) {
+    setTimeout(function () {
+      C.dialog({ title: 'Send the updated invitation?', submit: 'Send the update',
+        body: '<p>“' + esc(m.title) + '” was moved, and the people invited still have the old day in their calendars. Send them the updated invitation now?</p><p class="crm-small crm-muted">If you choose not to, it stays marked as changed on the meeting, and you can send it later.</p>',
+        onSubmit: function () { return C.api('POST', '/api/crm/meetings/' + m.id + '/send', {}).then(function (r) { if (r.ok) { C.toast('Sent to ' + r.data.recipients + ' people'); load(); return; } return C.problem(r); }); } });
+    }, 250);
+  }
+})();
+</script>
+<script src="admin-shell.js?v=12"></script>
+</body>
+</html>

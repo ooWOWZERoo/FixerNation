@@ -45,6 +45,7 @@ function fileView(f, req) {
   return {
     id: f.id, name: f.original_name, kind: f.kind, sizeBytes: Number(f.size_bytes), uploadedAt: f.created_at, uploadedBy: f.uploader_name || null,
     subject: S.subjectView(f),
+    checklistItemId: f.checklist_item_id ? Number(f.checklist_item_id) : null, // G15: the procurement step it is attached to
     canDelete: req.crm.role === 'admin' || mine,
   };
 }
@@ -74,6 +75,14 @@ router.post('/', requireAuth, requireCrm('files'), receive, async (req, res) => 
     const r = await S.resolveSubject(req.body || {});
     if (r.error) return res.status(r.status).json({ error: r.error });
     if (!S.canWriteResolved(req, r.subject)) return res.status(403).json({ code: 'not_your_deal', error: 'This deal belongs to someone else. Ask the owner or a CRM Admin.' });
+    // G15: a file may be attached to one of THIS deal's procurement steps as it is uploaded.
+    let itemId = null;
+    if ((req.body || {}).checklistItemId !== undefined && String((req.body || {}).checklistItemId) !== '') {
+      itemId = Number(/^\d{1,10}$/.test(String(req.body.checklistItemId)) ? req.body.checklistItemId : NaN);
+      if (!itemId || r.subject.kind !== 'opportunity') return res.status(400).json({ error: 'Pick one of this deal\u2019s own checklist steps.' });
+      const [[it]] = await pool.query('SELECT id FROM crm_opportunity_checklist_items WHERE id = ? AND opportunity_id = ?', [itemId, r.subject.id]);
+      if (!it) return res.status(400).json({ error: 'Pick one of this deal\u2019s own checklist steps.' });
+    }
     const c = r.subject.cols;
     const col = r.subject.kind === 'opportunity' ? 'opportunity_id' : r.subject.kind === 'account' ? 'account_id' : 'contact_id';
     const [[{ n }]] = await pool.query(`SELECT COUNT(*) AS n FROM crm_attachments WHERE ${col} = ?`, [r.subject.id]);
@@ -93,6 +102,7 @@ router.post('/', requireAuth, requireCrm('files'), receive, async (req, res) => 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [c.opportunity_id, c.account_id, c.contact_id, F.safeOriginalName(file.originalname), stored, detected.kind, detected.mime, file.size, req.crm.adminId, sqlNow()]);
       id = ins.insertId;
+      if (itemId) await pool.query('UPDATE crm_attachments SET checklist_item_id = ? WHERE id = ?', [itemId, id]);
     } catch (err) {
       try { fs.unlinkSync(F.pathFor(stored)); } catch { /* not kept */ }
       throw err;
@@ -112,6 +122,23 @@ async function loadFile(req, res) {
   if (!f || !mayReach(req, f)) { res.status(404).json({ error: 'File not found' }); return null; }
   return f;
 }
+
+// G15: attach a file the deal already has to one of its procurement steps (or take it off, with checklistItemId null). Only within the same deal; the same rule as every file change.
+router.post('/:id/attach', requireAuth, requireCrm('files'), async (req, res) => {
+  const f = await loadFile(req, res);
+  if (!f) return;
+  const b = req.body || {};
+  if (!f.opportunity_id) return res.status(400).json({ error: 'Only a file on a deal can be attached to a checklist step.' });
+  let itemId = null;
+  if (b.checklistItemId !== null && b.checklistItemId !== undefined && b.checklistItemId !== '') {
+    itemId = Number(/^\d{1,10}$/.test(String(b.checklistItemId)) ? b.checklistItemId : NaN);
+    const [[it]] = itemId ? await pool.query('SELECT id FROM crm_opportunity_checklist_items WHERE id = ? AND opportunity_id = ?', [itemId, f.opportunity_id]) : [[null]];
+    if (!it) return res.status(400).json({ error: 'Pick one of this deal\u2019s own checklist steps.' });
+  }
+  await pool.query('UPDATE crm_attachments SET checklist_item_id = ? WHERE id = ?', [itemId, f.id]);
+  await crmAudit(req, { action: 'crm_file_attached', entityType: 'crm_file', entityId: f.id, next: { checklistItemId: itemId } });
+  res.json({ ok: true });
+});
 
 router.get('/:id/download', requireAuth, requireCrm('files'), async (req, res) => {
   const f = await loadFile(req, res);

@@ -13,10 +13,10 @@ const nav = read('admin-nav.js');
 const shell = read('admin-shell.js');
 
 test('the page is a normal admin workspace page: same shell, current shared asset versions, not indexable', () => {
-  assert.match(page, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=38"><\/script>/);
+  assert.match(page, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=39"><\/script>/);
   assert.match(page, /admin-common\.css\?v=22/);
   assert.match(page, /admin-common\.js\?v=17/);
-  assert.match(page, /admin-shell.js\?v=11/);
+  assert.match(page, /admin-shell.js\?v=12/);
   assert.match(page, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(page, /<h1>Demo<\/h1>/);
 });
@@ -27,11 +27,11 @@ test('every admin page that loads the shared nav and shell loads the same, curre
     const src = read(f);
     const navV = (src.match(/admin-nav\.js\?v=(\d+)/) || [])[1];
     const shellV = (src.match(/admin-shell\.js\?v=(\d+)/) || [])[1];
-    if (navV && navV !== '38') bad.push(`${f}: admin-nav.js v${navV}`);
-    if (shellV && shellV !== '11') bad.push(`${f}: admin-shell.js v${shellV}`);
+    if (navV && navV !== '39') bad.push(`${f}: admin-nav.js v${navV}`);
+    if (shellV && shellV !== '12') bad.push(`${f}: admin-shell.js v${shellV}`);
   }
   assert.deepEqual(bad, [], 'bump the ?v= on every admin page whenever admin-nav.js or admin-shell.js changes');
-  assert.match(nav, /admin-nav\.js\?v=38/, 'the header comment in admin-nav.js names the current version');
+  assert.match(nav, /admin-nav\.js\?v=39/, 'the header comment in admin-nav.js names the current version');
 });
 
 test('the sidebar lists Demo in the Sales group, with its own icon, and the page has an intro', () => {

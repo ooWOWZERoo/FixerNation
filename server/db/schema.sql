@@ -792,6 +792,53 @@ CREATE TABLE IF NOT EXISTS crm_purchase_refunds (
     CONSTRAINT fk_crm_refund_decider FOREIGN KEY (decided_by_admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Sales CRM punch list G22 (scripts/alter-create-crm-import.js): the prospect import. One row per import run, and the review queue of rows that look like someone already in the CRM.
+CREATE TABLE IF NOT EXISTS crm_import_batches (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    total_rows INT UNSIGNED NOT NULL DEFAULT 0,
+    added INT UNSIGNED NOT NULL DEFAULT 0,
+    already_there INT UNSIGNED NOT NULL DEFAULT 0,
+    queued INT UNSIGNED NOT NULL DEFAULT 0,
+    left_out INT UNSIGNED NOT NULL DEFAULT 0,
+    created_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_crm_import_batches_created (created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS crm_import_review (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    batch_id INT UNSIGNED NOT NULL,
+    name VARCHAR(255) NULL,
+    email VARCHAR(254) NOT NULL,
+    company VARCHAR(255) NULL,
+    state_text VARCHAR(64) NULL,
+    phone VARCHAR(32) NULL,
+    title VARCHAR(128) NULL,
+    account_id INT UNSIGNED NULL,
+    reason VARCHAR(16) NOT NULL,
+    candidates_json TEXT NOT NULL,
+    state VARCHAR(16) NOT NULL DEFAULT 'waiting',
+    resolved_contact_id INT UNSIGNED NULL,
+    decided_by_admin_id INT UNSIGNED NULL,
+    decided_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_crm_import_review_state (state, id),
+    KEY idx_crm_import_review_batch (batch_id),
+    CONSTRAINT fk_crm_import_review_batch FOREIGN KEY (batch_id) REFERENCES crm_import_batches (id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Sales CRM punch list G14 (scripts/alter-add-crm-task-note-fields.js): the text a note had before each edit. A CRM Admin can read it; deleting the note deletes its versions.
+CREATE TABLE IF NOT EXISTS crm_note_versions (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    note_id INT UNSIGNED NOT NULL,
+    body TEXT NOT NULL,
+    kind VARCHAR(8) NULL,
+    changed_by_admin_id INT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_crm_note_versions_note (note_id, created_at),
+    CONSTRAINT fk_crm_note_versions_note FOREIGN KEY (note_id) REFERENCES crm_notes (id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Sales CRM punch list G5 (scripts/alter-create-crm-repeat-requests.js): a district administrator's request to reorder or change seats on a license; staff approve or decline it.
 -- open_flag is 1 while Waiting and NULL after, so (purchase_id, open_flag) allows one Waiting request per license. The request never changes the purchase.
 CREATE TABLE IF NOT EXISTS crm_repeat_requests (
@@ -2031,6 +2078,10 @@ CREATE TABLE IF NOT EXISTS crm_tasks (
     created_by_admin_id INT UNSIGNED NULL,
     completed_at DATETIME NULL,
     completed_by_admin_id INT UNSIGNED NULL,
+    priority VARCHAR(6) NOT NULL DEFAULT 'normal', -- G14 (scripts/alter-add-crm-task-note-fields.js): low | normal | high
+    source VARCHAR(16) NOT NULL DEFAULT 'manual', -- manual | daily_check | request: set by the system, never typed
+    remind_on DATE NULL, -- the day to be reminded (never after due_on)
+    quote_id INT UNSIGNED NULL, -- one of the task's deal's quotes
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_crm_tasks_assignee (assigned_admin_id, state, due_on),
@@ -2054,6 +2105,8 @@ CREATE TABLE IF NOT EXISTS crm_notes (
     kind VARCHAR(8) NOT NULL DEFAULT 'note',
     body TEXT NOT NULL,
     created_by_admin_id INT UNSIGNED NULL,
+    edited_at DATETIME NULL, -- G14: set when the words or kind were changed after writing
+    edited_by_admin_id INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_crm_notes_opp (opportunity_id, created_at),
@@ -2076,9 +2129,11 @@ CREATE TABLE IF NOT EXISTS crm_attachments (
     mime VARCHAR(100) NOT NULL,
     size_bytes INT UNSIGNED NOT NULL,
     uploaded_by_admin_id INT UNSIGNED NULL,
+    checklist_item_id INT UNSIGNED NULL, -- G15 (scripts/alter-add-crm-checklist-owner-files.js): the procurement step this file is attached to; it still belongs to the deal
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_crm_attachments_stored (stored_name),
     KEY idx_crm_attachments_opp (opportunity_id, created_at),
+    KEY idx_crm_attachments_item (checklist_item_id),
     KEY idx_crm_attachments_account (account_id, created_at),
     KEY idx_crm_attachments_contact (contact_id, created_at),
     CONSTRAINT fk_crm_attachments_opp FOREIGN KEY (opportunity_id) REFERENCES crm_opportunities (id) ON DELETE CASCADE,
@@ -2101,6 +2156,9 @@ CREATE TABLE IF NOT EXISTS crm_appointments (
     uid VARCHAR(64) NOT NULL,
     sequence_no INT UNSIGNED NOT NULL DEFAULT 0,
     attendees_json TEXT NULL,
+    time_zone VARCHAR(64) NULL, -- G12 (scripts/alter-add-crm-meeting-details.js): the IANA zone the organizer set it up in (a label; times stay UTC)
+    join_url VARCHAR(500) NULL, -- an https video link, checked on the way in
+    attendance_json TEXT NULL, -- who attended, marked by staff afterwards: [{ type, id, attended }]
     organizer_admin_id INT UNSIGNED NULL,
     invite_sent_at DATETIME NULL,
     invite_sequence INT UNSIGNED NULL,
@@ -2145,6 +2203,7 @@ CREATE TABLE IF NOT EXISTS crm_opportunity_checklist_items (
     completed_at DATETIME NULL,
     completed_by_admin_id INT UNSIGNED NULL,
     created_by_admin_id INT UNSIGNED NULL,
+    owner_admin_id INT UNSIGNED NULL, -- G15 (scripts/alter-add-crm-checklist-owner-files.js): who is responsible for this step (blank: the deal's owner)
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_crm_checklist_opp (opportunity_id, status, sort_order),

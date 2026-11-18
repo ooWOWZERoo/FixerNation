@@ -89,7 +89,7 @@ test('RULES: each one fires on the right thing, says why in a sentence, and link
   assert.equal((await list(admin, '&rule=no_owner')).json.items.length, 1);
   const mine = await list(sales, '&owner=me');
   assert.ok(mine.json.items.every(i => i.ownerAdminId === sales) && !find(mine, 'next_step_overdue', adminsDeal));
-  assert.equal((await call('GET', '/api/crm/attention/rules', undefined, viewer)).json.rules.length, 17);
+  assert.equal((await call('GET', '/api/crm/attention/rules', undefined, viewer)).json.rules.length, 18);
 });
 
 test('SNOOZE persists until its day, then the item comes back; Read-only and other people\'s deals are refused', async () => {

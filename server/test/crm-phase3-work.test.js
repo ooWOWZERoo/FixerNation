@@ -111,7 +111,7 @@ test('TASKS QUEUE: my open tasks by day (the browser sends its own date), overdu
   await mk('late', day(-9)); await mk('today', today); await mk('soon', day(4)); await mk('someday', undefined); await mk('theirs', day(-9), { assignedAdminId: sales });
   const q = await call('GET', `/api/crm/tasks?assignee=me&today=${today}`, undefined, admin);
   assert.deepEqual(q.json.tasks.map(t => t.title), ['late', 'today', 'soon', 'someday'], 'by due date, none last, only mine');
-  assert.deepEqual(q.json.summary, { open: 4, overdue: 1, dueToday: 1 });
+  assert.deepEqual(q.json.summary, { open: 4, overdue: 1, dueToday: 1, reminders: 0 });
   assert.equal(q.json.tasks[0].overdue, true);
   assert.deepEqual((await call('GET', `/api/crm/tasks?assignee=me&due=overdue&today=${today}`, undefined, admin)).json.tasks.map(t => t.title), ['late']);
   assert.deepEqual((await call('GET', `/api/crm/tasks?assignee=me&due=today&today=${today}`, undefined, admin)).json.tasks.map(t => t.title), ['today']);

@@ -9,6 +9,9 @@
 //    student or teacher are never selected. Student totals under 10 are not shown ("fewer than 10"), the same small-group idea the district Program Use Report keeps.
 //  - A demo shows its dates and counts only. The group's name (public_demo_invitations.label) is staff-only and is never selected here.
 //  - No login history, no time spent, no score and no quiz result is read.
+//  - G18 (FR-TRIAL-01): a TREND (the latest saved month against the one before it) and four plain-fact USAGE ALERTS. Both are only ever computed from numbers the card already shows,
+//    each alert says what it saw in words and numbers, and an unknown never raises an alert (no snapshot, no seat records, a hidden small number: nothing is said). The trend refuses to
+//    compare two months when a different number of schools reported in them. No score, no ranking and nothing is written, mailed or put on Needs Attention (the owner's choice).
 // `conn` is the pool in the route and any query-capable handle in tests. SQL stays portable (no NOW(), no array parameters).
 const cls = require('./crm-classification');
 const { loadScope, demoInvitationIds } = require('./crm-timeline');
@@ -146,7 +149,51 @@ async function programUseSection(conn, S) {
       studentsEnrolled: hideEnrolled ? small(why) : known(sum.students_enrolled), studentsActive: hideActive ? small(why) : known(sum.students_active),
     });
   }
+  section.trend = trendOf(section.months);
   return section;
+}
+
+// ---- trend and alerts (G18) --------------------------------------------------------------------------------------------------------
+
+const TREND_METRICS = [['teachersTeaching', 'teachers teaching'], ['classroomsActive', 'classrooms in use'], ['activities', 'activities finished'], ['studentsActive', 'students active']];
+const monthIndex = (key) => { const m = /^(\d{4})-(\d{2})$/.exec(String(key)); return m ? Number(m[1]) * 12 + Number(m[2]) - 1 : null; };
+const STALE_MONTHS = 2; // a latest saved month older than this is too old to judge "now" from
+
+// The latest saved month against the one before it. { comparedWith, note, metrics } where each metric is { change, direction, unknownReason }.
+function trendOf(months) {
+  if (months.length < 2) return { comparedWith: null, note: 'Only one month has been saved so far, so there is nothing to compare it with yet.', metrics: null };
+  const [a, b] = months;
+  if (a.schoolsReporting !== b.schoolsReporting) return { comparedWith: String(b.label), note: `${a.schoolsReporting} school${a.schoolsReporting === 1 ? '' : 's'} reported in ${a.label} and ${b.schoolsReporting} in ${b.label}, so the two months cannot be compared fairly.`, metrics: null };
+  const gap = monthIndex(a.month) - monthIndex(b.month);
+  const metrics = {};
+  for (const [key] of TREND_METRICS) {
+    const x = a[key], y = b[key];
+    if (x.value === null || y.value === null) metrics[key] = { change: null, direction: null, unknownReason: x.value === null ? x.unknownReason : y.unknownReason };
+    else { const change = x.value - y.value; metrics[key] = { change, direction: change > 0 ? 'up' : change < 0 ? 'down' : 'same', unknownReason: null }; }
+  }
+  return { comparedWith: String(b.label), note: gap > 1 ? `The earlier saved month is ${gap} months before ${a.label}, not the month directly before.` : null, metrics };
+}
+
+// The four alerts the owner chose. Each is { key, text }. Only real, known numbers are used.
+function alertsFor(licenses, programUse, today) {
+  const out = [];
+  const months = programUse.months || [];
+  const latest = months[0];
+  const fresh = latest && monthIndex(latest.month) !== null && monthIndex(today.slice(0, 7)) - monthIndex(latest.month) <= STALE_MONTHS;
+  const prev = months[1];
+  const comparable = latest && prev && latest.schoolsReporting === prev.schoolsReporting;
+  const noActivity = fresh && latest.activities.value === 0;
+  if (noActivity && latest.teachersLicensed.value > 0) out.push({ key: 'no_activity', text: `No activities were finished in ${latest.label}, although ${latest.teachersLicensed.value} teacher${latest.teachersLicensed.value === 1 ? ' is' : 's are'} licensed.` });
+  if (fresh && comparable && prev.teachersTeaching.value !== null && latest.teachersTeaching.value !== null && prev.teachersTeaching.value >= 4 && latest.teachersTeaching.value * 2 <= prev.teachersTeaching.value)
+    out.push({ key: 'teaching_fell', text: `Teachers teaching fell from ${prev.teachersTeaching.value} in ${prev.label} to ${latest.teachersTeaching.value} in ${latest.label}, a drop of half or more.` });
+  for (const i of licenses.items || []) {
+    if (i.daysLeft === null || i.daysLeft < 0 || i.licenseStatus === 'cancelled' || i.licenseStatus === 'suspended') continue;
+    if (i.kind === 'paid' && i.daysLeft <= 60 && i.seatsBought.value > 0 && i.seatsRegistered.value !== null && i.seatsRegistered.value * 2 < i.seatsBought.value)
+      out.push({ key: 'license_ending_low_use', text: `Purchase #${i.purchaseId} ends in ${i.daysLeft} day${i.daysLeft === 1 ? '' : 's'} and only ${i.seatsRegistered.value} of its ${i.seatsBought.value} seats are signed up.` });
+    if (i.kind === 'trial' && i.daysLeft <= 7 && noActivity)
+      out.push({ key: 'trial_ending_quiet', text: `Trial #${i.purchaseId} has ${i.daysLeft} day${i.daysLeft === 1 ? '' : 's'} left and no activities were finished in ${latest.label}.` });
+  }
+  return out;
 }
 
 // ---- demo --------------------------------------------------------------------------------------------------------------------------
@@ -199,12 +246,13 @@ async function engagementFor(conn, kind, id, { today = new Date().toISOString().
       return { ...fallback, unknownReason: 'This part is not set up on this server yet.' };
     }
   };
+  const licenses = await safe(() => licensesSection(conn, S, kind, id, today), { source: 'Purchases and license seats (counts only)', window: `As of ${today}`, items: [] });
+  const programUse = await safe(() => programUseSection(conn, S), { source: 'Program use snapshots', window: '', months: [] });
   return {
     kind, id: Number(id), accountId: Number(S.account.id), accountName: S.account.name, schoolsInScope: S.schoolIds.length, linkNote: S.linkNote,
-    licenses: await safe(() => licensesSection(conn, S, kind, id, today), { source: 'Purchases and license seats (counts only)', window: `As of ${today}`, items: [] }),
-    programUse: await safe(() => programUseSection(conn, S), { source: 'Program use snapshots', window: '', months: [] }),
+    alerts: alertsFor(licenses, programUse, today), licenses, programUse,
     demo: await safe(() => demoSection(conn, S), { source: 'Prospect demo invitations', window: '', linked: false, invitations: [] }),
   };
 }
 
-module.exports = { engagementFor, STUDENT_FLOOR, MONTHS_SHOWN };
+module.exports = { engagementFor, trendOf, alertsFor, STUDENT_FLOOR, MONTHS_SHOWN, TREND_METRICS };

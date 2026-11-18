@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=38"></script>
+<script src="admin-nav.js?v=39"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -34,7 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
-<script src="crm-panels.js?v=2"></script>
+<script src="crm-panels.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -88,12 +88,30 @@
       (a.description && !a.archivedAt ? '<dt>Notes</dt><dd>' + esc(a.description) + '</dd>' : '') +
       '</dl></div>';
 
-    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>People (' + data.contacts.length + ')</h2></div>';
-    h += data.contacts.length ? '<table class="a-table" aria-label="People at this account"><thead><tr><th scope="col">Name</th><th scope="col">Label</th><th scope="col">Role here</th><th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
-      data.contacts.map(function (c) {
-        return '<tr><td><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.contactId) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + esc(c.email) + (c.title ? ' · ' + esc(c.title) : '') + '</div></td><td>' + C.classPill(c.classification) + '</td><td>' + esc(flags(c)) + '</td><td>' +
-          (C.can('write') ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="editp" data-cid="' + esc(c.contactId) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="rmp" data-cid="' + esc(c.contactId) + '" data-name="' + esc(c.name || c.email) + '">Remove</button></div>' : '') + '</td></tr>';
+    // G17: paid purchases and deals, worked out from the same rules as the Customer label. Money here is only what paid purchases say; "none" is a real zero.
+    var ru = data.rollup;
+    if (ru) {
+      var pd = ru.paid;
+      h += '<div class="a-card"><div class="a-card-head"><h2>Paid purchases and deals</h2></div><dl class="crm-kv">' +
+        '<dt>Paid purchases</dt><dd>' + (pd.count ? esc(C.num(pd.count)) + ' · ' + esc(C.money(pd.totalCents)) + ' in all' + (pd.lastAt ? '<div class="crm-small crm-muted">First ' + esc(C.date(pd.firstAt)) + ', latest ' + esc(C.date(pd.lastAt)) + (pd.nextEnd ? ', next license ends ' + esc(C.date(pd.nextEnd)) : '') + '</div>' : '') : '<span class="crm-muted">None yet</span>') + (ru.includesSchools ? '<div class="crm-small crm-muted">Includes purchases for the schools in this district.</div>' : '') + '</dd>' +
+        '<dt>Open deals</dt><dd>' + (ru.deals.open ? esc(C.num(ru.deals.open)) + ' · ' + esc(C.money(ru.deals.openValueCents, '$0')) + (ru.deals.openWithoutValue ? '<div class="crm-small crm-muted">' + esc(ru.deals.openWithoutValue) + ' of them ' + (ru.deals.openWithoutValue === 1 ? 'has' : 'have') + ' no value yet.</div>' : '') : '<span class="crm-muted">None</span>') + '</dd>' +
+        '<dt>Deals won</dt><dd>' + esc(C.num(ru.deals.won)) + '</dd></dl>' +
+        (pd.items.length ? '<details class="crm-more"><summary>Recent paid purchases (' + pd.items.length + ')</summary><ul class="crm-list" aria-label="Recent paid purchases">' + pd.items.map(function (i) { return '<li><div class="crm-item-main"><strong>' + esc(C.money(i.amountCents)) + '</strong> ' + esc(i.product || 'License') + '<div class="crm-small crm-muted">Bought ' + esc(C.date(i.boughtAt)) + (i.seats ? ' · ' + esc(C.num(i.seats)) + ' seats' : '') + (i.endsOn ? ' · ends ' + esc(C.date(i.endsOn)) : '') + '</div></div></li>'; }).join('') + '</ul></details>' : '') + '</div>';
+    }
+    // G17: another live account of the same type has the same website address. Merging is the CRM Admin's own action, above; nothing happens on its own.
+    if ((data.possibleDuplicates || []).length) h += '<p class="crm-notice">Possible duplicate' + (data.possibleDuplicates.length === 1 ? '' : 's') + ': ' + data.possibleDuplicates.map(function (d) { return '<a class="crm-link" href="admin-crm-account.html?id=' + esc(d.id) + '">' + esc(d.name) + '</a>'; }).join(', ') + ' has the same website address.' + (C.can('merge') ? ' If they are the same organization, use Merge into another above.' : ' A CRM Admin can merge them.') + '</p>';
+    // G16: people who have left the organization are kept in its history, below the current people.
+    var present = data.contacts.filter(function (c) { return !c.endedOn; }), gone = data.contacts.filter(function (c) { return c.endedOn; });
+    h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>People (' + present.length + ')</h2></div>';
+    h += present.length ? '<table class="a-table" aria-label="People at this account"><thead><tr><th scope="col">Name</th><th scope="col">Label</th><th scope="col">Role here</th><th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
+      present.map(function (c) {
+        return '<tr><td><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.contactId) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + esc(c.email) + (c.title ? ' · ' + esc(c.title) : '') + (c.startedOn ? ' · here since ' + esc(C.date(c.startedOn)) : '') + '</div></td><td>' + C.classPill(c.classification) + '</td><td>' + esc(flags(c)) + '</td><td>' +
+          (C.can('write') ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="editp" data-cid="' + esc(c.contactId) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="leftp" data-cid="' + esc(c.contactId) + '" data-name="' + esc(c.name || c.email) + '">Left this organization</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="rmp" data-cid="' + esc(c.contactId) + '" data-name="' + esc(c.name || c.email) + '">Remove</button></div>' : '') + '</td></tr>';
       }).join('') + '</tbody></table>' : C.empty('Nobody is on this account yet.', '👤');
+    if (gone.length) h += '<details class="crm-more"><summary>Left this organization (' + gone.length + ')</summary><ul class="crm-list" aria-label="People who left">' + gone.map(function (c) {
+      return '<li><div class="crm-item-main"><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.contactId) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + (c.startedOn ? esc(C.date(c.startedOn)) + ' to ' : 'Left ') + esc(C.date(c.endedOn)) + (c.title ? ' · ' + esc(c.title) : '') + '</div></div>' +
+        (C.can('write') ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="backp" data-cid="' + esc(c.contactId) + '">Back at this organization</button></div>' : '') + '</li>';
+    }).join('') + '</ul></details>';
     h += '</div><div class="a-card"><div class="a-card-head"><h2>Deals (' + data.opportunities.length + ')</h2></div>';
     h += data.opportunities.length ? '<table class="a-table" aria-label="Deals at this account"><thead><tr><th scope="col">Deal</th><th scope="col">Stage</th><th scope="col">Value</th><th scope="col">Next step</th></tr></thead><tbody>' +
       data.opportunities.map(function (o) {
@@ -105,7 +123,7 @@
     root.innerHTML = h;
 
     // Everything on an account's page (and on its deals) shows here; whether this person can change it is decided per item by the server.
-    var subject = { kind: 'account', id: id, canWrite: C.can('write'), contacts: data.contacts.map(function (c) { return { id: c.contactId, name: c.name, email: c.email }; }) };
+    var subject = { kind: 'account', id: id, canWrite: C.can('write'), contacts: data.contacts.filter(function (c) { return !c.endedOn; }).map(function (c) { return { id: c.contactId, name: c.name, email: c.email }; }) };
     FnCrmPanels.tasks(document.getElementById('pTasks'), subject);
     FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
     FnCrmPanels.notes(document.getElementById('pNotes'), subject);
@@ -121,6 +139,8 @@
     });
     root.querySelectorAll('[data-act=editp]').forEach(function (b) { b.addEventListener('click', function () { editPerson(Number(b.getAttribute('data-cid'))); }); });
     root.querySelectorAll('[data-act=rmp]').forEach(function (b) { b.addEventListener('click', function () { removePerson(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
+    root.querySelectorAll('[data-act=leftp]').forEach(function (b) { b.addEventListener('click', function () { leftPerson(Number(b.getAttribute('data-cid')), b.getAttribute('data-name')); }); });
+    root.querySelectorAll('[data-act=backp]').forEach(function (b) { b.addEventListener('click', function () { C.api('POST', '/api/crm/accounts/' + id + '/contacts/' + Number(b.getAttribute('data-cid')) + '/back', {}).then(function (r) { C.toast(r.ok ? 'Back at this organization' : C.problem(r)); load(); }); }); });
   }
 
   function editAccount() {
@@ -186,6 +206,14 @@
       onSubmit: function (f) { return C.api('PUT', '/api/crm/accounts/' + id + '/contacts/' + cid, personFlagsRead(f)).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return C.problem(r); }); }
     });
   }
+  // G16: record that a person has left. They stay in the organization's history and stop being its primary contact; "Back" undoes it.
+  function leftPerson(cid, name) {
+    C.dialog({
+      title: name + ' has left ' + data.account.name, submit: 'Record that they left',
+      body: '<p class="crm-small">They stay in the CRM and in this organization\u2019s history. They stop being its primary contact and are no longer offered for meetings here. You can undo this later.</p>' + C.field('The day they left', '<input type="date" id="lfDay" value="' + esc(C.todayLocal()) + '" max="' + esc(C.todayLocal()) + '">', '', 'lfDay'),
+      onSubmit: function (f) { return C.api('POST', '/api/crm/accounts/' + id + '/contacts/' + cid + '/left', { on: f.querySelector('#lfDay').value || null }).then(function (r) { if (r.ok) { C.toast('Recorded'); load(); return; } return C.problem(r); }); }
+    });
+  }
   function removePerson(cid, name) {
     C.dialog({
       title: 'Take ' + name + ' off this account?', submit: 'Remove', danger: true,
@@ -223,6 +251,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=11"></script>
+<script src="admin-shell.js?v=12"></script>
 </body>
 </html>

@@ -12,6 +12,7 @@
 //  - The task text holds the quote number and dates only, never a name or an address.
 // `conn` is the pool in the app and any query-capable handle in tests. SQL stays portable (no NOW(), no ON DUPLICATE KEY, no array parameters).
 const { audit } = require('./audit');
+const { tagTask } = require('./crm-task-fields');
 const A = require('./crm-attention');
 
 const SWITCH = 'crm_quote_followup_tasks';
@@ -107,6 +108,7 @@ async function createFollowUps(conn, { apply = false, now, today, days } = {}) {
          VALUES (?, ?, ?, ?, ?, ?, 'open', ?, NULL, ?)`,
         [place.cols.opportunity_id, place.cols.account_id, place.cols.contact_id, t.title.slice(0, 255), t.details.slice(0, 1000), t.dueOn, place.owner, now]);
       await conn.query('UPDATE crm_quote_followup_tasks SET task_id = ? WHERE id = ?', [ins.insertId, claim.insertId]);
+      await tagTask(conn, ins.insertId, { source: 'daily_check', quoteId: q.opportunity_id ? Number(q.id) : null }); // the quote link needs a deal (a task on a contact has no quote field)
       ledger.add(Number(q.id));
       out.made++;
       await audit(conn, {

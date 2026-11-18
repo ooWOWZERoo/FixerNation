@@ -65,20 +65,24 @@ CREATE TABLE campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT);
 CREATE TABLE campaign_sends (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER NOT NULL, contact_id INTEGER, email TEXT, status TEXT DEFAULT 'sent', sent_at TEXT DEFAULT '2026-01-01 00:00:00', opened_at TEXT, clicked_at TEXT);
 CREATE TABLE public_demo_invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, workspace_id INTEGER, status TEXT DEFAULT 'ended', starts_at TEXT, ends_at TEXT, ended_at TEXT);
 CREATE TABLE crm_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, title TEXT NOT NULL, details TEXT, due_on TEXT, state TEXT NOT NULL DEFAULT 'open',
-  assigned_admin_id INTEGER, created_by_admin_id INTEGER, completed_at TEXT, completed_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+  assigned_admin_id INTEGER, created_by_admin_id INTEGER, completed_at TEXT, completed_by_admin_id INTEGER, priority TEXT NOT NULL DEFAULT 'normal', source TEXT NOT NULL DEFAULT 'manual', remind_on TEXT, quote_id INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, kind TEXT NOT NULL DEFAULT 'note', body TEXT NOT NULL,
-  created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+  created_by_admin_id INTEGER, edited_at TEXT, edited_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_note_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, note_id INTEGER NOT NULL, body TEXT NOT NULL, kind TEXT, changed_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_import_batches (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, total_rows INTEGER NOT NULL DEFAULT 0, added INTEGER NOT NULL DEFAULT 0, already_there INTEGER NOT NULL DEFAULT 0, queued INTEGER NOT NULL DEFAULT 0, left_out INTEGER NOT NULL DEFAULT 0, created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE crm_import_review (id INTEGER PRIMARY KEY AUTOINCREMENT, batch_id INTEGER NOT NULL, name TEXT, email TEXT NOT NULL, company TEXT, state_text TEXT, phone TEXT, title TEXT, account_id INTEGER, reason TEXT NOT NULL, candidates_json TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'waiting', resolved_contact_id INTEGER, decided_by_admin_id INTEGER, decided_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, original_name TEXT NOT NULL, stored_name TEXT NOT NULL UNIQUE,
-  kind TEXT NOT NULL, mime TEXT NOT NULL, size_bytes INTEGER NOT NULL, uploaded_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+  kind TEXT NOT NULL, mime TEXT NOT NULL, size_bytes INTEGER NOT NULL, uploaded_by_admin_id INTEGER, checklist_item_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_appointments (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER, account_id INTEGER, contact_id INTEGER, title TEXT NOT NULL, starts_at TEXT NOT NULL, ends_at TEXT NOT NULL,
-  location TEXT, details TEXT, status TEXT NOT NULL DEFAULT 'scheduled', uid TEXT NOT NULL UNIQUE, sequence_no INTEGER NOT NULL DEFAULT 0, attendees_json TEXT, organizer_admin_id INTEGER,
+  location TEXT, details TEXT, status TEXT NOT NULL DEFAULT 'scheduled', uid TEXT NOT NULL UNIQUE, sequence_no INTEGER NOT NULL DEFAULT 0, attendees_json TEXT, time_zone TEXT, join_url TEXT, attendance_json TEXT, organizer_admin_id INTEGER,
   invite_sent_at TEXT, invite_sequence INTEGER, created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_purchase_refunds (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INTEGER NOT NULL, kind TEXT NOT NULL, source TEXT NOT NULL, stripe_event_id TEXT, amount_cents INTEGER, is_full INTEGER,
   state TEXT NOT NULL DEFAULT 'needs_review', note TEXT, raised_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, decided_by_admin_id INTEGER, decided_at TEXT, UNIQUE (stripe_event_id, purchase_id));
 CREATE TABLE crm_procurement_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, description TEXT, items_json TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,
   created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_opportunity_checklist_items (id INTEGER PRIMARY KEY AUTOINCREMENT, opportunity_id INTEGER NOT NULL, template_id INTEGER, label TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open',
-  due_on TEXT, note TEXT, sort_order INTEGER NOT NULL DEFAULT 0, completed_at TEXT, completed_by_admin_id INTEGER, created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+  due_on TEXT, note TEXT, sort_order INTEGER NOT NULL DEFAULT 0, completed_at TEXT, completed_by_admin_id INTEGER, created_by_admin_id INTEGER, owner_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_attention_states (id INTEGER PRIMARY KEY AUTOINCREMENT, rule_key TEXT NOT NULL, subject_type TEXT NOT NULL, subject_id INTEGER NOT NULL, state TEXT NOT NULL, snooze_until TEXT,
   fingerprint TEXT NOT NULL DEFAULT '', reason TEXT, admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (rule_key, subject_type, subject_id));
 CREATE TABLE crm_attention_events (id INTEGER PRIMARY KEY AUTOINCREMENT, rule_key TEXT NOT NULL, subject_type TEXT NOT NULL, subject_id INTEGER NOT NULL, fingerprint TEXT NOT NULL DEFAULT '',

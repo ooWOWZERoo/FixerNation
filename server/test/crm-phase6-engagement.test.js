@@ -225,7 +225,7 @@ test('DEMO: dates and counts only; the group name is never in the payload; zero 
   db.exec('ALTER TABLE public_demo_events_off RENAME TO public_demo_events');
 });
 
-const ALLOWED = new Set(['kind', 'id', 'accountId', 'accountName', 'schoolsInScope', 'linkNote', 'licenses', 'programUse', 'demo', 'source', 'window', 'items', 'unknownReason', 'purchaseId', 'product',
+const ALLOWED = new Set(['trend', 'comparedWith', 'note', 'metrics', 'change', 'direction', 'alerts', 'key', 'text', 'kind', 'id', 'accountId', 'accountName', 'schoolsInScope', 'linkNote', 'licenses', 'programUse', 'demo', 'source', 'window', 'items', 'unknownReason', 'purchaseId', 'product',
   'paymentStatus', 'licenseStatus', 'startsOn', 'endsOn', 'endsOnUnknownReason', 'daysLeft', 'trialLessonLimit', 'seatsBought', 'seatsRegistered', 'seatsPending', 'seatsAvailable', 'value',
   'schoolsReporting', 'months', 'month', 'label', 'schoolYear', 'savedOn', 'teachersLicensed', 'teachersActivated', 'teachersTeaching', 'classrooms', 'classroomsActive', 'activities',
   'studentsEnrolled', 'studentsActive', 'linked', 'invitations', 'note', 'open', 'gateEntries', 'signInsTotal', 'signIns', 'district', 'school', 'teacher', 'parent', 'student']);
@@ -233,6 +233,7 @@ test('KEY WHITELIST: the payload contains only keys on the list (a new field has
   for (const url of [`/api/crm/opportunities/${dealA}/engagement`, `/api/crm/accounts/${acctA}/engagement`]) {
     const r = await get(url);
     walk(r.json, (o) => { for (const k of Object.keys(o)) if (k !== 'unknownReason' && k !== 'kind') assert.ok(ALLOWED.has(k), `unexpected key "${k}" in ${url}`); });
+    assert.ok(Array.isArray(r.json.alerts), 'G18: the payload carries the usage alerts (an empty list when there is nothing to say)'); assert.ok(r.json.programUse.trend, 'G18: and the trend');
     const text = JSON.stringify(r.json);
     for (const bad of [SECRET_EMAIL, STUDENT_NAME, '@example.com', 'password', 'invited_email', 'registered_site_user_id', 'student_id', 'username']) assert.equal(text.includes(bad), false, bad);
   }

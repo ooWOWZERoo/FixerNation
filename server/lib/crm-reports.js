@@ -344,6 +344,9 @@ async function reconciliation(conn) {
     `FROM newsletter_contacts c WHERE c.crm_classification = 'customer' AND c.classification_locked = 0 AND NOT (${testSql}) AND NOT ${qualifying('c.id')}`, 'c.id'));
   checks.push(await check(conn, 'paid_not_customer', 'Paid purchases whose buyer is not a Customer', 'A qualifying paid purchase exists but the contact is not labeled Customer. The nightly reconcile normally fixes this by morning.',
     `FROM newsletter_contacts c WHERE c.crm_classification <> 'customer' AND NOT (${testSql}) AND ${qualifying('c.id')}`, 'c.id'));
+  // G16: an account should have one primary contact. The CRM now keeps it that way; this lists the older accounts that have two or more, so someone can pick one.
+  checks.push(await check(conn, 'account_multiple_primary', 'Accounts with more than one primary contact', 'Older entries from before the CRM kept one primary contact per account. Open the account and make one person the primary contact; the others lose the badge.',
+    `FROM crm_accounts a WHERE a.archived_at IS NULL AND (SELECT COUNT(*) FROM crm_account_contacts ac WHERE ac.account_id = a.id AND ac.is_primary = 1 AND ac.ended_on IS NULL) > 1`, 'a.id'));
   return {
     key: 'reconciliation', title: 'Reconciliation', window: null, windowLabel: 'All time (the date window does not apply)',
     definition: 'Plain checks that the CRM and the money records agree. Each shows how many exceptions it found and the first 20 internal ids so you can open them. A check with zero is fine. These are plain counts, and nothing here changes anything.',

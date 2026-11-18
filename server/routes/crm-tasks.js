@@ -10,6 +10,7 @@ const { crmAudit } = require('../lib/crm-audit');
 const { sqlNow } = require('../lib/crm-classification');
 const { text, posInt, dateOnly, oneOf, paging } = require('../lib/crm-common');
 const S = require('../lib/crm-subjects');
+const TF = require('../lib/crm-task-fields'); // G14: priority, source, reminder, quote link
 
 const router = express.Router();
 
@@ -18,11 +19,14 @@ const TASK_SELECT = `SELECT t.*, ${S.SUBJECT_COLS}, au.username AS assignee_name
   LEFT JOIN admin_users au ON au.id = t.assigned_admin_id
   LEFT JOIN admin_users cu ON cu.id = t.created_by_admin_id`;
 
-function taskView(t, req, today) {
+function taskView(t, req, today, quoteNumbers) {
   const mine = req.crm.role !== 'readonly' && Number(t.assigned_admin_id) === Number(req.crm.adminId);
   const writable = S.canWriteRow(req, t);
   return {
     id: t.id, title: t.title, details: t.details || null, dueOn: t.due_on || null, state: t.state,
+    // G14: priority and where the task came from (never typed), the day to be reminded, and the quote it is about. Defaults when the columns are not there yet.
+    priority: t.priority || 'normal', source: t.source || 'manual', remindOn: t.remind_on || null,
+    quote: t.quote_id ? { id: Number(t.quote_id), number: (quoteNumbers && quoteNumbers.get(Number(t.quote_id))) || null } : null,
     overdue: t.state === 'open' && !!t.due_on && String(t.due_on).slice(0, 10) < today,
     assignedAdminId: t.assigned_admin_id || null, assigneeName: t.assignee_name || null, createdByName: t.creator_name || null,
     createdAt: t.created_at, completedAt: t.completed_at || null,
@@ -34,6 +38,14 @@ function taskView(t, req, today) {
 async function staffExists(id) {
   const [[a]] = await pool.query('SELECT id FROM admin_users WHERE id = ?', [id]);
   return !!a;
+}
+
+// The quote numbers for the tasks that name a quote (one lookup, never a join: the quote column may not exist yet).
+async function quoteNumbersFor(rows) {
+  const ids = [...new Set(rows.map(r => Number(r.quote_id)).filter(Boolean))];
+  if (!ids.length) return new Map();
+  const [q] = await pool.query('SELECT id, quote_number FROM quote_requests WHERE id IN (?)', [ids]);
+  return new Map(q.map(x => [Number(x.id), x.quote_number || null]));
 }
 
 // ---- List -------------------------------------------------------------------------------------------------------------------------
@@ -51,6 +63,9 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   else if (req.query.assignee === 'none') where.push('t.assigned_admin_id IS NULL');
   else if (req.query.assignee === 'me_or_none') { where.push('(t.assigned_admin_id IS NULL OR t.assigned_admin_id = ?)'); params.push(req.crm.adminId); } // punch list B10: the Overview's box
   else if (posInt(req.query.assignee)) { where.push('t.assigned_admin_id = ?'); params.push(posInt(req.query.assignee)); }
+  const prio = oneOf(req.query.priority, TF.PRIORITIES); if (prio) { where.push('t.priority = ?'); params.push(prio); }
+  const src = oneOf(req.query.source, TF.SOURCES); if (src) { where.push('t.source = ?'); params.push(src); }
+  if (req.query.remind === 'due') { where.push('t.remind_on IS NOT NULL AND t.remind_on <= ?'); params.push(today); } // G14: reminders that have come up
   const due = oneOf(req.query.due, ['overdue', 'today', 'week', 'none', 'upto']);
   if (due === 'overdue') { where.push('t.due_on IS NOT NULL AND t.due_on < ?'); params.push(today); }
   if (due === 'today') { where.push('t.due_on = ?'); params.push(today); }
@@ -66,8 +81,16 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM crm_tasks t ${w}`, params);
   // Open tasks by due date (none last); finished ones newest first.
-  const order = state === 'done' ? 't.completed_at DESC, t.id DESC' : '(t.due_on IS NULL), t.due_on ASC, t.id ASC';
-  const [rows] = await pool.query(`${TASK_SELECT} ${w} ORDER BY ${order} LIMIT ? OFFSET ?`, [...params, size, offset]);
+  // G14: within one due date, High comes first. A database without the priority column yet falls back to the old order.
+  const orderOld = state === 'done' ? 't.completed_at DESC, t.id DESC' : '(t.due_on IS NULL), t.due_on ASC, t.id ASC';
+  const orderNew = state === 'done' ? orderOld : "(t.due_on IS NULL), t.due_on ASC, CASE t.priority WHEN 'high' THEN 0 WHEN 'low' THEN 2 ELSE 1 END, t.id ASC";
+  let rows;
+  try { [rows] = await pool.query(`${TASK_SELECT} ${w} ORDER BY ${orderNew} LIMIT ? OFFSET ?`, [...params, size, offset]); }
+  catch (err) { if (!TF.isMissing(err)) throw err; [rows] = await pool.query(`${TASK_SELECT} ${w} ORDER BY ${orderOld} LIMIT ? OFFSET ?`, [...params, size, offset]); }
+  const qn = await quoteNumbersFor(rows);
+  let reminders = null;
+  try { const [[r]] = await pool.query("SELECT COUNT(*) AS n FROM crm_tasks WHERE state = 'open' AND assigned_admin_id = ? AND remind_on IS NOT NULL AND remind_on <= ?", [req.crm.adminId, today]); reminders = Number(r.n || 0); }
+  catch (err) { if (!TF.isMissing(err)) throw err; }
 
   // The numbers on the queue header always describe MY open tasks, whatever filter is on screen.
   const [[mine]] = await pool.query(
@@ -76,12 +99,26 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
        SUM(CASE WHEN due_on = ? THEN 1 ELSE 0 END) AS today_n
      FROM crm_tasks WHERE state = 'open' AND assigned_admin_id = ?`, [today, today, req.crm.adminId]);
   res.json({
-    tasks: rows.map(t => taskView(t, req, today)), total: Number(total), page, pageSize: size, today,
-    summary: { open: Number(mine.open_n || 0), overdue: Number(mine.overdue_n || 0), dueToday: Number(mine.today_n || 0) },
+    tasks: rows.map(t => taskView(t, req, today, qn)), total: Number(total), page, pageSize: size, today,
+    summary: { open: Number(mine.open_n || 0), overdue: Number(mine.overdue_n || 0), dueToday: Number(mine.today_n || 0), reminders },
   });
 });
 
 // ---- Create and change ------------------------------------------------------------------------------------------------------------
+
+// G12: the open tasks due inside a window of days, for the Calendar page (?from=YYYY-MM-DD&to=YYYY-MM-DD, at most 62 days, ?mine=true for tasks assigned to me). Done tasks are not
+// on the calendar. At most 300 come back, and `truncated` says when there were more. Declared before the routes that take an id.
+router.get('/calendar', requireAuth, requireCrm('view'), async (req, res) => {
+  const from = dateOnly(req.query.from), to = dateOnly(req.query.to);
+  if (!from || !to || to < from || S.addDays(from, 62) < to) return res.status(400).json({ error: 'Pick a window of up to two months.' });
+  const where = ["t.state = 'open'", 't.due_on >= ?', 't.due_on <= ?'];
+  const params = [from, to];
+  if (req.query.mine === 'true') { where.push('t.assigned_admin_id = ?'); params.push(req.crm.adminId); }
+  const [rows] = await pool.query(`${TASK_SELECT} WHERE ${where.join(' AND ')} ORDER BY t.due_on, t.id LIMIT 301`, params);
+  const today = S.todayFrom(req.query.today);
+  const qn = await quoteNumbersFor(rows);
+  res.json({ tasks: rows.slice(0, 300).map(t => taskView(t, req, today, qn)), truncated: rows.length > 300 });
+});
 
 router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
   const b = req.body || {};
@@ -94,12 +131,15 @@ router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
   if (b.dueOn !== undefined && b.dueOn !== null && b.dueOn !== '') { dueOn = dateOnly(b.dueOn); if (!dueOn) return res.status(400).json({ error: 'The due date must be a real date (YYYY-MM-DD).' }); }
   const assignee = b.assignedAdminId === undefined ? req.crm.adminId : posInt(b.assignedAdminId);
   if (!assignee || !(await staffExists(assignee))) return res.status(400).json({ error: 'Pick a staff member to do it.' });
+  const extra = await TF.clean(pool, b, { dueOn, dealId: r.subject.kind === 'opportunity' ? r.subject.id : null });
+  if (extra.error) return res.status(400).json({ error: extra.error });
   const c = r.subject.cols;
+  const xcols = Object.keys(extra.fields); // only what was sent, so a database without these columns yet still takes a plain task
   const [ins] = await pool.query(
-    `INSERT INTO crm_tasks (opportunity_id, account_id, contact_id, title, details, due_on, state, assigned_admin_id, created_by_admin_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)`,
-    [c.opportunity_id, c.account_id, c.contact_id, title, text(b.details, 1000), dueOn, assignee, req.crm.adminId, sqlNow()]);
-  await crmAudit(req, { action: 'crm_task_created', entityType: 'crm_task', entityId: ins.insertId, next: { subject: r.subject.kind, subjectId: r.subject.id, assignedAdminId: assignee, dueOn } });
+    `INSERT INTO crm_tasks (opportunity_id, account_id, contact_id, title, details, due_on, state, assigned_admin_id, created_by_admin_id, created_at${xcols.map(k => `, ${k}`).join('')})
+     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?${xcols.map(() => ', ?').join('')})`,
+    [c.opportunity_id, c.account_id, c.contact_id, title, text(b.details, 1000), dueOn, assignee, req.crm.adminId, sqlNow(), ...xcols.map(k => extra.fields[k])]);
+  await crmAudit(req, { action: 'crm_task_created', entityType: 'crm_task', entityId: ins.insertId, next: { subject: r.subject.kind, subjectId: r.subject.id, assignedAdminId: assignee, dueOn, ...extra.fields } });
   res.status(201).json({ ok: true, id: ins.insertId });
 });
 
@@ -119,6 +159,12 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
     f.assigned_admin_id = posInt(b.assignedAdminId);
     if (!f.assigned_admin_id || !(await staffExists(f.assigned_admin_id))) return res.status(400).json({ error: 'Pick a staff member to do it.' });
   }
+  // G14: priority, reminder and quote. The reminder is checked against the due date this change leaves the task with; moving the due date earlier than a reminder pulls the reminder in with it.
+  const newDue = f.due_on !== undefined ? f.due_on : (t.due_on ? String(t.due_on).slice(0, 10) : null);
+  const extra = await TF.clean(pool, b, { dueOn: newDue, dealId: t.opportunity_id || null });
+  if (extra.error) return res.status(400).json({ error: extra.error });
+  Object.assign(f, extra.fields);
+  if (f.due_on && f.remind_on === undefined && t.remind_on && String(t.remind_on).slice(0, 10) > f.due_on) f.remind_on = f.due_on;
   const cols = Object.keys(f);
   if (!cols.length) return res.status(400).json({ error: 'Nothing to change.' });
   await pool.query(`UPDATE crm_tasks SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => f[k]), t.id]);

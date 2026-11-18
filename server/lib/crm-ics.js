@@ -43,7 +43,7 @@ function stamp(v) {
 }
 
 // method: 'REQUEST' (invite or update: raise `sequence` when something changed) or 'CANCEL'. attendees: [{ name, email }] (already validated by the caller).
-function buildInvite({ method, uid, sequence, title, details, location, startsAt, endsAt, organizer, attendees, now }) {
+function buildInvite({ method, uid, sequence, title, details, location, startsAt, endsAt, organizer, attendees, now, joinUrl, timeZone }) {
   if (!['REQUEST', 'CANCEL'].includes(method)) throw new Error('method must be REQUEST or CANCEL');
   if (!validEmail(organizer && organizer.email)) throw new Error('The organizer needs a valid email address.');
   const lines = [
@@ -56,8 +56,12 @@ function buildInvite({ method, uid, sequence, title, details, location, startsAt
     `SEQUENCE:${Number(sequence) || 0}`,
     `SUMMARY:${icsText(title)}`,
   ];
-  if (details) lines.push(`DESCRIPTION:${icsText(details)}`);
+  // G12: the join link goes in the standard URL property and is repeated in the description, because some calendars show only one of them. The caller passes only a link that
+  // lib/crm-meeting-details.js cleanUrl accepted (https, no spaces); it is escaped like any other text anyway.
+  const description = [details, joinUrl ? `Join: ${joinUrl}` : null, timeZone && !/^UTC$/i.test(timeZone) ? `Set up in the ${timeZone} time zone.` : null].filter(Boolean).join('\n\n');
+  if (description) lines.push(`DESCRIPTION:${icsText(description)}`);
   if (location) lines.push(`LOCATION:${icsText(location)}`);
+  if (joinUrl) lines.push(`URL:${icsText(joinUrl)}`);
   lines.push(`STATUS:${method === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED'}`);
   lines.push(`ORGANIZER;CN="${icsParam(organizer.name || organizer.email)}":mailto:${organizer.email.trim()}`);
   for (const a of attendees || []) {
@@ -72,15 +76,19 @@ const htmlEsc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&
 const WHEN = new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
 
 // The email that carries the invitation: plain text plus a small HTML copy, with the time spelled out in UTC (the calendar file shows it in the reader's own zone).
-function inviteEmail({ method, title, details, location, startsAt, endsAt, organizerName, updated }) {
-  const when = `${WHEN.format(new Date(`${String(startsAt).replace(' ', 'T')}Z`))} to ${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' }).format(new Date(`${String(endsAt).replace(' ', 'T')}Z`))}`;
+function zoneOk(z) { if (!z) return 'UTC'; try { new Intl.DateTimeFormat('en-US', { timeZone: z }); return z; } catch { return 'UTC'; } }
+function inviteEmail({ method, title, details, location, startsAt, endsAt, organizerName, updated, joinUrl, timeZone }) {
+  // G12: the time is spelled out in the zone the organizer set the meeting up in (UTC when none was chosen); the calendar file still shows it in each reader's own zone.
+  const zone = zoneOk(timeZone);
+  const when = `${new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: zone, timeZoneName: 'short' }).format(new Date(`${String(startsAt).replace(' ', 'T')}Z`))} to ${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: zone, timeZoneName: 'short' }).format(new Date(`${String(endsAt).replace(' ', 'T')}Z`))}`;
   const cancelled = method === 'CANCEL';
   const subject = `${cancelled ? 'Cancelled: ' : updated ? 'Updated: ' : 'Invitation: '}${String(title).slice(0, 150)}`;
   const intro = cancelled ? `${organizerName || 'We'} cancelled this meeting.` : updated ? `${organizerName || 'We'} changed this meeting. The calendar file updates your copy.` : `${organizerName || 'We'} invited you to a meeting. Open the attached calendar file to add it to your calendar.`;
   const textLines = [intro, '', title, when];
   if (location) textLines.push(`Where: ${location}`);
+  if (joinUrl && !cancelled) textLines.push(`Join: ${joinUrl}`);
   if (details) textLines.push('', details);
-  const html = `<p>${htmlEsc(intro)}</p><p><strong>${htmlEsc(title)}</strong><br>${htmlEsc(when)}${location ? `<br>Where: ${htmlEsc(location)}` : ''}</p>${details ? `<p>${htmlEsc(details).replace(/\r?\n/g, '<br>')}</p>` : ''}`;
+  const html = `<p>${htmlEsc(intro)}</p><p><strong>${htmlEsc(title)}</strong><br>${htmlEsc(when)}${location ? `<br>Where: ${htmlEsc(location)}` : ''}${joinUrl && !cancelled ? `<br>Join: <a href="${htmlEsc(joinUrl)}">${htmlEsc(joinUrl)}</a>` : ''}</p>${details ? `<p>${htmlEsc(details).replace(/\r?\n/g, '<br>')}</p>` : ''}`;
   return { subject, text: textLines.join('\n'), html };
 }
 

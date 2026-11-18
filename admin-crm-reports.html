@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=38"></script>
+<script src="admin-nav.js?v=39"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -88,7 +88,7 @@
       '<p class="crm-small crm-muted"><strong>How this is counted:</strong> ' + esc(report.definition) + '</p>' + inner + '</section>';
   }
 
-  var LINK = { accepted_no_purchase: ['admin-quotes.html?quote=', 'Quote'], won_no_accepted_quote: ['admin-crm-opportunity.html?id=', 'Deal'], accepted_deal_open: ['admin-crm-opportunity.html?id=', 'Deal'], customer_without_purchase: ['admin-crm-contact.html?id=', 'Contact'], paid_not_customer: ['admin-crm-contact.html?id=', 'Contact'] };
+  var LINK = { accepted_no_purchase: ['admin-quotes.html?quote=', 'Quote'], won_no_accepted_quote: ['admin-crm-opportunity.html?id=', 'Deal'], accepted_deal_open: ['admin-crm-opportunity.html?id=', 'Deal'], customer_without_purchase: ['admin-crm-contact.html?id=', 'Contact'], paid_not_customer: ['admin-crm-contact.html?id=', 'Contact'], account_multiple_primary: ['admin-crm-account.html?id=', 'Account'] };
   function reconciliation(report) {
     var h = '<p><span class="a-pill ' + (report.allClear ? 'a-pill-success' : 'a-pill-warning') + '">' + (report.allClear ? 'All clear' : 'Some checks have exceptions') + '</span></p><ul class="crm-list">';
     h += report.checks.map(function (c) {
@@ -133,6 +133,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=11"></script>
+<script src="admin-shell.js?v=12"></script>
 </body>
 </html>

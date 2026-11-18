@@ -45,6 +45,7 @@ const HELP = {
   stale_deal: (t) => `An open deal that has sat in one stage for ${t.staleStageDays} days or more with no note and no finished task in the last ${t.quietDays} days.`,
   no_owner: () => 'An open deal with no owner (for example, the owner\u2019s account was removed).',
   task_overdue: () => 'An open task whose due date has passed.',
+  task_reminder: () => 'An open task whose remind-me date has come, so you asked to be reminded about it. It is listed from that day until the task is done.',
   checklist_overdue: () => 'A procurement step on an open deal whose due date has passed.',
   quote_expiring: (t) => `A quote that was sent, has not been accepted and is good for ${t.quoteWindowDays} more days or fewer.`,
   won_no_purchase: (t) => `A deal with a quote that was closed as Won more than ${t.wonGraceDays} days ago, and none of its quotes has a purchase. Deals with no quote at all (a phone deal, a renewal the system opened) are not listed, because there is nothing to link a purchase to. The CRM never creates a purchase; it starts from the quote or the order.`,
@@ -66,6 +67,7 @@ const RULES = {
   stale_deal: { label: 'Deal has gone quiet', subjectType: 'opportunity' },
   no_owner: { label: 'Nobody owns this deal', subjectType: 'opportunity' },
   task_overdue: { label: 'Task is overdue', subjectType: 'task' },
+  task_reminder: { label: 'Task reminder', subjectType: 'task' },
   checklist_overdue: { label: 'Checklist step is overdue', subjectType: 'checklist_item' },
   quote_expiring: { label: 'Quote runs out soon', subjectType: 'quote' },
   won_no_purchase: { label: 'Won, but no purchase yet', subjectType: 'opportunity' },
@@ -277,6 +279,30 @@ async function evaluate(conn, { today, caps = {}, thresholds = null }) {
          AND (SELECT COUNT(*) FROM license_seats s WHERE s.purchase_id = p.id AND s.status = 'registered') * 100 >= p.seat_count * ? ORDER BY p.trial_expiration_date, p.id`, [start(today), t.trialUsePercent]);
     for (const r of rows) items.push(purchaseItem('trial_high_use', r, { title: 'Trial in good use', fingerprint: day10(r.trial_expiration_date),
       why: `${Number(r.registered)} of this trial's ${Number(r.seat_count)} seats are registered (${t.trialUsePercent}% is the line). Teachers are using it: a good moment to talk about a quote.` }));
+  });
+
+  // G15: a procurement step with its own owner goes to that person instead of the deal's owner. Read separately so a database without the column yet changes nothing.
+  await optional(async () => {
+    const [owned] = await conn.query('SELECT i.id, i.owner_admin_id, u.username FROM crm_opportunity_checklist_items i JOIN admin_users u ON u.id = i.owner_admin_id WHERE i.owner_admin_id IS NOT NULL');
+    const by = new Map(owned.map(x => [Number(x.id), x]));
+    for (const it of items) if (it.ruleKey === 'checklist_overdue' && by.has(Number(it.subjectId))) { const x = by.get(Number(it.subjectId)); it.ownerAdminId = Number(x.owner_admin_id); it.ownerName = x.username; }
+  });
+
+  // G14: a reminder. The date the person chose has come and the task is still open. The date is the fingerprint, so changing the reminder to a later day raises it again.
+  await optional(async () => {
+    rows = await capped('task_reminder',
+      `SELECT t.id, t.title, t.remind_on, t.due_on, t.assigned_admin_id, t.opportunity_id, t.account_id, t.contact_id, au.username AS assignee_name,
+              so.name AS deal_name, sa.name AS account_name, sc.name AS contact_name, sc.email AS contact_email
+       FROM crm_tasks t LEFT JOIN admin_users au ON au.id = t.assigned_admin_id
+         LEFT JOIN crm_opportunities so ON so.id = t.opportunity_id LEFT JOIN crm_accounts sa ON sa.id = t.account_id LEFT JOIN newsletter_contacts sc ON sc.id = t.contact_id
+       WHERE t.state = 'open' AND t.remind_on IS NOT NULL AND t.remind_on <= ? ORDER BY t.remind_on, t.id`, [today]);
+    for (const r of rows) {
+      const where = r.opportunity_id ? { link: pageFor.opportunity + r.opportunity_id, context: r.deal_name, dealId: Number(r.opportunity_id) }
+        : r.contact_id ? { link: pageFor.contact + r.contact_id, context: r.contact_name || r.contact_email }
+        : { link: pageFor.account + r.account_id, context: r.account_name };
+      items.push(item('task_reminder', r.id, { ...where, title: r.title, ownerAdminId: r.assigned_admin_id || null, ownerName: r.assignee_name || null, fingerprint: day10(r.remind_on),
+        why: `You asked to be reminded about this task on ${day10(r.remind_on)}${r.due_on ? ` (it is due ${day10(r.due_on)})` : ''}.` }));
+    }
   });
 
   // G13: a declined quote. It is an answer, so it comes off the "no answer" and "runs out soon" lists, and it gets its own item until staff revise the quote or close the deal.

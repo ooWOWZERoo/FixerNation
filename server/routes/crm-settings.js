@@ -43,6 +43,12 @@ router.put('/staff/:id/role', requireAuth, requireCrm('assign_roles'), async (re
 
 // ---- Pipeline stages --------------------------------------------------------------------------------------------------------------
 
+// G19: how Suspect, Prospect and Customer are decided, in plain words, with today's counts. Read only; the rules live in lib/crm-classification.js.
+router.get('/classification-rules', requireAuth, requireCrm('view'), async (req, res) => {
+  const today = typeof req.query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.today) ? req.query.today : new Date().toISOString().slice(0, 10);
+  res.json(await require('../lib/crm-classification-rules').overview(pool, today));
+});
+
 router.get('/stages', requireAuth, requireCrm('view'), async (req, res) => {
   const [rows] = await pool.query('SELECT id, stage_key, label, sort_order, default_probability, is_active FROM crm_pipeline_stages ORDER BY sort_order, id');
   res.json({ stages: rows.map(r => ({ id: r.id, key: r.stage_key, label: r.label, sortOrder: r.sort_order, defaultProbability: r.default_probability, isActive: !!r.is_active })) });

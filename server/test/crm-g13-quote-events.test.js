@@ -103,7 +103,7 @@ test('NEEDS ATTENTION: a declined quote on an open deal is its own item, and it 
   assert.equal((await items('quote_declined')).length, 0, 'a revision replaced it');
   db.prepare("UPDATE quote_requests SET version_status = 'current', email = 'qa@example.com' WHERE id = ?").run(declined);
   assert.equal((await items('quote_declined')).length, 0, 'a test address is left out');
-  assert.equal(Object.keys(A.RULES).length, 17); assert.ok(A.RULES.quote_declined.help);
+  assert.equal(Object.keys(A.RULES).length, 18); assert.ok(A.RULES.quote_declined.help);
   assert.ok(fs.readFileSync(path.join(env.SERVER, 'routes/crm-attention.js'), 'utf8').includes("'quote_declined'"));
 });
 

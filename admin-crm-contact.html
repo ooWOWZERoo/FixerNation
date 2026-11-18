@@ -17,7 +17,7 @@
 
 <div class="a-shell">
   <aside class="a-sidebar"></aside>
-<script src="admin-nav.js?v=38"></script>
+<script src="admin-nav.js?v=39"></script>
 
   <div class="a-main">
     <div class="a-topbar">
@@ -34,7 +34,7 @@
 
 <script src="admin-common.js?v=17"></script>
 <script src="crm-common.js?v=2"></script>
-<script src="crm-panels.js?v=2"></script>
+<script src="crm-panels.js?v=3"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -100,7 +100,7 @@
     h += '</div>';
 
     h += '<div class="crm-two"><div class="a-card"><div class="a-card-head"><h2>Accounts (' + data.accounts.length + ')</h2></div>' +
-      (data.accounts.length ? '<ul class="crm-list">' + data.accounts.map(function (a) { return '<li><div><a href="admin-crm-account.html?id=' + esc(a.accountId) + '">' + esc(a.name) + '</a><div class="crm-small crm-muted">' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + (a.title ? ' · ' + esc(a.title) : '') + '</div></div></li>'; }).join('') + '</ul>' : C.empty('Not on any account yet. Add them from an account page.', '🏫')) + '</div>' +
+      (data.accounts.length ? '<ul class="crm-list">' + data.accounts.map(function (a) { return '<li><div><a href="admin-crm-account.html?id=' + esc(a.accountId) + '">' + esc(a.name) + '</a><div class="crm-small crm-muted">' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + (a.title ? ' · ' + esc(a.title) : '') + (a.endedOn ? ' · left ' + esc(C.date(a.endedOn)) : a.startedOn ? ' · since ' + esc(C.date(a.startedOn)) : '') + '</div></div></li>'; }).join('') + '</ul>' : C.empty('Not on any account yet. Add them from an account page.', '🏫')) + '</div>' +
       '<div class="a-card"><div class="a-card-head"><h2>Deals (' + data.opportunities.length + ')</h2></div>' +
       (data.opportunities.length ? '<ul class="crm-list">' + data.opportunities.map(function (o) { return '<li><div><a href="admin-crm-opportunity.html?id=' + esc(o.id) + '">' + esc(o.name) + '</a><div class="crm-small crm-muted">' + esc(o.stage) + ' · ' + esc(C.label(C.COMMITTEE_ROLES, o.role)) + '</div></div>' + C.statePill(o.state) + '</li>'; }).join('') + '</ul>' : C.empty('Not on any deal.', '🎯')) + '</div></div>';
 
@@ -170,6 +170,6 @@
   }
 })();
 </script>
-<script src="admin-shell.js?v=11"></script>
+<script src="admin-shell.js?v=12"></script>
 </body>
 </html>

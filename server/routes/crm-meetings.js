@@ -11,6 +11,7 @@ const { text, posInt, paging } = require('../lib/crm-common');
 const ics = require('../lib/crm-ics');
 const S = require('../lib/crm-subjects');
 const mailer = require('../lib/mailer');
+const MD = require('../lib/crm-meeting-details'); // G12: time zone, join link, attendance
 
 const router = express.Router();
 const MAX_ATTENDEES = 10;
@@ -40,7 +41,7 @@ const marks = (ids) => ids.map(() => '?').join(',');
 async function inviteableContactIds(kind, id) {
   if (kind === 'contact') return [id];
   if (kind === 'account') {
-    const [rows] = await pool.query('SELECT contact_id FROM crm_account_contacts WHERE account_id = ?', [id]);
+    const [rows] = await pool.query('SELECT contact_id FROM crm_account_contacts WHERE account_id = ? AND (ended_on IS NULL OR ended_on >= ?)', [id, new Date().toISOString().slice(0, 10)]); // G16: not people who have left
     return rows.map(r => r.contact_id);
   }
   const [rows] = await pool.query('SELECT contact_id FROM crm_opportunity_contacts WHERE opportunity_id = ?', [id]);
@@ -98,6 +99,10 @@ async function viewAll(rows, req) {
       ...parsed[i].staffIds.map(id => { const r = staffRows.find(x => Number(x.id) === id); return r ? { type: 'staff', id, name: r.username, email: r.email || null } : null; }),
       ...parsed[i].contactIds.map(id => { const r = contactRows.find(x => Number(x.id) === id); return r ? { type: 'contact', id, name: r.name || r.email, email: r.email } : null; }),
     ].filter(Boolean),
+    // G12: the zone it was set up in, the join link (https only, checked on the way in) and who attended (marked by staff once it has started).
+    timeZone: m.time_zone || null, joinUrl: m.join_url || null,
+    attendance: MD.parseAttendance(m),
+    canMarkAttendance: m.status === 'scheduled' && asDate(m.starts_at).getTime() <= Date.now() && (req.crm.role === 'admin' || (req.crm.role === 'sales' && Number(m.organizer_admin_id) === Number(req.crm.adminId))),
     inviteSentAt: m.invite_sent_at || null,
     // Changed since the last invitation went out: a re-send would update everyone's calendar.
     inviteOutOfDate: !!m.invite_sent_at && m.status === 'scheduled' && Number(m.invite_sequence) !== Number(m.sequence_no),
@@ -151,12 +156,14 @@ router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
   const contactIds = idList(b.contactIds);
   const people = await checkAttendees(r.subject.kind, r.subject.id, staffIds, contactIds);
   if (people.error) return res.status(400).json({ error: people.error });
+  const zone = MD.cleanZone(b.timeZone); if (zone.error) return res.status(400).json({ error: zone.error });
+  const link = MD.cleanUrl(b.joinUrl); if (link.error) return res.status(400).json({ error: link.error });
   const c = r.subject.cols;
   const uid = require('crypto').randomBytes(16).toString('hex');
   const [ins] = await pool.query(
-    `INSERT INTO crm_appointments (opportunity_id, account_id, contact_id, title, starts_at, ends_at, location, details, status, uid, sequence_no, attendees_json, organizer_admin_id, created_by_admin_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, 0, ?, ?, ?, ?)`,
-    [c.opportunity_id, c.account_id, c.contact_id, title, t.startsAt, t.endsAt, text(b.location, 255), text(b.details, 2000), uid, JSON.stringify({ staffIds, contactIds }), req.crm.adminId, req.crm.adminId, sqlNow()]);
+    `INSERT INTO crm_appointments (opportunity_id, account_id, contact_id, title, starts_at, ends_at, location, details, status, uid, sequence_no, attendees_json, organizer_admin_id, created_by_admin_id, created_at${zone.value || link.value ? ', time_zone, join_url' : ''})
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, 0, ?, ?, ?, ?${zone.value || link.value ? ', ?, ?' : ''})`,
+    [c.opportunity_id, c.account_id, c.contact_id, title, t.startsAt, t.endsAt, text(b.location, 255), text(b.details, 2000), uid, JSON.stringify({ staffIds, contactIds }), req.crm.adminId, req.crm.adminId, sqlNow(), ...(zone.value || link.value ? [zone.value, link.value] : [])]);
   await crmAudit(req, { action: 'crm_meeting_created', entityType: 'crm_meeting', entityId: ins.insertId, next: { subject: r.subject.kind, subjectId: r.subject.id, startsAt: t.startsAt, invitees: staffIds.length + contactIds.length } });
   res.status(201).json({ ok: true, id: ins.insertId });
 });
@@ -184,6 +191,8 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
   }
   if (b.location !== undefined) { f.location = text(b.location, 255); changed = changed || (f.location || null) !== (m.location || null); }
   if (b.details !== undefined) { f.details = text(b.details, 2000); changed = changed || (f.details || null) !== (m.details || null); }
+  if (b.timeZone !== undefined) { const z = MD.cleanZone(b.timeZone); if (z.error) return res.status(400).json({ error: z.error }); f.time_zone = z.value; changed = changed || (z.value || null) !== (m.time_zone || null); }
+  if (b.joinUrl !== undefined) { const u = MD.cleanUrl(b.joinUrl); if (u.error) return res.status(400).json({ error: u.error }); f.join_url = u.value; changed = changed || (u.value || null) !== (m.join_url || null); }
   if (b.staffIds !== undefined || b.contactIds !== undefined) {
     const cur = parseAttendees(m);
     const staffIds = b.staffIds === undefined ? cur.staffIds : idList(b.staffIds);
@@ -199,6 +208,39 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
   await pool.query(`UPDATE crm_appointments SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => f[k]), m.id]);
   await crmAudit(req, { action: 'crm_meeting_updated', entityType: 'crm_meeting', entityId: m.id, next: { fields: cols.filter(k => k !== 'attendees_json') } });
   res.json({ ok: true, inviteOutOfDate: changed && !!m.invite_sent_at });
+});
+
+// ---- Calendar (G12) ----------------------------------------------------------------------------------------------------------------
+
+// The meetings that start inside a window, for the Calendar page. The window is two moments that say their time zone (the viewer's own day boundaries), at most 62 days wide.
+// ?mine=true: only meetings I organize. Cancelled meetings are not on the calendar. At most 300 come back, and `truncated` says when there were more.
+router.get('/calendar', requireAuth, requireCrm('view'), async (req, res) => {
+  const from = momentOf(req.query.fromAt), to = momentOf(req.query.toAt);
+  if (!from || !to) return res.status(400).json({ error: 'Say which dates to show.' });
+  if (asDate(to) <= asDate(from) || asDate(to) - asDate(from) > 62 * 24 * 3600 * 1000) return res.status(400).json({ error: 'Pick a window of up to two months.' });
+  const where = ["m.status = 'scheduled'", 'm.starts_at >= ?', 'm.starts_at < ?'];
+  const params = [from, to];
+  if (req.query.mine === 'true') { where.push('m.organizer_admin_id = ?'); params.push(req.crm.adminId); }
+  const [rows] = await pool.query(`${MEETING_SELECT} WHERE ${where.join(' AND ')} ORDER BY m.starts_at, m.id LIMIT 301`, params);
+  res.json({ meetings: await viewAll(rows.slice(0, 300), req), truncated: rows.length > 300 });
+});
+
+// ---- Attendance (G12) ------------------------------------------------------------------------------------------------------------------
+
+// After a meeting has started, its organizer or a CRM Admin marks who came. Only people who were invited can be marked; nothing is read from anyone's calendar reply.
+router.post('/:id/attendance', requireAuth, requireCrm('write'), async (req, res) => {
+  const m = await loadWritable(req, res);
+  if (!m) return;
+  if (m.status !== 'scheduled') return res.status(409).json({ code: 'cancelled', error: 'This meeting was cancelled.' });
+  if (!(req.crm.role === 'admin' || Number(m.organizer_admin_id) === Number(req.crm.adminId))) return res.status(403).json({ code: 'not_organizer', error: 'Only the person who set this meeting up, or a CRM Admin, can mark who came.' });
+  if (asDate(m.starts_at).getTime() > Date.now()) return res.status(409).json({ code: 'not_started', error: 'This meeting has not started yet.' });
+  const cur = parseAttendees(m);
+  const invited = [...cur.staffIds.map(id => ({ type: 'staff', id })), ...cur.contactIds.map(id => ({ type: 'contact', id }))];
+  const out = MD.applyMarks(MD.parseAttendance(m), (req.body || {}).marks, invited);
+  if (out.error) return res.status(400).json({ error: out.error });
+  await pool.query('UPDATE crm_appointments SET attendance_json = ? WHERE id = ?', [out.value, m.id]);
+  await crmAudit(req, { action: 'crm_meeting_attendance', entityType: 'crm_meeting', entityId: m.id, next: out.counts });
+  res.json({ ok: true, ...out.counts });
 });
 
 // ---- The invitation ---------------------------------------------------------------------------------------------------------------
@@ -218,10 +260,10 @@ async function deliver(req, m, method) {
   if (everyone.length < 2) return { status: 409, error: 'Add at least one person to invite besides yourself.' };
   const seq = Number(m.sequence_no);
   const body = ics.buildInvite({
-    method, uid: m.uid, sequence: seq, title: m.title, details: m.details, location: m.location, startsAt: m.starts_at, endsAt: m.ends_at,
+    method, uid: m.uid, sequence: seq, title: m.title, details: m.details, location: m.location, startsAt: m.starts_at, endsAt: m.ends_at, joinUrl: m.join_url || null, timeZone: m.time_zone || null,
     organizer: { name: org.username, email: org.email }, attendees: everyone,
   });
-  const mail = ics.inviteEmail({ method, title: m.title, details: m.details, location: m.location, startsAt: m.starts_at, endsAt: m.ends_at, organizerName: org.username, updated: method === 'REQUEST' && !!m.invite_sent_at });
+  const mail = ics.inviteEmail({ method, title: m.title, details: m.details, location: m.location, startsAt: m.starts_at, endsAt: m.ends_at, joinUrl: m.join_url || null, timeZone: m.time_zone || null, organizerName: org.username, updated: method === 'REQUEST' && !!m.invite_sent_at });
   try {
     await mailer.sendMeetingInviteEmail({ to: everyone.map(p => p.email), replyTo: org.email.trim(), subject: mail.subject, text: mail.text, html: mail.html, ics: body, method });
   } catch (err) {

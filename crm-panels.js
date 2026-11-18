@@ -43,13 +43,24 @@
         draw(res[1].data.tasks);
       });
     }
+    // G14: priority, remind-me date, quote and where the task came from (set by the system, never typed).
+    var SOURCE = { daily_check: 'Made by the daily check', request: 'From a district request' };
+    function meta(t) {
+      var m = '';
+      if (t.priority === 'high') m += ' · <span class="crm-flag">High priority</span>';
+      if (t.priority === 'low') m += ' · low priority';
+      if (t.remindOn && t.state !== 'done') m += ' · remind ' + esc(C.date(t.remindOn));
+      if (t.quote) m += ' · <a class="crm-link" href="admin-quotes.html?quote=' + encodeURIComponent(t.quote.id) + '">Quote ' + esc(t.quote.number || '#' + t.quote.id) + '</a>';
+      if (SOURCE[t.source]) m += ' · ' + esc(SOURCE[t.source]);
+      return m;
+    }
     function row(t) {
       var done = t.state === 'done';
       var due = t.dueOn ? '<span class="' + (t.overdue ? 'crm-flag' : '') + '">' + (t.overdue ? 'Overdue, was due ' : 'Due ') + esc(C.date(t.dueOn)) + '</span>' : 'No due date';
       return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="tk' + esc(t.id) + '" data-id="' + esc(t.id) + '" data-act="toggle"' + (done ? ' checked' : '') + (t.canComplete ? '' : ' disabled') + '>' +
         '<label for="tk' + esc(t.id) + '"' + (done ? ' class="crm-done"' : '') + '>' + esc(t.title) + '</label></div>' +
         (t.details ? '<div class="crm-small crm-muted crm-wrap">' + esc(t.details) + '</div>' : '') +
-        '<div class="crm-small crm-muted">' + (done ? 'Done ' + esc(C.date(t.completedAt)) : due) + ' · ' + (t.assigneeName ? 'for ' + esc(t.assigneeName) : 'for nobody') + where(t, s) + '</div></div>' +
+        '<div class="crm-small crm-muted">' + (done ? 'Done ' + esc(C.date(t.completedAt)) : due) + ' · ' + (t.assigneeName ? 'for ' + esc(t.assigneeName) : 'for nobody') + meta(t) + where(t, s) + '</div></div>' +
         (t.canEdit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(t.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(t.id) + '">Delete</button></div>' : '') + '</li>';
     }
     function draw(tasks) {
@@ -76,9 +87,13 @@
         body: C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="255" required value="' + esc(t ? t.title : '') + '">', '', 'tTitle') +
           C.field('Details (optional)', '<textarea id="tDetails" maxlength="1000">' + esc(t ? t.details || '' : '') + '</textarea>', '', 'tDetails') +
           '<div class="a-form-row">' + C.field('Due', '<input type="date" id="tDue" value="' + esc(t && t.dueOn ? String(t.dueOn).slice(0, 10) : '') + '">', '', 'tDue') +
-          C.field('For', '<select id="tWho">' + C.ownerOptions(staff, t ? t.assignedAdminId : C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>',
+          C.field('For', '<select id="tWho">' + C.ownerOptions(staff, t ? t.assignedAdminId : C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>' +
+          '<div class="a-form-row">' + C.field('Priority', '<select id="tPrio">' + [['normal', 'Normal'], ['high', 'High'], ['low', 'Low']].map(function (o) { return '<option value="' + o[0] + '"' + ((t ? t.priority : 'normal') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>', '', 'tPrio') +
+          C.field('Remind me on (optional)', '<input type="date" id="tRemind" value="' + esc(t && t.remindOn ? String(t.remindOn).slice(0, 10) : '') + '">', 'Not after the due day. It shows on Needs Attention that day.', 'tRemind') + '</div>' +
+          (s.quotes && s.quotes.length ? C.field('About a quote (optional)', '<select id="tQuote"><option value="">No quote</option>' + s.quotes.map(function (q) { return '<option value="' + esc(q.id) + '"' + (t && t.quote && Number(t.quote.id) === Number(q.id) ? ' selected' : '') + '>' + esc(q.number || '#' + q.id) + '</option>'; }).join('') + '</select>', 'One of this deal\u2019s own quotes.', 'tQuote') : ''),
         onSubmit: function (f) {
-          var body = { title: f.querySelector('#tTitle').value, details: f.querySelector('#tDetails').value, dueOn: f.querySelector('#tDue').value || null, assignedAdminId: Number(f.querySelector('#tWho').value) };
+          var body = { title: f.querySelector('#tTitle').value, details: f.querySelector('#tDetails').value, dueOn: f.querySelector('#tDue').value || null, assignedAdminId: Number(f.querySelector('#tWho').value), priority: f.querySelector('#tPrio').value, remindOn: f.querySelector('#tRemind').value || null };
+          var qsel = f.querySelector('#tQuote'); if (qsel) body.quoteId = qsel.value ? Number(qsel.value) : null;
           if (!body.assignedAdminId) return 'Pick who will do it.';
           var req = t ? api('PUT', '/api/crm/tasks/' + t.id, body) : api('POST', '/api/crm/tasks', withSubject(s, body));
           return req.then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return problem(r); });
@@ -110,9 +125,9 @@
           '<div class="crm-row-actions"><label class="crm-sr" for="noteKind">Kind of note</label><select id="noteKind" class="a-filter-select">' + C.options(KINDS, 'note') + '</select><button type="submit" class="a-btn a-btn-primary a-btn-sm">Save the note</button></div><p class="crm-inline-error" role="alert" id="noteErr" hidden></p></form>';
       }
       h += notes.length ? '<ul class="crm-list" aria-label="Notes">' + notes.map(function (n) {
-        return '<li><div class="crm-item-main"><div><span class="a-pill a-pill-neutral">' + esc(KINDS[n.kind] || 'Note') + '</span> <span class="crm-small crm-muted">' + esc(C.dateTime(n.createdAt)) + (n.authorName ? ' · ' + esc(n.authorName) : '') + where(n, s) + '</span></div>' +
+        return '<li><div class="crm-item-main"><div><span class="a-pill a-pill-neutral">' + esc(KINDS[n.kind] || 'Note') + '</span> <span class="crm-small crm-muted">' + esc(C.dateTime(n.createdAt)) + (n.authorName ? ' · ' + esc(n.authorName) : '') + (n.editedAt ? ' · edited ' + esc(C.dateTime(n.editedAt)) : '') + where(n, s) + '</span></div>' +
           '<div class="crm-wrap">' + esc(n.body) + '</div></div>' +
-          (n.canEdit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(n.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(n.id) + '">Delete</button></div>' : '') + '</li>';
+          (n.canEdit || n.canSeeHistory ? '<div class="crm-row-actions">' + (n.canSeeHistory ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="history" data-id="' + esc(n.id) + '">Earlier versions</button>' : '') + (n.canEdit ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(n.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(n.id) + '">Delete</button>' : '') + '</div>' : '') + '</li>';
       }).join('') + '</ul>' + (notes.length < total ? '<p><button type="button" class="a-btn a-btn-outline a-btn-sm" id="moreNotes">Show older notes (' + (total - notes.length) + ' more)</button></p>' : '') : C.empty('No notes yet.', '📝');
       el.innerHTML = card('Notes (' + C.num(total) + ')', '', h, 'panelNotes');
       var byId = {}; notes.forEach(function (n) { byId[n.id] = n; });
@@ -128,6 +143,17 @@
         var n = byId[b.getAttribute('data-id')];
         C.dialog({ title: 'Edit the note', submit: 'Save', body: C.field('Note', '<textarea id="enBody" maxlength="5000" required>' + esc(n.body) + '</textarea>', '', 'enBody') + C.field('Kind', '<select id="enKind">' + C.options(KINDS, n.kind) + '</select>', '', 'enKind'),
           onSubmit: function (f) { return api('PUT', '/api/crm/notes/' + n.id, { body: f.querySelector('#enBody').value, kind: f.querySelector('#enKind').value }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return problem(r); }); } });
+      });
+      // G14: a CRM Admin can read what a note said before each edit. Every old text is escaped; opening this is written to the audit log.
+      each(el, '[data-act=history]', function (b) {
+        var n = byId[b.getAttribute('data-id')];
+        api('GET', '/api/crm/notes/' + n.id + '/history').then(function (r) {
+          if (!r.ok) { C.toast(problem(r)); return; }
+          var v = r.data.versions;
+          C.dialog({ title: 'Earlier versions of this note',
+            body: '<p class="crm-small crm-muted">Newest change first. The note as it reads now is at the bottom.</p>' + (v.length ? '<ol class="crm-list" aria-label="Earlier versions">' + v.map(function (x) { return '<li><div><div class="crm-small crm-muted">Replaced ' + esc(C.dateTime(x.at)) + (x.changedBy ? ' by ' + esc(x.changedBy) : '') + '</div><div class="crm-wrap">' + esc(x.body) + '</div></div></li>'; }).join('') + '</ol>' : '<p>No earlier versions were kept.</p>') +
+              '<p class="crm-small crm-muted" style="margin-top:12px;">Now:</p><div class="crm-wrap">' + esc(r.data.current.body) + '</div>' });
+        });
       });
       each(el, '[data-act=del]', function (b) {
         var n = byId[b.getAttribute('data-id')];
@@ -185,6 +211,17 @@
   };
 
   /* ---- Meetings ------------------------------------------------------------------------------------------------------------------ */
+  // G12: the time zones offered when setting up a meeting (a label for the invitation; times are still shown in each viewer's own zone). The browser's own zone comes first.
+  var ZONES = [['America/New_York', 'Eastern'], ['America/Chicago', 'Central'], ['America/Denver', 'Mountain'], ['America/Phoenix', 'Arizona'], ['America/Los_Angeles', 'Pacific'], ['America/Anchorage', 'Alaska'], ['Pacific/Honolulu', 'Hawaii'], ['UTC', 'UTC']];
+  function zoneName(z) { for (var i = 0; i < ZONES.length; i++) if (ZONES[i][0] === z) return ZONES[i][1]; return z; }
+  function browserZone() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } }
+  function zoneOptions(current) {
+    var list = ZONES.slice(), have = {}; list.forEach(function (z) { have[z[0]] = true; });
+    [current, browserZone()].forEach(function (z) { if (z && !have[z]) { have[z] = true; list.unshift([z, z.replace(/_/g, ' ')]); } });
+    return '<option value="">No zone named</option>' + list.map(function (z) { return '<option value="' + esc(z[0]) + '"' + (z[0] === current ? ' selected' : '') + '>' + esc(z[1]) + (z[1] !== z[0] ? ' (' + esc(z[0].replace(/_/g, ' ')) + ')' : '') + '</option>'; }).join('');
+  }
+  function attendanceOf(m, a) { for (var i = 0; i < (m.attendance || []).length; i++) if (m.attendance[i].type === a.type && Number(m.attendance[i].id) === Number(a.id)) return m.attendance[i].attended; return null; }
+
   P.meetings = function (el, s) {
     var staff = [];
     function load() {
@@ -199,11 +236,11 @@
       var scheduled = m.status === 'scheduled';
       var invite = !scheduled ? '' : !m.inviteSentAt ? 'Invitation not sent yet' : m.inviteOutOfDate ? '<span class="crm-flag">Changed since the invitation went out</span>' : 'Invitation sent ' + esc(C.date(m.inviteSentAt));
       return '<li><div class="crm-item-main"><div><strong>' + esc(m.title) + '</strong> ' + (scheduled ? '' : '<span class="a-pill a-pill-neutral">Cancelled</span>') + '</div>' +
-        '<div class="crm-small crm-muted">' + esc(C.dateTime(m.startsAt)) + ' to ' + esc(C.timeOnly(m.endsAt)) + (m.location ? ' · ' + esc(m.location) : '') + where(m, s) + '</div>' +
-        '<div class="crm-small crm-muted">' + (m.attendees.length ? 'Invited: ' + m.attendees.map(function (a) { return esc(a.name); }).join(', ') : 'Nobody invited yet') + '</div>' +
+        '<div class="crm-small crm-muted">' + esc(C.dateTime(m.startsAt)) + ' to ' + esc(C.timeOnly(m.endsAt)) + (m.timeZone ? ' · set up in ' + esc(zoneName(m.timeZone)) + ' time' : '') + (m.location ? ' · ' + esc(m.location) : '') + (m.joinUrl ? ' · <a class="crm-link" href="' + esc(m.joinUrl) + '" target="_blank" rel="noopener noreferrer">Join link</a>' : '') + where(m, s) + '</div>' +
+        '<div class="crm-small crm-muted">' + (m.attendees.length ? 'Invited: ' + m.attendees.map(function (a) { var at = attendanceOf(m, a); return esc(a.name) + (at === true ? ' (came)' : at === false ? ' (did not come)' : ''); }).join(', ') : 'Nobody invited yet') + '</div>' +
         (invite ? '<div class="crm-small crm-muted">' + invite + '</div>' : '') + '</div>' +
         (m.canEdit && scheduled ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-primary a-btn-sm" data-act="send" data-id="' + esc(m.id) + '">' + (m.inviteSentAt ? 'Send the update' : 'Send the invitation') + '</button>' +
-          '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(m.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="cancel" data-id="' + esc(m.id) + '">Cancel</button></div>' : '') + '</li>';
+          (m.canMarkAttendance && m.attendees.length ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="came" data-id="' + esc(m.id) + '">Who came</button>' : '') + '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(m.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="cancel" data-id="' + esc(m.id) + '">Cancel</button></div>' : '') + '</li>';
     }
     function draw(meetings) {
       var live = meetings.filter(function (m) { return m.status === 'scheduled'; }), past = meetings.filter(function (m) { return m.status !== 'scheduled'; });
@@ -213,6 +250,7 @@
       var byId = {}; meetings.forEach(function (m) { byId[m.id] = m; });
       on(el, '#addMeeting', function () { form(null); });
       each(el, '[data-act=edit]', function (b) { form(byId[b.getAttribute('data-id')]); });
+      each(el, '[data-act=came]', function (b) { attendance(byId[b.getAttribute('data-id')]); });
       each(el, '[data-act=send]', function (b) {
         b.disabled = true;
         api('POST', '/api/crm/meetings/' + b.getAttribute('data-id') + '/send', {}).then(function (r) { C.toast(r.ok ? 'Sent to ' + r.data.recipients + ' people' : problem(r)); load(); });
@@ -223,6 +261,19 @@
           body: '<p>“' + esc(m.title) + '” will be marked cancelled.' + (m.inviteSentAt ? ' Everyone who got the invitation is sent a cancellation, so it comes off their calendar.' : ' No invitation went out, so nobody is emailed.') + '</p>',
           onSubmit: function () { return api('POST', '/api/crm/meetings/' + m.id + '/cancel', {}).then(function (r) { if (r.ok) { C.toast(r.data.warning || 'Meeting cancelled'); load(); return; } return problem(r); }); } });
       });
+    }
+    // G12: after the meeting starts, its organizer or a CRM Admin marks who came. Only people who were invited are listed. Nothing is read from anyone's calendar reply.
+    function attendance(m) {
+      var rows = m.attendees.map(function (a, i) {
+        var cur = attendanceOf(m, a);
+        return '<div class="a-form-row"><div class="crm-small" style="align-self:center;">' + esc(a.name) + '</div><select id="at' + i + '" data-type="' + esc(a.type) + '" data-id="' + esc(a.id) + '" aria-label="' + esc(a.name) + '"><option value="">Not marked</option><option value="yes"' + (cur === true ? ' selected' : '') + '>Came</option><option value="no"' + (cur === false ? ' selected' : '') + '>Did not come</option></select></div>';
+      }).join('');
+      C.dialog({ title: 'Who came to this meeting?', submit: 'Save', body: '<p class="crm-small">Mark each person who was invited. This is your own record; nothing is read from their calendars.</p>' + rows,
+        onSubmit: function (f) {
+          var marks = [];
+          f.querySelectorAll('select[data-type]').forEach(function (sel) { marks.push({ type: sel.getAttribute('data-type'), id: Number(sel.getAttribute('data-id')), attended: sel.value === 'yes' ? true : sel.value === 'no' ? false : null }); });
+          return api('POST', '/api/crm/meetings/' + m.id + '/attendance', { marks: marks }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return problem(r); });
+        } });
     }
     function form(m) {
       var have = {}; (m ? m.attendees : []).forEach(function (a) { have[a.type + a.id] = true; });
@@ -235,7 +286,9 @@
         title: m ? 'Edit the meeting' : 'Set up a meeting', submit: 'Save',
         body: C.field('Title', '<input type="text" id="mTitle" maxlength="255" required value="' + esc(m ? m.title : '') + '">', '', 'mTitle') +
           '<div class="a-form-row">' + C.field('Day', '<input type="date" id="mDay" required value="' + esc(m ? C.isoDay(m.startsAt) : '') + '">', '', 'mDay') + C.field('Start time', '<input type="time" id="mTime" required value="' + esc(m ? C.localTime(m.startsAt) : '09:00') + '">', 'Your own time zone. Invitees see theirs.', 'mTime') + C.field('Length', '<select id="mLen">' + C.options(durations, String(dur)) + '</select>', '', 'mLen') + '</div>' +
-          C.field('Where', '<input type="text" id="mWhere" maxlength="255" placeholder="A video link or a room" value="' + esc(m ? m.location || '' : '') + '">', '', 'mWhere') +
+          C.field('Time zone you are setting it up in', '<select id="mZone">' + zoneOptions(m ? m.timeZone || '' : browserZone()) + '</select>', 'Named in the invitation. Everyone still sees the time in their own calendar.', 'mZone') +
+          C.field('Where', '<input type="text" id="mWhere" maxlength="255" placeholder="A room or an address" value="' + esc(m ? m.location || '' : '') + '">', '', 'mWhere') +
+          C.field('Join link (optional)', '<input type="url" id="mUrl" maxlength="500" placeholder="Paste the video link" value="' + esc(m ? m.joinUrl || '' : '') + '">', 'A video call link. It has to be a secure link (it starts with https).', 'mUrl') +
           C.field('Notes for the invitation (optional)', '<textarea id="mDetails" maxlength="2000">' + esc(m ? m.details || '' : '') + '</textarea>', 'Everyone invited sees this.', 'mDetails') +
           '<fieldset class="crm-fieldset"><legend>Invite</legend>' + (people || '<p class="crm-small crm-muted">Nobody outside the team can be invited yet. Add them to the deal’s buying committee or the account first.</p>') + team + '</fieldset>',
         onSubmit: function (f) {
@@ -245,7 +298,7 @@
           var end = new Date(new Date(start).getTime() + Number(f.querySelector('#mLen').value) * 60000).toISOString();
           var staffIds = [], contactIds = [];
           f.querySelectorAll('input[data-type]:checked').forEach(function (b) { (b.getAttribute('data-type') === 'staff' ? staffIds : contactIds).push(Number(b.getAttribute('data-id'))); });
-          var body = { title: f.querySelector('#mTitle').value, startsAt: start, endsAt: end, location: f.querySelector('#mWhere').value, details: f.querySelector('#mDetails').value, staffIds: staffIds, contactIds: contactIds };
+          var body = { title: f.querySelector('#mTitle').value, startsAt: start, endsAt: end, location: f.querySelector('#mWhere').value, timeZone: f.querySelector('#mZone').value, joinUrl: f.querySelector('#mUrl').value, details: f.querySelector('#mDetails').value, staffIds: staffIds, contactIds: contactIds };
           var req = m ? api('PUT', '/api/crm/meetings/' + m.id, body) : api('POST', '/api/crm/meetings', withSubject(s, body));
           return req.then(function (r) { if (r.ok) { C.toast(m ? 'Saved' : 'Meeting set up. Send the invitation when you are ready.'); load(); return; } return problem(r); });
         }
@@ -256,15 +309,41 @@
 
   /* ---- Procurement checklist (deals only) ------------------------------------------------------------------------------------------ */
   P.checklist = function (el, s) {
-    var templates = [];
+    var templates = [], staffList = [];
     function load() {
       C.loading(el);
       api('GET', '/api/crm/checklists' + C.qstr({ opportunityId: s.id })).then(function (r) {
         if (!r.ok) { C.errorBox(el, problem(r)); return; }
         if (!r.data.canEdit) { draw(r.data); return; }
-        api('GET', '/api/crm/checklists/templates').then(function (t) { templates = (t.data.templates || []).filter(function (x) { return x.isActive; }); draw(r.data); });
+        Promise.all([api('GET', '/api/crm/checklists/templates'), C.staff()]).then(function (res) { templates = (res[0].data.templates || []).filter(function (x) { return x.isActive; }); staffList = res[1] || []; draw(r.data); });
       });
     }
+    // G15: the files attached to a step, by name, each opening through the authenticated download route (never a public address). Read-only and other reps' deals get no file list.
+    function stepFiles(i, d) {
+      var mine = (d.files || []).filter(function (f) { return f.itemId === i.id; });
+      return mine.length ? '<div class="crm-small">' + mine.map(function (f) { return '<a class="crm-link" href="/api/crm/files/' + esc(f.id) + '/download" download>' + esc(f.name) + '</a> <span class="crm-muted">(' + esc(C.bytes(f.sizeBytes)) + ')</span>'; }).join(' · ') + '</div>' : '';
+    }
+    function attachDialog(i, d) {
+      var mine = d.files.filter(function (f) { return f.itemId === i.id; }), free = d.files.filter(function (f) { return f.itemId !== i.id; });
+      C.dialog({ title: 'Files for this step', submit: 'Done',
+        body: '<p class="crm-small crm-muted">' + esc(i.label) + '</p>' +
+          (mine.length ? '<ul class="crm-list" aria-label="Attached">' + mine.map(function (f) { return '<li><div class="crm-item-main"><a class="crm-link" href="/api/crm/files/' + esc(f.id) + '/download" download>' + esc(f.name) + '</a></div><div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-detach="' + esc(f.id) + '">Take off this step</button></div></li>'; }).join('') + '</ul>' : '<p class="crm-small">Nothing is attached to this step yet.</p>') +
+          (free.length ? C.field('Attach a file this deal already has', '<select id="atPick"><option value="">Choose a file</option>' + free.map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.name) + (f.itemId ? ' (on another step)' : '') + '</option>'; }).join('') + '</select>', '', 'atPick') : '') +
+          C.field('Or upload a new one', '<input type="file" id="atFile">', 'A PDF, an image or a Word document, up to 15 MB. It is kept with the deal, privately.', 'atFile'),
+        onOpen: function (f) {
+          f.querySelectorAll('[data-detach]').forEach(function (b) { b.addEventListener('click', function () { api('POST', '/api/crm/files/' + b.getAttribute('data-detach') + '/attach', { checklistItemId: null }).then(function (r) { C.toast(r.ok ? 'Taken off this step' : problem(r)); load(); }); }); });
+        },
+        onSubmit: function (f) {
+          var pick = f.querySelector('#atPick'), file = f.querySelector('#atFile').files[0];
+          if (file) {
+            var fd = new FormData(); fd.append('opportunityId', s.id); fd.append('checklistItemId', i.id); fd.append('file', file); // the subject first, then the step, then the file
+            return upl('/api/crm/files', fd).then(function (r) { if (r.ok) { C.toast('File attached'); load(); return; } return problem(r); });
+          }
+          if (pick && pick.value) return api('POST', '/api/crm/files/' + pick.value + '/attach', { checklistItemId: i.id }).then(function (r) { if (r.ok) { C.toast('File attached'); load(); return; } return problem(r); });
+          load();
+        } });
+    }
+
     function draw(d) {
       var pr = d.progress, edit = d.canEdit;
       var h = '';
@@ -272,9 +351,9 @@
       h += d.items.length ? '<ul class="crm-list" aria-label="Procurement steps">' + d.items.map(function (i) {
         var done = i.status === 'done', skip = i.status === 'not_needed';
         var late = i.status === 'open' && i.dueOn && String(i.dueOn).slice(0, 10) < C.todayLocal();
-        return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="ck' + esc(i.id) + '" data-act="toggle" data-id="' + esc(i.id) + '"' + (done ? ' checked' : '') + (edit && !skip ? '' : ' disabled') + '><label for="ck' + esc(i.id) + '"' + (done || skip ? ' class="crm-done"' : '') + '>' + esc(i.label) + '</label></div>' +
-          '<div class="crm-small crm-muted">' + (skip ? 'Not needed' : done ? 'Done ' + esc(C.date(i.completedAt)) + (i.completedBy ? ' by ' + esc(i.completedBy) : '') : i.dueOn ? '<span class="' + (late ? 'crm-flag' : '') + '">' + (late ? 'Overdue, was due ' : 'Due ') + esc(C.date(i.dueOn)) + '</span>' : 'No due date') + (i.note ? ' · ' + esc(i.note) : '') + '</div></div>' +
-          (edit ? '<div class="crm-row-actions"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(i.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="skip" data-id="' + esc(i.id) + '" data-skip="' + (skip ? '0' : '1') + '">' + (skip ? 'Needed after all' : 'Not needed') + '</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(i.id) + '">Remove</button></div>' : '') + '</li>';
+        return '<li><div class="crm-item-main"><div class="crm-check"><input type="checkbox" id="ck' + esc(i.id) + '" data-act="toggle" data-id="' + esc(i.id) + '"' + (done ? ' checked' : '') + ((edit || (i.ownerAdminId && Number(i.ownerAdminId) === Number(C.adminId) && C.role !== 'readonly')) && !skip ? '' : ' disabled') + '><label for="ck' + esc(i.id) + '"' + (done || skip ? ' class="crm-done"' : '') + '>' + esc(i.label) + '</label></div>' +
+          '<div class="crm-small crm-muted">' + (skip ? 'Not needed' : done ? 'Done ' + esc(C.date(i.completedAt)) + (i.completedBy ? ' by ' + esc(i.completedBy) : '') : i.dueOn ? '<span class="' + (late ? 'crm-flag' : '') + '">' + (late ? 'Overdue, was due ' : 'Due ') + esc(C.date(i.dueOn)) + '</span>' : 'No due date') + (i.note ? ' · ' + esc(i.note) : '') + (i.ownerName ? ' · owner: ' + esc(i.ownerName) : '') + '</div>' + stepFiles(i, d) + '</div>' +
+          (edit ? '<div class="crm-row-actions">' + (d.files ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="attach" data-id="' + esc(i.id) + '">Files</button>' : '') + '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="edit" data-id="' + esc(i.id) + '">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="skip" data-id="' + esc(i.id) + '" data-skip="' + (skip ? '0' : '1') + '">' + (skip ? 'Needed after all' : 'Not needed') + '</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-id="' + esc(i.id) + '">Remove</button></div>' : '') + '</li>';
       }).join('') + '</ul>' : C.empty('No procurement steps yet.' + (edit ? ' Add a checklist to track what stands between “yes” and “paid”.' : ''), '📋');
       var actions = '';
       if (edit) {
@@ -288,15 +367,16 @@
         api('POST', '/api/crm/checklists/apply', { opportunityId: s.id, templateId: Number(el.querySelector('#tplSel').value) }).then(function (r) { C.toast(r.ok ? (r.data.added ? r.data.added + ' steps added' : 'Those steps are already on this deal') : problem(r)); load(); });
       });
       on(el, '#addStep', function () {
-        C.dialog({ title: 'Add a step', submit: 'Add', body: C.field('Step', '<input type="text" id="sLabel" maxlength="255" required>', '', 'sLabel') + C.field('Due (optional)', '<input type="date" id="sDue">', '', 'sDue'),
-          onSubmit: function (f) { return api('POST', '/api/crm/checklists', { opportunityId: s.id, label: f.querySelector('#sLabel').value, dueOn: f.querySelector('#sDue').value || null }).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
+        C.dialog({ title: 'Add a step', submit: 'Add', body: C.field('Step', '<input type="text" id="sLabel" maxlength="255" required>', '', 'sLabel') + C.field('Due (optional)', '<input type="date" id="sDue">', '', 'sDue') + C.field('Who is responsible', '<select id="sOwner">' + C.ownerOptions(staffList, null, 'The deal owner') + '</select>', 'Blank means the deal owner. Naming someone does not change who can see the deal.', 'sOwner'),
+          onSubmit: function (f) { return api('POST', '/api/crm/checklists', { opportunityId: s.id, label: f.querySelector('#sLabel').value, dueOn: f.querySelector('#sDue').value || null, ownerAdminId: f.querySelector('#sOwner').value ? Number(f.querySelector('#sOwner').value) : null }).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
       });
       el.querySelectorAll('[data-act=toggle]').forEach(function (b) { b.addEventListener('change', function () { b.disabled = true; put(b.getAttribute('data-id'), { status: b.checked ? 'done' : 'open' }); }); });
+      each(el, '[data-act=attach]', function (b) { attachDialog(byId[b.getAttribute('data-id')], d); });
       each(el, '[data-act=skip]', function (b) { put(b.getAttribute('data-id'), { status: b.getAttribute('data-skip') === '1' ? 'not_needed' : 'open' }); });
       each(el, '[data-act=edit]', function (b) {
         var i = byId[b.getAttribute('data-id')];
-        C.dialog({ title: 'Edit the step', submit: 'Save', body: C.field('Step', '<input type="text" id="sLabel" maxlength="255" required value="' + esc(i.label) + '">', '', 'sLabel') + C.field('Due', '<input type="date" id="sDue" value="' + esc(i.dueOn ? String(i.dueOn).slice(0, 10) : '') + '">', '', 'sDue') + C.field('Note', '<input type="text" id="sNote" maxlength="255" value="' + esc(i.note || '') + '">', '', 'sNote'),
-          onSubmit: function (f) { return api('PUT', '/api/crm/checklists/' + i.id, { label: f.querySelector('#sLabel').value, dueOn: f.querySelector('#sDue').value || null, note: f.querySelector('#sNote').value }).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
+        C.dialog({ title: 'Edit the step', submit: 'Save', body: C.field('Step', '<input type="text" id="sLabel" maxlength="255" required value="' + esc(i.label) + '">', '', 'sLabel') + C.field('Due', '<input type="date" id="sDue" value="' + esc(i.dueOn ? String(i.dueOn).slice(0, 10) : '') + '">', '', 'sDue') + C.field('Note', '<input type="text" id="sNote" maxlength="255" value="' + esc(i.note || '') + '">', '', 'sNote') + C.field('Who is responsible', '<select id="sOwner">' + C.ownerOptions(staffList, i.ownerAdminId, 'The deal owner') + '</select>', 'Blank means the deal owner. Naming someone does not change who can see the deal.', 'sOwner'),
+          onSubmit: function (f) { return api('PUT', '/api/crm/checklists/' + i.id, { label: f.querySelector('#sLabel').value, dueOn: f.querySelector('#sDue').value || null, note: f.querySelector('#sNote').value, ownerAdminId: f.querySelector('#sOwner').value ? Number(f.querySelector('#sOwner').value) : null }).then(function (r) { if (r.ok) { load(); return; } return problem(r); }); } });
       });
       each(el, '[data-act=del]', function (b) {
         var i = byId[b.getAttribute('data-id')];
@@ -355,7 +435,20 @@
           '<td>' + (m.studentsActive.value === null && m.studentsEnrolled.value === null && m.studentsActive.kind === m.studentsEnrolled.kind ? metricCell(m.studentsActive, notes) : metricCell(m.studentsActive, notes) + ' <span class="crm-muted">of</span> ' + metricCell(m.studentsEnrolled, notes)) + '</td><td>' + metricCell(m.activities, notes) + '</td></tr>';
       }).join('');
       return '<div style="overflow-x:auto;"><table class="a-table" aria-label="Program use by month"><thead><tr><th scope="col">Month</th><th scope="col">Teachers licensed</th><th scope="col">Signed up</th><th scope="col">Teaching</th><th scope="col">Classrooms in use</th><th scope="col">Students active</th><th scope="col">Activities</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        trendHtml(sec.trend) +
         '<p class="crm-small crm-muted" style="margin:8px 0 0;">Active means a lesson or game was finished that month. These are counts only, with no teacher or student named.</p>' + notesHtml(notes);
+    }
+    // G18: the latest saved month against the one before it. A number that is unknown, or a small group, says so and is never shown as a change.
+    var TREND_NAMES = { teachersTeaching: 'teachers teaching', classroomsActive: 'classrooms in use', activities: 'activities finished', studentsActive: 'students active' };
+    function trendHtml(t) {
+      if (!t) return '';
+      if (!t.metrics) return '<p class="crm-small crm-muted" style="margin:10px 0 0;"><strong>Compared with the month before:</strong> ' + esc(t.note) + '</p>';
+      var bits = Object.keys(TREND_NAMES).map(function (k) {
+        var m = t.metrics[k];
+        if (!m || m.direction === null) return esc(TREND_NAMES[k]) + ': <span class="crm-muted" title="' + esc(m ? m.unknownReason : '') + '">not shown</span>';
+        return esc(TREND_NAMES[k]) + ': ' + (m.direction === 'same' ? 'no change' : '<strong class="' + (m.direction === 'down' ? 'crm-flag' : '') + '">' + (m.direction === 'up' ? 'up ' : 'down ') + esc(C.num(Math.abs(m.change))) + '</strong>');
+      });
+      return '<p class="crm-small" style="margin:10px 0 0;"><strong>Compared with ' + esc(t.comparedWith) + ':</strong> ' + bits.join(' · ') + '</p>' + (t.note ? '<p class="crm-small crm-muted" style="margin:2px 0 0;">' + esc(t.note) + '</p>' : '');
     }
     function demo(sec) {
       if (sec.unknownReason) return unknownBox(sec.unknownReason);
@@ -370,6 +463,8 @@
     }
     function draw(d) {
       var h = '<p class="crm-small crm-muted" style="margin:0;">What the site has recorded about how ' + esc(d.accountName) + ' is using Fixer Nation, and where each number comes from. <strong>Unknown</strong> means the site has no record. It does not mean zero.</p>';
+      // G18: plain-fact usage alerts, each saying what was seen. They only appear here; nothing is sent and nothing is added to Needs Attention.
+      if ((d.alerts || []).length) h += '<div class="crm-notice" role="status" style="margin:10px 0 0;"><strong>Worth a look</strong><ul style="margin:6px 0 0;padding-left:18px;">' + d.alerts.map(function (a) { return '<li>' + esc(a.text) + '</li>'; }).join('') + '</ul></div>';
       if (d.linkNote) h += '<p class="crm-small crm-notice" style="margin:10px 0 0;">' + esc(d.linkNote) + (s.kind === 'opportunity' ? ' <a class="crm-link" href="admin-crm-account.html?id=' + esc(d.accountId) + '">Open the account</a>' : '') + '</p>';
       h += part('Licenses and trials', d.licenses.source, d.licenses.window, licenses(d.licenses));
       h += part('Program use', d.programUse.source, d.programUse.window, use(d.programUse));

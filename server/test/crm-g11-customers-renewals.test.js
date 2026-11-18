@@ -164,7 +164,7 @@ test('THE PAGE: every outside value is escaped, it shows reasons not a score, it
   assert.match(page, /esc\(r\.deal\.nextStep\)/); assert.match(page, /esc\(x\.name\)/); assert.match(page, /esc\(x\)/);
   assert.doesNotMatch(page, /C\.api\('(POST|PUT|DELETE)'/, 'nothing on this page writes');
   assert.doesNotMatch(page, /hot lead|warm lead|cold lead/i);
-  assert.match(page, /admin-nav\.js\?v=38/); assert.match(page, /admin-shell\.js\?v=11/); assert.match(page, /name="robots" content="noindex"/);
+  assert.match(page, /admin-nav\.js\?v=39/); assert.match(page, /admin-shell\.js\?v=12/); assert.match(page, /name="robots" content="noindex"/);
   assert.match(read('admin-nav.js'), /admin-crm-customers\.html/); assert.match(read('admin-nav.js'), /"crm-customers": "</);
   assert.match(read('admin-shell.js'), /'crm-customers':/);
   assert.match(fs.readFileSync(path.join(env.SERVER, 'app.js'), 'utf8'), /\/api\/crm\/customers/);

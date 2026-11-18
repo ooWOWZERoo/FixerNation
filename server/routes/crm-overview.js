@@ -74,6 +74,14 @@ async function buildCards(today) {
   return out;
 }
 
+// G14: tasks whose remind-me date has come, for the person looking (theirs, plus any nobody is assigned to, like the other boxes). null when the column is not there yet.
+async function remindersFor(req, today) {
+  return card(async () => {
+    const [[r]] = await pool.query("SELECT COUNT(*) AS n FROM crm_tasks WHERE state = 'open' AND remind_on IS NOT NULL AND remind_on <= ? AND (assigned_admin_id = ? OR assigned_admin_id IS NULL)", [today, req.crm.adminId]);
+    return { count: Number(r.n || 0) };
+  });
+}
+
 router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const now = cls.sqlNow();
   const today = dateOnly(req.query.today) || now.slice(0, 10); // the person's own day when the page sends it
@@ -111,7 +119,7 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
 
   res.json({
     counts,
-    cards: await buildCards(today),
+    cards: { ...(await buildCards(today)), remindersToday: await remindersFor(req, today) },
     pipeline: { openCount: open.length, grossCents: gross, weightedCents: weighted, openWithoutValue: unvalued, myOpen: mine, unowned, byStage: [...byStage.values()].sort((a, b) => a.sortOrder - b.sortOrder) },
     nextSteps: { overdue: { total: Number(overdueN), items: overdue.map(shape) }, missing: { total: Number(missingN), items: missing.map(shape) } },
     decisions: {
