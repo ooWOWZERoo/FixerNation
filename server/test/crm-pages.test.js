@@ -16,10 +16,10 @@ test('PAGES: all eleven Customer Hub pages exist and load the shared admin asset
   for (const f of PAGES) {
     assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} exists`);
     const html = read(f);
-    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=39"><\/script>/, f);
-    assert.match(html, /admin-common\.css\?v=22/, f);
+    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=40"><\/script>/, f);
+    assert.match(html, /admin-common\.css\?v=23/, f);
     assert.match(html, /admin-common\.js\?v=18/, f);
-    assert.match(html, /admin-shell\.js\?v=12/, f);
+    assert.match(html, /admin-shell\.js\?v=13/, f);
     assert.match(html, /crm-common\.css\?v=3/, f);
     assert.match(html, /crm-common\.js\?v=3/, f);
     assert.match(html, /<meta name="robots" content="noindex">/, `${f} is not for search engines`);
@@ -32,8 +32,8 @@ test('VERSIONS: every admin page that loads the nav or the shell loads the curre
   assert.ok(pages.length > 25);
   for (const f of pages) {
     const html = read(f);
-    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=39/, f);
-    if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=12/, f);
+    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=40/, f);
+    if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=13/, f);
   }
 });
 

@@ -87,6 +87,14 @@
   var results = document.createElement('div'); results.id = 'mc-page-results'; results.className = 'mc-page-results'; results.hidden = true;
   var status = document.createElement('span'); status.className = 'mc-sr-only'; status.setAttribute('aria-live', 'polite');
   searchWrap.append(search, results, status); tools.after(searchWrap);
+  // Two shortcuts right after the search box: the Customer Hub (shown only when the Hub is on for this person's role: admin-nav.js announces that) and Support. The button for the area you are in
+  // is marked as current.
+  var quick = document.createElement('nav'); quick.className = 'mc-quick'; quick.setAttribute('aria-label', 'Quick links');
+  function quickLink(href, text, area){ var a = document.createElement('a'); a.href = href; a.textContent = text; if (area) a.setAttribute('aria-current', 'true'); return a; }
+  var inHub = key.indexOf('crm-') === 0, inSupport = ['support','account-lookup','support-classrooms','support-errors','support-help'].indexOf(key) !== -1;
+  var hubBtn = quickLink('admin-crm-overview.html', 'Customer Hub', inHub); hubBtn.hidden = !window.__fnCrmOn;
+  quick.append(hubBtn, quickLink('admin-support.html', 'Support', inSupport)); searchWrap.after(quick);
+  window.addEventListener('fn-crm-nav', function(e){ hubBtn.hidden = !(e.detail && e.detail.on); });
   // Read when someone types, not once at load: the Customer Hub group is revealed a moment after the page loads (only when the CRM is on for their role).
   function pageLinks(){
     var list = Array.from(sidebar.querySelectorAll('a[href$=".html"]')).filter(function(a){return a.getAttribute('href').indexOf('admin-') === 0 && !a.closest('[hidden]') && a.style.display !== 'none';}).map(function(a){return {href:a.getAttribute('href'),label:a.querySelector('.label').textContent};});

@@ -6,7 +6,7 @@ Written at the end of a long working session so a fresh session can pick up clea
 
 - The whole 2026-11-15 review punch list is built, tested (1,476 tests) and **deployed to production**: S1 to S15, B1 to B16, G1 to G22. Nothing from it is uncommitted or unpushed. The only untracked files in the folder (`docs/sales/`, `fne_logo_scales.png`) are not CRM work and were deliberately left alone.
 - Production was checked with `curl` after each deploy (pages load at the new versions; every new route answers 401 when signed out, not 404). **Nobody has seen the signed-in screens built after G8 in a real browser except the owner's quick look on 2026-11-17 ("all looks fine").** Every screen was otherwise checked by tests and syntax only.
-- Latest versions of shared assets: `admin-common.css v22`, `admin-nav.js v39`, `admin-shell.js v12`, `crm-common.js v3`, `crm-common.css v3`, `crm-panels.js v4`, `admin-common.js v18`, `district-admin-nav.js v15`, `release-notes.js v15`.
+- Latest versions of shared assets: `admin-common.css v23`, `admin-nav.js v40`, `admin-shell.js v13`, `crm-common.js v3`, `crm-common.css v3`, `crm-panels.js v4`, `admin-common.js v18`, `district-admin-nav.js v15`, `release-notes.js v15`.
 
 ## What the owner still has to do (none of it is code)
 

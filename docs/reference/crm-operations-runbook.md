@@ -86,6 +86,7 @@ Rolling back never drops a table. Code goes back with `git revert` of that phase
 - **Not a duplicate (F3):** undo each pair from the list at the bottom of Accounts > Possible duplicates.
 - **Look-alike names (F4):** read only, no switch and no cron job; suggestions only. To change what counts as alike, change `lib/crm-name-match.js` (and its tests).
 - **My checklist steps (F2) and the picker fix (F1):** read only; revert the commit if needed.
+- **Quote #307785 customers (F12):** `node scripts/mark-quote-people-customers.js 307785` is a dry run that lists who it would mark and changes nothing; add `--apply --as <your admin username>` to mark them. Undo one person by releasing the hand-set label on their contact page (CRM Admin). It never touches the purchase, seats or licenses.
 - **Phase 7 (Reports):** revert its commit. No data was added.
 - **Phase 6 (renewals, engagement, attribution):** set `crm_renewal_generator` to anything but `true` to stop new renewal deals. Deals it already made stay; close or delete them by hand.
 - **Phase 4b to 4d (revisions, evidence, Won handoff):** reverting the code makes the accept page stop asking for a name; the saved names and hashes stay. A quote already marked replaced would then accept again, so before reverting, list replaced quotes: `SELECT id, quote_number FROM quote_requests WHERE version_status = 'superseded'`.

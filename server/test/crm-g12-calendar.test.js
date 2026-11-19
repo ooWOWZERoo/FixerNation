@@ -168,7 +168,7 @@ test('THE PAGES: the calendar escapes outside text, only uses a join link that s
   assert.match(page, /esc\(m\.title\)/); assert.match(page, /esc\(t\.title\)/); assert.match(page, /\^https:\\\/\\\//); assert.match(page, /noopener noreferrer/);
   assert.doesNotMatch(page, /C\.api\('(POST|DELETE)', '\/api\/crm\/(tasks|meetings)\/' \+ [^)]*\/(complete|cancel)/, 'it only moves things; finishing and cancelling stay where they were');
   assert.match(page, /\/api\/crm\/tasks\/calendar/); assert.match(page, /\/api\/crm\/meetings\/calendar/); assert.match(page, /sendUpdate/);
-  assert.match(page, /name="robots" content="noindex"/); assert.match(page, /admin-nav\.js\?v=39/); assert.match(page, /admin-shell\.js\?v=12/); assert.doesNotMatch(page, /fonts\.googleapis|cdn\./i);
+  assert.match(page, /name="robots" content="noindex"/); assert.match(page, /admin-nav\.js\?v=40/); assert.match(page, /admin-shell\.js\?v=13/); assert.doesNotMatch(page, /fonts\.googleapis|cdn\./i);
   assert.match(read('admin-nav.js'), /admin-crm-calendar\.html/); assert.match(read('admin-nav.js'), /"crm-calendar": "</); assert.match(read('admin-shell.js'), /'crm-calendar':/);
   const panels = read('crm-panels.js');
   for (const k of ['mZone', 'mUrl', 'Who came', '/attendance']) assert.ok(panels.includes(k), k);

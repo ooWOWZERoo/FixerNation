@@ -1,6 +1,6 @@
 /* Fixer Nation — shared admin sidebar navigation.
    Every admin page has an empty <aside class="a-sidebar"></aside> placeholder
-   followed immediately by <script src="admin-nav.js?v=39"></script>.
+   followed immediately by <script src="admin-nav.js?v=40"></script>.
    This script populates it synchronously and marks the active link. */
 (function () {
   // Error capture (Release 122): load the shared reporter once per page.
@@ -148,13 +148,26 @@
   // navigation -- annoying once the link list no longer fits one screen.
   // sessionStorage (not localStorage) so it clears with the tab/session.
   var navEl = aside.querySelector('.a-nav');
+  var SCROLL_KEY = 'fnAdminNavScrollTop';
   if (navEl) {
-    var SCROLL_KEY = 'fnAdminNavScrollTop';
-    var savedScroll = parseInt(sessionStorage.getItem(SCROLL_KEY), 10);
-    if (!isNaN(savedScroll)) navEl.scrollTop = savedScroll;
     navEl.addEventListener('scroll', function () {
       sessionStorage.setItem(SCROLL_KEY, String(navEl.scrollTop));
     });
+  }
+  // Putting the menu back where it was is done AFTER the Customer Hub group has been shown or hidden for this page (see showCrmNav and the start-up below). The saved position was measured
+  // with that group on screen; applying it while the group was still hidden left the menu scrolled somewhere else, so the link you had just clicked was off to one side.
+  function restoreNavScroll() {
+    if (!navEl) return;
+    var saved = parseInt(sessionStorage.getItem(SCROLL_KEY), 10);
+    if (!isNaN(saved)) navEl.scrollTop = saved;
+  }
+  function activeLink() { return navEl ? navEl.querySelector('a.active') : null; }
+  // Whatever happened to the scroll position, the link for the page you are on is never left out of sight.
+  function keepActiveVisible() {
+    var a = activeLink();
+    if (!a || !a.getClientRects().length) return;
+    var r = a.getBoundingClientRect(), n = navEl.getBoundingClientRect();
+    if (r.top < n.top || r.bottom > n.bottom) a.scrollIntoView({ block: 'nearest' });
   }
 
   aside.querySelectorAll('.a-nav-section-head').forEach(function (head) {
@@ -176,14 +189,29 @@
   function showCrmNav(perms) {
     var group = aside.querySelector('[data-crm-nav]');
     if (!group) return;
-    if (!perms) { group.hidden = true; return; }
-    group.querySelectorAll('a[data-crm-perm]').forEach(function (a) { a.style.display = perms[a.getAttribute('data-crm-perm')] ? '' : 'none'; });
-    group.hidden = false;
+    // Where the link for this page is on screen before the group appears or goes, so the menu can be moved to keep it in the same place (nothing jumps under the pointer).
+    var link = activeLink(), before = link && link.getClientRects().length ? link.getBoundingClientRect().top : null, wasHidden = group.hidden;
+    if (!perms) group.hidden = true;
+    else {
+      group.querySelectorAll('a[data-crm-perm]').forEach(function (a) { a.style.display = perms[a.getAttribute('data-crm-perm')] ? '' : 'none'; });
+      group.hidden = false;
+    }
+    if (navEl && wasHidden !== group.hidden) {
+      if (before !== null && link.getClientRects().length) navEl.scrollTop += link.getBoundingClientRect().top - before;
+      else { restoreNavScroll(); keepActiveVisible(); } // this page's own link was inside the group: put the menu back as it was
+    }
+    // The top bar's Customer Hub button follows the same answer (admin-shell.js listens).
+    window.__fnCrmOn = !!perms;
+    try { window.dispatchEvent(new CustomEvent('fn-crm-nav', { detail: { on: !!perms } })); } catch (e) { /* old browser */ }
   }
   if (window.fetch) {
     var cachedCrm = null;
     try { cachedCrm = JSON.parse(sessionStorage.getItem('fnCrmNav')); } catch (e) { /* storage blocked */ }
-    if (cachedCrm && cachedCrm.perms && Date.now() - cachedCrm.at < 300000) showCrmNav(cachedCrm.perms);
+    // The last answer is used at once, however old: it is only for the first paint, and the answer below always replaces it. (A five-minute limit here made the group pop in, and shifted
+    // every link beneath it, on the first page after each pause.)
+    if (cachedCrm && cachedCrm.perms) showCrmNav(cachedCrm.perms);
+    restoreNavScroll();
+    keepActiveVisible();
     fetch('/api/crm/me', { credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
@@ -192,7 +220,7 @@
         showCrmNav(perms);
       })
       .catch(function () { showCrmNav(null); });
-  }
+  } else { restoreNavScroll(); keepActiveVisible(); }
 
   // Counts beside two Support links, so a new request or a burst of errors is noticed even when no email is. Best effort: any
   // failure (signed out, older server) just leaves the link as it is.
