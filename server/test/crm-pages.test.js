@@ -18,7 +18,7 @@ test('PAGES: all eleven Customer Hub pages exist and load the shared admin asset
     const html = read(f);
     assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=39"><\/script>/, f);
     assert.match(html, /admin-common\.css\?v=22/, f);
-    assert.match(html, /admin-common\.js\?v=17/, f);
+    assert.match(html, /admin-common\.js\?v=18/, f);
     assert.match(html, /admin-shell\.js\?v=12/, f);
     assert.match(html, /crm-common\.css\?v=3/, f);
     assert.match(html, /crm-common\.js\?v=3/, f);

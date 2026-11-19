@@ -95,11 +95,40 @@ async function fnUploadFile(file) {
     }
     const data = await r.json();
     if (!data.url) { fnToast('Upload error: server returned no URL'); return null; }
+    // A video in a format that will not play everywhere (a phone plays HEVC, many classroom casting devices show a black screen). The file is kept; this only tells the admin.
+    if (Array.isArray(data.warnings) && data.warnings.length) fnNotice('This video may not play on every device', data.warnings);
     return data.url;
   } catch (e) {
     fnToast('Upload failed: ' + (e.message || 'network error'));
     return null;
   }
+}
+
+// A message that stays until it is closed (a toast vanishes in two seconds, too fast to read advice). Built with textContent only, so nothing in `lines` can run as markup.
+function fnNotice(title, lines) {
+  const old = document.getElementById('fnNotice');
+  if (old) old.remove();
+  const box = document.createElement('div');
+  box.id = 'fnNotice';
+  box.setAttribute('role', 'alert');
+  box.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:10000;max-width:440px;background:#FFF4E5;color:#2A2420;border:2px solid #EBA657;border-radius:12px;padding:14px 16px 12px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:14px;line-height:1.45;';
+  const h = document.createElement('div');
+  h.style.cssText = 'font-weight:700;margin-bottom:6px;';
+  h.textContent = title;
+  box.appendChild(h);
+  (lines || []).forEach(function (t) { const p = document.createElement('p'); p.style.cssText = 'margin:0 0 8px;'; p.textContent = String(t); box.appendChild(p); });
+  const note = document.createElement('p');
+  note.style.cssText = 'margin:0 0 8px;color:#6B5F55;font-size:12.5px;';
+  note.textContent = 'The video was uploaded as it is. Nothing was changed.';
+  box.appendChild(note);
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = 'Got it';
+  b.style.cssText = 'background:#164F4A;color:#fff;border:0;border-radius:8px;padding:6px 14px;font-weight:600;cursor:pointer;';
+  b.addEventListener('click', function () { box.remove(); });
+  box.appendChild(b);
+  document.body.appendChild(box);
+  b.focus();
 }
 
 function fnFormatAddress(address, full) {

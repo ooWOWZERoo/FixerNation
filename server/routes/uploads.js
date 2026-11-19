@@ -5,6 +5,7 @@ const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const { finalizeUpload } = require('../lib/upload-safety');
+const { inspectVideo, compatWarnings } = require('../lib/video-compat'); // warns about video formats that will not play on every device
 
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -58,7 +59,17 @@ router.post('/', requireAuth, upload.single('file'), (req, res) => {
     return res.status(400).json({ error: err.message });
   }
   const urlPrefix = process.env.UPLOADS_URL_PREFIX || '/uploads/';
-  res.status(201).json({ filename: saved.filename, url: urlPrefix + saved.filename });
+  const body = { filename: saved.filename, url: urlPrefix + saved.filename };
+  // A video is checked for formats that play on a phone but not on many classroom casting devices (HEVC, oversize, index at the end of the file). It only WARNS: the upload is kept
+  // exactly as sent, and a failed check never fails the upload. The admin page shows the warnings (fnUploadFile in admin-common.js).
+  if (saved.kind === 'mp4' || saved.kind === 'mov') {
+    try {
+      const info = inspectVideo(path.join(uploadsDir, saved.filename));
+      body.warnings = compatWarnings(info).map(x => x.text);
+      if (info.video) body.video = { codec: info.video.codec, profile: info.video.profileName, level: info.video.level, width: info.video.width, height: info.video.height, audio: info.audio ? info.audio.codec : null, faststart: info.faststart };
+    } catch { body.warnings = []; }
+  }
+  res.status(201).json(body);
 });
 
 router.use((err, req, res, next) => {

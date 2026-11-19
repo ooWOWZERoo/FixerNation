@@ -15,7 +15,7 @@ const shell = read('admin-shell.js');
 test('the page is a normal admin workspace page: same shell, current shared asset versions, not indexable', () => {
   assert.match(page, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=39"><\/script>/);
   assert.match(page, /admin-common\.css\?v=22/);
-  assert.match(page, /admin-common\.js\?v=17/);
+  assert.match(page, /admin-common\.js\?v=18/);
   assert.match(page, /admin-shell.js\?v=12/);
   assert.match(page, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(page, /<h1>Demo<\/h1>/);
