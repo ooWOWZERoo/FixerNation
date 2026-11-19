@@ -113,6 +113,15 @@ const AUTOMATIONS = [
     body: "Hi {{firstName}},\n\nYour Fixer Nation Education license for {{school}} is confirmed. Here's what happens next:\n\n1. Set up your School License Administrator account at the link below.\n2. Once you're in, you can invite your teachers directly from the School Admin portal.\n3. Teachers accept their invitation and get immediate access to the lesson library.\n4. If you prefer support through the onboarding process, contact us at admin@fixernationeducation.com.\n\nGet started here: {{setupUrl}}\n\nIf you'd rather have someone else manage the account, just forward this email and have them use the same link.\n\nWe're glad to have {{school}} on board.\n\nFixer Nation Education",
     reminderDaysBefore: null,
   },
+  // Not fired by fireAutomation: staff press Email on the Demo page (lib/public-demo-email.js reads this row for its wording and on/off switch, and fills in
+  // the merge fields below). There is deliberately no field for the group's name (rule D14). The unsubscribe line is added by the mailer, not by this text.
+  {
+    eventKey: 'demo_invitation',
+    label: 'Prospect Demo — Invitation Email',
+    subject: 'Your Fixer Nation Education demo',
+    body: "Hi {{firstName}},\n\nThanks for your interest in Fixer Nation Education. We set up a demo you can explore whenever it suits you. It has sample classrooms, students and lessons, and none of it is real student information. This copy is just for your group, so nothing you do in it is visible to anyone else.\n\nOpen the demo: {{demoLink}}\nAccess code: {{accessCode}}\nThe demo is open until {{endDate}}.\n\nOnce you're in, you'll find a sign-in for each role: district administrator, school administrator, teacher, parent and student. Try as many as you like.\n\nIf a question comes up, just reply to this email. You can also send us a question, submit a ticket or request a quote from the demo page at any time.\n\nThanks again,\nThe Fixer Nation Team",
+    reminderDaysBefore: null,
+  },
 ];
 
 async function main() {

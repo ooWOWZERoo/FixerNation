@@ -148,4 +148,6 @@ Each phase is its own release, with an alter script run before the restart, and 
 
 ## 11. Out of scope
 
+Emailing an invitation to a prospect from the Demo page (and starting several at once) is designed separately in `demo-invitation-email-requirements.md` (draft, 2026-11-18).
+
 Self-serve "start a demo" buttons, a waitlist, per-group branding (colors only, as today), demo accounts for affiliates, and any real student data.

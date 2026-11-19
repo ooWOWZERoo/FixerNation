@@ -1912,6 +1912,22 @@ CREATE TABLE IF NOT EXISTS public_demo_invitations (
   INDEX idx_public_demo_invitation_ws (workspace_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Who a demo invitation was emailed to (docs/reference/demo-invitation-email-requirements.md). One row per attempt, sent or failed. Staff-only. Never holds the
+-- message, the access code or any secret. No foreign key to newsletter_contacts on purpose: deleting a contact must not cascade into or be blocked by this history,
+-- and the timeline matches by address. Created on existing installs by scripts/alter-create-demo-invitation-recipients.js.
+CREATE TABLE IF NOT EXISTS public_demo_invitation_recipients (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  invitation_id INT UNSIGNED NOT NULL,
+  contact_id INT UNSIGNED NULL,
+  email VARCHAR(255) NOT NULL,
+  result VARCHAR(12) NOT NULL,        -- 'sent' | 'failed'
+  error_code VARCHAR(30) NULL,        -- the mail server's code only, never its message (that can contain the address)
+  sent_by VARCHAR(80) NOT NULL,
+  sent_at DATETIME NOT NULL,          -- UTC
+  INDEX idx_pdir_invitation (invitation_id, sent_at),
+  INDEX idx_pdir_email (email, sent_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------------------------------------------------------------------------
 -- Sales CRM core (docs/reference/sales-crm-update-requirements.md, phase 1). Created on existing installs by scripts/alter-create-crm-core.js, which also
 -- seeds crm_pipeline_stages and crm_loss_reasons. The quote_requests.opportunity_id foreign key to crm_opportunities is added there too.

@@ -113,6 +113,25 @@ function systemFromAddress() {
   return `"Fixer Nation" <${process.env.SMTP_USER}>`;
 }
 
+// A prospect demo invitation, emailed by staff from Sales > Demo (lib/public-demo-email.js builds subject and body; docs/reference/demo-invitation-email-requirements.md).
+// Always from the system address; replyTo is whatever staff typed (already checked to be one clean address, or empty). Ends with the same unsubscribe link the campaigns use,
+// so a click lands on the same list the demo emails check. This is an admin-triggered mail, never sent from inside a demo session.
+async function sendDemoInvitationEmail({ to, subject, body, replyTo }) {
+  const url = unsubscribeUrl(to);
+  const why = "You're getting this because we set up a Fixer Nation Education demo for you.";
+  const mail = {
+    from: systemFromAddress(),
+    to,
+    subject,
+    headers: { 'List-Unsubscribe': `<${url}>` },
+    text: `${body}\n\n---\n${why}\nIf you'd rather not hear from us, unsubscribe here: ${url}`,
+    html: body.split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('') +
+      `<hr style="border:none;border-top:1px solid #eee;margin:24px 0;"><p style="font-family:Arial,sans-serif;font-size:11px;color:#999;">${esc(why)} If you'd rather not hear from us, <a href="${safeUrl(url)}" style="color:#999;">unsubscribe</a>.</p>`,
+  };
+  if (replyTo) mail.replyTo = replyTo;
+  await getTransporter().sendMail(mail);
+}
+
 // HTML-escapes a value that came from a user or a public form before it's
 // interpolated into an email body. Anything that originates outside this
 // codebase (names, schools, messages) must go through this -- unescaped, a form
@@ -615,4 +634,4 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
   });
 }
 
-module.exports = { sendTaskReminderEmail, addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };
+module.exports = { sendDemoInvitationEmail, sendTaskReminderEmail, addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };

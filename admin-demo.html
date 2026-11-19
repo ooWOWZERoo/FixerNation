@@ -201,6 +201,7 @@ function renderInvDetail() {
       }).join('') + '</tbody></table>' +
       '<div class="inv-sub"><div style="font-weight:600; margin-bottom:6px;">Message for the group</div><textarea class="demo-message" id="invMessage" readonly aria-label="Message for the group"></textarea>' +
       '<div style="margin-top:10px;"><button class="a-btn a-btn-primary" data-inv="copy" data-key="message">Copy message</button></div></div>' +
+      invEmailHtml(true) +
       '<div class="inv-sub"><div class="inv-grid"><div class="a-field"><label for="invExtendDays">Change the end date</label><select id="invExtendDays" class="a-filter-select">' +
       [1, 3, 7, 14, 21, 30].filter(function (n) { return n <= inv.data.maxDays; }).map(function (n) { return '<option value="' + esc(n) + '"' + (n === 7 ? ' selected' : '') + '>' + esc(n) + ' day' + (n === 1 ? '' : 's') + ' from now</option>'; }).join('') +
       '</select></div><div class="a-field"><label for="invExtendUntil">or until (your computer\'s time zone)</label><input type="datetime-local" id="invExtendUntil"></div>' +
@@ -210,6 +211,7 @@ function renderInvDetail() {
       '<div class="demo-row"><button class="a-btn a-btn-outline" data-inv="clear">Clear what this group added</button><span class="a-hint">Removes the classrooms, students, work and invitations the group added. Their codes, password and PIN stay the same.</span></div>' +
       '<div class="demo-row"><button class="a-btn a-btn-danger" data-inv="end">End now</button></div></div>';
   }
+  if (!open && inv.email.data && inv.email.data.recipients.length) html += invEmailHtml(false);
   var c = d.counts, roles = [['district', 'District administrator'], ['school', 'School administrator'], ['teacher', 'Teacher'], ['parent', 'Parent'], ['student', 'Student']];
   html += '<div class="inv-sub"><div style="font-weight:600; margin-bottom:6px;">Activity</div>' +
     '<div class="a-hint" style="margin-bottom:8px;">Counted since this invitation started. No names or email addresses are kept.</div>' +
@@ -223,6 +225,95 @@ function renderInvDetail() {
   document.getElementById('invDetailBody').innerHTML = html;
   document.getElementById('invRename').value = d.label;
   if (open) document.getElementById('invMessage').value = d.message;
+  var f = inv.email.form;
+  [['emSearch', 'search'], ['emReply', 'replyTo'], ['emSubject', 'subject'], ['emBody', 'body']].forEach(function (p) {
+    var el = document.getElementById(p[0]); if (el) el.value = f[p[1]] || '';
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// Email this invitation (docs/reference/demo-invitation-email-requirements.md). The form's state lives in inv.email.form so a re-render
+// (Show or Hide on a secret, say) never loses what staff typed. Names and addresses from the CRM go in data- attributes, never an inline handler.
+// ---------------------------------------------------------------------------------------------------------------------------------------
+inv.email = { data: null, form: { to: [], search: '', replyTo: '', subject: '', body: '' }, results: null, forId: null };
+
+async function invLoadEmail(id, reset) {
+  var data = await invApi('/invitations/' + encodeURIComponent(id) + '/email');
+  if (!data) return;
+  inv.email.data = data;
+  if (reset || inv.email.forId !== id) {
+    inv.email.forId = id; inv.email.results = null;
+    inv.email.form = { to: [], search: '', replyTo: data.replyTo || '', subject: data.subject || '', body: data.body || '' };
+  }
+}
+
+function invWhen(s) { var d = new Date(String(s).replace(' ', 'T') + 'Z'); return isNaN(d.getTime()) ? String(s) : d.toLocaleString(); }
+
+function invSentList(list) {
+  if (!list.length) return '';
+  return '<div style="font-weight:600; margin:14px 0 6px;">Sent to</div><table class="a-table"><thead><tr><th>Who</th><th>Result</th><th>When</th><th>By</th></tr></thead><tbody>' +
+    list.map(function (r) {
+      return '<tr><td>' + esc(r.email) + '</td><td>' + (r.result === 'sent' ? '<span class="a-pill a-pill-success">Sent</span>' : '<span class="a-pill a-pill-warning">Failed</span>') +
+        '</td><td>' + esc(invWhen(r.sentAt)) + '</td><td>' + esc(r.sentBy) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+function invEmailHtml(open) {
+  var e = inv.email, d = e.data, f = e.form;
+  var h = '<div class="inv-sub"><div style="font-weight:600; margin-bottom:6px;">' + (open ? 'Email this invitation' : 'Emailed to') + '</div>';
+  if (!d) return h + '<div class="a-hint">Loading...</div></div>';
+  if (!open) return h + invSentList(d.recipients) + '</div>';
+  if (!d.templateReady) return h + '<div class="a-note">The demo invitation email isn\'t set up on the server yet.</div></div>';
+  if (!d.templateEnabled) return h + '<div class="a-note">The demo invitation email is switched off. You can turn it back on in <a href="admin-automations.html">Automations</a>.</div>' + invSentList(d.recipients) + '</div>';
+  h += '<div class="a-note" style="margin:0 0 12px;">Each person gets their own email from Fixer Nation with the demo link and access code. The password and PIN stay behind the code. Replies go to the address in Reply to.</div>';
+  h += '<div class="a-field" style="margin:0 0 8px;"><label for="emSearch">Find someone in the CRM</label><input type="text" id="emSearch" data-emf="search" placeholder="Name or email" style="min-width:260px;" autocomplete="off"></div>' +
+    '<div id="emResults"></div>' +
+    '<div class="inv-grid" style="margin:8px 0;"><div class="a-field"><label for="emTyped">or type an email address</label><input type="email" id="emTyped" style="min-width:260px;"></div>' +
+    '<button class="a-btn a-btn-outline" data-inv="addtyped">Add</button></div>';
+  h += '<div class="demo-row"><span class="demo-label">To</span>' + (f.to.length ? f.to.map(function (t) {
+    return '<span class="a-pill a-pill-neutral">' + esc(t.name ? t.name + ' · ' + t.email : t.email) + ' <button class="inv-link" style="margin-left:6px;" data-inv="unpick" data-email="' + esc(t.email) + '" aria-label="Remove ' + esc(t.email) + '">&times;</button></span>';
+  }).join(' ') : '<span class="a-hint">Nobody yet.</span>') + '</div>';
+  h += '<div class="inv-grid" style="margin-top:8px;"><div class="a-field"><label for="emReply">Reply to</label><input type="email" id="emReply" data-emf="replyTo" style="min-width:260px;"></div></div>' +
+    '<div class="a-field" style="margin:10px 0 8px;"><label for="emSubject">Subject</label><input type="text" id="emSubject" data-emf="subject" maxlength="200" style="width:100%;"></div>' +
+    '<div class="a-field" style="margin:0;"><label for="emBody">Message</label><textarea class="demo-message" id="emBody" data-emf="body" style="width:100%;min-height:260px;"></textarea></div>' +
+    '<div class="a-hint" style="margin-top:6px;">{{firstName}} becomes each person\'s first name, or "there" when we don\'t have one. You can edit this message for this send only. To change the wording for good, edit it in <a href="admin-automations.html">Automations</a>.</div>' +
+    '<div style="margin-top:10px;"><button class="a-btn a-btn-primary" data-inv="sendemail">Send email</button></div>' +
+    '<div class="a-hint" style="margin-top:6px;">Up to ' + esc(d.limits.perSend) + ' people at a time, ' + esc(d.limits.perInvitation) + ' per invitation and ' + esc(d.limits.perDay) + ' a day.</div>';
+  if (e.results) {
+    h += '<div style="font-weight:600; margin:14px 0 6px;">This send</div><ul class="demo-list">' + e.results.map(function (r) {
+      return '<li>' + esc(r.email) + ': ' + (r.result === 'sent' ? 'Sent' : r.result === 'failed' ? 'Failed. ' + esc(r.reason || '') : 'Skipped: ' + esc(r.reason || '')) + '</li>';
+    }).join('') + '</ul>';
+  }
+  return h + invSentList(d.recipients) + '</div>';
+}
+
+var emSearchTimer = null;
+async function invEmailSearch(q) {
+  var box = document.getElementById('emResults');
+  if (!box) return;
+  if (q.trim().length < 2) { box.innerHTML = ''; return; }
+  var j = await invApi('/contacts/search?q=' + encodeURIComponent(q.trim()));
+  if (!j) return;
+  var list = j.contacts || [];
+  box.innerHTML = list.length ? '<div class="demo-row" style="margin:0 0 8px;">' + list.map(function (c) {
+    return '<button class="a-btn a-btn-outline a-btn-sm" data-inv="pick" data-email="' + esc(c.email) + '" data-name="' + esc(c.name || '') + '">' + esc((c.name ? c.name + ' · ' : '') + c.email + (c.company ? ' (' + c.company + ')' : '')) + '</button>';
+  }).join('') + '</div>' : '<div class="a-hint" style="margin-bottom:8px;">Nobody found. You can type their address below.</div>';
+}
+
+document.addEventListener('input', function (e) {
+  var k = e.target && e.target.dataset ? e.target.dataset.emf : null;
+  if (!k) return;
+  inv.email.form[k] = e.target.value;
+  if (k === 'search') { clearTimeout(emSearchTimer); emSearchTimer = setTimeout(function () { invEmailSearch(e.target.value); }, 250); }
+});
+
+function invAddRecipient(email, name) {
+  var f = inv.email.form, lower = String(email).toLowerCase();
+  if (f.to.some(function (t) { return t.email.toLowerCase() === lower; })) return;
+  var max = inv.email.data ? inv.email.data.limits.perSend : 5;
+  if (f.to.length >= max) { fnToast('You can email up to ' + max + ' people at a time.'); return; }
+  f.to.push({ email: email, name: name || '' });
+  renderInvDetail();
 }
 
 async function loadInvitations() {
@@ -244,6 +335,7 @@ async function invOpen(id) {
   var d = await invApi('/invitations/' + encodeURIComponent(id));
   if (!d) return;
   inv.selected = d.id; inv.detail = d; inv.shown = {};
+  await invLoadEmail(d.id, true);
   renderInvDetail();
   document.getElementById('invDetailCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -254,6 +346,7 @@ async function invAfter(detail, toast, keepShown) {
   inv.selected = detail.id; inv.detail = detail;
   if (!keepShown) inv.shown = {};
   if (toast) fnToast(toast);
+  await invLoadEmail(detail.id, true);
   await loadInvitations();
   renderInvDetail();
 }
@@ -266,6 +359,17 @@ document.addEventListener('click', async function (e) {
   var action = btn.dataset.inv, id = inv.selected, d = inv.detail, r;
   if (action === 'open') { await invOpen(Number(btn.dataset.id)); return; }
   if (action === 'toggle') { inv.shown[btn.dataset.key] = !inv.shown[btn.dataset.key]; renderInvDetail(); return; }
+  if (action === 'pick') { invAddRecipient(btn.dataset.email, btn.dataset.name); return; }
+  if (action === 'unpick') {
+    inv.email.form.to = inv.email.form.to.filter(function (t) { return t.email !== btn.dataset.email; });
+    renderInvDetail(); return;
+  }
+  if (action === 'addtyped') {
+    var typed = document.getElementById('emTyped').value.trim();
+    if (!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(typed)) { fnToast("That doesn't look like an email address."); return; }
+    invAddRecipient(typed, '');
+    return;
+  }
   if (action === 'copy') {
     var map = d ? { code: d.accessCode, password: d.password, pin: d.pin, message: d.message } : {};
     invCopy(map[btn.dataset.key]);
@@ -292,6 +396,20 @@ document.addEventListener('click', async function (e) {
       if (r) { fnToast('Workspaces added'); await loadInvitations(); }
     } else if (!id || !d) {
       return;
+    } else if (action === 'sendemail') {
+      var ef = inv.email.form, n = ef.to.length;
+      if (!n) { fnToast('Choose who to email first.'); return; }
+      if (!confirm('Send this to ' + n + (n === 1 ? ' person' : ' people') + ' now?')) return;
+      r = await invApi('/invitations/' + id + '/email', 'POST', {
+        recipients: ef.to.map(function (t) { return { email: t.email }; }), replyTo: ef.replyTo, subject: ef.subject, body: ef.body
+      });
+      if (r) {
+        inv.email.results = r.results; inv.email.data.recipients = r.recipients;
+        var failedOrSkipped = {}; r.results.forEach(function (x) { if (x.result !== 'sent') failedOrSkipped[x.email.toLowerCase()] = true; });
+        ef.to = ef.to.filter(function (t) { return failedOrSkipped[t.email.toLowerCase()]; });
+        fnToast(r.sent ? 'Sent to ' + r.sent + (r.sent === 1 ? ' person' : ' people') + (r.failed || r.skipped ? '. Some were not sent.' : '') : 'Nothing was sent');
+        renderInvDetail();
+      }
     } else if (action === 'rename') {
       var name = document.getElementById('invRename').value.trim();
       if (!name) { fnToast('Give the group a name.'); return; }

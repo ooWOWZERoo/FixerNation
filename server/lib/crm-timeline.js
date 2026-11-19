@@ -181,6 +181,19 @@ async function demoEvents(conn, sc) {
   }));
 }
 
+// Demo invitation emails (docs/reference/demo-invitation-email-requirements.md, R7): each one SENT to an address in this timeline, found by address like a support
+// request. It says only that an invitation was emailed and when. Never the group's name (D14), the access code or the message.
+async function demoEmailEvents(conn, sc) {
+  if (sc.kind === 'opportunity' || !sc.emails.length) return [];
+  const [rows] = await conn.query(
+    `SELECT id, sent_at, sent_by FROM public_demo_invitation_recipients WHERE result = 'sent' AND ${inList('LOWER(TRIM(email))', sc.emails).sql} ORDER BY sent_at DESC, id DESC LIMIT 50`, sc.emails);
+  return rows.map(r => ({
+    id: `demoemail-${r.id}`, type: 'demo', at: String(r.sent_at), title: 'Demo invitation emailed',
+    detail: 'A prospect demo invitation was emailed to this person.',
+    actor: r.sent_by || null, link: null, dealId: null, dealName: null,
+  }));
+}
+
 async function buildTimeline(conn, kind, id, { page = 1, size = 50, viewer = null } = {}) {
   const sc = await loadScope(conn, kind, id);
   if (!sc.ok) return null;
@@ -201,6 +214,10 @@ async function buildTimeline(conn, kind, id, { page = 1, size = 50, viewer = nul
     // A server that has not had the demo tables or tags added yet simply has no demos to show.
     if (err.code !== 'ER_NO_SUCH_TABLE' && err.code !== 'ER_BAD_FIELD_ERROR') throw err;
   }
+  // The same for the recipients table (scripts/alter-create-demo-invitation-recipients.js), kept apart so a server without it still shows its demos.
+  try { demos = demos.concat(await demoEmailEvents(conn, sc)); } catch (err) {
+    if (err.code !== 'ER_NO_SUCH_TABLE' && !/no such table/i.test(String(err.message))) throw err;
+  }
   total += demos.length;
   demos.forEach((d, i) => events.push({ ...d, order: sources.length + i }));
   events.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : a.order - b.order || (a.id < b.id ? 1 : -1)));
@@ -210,4 +227,4 @@ async function buildTimeline(conn, kind, id, { page = 1, size = 50, viewer = nul
   };
 }
 
-module.exports = { buildTimeline, loadScope, demoInvitationIds };
+module.exports = { buildTimeline, loadScope, demoInvitationIds, demoEmailEvents };

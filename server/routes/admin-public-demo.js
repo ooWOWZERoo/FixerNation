@@ -15,6 +15,9 @@ const { resetDemo } = require('../scripts/reset-public-demo');
 const { siteLoginBlockedFor, unlockSiteLogin } = require('./site-auth');
 const { lockStatus, clearLock } = require('../lib/pin-lockout');
 const inv = require('../lib/public-demo-invitations');
+const E = require('../lib/public-demo-email');
+const { requireCrmRole } = require('../lib/crm-permissions');
+const { getSetting } = require('../lib/settings');
 const { workspaceFixtures } = require('../lib/public-demo-workspaces');
 const { workspaceTag } = require('../lib/sales-demo');
 
@@ -197,6 +200,42 @@ router.post('/invitations/:id/reset', handle(async (req, res) => {
   await inTransaction((conn) => resetDemo(conn, { fx: workspaceFixtures(i.workspaceId) }, seedLib.makeReport()));
   await logAction(req, 'invitation_workspace_reset', null, { id: i.id, label: i.label, workspace: workspaceTag(i.workspaceId) });
   res.json(await invitationDetails(invId(req)));
+}));
+
+// Emailing the invitation (docs/reference/demo-invitation-email-requirements.md). GET: what the Email block needs (the template's wording with this invitation's details in,
+// the default Reply-To, who it has gone to, and the limits). POST: send it to one to five people; only CRM Admin and Sales (action email_demo), never Read-only.
+router.get('/invitations/:id/email', handle(async (req, res) => {
+  const i = invId(req) ? await inv.getInvitation(pool, invId(req), { secrets: true }) : null;
+  if (!i) return fail(res, 404, 'That invitation was not found.');
+  const [template, replyTo, recipients] = await Promise.all([E.getTemplate(pool), getSetting('contact_email_quote'), E.listRecipients(pool, i.id)]);
+  const out = {
+    templateReady: !!template, templateEnabled: !!(template && template.enabled),
+    replyTo: replyTo || '', recipients,
+    limits: { perSend: E.MAX_PER_SEND, perInvitation: E.MAX_PER_INVITATION, perDay: await E.dailyCap(pool) },
+  };
+  if (i.open && template) Object.assign(out, E.previewFor(template, i, process.env.SITE_URL));
+  res.json(out);
+}));
+
+// Typeahead for the Email block: CRM people by name or email (the same lookup the quotes page uses), name, email and company only.
+router.get('/contacts/search', handle(async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  if (q.length < 2 || q.length > 100) return res.json({ contacts: [] });
+  const like = `%${q}%`;
+  const [rows] = await pool.query('SELECT id, name, email, company FROM newsletter_contacts WHERE name LIKE ? OR email LIKE ? ORDER BY name LIMIT 20', [like, like]);
+  res.json({ contacts: rows });
+}));
+
+router.post('/invitations/:id/email', requireCrmRole('email_demo'), handle(async (req, res) => {
+  const i = invId(req) ? await inv.getInvitation(pool, invId(req), { secrets: true }) : null;
+  if (!i) return fail(res, 404, 'That invitation was not found.');
+  const b = req.body || {};
+  const r = await E.sendInvitation(pool, {
+    invitation: i, recipients: b.recipients, subject: b.subject, body: b.body, replyTo: b.replyTo, sentBy: req.user.username, siteUrl: process.env.SITE_URL,
+  });
+  // The audit row says who, how many and the Reply-To; the addresses are in the recipients table and the code is never written down here.
+  await logAction(req, 'invitation_emailed', null, { id: i.id, people: r.results.length, sent: r.sent, failed: r.failed, skipped: r.skipped, replyTo: r.replyTo || null });
+  res.json({ ...r, recipients: await E.listRecipients(pool, i.id) });
 }));
 
 // Pause or resume every demo at once (the master switch). Paused: no invitation works and no new one can start; nothing is lost.

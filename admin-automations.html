@@ -453,6 +453,7 @@ const MERGE_FIELDS = {
   book_purchase_thank_you:       ['firstName','bookTitle'],
   invoice_paid:                  ['buyerName','invoiceNumber','total'],
   license_seat_invite:           ['licenseProductName','schoolLabel'],
+  demo_invitation:               ['firstName','demoLink','accessCode','endDate'],
 };
 
 const MERGE_FIELD_DESCS = {
@@ -465,6 +466,9 @@ const MERGE_FIELD_DESCS = {
   total:              'Invoice total amount',
   licenseProductName: 'Name of the license product',
   schoolLabel:        'School name or domain',
+  demoLink:           'Link to the demo page',
+  accessCode:         "The group's demo access code, e.g. ABCD-2345",
+  endDate:            'When the demo closes, in US Eastern',
 };
 
 const TRIGGER_EVENTS = {
